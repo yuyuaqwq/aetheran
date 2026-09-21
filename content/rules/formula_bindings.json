@@ -1,0 +1,6 @@
+{
+  "_comment": "语义槽位 → 声明 id。引擎按**中性槽位名**问，本文件按本包命名回答。不写 = 该槽位不声明，引擎走原路。槽位名全集见 saintess_engine/formula/__init__.py 的 SLOTS。",
+  "_slots_available": ["damage", "miss", "crit_pct", "crit_mult", "act_time", "cd", "heal", "threat", "drop_rate"],
+  "_note_unbound": "★ 只绑了的才算数：其余槽位在引擎里**没有读点**（是引擎自己的算法，不是注入面）⇒ 绑了也没人问。act_time 走 `time_model_fn`（引擎既有注入面）而不是这张表。",
+  "damage": "F2_damage_full"
+}

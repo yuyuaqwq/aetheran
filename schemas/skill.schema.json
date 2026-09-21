@@ -52,7 +52,7 @@
                 "item",
                 "move"
               ],
-              "$comment": "★ 这 4 项必须与内容侧时间模型 TIME_MODEL.cast 的键集一致（同源点，改一处要改两处 ⇒ 已登记为待同步项）。设计文档 B1 要求「枚举名当耗时」被 schema 拦下，所以这里必须是 enum 而不是裸 string。"
+              "$comment": "★ 这 4 项**目前没有真源**（本包的时间模型常量已并入声明式公式表 F5_act_time，不再有 TIME_MODEL.cast 类别表）⇒ 这个 enum 是**预留**：等两段耗时的「行动类别名」清单真正定下来后，必须把 enum 与清单对齐（届时同源，改一处改两处）。在那之前，包内数据请一律用 number/{base} 形态，别写 str，免得凭 enum 臆造类别。"
             },
             {
               "type": "number",
@@ -84,7 +84,7 @@
                 "item",
                 "move"
               ],
-              "$comment": "★ 这 4 项必须与内容侧时间模型 TIME_MODEL.cast 的键集一致（同源点，改一处要改两处 ⇒ 已登记为待同步项）。设计文档 B1 要求「枚举名当耗时」被 schema 拦下，所以这里必须是 enum 而不是裸 string。"
+              "$comment": "★ 这 4 项**目前没有真源**（本包的时间模型常量已并入声明式公式表 F5_act_time，不再有 TIME_MODEL.cast 类别表）⇒ 这个 enum 是**预留**：等两段耗时的「行动类别名」清单真正定下来后，必须把 enum 与清单对齐（届时同源，改一处改两处）。在那之前，包内数据请一律用 number/{base} 形态，别写 str，免得凭 enum 臆造类别。"
             },
             {
               "type": "number",

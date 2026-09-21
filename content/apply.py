@@ -3,28 +3,60 @@
 
 方向只有一个：**内容 → 引擎**。引擎不 import 本包，也不认识本包的表。
 
-⚠️ 当前是 **P1 骨架阶段**：只装配「时间模型」这一个 hook，
-   其余（公式族 F1–F12 / 面板聚合 / 技能表）待 `12_迁移引擎评估/01` 的 E1/E2 落地后接入。
-   引擎对未装配的 hook 走「零默认值」⇒ 包能加载、能进编辑器，但战斗数学还是中性兜底。
+## 本文件装什么
+
+| hook | 供体 | 说明 |
+|---|---|---|
+| `formula_table_fn` | `content/rules/formula_table.json` | 声明式公式表（F1–F12 + F2 全链），E1 |
+| `formula_bindings_fn` | `content/rules/formula_bindings.json` | 语义槽位 → 声明 id，E1b |
+| `time_model_fn` | 同上表（**委托 `F5_act_time`**） | 行动间隔，E2b/CTB |
+
+★ **零双源纪律**：本文件**不再手写任何公式或常数**。
+  修前 `_time_model` 自己实现了 `base*(spd_ref/spd)^alpha` 且自带一份
+  `TIME_MODEL = {spd_ref, alpha, spd_cap}` —— 与 `F5_act_time` 的声明**同式同数**，
+  改一处另一处会静默漂（这正是 E1 要消灭的东西）。
+  现在钳位归声明的 `guard`、常数归声明的 `$const`，本文件只负责**喂变量**。
 """
 from __future__ import annotations
 
-from saintess_engine import config
+import json
+from pathlib import Path
 
-# 时间模型（内容侧参数，数据字典 §0 红线 Z2：1 刻 = 1 次普通行动，1 天 = 120 刻）
-TIME_MODEL = {"shape": "pow", "spd_ref": 100.0, "alpha": 0.5, "spd_cap": 300.0}
+from saintess_engine import config
+from saintess_engine.formula import FormulaTable
+
+_RULES = Path(__file__).resolve().parent.parent / "content" / "rules"
 
 _MOUNTED = False
+_TABLE: FormulaTable | None = None
+_BINDINGS: dict | None = None
+
+
+def _load_table() -> FormulaTable:
+    """装配期读一次、校验一次（`from_decl` 跑 V1–V12，声明错当场抛）。"""
+    global _TABLE
+    if _TABLE is None:
+        decl = json.loads((_RULES / "formula_table.json").read_text(encoding="utf-8"))
+        _TABLE = FormulaTable.from_decl(decl)
+    return _TABLE
+
+
+def _load_bindings() -> dict:
+    global _BINDINGS
+    if _BINDINGS is None:
+        _BINDINGS = json.loads(
+            (_RULES / "formula_bindings.json").read_text(encoding="utf-8"))
+    return _BINDINGS
 
 
 def _time_model(spd, base):
-    """`time_model_fn` 供体：行动间隔 = base × (SPD_REF/有效spd)^alpha。
+    """`time_model_fn` 供体：**委托声明** `F5_act_time`（不再自己实现）。
 
-    形状 = F5（数据字典 §3.1）：`ActTime = base × (SPD_REF/有效spd)^0.5`，α 是唯一的速度权重旋钮。
+    声明侧口径：`ActTime = base × (SPD_REF/有效spd)^0.5`，
+    `spd_ref`/`alpha` 取自 `$const`，`spd` 的 floor=1 / cap=300 由声明的 `guard` 负责
+    —— 本函数**不做任何钳位**，否则就是把 guard 又抄了一遍。
     """
-    _spd = max(float(spd or 0), 1.0)
-    _spd = min(_spd, float(TIME_MODEL["spd_cap"]))
-    return float(base) * (float(TIME_MODEL["spd_ref"]) / _spd) ** float(TIME_MODEL["alpha"])
+    return _load_table().eval("F5_act_time", {"base": float(base), "spd": float(spd or 0)})
 
 
 def install_engine():
@@ -32,10 +64,16 @@ def install_engine():
     global _MOUNTED
     if _MOUNTED:
         return
-    config.mount(time_model_fn=_time_model)
+    tbl = _load_table()
+    bind = _load_bindings()
+    config.mount(
+        formula_table_fn=lambda: tbl,
+        formula_bindings_fn=lambda slot: bind.get(slot),
+        time_model_fn=_time_model,
+    )
     _MOUNTED = True
 
 
-def apply_game_content(actor):        # noqa: ARG001 —— P1 骨架暂无 actor 级内容
-    """单个 actor 的装配（P1 骨架为空；随从/机制待后续轮次）。"""
+def apply_game_content(actor):        # noqa: ARG001 —— P1 阶段暂无 actor 级内容
+    """单个 actor 的装配（P1 为空；随从/机制待后续轮次）。"""
     return None
