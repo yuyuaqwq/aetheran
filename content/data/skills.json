@@ -1,9 +1,9 @@
 {
-  "SKILL_WDN_riftslash": {
+  "SKILL_KNT_riftslash": {
     "name": "裂地斩",
     "kind": "主动",
     "lv": 1,
-    "desc": "SKILL_WDN_riftslash_desc",
+    "desc": "SKILL_KNT_riftslash_desc",
     "cd": 5,
     "cast": {
       "base": 0.8
@@ -17,15 +17,15 @@
       "RES_OATH": 30
     },
     "power": 1.074103,
-    "owner_class": "CLS_WARDEN",
+    "owner_class": "CLS_KNIGHT",
     "lv_band": "P1",
     "element": "ELE_FIRE"
   },
-  "SKILL_WDN_oathwall": {
+  "SKILL_KNT_oathwall": {
     "name": "誓约壁垒",
     "kind": "主动",
     "lv": 1,
-    "desc": "SKILL_WDN_oathwall_desc",
+    "desc": "SKILL_KNT_oathwall_desc",
     "cd": 19,
     "cast": {
       "base": 1.2
@@ -39,7 +39,7 @@
       "RES_OATH": 55
     },
     "power": 0.0,
-    "owner_class": "CLS_WARDEN",
+    "owner_class": "CLS_KNIGHT",
     "lv_band": "P1",
     "mech": "无敌1行动",
     "mech_val": 130.0,
@@ -145,11 +145,11 @@
     "mech2_val": 35.0,
     "effect": "减益20%45+DOT35=80PE"
   },
-  "SKILL_ARC_arcanebolt": {
+  "SKILL_MAG_arcanebolt": {
     "name": "秘能冲击",
     "kind": "主动",
     "lv": 1,
-    "desc": "SKILL_ARC_arcanebolt_desc",
+    "desc": "SKILL_MAG_arcanebolt_desc",
     "cd": 6,
     "cast": {
       "base": 1.4
@@ -163,15 +163,15 @@
       "RES_MANA": 35
     },
     "power": 1.30417,
-    "owner_class": "CLS_ARCANIST",
+    "owner_class": "CLS_MAGE",
     "lv_band": "P1",
     "element": "ELE_PHYS"
   },
-  "SKILL_ARC_annihilation_ring": {
+  "SKILL_MAG_annihilation_ring": {
     "name": "湮灭之环",
     "kind": "主动",
     "lv": 1,
-    "desc": "SKILL_ARC_annihilation_ring_desc",
+    "desc": "SKILL_MAG_annihilation_ring_desc",
     "cd": 17,
     "cast": {
       "base": 2.4
@@ -185,7 +185,7 @@
       "RES_MANA": 100
     },
     "power": 1.086908,
-    "owner_class": "CLS_ARCANIST",
+    "owner_class": "CLS_MAGE",
     "lv_band": "P1",
     "element": "ELE_PHYS",
     "mech": "真伤",
@@ -262,7 +262,7 @@
       "RES_SHADE": 25
     },
     "power": 0.386031,
-    "owner_class": "CLS_SHADE",
+    "owner_class": "CLS_ASSASSIN",
     "lv_band": "P1",
     "element": "ELE_SHADOW",
     "mech": "层数叠层",
@@ -287,7 +287,7 @@
       "RES_SHADE": 65
     },
     "power": 0.661496,
-    "owner_class": "CLS_SHADE",
+    "owner_class": "CLS_ASSASSIN",
     "lv_band": "P1",
     "element": "ELE_PHYS",
     "mech": "真伤",
@@ -314,7 +314,7 @@
       "RES_ANTHEM": 25
     },
     "power": 0.65,
-    "owner_class": "CLS_SKALD",
+    "owner_class": "CLS_BARD",
     "lv_band": "P1",
     "element": "ELE_PHYS",
     "mech": "团队增益",
@@ -339,7 +339,7 @@
       "RES_ANTHEM": 60
     },
     "power": 0.0,
-    "owner_class": "CLS_SKALD",
+    "owner_class": "CLS_BARD",
     "lv_band": "P1",
     "mech": "减益30%",
     "mech_val": 65.0,

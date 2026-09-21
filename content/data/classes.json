@@ -8,7 +8,7 @@
     "title": "艾瑟兰：织誓",
     "generated": "2026-09-21",
     "generator": "子任务（classes 域）：import `_work/W1Ca_class_panel.py`（exit=0）导出面板/评级/轴倍数/PE/五维系数/成长率；资源数值逐行解析 `04_职业/02` §3 表并断言；**数值零手打**",
-    "id_rule": "CLS_ + 英文名全大写（数据字典 §1.2:59 的 7 值枚举）；职业缩写 WDN/BSK/RNG/ARC/PRS/SHD/SKD（数据字典 §4:213）",
+    "id_rule": "CLS_ + 英文名全大写（数据字典 §1.2:59 的 7 值枚举）；职业缩写 KNT/BSK/RNG/MAG/PRS/SHD/SKD（数据字典 §4:213）",
     "sources": [
       {
         "file": "00_总纲/02_数据字典.md",
@@ -365,9 +365,9 @@
       {
         "id": "C1",
         "topic": "职业英文名不一致（暗影/战歌）",
-        "a": "数据字典 §1.2:59 与 §4:212 定 `CLS_SHADE`（缩写 SHD）· `CLS_SKALD`（缩写 SKD）",
+        "a": "数据字典 §1.2:59 与 §4:212 定 `CLS_ASSASSIN`（缩写 SHD）· `CLS_BARD`（缩写 SKD）",
         "b": "04_职业/01:426,465 与 _work/W1Ca_class_panel.py:66-67 写 `Shadow` / `Warchant`",
-        "resolution": "以数据字典为准：本包 id = CLS_SHADE / CLS_SKALD，中文名 暗影/战歌 不变（03_战斗深度设计:226-227 已用 SHADE/SKALD，同向）",
+        "resolution": "以数据字典为准：本包 id = CLS_ASSASSIN / CLS_BARD，中文名 暗影/战歌 不变（03_战斗深度设计:226-227 已用 SHADE/SKALD，同向）",
         "impact": "若技能/装备域按 Warchant 造 id 会分叉 → 已在此钉死"
       },
       {
@@ -467,12 +467,12 @@
       "五维每点 PE 的 Lv1 极差 75 倍（体质 6.0833 ↔ 感知 0.0812，04_职业/01:113-114）：结论是「低级阶段不用 PE 做平衡判据」，本包照录不作裁剪"
     ]
   },
-  "CLS_ARCANIST": {
-    "id": "CLS_ARCANIST",
+  "CLS_MAGE": {
+    "id": "CLS_MAGE",
     "name": "法师",
     "name_en": "Arcanist",
     "slug": "arcanist",
-    "skill_prefix": "ARC",
+    "skill_prefix": "MAG",
     "role": "远档法术：穿透与施法最高、格挡最薄，法力池最大也最贵——单发最重、节奏最慢。",
     "feel": "看着像躲在后排的长袍与法印；打上去一下一大片，但别让它被贴身。",
     "position": {
@@ -1779,8 +1779,8 @@
     },
     "status": "面板/评级/倍数/PE = 脚本 v1.0 输出（exit=0）；W3 逐职业详案未产出 ⇒ 技能清单/职业特性/加点方案未定"
   },
-  "CLS_SHADE": {
-    "id": "CLS_SHADE",
+  "CLS_ASSASSIN": {
+    "id": "CLS_ASSASSIN",
     "name": "刺客",
     "name_en": "Shade",
     "slug": "shade",
@@ -2107,8 +2107,8 @@
     },
     "status": "面板/评级/倍数/PE = 脚本 v1.0 输出（exit=0）；W3 逐职业详案未产出 ⇒ 技能清单/职业特性/加点方案未定；★ R7 改判（敏捷主维）未跟账重跑 ⇒ 面板/评级/SPD 仍为旧权重产物（C9）"
   },
-  "CLS_SKALD": {
-    "id": "CLS_SKALD",
+  "CLS_BARD": {
+    "id": "CLS_BARD",
     "name": "吟游诗人",
     "name_en": "Skald",
     "slug": "skald",
@@ -2435,12 +2435,12 @@
     },
     "status": "面板/评级/倍数/PE = 脚本 v1.0 输出（exit=0）；W3 逐职业详案未产出 ⇒ 技能清单/职业特性/加点方案未定"
   },
-  "CLS_WARDEN": {
-    "id": "CLS_WARDEN",
+  "CLS_KNIGHT": {
+    "id": "CLS_KNIGHT",
     "name": "骑士",
     "name_en": "Warden",
     "slug": "warden",
-    "skill_prefix": "WDN",
+    "skill_prefix": "KNT",
     "role": "贴身扛伤的前排：用格挡与韧性把伤害压低，挨打越多誓约值涨得越快。",
     "feel": "看着像一堵会走路的墙；打上去砍不动，而且越打它越精神。",
     "position": {

@@ -6,7 +6,9 @@
     "faction": null,
     "node": "NODE_t6",
     "quests": [
-      "QUEST_M1_2",
+      "QUEST_M1_2"
+    ],
+    "quests_join": [
       "QUEST_L6"
     ],
     "lines": {
@@ -15,9 +17,10 @@
       "line_03": "NPC_aodeng_line_03"
     },
     "locked_lines": [
-      "NPC_aodeng_locked_pvp"
+      "NPC_aodeng_locked_weapon"
     ],
-    "_src": "04_story_npc.md#N6 | 01_topology.md#T6"
+    "_src": "01_世界观与剧情/04_剧情与NPC.md §2（N6 奥登·木桩（退役护路队 · 训练场教习））· 08_地图任务关卡/02_任务线与推进节奏.md §1（NODE_t6 训练场·木桩圈）",
+    "_todo": "locked_lines 换槽：旧值 NPC_aodeng_locked_pvp（旧世界 PvP 回执）→ 新源只点名 NPC_aodeng_locked_weapon（空手教习不开课，04 §1.1 M1_2 触发条件）。QUEST_L6 由 quests 移到 quests_join：04 §2.1 N6 明写「L6 参与（换装考核）」，发布人是布兰妲。"
   },
   "NPC_basike": {
     "id": "NPC_basike",
@@ -39,7 +42,7 @@
       "line_02": "NPC_basike_line_02",
       "line_03": "NPC_basike_line_03"
     },
-    "_src": "04_story_npc.md#N11 | 01_topology.md#M1"
+    "_src": "01_世界观与剧情/04_剧情与NPC.md §2（N11 巴斯克·三井（铁脊矿径矿头））· 08_地图任务关卡/02_任务线与推进节奏.md §1（NODE_m1 井口平台）"
   },
   "NPC_bulanda": {
     "id": "NPC_bulanda",
@@ -49,9 +52,13 @@
     "node": "NODE_t7",
     "quests": [
       "QUEST_M3_1",
+      "QUEST_M3_2",
       "QUEST_M3_3",
       "QUEST_L6",
       "QUEST_R6"
+    ],
+    "quests_join": [
+      "QUEST_M1_3"
     ],
     "lines": {
       "line_01": "NPC_bulanda_line_01",
@@ -61,7 +68,8 @@
     "locked_lines": [
       "NPC_bulanda_locked_companion"
     ],
-    "_src": "04_story_npc.md#N7 | 01_topology.md#T7"
+    "_src": "01_世界观与剧情/04_剧情与NPC.md §2（N7 布兰妲·东门（镇门哨卫长））· 08_地图任务关卡/02_任务线与推进节奏.md §1（NODE_t7 镇门·东门签押）",
+    "_todo": "quests 补 QUEST_M3_2：04 §2.1 N7 明写副本准入名单的发布人是布兰妲（M3_1 / M3_2 / M3_3）。新增 quests_join=[QUEST_M1_3]：M1_3 的镇门签押由她执行（被交付，非发布）。"
   },
   "NPC_diya": {
     "id": "NPC_diya",
@@ -85,7 +93,8 @@
       "line_02": "NPC_diya_line_02",
       "line_03": "NPC_diya_line_03"
     },
-    "_src": "04_story_npc.md#N10 | 01_topology.md#L4"
+    "_src": "01_世界观与剧情/04_剧情与NPC.md §2（N10 蒂亚（低语林带采药学徒 · 五节点间走动））· 08_地图任务关卡/02_任务线与推进节奏.md §1（NODE_l4 鹿径营地）",
+    "_todo": "没支线的第 1 类（04 §2.3②）：她只被寻、不派活 ⇒ quests=[]，quests_join=[QUEST_L3]。"
   },
   "NPC_gelimu": {
     "id": "NPC_gelimu",
@@ -102,7 +111,7 @@
       "line_02": "NPC_gelimu_line_02",
       "line_03": "NPC_gelimu_line_03"
     },
-    "_src": "04_story_npc.md#N13 | 01_topology.md#R5"
+    "_src": "01_世界观与剧情/04_剧情与NPC.md §2（N13 格里姆（残塔外墙营地拾荒者））· 08_地图任务关卡/02_任务线与推进节奏.md §1（NODE_r5 残塔外墙营地）"
   },
   "NPC_jianmozhe": {
     "id": "NPC_jianmozhe",
@@ -129,7 +138,7 @@
         "node_key": "rite_stage"
       }
     ],
-    "_src": "04_story_npc.md#N14 | 01_topology.md#A1"
+    "_src": "01_世界观与剧情/04_剧情与NPC.md §2（N14 缄默者（启程台引路人 · 身份不明））· 08_地图任务关卡/02_任务线与推进节奏.md §1（NODE_a1 启程台）"
   },
   "NPC_kadelian": {
     "id": "NPC_kadelian",
@@ -144,7 +153,8 @@
     "lines": {
       "line_01": "NPC_kadelian_line_01",
       "line_02": "NPC_kadelian_line_02",
-      "line_03": "NPC_kadelian_line_03"
+      "line_03": "NPC_kadelian_line_03",
+      "line_04": "NPC_kadelian_line_04"
     },
     "locked_lines": [
       "NPC_kadelian_locked_renown"
@@ -172,7 +182,9 @@
         "node_key": "talk"
       }
     ],
-    "_src": "04_story_npc.md#N1 | 01_topology.md#T1"
+    "_src": "01_世界观与剧情/04_剧情与NPC.md §2（N1 卡德里安（冒险者公会灰石分会柜台受付））· 08_地图任务关卡/02_任务线与推进节奏.md §1（NODE_t1 公会分会·柜台）",
+    "_faction_note": "显示名 → 冒险者公会（徽章 / 委托单墙 / 铜牌）。id 改 FAC_gonghui 会动 npcs.json，04 §7.4 只建议、本轮不执行；改前 faction 保持现值。",
+    "_todo": "line_04 为 04 §2.1 N1 点名的「P2 预留」槽位（她请你陪她上去），本域补上该槽位。"
   },
   "NPC_keer": {
     "id": "NPC_keer",
@@ -186,14 +198,16 @@
       "QUEST_L4"
     ],
     "quests_join": [
-      "QUEST_L1"
+      "QUEST_L1",
+      "QUEST_L3"
     ],
     "lines": {
       "line_01": "NPC_keer_line_01",
       "line_02": "NPC_keer_line_02",
       "line_03": "NPC_keer_line_03"
     },
-    "_src": "04_story_npc.md#N9 | 01_topology.md#L4"
+    "_src": "01_世界观与剧情/04_剧情与NPC.md §2（N9 柯尔（低语林带猎户 · 技术性怀疑者））· 08_地图任务关卡/02_任务线与推进节奏.md §1（NODE_l4 鹿径营地）",
+    "_todo": "quests_join 补 QUEST_L1：L1 的「标错的一味药（送柯尔确认）」以他为交付对象（02 §2.1 L1 目标列）。faction 保持 null（04 §2.2 N9：连行会都不入）。"
   },
   "NPC_luti": {
     "id": "NPC_luti",
@@ -216,7 +230,7 @@
     "locked_lines": [
       "NPC_luti_locked_lifeprof"
     ],
-    "_src": "04_story_npc.md#N3 | 01_topology.md#T3"
+    "_src": "01_世界观与剧情/04_剧情与NPC.md §2（N3 露缇·苦苔（药铺「苦苔台」药师））· 08_地图任务关卡/02_任务线与推进节奏.md §1（NODE_t3 药铺·苦苔台）"
   },
   "NPC_maerda": {
     "id": "NPC_maerda",
@@ -238,7 +252,7 @@
     "locked_lines": [
       "NPC_maerda_locked_stall"
     ],
-    "_src": "04_story_npc.md#N5 | 01_topology.md#T5"
+    "_src": "01_世界观与剧情/04_剧情与NPC.md §2（N5 玛尔达·三盏（旅店「三盏灯」老板娘 · 车马行代售））· 08_地图任务关卡/02_任务线与推进节奏.md §1（NODE_t5 旅店·三盏灯）"
   },
   "NPC_saixien": {
     "id": "NPC_saixien",
@@ -259,7 +273,7 @@
       "NPC_saixien_locked_guild"
     ],
     "board": true,
-    "_src": "04_story_npc.md#N4 | 01_topology.md#T4"
+    "_src": "01_世界观与剧情/04_剧情与NPC.md §2（N4 塞西恩·白烛（光明教会修女会 · 教堂告示廊））· 08_地图任务关卡/02_任务线与推进节奏.md §1（NODE_t4 教堂·告示廊）· 02 §2.0（18 条支线唯一接取口）"
   },
   "NPC_taode": {
     "id": "NPC_taode",
@@ -288,7 +302,7 @@
         "node_key": "paper_line"
       }
     ],
-    "_src": "04_story_npc.md#N8 | 01_topology.md#T8"
+    "_src": "01_世界观与剧情/04_剧情与NPC.md §2（N8 陶德·秤（当铺「收货柜」掌柜 · 商会联盟收货点））· 08_地图任务关卡/02_任务线与推进节奏.md §1（NODE_t8 当铺·收货柜）"
   },
   "NPC_weila_tieji": {
     "id": "NPC_weila_tieji",
@@ -310,7 +324,7 @@
       "NPC_weila_tieji_locked_forge",
       "NPC_weila_tieji_locked_reforge"
     ],
-    "_src": "04_story_npc.md#N2 | 01_topology.md#T2"
+    "_src": "01_世界观与剧情/04_剧情与NPC.md §2（N2 薇拉·铁脊（铁匠铺「铁脊炉」 · 锻炉会代工点））· 08_地图任务关卡/02_任务线与推进节奏.md §1（NODE_t2 铁匠铺·铁脊炉）"
   },
   "NPC_yilan": {
     "id": "NPC_yilan",
@@ -320,13 +334,13 @@
     "node": "NODE_r1",
     "quests": [
       "QUEST_M2_3",
-      "QUEST_M3_3",
       "QUEST_R1",
       "QUEST_R2",
       "QUEST_R4"
     ],
     "quests_join": [
-      "QUEST_M3_2"
+      "QUEST_M3_2",
+      "QUEST_M3_3"
     ],
     "lines": {
       "line_01": "NPC_yilan_line_01",
@@ -336,6 +350,8 @@
     "locked_lines": [
       "NPC_yilan_locked_worldboss"
     ],
-    "_src": "04_story_npc.md#N12 | 01_topology.md#R1"
+    "_src": "01_世界观与剧情/04_剧情与NPC.md §2（N12 伊兰·残页（残塔废墟鉴定师 / 抄录员））· 08_地图任务关卡/02_任务线与推进节奏.md §1（NODE_r1 残墙入口）",
+    "_faction_note": "显示名 → 遗迹商（商业侧考据人，与古文字会外围有往来）。id 改 FAC_yijishang 会动 npcs.json，04 §7.4 只建议、本轮不执行。",
+    "_todo": "quests 收 M2_3 / R1 / R2 / R4（04 §2.1 N12：M2_3 与 R1/R2/R4 发布人）；M3_3 由 quests 移到 quests_join（04 §2.1 N12 明写「M3_3 被交付」——名册原本交给她）。"
   }
 }

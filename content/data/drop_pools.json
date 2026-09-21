@@ -467,7 +467,7 @@
   },
   "DROP_oath_eater": {
     "id": "DROP_oath_eater",
-    "host": "MON_oath_eater",
+    "host": "MON_scroll_eater",
     "host_name": "噬契者",
     "tier": "common",
     "zone": "近郊·废墟",

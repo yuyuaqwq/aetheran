@@ -1,12 +1,12 @@
 {
   "QUEST_M1_1": {
     "id": "QUEST_M1_1",
-    "name": "边镇的门",
+    "name": "QUEST_M1_1_title",
     "kind": "主线",
     "chapter": 1,
     "level_min": 1,
     "level_max": 3,
-    "trigger": "首次进入 NODE_t0（誓钟广场）由进入节点事件自动触发；不可拒绝、不可放弃",
+    "trigger": "首次进入 NODE_t0（旧钟广场）由进入节点事件自动触发；不可拒绝、不可放弃",
     "giver": "NPC_kadelian",
     "giver_node": "NODE_t1",
     "nodes": [
@@ -21,7 +21,7 @@
         "count": 1,
         "npc": "NPC_kadelian",
         "node": "NODE_t1",
-        "_todo": "对话型交付（分支对话 1：写「来处」）"
+        "_todo": "对话型交付（分支对话 1 DIALOG_kadelian_first_oath：登记簿「来处」三选项）"
       },
       {
         "kind": "交付",
@@ -35,13 +35,21 @@
         "target": "旅店·三盏灯",
         "count": 1,
         "node": "NODE_t5"
+      },
+      {
+        "kind": "交付",
+        "target": "卡德里安",
+        "count": 1,
+        "npc": "NPC_kadelian",
+        "node": "NODE_t1",
+        "_todo": "二次对话：担保人「公会分会代」落笔 + 碑印被问过（写标记 碑印被问过）"
       }
     ],
     "rings": [
       {
         "key": "a",
         "id": "QUEST_M1_1_a",
-        "name": "报个名",
+        "name": "QUEST_M1_1_a_title",
         "objectives": [
           {
             "kind": "交付",
@@ -49,17 +57,18 @@
             "count": 1,
             "npc": "NPC_kadelian",
             "node": "NODE_t1",
-            "_todo": "对话型交付（分支对话 1：写「来处」）"
+            "_todo": "对话型交付（分支对话 1 DIALOG_kadelian_first_oath：登记簿「来处」三选项）"
           }
         ],
         "exp": 100,
         "text": "QUEST_M1_1_a_text",
-        "next": "QUEST_M1_1_b"
+        "next": "QUEST_M1_1_b",
+        "_todo": "真源环名「报个名」（04 §1.1 M1_1 环 a）"
       },
       {
         "key": "b",
         "id": "QUEST_M1_1_b",
-        "name": "找个落脚的地方",
+        "name": "QUEST_M1_1_b_title",
         "objectives": [
           {
             "kind": "交付",
@@ -77,12 +86,13 @@
         ],
         "exp": 120,
         "text": "QUEST_M1_1_b_text",
-        "next": "QUEST_M1_1_c"
+        "next": "QUEST_M1_1_c",
+        "_todo": "真源环名「找个落脚的地方」（拿登记页去旅店抵两晚床位，玛尔达把你记成「临时」）"
       },
       {
         "key": "c",
         "id": "QUEST_M1_1_c",
-        "name": "把手伸出来",
+        "name": "QUEST_M1_1_c_title",
         "objectives": [
           {
             "kind": "交付",
@@ -90,13 +100,14 @@
             "count": 1,
             "npc": "NPC_kadelian",
             "node": "NODE_t1",
-            "_todo": "二次对话：担保人「镇务厅代」落笔"
+            "_todo": "二次对话：担保人「公会分会代」落笔 + 碑印被问过（写标记 碑印被问过）"
           }
         ],
         "exp": 180,
         "text": "QUEST_M1_1_c_text",
         "next": "QUEST_M1_2_a",
-        "upgrade": "粗制短刀【武器/粗制/装等 1】"
+        "upgrade": "铜级冒险者证（铜牌）+ 粗铁长剑【武器/粗制】（ITEM_iron_longsword）",
+        "_todo": "真源环名「把手伸出来」（回柜台刻铜牌：铜牌是热的，得用布垫着拿）"
       }
     ],
     "rewards": {
@@ -106,16 +117,17 @@
         {
           "id": "ITEM_iron_longsword",
           "count": 1,
-          "name": "粗制短刀",
-          "_todo": "真源=【武器/粗制/装等 1】；真源给【槽位/品阶/装等】，items 域无同装等件；按「同品阶·同槽位·装等最接近」取件，装等映射待 W1-C 复核"
+          "name": "粗铁长剑",
+          "_todo": "真源=【武器/粗制】（04 §1.1 M1_1 交付物）；items.json 现值 ITEM_iron_longsword 粗铁长剑（粗制/武器/ilv5）；装等映射待 W1-C 复核"
         }
       ],
       "growth": {
         "perks": [
-          "城镇居住登记：解锁旅店休息 + 任务板可见"
+          "铜级冒险者证（铜牌）：冒险者等级落地",
+          "城镇居住登记：解锁旅店休息 + 委托板可见"
         ]
       },
-      "upgrade": "粗制短刀【武器/粗制/装等 1】"
+      "upgrade": "铜级冒险者证（铜牌）+ 粗铁长剑"
     },
     "teach": "移动/对话/接取",
     "skippable": false,
@@ -124,17 +136,17 @@
       "progress": "QUEST_M1_1_progress",
       "complete": "QUEST_M1_1_complete"
     },
-    "_source": "01_世界观与剧情/04_剧情与NPC.md §2 M1-1（L181–192）· 08_地图任务关卡/02_任务线与推进节奏.md §6.1（第 1 天脚本）",
-    "_todo": "标题/描述槽位：QUEST_M1_1_title / QUEST_M1_1_desc（本域只传槽位 key，真句在 text_specs）"
+    "_source": "01_世界观与剧情/04_剧情与NPC.md §1.1 M1_1「铜牌」（L98–109）· 08_地图任务关卡/02_任务线与推进节奏.md §1（NODE_t0 旧钟广场）· §3.3（第 1 天节拍）",
+    "_todo": "标题/描述槽位：QUEST_M1_1_title / QUEST_M1_1_desc（真源标题「铜牌」；本域只传槽位 key，真句在 text_specs）"
   },
   "QUEST_M1_2": {
     "id": "QUEST_M1_2",
-    "name": "先手",
+    "name": "QUEST_M1_2_title",
     "kind": "主线",
     "chapter": 1,
     "level_min": 3,
     "level_max": 5,
-    "trigger": "完成 QUEST_M1_1 且已装备武器（未装备时训练场入口给可判定提示「空手教习不开课」）",
+    "trigger": "完成 QUEST_M1_1 且已装备武器（未装备时训练场入口给可判定提示，槽位 NPC_aodeng_locked_weapon）",
     "giver": "NPC_aodeng",
     "giver_node": "NODE_t6",
     "nodes": [
@@ -161,7 +173,7 @@
         "count": 1,
         "npc": "NPC_aodeng",
         "node": "NODE_t6",
-        "_todo": "对话 + 装备槽变更事件（换上粗制软靴后重跑同一场）"
+        "_todo": "对话 + 装备槽变更事件（换上粗铁战靴后重跑同一场：这回你先出手）"
       },
       {
         "kind": "交付",
@@ -169,14 +181,14 @@
         "count": 1,
         "item": "ITEM_crude_wound_medicine",
         "node": "NODE_t6",
-        "_todo": "战斗内道具使用事件（奥登打断一次后当着回合用掉）"
+        "_todo": "战斗内道具使用事件（奥登打断一次后，当着这一回合把药用掉）"
       }
     ],
     "rings": [
       {
         "key": "a",
         "id": "QUEST_M1_2_a",
-        "name": "秤一下手",
+        "name": "QUEST_M1_2_a_title",
         "objectives": [
           {
             "kind": "击杀",
@@ -195,12 +207,13 @@
         ],
         "exp": 300,
         "text": "QUEST_M1_2_a_text",
-        "next": "QUEST_M1_2_b"
+        "next": "QUEST_M1_2_b",
+        "_todo": "真源环名「站进圈子」（一快一慢两只木桩，先让你挨两下）"
       },
       {
         "key": "b",
         "id": "QUEST_M1_2_b",
-        "name": "换双鞋",
+        "name": "QUEST_M1_2_b_title",
         "objectives": [
           {
             "kind": "交付",
@@ -208,17 +221,18 @@
             "count": 1,
             "npc": "NPC_aodeng",
             "node": "NODE_t6",
-            "_todo": "对话 + 装备槽变更事件（换上粗制软靴后重跑同一场）"
+            "_todo": "对话 + 装备槽变更事件（换上粗铁战靴后重跑同一场：这回你先出手）"
           }
         ],
         "exp": 300,
         "text": "QUEST_M1_2_b_text",
-        "next": "QUEST_M1_2_c"
+        "next": "QUEST_M1_2_c",
+        "_todo": "真源环名「换上软靴」（装备面板实操：玩家能指出「这次提升来自那双靴子」）"
       },
       {
         "key": "c",
         "id": "QUEST_M1_2_c",
-        "name": "第一次用道具",
+        "name": "QUEST_M1_2_c_title",
         "objectives": [
           {
             "kind": "交付",
@@ -226,13 +240,14 @@
             "count": 1,
             "item": "ITEM_crude_wound_medicine",
             "node": "NODE_t6",
-            "_todo": "战斗内道具使用事件（奥登打断一次后当着回合用掉）"
+            "_todo": "战斗内道具使用事件（奥登打断一次后，当着这一回合把药用掉）"
           }
         ],
         "exp": 300,
         "text": "QUEST_M1_2_c_text",
         "next": "QUEST_M1_3_a",
-        "upgrade": "粗制软靴【靴子/粗制/装等 1】"
+        "upgrade": "粗铁战靴【靴子/粗制】（ITEM_iron_boots）",
+        "_todo": "真源环名「手边得有一瓶药」"
       }
     ],
     "rewards": {
@@ -241,8 +256,8 @@
         {
           "id": "ITEM_iron_boots",
           "count": 1,
-          "name": "粗制软靴",
-          "_todo": "真源=【靴子/粗制/装等 1】；真源给【槽位/品阶/装等】，items 域无同装等件；按「同品阶·同槽位·装等最接近」取件，装等映射待 W1-C 复核"
+          "name": "粗铁战靴",
+          "_todo": "真源=【靴子/粗制】（04 §1.1 M1_2 交付物）；items.json 现值 ITEM_iron_boots 粗铁战靴（粗制/靴子/ilv5）；装等映射待 W1-C 复核"
         },
         {
           "id": "ITEM_crude_wound_medicine",
@@ -255,7 +270,7 @@
           "训练场开放：自由对练（0 exp，可测伤害数字）"
         ]
       },
-      "upgrade": "粗制软靴【靴子/粗制/装等 1】"
+      "upgrade": "粗铁战靴【靴子/粗制】"
     },
     "teach": "战斗四决策/速度决定出手顺序/装备更换",
     "skippable": false,
@@ -264,17 +279,17 @@
       "progress": "QUEST_M1_2_progress",
       "complete": "QUEST_M1_2_complete"
     },
-    "_source": "01_世界观与剧情/04_剧情与NPC.md §2 M1-2（L194–205）· 08_地图任务关卡/02_任务线与推进节奏.md §6.1（第 1 天脚本·训练场）",
-    "_todo": "标题/描述槽位：QUEST_M1_2_title / QUEST_M1_2_desc（本域只传槽位 key，真句在 text_specs）"
+    "_source": "01_世界观与剧情/04_剧情与NPC.md §1.1 M1_2「木桩圈的第一课」（L111–122）· 08_地图任务关卡/02_任务线与推进节奏.md §1.1（NODE_t6 训练场·木桩圈）",
+    "_todo": "标题/描述槽位：QUEST_M1_2_title / QUEST_M1_2_desc（真源标题「木桩圈的第一课」）"
   },
   "QUEST_M1_3": {
     "id": "QUEST_M1_3",
-    "name": "林带的第一捆柴",
+    "name": "QUEST_M1_3_title",
     "kind": "主线",
     "chapter": 1,
     "level_min": 4,
     "level_max": 6,
-    "trigger": "完成 QUEST_M1_2 且首次走出镇门（NODE_t7 出镇签押记下出镇时间）",
+    "trigger": "完成 QUEST_M1_2 且首次走出镇门（NODE_t7 镇门·东门签押记下出镇时间，布兰妲：回来记得销假）",
     "giver": "NPC_taode",
     "giver_node": "NODE_t8",
     "nodes": [
@@ -297,14 +312,16 @@
         "target": "哥布林斥候",
         "count": 1,
         "monster": "MON_goblin_scout",
-        "node": "NODE_l1"
+        "node": "NODE_l1",
+        "_todo": "真源：林缘空地的 MON_goblin_scout 抢在你前面出手（一快一慢对照组的「快」）"
       },
       {
         "kind": "击杀",
         "target": "食尸鬼",
         "count": 1,
         "monster": "MON_ghoul",
-        "node": "NODE_l3"
+        "node": "NODE_l3",
+        "_todo": "真源：蛛网林窗的 MON_ghoul 慢半拍（对照组的「慢」）"
       },
       {
         "kind": "交付",
@@ -312,14 +329,14 @@
         "count": 1,
         "npc": "NPC_taode",
         "node": "NODE_t8",
-        "_todo": "交付火绒草与战利品；陶德的半秒（对话 2 的静默伏笔）"
+        "_todo": "交付火绒草与战利品；陶德那半秒（分支对话 2 DIALOG_taode_readline 的静默伏笔）"
       }
     ],
     "rings": [
       {
         "key": "a",
         "id": "QUEST_M1_3_a",
-        "name": "采一捆火绒草",
+        "name": "QUEST_M1_3_a_title",
         "objectives": [
           {
             "kind": "收集",
@@ -331,36 +348,40 @@
         ],
         "exp": 400,
         "text": "QUEST_M1_3_a_text",
-        "next": "QUEST_M1_3_b"
+        "next": "QUEST_M1_3_b",
+        "_todo": "真源环名「采一捆火绒草」（教采集指令与采集点刷新）"
       },
       {
         "key": "b",
         "id": "QUEST_M1_3_b",
-        "name": "第一场真打",
+        "name": "QUEST_M1_3_b_title",
         "objectives": [
           {
             "kind": "击杀",
             "target": "哥布林斥候",
             "count": 1,
             "monster": "MON_goblin_scout",
-            "node": "NODE_l1"
+            "node": "NODE_l1",
+            "_todo": "真源：林缘空地的 MON_goblin_scout 抢在你前面出手（一快一慢对照组的「快」）"
           },
           {
             "kind": "击杀",
             "target": "食尸鬼",
             "count": 1,
             "monster": "MON_ghoul",
-            "node": "NODE_l3"
+            "node": "NODE_l3",
+            "_todo": "真源：蛛网林窗的 MON_ghoul 慢半拍（对照组的「慢」）"
           }
         ],
         "exp": 500,
         "text": "QUEST_M1_3_b_text",
-        "next": "QUEST_M1_3_c"
+        "next": "QUEST_M1_3_c",
+        "_todo": "真源环名「第一场真打」（微循环：探索 → 遭遇 → 战斗 → 掉落）"
       },
       {
         "key": "c",
         "id": "QUEST_M1_3_c",
-        "name": "把柴卖成钱",
+        "name": "QUEST_M1_3_c_title",
         "objectives": [
           {
             "kind": "交付",
@@ -368,13 +389,14 @@
             "count": 1,
             "npc": "NPC_taode",
             "node": "NODE_t8",
-            "_todo": "交付火绒草与战利品；陶德的半秒（对话 2 的静默伏笔）"
+            "_todo": "交付火绒草与战利品；陶德那半秒（分支对话 2 DIALOG_taode_readline 的静默伏笔）"
           }
         ],
         "exp": 600,
         "text": "QUEST_M1_3_c_text",
         "next": "QUEST_M2_1_a",
-        "upgrade": "粗制护甲（上）【护甲上/粗制/装等 2】 + 技能点 +1"
+        "upgrade": "粗铁胸甲【上甲/粗制】（ITEM_iron_chestplate）+ 技能点 +1",
+        "_todo": "真源环名「把柴卖成钱」（陶德把柴捆收进筐，翻账的手没停，眼睛在你手腕上停了半秒）"
       }
     ],
     "rewards": {
@@ -383,17 +405,17 @@
         {
           "id": "ITEM_iron_chestplate",
           "count": 1,
-          "name": "粗制护甲（上）",
-          "_todo": "真源=【护甲上/粗制/装等 2】；真源给【槽位/品阶/装等】，items 域无同装等件；按「同品阶·同槽位·装等最接近」取件，装等映射待 W1-C 复核"
+          "name": "粗铁胸甲",
+          "_todo": "真源=【护甲上/粗制】（04 §1.1 M1_3 交付物）；items.json 现值 ITEM_iron_chestplate 粗铁胸甲（粗制/上甲/ilv5）；装等映射待 W1-C 复核"
         }
       ],
       "growth": {
         "skill_points": 1,
         "perks": [
-          "杂货商行开张：卖基础消耗品 / 收材料"
+          "当铺兼杂货开张：卖基础消耗品 / 收材料"
         ]
       },
-      "upgrade": "粗制护甲（上）【护甲上/粗制/装等 2】"
+      "upgrade": "粗铁胸甲【上甲/粗制】+ 技能点 +1"
     },
     "teach": "探索/采集/遭遇战斗/交付（微循环完整跑一遍）+ 技能点第一次花出去",
     "skippable": false,
@@ -402,17 +424,17 @@
       "progress": "QUEST_M1_3_progress",
       "complete": "QUEST_M1_3_complete"
     },
-    "_source": "01_世界观与剧情/04_剧情与NPC.md §2 M1-3（L207–218）· 08_地图任务关卡/02_任务线与推进节奏.md §6.1（第 1 天脚本·林带）",
-    "_todo": "标题/描述槽位：QUEST_M1_3_title / QUEST_M1_3_desc（本域只传槽位 key，真句在 text_specs）"
+    "_source": "01_世界观与剧情/04_剧情与NPC.md §1.1 M1_3「林带的第一份委托」（L124–135）· 08_地图任务关卡/02_任务线与推进节奏.md §1.2/§1.3（林带三节点 · 当铺收货柜）",
+    "_todo": "标题/描述槽位：QUEST_M1_3_title / QUEST_M1_3_desc（真源标题「林带的第一份委托」）"
   },
   "QUEST_M2_1": {
     "id": "QUEST_M2_1",
-    "name": "低语里的东西",
+    "name": "QUEST_M2_1_title",
     "kind": "主线",
     "chapter": 2,
     "level_min": 6,
     "level_max": 8,
-    "trigger": "完成 QUEST_M1_3（主线不断档）；支线 L1/L2 可并行",
+    "trigger": "完成 QUEST_M1_3（主线不断档）；支线 QUEST_L1 / QUEST_L2 可并行",
     "giver": "NPC_keer",
     "giver_node": "NODE_l4",
     "nodes": [
@@ -426,7 +448,8 @@
         "target": "柯尔",
         "count": 1,
         "npc": "NPC_keer",
-        "node": "NODE_l4"
+        "node": "NODE_l4",
+        "_todo": "柯尔只在树皮上给你画三条道（解锁林带后段节点）"
       },
       {
         "kind": "到达",
@@ -448,11 +471,11 @@
       },
       {
         "kind": "击杀",
-        "target": "林妖",
+        "target": "树精",
         "count": 2,
         "monster": "MON_sprite",
         "node": "NODE_l5",
-        "_todo": "真源「高闪避怪 ×2 · teach:闪避」；林带高闪避条目取 林妖"
+        "_todo": "真源「高闪避怪 ×2 · teach:闪避」；林带高闪避条目 = MON_sprite 树精（闪避面板 20%，此轮玩家精准还低 ⇒ 打空是常态。旧落盘目标名「林妖」按 04 §7.2 改为「树精」）"
       },
       {
         "kind": "收集",
@@ -460,21 +483,30 @@
         "count": 1,
         "item": "ITEM_antler_splinter",
         "node": "NODE_l3",
-        "_todo": "真源物名「它的头骨」；items 域最近材料 = 鹿角骨片"
+        "_todo": "真源物名「它的头骨」；items 域最近材料 = ITEM_antler_splinter 鹿角骨片"
+      },
+      {
+        "kind": "交付",
+        "target": "柯尔",
+        "count": 1,
+        "npc": "NPC_keer",
+        "node": "NODE_l4",
+        "_todo": "交付头骨：柯尔给你一枚刻着木牌的护符（它不该在这儿 / 它以前只走那两条道）"
       }
     ],
     "rings": [
       {
         "key": "a",
         "id": "QUEST_M2_1_a",
-        "name": "猎户的地图",
+        "name": "QUEST_M2_1_a_title",
         "objectives": [
           {
             "kind": "交付",
             "target": "柯尔",
             "count": 1,
             "npc": "NPC_keer",
-            "node": "NODE_l4"
+            "node": "NODE_l4",
+            "_todo": "柯尔只在树皮上给你画三条道（解锁林带后段节点）"
           },
           {
             "kind": "到达",
@@ -497,30 +529,32 @@
         ],
         "exp": 850,
         "text": "QUEST_M2_1_a_text",
-        "next": "QUEST_M2_1_b"
+        "next": "QUEST_M2_1_b",
+        "_todo": "真源环名「猎户的地图」"
       },
       {
         "key": "b",
         "id": "QUEST_M2_1_b",
-        "name": "追上它",
+        "name": "QUEST_M2_1_b_title",
         "objectives": [
           {
             "kind": "击杀",
-            "target": "林妖",
+            "target": "树精",
             "count": 2,
             "monster": "MON_sprite",
             "node": "NODE_l5",
-            "_todo": "真源「高闪避怪 ×2 · teach:闪避」；林带高闪避条目取 林妖"
+            "_todo": "真源「高闪避怪 ×2 · teach:闪避」；林带高闪避条目 = MON_sprite 树精（闪避面板 20%，此轮玩家精准还低 ⇒ 打空是常态。旧落盘目标名「林妖」按 04 §7.2 改为「树精」）"
           }
         ],
         "exp": 850,
         "text": "QUEST_M2_1_b_text",
-        "next": "QUEST_M2_1_c"
+        "next": "QUEST_M2_1_c",
+        "_todo": "真源环名「追上它」（柯尔在旁边说一句「你砍空气做什么」）"
       },
       {
         "key": "c",
         "id": "QUEST_M2_1_c",
-        "name": "把它的头骨给柯尔",
+        "name": "QUEST_M2_1_c_title",
         "objectives": [
           {
             "kind": "收集",
@@ -528,20 +562,22 @@
             "count": 1,
             "item": "ITEM_antler_splinter",
             "node": "NODE_l3",
-            "_todo": "真源物名「它的头骨」；items 域最近材料 = 鹿角骨片"
+            "_todo": "真源物名「它的头骨」；items 域最近材料 = ITEM_antler_splinter 鹿角骨片"
           },
           {
             "kind": "交付",
             "target": "柯尔",
             "count": 1,
             "npc": "NPC_keer",
-            "node": "NODE_l4"
+            "node": "NODE_l4",
+            "_todo": "交付头骨：柯尔给你一枚刻着木牌的护符（它不该在这儿 / 它以前只走那两条道）"
           }
         ],
         "exp": 1100,
         "text": "QUEST_M2_1_c_text",
         "next": "QUEST_M2_2_a",
-        "upgrade": "精制木牌护符【饰品/精制/装等 4 · 精准】 + 属性点 +3"
+        "upgrade": "精锻守护护符【饰品/精制 · 主属性：精准】（ITEM_fineforged_ward_amulet）+ 属性点 +3",
+        "_todo": "真源环名「把它的头骨给柯尔」"
       }
     ],
     "rewards": {
@@ -550,8 +586,8 @@
         {
           "id": "ITEM_fineforged_ward_amulet",
           "count": 1,
-          "name": "精制木牌护符",
-          "_todo": "真源=【饰品/精制/装等 4 · 主属性建议：精准 rating】；真源给【槽位/品阶/装等】，items 域无同装等件；按「同品阶·同槽位·装等最接近」取件，装等映射待 W1-C 复核"
+          "name": "精锻守护护符",
+          "_todo": "真源=【饰品/精制 · 主属性建议：精准 rating】（04 §1.2 M2_1 交付物）；items.json 现值 ITEM_fineforged_ward_amulet 精制守护护符（精制/饰品/ilv8）"
         }
       ],
       "growth": {
@@ -560,7 +596,7 @@
           "林带采集点全开"
         ]
       },
-      "upgrade": "精制木牌护符【饰品/精制/装等 4 · 精准】"
+      "upgrade": "精制守护护符【饰品/精制 · 精准】+ 属性点 +3"
     },
     "teach": "命中/闪避的对抗关系/属性点分配",
     "skippable": false,
@@ -569,12 +605,12 @@
       "progress": "QUEST_M2_1_progress",
       "complete": "QUEST_M2_1_complete"
     },
-    "_source": "01_世界观与剧情/04_剧情与NPC.md §2 M2-1（L227–238）· 08_地图任务关卡/02_任务线与推进节奏.md §6.2（第 2 天脚本）",
-    "_todo": "标题/描述槽位：QUEST_M2_1_title / QUEST_M2_1_desc（本域只传槽位 key，真句在 text_specs）"
+    "_source": "01_世界观与剧情/04_剧情与NPC.md §1.2 M2_1「会绕路的东西」（L143–154）· 08_地图任务关卡/02_任务线与推进节奏.md §1.2（林带 l3–l5）",
+    "_todo": "标题/描述槽位：QUEST_M2_1_title / QUEST_M2_1_desc（真源标题「会绕路的东西」）"
   },
   "QUEST_M2_2": {
     "id": "QUEST_M2_2",
-    "name": "铁脊之下",
+    "name": "QUEST_M2_2_title",
     "kind": "主线",
     "chapter": 2,
     "level_min": 8,
@@ -595,15 +631,15 @@
         "count": 3,
         "monster": "MON_gargoyle",
         "node": "NODE_m1",
-        "_todo": "真源「井口清掉三只厚壳怪」；厚壳怪取 矿径高 DR 条目 石像鬼"
+        "_todo": "真源「井口清掉三只厚壳怪」；矿径高 DR 条目 = MON_gargoyle 石像鬼（DEF×2.0，面板 DR 50%）"
       },
       {
         "kind": "击杀",
-        "target": "石甲虫",
+        "target": "岩甲虫",
         "count": 2,
         "monster": "MON_rock_beetle",
         "node": "NODE_m2",
-        "_todo": "真源「厚壳怪（高 DEF）×2 · teach:穿透」；取 石甲虫（穿透/练手）"
+        "_todo": "真源「厚壳怪（高 DEF）×2 · teach:穿透」；取 MON_rock_beetle 岩甲虫（DEF×1.5 + SPD −12）。旧落盘目标名「石甲虫」按 04 §7.2 改为「岩甲虫」"
       },
       {
         "kind": "到达",
@@ -617,14 +653,14 @@
         "count": 1,
         "npc": "NPC_basike",
         "node": "NODE_m1",
-        "_todo": "井壁断口（线状焦痕）第一次以物理形态出现"
+        "_todo": "井壁焦痕（线状，从井顶拖到地底）第一次以物理形态出现；巴斯克：「三年前也有过一次」"
       }
     ],
     "rings": [
       {
         "key": "a",
         "id": "QUEST_M2_2_a",
-        "name": "矿头不认人",
+        "name": "QUEST_M2_2_a_title",
         "objectives": [
           {
             "kind": "击杀",
@@ -632,35 +668,37 @@
             "count": 3,
             "monster": "MON_gargoyle",
             "node": "NODE_m1",
-            "_todo": "真源「井口清掉三只厚壳怪」；厚壳怪取 矿径高 DR 条目 石像鬼"
+            "_todo": "真源「井口清掉三只厚壳怪」；矿径高 DR 条目 = MON_gargoyle 石像鬼（DEF×2.0，面板 DR 50%）"
           }
         ],
         "exp": 1000,
         "text": "QUEST_M2_2_a_text",
-        "next": "QUEST_M2_2_b"
+        "next": "QUEST_M2_2_b",
+        "_todo": "真源环名「矿头不认人」（巴斯克欠公会一笔账，只肯按战绩放你下井）"
       },
       {
         "key": "b",
         "id": "QUEST_M2_2_b",
-        "name": "你的刀在干什么",
+        "name": "QUEST_M2_2_b_title",
         "objectives": [
           {
             "kind": "击杀",
-            "target": "石甲虫",
+            "target": "岩甲虫",
             "count": 2,
             "monster": "MON_rock_beetle",
             "node": "NODE_m2",
-            "_todo": "真源「厚壳怪（高 DEF）×2 · teach:穿透」；取 石甲虫（穿透/练手）"
+            "_todo": "真源「厚壳怪（高 DEF）×2 · teach:穿透」；取 MON_rock_beetle 岩甲虫（DEF×1.5 + SPD −12）。旧落盘目标名「石甲虫」按 04 §7.2 改为「岩甲虫」"
           }
         ],
         "exp": 1100,
         "text": "QUEST_M2_2_b_text",
-        "next": "QUEST_M2_2_c"
+        "next": "QUEST_M2_2_c",
+        "_todo": "真源环名「你的刀在挠痒」（换破甲类技能，或给武器抹一次性 ITEM_armor_solvent）"
       },
       {
         "key": "c",
         "id": "QUEST_M2_2_c",
-        "name": "断在地底的那一段",
+        "name": "QUEST_M2_2_c_title",
         "objectives": [
           {
             "kind": "到达",
@@ -674,13 +712,14 @@
             "count": 1,
             "npc": "NPC_basike",
             "node": "NODE_m1",
-            "_todo": "井壁断口（线状焦痕）第一次以物理形态出现"
+            "_todo": "井壁焦痕（线状，从井顶拖到地底）第一次以物理形态出现；巴斯克：「三年前也有过一次」"
           }
         ],
         "exp": 1300,
         "text": "QUEST_M2_2_c_text",
         "next": "QUEST_M2_3_a",
-        "upgrade": "精制护甲（下）【护甲下/精制/装等 6】 + 解甲油 ×2"
+        "upgrade": "精锻护腿【下甲/精制】（ITEM_fineforged_legguards）+ 解甲油 ×2",
+        "_todo": "真源环名「断在地底的那一段」；02 §4.3 连带改名建议 →「烧进墙里的一段」（去「断」系旧隐喻）"
       }
     ],
     "rewards": {
@@ -689,8 +728,8 @@
         {
           "id": "ITEM_fineforged_legguards",
           "count": 1,
-          "name": "精制护甲（下）",
-          "_todo": "真源=【护甲下/精制/装等 6】；真源给【槽位/品阶/装等】，items 域无同装等件；按「同品阶·同槽位·装等最接近」取件，装等映射待 W1-C 复核"
+          "name": "精锻护腿",
+          "_todo": "真源=【护甲下/精制】（04 §1.2 M2_2 交付物）；items.json 现值 ITEM_fineforged_legguards 精锻护腿（精制/下甲/ilv8）— 逐字段吻合"
         },
         {
           "id": "ITEM_armor_solvent",
@@ -703,7 +742,7 @@
           "矿径采集点全开（矿石类材料）"
         ]
       },
-      "upgrade": "精制护甲（下）【护甲下/精制/装等 6】"
+      "upgrade": "精锻护腿【下甲/精制】+ 解甲油 ×2"
     },
     "teach": "穿透与防御的对抗/消耗品作为解法",
     "skippable": false,
@@ -712,12 +751,12 @@
       "progress": "QUEST_M2_2_progress",
       "complete": "QUEST_M2_2_complete"
     },
-    "_source": "01_世界观与剧情/04_剧情与NPC.md §2 M2-2（L240–251）· 08_地图任务关卡/02_任务线与推进节奏.md §6.2（第 2 天脚本·矿径）",
-    "_todo": "标题/描述槽位：QUEST_M2_2_title / QUEST_M2_2_desc（本域只传槽位 key，真句在 text_specs）"
+    "_source": "01_世界观与剧情/04_剧情与NPC.md §1.2 M2_2「打不动的壳」（L156–167）· 08_地图任务关卡/02_任务线与推进节奏.md §1.3（矿径 m1–m4）· §4.3（环名去旧隐喻）",
+    "_todo": "标题/描述槽位：QUEST_M2_2_title / QUEST_M2_2_desc（真源标题「打不动的壳」）"
   },
   "QUEST_M2_3": {
     "id": "QUEST_M2_3",
-    "name": "被抹掉的名字",
+    "name": "QUEST_M2_3_title",
     "kind": "主线",
     "chapter": 2,
     "level_min": 10,
@@ -737,7 +776,8 @@
         "target": "伊兰",
         "count": 1,
         "npc": "NPC_yilan",
-        "node": "NODE_r1"
+        "node": "NODE_r1",
+        "_todo": "「有人先到了」：她在废墟里翻了七天，只为了核对一页抄本的页数"
       },
       {
         "kind": "击杀",
@@ -745,14 +785,15 @@
         "count": 2,
         "monster": "MON_shadow_bat",
         "node": "NODE_r2",
-        "_todo": "真源「废墟高闪避怪 ×3 · teach:精准/控场」，拆为 暗影蝠 2 + 恸哭幽魂 1"
+        "_todo": "真源「废墟高闪避怪 ×2 · teach:精准/控场」；MON_shadow_bat 暗影蝠（闪避面板 25%）"
       },
       {
         "kind": "击杀",
         "target": "恸哭幽魂",
         "count": 1,
         "monster": "MON_wraith",
-        "node": "NODE_r3"
+        "node": "NODE_r3",
+        "_todo": "真源「自盾 + 缴械」；MON_wraith 恸哭幽魂（教「资源要留、别空手接缴械」）"
       },
       {
         "kind": "到达",
@@ -762,35 +803,37 @@
       },
       {
         "kind": "收集",
-        "target": "摹录纸",
+        "target": "抄本纸",
         "count": 1,
         "item": "ITEM_tracing_paper",
         "node": "NODE_r4",
-        "_todo": "真源物名「摹录页」（石刻名册的摹录）"
+        "_todo": "真源物名「拓页」（无姓碑列石刻的拓本）；items 域条目 = ITEM_tracing_paper 抄本纸。★ 拓了两遍拓不出来：那一行被凿掉，凿痕还是新的"
       }
     ],
     "rings": [
       {
         "key": "a",
         "id": "QUEST_M2_3_a",
-        "name": "有人先到了",
+        "name": "QUEST_M2_3_a_title",
         "objectives": [
           {
             "kind": "交付",
             "target": "伊兰",
             "count": 1,
             "npc": "NPC_yilan",
-            "node": "NODE_r1"
+            "node": "NODE_r1",
+            "_todo": "「有人先到了」：她在废墟里翻了七天，只为了核对一页抄本的页数"
           }
         ],
         "exp": 1300,
         "text": "QUEST_M2_3_a_text",
-        "next": "QUEST_M2_3_b"
+        "next": "QUEST_M2_3_b",
+        "_todo": "真源环名「有人先到了」"
       },
       {
         "key": "b",
         "id": "QUEST_M2_3_b",
-        "name": "别让它们靠近",
+        "name": "QUEST_M2_3_b_title",
         "objectives": [
           {
             "kind": "击杀",
@@ -798,51 +841,47 @@
             "count": 2,
             "monster": "MON_shadow_bat",
             "node": "NODE_r2",
-            "_todo": "真源「废墟高闪避怪 ×3 · teach:精准/控场」，拆为 暗影蝠 2 + 恸哭幽魂 1"
+            "_todo": "真源「废墟高闪避怪 ×2 · teach:精准/控场」；MON_shadow_bat 暗影蝠（闪避面板 25%）"
           },
           {
             "kind": "击杀",
             "target": "恸哭幽魂",
             "count": 1,
             "monster": "MON_wraith",
-            "node": "NODE_r3"
-          },
+            "node": "NODE_r3",
+            "_todo": "真源「自盾 + 缴械」；MON_wraith 恸哭幽魂（教「资源要留、别空手接缴械」）"
+          }
+        ],
+        "exp": 1400,
+        "text": "QUEST_M2_3_b_text",
+        "next": "QUEST_M2_3_c",
+        "_todo": "真源环名「别让它们靠近」（伊兰抱着箱子跑不快，你要在她走到厅堂前挡住两波；打断第一次成为必需）"
+      },
+      {
+        "key": "c",
+        "id": "QUEST_M2_3_c",
+        "name": "QUEST_M2_3_c_title",
+        "objectives": [
           {
             "kind": "到达",
             "target": "无门厅堂",
             "count": 1,
             "node": "NODE_r4"
-          }
-        ],
-        "exp": 1400,
-        "text": "QUEST_M2_3_b_text",
-        "next": "QUEST_M2_3_c"
-      },
-      {
-        "key": "c",
-        "id": "QUEST_M2_3_c",
-        "name": "名单上的空位",
-        "objectives": [
+          },
           {
             "kind": "收集",
-            "target": "摹录纸",
+            "target": "抄本纸",
             "count": 1,
             "item": "ITEM_tracing_paper",
             "node": "NODE_r4",
-            "_todo": "真源物名「摹录页」（石刻名册的摹录）"
-          },
-          {
-            "kind": "交付",
-            "target": "伊兰",
-            "count": 1,
-            "npc": "NPC_yilan",
-            "node": "NODE_r4"
+            "_todo": "真源物名「拓页」（无姓碑列石刻的拓本）；items 域条目 = ITEM_tracing_paper 抄本纸。★ 拓了两遍拓不出来：那一行被凿掉，凿痕还是新的"
           }
         ],
         "exp": 1500,
         "text": "QUEST_M2_3_c_text",
         "next": "QUEST_M3_1_a",
-        "upgrade": "精制头盔【头盔/精制/装等 8】 + 属性点 +3"
+        "upgrade": "精锻盔【头盔/精制】（ITEM_fineforged_helm）+ 属性点 +3",
+        "_todo": "真源环名「拓不出的一行」（旧落盘环名「名单上的空位」按 04 §1.2 改）"
       }
     ],
     "rewards": {
@@ -851,17 +890,17 @@
         {
           "id": "ITEM_fineforged_helm",
           "count": 1,
-          "name": "精制头盔",
-          "_todo": "真源=【头盔/精制/装等 8】；真源给【槽位/品阶/装等】，items 域无同装等件；按「同品阶·同槽位·装等最接近」取件，装等映射待 W1-C 复核"
+          "name": "精锻盔",
+          "_todo": "真源=【头盔/精制】（04 §1.2 M2_3 交付物）；items.json 现值 ITEM_fineforged_helm 精锻盔（精制/头盔/ilv8）"
         }
       ],
       "growth": {
         "attr_points": 3,
         "perks": [
-          "副本「灰塔哨所」解锁提示：Lv 8 声明 + 布兰妲准入对话出现"
+          "副本「残塔哨所」解锁提示：Lv 8 声明 + 布兰妲的准入对话出现"
         ]
       },
-      "upgrade": "精制头盔【头盔/精制/装等 8】"
+      "upgrade": "精锻盔【头盔/精制】+ 属性点 +3"
     },
     "teach": "控场与打断的第一次必要使用/副本的存在被「人」引出来",
     "skippable": false,
@@ -870,17 +909,17 @@
       "progress": "QUEST_M2_3_progress",
       "complete": "QUEST_M2_3_complete"
     },
-    "_source": "01_世界观与剧情/04_剧情与NPC.md §2 M2-3（L253–264）· 08_地图任务关卡/02_任务线与推进节奏.md §6.2（第 2 天脚本·废墟收尾）",
-    "_todo": "标题/描述槽位：QUEST_M2_3_title / QUEST_M2_3_desc（本域只传槽位 key，真句在 text_specs）"
+    "_source": "01_世界观与剧情/04_剧情与NPC.md §1.2 M2_3「拓不出的一行」（L169–180）· 08_地图任务关卡/02_任务线与推进节奏.md §1.4（废墟 r1–r4）· §三.2（r3 无姓碑列）",
+    "_todo": "标题/描述槽位：QUEST_M2_3_title / QUEST_M2_3_desc（真源标题「拓不出的一行」）"
   },
   "QUEST_M3_1": {
     "id": "QUEST_M3_1",
-    "name": "哨塔的名单",
+    "name": "QUEST_M3_1_title",
     "kind": "主线",
     "chapter": 3,
     "level_min": 11,
     "level_max": 13,
-    "trigger": "完成 QUEST_M2_3（持有伊兰的摹录页）且 Lv ≥ 8，与布兰妲对话接取",
+    "trigger": "完成 QUEST_M2_3（持有伊兰的拓页）且 Lv ≥ 8，与布兰妲对话接取",
     "giver": "NPC_bulanda",
     "giver_node": "NODE_t7",
     "nodes": [
@@ -902,33 +941,43 @@
         "count": 1,
         "npc": "NPC_bulanda",
         "node": "NODE_t7",
-        "_todo": "run 准入链 3 项（谁进/谁批/谁担保）；卡德里安批签是准入链的一项"
+        "_todo": "进塔签押簿三栏（谁进 / 谁批 / 谁担保）——玩家第一次自己当担保人；「这一册是我抄的，原件在塔上」"
       },
       {
         "kind": "通关",
-        "target": "灰塔哨所·一层",
+        "target": "残塔哨所·一层",
         "count": 1,
-        "node": "NODE_d12"
+        "node": "NODE_d12",
+        "_todo": "一层通关判定位（01_世界观与剧情/_parts/地理_P1篇.md §三.0）；进度线性、可中断续跑"
       },
       {
         "kind": "通关",
-        "target": "灰塔哨所·二层",
+        "target": "残塔哨所·二层",
         "count": 1,
-        "node": "NODE_d22"
+        "node": "NODE_d22",
+        "_todo": "二层通关判定位（01_世界观与剧情/_parts/地理_P1篇.md §三.0）"
       },
       {
         "kind": "收集",
         "target": "轮值牌",
         "count": 1,
         "node": "NODE_d23",
-        "_todo": "剧情物：items 域无对应件（12 卡槽，第 12 槽空）；run.Progress 记录进度"
+        "_todo": "剧情物：items 域无对应件（12 枚轮值牌 + 墙上 13 个钉孔）；run.Progress 记录进度。每枚都被手摩挲得发亮"
+      },
+      {
+        "kind": "交付",
+        "target": "布兰妲",
+        "count": 1,
+        "npc": "NPC_bulanda",
+        "node": "NODE_t7",
+        "_todo": "把轮值牌带回镇上交给签押簿的主人（闭环：04 §1.3 M3_1 环 c「把轮值牌带回来」）"
       }
     ],
     "rings": [
       {
         "key": "a",
         "id": "QUEST_M3_1_a",
-        "name": "签字，押名字",
+        "name": "QUEST_M3_1_a_title",
         "objectives": [
           {
             "kind": "交付",
@@ -936,60 +985,65 @@
             "count": 1,
             "npc": "NPC_bulanda",
             "node": "NODE_t7",
-            "_todo": "run 准入链 3 项（谁进/谁批/谁担保）；卡德里安批签是准入链的一项"
+            "_todo": "进塔签押簿三栏（谁进 / 谁批 / 谁担保）——玩家第一次自己当担保人；「这一册是我抄的，原件在塔上」"
           }
         ],
         "exp": 1700,
         "text": "QUEST_M3_1_a_text",
-        "next": "QUEST_M3_1_b"
+        "next": "QUEST_M3_1_b",
+        "_todo": "真源环名「签字，押名字」"
       },
       {
         "key": "b",
         "id": "QUEST_M3_1_b",
-        "name": "一层一层往下走",
+        "name": "QUEST_M3_1_b_title",
         "objectives": [
           {
             "kind": "通关",
-            "target": "灰塔哨所·一层",
+            "target": "残塔哨所·一层",
             "count": 1,
-            "node": "NODE_d12"
+            "node": "NODE_d12",
+            "_todo": "一层通关判定位（01_世界观与剧情/_parts/地理_P1篇.md §三.0）；进度线性、可中断续跑"
           },
           {
             "kind": "通关",
-            "target": "灰塔哨所·二层",
+            "target": "残塔哨所·二层",
             "count": 1,
-            "node": "NODE_d22"
-          },
+            "node": "NODE_d22",
+            "_todo": "二层通关判定位（01_世界观与剧情/_parts/地理_P1篇.md §三.0）"
+          }
+        ],
+        "exp": 1900,
+        "text": "QUEST_M3_1_b_text",
+        "next": "QUEST_M3_1_c",
+        "_todo": "真源环名「一层一层往下走」（一层 d12 前哨营房 / 二层 d22 守望台）"
+      },
+      {
+        "key": "c",
+        "id": "QUEST_M3_1_c",
+        "name": "QUEST_M3_1_c_title",
+        "objectives": [
           {
             "kind": "收集",
             "target": "轮值牌",
             "count": 1,
             "node": "NODE_d23",
-            "_todo": "剧情物：items 域无对应件（12 卡槽，第 12 槽空）；run.Progress 记录进度"
-          }
-        ],
-        "exp": 1900,
-        "text": "QUEST_M3_1_b_text",
-        "next": "QUEST_M3_1_c"
-      },
-      {
-        "key": "c",
-        "id": "QUEST_M3_1_c",
-        "name": "把轮值牌带回来",
-        "objectives": [
+            "_todo": "剧情物：items 域无对应件（12 枚轮值牌 + 墙上 13 个钉孔）；run.Progress 记录进度。每枚都被手摩挲得发亮"
+          },
           {
             "kind": "交付",
             "target": "布兰妲",
             "count": 1,
             "npc": "NPC_bulanda",
             "node": "NODE_t7",
-            "_todo": "交付轮值牌（背面写着卡德里安）"
+            "_todo": "把轮值牌带回镇上交给签押簿的主人（闭环：04 §1.3 M3_1 环 c「把轮值牌带回来」）"
           }
         ],
         "exp": 2200,
         "text": "QUEST_M3_1_c_text",
         "next": "QUEST_M3_2_a",
-        "upgrade": "精制武器【武器/精制/装等 10】 + 技能点 +1"
+        "upgrade": "精锻长剑【武器/精制】（ITEM_fineforged_longsword）+ 技能点 +1",
+        "_todo": "真源环名「把轮值牌带回来」（名册厅 d23 取牌；墙上 13 个孔只有 12 枚牌）"
       }
     ],
     "rewards": {
@@ -998,36 +1052,36 @@
         {
           "id": "ITEM_fineforged_longsword",
           "count": 1,
-          "name": "精制武器",
-          "_todo": "真源=【武器/精制/装等 10】；真源给【槽位/品阶/装等】，items 域无同装等件；按「同品阶·同槽位·装等最接近」取件，装等映射待 W1-C 复核"
+          "name": "精锻长剑",
+          "_todo": "真源=【武器/精制】（04 §1.3 M3_1 交付物）；items.json 现值 ITEM_fineforged_longsword 精锻长剑（精制/武器/ilv8）"
         }
       ],
       "growth": {
         "skill_points": 1,
         "perks": [
-          "灰塔 L1–L2 可重复挑战（日常入口的前身）"
+          "残塔哨所 L1–L2 可重复挑战（日常入口的前身）"
         ]
       },
-      "upgrade": "精制武器【武器/精制/装等 10】"
+      "upgrade": "精锻长剑【武器/精制】+ 技能点 +1"
     },
-    "teach": "副本三件套：准入（要签押）/进度（线性可中断续跑）/名单 + 打断第一次成为必需",
+    "teach": "副本三件套：准入（要签押才有名单）/进度（线性、可中断续跑）/名单 + 打断第一次成为必需",
     "skippable": false,
     "text": {
       "intro": "QUEST_M3_1_intro",
       "progress": "QUEST_M3_1_progress",
       "complete": "QUEST_M3_1_complete"
     },
-    "_source": "01_世界观与剧情/04_剧情与NPC.md §2 M3-1（L274–285）· 08_地图任务关卡/02_任务线与推进节奏.md §6.3（第 5 天回顾接续）",
-    "_todo": "标题/描述槽位：QUEST_M3_1_title / QUEST_M3_1_desc（本域只传槽位 key，真句在 text_specs）"
+    "_source": "01_世界观与剧情/04_剧情与NPC.md §1.3 M3_1「进塔要签三个名字」（L188–199）· 01_世界观与剧情/_parts/地理_P1篇.md §三.0–§三.1（残塔哨所三层）",
+    "_todo": "标题/描述槽位：QUEST_M3_1_title / QUEST_M3_1_desc（真源标题「进塔要签三个名字」）。通关目标名「灰塔哨所·一层/二层」按 02 §4.3 改为「残塔哨所·一层/二层」"
   },
   "QUEST_M3_2": {
     "id": "QUEST_M3_2",
-    "name": "塔里的第二个人",
+    "name": "QUEST_M3_2_title",
     "kind": "主线",
     "chapter": 3,
     "level_min": 13,
     "level_max": 15,
-    "trigger": "完成 QUEST_M3_1 且持有轮值牌；进入灰塔 L2 深处（前置线索来自营地拾荒者格里姆）",
+    "trigger": "完成 QUEST_M3_1 且持有轮值牌；进入残塔 L2 深处（前置线索来自残塔外墙营地的拾荒者格里姆）",
     "giver": "NPC_bulanda",
     "giver_node": "NODE_t7",
     "nodes": [
@@ -1045,30 +1099,30 @@
         "count": 1,
         "npc": "NPC_gelimu",
         "node": "NODE_r5",
-        "_todo": "环 1 前置线索源（他不进门、不给答案，只给「夜里的灯」）"
+        "_todo": "环 a 前置线索源（他不进二层、不给答案，只给「夜里的灯」：上面那盏灯是我看着它亮的，不是我点的）"
       },
       {
         "kind": "到达",
         "target": "环廊·抄录室",
         "count": 1,
         "node": "NODE_d21",
-        "_todo": "真源「L2 深处储藏间」无同名节点，就近取 NODE_d21；拾获物 ×3 交在对话里"
+        "_todo": "真源「L2 深处抄录室」= NODE_d21（01_世界观与剧情/_parts/地理_P1篇.md §三.2 2–1：拼合页在这里拼出来）"
       },
       {
         "kind": "交付",
-        "target": "摹录纸",
+        "target": "抄本纸",
         "count": 1,
         "item": "ITEM_tracing_paper",
         "node": "NODE_d21",
-        "_todo": "配对物：摹录页 + 墙上刻字（同一抄录人的手）⇒ 拼合页"
+        "_todo": "配对物：伊兰的拓页 + 塔里翻到的抄页（同一只手：一页 59 年前写的，一页去年写的）⇒ 拼合页"
       },
       {
         "kind": "击杀",
-        "target": "石像守望者（前置形态）",
+        "target": "塔卫（前置形态）",
         "count": 1,
         "monster": "BOSS_stone_warden",
         "node": "NODE_d31",
-        "_todo": "真源「L3 守卫 · 层主的前置形态」；monsters 域哨塔层主条目 = BOSS_stone_warden"
+        "_todo": "真源「L3 守卫 · 层主的前置形态」；monsters 域同一条目 = BOSS_stone_warden 塔卫（d31 前置形态 / d34 本体）。弱点窗口 = 打断：你不动，它不动"
       },
       {
         "kind": "到达",
@@ -1081,7 +1135,7 @@
       {
         "key": "a",
         "id": "QUEST_M3_2_a",
-        "name": "有人比你先到",
+        "name": "QUEST_M3_2_a_title",
         "objectives": [
           {
             "kind": "交付",
@@ -1089,50 +1143,52 @@
             "count": 1,
             "npc": "NPC_gelimu",
             "node": "NODE_r5",
-            "_todo": "环 1 前置线索源（他不进门、不给答案，只给「夜里的灯」）"
+            "_todo": "环 a 前置线索源（他不进二层、不给答案，只给「夜里的灯」：上面那盏灯是我看着它亮的，不是我点的）"
           },
           {
             "kind": "到达",
             "target": "环廊·抄录室",
             "count": 1,
             "node": "NODE_d21",
-            "_todo": "真源「L2 深处储藏间」无同名节点，就近取 NODE_d21；拾获物 ×3 交在对话里"
+            "_todo": "真源「L2 深处抄录室」= NODE_d21（01_世界观与剧情/_parts/地理_P1篇.md §三.2 2–1：拼合页在这里拼出来）"
           }
         ],
         "exp": 2100,
         "text": "QUEST_M3_2_a_text",
-        "next": "QUEST_M3_2_b"
+        "next": "QUEST_M3_2_b",
+        "_todo": "真源环名「有人比你先到」"
       },
       {
         "key": "b",
         "id": "QUEST_M3_2_b",
-        "name": "他在找什么",
+        "name": "QUEST_M3_2_b_title",
         "objectives": [
           {
             "kind": "交付",
-            "target": "摹录纸",
+            "target": "抄本纸",
             "count": 1,
             "item": "ITEM_tracing_paper",
             "node": "NODE_d21",
-            "_todo": "配对物：摹录页 + 墙上刻字（同一抄录人的手）⇒ 拼合页"
+            "_todo": "配对物：伊兰的拓页 + 塔里翻到的抄页（同一只手：一页 59 年前写的，一页去年写的）⇒ 拼合页"
           }
         ],
         "exp": 2400,
         "text": "QUEST_M3_2_b_text",
-        "next": "QUEST_M3_2_c"
+        "next": "QUEST_M3_2_c",
+        "_todo": "真源环名「他在找什么」（跨任务线索拼接：拓页 + 抄页 = 同一只手）"
       },
       {
         "key": "c",
         "id": "QUEST_M3_2_c",
-        "name": "门口的那个东西",
+        "name": "QUEST_M3_2_c_title",
         "objectives": [
           {
             "kind": "击杀",
-            "target": "石像守望者（前置形态）",
+            "target": "塔卫（前置形态）",
             "count": 1,
             "monster": "BOSS_stone_warden",
             "node": "NODE_d31",
-            "_todo": "真源「L3 守卫 · 层主的前置形态」；monsters 域哨塔层主条目 = BOSS_stone_warden"
+            "_todo": "真源「L3 守卫 · 层主的前置形态」；monsters 域同一条目 = BOSS_stone_warden 塔卫（d31 前置形态 / d34 本体）。弱点窗口 = 打断：你不动，它不动"
           },
           {
             "kind": "到达",
@@ -1144,7 +1200,8 @@
         "exp": 2700,
         "text": "QUEST_M3_2_c_text",
         "next": "QUEST_M3_3_a",
-        "upgrade": "铭刻护甲（上）【护甲上/铭刻/装等 12】 + 属性点 +3"
+        "upgrade": "荣誉胸甲【上甲/铭刻】（ITEM_oathbound_chestplate）+ 属性点 +3",
+        "_todo": "真源环名「门口的那个东西」（弱点窗口 = 打断 = 关掉免伤窗口）"
       }
     ],
     "rewards": {
@@ -1153,8 +1210,8 @@
         {
           "id": "ITEM_oathbound_chestplate",
           "count": 1,
-          "name": "铭刻护甲（上）",
-          "_todo": "真源=【护甲上/铭刻（P1 最高档）/装等 12】；真源给【槽位/品阶/装等】，items 域无同装等件；按「同品阶·同槽位·装等最接近」取件，装等映射待 W1-C 复核"
+          "name": "荣誉胸甲",
+          "_todo": "真源=【护甲上/铭刻】（04 §1.3 M3_2 交付物）；items.json 现值 ITEM_oathbound_chestplate 荣誉胸甲（铭刻/上甲/ilv10）；04 §7.3 建议「誓约××」→「荣誉××」（已按新名）"
         }
       ],
       "growth": {
@@ -1163,7 +1220,7 @@
           "剧情物：拼合页（P1 结束前留在背包，P2 用）"
         ]
       },
-      "upgrade": "铭刻护甲（上）【护甲上/铭刻/装等 12】"
+      "upgrade": "荣誉胸甲【上甲/铭刻】+ 属性点 +3"
     },
     "teach": "弱点窗口（打断 = 关掉免伤窗口）/跨任务线索拼接",
     "skippable": false,
@@ -1172,17 +1229,21 @@
       "progress": "QUEST_M3_2_progress",
       "complete": "QUEST_M3_2_complete"
     },
-    "_source": "01_世界观与剧情/04_剧情与NPC.md §2 M3-2（L287–298）· 08_地图任务关卡/02_任务线与推进节奏.md §6.3（第 5 天回顾）",
-    "_todo": "标题/描述槽位：QUEST_M3_2_title / QUEST_M3_2_desc。★ 真源未点名发布人（格里姆按设定不能委托他人办事）⇒ giver 按本章发布人布兰妲推定；格里姆是环 1 前置线索源（npcs.json: quests_join=[QUEST_M3_2]）"
+    "_source": "01_世界观与剧情/04_剧情与NPC.md §1.3 M3_2「塔里还有一个人的脚步声」（L201–212）· 01_世界观与剧情/_parts/地理_P1篇.md §三.2（d21 拼合页 / d31 前置形态）",
+    "_todo": "标题/描述槽位：QUEST_M3_2_title / QUEST_M3_2_desc（真源标题「塔里还有一个人的脚步声」）。发布人按 04 §1.3 保持布兰妲；格里姆是环 a 被交付的前置线索源（npcs.json: quests_join=[QUEST_M3_2]）"
   },
   "QUEST_M3_3": {
     "id": "QUEST_M3_3",
-    "name": "最后一班",
+    "name": "QUEST_M3_3_title",
     "kind": "主线",
     "chapter": 3,
     "level_min": 15,
     "level_max": 16,
-    "trigger": "完成 QUEST_M3_2 且玩家至少完成过 3 条支线（用履历当门槛，不是等级）",
+    "trigger": "完成 QUEST_M3_2 且玩家至少完成过 3 条支线（用履历当门槛，不是等级门槛）",
+    "prereq": [
+      "QUEST_M3_2"
+    ],
+    "prereq_note": "支线（子 lane）终态条目数 ≥ 3",
     "giver": "NPC_bulanda",
     "giver_node": "NODE_t7",
     "nodes": [
@@ -1200,42 +1261,44 @@
         "count": 3,
         "progress_key": "点的灯",
         "node": "NODE_d32",
-        "_todo": "三处火盆聚合进度键「点的灯」；漏一处则层主第一阶段点名更狠。塔顶守望灯就近取 NODE_d32 誓钟台"
+        "_todo": "三个灯座聚合进度键「点的灯」（钟台 d32）；漏一处则层主第一阶段点名更狠。灯一亮，值夜室 d33 的门才开"
       },
       {
         "kind": "通关",
-        "target": "灰塔哨所·三层",
+        "target": "残塔哨所·三层",
         "count": 1,
-        "node": "NODE_d34"
+        "node": "NODE_d34",
+        "_todo": "三层通关判定位（01_世界观与剧情/_parts/地理_P1篇.md §三.0）"
       },
       {
         "kind": "击杀",
-        "target": "石像守望者",
+        "target": "塔卫",
         "count": 1,
         "monster": "BOSS_stone_warden",
         "node": "NODE_d34",
-        "_todo": "真源「层主：畸变的守塔人」三阶段（HP 70%/40%/15%）；monsters 域条目 = BOSS_stone_warden"
+        "_todo": "真源「层主：塔卫」三阶段（HP 70/40/15、轮次 3/4/5、弱点窗口 = 打断、带点名机制）；monsters 域条目 = BOSS_stone_warden（称号「第十三个人」）"
       },
       {
         "kind": "收集",
         "target": "守望名册原本",
         "count": 1,
         "node": "NODE_d34",
-        "_todo": "剧情物：items 域无对应件（第 13 个位置被人削掉一层）"
+        "_todo": "剧情物：items 域无对应件（12 行 + 空着的那一行；今晚当班那栏签的是公会柜台）"
       },
       {
         "kind": "交付",
         "target": "伊兰",
         "count": 1,
         "npc": "NPC_yilan",
-        "node": "NODE_d34"
+        "node": "NODE_d34",
+        "_todo": "把名册原本交给伊兰（04 §2.1 N12：M3_3 被交付）"
       }
     ],
     "rings": [
       {
         "key": "a",
         "id": "QUEST_M3_3_a",
-        "name": "点灯",
+        "name": "QUEST_M3_3_a_title",
         "objectives": [
           {
             "kind": "交付",
@@ -1243,61 +1306,66 @@
             "count": 3,
             "progress_key": "点的灯",
             "node": "NODE_d32",
-            "_todo": "三处火盆聚合进度键「点的灯」；漏一处则层主第一阶段点名更狠。塔顶守望灯就近取 NODE_d32 誓钟台"
+            "_todo": "三个灯座聚合进度键「点的灯」（钟台 d32）；漏一处则层主第一阶段点名更狠。灯一亮，值夜室 d33 的门才开"
           }
         ],
         "exp": 2600,
         "text": "QUEST_M3_3_a_text",
-        "next": "QUEST_M3_3_b"
+        "next": "QUEST_M3_3_b",
+        "_todo": "真源环名「点灯」（把三盏油灯点上）"
       },
       {
         "key": "b",
         "id": "QUEST_M3_3_b",
-        "name": "最后一班",
+        "name": "QUEST_M3_3_b_title",
         "objectives": [
           {
             "kind": "通关",
-            "target": "灰塔哨所·三层",
+            "target": "残塔哨所·三层",
             "count": 1,
-            "node": "NODE_d34"
+            "node": "NODE_d34",
+            "_todo": "三层通关判定位（01_世界观与剧情/_parts/地理_P1篇.md §三.0）"
           },
           {
             "kind": "击杀",
-            "target": "石像守望者",
+            "target": "塔卫",
             "count": 1,
             "monster": "BOSS_stone_warden",
             "node": "NODE_d34",
-            "_todo": "真源「层主：畸变的守塔人」三阶段（HP 70%/40%/15%）；monsters 域条目 = BOSS_stone_warden"
+            "_todo": "真源「层主：塔卫」三阶段（HP 70/40/15、轮次 3/4/5、弱点窗口 = 打断、带点名机制）；monsters 域条目 = BOSS_stone_warden（称号「第十三个人」）"
           }
         ],
         "exp": 3000,
         "text": "QUEST_M3_3_b_text",
-        "next": "QUEST_M3_3_c"
+        "next": "QUEST_M3_3_c",
+        "_todo": "真源环名「最后一班」（多阶段 Boss：阈值换技能表 + 点名）"
       },
       {
         "key": "c",
         "id": "QUEST_M3_3_c",
-        "name": "名册原本",
+        "name": "QUEST_M3_3_c_title",
         "objectives": [
           {
             "kind": "收集",
             "target": "守望名册原本",
             "count": 1,
             "node": "NODE_d34",
-            "_todo": "剧情物：items 域无对应件（第 13 个位置被人削掉一层）"
+            "_todo": "剧情物：items 域无对应件（12 行 + 空着的那一行；今晚当班那栏签的是公会柜台）"
           },
           {
             "kind": "交付",
             "target": "伊兰",
             "count": 1,
             "npc": "NPC_yilan",
-            "node": "NODE_d34"
+            "node": "NODE_d34",
+            "_todo": "把名册原本交给伊兰（04 §2.1 N12：M3_3 被交付）"
           }
         ],
         "exp": 3400,
         "text": "QUEST_M3_3_c_text",
         "next": "QUEST_M4_1_a",
-        "upgrade": "铭刻武器【武器/铭刻/装等 14】 + 技能点 +2 + 首通宝箱（铭刻头盔 + 材料箱）"
+        "upgrade": "荣誉长剑【武器/铭刻】（ITEM_oathbound_longsword）+ 技能点 +2 + 首通宝箱（荣誉盔 + 材料箱）",
+        "_todo": "真源环名「名册原本」；★ P1 收尾：名册最新一页的签押是卡德里安的，而她从没进过塔。塔卫倒下时把笔递给你（不是攻击，是递笔）"
       }
     ],
     "rewards": {
@@ -1306,20 +1374,20 @@
         {
           "id": "ITEM_oathbound_longsword",
           "count": 1,
-          "name": "铭刻武器",
-          "_todo": "真源=【武器/铭刻/装等 14】；真源给【槽位/品阶/装等】，items 域无同装等件；按「同品阶·同槽位·装等最接近」取件，装等映射待 W1-C 复核"
+          "name": "荣誉长剑",
+          "_todo": "真源=【武器/铭刻】（04 §1.3 M3_3 交付物）；items.json 现值 ITEM_oathbound_longsword 荣誉长剑（铭刻/武器/ilv10）"
         },
         {
           "id": "ITEM_oathbound_helm",
           "count": 1,
-          "name": "首通宝箱·铭刻头盔",
-          "_todo": "真源=【铭刻头盔】（首通宝箱）"
+          "name": "首通宝箱·荣誉盔",
+          "_todo": "真源=【铭刻头盔】（首通宝箱）⇒ ITEM_oathbound_helm 荣誉盔（铭刻/头盔/ilv10）"
         },
         {
           "id": "ITEM_watcher_oath_mark",
           "count": 1,
           "name": "首通宝箱·材料箱",
-          "_todo": "真源「材料箱」；items 域对应哨塔层主掉料 = 守望誓痕"
+          "_todo": "真源「材料箱」；items 域对应哨塔层主掉料 = ITEM_watcher_oath_mark（现值「守望誓痕」，04 §7.3 建议改名「守望刻痕」）"
         }
       ],
       "growth": {
@@ -1328,7 +1396,7 @@
           "主线推进物：守望名册原本"
         ]
       },
-      "upgrade": "铭刻武器【武器/铭刻/装等 14】 + 首通宝箱（铭刻头盔 + 材料箱）"
+      "upgrade": "荣誉长剑【武器/铭刻】+ 首通宝箱（荣誉盔 + 材料箱）"
     },
     "teach": "多阶段 Boss（阈值换技能表）/点名机制",
     "skippable": false,
@@ -1337,21 +1405,21 @@
       "progress": "QUEST_M3_3_progress",
       "complete": "QUEST_M3_3_complete"
     },
-    "_source": "01_世界观与剧情/04_剧情与NPC.md §2 M3-3（L300–311）· 08_地图任务关卡/02_任务线与推进节奏.md §6.3（第 5 天回顾）",
-    "_todo": "标题/描述槽位：QUEST_M3_3_title / QUEST_M3_3_desc（本域只传槽位 key，真句在 text_specs）",
-    "prereq": [
-      "QUEST_M3_2"
-    ],
-    "prereq_note": "支线（子 lane）终态条目数 ≥ 3"
+    "_source": "01_世界观与剧情/04_剧情与NPC.md §1.3 M3_3「今晚的当班人」（L214–225）· 01_世界观与剧情/_parts/地理_P1篇.md §三.2（d32 钟台 / d33 值夜室 / d34 塔冠）",
+    "_todo": "标题/描述槽位：QUEST_M3_3_title / QUEST_M3_3_desc（真源标题「今晚的当班人」）"
   },
   "QUEST_M4_1": {
     "id": "QUEST_M4_1",
-    "name": "线的尽头",
+    "name": "QUEST_M4_1_title",
     "kind": "主线",
     "chapter": 4,
     "level_min": 17,
     "level_max": 18,
-    "trigger": "完成 QUEST_M3_3 且守望名册原本在背包；走进镇务厅与卡德里安对话",
+    "trigger": "完成 QUEST_M3_3 且守望名册原本在背包；走进公会分会与卡德里安对话",
+    "prereq": [
+      "QUEST_M3_3"
+    ],
+    "prereq_note": "持有剧情物「守望名册原本」",
     "giver": "NPC_kadelian",
     "giver_node": "NODE_t1",
     "nodes": [
@@ -1364,14 +1432,30 @@
         "count": 1,
         "npc": "NPC_kadelian",
         "node": "NODE_t1",
-        "_todo": "交付名册原本；他认出轮值牌背面的字是自己的"
+        "_todo": "交付名册原本：她认得纸边、认得装订线，也认得那支笔"
+      },
+      {
+        "kind": "交付",
+        "target": "卡德里安",
+        "count": 1,
+        "npc": "NPC_kadelian",
+        "node": "NODE_t1",
+        "_todo": "对话（分支对话 3 DIALOG_kadelian_name13：拉开柜台最下面那格抽屉 —— 11 份哨所轮值交接单，一年一份）"
+      },
+      {
+        "kind": "交付",
+        "target": "卡德里安",
+        "count": 1,
+        "npc": "NPC_kadelian",
+        "node": "NODE_t1",
+        "_todo": "对话（分支对话 4 DIALOG_kadelian_pledge：担保人一栏三选项；她把名册翻到最新一页，指着自己名字说「这不是我写的」）"
       }
     ],
     "rings": [
       {
         "key": "a",
         "id": "QUEST_M4_1_a",
-        "name": "他认得这页纸",
+        "name": "QUEST_M4_1_a_title",
         "objectives": [
           {
             "kind": "交付",
@@ -1379,17 +1463,18 @@
             "count": 1,
             "npc": "NPC_kadelian",
             "node": "NODE_t1",
-            "_todo": "交付名册原本；他认出轮值牌背面的字是自己的"
+            "_todo": "交付名册原本：她认得纸边、认得装订线，也认得那支笔"
           }
         ],
         "exp": 2100,
         "text": "QUEST_M4_1_a_text",
-        "next": "QUEST_M4_1_b"
+        "next": "QUEST_M4_1_b",
+        "_todo": "真源环名「她认得这页纸」"
       },
       {
         "key": "b",
         "id": "QUEST_M4_1_b",
-        "name": "他为什么把塔划掉",
+        "name": "QUEST_M4_1_b_title",
         "objectives": [
           {
             "kind": "交付",
@@ -1397,17 +1482,18 @@
             "count": 1,
             "npc": "NPC_kadelian",
             "node": "NODE_t1",
-            "_todo": "对话（分支对话 3：第 13 个名字；DIALOG_kadelian_name13）"
+            "_todo": "对话（分支对话 3 DIALOG_kadelian_name13：拉开柜台最下面那格抽屉 —— 11 份哨所轮值交接单，一年一份）"
           }
         ],
         "exp": 2500,
         "text": "QUEST_M4_1_b_text",
-        "next": "QUEST_M4_1_c"
+        "next": "QUEST_M4_1_c",
+        "_todo": "真源环名「她为什么把塔划掉」（她 P1 唯一一次坦白：11 年前上一任柜台管事——她的师父——进塔核对名册）"
       },
       {
         "key": "c",
         "id": "QUEST_M4_1_c",
-        "name": "那不是你的账",
+        "name": "QUEST_M4_1_c_title",
         "objectives": [
           {
             "kind": "交付",
@@ -1415,13 +1501,14 @@
             "count": 1,
             "npc": "NPC_kadelian",
             "node": "NODE_t1",
-            "_todo": "对话（分支对话 4：担保誓；DIALOG_kadelian_pledge）"
+            "_todo": "对话（分支对话 4 DIALOG_kadelian_pledge：担保人一栏三选项；她把名册翻到最新一页，指着自己名字说「这不是我写的」）"
           }
         ],
         "exp": 2900,
         "text": "QUEST_M4_1_c_text",
         "next": "QUEST_M4_2_a",
-        "upgrade": "铭刻护甲（下）【护甲下/铭刻/装等 16】 + 属性点 +3"
+        "upgrade": "古誓护腿【下甲/铭刻】（ITEM_ancient_oath_legguards）+ 属性点 +3",
+        "_todo": "真源环名「那不是你的账」；她请你陪她上去（P2 入口）"
       }
     ],
     "rewards": {
@@ -1430,40 +1517,40 @@
         {
           "id": "ITEM_ancient_oath_legguards",
           "count": 1,
-          "name": "铭刻护甲（下）",
-          "_todo": "真源=【护甲下/铭刻/装等 16】；真源给【槽位/品阶/装等】，items 域无同装等件；按「同品阶·同槽位·装等最接近」取件，装等映射待 W1-C 复核"
+          "name": "古誓护腿",
+          "_todo": "真源=【护甲下/铭刻】（04 §1.4 M4_1 交付物）；items.json 现值 ITEM_ancient_oath_legguards 古誓护腿（铭刻/下甲/ilv18）；04 §7.3 建议「古誓××」→「旧誓××」（低优先，items 域未改）"
         }
       ],
       "growth": {
         "attr_points": 3,
         "perks": [
-          "剧情物：镇务令抄本（卡德里安的亲笔废弃令）"
+          "剧情物：公会归档抄本（卡德里安的亲笔废弃令）"
         ]
       },
-      "upgrade": "铭刻护甲（下）【护甲下/铭刻/装等 16】"
+      "upgrade": "古誓护腿【下甲/铭刻】+ 属性点 +3"
     },
-    "teach": "无新机制（故意）：纯叙事条，让玩家在密集机制教学后喘息",
+    "teach": "无新机制（故意）：纯叙事条，让玩家在密集机制教学后喘一口气",
     "skippable": false,
     "text": {
       "intro": "QUEST_M4_1_intro",
       "progress": "QUEST_M4_1_progress",
       "complete": "QUEST_M4_1_complete"
     },
-    "_source": "01_世界观与剧情/04_剧情与NPC.md §2 M4-1（L321–332）· 08_地图任务关卡/02_任务线与推进节奏.md §6.3（第 5 天脚本·镇务厅）",
-    "_todo": "标题/描述槽位：QUEST_M4_1_title / QUEST_M4_1_desc（本域只传槽位 key，真句在 text_specs）",
-    "prereq": [
-      "QUEST_M3_3"
-    ],
-    "prereq_note": "持有剧情物「守望名册原本」"
+    "_source": "01_世界观与剧情/04_剧情与NPC.md §1.4 M4_1「柜台后面的抽屉」（L232–243）· §4 对话 3 / 对话 4",
+    "_todo": "标题/描述槽位：QUEST_M4_1_title / QUEST_M4_1_desc（真源标题「柜台后面的抽屉」）。剧情物名「镇务令抄本」按 04 §7.4 改为「公会归档抄本」（镇务厅 → 公会分会）"
   },
   "QUEST_M4_2": {
     "id": "QUEST_M4_2",
-    "name": "把针拿起来",
+    "name": "QUEST_M4_2_title",
     "kind": "主线",
     "chapter": 4,
     "level_min": 18,
     "level_max": 19,
-    "trigger": "完成 QUEST_M4_1 且 Lv ≥ 18，走到织誓祭坛（灰塔外新路径开启，缄默者在祭坛门口等）",
+    "trigger": "完成 QUEST_M4_1 且 Lv ≥ 18，走到启程台（NODE_a1，残塔外新路径开启，缄默者在台前等）",
+    "prereq": [
+      "QUEST_M4_1"
+    ],
+    "prereq_note": "Lv ≥ 18；需走到启程台 NODE_a1（残塔外新路径）",
     "giver": "NPC_jianmozhe",
     "giver_node": "NODE_a1",
     "nodes": [
@@ -1476,7 +1563,7 @@
         "count": 1,
         "npc": "NPC_jianmozhe",
         "node": "NODE_a1",
-        "_todo": "把装备/技能/属性点全部摊开（面板只读展示）"
+        "_todo": "把 P1 的账过一遍：装备 / 技能 / 属性三个面板各看一次（只读展示）"
       },
       {
         "kind": "交付",
@@ -1484,14 +1571,14 @@
         "count": 1,
         "npc": "NPC_jianmozhe",
         "node": "NODE_a1",
-        "_todo": "每组技能选 1 条专精 + 属性点最后一次自由分配；二次确认，写锁定标记「专精已锁」"
+        "_todo": "专精槽锁定前最后一次随便改：每组技能选 1 条专精 + 属性点最后一次自由分配；二次确认，写锁定标记「专精已锁」"
       }
     ],
     "rings": [
       {
         "key": "a",
         "id": "QUEST_M4_2_a",
-        "name": "理你的线",
+        "name": "QUEST_M4_2_a_title",
         "objectives": [
           {
             "kind": "交付",
@@ -1499,17 +1586,18 @@
             "count": 1,
             "npc": "NPC_jianmozhe",
             "node": "NODE_a1",
-            "_todo": "把装备/技能/属性点全部摊开（面板只读展示）"
+            "_todo": "把 P1 的账过一遍：装备 / 技能 / 属性三个面板各看一次（只读展示）"
           }
         ],
         "exp": 2300,
         "text": "QUEST_M4_2_a_text",
-        "next": "QUEST_M4_2_b"
+        "next": "QUEST_M4_2_b",
+        "_todo": "真源环名「把你的账理一遍」"
       },
       {
         "key": "b",
         "id": "QUEST_M4_2_b",
-        "name": "最后一次随便改",
+        "name": "QUEST_M4_2_b_title",
         "objectives": [
           {
             "kind": "交付",
@@ -1517,31 +1605,33 @@
             "count": 1,
             "npc": "NPC_jianmozhe",
             "node": "NODE_a1",
-            "_todo": "每组技能选 1 条专精 + 属性点最后一次自由分配；二次确认，写锁定标记「专精已锁」"
+            "_todo": "专精槽锁定前最后一次随便改：每组技能选 1 条专精 + 属性点最后一次自由分配；二次确认，写锁定标记「专精已锁」"
           }
         ],
         "exp": 2800,
         "text": "QUEST_M4_2_b_text",
-        "next": "QUEST_M4_2_c"
+        "next": "QUEST_M4_2_c",
+        "_todo": "真源环名「最后一次随便改」（不可逆：写「专精已锁」）"
       },
       {
         "key": "c",
         "id": "QUEST_M4_2_c",
-        "name": "对着镜子说一遍",
+        "name": "QUEST_M4_2_c_title",
         "objectives": [
           {
             "kind": "交付",
-            "target": "缄默者",
+            "target": "技能专精确认",
             "count": 1,
             "npc": "NPC_jianmozhe",
             "node": "NODE_a1",
-            "_todo": "对话（分支对话 5：转职仪式，三选一句式；DIALOG_jianmozhe_rite）"
+            "_todo": "对着石头说一遍：你必须自己把名字写在启程石上——不是别人替你签"
           }
         ],
         "exp": 3100,
         "text": "QUEST_M4_2_c_text",
         "next": "QUEST_M4_3_a",
-        "upgrade": "属性点 +5 + 技能专精槽（每专精组 1 条，锁定）+ 漂白道具 ×1"
+        "upgrade": "属性点 +5 + 技能专精槽 ×1（每专精组 1 条，锁定）+ 漂白道具 ×1",
+        "_todo": "真源环名「对着石头说一遍」（分支对话 5 DIALOG_jianmozhe_rite）"
       }
     ],
     "rewards": {
@@ -1556,28 +1646,28 @@
       },
       "upgrade": "属性点 +5 + 技能专精槽（锁定）+ 漂白道具 ×1"
     },
-    "teach": "不可逆决策的重量（C5：每阶段 ≥1 不可逆决策点）",
+    "teach": "不可逆决策的重量（每阶段 ≥ 1 个不可逆决策点）",
     "skippable": false,
     "text": {
       "intro": "QUEST_M4_2_intro",
       "progress": "QUEST_M4_2_progress",
       "complete": "QUEST_M4_2_complete"
     },
-    "_source": "01_世界观与剧情/04_剧情与NPC.md §2 M4-2（L334–345）· 08_地图任务关卡/02_任务线与推进节奏.md §6.3（第 5 天脚本·祭坛）",
-    "_todo": "标题/描述槽位：QUEST_M4_2_title / QUEST_M4_2_desc。真源交付物「漂白道具 ×1」items 域无对应件 ⇒ 落 growth.perks（不编 id）",
-    "prereq": [
-      "QUEST_M4_1"
-    ],
-    "prereq_note": "Lv ≥ 18；需走到织誓祭坛（灰塔外新路径）"
+    "_source": "01_世界观与剧情/04_剧情与NPC.md §1.4 M4_2「把手放上去」（L245–256）· §4 对话 5（DIALOG_jianmozhe_rite）",
+    "_todo": "标题/描述槽位：QUEST_M4_2_title / QUEST_M4_2_desc（真源标题「把手放上去」）。真源交付物「漂白道具 ×1」items 域无对应件 ⇒ 落 growth.perks（不编 id）"
   },
   "QUEST_M4_3": {
     "id": "QUEST_M4_3",
-    "name": "初织",
+    "name": "QUEST_M4_3_title",
     "kind": "主线",
     "chapter": 4,
     "level_min": 19,
     "level_max": 20,
-    "trigger": "完成 QUEST_M4_2 且 Lv ≥ 19（转职的唯一等级硬门）；在织誓祭坛与缄默者对话",
+    "trigger": "完成 QUEST_M4_2 且 Lv ≥ 19（转职的唯一等级硬门）；在启程台与缄默者对话",
+    "prereq": [
+      "QUEST_M4_2"
+    ],
+    "prereq_note": "Lv ≥ 19（P1 唯一的等级硬门）",
     "giver": "NPC_jianmozhe",
     "giver_node": "NODE_a1",
     "nodes": [
@@ -1596,7 +1686,8 @@
         "target": "缄默者",
         "count": 1,
         "npc": "NPC_jianmozhe",
-        "node": "NODE_a1"
+        "node": "NODE_a1",
+        "_todo": "把它按在石头上（仪式第二问：你把东西带在身上了吗）"
       },
       {
         "kind": "交付",
@@ -1611,14 +1702,14 @@
         "target": "转职仪式",
         "count": 1,
         "node": "NODE_a1",
-        "_todo": "P1 阶段终点：名册第 13 个空位不填，在它下面另起一行写自己的名字；收尾演出 + 三钩子浮出"
+        "_todo": "P1 阶段终点：名册空着的那一行不填，在它下面另起一行写自己的名字；收尾响一次旧钟 + 三个钩子浮出"
       }
     ],
     "rings": [
       {
         "key": "a",
         "id": "QUEST_M4_3_a",
-        "name": "捻第一根线",
+        "name": "QUEST_M4_3_a_title",
         "objectives": [
           {
             "kind": "收集",
@@ -1626,23 +1717,36 @@
             "count": 1,
             "node": "NODE_a1",
             "_todo": "三类任选一：轮值牌碎片 / 名册拓页纸灰 / 玩家自选一件（items 域无对应件，决定 P2 起始 NPC 台词变体）"
-          },
+          }
+        ],
+        "exp": 2500,
+        "text": "QUEST_M4_3_a_text",
+        "next": "QUEST_M4_3_b",
+        "_todo": "真源环名「捡一样东西带在身上」"
+      },
+      {
+        "key": "b",
+        "id": "QUEST_M4_3_b",
+        "name": "QUEST_M4_3_b_title",
+        "objectives": [
           {
             "kind": "交付",
             "target": "缄默者",
             "count": 1,
             "npc": "NPC_jianmozhe",
-            "node": "NODE_a1"
+            "node": "NODE_a1",
+            "_todo": "把它按在石头上（仪式第二问：你把东西带在身上了吗）"
           }
         ],
-        "exp": 2500,
-        "text": "QUEST_M4_3_a_text",
-        "next": "QUEST_M4_3_b"
+        "exp": 3000,
+        "text": "QUEST_M4_3_b_text",
+        "next": "QUEST_M4_3_c",
+        "_todo": "真源环名「把它按在石头上」"
       },
       {
-        "key": "b",
-        "id": "QUEST_M4_3_b",
-        "name": "线的一端系向哪里",
+        "key": "c",
+        "id": "QUEST_M4_3_c",
+        "name": "QUEST_M4_3_c_title",
         "objectives": [
           {
             "kind": "交付",
@@ -1651,29 +1755,20 @@
             "npc": "NPC_jianmozhe",
             "node": "NODE_a1",
             "_todo": "7 基础职业 × 2 分支 = 14 条线；需输入确认词；★ 不可逆（class 字段锁定，指令层二次确认）"
-          }
-        ],
-        "exp": 3000,
-        "text": "QUEST_M4_3_b_text",
-        "next": "QUEST_M4_3_c"
-      },
-      {
-        "key": "c",
-        "id": "QUEST_M4_3_c",
-        "name": "在空位旁边另起一行",
-        "objectives": [
+          },
           {
             "kind": "通关",
             "target": "转职仪式",
             "count": 1,
             "node": "NODE_a1",
-            "_todo": "P1 阶段终点：名册第 13 个空位不填，在它下面另起一行写自己的名字；收尾演出 + 三钩子浮出"
+            "_todo": "P1 阶段终点：名册空着的那一行不填，在它下面另起一行写自己的名字；收尾响一次旧钟 + 三个钩子浮出"
           }
         ],
         "exp": 3200,
         "text": "QUEST_M4_3_c_text",
         "next": null,
-        "upgrade": "转职徽记【饰品/铭刻/装等 18】 + 技能点 +2"
+        "upgrade": "转职徽记【饰品/铭刻】（ITEM_oathweaver_sigil）+ 技能点 +2",
+        "_todo": "真源环名「在空白那一行写自己的名字」（转职 = P1 最重要的一课，不可逆）"
       }
     ],
     "rewards": {
@@ -1683,7 +1778,7 @@
           "id": "ITEM_oathweaver_sigil",
           "count": 1,
           "name": "转职徽记",
-          "_todo": "真源=【饰品/铭刻/装等 18 · 随职业分支不同属性池】；items 域按名取「织誓者徽记」（传世/ilv18，唯一传奇件）— 品阶与真源「铭刻」不一致，待 W1-C 裁"
+          "_todo": "真源=【饰品/铭刻 · 随职业分支不同属性池】（04 §1.4 M4_3 交付物）；04 §7.3 建议「织誓者徽记」→「转职徽记」（本域按真源建议名写）；items.json 现值仍为 ITEM_oathweaver_sigil「织誓者徽记」（传世/ilv18，唯一传奇件）——品阶与真源「铭刻」不一致，且与 QUEST_R5 奖励同挂一件（同一件唯一饰品被两条任务点名），两项待 W1-C / 父 agent 裁"
         }
       ],
       "growth": {
@@ -1693,21 +1788,17 @@
           "P2 主线入口开启（三个悬置钩子各自对应 P2 的一条主线）"
         ]
       },
-      "upgrade": "转职徽记【饰品/铭刻/装等 18】"
+      "upgrade": "转职徽记【饰品/铭刻】+ 技能点 +2"
     },
-    "teach": "织（本作最重要的一课；转职不可逆）",
+    "teach": "转职（本作最重要的一课；不可逆）",
     "skippable": false,
     "text": {
       "intro": "QUEST_M4_3_intro",
       "progress": "QUEST_M4_3_progress",
       "complete": "QUEST_M4_3_complete"
     },
-    "_source": "01_世界观与剧情/04_剧情与NPC.md §2 M4-3（L347–358）· 08_地图任务关卡/02_任务线与推进节奏.md §6.3（第 5 天脚本·祭坛收尾）",
-    "_todo": "标题/描述槽位：QUEST_M4_3_title / QUEST_M4_3_desc（本域只传槽位 key，真句在 text_specs）",
-    "prereq": [
-      "QUEST_M4_2"
-    ],
-    "prereq_note": "Lv ≥ 19（P1 唯一的等级硬门，见待裁项 D4）"
+    "_source": "01_世界观与剧情/04_剧情与NPC.md §1.4 M4_3「启程」（L258–269）· §5（三个钩子各自接 P2 的一条主线）",
+    "_todo": "标题/描述槽位：QUEST_M4_3_title / QUEST_M4_3_desc（真源标题「启程」）"
   },
   "QUEST_L1": {
     "id": "QUEST_L1",
@@ -1715,6 +1806,7 @@
     "kind": "支线",
     "band": "低语林带",
     "level_min": 1,
+    "trigger": "首次进入 NODE_t3（药铺·苦苔台）",
     "giver": "NPC_luti",
     "giver_node": "NODE_t3",
     "nodes": [
@@ -1731,7 +1823,7 @@
         "node": "NODE_l1",
         "item": "ITEM_tinder_herb",
         "progress_key": "火绒草",
-        "_todo": "真源：在林带采 5 份火绒草（采集指令 + 采集点刷新）；§6.1 L229–L234 有采集回显"
+        "_todo": "真源：在林带采 5 份火绒草（采集指令 + 采集点刷新；NODE_l2 苔痕小径是采集点）"
       },
       {
         "kind": "收集",
@@ -1748,7 +1840,7 @@
         "node": "NODE_l4",
         "npc": "NPC_keer",
         "item": "ITEM_whitedown_grass",
-        "_todo": "真源：把她标错的一味药送去给柯尔确认；错的那味 = 白毛草（§6.2 L388–L392 露缇认错）"
+        "_todo": "真源：把她标错的那一味药送去给柯尔确认；错的那味 = 白毛草。柯尔只看了一眼就说对了——「她不是标错，她是急着写」"
       },
       {
         "kind": "交付",
@@ -1771,7 +1863,7 @@
             "node": "NODE_l1",
             "item": "ITEM_tinder_herb",
             "progress_key": "火绒草",
-            "_todo": "真源：在林带采 5 份火绒草（采集指令 + 采集点刷新）；§6.1 L229–L234 有采集回显"
+            "_todo": "真源：在林带采 5 份火绒草（采集指令 + 采集点刷新；NODE_l2 苔痕小径是采集点）"
           },
           {
             "kind": "收集",
@@ -1783,7 +1875,8 @@
           }
         ],
         "text": "QUEST_L1_a_text",
-        "next": "QUEST_L1_b"
+        "next": "QUEST_L1_b",
+        "_todo": "真源环 a：采两味药（火绒草 ×5 + 苦苔 ×2）"
       },
       {
         "key": "b",
@@ -1797,11 +1890,12 @@
             "node": "NODE_l4",
             "npc": "NPC_keer",
             "item": "ITEM_whitedown_grass",
-            "_todo": "真源：把她标错的一味药送去给柯尔确认；错的那味 = 白毛草（§6.2 L388–L392 露缇认错）"
+            "_todo": "真源：把她标错的那一味药送去给柯尔确认；错的那味 = 白毛草。柯尔只看了一眼就说对了——「她不是标错，她是急着写」"
           }
         ],
         "text": "QUEST_L1_b_text",
-        "next": "QUEST_L1_c"
+        "next": "QUEST_L1_c",
+        "_todo": "真源环 b：把标错的一味送去给柯尔确认"
       },
       {
         "key": "c",
@@ -1818,7 +1912,8 @@
         ],
         "text": "QUEST_L1_c_text",
         "next": null,
-        "upgrade": "药铺开启「材料换药」（可见系统解锁）"
+        "upgrade": "药铺开启「材料换药」（可见系统解锁）",
+        "_todo": "真源环 c：把订正后的药单交回药铺"
       }
     ],
     "rewards": {
@@ -1840,9 +1935,8 @@
       "complete": "QUEST_L1_complete",
       "abandon": "QUEST_L1_abandon"
     },
-    "_source": "08_地图任务关卡/02_任务线与推进节奏.md:L40（§3.1 低语林带 · L1）· L307–L313（§6.2 接取）· L388–L396（§6.2 完成回显）",
-    "_todo": "标题槽位 QUEST_L1_title = 「露缇的药单」（真源 §3 表内专名原文）；本域只传槽位 key，句子真源 = content/data/text_specs.json",
-    "trigger": "首次进入 NODE_t3（药铺·苦苔台）"
+    "_source": "08_地图任务关卡/02_任务线与推进节奏.md §2.1（L122 · 林带 L1「标错的一味」）· 01_世界观与剧情/04_剧情与NPC.md §2.1 N3（露缇·苦苔：她是镇上的常识之口）",
+    "_todo": "标题槽位 QUEST_L1_title = 「标错的一味」（真源 02 §2.1 新标题；旧落盘为「露缇的药单」）。本域只传槽位 key"
   },
   "QUEST_L2": {
     "id": "QUEST_L2",
@@ -1850,6 +1944,10 @@
     "kind": "支线",
     "band": "低语林带",
     "level_min": 3,
+    "trigger": "完成 QUEST_M1_3 后，首次在 NODE_l4 与柯尔对话",
+    "prereq": [
+      "QUEST_M1_3"
+    ],
     "giver": "NPC_keer",
     "giver_node": "NODE_l4",
     "nodes": [
@@ -1900,11 +1998,11 @@
       },
       {
         "kind": "交付",
-        "target": "放走活物·听柯尔讲闪避对抗",
+        "target": "放走活物·听柯尔讲「看它往哪跑」",
         "count": 1,
         "node": "NODE_l4",
         "npc": "NPC_keer",
-        "_todo": "真源：放走它，柯尔教你「看它往哪跑」= 闪避对抗第一课（§6.2 L334–L373）"
+        "_todo": "真源：放走它——柯尔教你的第一件事不是打架，是「看它往哪跑」（闪避对抗第一课）"
       }
     ],
     "rings": [
@@ -1946,7 +2044,7 @@
         ],
         "text": "QUEST_L2_a_text",
         "next": "QUEST_L2_b",
-        "_todo": "真源：跟柯尔走完林带 5 个节点（纯移动、无战斗——教「路」）；节点取名 maps.json 的 l1–l5 逐字"
+        "_todo": "真源环 a：跟柯尔走完林带 5 个节点（纯移动、不打架——教「路」）；节点名逐字取新显示名"
       },
       {
         "key": "b",
@@ -1963,7 +2061,8 @@
           }
         ],
         "text": "QUEST_L2_b_text",
-        "next": "QUEST_L2_c"
+        "next": "QUEST_L2_c",
+        "_todo": "真源环 b：陷阱抓一只活物（不杀）"
       },
       {
         "key": "c",
@@ -1972,16 +2071,17 @@
         "objectives": [
           {
             "kind": "交付",
-            "target": "放走活物·听柯尔讲闪避对抗",
+            "target": "放走活物·听柯尔讲「看它往哪跑」",
             "count": 1,
             "node": "NODE_l4",
             "npc": "NPC_keer",
-            "_todo": "真源：放走它，柯尔教你「看它往哪跑」= 闪避对抗第一课（§6.2 L334–L373）"
+            "_todo": "真源：放走它——柯尔教你的第一件事不是打架，是「看它往哪跑」（闪避对抗第一课）"
           }
         ],
         "text": "QUEST_L2_c_text",
         "next": null,
-        "upgrade": "猎手披风（护甲上 · 粗制 · 首件带闪避的甲）"
+        "upgrade": "猎手披风（上甲 · 粗制 · 首件带闪避的甲）",
+        "_todo": "真源环 c：放走活物并听柯尔讲「看它往哪跑」"
       }
     ],
     "rewards": {
@@ -1991,7 +2091,7 @@
           "id": "ITEM_iron_chestplate",
           "count": 1,
           "name": "猎手披风",
-          "_todo": "真源【护甲上 / 粗制 / 装等 3 · 主属性建议：闪避 rating】；items 域无此条，暂借粗铁胸甲（粗制/上甲/ilv5/band Ⅰ）占位，待 items 域补「猎手披风」"
+          "_todo": "真源【护甲上 / 粗制 · 主属性建议：闪避 rating】（02 §2.1 L2 奖励感）；items 域无「猎手披风」条目 ⇒ 按 02 原文暂借 ITEM_iron_chestplate（粗铁胸甲，粗制/上甲/ilv5）占位，待 W1-D 复核"
         }
       ],
       "upgrade": "猎手披风（护甲上 · 粗制 · 首件带闪避的甲）"
@@ -2004,12 +2104,8 @@
       "complete": "QUEST_L2_complete",
       "abandon": "QUEST_L2_abandon"
     },
-    "_source": "08_地图任务关卡/02_任务线与推进节奏.md:L41（§3.1 低语林带 · L2）· L315–L373（§6.2 柯尔 & 闪避对抗）",
-    "_todo": "标题槽位 QUEST_L2_title = 「猎户的三天」（真源 §3 表内专名原文）；本域只传槽位 key，句子真源 = content/data/text_specs.json",
-    "trigger": "完成 QUEST_M1_3 后，首次在 NODE_l4 与柯尔对话",
-    "prereq": [
-      "QUEST_M1_3"
-    ]
+    "_source": "08_地图任务关卡/02_任务线与推进节奏.md §2.1（L123 · 林带 L2「猎户的三条道」）· 01_世界观与剧情/04_剧情与NPC.md §2.2 N9（柯尔：把林子当账本的技术性怀疑者）",
+    "_todo": "标题槽位 QUEST_L2_title = 「猎户的三条道」（真源 02 §2.1 新标题；旧落盘为「猎户的三天」）"
   },
   "QUEST_L3": {
     "id": "QUEST_L3",
@@ -2017,6 +2113,10 @@
     "kind": "支线",
     "band": "低语林带",
     "level_min": 3,
+    "trigger": "完成 QUEST_L1 后，在 NODE_t3 与露缇对话",
+    "prereq": [
+      "QUEST_L1"
+    ],
     "giver": "NPC_luti",
     "giver_node": "NODE_t3",
     "nodes": [
@@ -2036,11 +2136,11 @@
       },
       {
         "kind": "击杀",
-        "target": "林妖",
+        "target": "树精",
         "count": 1,
         "node": "NODE_l3",
         "monster": "MON_sprite",
-        "_todo": "真源：护送她回镇（途中 1 波遭遇，不能让她被打到）；遭遇怪取林带普通怪林妖，「不能让她被打到」为护送侧保护条件"
+        "_todo": "真源：护送她回镇（途中 1 波遭遇，不能让她被打到）；遭遇怪取林带高闪避条目 MON_sprite 树精（旧落盘目标名「林妖」按 04 §7.2 改），「不能让她被打到」为护送侧保护条件"
       },
       {
         "kind": "交付",
@@ -2048,7 +2148,7 @@
         "count": 1,
         "node": "NODE_t3",
         "npc": "NPC_luti",
-        "_todo": "真源：交还药铺并听她复述一遍路线"
+        "_todo": "真源：交还药铺并听她复述一遍路线（「我不是乱跑，我是走到那儿的」）"
       }
     ],
     "rings": [
@@ -2067,7 +2167,8 @@
           }
         ],
         "text": "QUEST_L3_a_text",
-        "next": "QUEST_L3_b"
+        "next": "QUEST_L3_b",
+        "_todo": "真源环 a：在苔痕小径一带找到蒂亚"
       },
       {
         "key": "b",
@@ -2076,15 +2177,16 @@
         "objectives": [
           {
             "kind": "击杀",
-            "target": "林妖",
+            "target": "树精",
             "count": 1,
             "node": "NODE_l3",
             "monster": "MON_sprite",
-            "_todo": "真源：护送她回镇（途中 1 波遭遇，不能让她被打到）；遭遇怪取林带普通怪林妖，「不能让她被打到」为护送侧保护条件"
+            "_todo": "真源：护送她回镇（途中 1 波遭遇，不能让她被打到）；遭遇怪取林带高闪避条目 MON_sprite 树精（旧落盘目标名「林妖」按 04 §7.2 改），「不能让她被打到」为护送侧保护条件"
           }
         ],
         "text": "QUEST_L3_b_text",
-        "next": "QUEST_L3_c"
+        "next": "QUEST_L3_c",
+        "_todo": "真源环 b：护送出林（1 波遭遇）"
       },
       {
         "key": "c",
@@ -2097,12 +2199,13 @@
             "count": 1,
             "node": "NODE_t3",
             "npc": "NPC_luti",
-            "_todo": "真源：交还药铺并听她复述一遍路线"
+            "_todo": "真源：交还药铺并听她复述一遍路线（「我不是乱跑，我是走到那儿的」）"
           }
         ],
         "text": "QUEST_L3_c_text",
         "next": null,
-        "upgrade": "露缇折扣（药铺价格 −10%）+ 消耗品 ×3"
+        "upgrade": "露缇折扣（药铺价格 −10%）+ 消耗品 ×3",
+        "_todo": "真源环 c：交还药铺"
       }
     ],
     "rewards": {
@@ -2122,7 +2225,7 @@
       },
       "upgrade": "露缇折扣（药铺价格 −10%）"
     },
-    "teach": "teach:逃避位/救援",
+    "teach": "teach:救援/逃避位",
     "skippable": true,
     "text": {
       "intro": "QUEST_L3_intro",
@@ -2130,12 +2233,8 @@
       "complete": "QUEST_L3_complete",
       "abandon": "QUEST_L3_abandon"
     },
-    "_source": "08_地图任务关卡/02_任务线与推进节奏.md:L42（§3.1 低语林带 · L3）· L313（§6.2 露缇提到「蒂亚早上出去的，到晚饭还没回来」）",
-    "_todo": "标题槽位 QUEST_L3_title = 「走丢的学徒」（真源 §3 表内专名原文）；本域只传槽位 key，句子真源 = content/data/text_specs.json",
-    "trigger": "完成 QUEST_L1 后，在 NODE_t3 与露缇对话",
-    "prereq": [
-      "QUEST_L1"
-    ]
+    "_source": "08_地图任务关卡/02_任务线与推进节奏.md §2.1（L124 · 林带 L3「蒂亚的第三遍」）· 01_世界观与剧情/04_剧情与NPC.md §2.2 N10（蒂亚：鞋大一号 / 只说三遍）",
+    "_todo": "标题槽位 QUEST_L3_title = 「蒂亚的第三遍」（真源 02 §2.1 新标题；旧落盘为「走丢的学徒」）"
   },
   "QUEST_L4": {
     "id": "QUEST_L4",
@@ -2143,6 +2242,10 @@
     "kind": "支线",
     "band": "低语林带",
     "level_min": 4,
+    "trigger": "完成 QUEST_L2 后，首次靠近 NODE_l3（隐藏刻记）",
+    "prereq": [
+      "QUEST_L2"
+    ],
     "giver": "NPC_keer",
     "giver_node": "NODE_l4",
     "nodes": [
@@ -2157,7 +2260,7 @@
         "target": "旧记号",
         "count": 3,
         "progress_key": "旧记号",
-        "_todo": "真源：发现 3 处刻在树上的旧记号（隐藏节点触发：只有靠近特定节点才刷出）；具体 3 处以 l2/l3/l5 为代表（真源未点名）"
+        "_todo": "真源：发现 3 处刻在树上的旧记号（隐藏节点触发：靠近才刷出）；具体 3 处以 l2 / l3 / l5 为代表（真源未点名）"
       },
       {
         "kind": "到达",
@@ -2168,10 +2271,11 @@
       },
       {
         "kind": "收集",
-        "target": "持线者的旧铁牌",
+        "target": "守路人的旧铁牌",
         "count": 1,
         "node": "NODE_l5",
-        "item": "ITEM_iron_amulet"
+        "item": "ITEM_iron_amulet",
+        "_todo": "真源：老木环坛的旧铁牌（饰品 · 粗制 · 首件剧情物证）；旧物名「持线者的旧铁牌」按 04 §7.2/命名总表去「线」系 → 「守路人的旧铁牌」"
       }
     ],
     "rings": [
@@ -2185,11 +2289,12 @@
             "target": "旧记号",
             "count": 3,
             "progress_key": "旧记号",
-            "_todo": "真源：发现 3 处刻在树上的旧记号（隐藏节点触发：只有靠近特定节点才刷出）；具体 3 处以 l2/l3/l5 为代表（真源未点名）"
+            "_todo": "真源：发现 3 处刻在树上的旧记号（隐藏节点触发：靠近才刷出）；具体 3 处以 l2 / l3 / l5 为代表（真源未点名）"
           }
         ],
         "text": "QUEST_L4_a_text",
-        "next": "QUEST_L4_b"
+        "next": "QUEST_L4_b",
+        "_todo": "真源环 a：找到 3 处树皮旧刻"
       },
       {
         "key": "b",
@@ -2205,7 +2310,8 @@
           }
         ],
         "text": "QUEST_L4_b_text",
-        "next": "QUEST_L4_c"
+        "next": "QUEST_L4_c",
+        "_todo": "真源环 b：按序走完记号链"
       },
       {
         "key": "c",
@@ -2214,15 +2320,17 @@
         "objectives": [
           {
             "kind": "收集",
-            "target": "持线者的旧铁牌",
+            "target": "守路人的旧铁牌",
             "count": 1,
             "node": "NODE_l5",
-            "item": "ITEM_iron_amulet"
+            "item": "ITEM_iron_amulet",
+            "_todo": "真源：老木环坛的旧铁牌（饰品 · 粗制 · 首件剧情物证）；旧物名「持线者的旧铁牌」按 04 §7.2/命名总表去「线」系 → 「守路人的旧铁牌」"
           }
         ],
         "text": "QUEST_L4_c_text",
         "next": null,
-        "upgrade": "持线者铁牌（饰品 · 粗制 · 首件剧情物证）"
+        "upgrade": "守路人的旧铁牌（饰品 · 粗制 · 首件剧情物证）",
+        "_todo": "真源环 c：取回旧铁牌——「猎人不会刻得这么齐」"
       }
     ],
     "rewards": {
@@ -2231,11 +2339,11 @@
         {
           "id": "ITEM_iron_amulet",
           "count": 1,
-          "name": "持线者铁牌",
-          "_todo": "真源【饰品 / 粗制 / 装等 3】；items 域无此条，暂借粗铁护符（粗制/饰品/ilv5）占位"
+          "name": "守路人的旧铁牌",
+          "_todo": "真源【饰品 / 粗制】（02 §2.1 L4 奖励感）；items 域无此条 ⇒ 暂借 ITEM_iron_amulet（粗铁护符，粗制/饰品/ilv5）占位，待 W1-D 复核"
         }
       ],
-      "upgrade": "持线者铁牌（饰品 · 粗制 · 装等 3）"
+      "upgrade": "守路人的旧铁牌（饰品 · 粗制 · 首件剧情物证）"
     },
     "teach": "teach:探索/隐藏点",
     "skippable": true,
@@ -2245,12 +2353,8 @@
       "complete": "QUEST_L4_complete",
       "abandon": "QUEST_L4_abandon"
     },
-    "_source": "08_地图任务关卡/02_任务线与推进节奏.md:L43（§3.1 低语林带 · L4）· 08_地图任务关卡/01_地图拓扑与节点清单.md:L74（L4 鹿径营地 = 支线终点）",
-    "_todo": "标题槽位 QUEST_L4_title = 「树上的记号」（真源 §3 表内专名原文）；本域只传槽位 key，句子真源 = content/data/text_specs.json",
-    "trigger": "完成 QUEST_L2 后，首次靠近 NODE_l3（隐藏刻记）",
-    "prereq": [
-      "QUEST_L2"
-    ]
+    "_source": "08_地图任务关卡/02_任务线与推进节奏.md §2.1（L126 · 林带 L4「树皮上的旧刻」）· 01_世界观与剧情/_parts/地理_P1篇.md §二.1（l3 蛛网林窗 = 记号链起点）",
+    "_todo": "标题槽位 QUEST_L4_title = 「树皮上的旧刻」（真源 02 §2.1 新标题；旧落盘为「树上的记号」）"
   },
   "QUEST_L5": {
     "id": "QUEST_L5",
@@ -2258,6 +2362,10 @@
     "kind": "支线",
     "band": "低语林带",
     "level_min": 3,
+    "trigger": "完成 QUEST_M1_3 后，在 NODE_t5 与玛尔达对话",
+    "prereq": [
+      "QUEST_M1_3"
+    ],
     "giver": "NPC_maerda",
     "giver_node": "NODE_t5",
     "nodes": [
@@ -2273,16 +2381,15 @@
         "node": "NODE_l1",
         "item": "ITEM_straw_bundle",
         "progress_key": "柴",
-        "_todo": "真源：给旅店补 8 份柴（火绒草 → 木柴的换物）；items 域木柴/捆扎类只有干草束，暂借其 id，换物配方待生活域"
+        "_todo": "真源：给旅店补 8 份柴；items 域无「柴」⇒ 02 §4.2 待 W1-D 定（新增「柴」或改用干草束 ITEM_straw_bundle），本轮沿用干草束占位"
       },
       {
         "kind": "交付",
         "target": "热汤",
         "count": 3,
         "node": "NODE_t5",
-        "npc": "NPC_taode",
         "item": "ITEM_hot_soup",
-        "_todo": "真源：给当晚 3 位住客送热汤（3 个对话节点，其中一位是陶德）"
+        "_todo": "真源：给当晚 3 位住客送热汤——露缇（NPC_luti）/ 车夫（背景，不在 14 位内）/ 角落一直没抬头的那位。三位住客不是同一 NPC ⇒ 本目标不挂 npc 字段"
       },
       {
         "kind": "交付",
@@ -2290,7 +2397,7 @@
         "count": 1,
         "node": "NODE_t5",
         "npc": "NPC_taode",
-        "_todo": "真源：深夜有人敲你房门——陶德来还你一样东西（钩子②的第一次轻微触碰）；§6.1 L160 玛尔达「半夜有人敲你门，你就开」"
+        "_todo": "真源：深夜有人敲你的门——陶德来还「那样东西」（当票背面那半页的另一半）；★ 基调装置①「白天光 / 夜里冷」的第一次落地"
       }
     ],
     "rings": [
@@ -2306,11 +2413,12 @@
             "node": "NODE_l1",
             "item": "ITEM_straw_bundle",
             "progress_key": "柴",
-            "_todo": "真源：给旅店补 8 份柴（火绒草 → 木柴的换物）；items 域木柴/捆扎类只有干草束，暂借其 id，换物配方待生活域"
+            "_todo": "真源：给旅店补 8 份柴；items 域无「柴」⇒ 02 §4.2 待 W1-D 定（新增「柴」或改用干草束 ITEM_straw_bundle），本轮沿用干草束占位"
           }
         ],
         "text": "QUEST_L5_a_text",
-        "next": "QUEST_L5_b"
+        "next": "QUEST_L5_b",
+        "_todo": "真源环 a：补 8 份柴"
       },
       {
         "key": "b",
@@ -2322,13 +2430,13 @@
             "target": "热汤",
             "count": 3,
             "node": "NODE_t5",
-            "npc": "NPC_taode",
             "item": "ITEM_hot_soup",
-            "_todo": "真源：给当晚 3 位住客送热汤（3 个对话节点，其中一位是陶德）"
+            "_todo": "真源：给当晚 3 位住客送热汤——露缇（NPC_luti）/ 车夫（背景，不在 14 位内）/ 角落一直没抬头的那位。三位住客不是同一 NPC ⇒ 本目标不挂 npc 字段"
           }
         ],
         "text": "QUEST_L5_b_text",
-        "next": "QUEST_L5_c"
+        "next": "QUEST_L5_c",
+        "_todo": "真源环 b：给三位住客送热汤"
       },
       {
         "key": "c",
@@ -2341,12 +2449,13 @@
             "count": 1,
             "node": "NODE_t5",
             "npc": "NPC_taode",
-            "_todo": "真源：深夜有人敲你房门——陶德来还你一样东西（钩子②的第一次轻微触碰）；§6.1 L160 玛尔达「半夜有人敲你门，你就开」"
+            "_todo": "真源：深夜有人敲你的门——陶德来还「那样东西」（当票背面那半页的另一半）；★ 基调装置①「白天光 / 夜里冷」的第一次落地"
           }
         ],
         "text": "QUEST_L5_c_text",
         "next": null,
-        "upgrade": "旅店休息免费 3 次 + 林带精英位置情报"
+        "upgrade": "旅店休息免费 3 次 + 林带精英位置情报",
+        "_todo": "真源环 c：深夜敲门（陶德来还东西）"
       }
     ],
     "rewards": {
@@ -2367,12 +2476,8 @@
       "complete": "QUEST_L5_complete",
       "abandon": "QUEST_L5_abandon"
     },
-    "_source": "08_地图任务关卡/02_任务线与推进节奏.md:L44（§3.1 低语林带 · L5）· §6.1 L150–L160（玛尔达）· L269–L278（陶德的半秒）",
-    "_todo": "标题槽位 QUEST_L5_title = 「一捆柴与一夜」（真源 §3 表内专名原文）；本域只传槽位 key，句子真源 = content/data/text_specs.json",
-    "trigger": "完成 QUEST_M1_3 后，在 NODE_t5 与玛尔达对话",
-    "prereq": [
-      "QUEST_M1_3"
-    ]
+    "_source": "08_地图任务关卡/02_任务线与推进节奏.md §2.1（L127 · 林带 L5「八捆柴，三碗汤」）· 01_世界观与剧情/04_剧情与NPC.md §2.1 N5（玛尔达：把旅店从姐姐名下过户）",
+    "_todo": "标题槽位 QUEST_L5_title = 「八捆柴，三碗汤」（真源 02 §2.1 新标题；旧落盘为「一捆柴与一夜」）"
   },
   "QUEST_L6": {
     "id": "QUEST_L6",
@@ -2380,6 +2485,11 @@
     "kind": "委托",
     "band": "低语林带",
     "level_min": 6,
+    "trigger": "完成 QUEST_L2 且等级 ≥ 6 后，在 NODE_t7 与布兰妲对话",
+    "prereq": [
+      "QUEST_L2"
+    ],
+    "prereq_note": "需等级 ≥ 6；第 3 环需把 L2–L5 拿到的装备穿齐（换装是这环的教学落点）",
     "giver": "NPC_bulanda",
     "giver_node": "NODE_t7",
     "nodes": [
@@ -2394,7 +2504,7 @@
         "target": "踪迹链",
         "count": 3,
         "progress_key": "踪迹链",
-        "_todo": "真源：追踪林带精英恐狼首领（3 个节点的踪迹链）；具体 3 处以 l3/l4/l5 为代表（真源未点名）"
+        "_todo": "真源：追踪林带精英恐狼首领（3 个节点的踪迹链）；具体 3 处以 l3 / l4 / l5 为代表（真源未点名）"
       },
       {
         "kind": "击杀",
@@ -2402,7 +2512,7 @@
         "count": 1,
         "node": "NODE_l5",
         "monster": "MON_dire_wolf",
-        "_todo": "★ 真源：第一次交手会败退（设计上必输，被放走——教「打不过要跑」）；败退判定由 run/战斗侧实现，不靠数值暗改"
+        "_todo": "★ 真源：第一次交手会败退（设计上必输、被放走——「打不过要跑」是布兰妲教你的）；委托单上她手写备注「第一次会输，别硬撑」"
       },
       {
         "kind": "击杀",
@@ -2424,11 +2534,12 @@
             "target": "踪迹链",
             "count": 3,
             "progress_key": "踪迹链",
-            "_todo": "真源：追踪林带精英恐狼首领（3 个节点的踪迹链）；具体 3 处以 l3/l4/l5 为代表（真源未点名）"
+            "_todo": "真源：追踪林带精英恐狼首领（3 个节点的踪迹链）；具体 3 处以 l3 / l4 / l5 为代表（真源未点名）"
           }
         ],
         "text": "QUEST_L6_a_text",
-        "next": "QUEST_L6_b"
+        "next": "QUEST_L6_b",
+        "_todo": "真源环 a：跟踪迹链"
       },
       {
         "key": "b",
@@ -2441,11 +2552,12 @@
             "count": 1,
             "node": "NODE_l5",
             "monster": "MON_dire_wolf",
-            "_todo": "★ 真源：第一次交手会败退（设计上必输，被放走——教「打不过要跑」）；败退判定由 run/战斗侧实现，不靠数值暗改"
+            "_todo": "★ 真源：第一次交手会败退（设计上必输、被放走——「打不过要跑」是布兰妲教你的）；委托单上她手写备注「第一次会输，别硬撑」"
           }
         ],
         "text": "QUEST_L6_b_text",
-        "next": "QUEST_L6_c"
+        "next": "QUEST_L6_c",
+        "_todo": "真源环 b：第一次交手（必输、被放走）"
       },
       {
         "key": "c",
@@ -2463,7 +2575,8 @@
         ],
         "text": "QUEST_L6_c_text",
         "next": null,
-        "upgrade": "铭刻护甲上 · 按职业给（游侠向：铭刻短弓）"
+        "upgrade": "铭刻护甲上（按职业给；游侠向 = 铭刻短弓）",
+        "_todo": "真源环 c：换装后再战"
       }
     ],
     "rewards": {
@@ -2473,7 +2586,7 @@
           "id": "ITEM_oathbound_chestplate",
           "count": 1,
           "name": "铭刻护甲上",
-          "_todo": "真源【装备 / 铭刻 / 装等 6 · 按职业给：游侠向为铭刻短弓】；items 域铭刻上甲取誓约胸甲（ilv10），铭刻短弓条目待 items 域补"
+          "_todo": "真源【装备 / 铭刻 / 装等 6 · 按职业给：游侠向为铭刻短弓】；items 域铭刻上甲取 ITEM_oathbound_chestplate（荣誉胸甲，铭刻/上甲/ilv10），铭刻短弓条目待 items 域补"
         },
         {
           "id": "ITEM_living_wood_core",
@@ -2492,13 +2605,8 @@
       "complete": "QUEST_L6_complete",
       "abandon": "QUEST_L6_abandon"
     },
-    "_source": "08_地图任务关卡/02_任务线与推进节奏.md:L45（§3.1 低语林带 · L6 精英）· L69–L76（支线合计 14 600 = 4 100 + 4 700 + 5 800）",
-    "_todo": "标题槽位 QUEST_L6_title = 「独行的恐狼首领」（真源 §3 表内专名原文）；本域只传槽位 key，句子真源 = content/data/text_specs.json",
-    "trigger": "完成 QUEST_L2 且等级≥6 后，在 NODE_t7 与布兰妲对话",
-    "prereq": [
-      "QUEST_L2"
-    ],
-    "prereq_note": "需等级≥6；第 3 环需把 L2–L5 拿到的装备穿齐（换装是这环的教学落点）"
+    "_source": "08_地图任务关卡/02_任务线与推进节奏.md §2.1（L128 · 林带 L6 精英「林子里那只大的」）· §2.0（精英支线只在 L6 / K6 / R6 给装备）",
+    "_todo": "标题槽位 QUEST_L6_title = 「林子里那只大的」（真源 02 §2.1 新标题；旧落盘为「独行的恐狼首领」）"
   },
   "QUEST_K1": {
     "id": "QUEST_K1",
@@ -2506,6 +2614,7 @@
     "kind": "支线",
     "band": "铁脊矿径",
     "level_min": 8,
+    "trigger": "首次进入 NODE_t2（铁匠铺·铁脊炉，等级 ≥ 8）",
     "giver": "NPC_weila_tieji",
     "giver_node": "NODE_t2",
     "nodes": [
@@ -2525,11 +2634,11 @@
       },
       {
         "kind": "击杀",
-        "target": "石甲虫",
+        "target": "岩甲虫",
         "count": 3,
         "node": "NODE_m3",
         "monster": "MON_rock_beetle",
-        "_todo": "真源「厚壳怪（高 DEF）」取骨；矿径厚壳怪 = 石甲虫（monsters teach:穿透/练手，drop 岩壳片 ITEM_stone_shell_plate）"
+        "_todo": "真源「厚壳怪（高 DEF）」取骨；矿径厚壳怪 = MON_rock_beetle 岩甲虫（drop 岩壳片 ITEM_stone_shell_plate）；旧落盘目标名「石甲虫」按 04 §7.2 改为「岩甲虫」"
       },
       {
         "kind": "交付",
@@ -2537,7 +2646,7 @@
         "count": 1,
         "node": "NODE_t2",
         "npc": "NPC_weila_tieji",
-        "_todo": "真源：看着薇拉打一件东西——锻造仍灰显（P2 解锁），她说「这活儿要到外面学」（未解锁系统文案：不给静默失败）"
+        "_todo": "真源：看她打一件东西——锻造面板还是灰的，她说「这活儿要到外面去学」（未解锁系统回执槽 NPC_weila_tieji_locked_forge，不给静默失败）"
       }
     ],
     "rings": [
@@ -2556,7 +2665,8 @@
           }
         ],
         "text": "QUEST_K1_a_text",
-        "next": "QUEST_K1_b"
+        "next": "QUEST_K1_b",
+        "_todo": "真源环 a：她收铁砂（拿指头捻一下，然后说「这批得掺」）"
       },
       {
         "key": "b",
@@ -2565,15 +2675,16 @@
         "objectives": [
           {
             "kind": "击杀",
-            "target": "石甲虫",
+            "target": "岩甲虫",
             "count": 3,
             "node": "NODE_m3",
             "monster": "MON_rock_beetle",
-            "_todo": "真源「厚壳怪（高 DEF）」取骨；矿径厚壳怪 = 石甲虫（monsters teach:穿透/练手，drop 岩壳片 ITEM_stone_shell_plate）"
+            "_todo": "真源「厚壳怪（高 DEF）」取骨；矿径厚壳怪 = MON_rock_beetle 岩甲虫（drop 岩壳片 ITEM_stone_shell_plate）；旧落盘目标名「石甲虫」按 04 §7.2 改为「岩甲虫」"
           }
         ],
         "text": "QUEST_K1_b_text",
-        "next": "QUEST_K1_c"
+        "next": "QUEST_K1_c",
+        "_todo": "真源环 b：厚壳怪取骨"
       },
       {
         "key": "c",
@@ -2586,12 +2697,13 @@
             "count": 1,
             "node": "NODE_t2",
             "npc": "NPC_weila_tieji",
-            "_todo": "真源：看着薇拉打一件东西——锻造仍灰显（P2 解锁），她说「这活儿要到外面学」（未解锁系统文案：不给静默失败）"
+            "_todo": "真源：看她打一件东西——锻造面板还是灰的，她说「这活儿要到外面去学」（未解锁系统回执槽 NPC_weila_tieji_locked_forge，不给静默失败）"
           }
         ],
         "text": "QUEST_K1_c_text",
         "next": null,
-        "upgrade": "修理折扣（铁匠铺）+ 铁料 ×6"
+        "upgrade": "修理折扣（铁匠铺）+ 铁料 ×6",
+        "_todo": "真源环 c：回炉观摩（锻造/附魔灰显出口）"
       }
     ],
     "rewards": {
@@ -2618,9 +2730,8 @@
       "complete": "QUEST_K1_complete",
       "abandon": "QUEST_K1_abandon"
     },
-    "_source": "08_地图任务关卡/02_任务线与推进节奏.md:L51（§3.2 铁脊矿径 · K1）· §6.2 L401–L409（井口/解甲油/「你这刀在挠痒」）",
-    "_todo": "标题槽位 QUEST_K1_title = 「铁与骨」（真源 §3 表内专名原文）；本域只传槽位 key，句子真源 = content/data/text_specs.json",
-    "trigger": "首次进入 NODE_t2（铁匠铺·铁脊炉，等级≥8）"
+    "_source": "08_地图任务关卡/02_任务线与推进节奏.md §2.2（L138 · 矿径 K1「她收铁砂」）· 01_世界观与剧情/04_剧情与NPC.md §2.1 N2（薇拉·铁脊：想要开炉许可）",
+    "_todo": "标题槽位 QUEST_K1_title = 「她收铁砂」（真源 02 §2.2 新标题；旧落盘为「铁与骨」）"
   },
   "QUEST_K2": {
     "id": "QUEST_K2",
@@ -2628,6 +2739,10 @@
     "kind": "支线",
     "band": "铁脊矿径",
     "level_min": 8,
+    "trigger": "完成 QUEST_K1 后，在 NODE_m1 与巴斯克对话",
+    "prereq": [
+      "QUEST_K1"
+    ],
     "giver": "NPC_basike",
     "giver_node": "NODE_m1",
     "nodes": [
@@ -2637,28 +2752,28 @@
     "objectives": [
       {
         "kind": "击杀",
-        "target": "洞穴妖婆",
+        "target": "洞窟妖婆",
         "count": 2,
         "node": "NODE_m4",
         "monster": "MON_hag",
-        "_todo": "真源「怪带可打断的蓄力：不打断则本回合伤害翻倍」；矿径打断主怪 = 洞穴妖婆（前摇 2.0 刻、×2.0）"
+        "_todo": "真源「怪带可打断的蓄力：不打断则本回合伤害翻倍」；矿径打断主怪 = MON_hag 洞窟妖婆（前摇 2.0 刻、×2.0）；旧落盘名「洞穴妖婆」按 04 §7.2 改为「洞窟妖婆」"
       },
       {
         "kind": "收集",
-        "target": "断口样本",
+        "target": "焦痕样本",
         "count": 1,
         "node": "NODE_m4",
         "item": "ITEM_scorch_sample",
-        "_todo": "真源：在井壁的断口处取样（采集变体）；物 = 焦痕样本（§6.2 L421–L428 那道齐口焦痕）"
+        "_todo": "真源：在井壁的焦痕处取样（采集变体）；旧物名「断口样本」按 02 §4.3 改为「焦痕样本」（去「断口」旧隐喻）"
       },
       {
         "kind": "交付",
-        "target": "断口样本",
+        "target": "焦痕样本",
         "count": 1,
         "node": "NODE_m1",
         "npc": "NPC_basike",
         "item": "ITEM_scorch_sample",
-        "_todo": "真源：把样本交给巴斯克，他认出这是「塔上才有的东西」"
+        "_todo": "真源：把样本交给巴斯克，他看了半天只说一句「三年前也有过一次」——他没说是谁来看的"
       }
     ],
     "rings": [
@@ -2669,15 +2784,16 @@
         "objectives": [
           {
             "kind": "击杀",
-            "target": "洞穴妖婆",
+            "target": "洞窟妖婆",
             "count": 2,
             "node": "NODE_m4",
             "monster": "MON_hag",
-            "_todo": "真源「怪带可打断的蓄力：不打断则本回合伤害翻倍」；矿径打断主怪 = 洞穴妖婆（前摇 2.0 刻、×2.0）"
+            "_todo": "真源「怪带可打断的蓄力：不打断则本回合伤害翻倍」；矿径打断主怪 = MON_hag 洞窟妖婆（前摇 2.0 刻、×2.0）；旧落盘名「洞穴妖婆」按 04 §7.2 改为「洞窟妖婆」"
           }
         ],
         "text": "QUEST_K2_a_text",
-        "next": "QUEST_K2_b"
+        "next": "QUEST_K2_b",
+        "_todo": "真源环 a：第三竖井的可打断蓄力怪"
       },
       {
         "key": "b",
@@ -2686,15 +2802,16 @@
         "objectives": [
           {
             "kind": "收集",
-            "target": "断口样本",
+            "target": "焦痕样本",
             "count": 1,
             "node": "NODE_m4",
             "item": "ITEM_scorch_sample",
-            "_todo": "真源：在井壁的断口处取样（采集变体）；物 = 焦痕样本（§6.2 L421–L428 那道齐口焦痕）"
+            "_todo": "真源：在井壁的焦痕处取样（采集变体）；旧物名「断口样本」按 02 §4.3 改为「焦痕样本」（去「断口」旧隐喻）"
           }
         ],
         "text": "QUEST_K2_b_text",
-        "next": "QUEST_K2_c"
+        "next": "QUEST_K2_c",
+        "_todo": "真源环 b：井壁焦痕取样"
       },
       {
         "key": "c",
@@ -2703,17 +2820,18 @@
         "objectives": [
           {
             "kind": "交付",
-            "target": "断口样本",
+            "target": "焦痕样本",
             "count": 1,
             "node": "NODE_m1",
             "npc": "NPC_basike",
             "item": "ITEM_scorch_sample",
-            "_todo": "真源：把样本交给巴斯克，他认出这是「塔上才有的东西」"
+            "_todo": "真源：把样本交给巴斯克，他看了半天只说一句「三年前也有过一次」——他没说是谁来看的"
           }
         ],
         "text": "QUEST_K2_c_text",
         "next": null,
-        "upgrade": "矿径采集点全开 + 解甲油 ×3"
+        "upgrade": "矿径采集点全开 + 解甲油 ×3",
+        "_todo": "真源环 c：把样本交给矿头"
       }
     ],
     "rewards": {
@@ -2740,12 +2858,8 @@
       "complete": "QUEST_K2_complete",
       "abandon": "QUEST_K2_abandon"
     },
-    "_source": "08_地图任务关卡/02_任务线与推进节奏.md:L52（§3.2 铁脊矿径 · K2）· §6.2 L421–L428（第三竖井焦痕）",
-    "_todo": "标题槽位 QUEST_K2_title = 「第三竖井」（真源 §3 表内专名原文）；本域只传槽位 key，句子真源 = content/data/text_specs.json",
-    "trigger": "完成 QUEST_K1 后，在 NODE_m1 与巴斯克对话",
-    "prereq": [
-      "QUEST_K1"
-    ]
+    "_source": "08_地图任务关卡/02_任务线与推进节奏.md §2.2（L140 · 矿径 K2「第三竖井的井壁」）· 01_世界观与剧情/_parts/地理_P1篇.md §二.1（m4 地标 = 井壁的焦痕）",
+    "_todo": "标题槽位 QUEST_K2_title = 「第三竖井的井壁」（真源 02 §2.2 新标题；旧落盘为「第三竖井」）"
   },
   "QUEST_K3": {
     "id": "QUEST_K3",
@@ -2753,6 +2867,10 @@
     "kind": "支线",
     "band": "铁脊矿径",
     "level_min": 9,
+    "trigger": "完成 QUEST_K2 后，在 NODE_t4 与塞西恩对话",
+    "prereq": [
+      "QUEST_K2"
+    ],
     "giver": "NPC_saixien",
     "giver_node": "NODE_t4",
     "nodes": [
@@ -2763,11 +2881,11 @@
     "objectives": [
       {
         "kind": "交付",
-        "target": "誓册核对（3 处对不上）",
+        "target": "记工簿核对（3 处对不上）",
         "count": 1,
         "node": "NODE_t4",
         "npc": "NPC_saixien",
-        "_todo": "真源：核对巴斯克（NPC_basike）的誓册，3 处对不上，按掉落记录核对——教「掉落/材料计数」"
+        "_todo": "真源：核对巴斯克（NPC_basike）的记工簿，3 处对不上，按掉落记录核对——教「掉落/材料计数」；旧目标名「誓册核对」按 04 §7.4 改为「记工簿核对」（去「誓册」）"
       },
       {
         "kind": "收集",
@@ -2780,11 +2898,11 @@
       },
       {
         "kind": "交付",
-        "target": "核对完的誓册",
+        "target": "核对完的记工簿",
         "count": 1,
         "node": "NODE_t4",
         "npc": "NPC_saixien",
-        "_todo": "真源：交给塞西恩，他会问你「你身上那道是什么时候的」"
+        "_todo": "真源：交给她——她不是查巴斯克的账，是替他补一个说法（那三个人没写进教区册子）"
       }
     ],
     "rings": [
@@ -2795,15 +2913,16 @@
         "objectives": [
           {
             "kind": "交付",
-            "target": "誓册核对（3 处对不上）",
+            "target": "记工簿核对（3 处对不上）",
             "count": 1,
             "node": "NODE_t4",
             "npc": "NPC_saixien",
-            "_todo": "真源：核对巴斯克（NPC_basike）的誓册，3 处对不上，按掉落记录核对——教「掉落/材料计数」"
+            "_todo": "真源：核对巴斯克（NPC_basike）的记工簿，3 处对不上，按掉落记录核对——教「掉落/材料计数」；旧目标名「誓册核对」按 04 §7.4 改为「记工簿核对」（去「誓册」）"
           }
         ],
         "text": "QUEST_K3_a_text",
-        "next": "QUEST_K3_b"
+        "next": "QUEST_K3_b",
+        "_todo": "真源环 a：记工簿核对（3 处对不上）"
       },
       {
         "key": "b",
@@ -2821,7 +2940,8 @@
           }
         ],
         "text": "QUEST_K3_b_text",
-        "next": "QUEST_K3_c"
+        "next": "QUEST_K3_c",
+        "_todo": "真源环 b：补齐差额"
       },
       {
         "key": "c",
@@ -2830,16 +2950,17 @@
         "objectives": [
           {
             "kind": "交付",
-            "target": "核对完的誓册",
+            "target": "核对完的记工簿",
             "count": 1,
             "node": "NODE_t4",
             "npc": "NPC_saixien",
-            "_todo": "真源：交给塞西恩，他会问你「你身上那道是什么时候的」"
+            "_todo": "真源：交给她——她不是查巴斯克的账，是替他补一个说法（那三个人没写进教区册子）"
           }
         ],
         "text": "QUEST_K3_c_text",
         "next": null,
-        "upgrade": "属性点 +3（可见）"
+        "upgrade": "属性点 +3（可见）",
+        "_todo": "真源环 c：交回核对完的记工簿"
       }
     ],
     "rewards": {
@@ -2848,7 +2969,8 @@
       "growth": {
         "attr_points": 3
       },
-      "upgrade": "属性点 +3（可见）"
+      "upgrade": "属性点 +3（可见）",
+      "_todo": "真源 02 §2.2 K3 只点名「属性点 +3（可见）」；gold 120 是旧落盘的数、新源未点名 ⇒ 保留现值并标注，待 W2-A / 父 agent 裁（不删也不编）"
     },
     "teach": "teach:掉落/材料",
     "skippable": true,
@@ -2858,12 +2980,8 @@
       "complete": "QUEST_K3_complete",
       "abandon": "QUEST_K3_abandon"
     },
-    "_source": "08_地图任务关卡/02_任务线与推进节奏.md:L53（§3.2 铁脊矿径 · K3）",
-    "_todo": "标题槽位 QUEST_K3_title = 「矿头的誓册」（真源 §3 表内专名原文）；本域只传槽位 key，句子真源 = content/data/text_specs.json",
-    "trigger": "完成 QUEST_K2 后，在 NODE_t4 与塞西恩对话",
-    "prereq": [
-      "QUEST_K2"
-    ]
+    "_source": "08_地图任务关卡/02_任务线与推进节奏.md §2.2（L141 · 矿径 K3「对不上的三处」）· 01_世界观与剧情/04_剧情与NPC.md §2.1 N4（塞西恩：要替 12 个名字补葬仪）",
+    "_todo": "标题槽位 QUEST_K3_title = 「对不上的三处」（真源 02 §2.2 新标题；旧落盘为「矿头的誓册」）"
   },
   "QUEST_K4": {
     "id": "QUEST_K4",
@@ -2871,6 +2989,10 @@
     "kind": "支线",
     "band": "铁脊矿径",
     "level_min": 9,
+    "trigger": "完成 QUEST_K1 后，在 NODE_t2 与薇拉·铁脊对话",
+    "prereq": [
+      "QUEST_K1"
+    ],
     "giver": "NPC_weila_tieji",
     "giver_node": "NODE_t2",
     "nodes": [
@@ -2885,7 +3007,7 @@
         "count": 1,
         "node": "NODE_t2",
         "npc": "NPC_weila_tieji",
-        "_todo": "真源：跟薇拉学一遍「减伤链怎么来的」（面板实操）；这是 M1-3 教学之后唯一一次把 DR 数字摊开讲的地方"
+        "_todo": "真源：跟薇拉学一遍「减伤链怎么来的」（面板实操）——她不解释公式，只说「你穿这两件再砍一次，数字自己会说话」"
       },
       {
         "kind": "击杀",
@@ -2893,15 +3015,15 @@
         "count": 3,
         "node": "NODE_m3",
         "monster": "MON_zombie",
-        "_todo": "真源「厚壳怪（高血低伤）」；矿径减伤链练手怪 = 僵尸（monsters teach:减伤链/练手）"
+        "_todo": "真源「厚壳怪（高血低伤）」；矿径减伤链练手怪 = MON_zombie 僵尸（HP×1.25 + ATK×0.85 + SPD −8）"
       },
       {
         "kind": "收集",
         "target": "没打过的东西",
         "count": 1,
         "node": "NODE_m5",
-        "item": "ITEM_collapse_sand_core",
-        "_todo": "真源：在矿径深处捡到一块没打过的东西（后续 P2 材料）；暂借塌砂核（矿径材料）占位"
+        "item": "ITEM_slag_ingot",
+        "_todo": "真源 02 §2.2 K4 + §4.2：建议映射 ITEM_slag_ingot 熔渣锭（薇拉：「你留着。我看了会睡不着」）；旧落盘借塌砂核占位，本轮按真源建议改挂熔渣锭"
       }
     ],
     "rings": [
@@ -2916,11 +3038,12 @@
             "count": 1,
             "node": "NODE_t2",
             "npc": "NPC_weila_tieji",
-            "_todo": "真源：跟薇拉学一遍「减伤链怎么来的」（面板实操）；这是 M1-3 教学之后唯一一次把 DR 数字摊开讲的地方"
+            "_todo": "真源：跟薇拉学一遍「减伤链怎么来的」（面板实操）——她不解释公式，只说「你穿这两件再砍一次，数字自己会说话」"
           }
         ],
         "text": "QUEST_K4_a_text",
-        "next": "QUEST_K4_b"
+        "next": "QUEST_K4_b",
+        "_todo": "真源环 a：两件甲的数字（DR 实操）"
       },
       {
         "key": "b",
@@ -2933,11 +3056,12 @@
             "count": 3,
             "node": "NODE_m3",
             "monster": "MON_zombie",
-            "_todo": "真源「厚壳怪（高血低伤）」；矿径减伤链练手怪 = 僵尸（monsters teach:减伤链/练手）"
+            "_todo": "真源「厚壳怪（高血低伤）」；矿径减伤链练手怪 = MON_zombie 僵尸（HP×1.25 + ATK×0.85 + SPD −8）"
           }
         ],
         "text": "QUEST_K4_b_text",
-        "next": "QUEST_K4_c"
+        "next": "QUEST_K4_c",
+        "_todo": "真源环 b：减伤链练手（高血低伤怪 ×3）"
       },
       {
         "key": "c",
@@ -2949,13 +3073,14 @@
             "target": "没打过的东西",
             "count": 1,
             "node": "NODE_m5",
-            "item": "ITEM_collapse_sand_core",
-            "_todo": "真源：在矿径深处捡到一块没打过的东西（后续 P2 材料）；暂借塌砂核（矿径材料）占位"
+            "item": "ITEM_slag_ingot",
+            "_todo": "真源 02 §2.2 K4 + §4.2：建议映射 ITEM_slag_ingot 熔渣锭（薇拉：「你留着。我看了会睡不着」）；旧落盘借塌砂核占位，本轮按真源建议改挂熔渣锭"
           }
         ],
         "text": "QUEST_K4_c_text",
         "next": null,
-        "upgrade": "精制护甲下（下甲 · 精制 · 装等 8）"
+        "upgrade": "精制护甲下（ITEM_fineforged_legguards）",
+        "_todo": "真源环 c：矿径深处那块「没打过的东西」"
       }
     ],
     "rewards": {
@@ -2965,7 +3090,7 @@
           "id": "ITEM_fineforged_legguards",
           "count": 1,
           "name": "精制护甲下",
-          "_todo": "真源【装等 8】；items 域精锻护腿 = 精制/下甲/ilv8/band Ⅰ，逐字段吻合，无需另立条目"
+          "_todo": "真源【装等 8】；items 域 ITEM_fineforged_legguards 精锻护腿 = 精制/下甲/ilv8，逐字段吻合，无需另立条目"
         }
       ],
       "upgrade": "精制护甲下（下甲 · 精制 · 装等 8）"
@@ -2978,12 +3103,8 @@
       "complete": "QUEST_K4_complete",
       "abandon": "QUEST_K4_abandon"
     },
-    "_source": "08_地图任务关卡/02_任务线与推进节奏.md:L54（§3.2 铁脊矿径 · K4）· §6.2 L411–L419（穿透与 DR 数字）",
-    "_todo": "标题槽位 QUEST_K4_title = 「硬壳」（真源 §3 表内专名原文）；本域只传槽位 key，句子真源 = content/data/text_specs.json",
-    "trigger": "完成 QUEST_K1 后，在 NODE_t2 与薇拉·铁脊对话",
-    "prereq": [
-      "QUEST_K1"
-    ]
+    "_source": "08_地图任务关卡/02_任务线与推进节奏.md §2.2（L142 · 矿径 K4「两件甲的数字」）· 01_世界观与剧情/04_剧情与NPC.md §2.1 N2（薇拉：动词开头、骂料不骂人）",
+    "_todo": "标题槽位 QUEST_K4_title = 「两件甲的数字」（真源 02 §2.2 新标题；旧落盘为「硬壳」）"
   },
   "QUEST_K5": {
     "id": "QUEST_K5",
@@ -2991,6 +3112,10 @@
     "kind": "支线",
     "band": "铁脊矿径",
     "level_min": 9,
+    "trigger": "完成 QUEST_K2 后，在 NODE_m1 与巴斯克对话",
+    "prereq": [
+      "QUEST_K2"
+    ],
     "giver": "NPC_basike",
     "giver_node": "NODE_m1",
     "nodes": [
@@ -3006,7 +3131,7 @@
         "count": 2,
         "node": "NODE_m2",
         "monster": "MON_gargoyle",
-        "_todo": "真源：教射程档/行动顺序——先手清远处的小怪，再处理近身；矿径「远处」的高威胁目标取石像鬼（高 DEF，逼先手 + 穿透）"
+        "_todo": "真源：教射程档 / 行动顺序——先手清远处的小怪，再处理近身；矿径「远处」的高威胁目标取 MON_gargoyle 石像鬼（高 DEF，逼先手 + 穿透）"
       },
       {
         "kind": "到达",
@@ -3014,7 +3139,7 @@
         "count": 3,
         "node": "NODE_m4",
         "progress_key": "塌方标记",
-        "_todo": "真源：在灯灭前把 3 处塌方标记完（矿灯只够走 4 个节点 ⇒ 顺序即决策）；3 处以 m4/m5 一带为代表"
+        "_todo": "真源：在灯灭前把 3 处塌方标记完（矿灯只够走 4 个节点 ⇒ 顺序即决策）；3 处以 m4 / m5 一带为代表"
       },
       {
         "kind": "交付",
@@ -3022,7 +3147,7 @@
         "count": 1,
         "node": "NODE_m1",
         "npc": "NPC_basike",
-        "_todo": "真源：回井口复述路线，巴斯克按完成度给钱"
+        "_todo": "真源：回井口复述一遍路线——「说得出来才算走过」。他不会看地图"
       }
     ],
     "rings": [
@@ -3037,11 +3162,12 @@
             "count": 2,
             "node": "NODE_m2",
             "monster": "MON_gargoyle",
-            "_todo": "真源：教射程档/行动顺序——先手清远处的小怪，再处理近身；矿径「远处」的高威胁目标取石像鬼（高 DEF，逼先手 + 穿透）"
+            "_todo": "真源：教射程档 / 行动顺序——先手清远处的小怪，再处理近身；矿径「远处」的高威胁目标取 MON_gargoyle 石像鬼（高 DEF，逼先手 + 穿透）"
           }
         ],
         "text": "QUEST_K5_a_text",
-        "next": "QUEST_K5_b"
+        "next": "QUEST_K5_b",
+        "_todo": "真源环 a：先照远处还是先处理近身（射程决策）"
       },
       {
         "key": "b",
@@ -3054,11 +3180,12 @@
             "count": 3,
             "node": "NODE_m4",
             "progress_key": "塌方标记",
-            "_todo": "真源：在灯灭前把 3 处塌方标记完（矿灯只够走 4 个节点 ⇒ 顺序即决策）；3 处以 m4/m5 一带为代表"
+            "_todo": "真源：在灯灭前把 3 处塌方标记完（矿灯只够走 4 个节点 ⇒ 顺序即决策）；3 处以 m4 / m5 一带为代表"
           }
         ],
         "text": "QUEST_K5_b_text",
-        "next": "QUEST_K5_c"
+        "next": "QUEST_K5_c",
+        "_todo": "真源环 b：灯灭前标完 3 处塌方"
       },
       {
         "key": "c",
@@ -3071,12 +3198,13 @@
             "count": 1,
             "node": "NODE_m1",
             "npc": "NPC_basike",
-            "_todo": "真源：回井口复述路线，巴斯克按完成度给钱"
+            "_todo": "真源：回井口复述一遍路线——「说得出来才算走过」。他不会看地图"
           }
         ],
         "text": "QUEST_K5_c_text",
         "next": null,
-        "upgrade": "矿灯（消耗品 · 短时提升精准）"
+        "upgrade": "矿灯（消耗品 · 短时提升精准）",
+        "_todo": "真源环 c：复述路线"
       }
     ],
     "rewards": {
@@ -3099,12 +3227,8 @@
       "complete": "QUEST_K5_complete",
       "abandon": "QUEST_K5_abandon"
     },
-    "_source": "08_地图任务关卡/02_任务线与推进节奏.md:L55（§3.2 铁脊矿径 · K5）",
-    "_todo": "标题槽位 QUEST_K5_title = 「一盏灯的距离」（真源 §3 表内专名原文）；本域只传槽位 key，句子真源 = content/data/text_specs.json；★ 真源交付物含「金币」但未给数 ⇒ 按 schema 口径不写 gold 数值键（宁可缺，不编数）",
-    "trigger": "完成 QUEST_K2 后，在 NODE_m1 与巴斯克对话",
-    "prereq": [
-      "QUEST_K2"
-    ]
+    "_source": "08_地图任务关卡/02_任务线与推进节奏.md §2.2（L144 · 矿径 K5「一盏矿灯的距离」）· 01_世界观与剧情/_parts/地理_P1篇.md §二.1（m4 限时节点）",
+    "_todo": "标题槽位 QUEST_K5_title = 「一盏矿灯的距离」（真源 02 §2.2 新标题；与旧落盘同名）。★ 真源交付物含「金币」但未给数 ⇒ 按 schema 口径不写 gold 数值键（宁可缺，不编数）"
   },
   "QUEST_K6": {
     "id": "QUEST_K6",
@@ -3112,6 +3236,11 @@
     "kind": "委托",
     "band": "铁脊矿径",
     "level_min": 12,
+    "trigger": "完成 QUEST_K4 且等级 ≥ 12 后，在 NODE_m1 与巴斯克对话",
+    "prereq": [
+      "QUEST_K4"
+    ],
+    "prereq_note": "需等级 ≥ 12",
     "giver": "NPC_basike",
     "giver_node": "NODE_m1",
     "nodes": [
@@ -3124,23 +3253,23 @@
         "target": "塌方处",
         "count": 1,
         "node": "NODE_m5",
-        "_todo": "真源：在塌方处引出精英守主"
+        "_todo": "真源：在塌方处引出精英守主（焦痕的尽头）"
       },
       {
         "kind": "击杀",
-        "target": "守主",
+        "target": "熔岩犬",
         "count": 1,
         "node": "NODE_m5",
         "monster": "MON_magma_hound",
-        "_todo": "真源精英「守主」在 monsters 域无独立条目；矿径唯一精英 = 熔岩犬 MON_magma_hound（物理抗性 25%）暂作宿主，待 P2 补 MON_* 条目"
+        "_todo": "真源精英「守主」在 monsters 域无独立条目；矿径唯一精英 = MON_magma_hound 熔岩犬（物理抗性 25%）；02 §4.2 建议目标名改「熔岩犬」⇒ 本轮目标名取「熔岩犬」"
       },
       {
         "kind": "击杀",
-        "target": "守主",
+        "target": "熔岩犬",
         "count": 1,
         "node": "NODE_m5",
         "monster": "MON_magma_hound",
-        "_todo": "真源：第一阶段它每回合叠加防御（必须用穿透类技能持续消），打断它的第二次蓄力后收尾"
+        "_todo": "真源：第一阶段它每回合叠加防御（必须用穿透类技能持续消）＝本环；收尾时发现它项圈上有旧帝国的记号，巴斯克看了一眼，什么都没说（真源记 ×2 击杀 ⇒ 两环各 1 次：b 第一形态 / c 穿透叠加阶段）"
       }
     ],
     "rings": [
@@ -3154,11 +3283,12 @@
             "target": "塌方处",
             "count": 1,
             "node": "NODE_m5",
-            "_todo": "真源：在塌方处引出精英守主"
+            "_todo": "真源：在塌方处引出精英守主（焦痕的尽头）"
           }
         ],
         "text": "QUEST_K6_a_text",
-        "next": "QUEST_K6_b"
+        "next": "QUEST_K6_b",
+        "_todo": "真源环 a：塌方处（引怪）"
       },
       {
         "key": "b",
@@ -3167,15 +3297,16 @@
         "objectives": [
           {
             "kind": "击杀",
-            "target": "守主",
+            "target": "熔岩犬",
             "count": 1,
             "node": "NODE_m5",
             "monster": "MON_magma_hound",
-            "_todo": "真源精英「守主」在 monsters 域无独立条目；矿径唯一精英 = 熔岩犬 MON_magma_hound（物理抗性 25%）暂作宿主，待 P2 补 MON_* 条目"
+            "_todo": "真源精英「守主」在 monsters 域无独立条目；矿径唯一精英 = MON_magma_hound 熔岩犬（物理抗性 25%）；02 §4.2 建议目标名改「熔岩犬」⇒ 本轮目标名取「熔岩犬」"
           }
         ],
         "text": "QUEST_K6_b_text",
-        "next": "QUEST_K6_c"
+        "next": "QUEST_K6_c",
+        "_todo": "真源环 b：精英第一形态"
       },
       {
         "key": "c",
@@ -3184,16 +3315,17 @@
         "objectives": [
           {
             "kind": "击杀",
-            "target": "守主",
+            "target": "熔岩犬",
             "count": 1,
             "node": "NODE_m5",
             "monster": "MON_magma_hound",
-            "_todo": "真源：第一阶段它每回合叠加防御（必须用穿透类技能持续消），打断它的第二次蓄力后收尾"
+            "_todo": "真源：第一阶段它每回合叠加防御（必须用穿透类技能持续消）＝本环；收尾时发现它项圈上有旧帝国的记号，巴斯克看了一眼，什么都没说（真源记 ×2 击杀 ⇒ 两环各 1 次：b 第一形态 / c 穿透叠加阶段）"
           }
         ],
         "text": "QUEST_K6_c_text",
         "next": null,
-        "upgrade": "铭刻护甲下（下甲 · 铭刻 · 装等 12）"
+        "upgrade": "铭刻护甲下（下甲 · 铭刻 · 装等 12）",
+        "_todo": "真源环 c：穿透叠加阶段收尾（焦痕线索的携带着）"
       }
     ],
     "rewards": {
@@ -3203,7 +3335,7 @@
           "id": "ITEM_oathbound_legguards",
           "count": 1,
           "name": "铭刻护甲下",
-          "_todo": "真源【装等 12】；items 域铭刻下甲只有誓约护腿（ilv10）与古誓护腿（ilv18），取 ilv10 侧，档位差待 items 域对齐"
+          "_todo": "真源【装等 12】；items 域铭刻下甲只有 ITEM_oathbound_legguards（荣誉护腿，ilv10）与 ITEM_ancient_oath_legguards（古誓护腿，ilv18），取 ilv10 侧，档位差待 items 域对齐"
         },
         {
           "id": "ITEM_slag_ingot",
@@ -3222,20 +3354,16 @@
       "complete": "QUEST_K6_complete",
       "abandon": "QUEST_K6_abandon"
     },
-    "_source": "08_地图任务关卡/02_任务线与推进节奏.md:L56（§3.2 铁脊矿径 · K6 精英）· L76（精英支线 3 条 = 1200+1200+1400，是加速通道）",
-    "_todo": "标题槽位 QUEST_K6_title = 「矿脉的守主」（真源 §3 表内专名原文）；本域只传槽位 key，句子真源 = content/data/text_specs.json",
-    "trigger": "完成 QUEST_K4 且等级≥12 后，在 NODE_m1 与巴斯克对话",
-    "prereq": [
-      "QUEST_K4"
-    ],
-    "prereq_note": "需等级≥12"
+    "_source": "08_地图任务关卡/02_任务线与推进节奏.md §2.2（L145 · 矿径 K6 精英「塌方处的东西」）· 01_世界观与剧情/04_剧情与NPC.md §三.4（精英出现节奏：K6 + Lv12）",
+    "_todo": "标题槽位 QUEST_K6_title = 「塌方处的东西」（真源 02 §2.2 新标题；旧落盘为「矿脉的守主」）"
   },
   "QUEST_R1": {
     "id": "QUEST_R1",
     "name": "QUEST_R1_title",
     "kind": "支线",
-    "band": "断线废墟",
+    "band": "残塔废墟",
     "level_min": 10,
+    "trigger": "首次进入 NODE_r1（残墙入口，等级 ≥ 10）",
     "giver": "NPC_yilan",
     "giver_node": "NODE_r1",
     "nodes": [
@@ -3252,7 +3380,7 @@
         "node": "NODE_r2",
         "item": "ITEM_tracing_paper",
         "progress_key": "抄本页",
-        "_todo": "真源：找回被风吹散的 3 页抄本（散在 3 个节点）；节点以 r2/r3/r4 为代表，物以摹录纸占位"
+        "_todo": "真源：找回被风吹散的 3 页抄本（散在 3 个节点）；节点以 r2 / r3 / r4 为代表，物以 ITEM_tracing_paper 抄本纸占位"
       },
       {
         "kind": "交付",
@@ -3264,11 +3392,11 @@
       },
       {
         "kind": "交付",
-        "target": "第一页（日期 = 哨塔废弃的那一天）",
+        "target": "第一页",
         "count": 1,
         "node": "NODE_r1",
         "npc": "NPC_yilan",
-        "_todo": "真源：她读完第一页后说「这页的日期，是哨塔废弃的那一天」；§6.2 L434–L457 有落地"
+        "_todo": "真源：她读完第一页说「这一页的日期，是哨所不再有人上塔的那一年」——她说得很平"
       }
     ],
     "rings": [
@@ -3284,11 +3412,12 @@
             "node": "NODE_r2",
             "item": "ITEM_tracing_paper",
             "progress_key": "抄本页",
-            "_todo": "真源：找回被风吹散的 3 页抄本（散在 3 个节点）；节点以 r2/r3/r4 为代表，物以摹录纸占位"
+            "_todo": "真源：找回被风吹散的 3 页抄本（散在 3 个节点）；节点以 r2 / r3 / r4 为代表，物以 ITEM_tracing_paper 抄本纸占位"
           }
         ],
         "text": "QUEST_R1_a_text",
-        "next": "QUEST_R1_b"
+        "next": "QUEST_R1_b",
+        "_todo": "真源环 a：找回 3 页散页"
       },
       {
         "key": "b",
@@ -3305,7 +3434,8 @@
           }
         ],
         "text": "QUEST_R1_b_text",
-        "next": "QUEST_R1_c"
+        "next": "QUEST_R1_c",
+        "_todo": "真源环 b：按页码排好"
       },
       {
         "key": "c",
@@ -3314,16 +3444,17 @@
         "objectives": [
           {
             "kind": "交付",
-            "target": "第一页（日期 = 哨塔废弃的那一天）",
+            "target": "第一页",
             "count": 1,
             "node": "NODE_r1",
             "npc": "NPC_yilan",
-            "_todo": "真源：她读完第一页后说「这页的日期，是哨塔废弃的那一天」；§6.2 L434–L457 有落地"
+            "_todo": "真源：她读完第一页说「这一页的日期，是哨所不再有人上塔的那一年」——她说得很平"
           }
         ],
         "text": "QUEST_R1_c_text",
         "next": null,
-        "upgrade": "属性点 +3（可见）+ 摹录页副本"
+        "upgrade": "属性点 +3（可见）+ 抄本页副本",
+        "_todo": "真源环 c：交出第一页"
       }
     ],
     "rewards": {
@@ -3332,13 +3463,13 @@
         {
           "id": "ITEM_tracing_paper",
           "count": 1,
-          "name": "摹录页副本"
+          "name": "抄本页副本"
         }
       ],
       "growth": {
         "attr_points": 3
       },
-      "upgrade": "属性点 +3（可见）+ 摹录页副本"
+      "upgrade": "属性点 +3（可见）+ 抄本页副本"
     },
     "teach": "teach:精准",
     "skippable": true,
@@ -3348,16 +3479,19 @@
       "complete": "QUEST_R1_complete",
       "abandon": "QUEST_R1_abandon"
     },
-    "_source": "08_地图任务关卡/02_任务线与推进节奏.md:L62（§3.3 断线废墟 · R1）· §6.2 L434–L457（伊兰与名册）",
-    "_todo": "标题槽位 QUEST_R1_title = 「抄录员的第一页」（真源 §3 表内专名原文）；本域只传槽位 key，句子真源 = content/data/text_specs.json",
-    "trigger": "首次进入 NODE_r1（断墙入口，等级≥10）"
+    "_source": "08_地图任务关卡/02_任务线与推进节奏.md §2.3（L155 · 废墟 R1「少了一页的抄本」）· 01_世界观与剧情/04_剧情与NPC.md §2.1 N12（伊兰·残页：只信拓下来的东西）",
+    "_todo": "标题槽位 QUEST_R1_title = 「少了一页的抄本」（真源 02 §2.3 新标题；旧落盘为「抄录员的第一页」）。band 由旧名「断线废墟」改为「残塔废墟」（命名总表 §十二 去「断线」）"
   },
   "QUEST_R2": {
     "id": "QUEST_R2",
     "name": "QUEST_R2_title",
     "kind": "支线",
-    "band": "断线废墟",
+    "band": "残塔废墟",
     "level_min": 11,
+    "trigger": "完成 QUEST_R1 后，在 NODE_r1 与伊兰对话",
+    "prereq": [
+      "QUEST_R1"
+    ],
     "giver": "NPC_yilan",
     "giver_node": "NODE_r1",
     "nodes": [
@@ -3371,7 +3505,7 @@
         "target": "脚印",
         "count": 3,
         "progress_key": "脚印",
-        "_todo": "真源：先不杀，跟着它的脚印走完 3 个节点（教「观察行为」）；节点以 r1/r3/r4 为代表，真源未点名"
+        "_todo": "真源：先不杀，跟着它的脚印走完 3 个节点（教「观察行为」）；以 r1 / r3 / r4 为代表，真源未点名"
       },
       {
         "kind": "击杀",
@@ -3379,14 +3513,15 @@
         "count": 1,
         "node": "NODE_r4",
         "monster": "MON_shadow_bat",
-        "_todo": "真源「废墟中层的高闪避潜行者（miss 窗口大：不堆精准几乎打不中）」⇒ 暗影蝠（闪避面板 25%，精准第二课）；在巢穴口一次性解决"
+        "_todo": "真源「废墟中层的高闪避潜行者（miss 窗口大：不堆精准几乎打不中）」⇒ MON_shadow_bat 暗影蝠（闪避面板 25%，精准第二课）；在巢穴口一次性解决"
       },
       {
         "kind": "交付",
         "target": "潜行者已清（脚印链闭环）",
         "count": 1,
         "node": "NODE_r1",
-        "npc": "NPC_yilan"
+        "npc": "NPC_yilan",
+        "_todo": "真源：伊兰要看的是「它为什么走这条道」，而不是它死了没有"
       }
     ],
     "rings": [
@@ -3400,11 +3535,12 @@
             "target": "脚印",
             "count": 3,
             "progress_key": "脚印",
-            "_todo": "真源：先不杀，跟着它的脚印走完 3 个节点（教「观察行为」）；节点以 r1/r3/r4 为代表，真源未点名"
+            "_todo": "真源：先不杀，跟着它的脚印走完 3 个节点（教「观察行为」）；以 r1 / r3 / r4 为代表，真源未点名"
           }
         ],
         "text": "QUEST_R2_a_text",
-        "next": "QUEST_R2_b"
+        "next": "QUEST_R2_b",
+        "_todo": "真源环 a：跟脚印走（先别杀）"
       },
       {
         "key": "b",
@@ -3417,11 +3553,12 @@
             "count": 1,
             "node": "NODE_r4",
             "monster": "MON_shadow_bat",
-            "_todo": "真源「废墟中层的高闪避潜行者（miss 窗口大：不堆精准几乎打不中）」⇒ 暗影蝠（闪避面板 25%，精准第二课）；在巢穴口一次性解决"
+            "_todo": "真源「废墟中层的高闪避潜行者（miss 窗口大：不堆精准几乎打不中）」⇒ MON_shadow_bat 暗影蝠（闪避面板 25%，精准第二课）；在巢穴口一次性解决"
           }
         ],
         "text": "QUEST_R2_b_text",
-        "next": "QUEST_R2_c"
+        "next": "QUEST_R2_c",
+        "_todo": "真源环 b：巢穴口一次性解决"
       },
       {
         "key": "c",
@@ -3433,12 +3570,14 @@
             "target": "潜行者已清（脚印链闭环）",
             "count": 1,
             "node": "NODE_r1",
-            "npc": "NPC_yilan"
+            "npc": "NPC_yilan",
+            "_todo": "真源：伊兰要看的是「它为什么走这条道」，而不是它死了没有"
           }
         ],
         "text": "QUEST_R2_c_text",
         "next": null,
-        "upgrade": "铭刻木牌护符（饰品 · 铭刻 · 装等 10 · 精准）"
+        "upgrade": "铭刻木牌护符（饰品 · 铭刻 · 装等 10 · 精准）",
+        "_todo": "真源环 c：脚印链闭环"
       }
     ],
     "rewards": {
@@ -3448,7 +3587,7 @@
           "id": "ITEM_oathbound_amulet",
           "count": 1,
           "name": "铭刻木牌护符",
-          "_todo": "真源【饰品 / 铭刻 / 装等 10 · 精准 rating】；items 域铭刻饰品取誓约护符（铭刻/饰品/ilv10）；精准 rating 词条待 items 域补"
+          "_todo": "真源【饰品 / 铭刻 / 装等 10 · 精准 rating】；items 域 ITEM_oathbound_amulet 荣誉护符（铭刻/饰品/ilv10）；精准 rating 词条待 items 域补"
         }
       ],
       "upgrade": "铭刻木牌护符（饰品 · 铭刻 · 装等 10 · 精准）"
@@ -3461,24 +3600,23 @@
       "complete": "QUEST_R2_complete",
       "abandon": "QUEST_R2_abandon"
     },
-    "_source": "08_地图任务关卡/02_任务线与推进节奏.md:L63（§3.3 断线废墟 · R2）· §6.2 L334–L373（未命中率 18.3% → 11.4%）",
-    "_todo": "标题槽位 QUEST_R2_title = 「看不见的脚步」（真源 §3 表内专名原文）；本域只传槽位 key，句子真源 = content/data/text_specs.json",
-    "trigger": "完成 QUEST_R1 后，在 NODE_r1 与伊兰对话",
-    "prereq": [
-      "QUEST_R1"
-    ]
+    "_source": "08_地图任务关卡/02_任务线与推进节奏.md §2.3（L156 · 废墟 R2「跟着脚印走」）· 01_世界观与剧情/_parts/地理_P1篇.md §二.1（r4 陷阱厅：进来就按行动顺序排队）",
+    "_todo": "标题槽位 QUEST_R2_title = 「跟着脚印走」（真源 02 §2.3 新标题；旧落盘为「看不见的脚步」）"
   },
   "QUEST_R3": {
     "id": "QUEST_R3",
     "name": "QUEST_R3_title",
     "kind": "支线",
-    "band": "断线废墟",
+    "band": "残塔废墟",
     "level_min": 12,
+    "trigger": "完成 QUEST_M2_3 后，在 NODE_t4 与塞西恩对话",
+    "prereq": [
+      "QUEST_M2_3"
+    ],
     "giver": "NPC_saixien",
     "giver_node": "NODE_t4",
     "nodes": [
       "NODE_t4",
-      "NODE_r2",
       "NODE_r3"
     ],
     "objectives": [
@@ -3488,14 +3626,15 @@
         "count": 1,
         "node": "NODE_t4",
         "npc": "NPC_saixien",
-        "_todo": "真源：塞西恩给你一份镇上的旧户籍，上面有 1 个名字被水浸掉了"
+        "_todo": "真源：塞西恩给你一份镇上的旧户籍，上面有 1 个名字被水浸掉了（她一直没补那一行）"
       },
       {
         "kind": "到达",
         "target": "姓氏石碑",
         "count": 3,
+        "node": "NODE_r3",
         "progress_key": "姓氏石碑",
-        "_todo": "真源：去废墟找那个姓氏的石碑（3 个节点）；节点以 r2/r3 为代表（真源未点名）"
+        "_todo": "真源：去无姓碑列（NODE_r3）把那一格拓回来；旧落盘节点含 r2，按 02 §2.3 收紧为 r3"
       },
       {
         "kind": "交付",
@@ -3504,7 +3643,7 @@
         "node": "NODE_t4",
         "npc": "NPC_saixien",
         "item": "ITEM_tracing_paper",
-        "_todo": "真源：把石碑拓下来交给他——拓出来的姓氏与卡德里安（NPC_kadelian）的旧姓同源"
+        "_todo": "真源：拓出来的姓氏与卡德里安登记簿上的字同源；修女把拓本夹进册子，没说话"
       }
     ],
     "rings": [
@@ -3519,11 +3658,12 @@
             "count": 1,
             "node": "NODE_t4",
             "npc": "NPC_saixien",
-            "_todo": "真源：塞西恩给你一份镇上的旧户籍，上面有 1 个名字被水浸掉了"
+            "_todo": "真源：塞西恩给你一份镇上的旧户籍，上面有 1 个名字被水浸掉了（她一直没补那一行）"
           }
         ],
         "text": "QUEST_R3_a_text",
-        "next": "QUEST_R3_b"
+        "next": "QUEST_R3_b",
+        "_todo": "真源环 a：拿到被水浸过的旧户籍"
       },
       {
         "key": "b",
@@ -3534,12 +3674,14 @@
             "kind": "到达",
             "target": "姓氏石碑",
             "count": 3,
+            "node": "NODE_r3",
             "progress_key": "姓氏石碑",
-            "_todo": "真源：去废墟找那个姓氏的石碑（3 个节点）；节点以 r2/r3 为代表（真源未点名）"
+            "_todo": "真源：去无姓碑列（NODE_r3）把那一格拓回来；旧落盘节点含 r2，按 02 §2.3 收紧为 r3"
           }
         ],
         "text": "QUEST_R3_b_text",
-        "next": "QUEST_R3_c"
+        "next": "QUEST_R3_c",
+        "_todo": "真源环 b：碑上拓回那一格"
       },
       {
         "key": "c",
@@ -3553,12 +3695,13 @@
             "node": "NODE_t4",
             "npc": "NPC_saixien",
             "item": "ITEM_tracing_paper",
-            "_todo": "真源：把石碑拓下来交给他——拓出来的姓氏与卡德里安（NPC_kadelian）的旧姓同源"
+            "_todo": "真源：拓出来的姓氏与卡德里安登记簿上的字同源；修女把拓本夹进册子，没说话"
           }
         ],
         "text": "QUEST_R3_c_text",
         "next": null,
-        "upgrade": "城镇关系标记 + 金币 ×150"
+        "upgrade": "城镇关系标记 + 金币 ×150",
+        "_todo": "真源环 c：把拓本交给修女"
       }
     ],
     "rewards": {
@@ -3579,19 +3722,19 @@
       "complete": "QUEST_R3_complete",
       "abandon": "QUEST_R3_abandon"
     },
-    "_source": "08_地图任务关卡/02_任务线与推进节奏.md:L64（§3.3 断线废墟 · R3）",
-    "_todo": "标题槽位 QUEST_R3_title = 「名字被抹掉的人」（真源 §3 表内专名原文）；本域只传槽位 key，句子真源 = content/data/text_specs.json",
-    "trigger": "完成 QUEST_M2_3 后，在 NODE_t4 与塞西恩对话",
-    "prereq": [
-      "QUEST_M2_3"
-    ]
+    "_source": "08_地图任务关卡/02_任务线与推进节奏.md §2.3（L157 · 废墟 R3「被水浸掉的那一格」）· 01_世界观与剧情/04_剧情与NPC.md §2.1 N4（塞西恩：报页码、报日期、报名字）",
+    "_todo": "标题槽位 QUEST_R3_title = 「被水浸掉的那一格」（真源 02 §2.3 新标题；旧落盘为「名字被抹掉的人」）"
   },
   "QUEST_R4": {
     "id": "QUEST_R4",
     "name": "QUEST_R4_title",
     "kind": "支线",
-    "band": "断线废墟",
+    "band": "残塔废墟",
     "level_min": 13,
+    "trigger": "完成 QUEST_R2 后，在 NODE_r1 与伊兰对话",
+    "prereq": [
+      "QUEST_R2"
+    ],
     "giver": "NPC_yilan",
     "giver_node": "NODE_r1",
     "nodes": [
@@ -3605,7 +3748,7 @@
         "count": 2,
         "node": "NODE_r4",
         "monster": "MON_wraith",
-        "_todo": "真源「厅堂的守卫只在行动顺序落后时开门：必须用打断把它的行动挤到后面」；守卫取恸哭幽魂（自盾 + 缴械，控场引入）"
+        "_todo": "真源「厅堂的守卫只在行动顺序落后时开门：必须用打断把它的行动挤到后面」；守卫取 MON_wraith 恸哭幽魂（自盾 + 缴械，控场引入）"
       },
       {
         "kind": "收集",
@@ -3613,15 +3756,15 @@
         "count": 1,
         "node": "NODE_r4",
         "item": "ITEM_oath_thread_remnant",
-        "_todo": "真源「进去取 1 件仪物」未给 items 域条目 ⇒ 暂借誓约残线占位（P2 用）"
+        "_todo": "真源「进去取 1 件仪物」未给 items 域条目 ⇒ 暂借 ITEM_oath_thread_remnant 占位（现值「荣誉残线」，04 §7.3 建议改名「旧绳仪物」）；那上面系着一小段绳子，摸上去还是新的"
       },
       {
         "kind": "击杀",
-        "target": "骷髅弓手",
+        "target": "骸骨弓手",
         "count": 2,
         "node": "NODE_r4",
         "monster": "MON_skeleton_archer",
-        "_todo": "真源：带出来时全厅的怪一起醒（多目标战斗的第一课）；增援取远程位骷髅弓手"
+        "_todo": "真源：带出来时全厅的怪一起醒（多目标战斗的第一课）；增援取远程位 MON_skeleton_archer（旧落盘目标名「骷髅弓手」按 monsters.json 改「骸骨弓手」）"
       }
     ],
     "rings": [
@@ -3636,11 +3779,12 @@
             "count": 2,
             "node": "NODE_r4",
             "monster": "MON_wraith",
-            "_todo": "真源「厅堂的守卫只在行动顺序落后时开门：必须用打断把它的行动挤到后面」；守卫取恸哭幽魂（自盾 + 缴械，控场引入）"
+            "_todo": "真源「厅堂的守卫只在行动顺序落后时开门：必须用打断把它的行动挤到后面」；守卫取 MON_wraith 恸哭幽魂（自盾 + 缴械，控场引入）"
           }
         ],
         "text": "QUEST_R4_a_text",
-        "next": "QUEST_R4_b"
+        "next": "QUEST_R4_b",
+        "_todo": "真源环 a：把守卫的行动挤到后面（打断）"
       },
       {
         "key": "b",
@@ -3653,11 +3797,12 @@
             "count": 1,
             "node": "NODE_r4",
             "item": "ITEM_oath_thread_remnant",
-            "_todo": "真源「进去取 1 件仪物」未给 items 域条目 ⇒ 暂借誓约残线占位（P2 用）"
+            "_todo": "真源「进去取 1 件仪物」未给 items 域条目 ⇒ 暂借 ITEM_oath_thread_remnant 占位（现值「荣誉残线」，04 §7.3 建议改名「旧绳仪物」）；那上面系着一小段绳子，摸上去还是新的"
           }
         ],
         "text": "QUEST_R4_b_text",
-        "next": "QUEST_R4_c"
+        "next": "QUEST_R4_c",
+        "_todo": "真源环 b：取 1 件仪物"
       },
       {
         "key": "c",
@@ -3666,16 +3811,17 @@
         "objectives": [
           {
             "kind": "击杀",
-            "target": "骷髅弓手",
+            "target": "骸骨弓手",
             "count": 2,
             "node": "NODE_r4",
             "monster": "MON_skeleton_archer",
-            "_todo": "真源：带出来时全厅的怪一起醒（多目标战斗的第一课）；增援取远程位骷髅弓手"
+            "_todo": "真源：带出来时全厅的怪一起醒（多目标战斗的第一课）；增援取远程位 MON_skeleton_archer（旧落盘目标名「骷髅弓手」按 monsters.json 改「骸骨弓手」）"
           }
         ],
         "text": "QUEST_R4_c_text",
         "next": null,
-        "upgrade": "铭刻头盔（头盔 · 铭刻 · 装等 12）"
+        "upgrade": "铭刻头盔（头盔 · 铭刻 · 装等 12）",
+        "_todo": "真源环 c：出来时全厅一起醒（多目标）"
       }
     ],
     "rewards": {
@@ -3685,13 +3831,13 @@
           "id": "ITEM_oathbound_helm",
           "count": 1,
           "name": "铭刻头盔",
-          "_todo": "真源【装等 12】；items 域铭刻头盔取誓约盔（ilv10），档位差待 items 域对齐"
+          "_todo": "真源【装等 12】；items 域铭刻头盔取 ITEM_oathbound_helm（荣誉盔，ilv10），档位差待 items 域对齐"
         },
         {
           "id": "ITEM_oath_thread_remnant",
           "count": 1,
           "name": "仪物",
-          "_todo": "真源「仪物（P2 用）」，items 域无独立条目，暂借誓约残线"
+          "_todo": "真源「仪物（P2 用）」，items 域无独立条目，暂借 ITEM_oath_thread_remnant"
         }
       ],
       "upgrade": "铭刻头盔（头盔 · 铭刻 · 装等 12）"
@@ -3704,19 +3850,20 @@
       "complete": "QUEST_R4_complete",
       "abandon": "QUEST_R4_abandon"
     },
-    "_source": "08_地图任务关卡/02_任务线与推进节奏.md:L65（§3.3 断线废墟 · R4）",
-    "_todo": "标题槽位 QUEST_R4_title = 「一间没有门的厅」（真源 §3 表内专名原文）；本域只传槽位 key，句子真源 = content/data/text_specs.json",
-    "trigger": "完成 QUEST_R2 后，在 NODE_r1 与伊兰对话",
-    "prereq": [
-      "QUEST_R2"
-    ]
+    "_source": "08_地图任务关卡/02_任务线与推进节奏.md §2.3（L159 · 废墟 R4「没有门的那间厅」）· 01_世界观与剧情/_parts/地理_P1篇.md §三.2（r4 无门厅堂 = 陷阱厅）",
+    "_todo": "标题槽位 QUEST_R4_title = 「没有门的那间厅」（真源 02 §2.3 新标题；旧落盘为「一间没有门的厅」）"
   },
   "QUEST_R5": {
     "id": "QUEST_R5",
     "name": "QUEST_R5_title",
     "kind": "支线",
-    "band": "断线废墟",
+    "band": "残塔废墟",
     "level_min": 14,
+    "trigger": "完成 QUEST_M1_3 并看过当票背面的半页后（次日），与 NODE_t8 的陶德对话（委托板可接）",
+    "prereq": [
+      "QUEST_M1_3"
+    ],
+    "prereq_note": "已看过标记「当票背面的半页」（分支对话 2 DIALOG_taode_readline）",
     "giver": "NPC_taode",
     "giver_node": "NODE_t8",
     "nodes": [
@@ -3728,17 +3875,17 @@
     "objectives": [
       {
         "kind": "收集",
-        "target": "断口记录",
+        "target": "焦痕记录",
         "count": 5,
-        "progress_key": "断口记录",
-        "_todo": "真源：任务誓册 × 世界观的咬合——每完成一次采集/击杀，纸上多一行；「交给他 5 行记录」⇒ count=5"
+        "progress_key": "焦痕记录",
+        "_todo": "真源：任务笔记 × 世界观的咬合——每完成一次采集 / 击杀，纸上多一行；交满 5 行。旧目标名「断口记录」按 02 §4.3 改为「焦痕记录」"
       },
       {
         "kind": "到达",
-        "target": "断口",
+        "target": "焦痕",
         "count": 3,
-        "progress_key": "断口",
-        "_todo": "真源未点名节点；取三条近郊带各一处代表：林带 l3 / 矿径 m4（焦痕）/ 废墟 r3，凑齐「跨带都记下来」的口径"
+        "progress_key": "焦痕",
+        "_todo": "真源未点名节点；取三条近郊带各一处代表：林带 l3 / 矿径 m4（井壁焦痕）/ 废墟 r3，凑齐「跨带都记下来」的口径"
       },
       {
         "kind": "交付",
@@ -3757,14 +3904,15 @@
         "objectives": [
           {
             "kind": "收集",
-            "target": "断口记录",
+            "target": "焦痕记录",
             "count": 5,
-            "progress_key": "断口记录",
-            "_todo": "真源：任务誓册 × 世界观的咬合——每完成一次采集/击杀，纸上多一行；「交给他 5 行记录」⇒ count=5"
+            "progress_key": "焦痕记录",
+            "_todo": "真源：任务笔记 × 世界观的咬合——每完成一次采集 / 击杀，纸上多一行；交满 5 行。旧目标名「断口记录」按 02 §4.3 改为「焦痕记录」"
           }
         ],
         "text": "QUEST_R5_a_text",
-        "next": "QUEST_R5_b"
+        "next": "QUEST_R5_b",
+        "_todo": "真源环 a：五行记录（记下来）"
       },
       {
         "key": "b",
@@ -3773,14 +3921,15 @@
         "objectives": [
           {
             "kind": "到达",
-            "target": "断口",
+            "target": "焦痕",
             "count": 3,
-            "progress_key": "断口",
-            "_todo": "真源未点名节点；取三条近郊带各一处代表：林带 l3 / 矿径 m4（焦痕）/ 废墟 r3，凑齐「跨带都记下来」的口径"
+            "progress_key": "焦痕",
+            "_todo": "真源未点名节点；取三条近郊带各一处代表：林带 l3 / 矿径 m4（井壁焦痕）/ 废墟 r3，凑齐「跨带都记下来」的口径"
           }
         ],
         "text": "QUEST_R5_b_text",
-        "next": "QUEST_R5_c"
+        "next": "QUEST_R5_c",
+        "_todo": "真源环 b：三条带各走一处焦痕"
       },
       {
         "key": "c",
@@ -3798,7 +3947,8 @@
         ],
         "text": "QUEST_R5_c_text",
         "next": null,
-        "upgrade": "读线人指环（饰品 · 铭刻 · 装等 12）"
+        "upgrade": "记录指环（饰品 · 铭刻 · 装等 12）",
+        "_todo": "真源环 c：交出 5 行记录"
       }
     ],
     "rewards": {
@@ -3807,8 +3957,8 @@
         {
           "id": "ITEM_oathweaver_sigil",
           "count": 1,
-          "name": "读线人指环",
-          "_todo": "真源【饰品 / 铭刻 / 装等 12 · 属性池待定】；items 域无此条，暂借织誓者徽记（饰品/传世/ilv18，唯一件）占位，待 items 域补"
+          "name": "记录指环",
+          "_todo": "真源【饰品 / 铭刻 / 装等 12 · 属性池待定】（02 §2.3 R5）；04 §7.3 建议「织誓者徽记」改名；items 域无此条 ⇒ 暂借 ITEM_oathweaver_sigil 占位。★ 与 QUEST_M4_3 奖励同挂一件（唯一传奇饰品被两条任务点名），待 W1-C / 父 agent 裁"
         }
       ],
       "growth": {
@@ -3816,9 +3966,9 @@
           "主线信息：钩子①第二次落地（内容侧标记）"
         ]
       },
-      "upgrade": "读线人指环（饰品 · 铭刻 · 装等 12）"
+      "upgrade": "记录指环（饰品 · 铭刻 · 装等 12）"
     },
-    "teach": "teach:系统咬合/记录",
+    "teach": "teach:记录",
     "skippable": true,
     "text": {
       "intro": "QUEST_R5_intro",
@@ -3826,19 +3976,20 @@
       "complete": "QUEST_R5_complete",
       "abandon": "QUEST_R5_abandon"
     },
-    "_source": "08_地图任务关卡/02_任务线与推进节奏.md:L66（§3.3 断线废墟 · R5）· §6.1 L269–L278（陶德的半秒）· L290（玛尔达今天记了三笔，其中一笔是「临时」）",
-    "_todo": "标题槽位 QUEST_R5_title = 「断线清单」（真源 §3 表内专名原文）；本域只传槽位 key，句子真源 = content/data/text_specs.json",
-    "trigger": "完成 QUEST_M3_1 后，在 NODE_t8 与陶德对话",
-    "prereq": [
-      "QUEST_M3_1"
-    ]
+    "_source": "08_地图任务关卡/02_任务线与推进节奏.md §2.3（L160 · 废墟 R5「五行记录」）· 01_世界观与剧情/04_剧情与NPC.md §4 对话 2（看当票背面的半页 ⇒ R5 次日可接）",
+    "_todo": "标题槽位 QUEST_R5_title = 「五行记录」（真源 02 §2.3 新标题；旧落盘为「断线清单」）。★ 门槛口径：旧落盘 prereq=QUEST_M3_1；新源 04 §4 对话 2 明写 R5 在看过当票背面后可接（次日）⇒ 本轮改为 prereq=QUEST_M1_3 +「当票背面的半页」标记，待裁"
   },
   "QUEST_R6": {
     "id": "QUEST_R6",
     "name": "QUEST_R6_title",
     "kind": "委托",
-    "band": "断线废墟",
+    "band": "残塔废墟",
     "level_min": 15,
+    "trigger": "完成 QUEST_R4 且等级 ≥ 15 后，在 NODE_t7 与布兰妲对话",
+    "prereq": [
+      "QUEST_R4"
+    ],
+    "prereq_note": "需等级 ≥ 15",
     "giver": "NPC_bulanda",
     "giver_node": "NODE_t7",
     "nodes": [
@@ -3852,15 +4003,15 @@
         "target": "回声巢穴",
         "count": 1,
         "node": "NODE_r5",
-        "_todo": "真源未点名节点；废墟精英巢穴取灰塔外墙营地 NODE_r5（r4 无门厅堂之后的下一个废墟节点）"
+        "_todo": "真源未点名节点；废墟精英巢穴取残塔外墙营地 NODE_r5（r4 无门厅堂之后的下一个废墟节点）"
       },
       {
         "kind": "击杀",
-        "target": "回声",
+        "target": "镜魔",
         "count": 1,
         "node": "NODE_r5",
         "monster": "MON_mirror_fiend",
-        "_todo": "真源精英「回声」会复制玩家上一次用过的技能、每次被击中换一种控制；废墟精英 = 镜魔（monsters 域同一机制，含 P1 首次点名）暂作宿主"
+        "_todo": "真源精英「回声」会复制玩家上一次用过的技能、每次被击中换一种控制；废墟唯一精英 = MON_mirror_fiend 镜魔（02 §4.2 建议目标名改「镜魔」）"
       },
       {
         "kind": "收集",
@@ -3868,7 +4019,7 @@
         "count": 1,
         "node": "NODE_r4",
         "item": "ITEM_tracing_paper",
-        "_todo": "真源：收尾时它在地上被划出 7 个记号（不是语言）——拓本交布兰妲，P2 钩子"
+        "_todo": "真源：收尾时它不是说话——地上的灰被划出 7 个记号；拓本交布兰妲（P2 钩子）"
       }
     ],
     "rings": [
@@ -3882,11 +4033,12 @@
             "target": "回声巢穴",
             "count": 1,
             "node": "NODE_r5",
-            "_todo": "真源未点名节点；废墟精英巢穴取灰塔外墙营地 NODE_r5（r4 无门厅堂之后的下一个废墟节点）"
+            "_todo": "真源未点名节点；废墟精英巢穴取残塔外墙营地 NODE_r5（r4 无门厅堂之后的下一个废墟节点）"
           }
         ],
         "text": "QUEST_R6_a_text",
-        "next": "QUEST_R6_b"
+        "next": "QUEST_R6_b",
+        "_todo": "真源环 a：找到回声巢穴"
       },
       {
         "key": "b",
@@ -3895,15 +4047,16 @@
         "objectives": [
           {
             "kind": "击杀",
-            "target": "回声",
+            "target": "镜魔",
             "count": 1,
             "node": "NODE_r5",
             "monster": "MON_mirror_fiend",
-            "_todo": "真源精英「回声」会复制玩家上一次用过的技能、每次被击中换一种控制；废墟精英 = 镜魔（monsters 域同一机制，含 P1 首次点名）暂作宿主"
+            "_todo": "真源精英「回声」会复制玩家上一次用过的技能、每次被击中换一种控制；废墟唯一精英 = MON_mirror_fiend 镜魔（02 §4.2 建议目标名改「镜魔」）"
           }
         ],
         "text": "QUEST_R6_b_text",
-        "next": "QUEST_R6_c"
+        "next": "QUEST_R6_c",
+        "_todo": "真源环 b：只能在它换控的空档里打断"
       },
       {
         "key": "c",
@@ -3916,12 +4069,13 @@
             "count": 1,
             "node": "NODE_r4",
             "item": "ITEM_tracing_paper",
-            "_todo": "真源：收尾时它在地上被划出 7 个记号（不是语言）——拓本交布兰妲，P2 钩子"
+            "_todo": "真源：收尾时它不是说话——地上的灰被划出 7 个记号；拓本交布兰妲（P2 钩子）"
           }
         ],
         "text": "QUEST_R6_c_text",
         "next": null,
-        "upgrade": "铭刻武器（武器 · 铭刻 · 装等 14）"
+        "upgrade": "铭刻武器（武器 · 铭刻 · 装等 14）",
+        "_todo": "真源环 c：地上的 7 个记号（拓本）"
       }
     ],
     "rewards": {
@@ -3931,7 +4085,7 @@
           "id": "ITEM_oathbound_longsword",
           "count": 1,
           "name": "铭刻武器",
-          "_todo": "真源【装等 14】；items 域铭刻武器取誓约长剑（铭刻/武器/ilv10），档位差待 items 域对齐"
+          "_todo": "真源【装等 14】；items 域铭刻武器取 ITEM_oathbound_longsword（荣誉长剑，ilv10），档位差待 items 域对齐"
         },
         {
           "id": "ITEM_deacon_sigil",
@@ -3955,13 +4109,8 @@
       "complete": "QUEST_R6_complete",
       "abandon": "QUEST_R6_abandon"
     },
-    "_source": "08_地图任务关卡/02_任务线与推进节奏.md:L67（§3.3 断线废墟 · R6 精英）· §6.3 L470–L480（第 5 天回顾：削的、不是划的）",
-    "_todo": "标题槽位 QUEST_R6_title = 「静默的回声」（真源 §3 表内专名原文）；本域只传槽位 key，句子真源 = content/data/text_specs.json",
-    "trigger": "完成 QUEST_R4 且等级≥15 后，在 NODE_t7 与布兰妲对话",
-    "prereq": [
-      "QUEST_R4"
-    ],
-    "prereq_note": "需等级≥15"
+    "_source": "08_地图任务关卡/02_任务线与推进节奏.md §2.3（L161 · 废墟 R6 精英「地上的七个记号」）· 01_世界观与剧情/04_剧情与NPC.md §三.4（R6 + Lv15）",
+    "_todo": "标题槽位 QUEST_R6_title = 「地上的七个记号」（真源 02 §2.3 新标题；旧落盘为「静默的回声」）"
   },
   "_meta": {
     "counts": {
@@ -3969,7 +4118,21 @@
       "side": 18,
       "total": 30
     },
-    "id_frozen": "30 个 id 已被 npcs.json 引用（QUEST_M1_1..M4_3 / K1-6 / L1-6 / R1-6）",
-    "origin": "deleg_11131930 两路窄化重派合并（前两次因体量超限被截断）"
+    "id_frozen": "30 个 id 逐字不变（npcs.json / maps.json 交叉引用）；本轮只重写内容",
+    "origin": "deleg_11131930 两路窄化重派合并（前两次因体量超限被截断）",
+    "revision": {
+      "date": "2026-09-21",
+      "world": "阿斯特兰（P1 · 灰石镇篇 v2.0）",
+      "sources": [
+        "01_世界观与剧情/04_剧情与NPC.md §1（主线 12 条）/ §2（14 NPC）/ §4（5 棵对话树）/ §6（id 冻结与缺口）/ §7（连带改名建议）",
+        "08_地图任务关卡/02_任务线与推进节奏.md §1（节点 id↔新名）/ §2（18 条支线）/ §3（推进节奏）/ §4（引用缺口）",
+        "01_世界观与剧情/_parts/地理_P1篇.md §一（灰石镇 9 节点）/ §二（三带 15 节点）/ §三（残塔哨所 13 房）"
+      ],
+      "notes": [
+        "文案一律槽位 key：quest.name = QUEST_<id>_title、环名 = QUEST_<id>_<key>_title、正文 = QUEST_<id>_{intro,progress,complete,[abandon]} / QUEST_<id>_<key>_text；真句在 content/data/text_specs.json",
+        "节点 / 怪物 / 道具 id 逐条对齐 maps.json / monsters.json / items.json；到达型 target 取 02 §1 的节点新显示名",
+        "★ 口径冲突：maps.json 37 节点的显示名仍为旧世界（11 处含禁词：誓钟广场 / 入誓台 / 议事厅 / 收线柜 / 断墙入口 / 灰塔外墙营地 / 断链吊桥 / 誓钟台 / 织线间 / 织誓祭坛 / 镇门哨所），本轮按 02 §1 写新名 ⇒ 待 W4 按 §1 换 maps.json 显示名（拓扑 65 边不动）"
+      ]
+    }
   }
 }

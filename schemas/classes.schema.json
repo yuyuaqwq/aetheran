@@ -24,7 +24,7 @@
         "id": {
           "type": "string",
           "pattern": "^CLS_[A-Z0-9_]+$",
-          "$comment": "职业 id 前缀（数据字典 §1.2:59 的 7 值枚举：WDN/BSK/RNG/ARC/PRS/SHD/SKD 缩写见 §4:213）"
+          "$comment": "职业 id 前缀（数据字典 §1.2:59 的 7 值枚举：KNT/BSK/RNG/MAG/PRS/SHD/SKD 缩写见 §4:213）"
         },
         "name": {
           "type": "string",
@@ -1773,7 +1773,7 @@
         "id": {
           "type": "string",
           "pattern": "^CLS_[A-Z0-9_]+$",
-          "$comment": "职业 id 前缀（数据字典 §1.2:59 的 7 值枚举：WDN/BSK/RNG/ARC/PRS/SHD/SKD 缩写见 §4:213）"
+          "$comment": "职业 id 前缀（数据字典 §1.2:59 的 7 值枚举：KNT/BSK/RNG/MAG/PRS/SHD/SKD 缩写见 §4:213）"
         },
         "name": {
           "type": "string",
