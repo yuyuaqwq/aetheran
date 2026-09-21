@@ -62,5 +62,12 @@
     "schema": "schemas/wiki.schema.json",
     "primary": "entry",
     "icon": "📖"
+  },
+  "quests": {
+    "label": "任务",
+    "kind": "data",
+    "schema": "schemas/quests.schema.json",
+    "primary": "quest",
+    "icon": "📜"
   }
 }
