@@ -1,0 +1,268 @@
+{
+  "$const": {
+    "k_def_base": 100,
+    "k_def_per_lv": 20,
+    "k_rate_base": 300,
+    "k_rate_per_lv": 30,
+    "spd_ref": 100,
+    "spd_alpha": 0.5,
+    "crit_base": 1.5,
+    "pene_cap": 0.6,
+    "mit_cap": 0.85,
+    "cast_spd_ref": 500,
+    "true_dmg": "绕过 DR，只走免伤"
+  },
+
+  "F1_k_def": {
+    "kind": "formula", "label": "F1 等级防御刻度", "version": 1,
+    "vars": ["level"],
+    "params": {
+      "base": {"ref": "const.k_def_base"},
+      "per_lv": {"ref": "const.k_def_per_lv"}
+    },
+    "expr": "base + per_lv * level",
+    "returns": "number", "round": 6,
+    "note": "K_def(L) = 100 + 20L。标准防御 = 0.5K ⇒ 标准 DR 恒 33.33%（全等级恒定）"
+  },
+
+  "F1_damage_reduction": {
+    "kind": "formula", "label": "F1 减伤率", "version": 1,
+    "vars": ["eff_def", "k_def"],
+    "expr": "eff_def / (eff_def + k_def)",
+    "clamp": [0.0, 1.0],
+    "returns": "pct", "round": 6,
+    "note": "DR = EffDef/(EffDef + K_def(L))。3×标准 ⇒ 60%；10×标准 ⇒ 83.33%；靠防御摸不到免伤上限"
+  },
+
+  "F1_eff_def": {
+    "kind": "formula", "label": "F1 有效防御（吃穿透）", "version": 1,
+    "vars": ["def", "pene_pct", "pene_flat"],
+    "guard": {
+      "def": {"floor": 0},
+      "pene_pct": {"floor": 0, "cap": 0.6},
+      "pene_flat": {"floor": 0}
+    },
+    "expr": "def * (1 - pene_pct) - pene_flat",
+    "clamp": [0, null],
+    "returns": "number",
+    "note": "穿透按百分比削防御（cap 0.6），再减固定穿透"
+  },
+
+  "F2_variance": {
+    "kind": "formula", "label": "F2 波动系数", "version": 1,
+    "vars": ["var_roll"],
+    "expr": "1 + var_roll",
+    "returns": "number",
+    "note": "var_roll ∈ [−0.05, +0.05]（由 chain 的 random 注入）"
+  },
+
+  "F2_damage": {
+    "kind": "chain", "label": "F2 最终伤害（乘区链）", "version": 1,
+    "vars": ["base", "mult_skill", "amp", "dr", "mitigation", "crit_mult",
+             "elem_mult", "variance"],
+    "random": {"key": "var_roll", "pct": "variance"},
+    "steps": [
+      {"id": "raw", "expr": "base * mult_skill", "returns": "number", "trace": "基数×倍率"},
+      {"id": "after_amp", "expr": "raw * (1 + amp)", "returns": "number", "trace": "增伤"},
+      {"id": "after_dr", "expr": "after_amp * (1 - dr)", "returns": "number", "trace": "减伤"},
+      {"id": "after_mit", "expr": "after_dr * (1 - mitigation)", "returns": "number", "trace": "免伤"},
+      {"id": "after_elem", "expr": "after_mit * elem_mult", "returns": "number", "trace": "克制区"},
+      {"id": "after_crit", "expr": "after_elem * crit_mult", "returns": "number", "trace": "暴击"},
+      {"id": "final", "expr": "after_crit * (1 + var_roll)", "returns": "int",
+       "trace": "波动", "floor": 1}
+    ],
+    "note": "逐项可打印；玩家看到 final 时每一环都能单独算给他看（B1 病灶的直接对策）"
+  },
+
+  "F3_eff_dodge": {
+    "kind": "formula", "label": "F3 有效闪避（差值模型）", "version": 1,
+    "vars": ["dodge", "prec"],
+    "expr": "dodge - prec",
+    "clamp": [0, null],
+    "returns": "number",
+    "note": "有效闪避 = max(0, 闪避 − 精准)。精准是对抗属性，直接对冲，自身递减"
+  },
+
+  "F3_miss": {
+    "kind": "formula", "label": "F3 未命中率（双递减）", "version": 1,
+    "vars": ["eff_dodge", "level", "diff_mod"],
+    "params": {"k": {"ref": "formula.F1_k_def_rate"}},
+    "expr": "eff_dodge / (eff_dodge + k * diff_mod)",
+    "clamp": [0.0, 0.5],
+    "returns": "pct", "round": 6,
+    "note": "★ 结构采提示词（差值 → 再过递减），但难度修正进 K 的乘数而非加成项（加成项会让高难闪避一刀归零）。0.5 硬顶保 RNG 不主导战斗。★ level 必须进 vars：k 由 formula.F1_k_def_rate 解析，那条要 level"
+  },
+
+  "F1_k_def_rate": {
+    "kind": "formula", "label": "对抗属性的统一刻度 K_rate", "version": 1,
+    "vars": ["level"],
+    "params": {
+      "base": {"ref": "const.k_rate_base"},
+      "per_lv": {"ref": "const.k_rate_per_lv"}
+    },
+    "expr": "base + per_lv * level",
+    "returns": "number",
+    "note": "K_rate(L) = 300 + 30L。暴击/闪避/急速共用同一刻度 ⇒ 同一 rating 在所有对抗属性上等价"
+  },
+
+  "F4_crit_pct": {
+    "kind": "formula", "label": "F4 暴击率", "version": 1,
+    "vars": ["crit_r", "k_rate"],
+    "expr": "crit_r / (crit_r + k_rate)",
+    "clamp": [0.0, 0.5],
+    "returns": "pct", "round": 6
+  },
+
+  "F4_crit_mult": {
+    "kind": "formula", "label": "F4 暴击倍率", "version": 1,
+    "vars": ["crit_dmg"],
+    "params": {"base": {"ref": "const.crit_base"}},
+    "expr": "base + crit_dmg",
+    "clamp": [1.0, 3.0],
+    "returns": "number", "round": 6,
+    "note": "1.5 + crit_dmg，上限 3.0 倍（crit_dmg ≤ 1.5）"
+  },
+
+  "F5_act_time": {
+    "kind": "formula", "label": "F5 行动间隔（CTB 时间模型）", "version": 1,
+    "vars": ["base", "spd"],
+    "params": {
+      "spd_ref": {"ref": "const.spd_ref"},
+      "alpha": {"ref": "const.spd_alpha"}
+    },
+    "guard": {"spd": {"floor": 1, "cap": 300}},
+    "expr": "base * (spd_ref / spd) ^ alpha",
+    "returns": "tick", "round": 6,
+    "note": "★ 本条是 expr 扩 `^` 幂的**唯一理由**。α 是唯一的速度权重旋钮；基准速度恒 100（不随等级成长）；spd 硬上限 3× 基准 = 300"
+  },
+
+  "F6_mitigation": {
+    "kind": "aggregate", "label": "F6 免伤（乘法叠加）", "version": 1,
+    "vars": ["mitigations"],
+    "params": {"cap": {"ref": "const.mit_cap"}},
+    "op": "prod",
+    "over": "mitigations",
+    "item_expr": "1 - x",
+    "combine": "1 - agg",
+    "clamp": [0.0, 0.85],
+    "returns": "pct", "round": 6,
+    "note": "两个 50% = 75%，永远堆不满；硬上限 85%"
+  },
+
+  "F7_haste_pct": {
+    "kind": "formula", "label": "F7 技能急速 → 冷却缩减%", "version": 1,
+    "vars": ["haste", "k_rate"],
+    "expr": "haste / (haste + k_rate)",
+    "clamp": [0.0, null],
+    "returns": "pct", "round": 6,
+    "note": "LoL 技能急速口径：永不 100%"
+  },
+
+  "F7_cd": {
+    "kind": "formula", "label": "F7 实际冷却", "version": 1,
+    "vars": ["cd_base", "cdr"],
+    "expr": "cd_base / (1 + cdr)",
+    "returns": "tick", "round": 6,
+    "note": "等价写法：cd_base/(1 + haste/100)；与 F7_haste_pct 二选一，口径等价"
+  },
+
+  "F8_cast_time": {
+    "kind": "formula", "label": "F8 施法急速（前摇/后摇）", "version": 1,
+    "vars": ["t_base", "cast_spd"],
+    "params": {"ref": {"ref": "const.cast_spd_ref"}},
+    "guard": {"cast_spd": {"floor": 0}},
+    "expr": "t_base / (1 + cast_spd / ref)",
+    "returns": "tick", "round": 6,
+    "note": "独立轴，不与 F7 合并（施法急速只吃前摇/后摇，不吃 CD）"
+  },
+
+  "F9_heal": {
+    "kind": "formula", "label": "F9 治疗量", "version": 1,
+    "vars": ["matk", "mult", "heal_amp", "heal_down"],
+    "expr": "matk * mult * (1 + heal_amp) * (1 - heal_down)",
+    "clamp": [0, null],
+    "returns": "number", "round": 6,
+    "note": "heal_down 为治疗削减（上限 0.5）"
+  },
+
+  "F9_shield": {
+    "kind": "formula", "label": "F9 护盾量", "version": 1,
+    "vars": ["matk", "mult", "shield_amp"],
+    "expr": "matk * mult * (1 + shield_amp)",
+    "clamp": [0, null],
+    "returns": "number", "round": 6
+  },
+
+  "F9_reflect": {
+    "kind": "formula", "label": "F9 反伤", "version": 1,
+    "vars": ["taken_final", "reflect_rate"],
+    "expr": "taken_final * reflect_rate",
+    "clamp": [0, null],
+    "returns": "number", "round": 6,
+    "note": "基于**最终**承伤（不是原始伤害）⇒ 免伤堆得越高，反伤越低"
+  },
+
+  "F10_resource_gain": {
+    "kind": "formula", "label": "F10 资源获取", "version": 1,
+    "vars": ["gain_base", "channel_mult", "gain_amp"],
+    "expr": "gain_base * channel_mult * (1 + gain_amp)",
+    "returns": "number", "round": 6,
+    "note": "channel_mult 按渠道（受击/出手/治疗/每刻）取值 ⇒ 七职业各自一套渠道表"
+  },
+
+  "F10_ult_frequency": {
+    "kind": "formula", "label": "F10 次行动/大招", "version": 1,
+    "vars": ["pool", "gain_per_action"],
+    "guard": {"gain_per_action": {"floor": 0.0001}},
+    "expr": "pool / gain_per_action",
+    "returns": "number", "round": 2,
+    "note": "目标带 4–6 次；七职业实测全部落带内"
+  },
+
+  "F11_threat": {
+    "kind": "formula", "label": "F11 单次动作仇恨", "version": 1,
+    "vars": ["final_dmg", "coef", "flat", "threat_amp"],
+    "expr": "(final_dmg * coef + flat) * (1 + threat_amp)",
+    "clamp": [0, null],
+    "returns": "number", "round": 6,
+    "note": "系数：伤害 1.0 / 治疗 0.5（按治疗量）/ 嘲讽·守护 3.0（固定，不看伤害）"
+  },
+
+  "F11_threat_share": {
+    "kind": "formula", "label": "F11 队伍仇恨占比", "version": 1,
+    "vars": ["my_threat", "team_threat"],
+    "guard": {"team_threat": {"floor": 0.0001}},
+    "expr": "my_threat / team_threat",
+    "clamp": [0.0, 1.0],
+    "returns": "pct", "round": 6,
+    "note": "Boss 点名按本条排序（不是随机）⇒ 坦克身份有数值依据"
+  },
+
+  "F12_drop_rate": {
+    "kind": "formula", "label": "F12 掉落概率", "version": 1,
+    "vars": ["daily_target", "daily_kills"],
+    "guard": {"daily_kills": {"floor": 1}},
+    "expr": "daily_target / daily_kills",
+    "clamp": [0.03, 0.30],
+    "returns": "pct", "round": 6,
+    "note": "★ 方向不可反：先定日产出再解掉率。门禁 [3%, 30%]"
+  },
+
+  "F12_exp_per_kill": {
+    "kind": "formula", "label": "F12 单只经验", "version": 1,
+    "vars": ["mob_hp", "k"],
+    "params": {"k_exp": {"ref": "param.curve.k_exp"}},
+    "expr": "mob_hp * k_exp",
+    "returns": "number", "round": 6,
+    "note": "k_exp = 0.32（由「Lv1→20 累计 30 211 exp ÷ 4 天 × 40 只/天」反解）"
+  },
+
+  "F12_level_req": {
+    "kind": "formula", "label": "F12 升级需求", "version": 1,
+    "vars": ["level"],
+    "params": {"k": {"ref": "param.curve.k_level"}, "p": {"ref": "param.curve.p_level"}},
+    "expr": "k * level ^ p",
+    "returns": "number", "round": 0,
+    "note": "45 × L^1.5。★ 又一处用 `^` 幂（经验曲线）"
+  }
+}
