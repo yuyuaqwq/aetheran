@@ -1,0 +1,12 @@
+{
+  "id": "aetheran",
+  "name": "艾瑟兰：织誓",
+  "desc": "《艾瑟兰：织誓》数据包（策划案仓 aetheran-designer 单向导出）",
+  "engine": ">=0.1",
+  "entry": "content/apply.py",
+  "domains": [
+    "monsters",
+    "maps"
+  ],
+  "created": "2026-09-21"
+}

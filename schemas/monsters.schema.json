@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "monsters",
+  "type": "object",
+  "required": [
+    "monsters"
+  ],
+  "properties": {
+    "monsters": {
+      "type": "array",
+      "items": {
+        "$ref": "#/defs/monster"
+      }
+    }
+  },
+  "defs": {
+    "monster": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "tier",
+        "lv"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^(MON|BOSS)_"
+        },
+        "name": {
+          "type": "string"
+        },
+        "zone": {
+          "type": "string"
+        },
+        "tier": {
+          "type": "string",
+          "enum": [
+            "common",
+            "elite",
+            "boss"
+          ]
+        },
+        "tier_zh": {
+          "type": "string"
+        },
+        "lv": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "teach": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        },
+        "skills": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

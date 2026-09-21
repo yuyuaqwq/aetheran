@@ -1,0 +1,17 @@
+{
+  "$builtin": false,
+  "monsters": {
+    "label": "怪物",
+    "kind": "data",
+    "schema": "schemas/monsters.schema.json",
+    "primary": "monster",
+    "icon": "🐺"
+  },
+  "maps": {
+    "label": "地图",
+    "kind": "data",
+    "schema": "schemas/maps.schema.json",
+    "primary": "map",
+    "icon": "🗺️"
+  }
+}
