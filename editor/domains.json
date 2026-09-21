@@ -13,5 +13,12 @@
     "schema": "schemas/maps.schema.json",
     "primary": "map",
     "icon": "🗺️"
+  },
+  "skills": {
+    "label": "技能",
+    "kind": "data",
+    "schema": "schemas/skill.schema.json",
+    "primary": "skill",
+    "icon": "⚔️"
   }
 }

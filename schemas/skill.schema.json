@@ -1,0 +1,206 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "《艾瑟兰：织誓》技能 7 维 schema —— 真源在**包**（设计裁决：schema 住包，引擎默认域集不新增技能域）。框架 schemas/ 那份只作回退副本。",
+  "$defs": {
+    "skill": {
+      "type": "object",
+      "required": [
+        "name",
+        "kind",
+        "lv",
+        "desc",
+        "cd",
+        "cast",
+        "recover",
+        "range",
+        "mp",
+        "res_cost",
+        "power"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "取值由内容侧声明表定（主动/被动/…）—— 引擎不内置枚举"
+        },
+        "lv": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "desc": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "文案真源 = content/data/text_specs.json，此处只传槽位"
+        },
+        "cd": {
+          "type": "integer",
+          "minimum": 0,
+          "$comment": "冷却（单位 = 刻）；0 = 无冷却"
+        },
+        "cast": {
+          "$comment": "前摇（第一段：登记 → 落地，可被打断）。一段耗时。三形态：str=**行动类别名**（枚举 = 内容侧时间模型的类别键）/ number=绝对秒（绕过速度模型）/ {base}=基准秒（过内容侧时间模型 ⇒ 吃速度）。★ 内联 anyOf 而不用 $ref：引擎未装 jsonschema 时走最小校验器，它不解析 $ref。",
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "attack",
+                "skill",
+                "item",
+                "move"
+              ],
+              "$comment": "★ 这 4 项必须与内容侧时间模型 TIME_MODEL.cast 的键集一致（同源点，改一处要改两处 ⇒ 已登记为待同步项）。设计文档 B1 要求「枚举名当耗时」被 schema 拦下，所以这里必须是 enum 而不是裸 string。"
+            },
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "object",
+              "required": [
+                "base"
+              ],
+              "properties": {
+                "base": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "recover": {
+          "$comment": "后摇（第二段：落地 → 下次能再动）；0 = 无后摇。一段耗时。三形态：str=**行动类别名**（枚举 = 内容侧时间模型的类别键）/ number=绝对秒（绕过速度模型）/ {base}=基准秒（过内容侧时间模型 ⇒ 吃速度）。★ 内联 anyOf 而不用 $ref：引擎未装 jsonschema 时走最小校验器，它不解析 $ref。",
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "attack",
+                "skill",
+                "item",
+                "move"
+              ],
+              "$comment": "★ 这 4 项必须与内容侧时间模型 TIME_MODEL.cast 的键集一致（同源点，改一处要改两处 ⇒ 已登记为待同步项）。设计文档 B1 要求「枚举名当耗时」被 schema 拦下，所以这里必须是 enum 而不是裸 string。"
+            },
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "object",
+              "required": [
+                "base"
+              ],
+              "properties": {
+                "base": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "range": {
+          "type": "integer",
+          "minimum": 1,
+          "$comment": "射程 = 能打到第几层；1 = 贴身"
+        },
+        "mp": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "res_cost": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "$comment": "职业核心资源消耗；键名沿用引擎既有两键，不另包一层"
+        },
+        "power": {
+          "type": "number",
+          "minimum": 0,
+          "$comment": "伤害/治疗的倍率基数"
+        },
+        "owner_class": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "内容侧声明；E3 技能 PE 极差的分组键"
+        },
+        "lv_band": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "内容侧声明；E3 技能极差的分组键（同职同级段）"
+        },
+        "kind_override": {
+          "type": "string"
+        },
+        "effect": {
+          "type": "string"
+        },
+        "mech": {
+          "type": "string"
+        },
+        "mech_val": {
+          "type": "number"
+        },
+        "mech2": {
+          "type": "string"
+        },
+        "mech2_val": {
+          "type": "number"
+        },
+        "buff_turns": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "hits": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "aoe": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string",
+              "minLength": 1
+            }
+          ]
+        },
+        "element": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "取值 = 内容侧 ELE_* 六元素；物理 = ELE_PHYS（不进相克表）"
+        },
+        "target": {
+          "type": "string"
+        },
+        "summon": {
+          "type": "string"
+        },
+        "lifesteal": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "hp_pct": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false,
+      "$comment": "★ additionalProperties:false 是新游戏的收紧（字段名写错当场红）。框架那份回退副本保持 additionalProperties:true，旧包不受影响。"
+    }
+  },
+  "type": "object",
+  "additionalProperties": {
+    "$ref": "#/$defs/skill"
+  },
+  "x-primary": "skill"
+}
