@@ -2,14 +2,14 @@
   "nodes": [
     {
       "id": "NODE_t0",
-      "name": "誓钟广场",
+      "name": "旧钟广场",
       "kind": "town-hub",
       "lv_min": 1,
       "lv_max": 20
     },
     {
       "id": "NODE_t1",
-      "name": "镇务厅·入誓台",
+      "name": "公会分会·柜台",
       "kind": "town",
       "lv_min": 1,
       "lv_max": 20
@@ -163,7 +163,7 @@
     },
     {
       "id": "NODE_r5",
-      "name": "灰塔外墙营地",
+      "name": "残塔外墙营地",
       "kind": "field-dungeon-gate",
       "lv_min": 12,
       "lv_max": 14
@@ -233,14 +233,14 @@
     },
     {
       "id": "NODE_d32",
-      "name": "誓钟台",
+      "name": "钟台",
       "kind": "room-story",
       "lv_min": 8,
       "lv_max": 99
     },
     {
       "id": "NODE_d33",
-      "name": "织线间",
+      "name": "值夜室",
       "kind": "room-trap",
       "lv_min": 8,
       "lv_max": 99
@@ -254,7 +254,7 @@
     },
     {
       "id": "NODE_a1",
-      "name": "织誓祭坛",
+      "name": "启程台",
       "kind": "ritual",
       "lv_min": 20,
       "lv_max": 20
@@ -525,5 +525,8 @@
   "stats": {
     "node_count": 37,
     "edge_count": 65
+  },
+  "_meta": {
+    "naming": "★ 2026-09-22 显示名跟账《阿斯特兰》：6 个节点改名（旧名含「誓约/织/灰塔」系旧隐喻）。★ 节点 id 与拓扑 65 边**一字未动** —— 只换显示名。"
   }
 }
