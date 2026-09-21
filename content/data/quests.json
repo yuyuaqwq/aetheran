@@ -1778,7 +1778,7 @@
           "id": "ITEM_oathweaver_sigil",
           "count": 1,
           "name": "转职徽记",
-          "_todo": "真源=【饰品/铭刻 · 随职业分支不同属性池】（04 §1.4 M4_3 交付物）；04 §7.3 建议「织誓者徽记」→「转职徽记」（本域按真源建议名写）；items.json 现值仍为 ITEM_oathweaver_sigil「织誓者徽记」（传世/ilv18，唯一传奇件）——品阶与真源「铭刻」不一致，且与 QUEST_R5 奖励同挂一件（同一件唯一饰品被两条任务点名），两项待 W1-C / 父 agent 裁"
+          "_todo": "真源=【饰品/铭刻 · 随职业分支不同属性池】（04 §1.4 M4_3 交付物）；04 §7.3 建议「织誓者徽记」→「转职徽记」（★已落地：items.json 现值已改为「转职徽记」）；items.json 现值仍为 ITEM_oathweaver_sigil「织誓者徽记」（传世/ilv18，唯一传奇件）——品阶与真源「铭刻」不一致，且与 QUEST_R5 奖励同挂一件（同一件唯一饰品被两条任务点名），两项待 W1-C / 父 agent 裁"
         }
       ],
       "growth": {
@@ -3958,7 +3958,7 @@
           "id": "ITEM_oathweaver_sigil",
           "count": 1,
           "name": "记录指环",
-          "_todo": "真源【饰品 / 铭刻 / 装等 12 · 属性池待定】（02 §2.3 R5）；04 §7.3 建议「织誓者徽记」改名；items 域无此条 ⇒ 暂借 ITEM_oathweaver_sigil 占位。★ 与 QUEST_M4_3 奖励同挂一件（唯一传奇饰品被两条任务点名），待 W1-C / 父 agent 裁"
+          "_todo": "真源【饰品 / 铭刻 / 装等 12 · 属性池待定】（02 §2.3 R5）；04 §7.3 建议「织誓者徽记」改名（★已落地为「转职徽记」）；items 域无此条 ⇒ 暂借 ITEM_oathweaver_sigil 占位。★ 与 QUEST_M4_3 奖励同挂一件（唯一传奇饰品被两条任务点名），待 W1-C / 父 agent 裁"
         }
       ],
       "growth": {
@@ -4131,7 +4131,7 @@
       "notes": [
         "文案一律槽位 key：quest.name = QUEST_<id>_title、环名 = QUEST_<id>_<key>_title、正文 = QUEST_<id>_{intro,progress,complete,[abandon]} / QUEST_<id>_<key>_text；真句在 content/data/text_specs.json",
         "节点 / 怪物 / 道具 id 逐条对齐 maps.json / monsters.json / items.json；到达型 target 取 02 §1 的节点新显示名",
-        "★ 口径冲突：maps.json 37 节点的显示名仍为旧世界（11 处含禁词：誓钟广场 / 入誓台 / 议事厅 / 收线柜 / 断墙入口 / 灰塔外墙营地 / 断链吊桥 / 誓钟台 / 织线间 / 织誓祭坛 / 镇门哨所），本轮按 02 §1 写新名 ⇒ 待 W4 按 §1 换 maps.json 显示名（拓扑 65 边不动）"
+        "★ 已结算（2026-09-22）：maps.json 的旧显示名已按 02 §1 换掉（6 处：誓钟广场→旧钟广场 / 镇务厅·入誓台→公会分会·柜台 / 灰塔外墙营地→残塔外墙营地 / 誓钟台→钟台 / 织线间→值夜室 / 织誓祭坛→启程台），拓扑 65 边未动"
       ]
     }
   }

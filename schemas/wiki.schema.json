@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$comment": "《艾瑟兰：织誓》wiki 域（条目索引）schema —— 真源在包。字段级口径真源 = aetheran-designer/11_数据包Wiki/02_字段规范.md（v1.1）；条目 body 的字段表真源 = 01_条目模板/*.md（12 份）。★ 不用 $ref（框架最小校验器不解析 $ref，见包内 skill.schema.json 的同类注释）⇒ 条目定义内联。",
+  "$comment": "《阿斯特兰：群雄纪》wiki 域（条目索引）schema —— 真源在包。字段级口径真源 = aetheran-designer/11_数据包Wiki/02_字段规范.md（v1.1）；条目 body 的字段表真源 = 01_条目模板/*.md（12 份）。★ 不用 $ref（框架最小校验器不解析 $ref，见包内 skill.schema.json 的同类注释）⇒ 条目定义内联。",
   "title": "wiki",
   "x-primary": "entry",
   "type": "object",

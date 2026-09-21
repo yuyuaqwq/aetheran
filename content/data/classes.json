@@ -5,7 +5,7 @@
     "x_primary": "class",
     "count": 7,
     "package": "aetheran",
-    "title": "艾瑟兰：织誓",
+    "title": "阿斯特兰：群雄纪",
     "generated": "2026-09-21",
     "generator": "子任务（classes 域）：import `_work/W1Ca_class_panel.py`（exit=0）导出面板/评级/轴倍数/PE/五维系数/成长率；资源数值逐行解析 `04_职业/02` §3 表并断言；**数值零手打**",
     "id_rule": "CLS_ + 英文名全大写（数据字典 §1.2:59 的 7 值枚举）；职业缩写 KNT/BSK/RNG/MAG/PRS/SHD/SKD（数据字典 §4:213）",

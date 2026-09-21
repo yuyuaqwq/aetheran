@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$comment": "《艾瑟兰：织誓》技能 7 维 schema —— 真源在**包**（设计裁决：schema 住包，引擎默认域集不新增技能域）。框架 schemas/ 那份只作回退副本。",
+  "$comment": "《阿斯特兰：群雄纪》技能 7 维 schema —— 真源在**包**（设计裁决：schema 住包，引擎默认域集不新增技能域）。框架 schemas/ 那份只作回退副本。",
   "$defs": {
     "skill": {
       "type": "object",

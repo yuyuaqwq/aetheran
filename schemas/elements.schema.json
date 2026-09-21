@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "elements",
-  "$comment": "《艾瑟兰：织誓》elements 域 —— 6 元素相克环 + 物理第 7 种（ELE_PHYS）。真源：策划案仓 00_总纲/02_数据字典.md §2.4（元素表 / 相克环 / 乘区行）· §1.2（ID 命名规则）· §1.3（物理 = ELE_PHYS 裁定）+ 14_会议与决策/02_裁决书.md §8.2 N23（ELE_PHYS 三分裁定）。口径：相克 = **四环 火→风→土→水→火** + **光 ↔ 暗 互克**（每元素克一个、被一个克）；乘区 克制 ×1.25 / 被克 ×0.80 / 中性（含物理）×1.00 —— 与 content/rules/formula_table.json 的 F2_damage 克制区步（after_elem）以及 _work/W3A_p5_verify.py 的实测断言（elem_mult = 1.25）对齐，倍率不手打。★ 全篇不用 $ref：引擎未装 jsonschema 时走 editor/validate.py 的最小校验器（它虽能解 #/$defs/…，但本包口径是复用形状一律内联 anyOf）。★ 校验口径：editor/validate.py 是拿 $defs[x-primary] 校验**表里一条**的值，不是拿顶层（顶层是「条目表」形状 {条目id: 条目}）。",
+  "$comment": "《阿斯特兰：群雄纪》elements 域 —— 6 元素相克环 + 物理第 7 种（ELE_PHYS）。真源：策划案仓 00_总纲/02_数据字典.md §2.4（元素表 / 相克环 / 乘区行）· §1.2（ID 命名规则）· §1.3（物理 = ELE_PHYS 裁定）+ 14_会议与决策/02_裁决书.md §8.2 N23（ELE_PHYS 三分裁定）。口径：相克 = **四环 火→风→土→水→火** + **光 ↔ 暗 互克**（每元素克一个、被一个克）；乘区 克制 ×1.25 / 被克 ×0.80 / 中性（含物理）×1.00 —— 与 content/rules/formula_table.json 的 F2_damage 克制区步（after_elem）以及 _work/W3A_p5_verify.py 的实测断言（elem_mult = 1.25）对齐，倍率不手打。★ 全篇不用 $ref：引擎未装 jsonschema 时走 editor/validate.py 的最小校验器（它虽能解 #/$defs/…，但本包口径是复用形状一律内联 anyOf）。★ 校验口径：editor/validate.py 是拿 $defs[x-primary] 校验**表里一条**的值，不是拿顶层（顶层是「条目表」形状 {条目id: 条目}）。",
   "$defs": {
     "element": {
       "type": "object",

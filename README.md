@@ -1,6 +1,6 @@
 # aetheran 数据包
 
-> 《艾瑟兰：织誓》的数据包。**真源在策划案仓** `C:/Users/yuyu/aetheran-designer`，本包是它的单向导出。
+> 《阿斯特兰：群雄纪》的数据包。**真源在策划案仓** `C:/Users/yuyu/aetheran-designer`，本包是它的单向导出。
 
 ## 怎么来的
 

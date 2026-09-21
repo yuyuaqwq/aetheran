@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$comment": "《艾瑟兰：织誓》任务域 schema（P1 主线 12 + 支线/委托 18）。真源：08_地图任务关卡/02_任务线与推进节奏.md §3/§6 · 01_世界观与剧情/04_剧情与NPC.md §2；节点 id 与 content/data/maps.json 对齐；道具 id 走 ITEM_ 前缀（items 域未落地，见各条目 _todo）。顶层 = 条目表 {条目 id: 条目}，`_` 前缀键 = 私有/元信息键（与引擎 editor/packages.py 的 is_entry_key 口径一致）。★ 复用子形状（目标 / 奖励 / 环）一律内联，不用 $ref —— 引擎未装 jsonschema 时走最小校验器，它不解析 $ref。",
+  "$comment": "《阿斯特兰：群雄纪》任务域 schema（P1 主线 12 + 支线/委托 18）。真源：08_地图任务关卡/02_任务线与推进节奏.md §3/§6 · 01_世界观与剧情/04_剧情与NPC.md §2；节点 id 与 content/data/maps.json 对齐；道具 id 走 ITEM_ 前缀（items 域未落地，见各条目 _todo）。顶层 = 条目表 {条目 id: 条目}，`_` 前缀键 = 私有/元信息键（与引擎 editor/packages.py 的 is_entry_key 口径一致）。★ 复用子形状（目标 / 奖励 / 环）一律内联，不用 $ref —— 引擎未装 jsonschema 时走最小校验器，它不解析 $ref。",
   "$defs": {
     "quest": {
       "type": "object",

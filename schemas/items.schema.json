@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$comment": "《艾瑟兰：织誓》物品域（items）。★ 顶层 = 「条目表」形状：{ITEM_<slug>: 条目}；'_' 开头的顶层键 = 私有/元信息键（不是条目，与框架 editor/packages.py::is_entry_key() 同口径）。★ 本 schema 不含任何 $ref：引擎未装 jsonschema 时走最小校验器（editor/validate.py::_mini_validate），复用子形状一律内联 anyOf。",
-  "title": "items（艾瑟兰：织誓 · 物品域）",
+  "$comment": "《阿斯特兰：群雄纪》物品域（items）。★ 顶层 = 「条目表」形状：{ITEM_<slug>: 条目}；'_' 开头的顶层键 = 私有/元信息键（不是条目，与框架 editor/packages.py::is_entry_key() 同口径）。★ 本 schema 不含任何 $ref：引擎未装 jsonschema 时走最小校验器（editor/validate.py::_mini_validate），复用子形状一律内联 anyOf。",
+  "title": "items（阿斯特兰：群雄纪 · 物品域）",
   "x-primary": "item",
   "type": "object",
   "propertyNames": {

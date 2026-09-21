@@ -1,20 +1,20 @@
 {
-  "id": "aetheran",
-  "name": "艾瑟兰：织誓",
-  "desc": "《艾瑟兰：织誓》数据包（策划案仓 aetheran-designer 单向导出）",
-  "engine": ">=0.1",
-  "entry": "content/apply.py",
-  "domains": [
-    "classes",
-    "drop_pools",
-    "elements",
-    "items",
-    "maps",
-    "monsters",
-    "npcs",
-    "quests",
-    "skills",
-    "wiki"
-  ],
-  "created": "2026-09-21"
+ "id": "aetheran",
+ "name": "阿斯特兰：群雄纪",
+ "desc": "《阿斯特兰：群雄纪》数据包（策划案仓 aetheran-designer 单向导出）",
+ "engine": ">=0.1",
+ "entry": "content/apply.py",
+ "domains": [
+  "classes",
+  "drop_pools",
+  "elements",
+  "items",
+  "maps",
+  "monsters",
+  "npcs",
+  "quests",
+  "skills",
+  "wiki"
+ ],
+ "created": "2026-09-21"
 }

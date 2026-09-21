@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$comment": "《艾瑟兰：织誓》NPC 14 位 schema —— 顶层 = **条目表** `{NPC_id: 条目}`（外层键升序），条目形状见 `$defs.npc`。★ 文案真源 = `content/data/text_specs.json`（00_总纲/02_数据字典.md §0）：本域**只传槽位 key**，`name` / `role` / `lines` / `locked_lines` / `dialogue_trees[].slot` 一律是槽位名，**禁裸文案**。★ 地点 id 与 `content/data/maps.json` 的节点 id 逐字对齐（`NODE_*`）。★ 子形状复用一律**内联 anyOf**、不用 $ref（引擎未装 jsonschema 时走最小校验器，它只解析本文件内的 `#/$defs/NAME`）。",
+  "$comment": "《阿斯特兰：群雄纪》NPC 14 位 schema —— 顶层 = **条目表** `{NPC_id: 条目}`（外层键升序），条目形状见 `$defs.npc`。★ 文案真源 = `content/data/text_specs.json`（00_总纲/02_数据字典.md §0）：本域**只传槽位 key**，`name` / `role` / `lines` / `locked_lines` / `dialogue_trees[].slot` 一律是槽位名，**禁裸文案**。★ 地点 id 与 `content/data/maps.json` 的节点 id 逐字对齐（`NODE_*`）。★ 子形状复用一律**内联 anyOf**、不用 $ref（引擎未装 jsonschema 时走最小校验器，它只解析本文件内的 `#/$defs/NAME`）。",
   "$defs": {
     "npc": {
       "type": "object",

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "drop_pools",
-  "$comment": "《艾瑟兰：织誓》掉落池域 —— **顶层 = 条目表** {条目id: 条目}，一条 = 一只宿主的掉落池。真源 = 策划案仓 `09_经济与掉落/01_掉落经验与金币产出.md` §6.2（掉落池总表）· §6.3（层主战单场收益）；怪物 id 真源 = `content/data/monsters.json`。★ 铁律：**掉率 = 日均需求 ÷ 日均该档击杀数**（§6.2 标题即口径）—— 每个 rate 必须能从 `_derive.demand_per_day ÷ _derive.kills_per_day` 复算出来，不许手打一个好看的百分数；两个数就写在条目里（`_` 前缀键 = 私有/元信息，不算条目）。子形状（含 `n` 的整数/区间两态）一律**内联 anyOf**，本文件只有顶层指向 $defs 的一次 $ref。",
+  "$comment": "《阿斯特兰：群雄纪》掉落池域 —— **顶层 = 条目表** {条目id: 条目}，一条 = 一只宿主的掉落池。真源 = 策划案仓 `09_经济与掉落/01_掉落经验与金币产出.md` §6.2（掉落池总表）· §6.3（层主战单场收益）；怪物 id 真源 = `content/data/monsters.json`。★ 铁律：**掉率 = 日均需求 ÷ 日均该档击杀数**（§6.2 标题即口径）—— 每个 rate 必须能从 `_derive.demand_per_day ÷ _derive.kills_per_day` 复算出来，不许手打一个好看的百分数；两个数就写在条目里（`_` 前缀键 = 私有/元信息，不算条目）。子形状（含 `n` 的整数/区间两态）一律**内联 anyOf**，本文件只有顶层指向 $defs 的一次 $ref。",
   "type": "object",
   "propertyNames": {
     "pattern": "^(DROP_|_)",

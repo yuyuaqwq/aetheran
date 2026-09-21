@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$comment": "《艾瑟兰：织誓》职业（classes）域 schema。顶层 = 条目表 {CLS_*: 职业}；`_` 开头的键 = 文件级私有元信息（引擎 is_entry_key 口径，见 11_数据包Wiki/00_Wiki设计与模板.md:307-322），不是条目。★ 子形状一律**内联 anyOf**，**全文不写 JSON-Schema 引用关键字**（引擎未装 jsonschema 时走 editor/validate.py 的最小校验器）。`$defs.class` 与顶层 `patternProperties` 里那份**逐字节相同**（由生成脚本保证）：前者是引擎的单条校验入口（editor/validate.py:118-134 取 `$defs[primary]`），后者供整表校验用。",
+  "$comment": "《阿斯特兰：群雄纪》职业（classes）域 schema。顶层 = 条目表 {CLS_*: 职业}；`_` 开头的键 = 文件级私有元信息（引擎 is_entry_key 口径，见 11_数据包Wiki/00_Wiki设计与模板.md:307-322），不是条目。★ 子形状一律**内联 anyOf**，**全文不写 JSON-Schema 引用关键字**（引擎未装 jsonschema 时走 editor/validate.py 的最小校验器）。`$defs.class` 与顶层 `patternProperties` 里那份**逐字节相同**（由生成脚本保证）：前者是引擎的单条校验入口（editor/validate.py:118-134 取 `$defs[primary]`），后者供整表校验用。",
   "$defs": {
     "class": {
       "type": "object",
