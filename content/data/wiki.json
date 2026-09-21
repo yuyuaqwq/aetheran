@@ -130,8 +130,8 @@
       "pending_data": "上游对象**未落地**、不许假装存在；三类分解（无上游数据域承运的世界观层专名 / 势力无独立域 / 域已存在但该 id 未落）见 counts.pending_data_breakdown。",
       "已发布": "首版 **0 条**（V3/V7 未过完，不许先给「已发布」—— 与旧版口径一致）。",
       "已废弃": "本文件 0 条（本轮没有「被取代」的条目；旧世界的 106 条属**范围外**整体替换，不在本文件的废弃条目清单里 —— 若父 agent 要求走 §5.4 的废弃留档，需另建一份 旧版 wiki.json 快照并登记 superseded_by）。",
-      "草稿条数（本次快照）": 28,
-      "pending_data 条数（本次快照）": 159
+      "草稿条数（本次快照）": 29,
+      "pending_data 条数（本次快照）": 158
     },
     "deviations": [
       "D-1：任务书给的字段集是 {id, 前缀, 对应域, 摘要槽位 key, 数值揭示档位, 版本, 状态}；本文件按旧版 `wiki.json` 的字段结构**超集**落盘（另含 name / category / type / phase / aliases / search_keys / source / wiki_key / template / _note）—— 超集字段全部有真源或为「未定 = null」，未编造。",
@@ -202,8 +202,8 @@
         "#": "ST-2",
         "冲突": "命名规范 §C-3 要求补第 17 只怪 `MON_slime`（史莱姆），`monsters.json` 现值只有 16 只（12 普通 + 3 精英 + 1 层主）；§C-3 明写「P1 主线在补之前不引用」。",
         "出处": "命名规范 §9.4 / §C-3 / 03_地理 §六 待裁 3",
-        "本文件处置": "`MON_slime` 记 1 条 pending_data（不假装存在）",
-        "建议": "补数据后由 P1 边陲（`NODE_t7` 外）接首怪位"
+        "本文件处置": "★ 2026-09-22 **已解**：第 17 只怪 `MON_slime` 已落 `content/data/monsters.json`（zone 近郊·林带 · Lv1 普通 · 0 技能）并配上 `content/data/drop_pools.json#DROP_slime`；本条目 status 由 pending_data 转「草稿」，③ 类 pending_data 明细里不再含它。",
+        "建议": "按建议①执行完毕（补第 17 只）；★ 剩余跟账：P1 主线 / `03_地理` 的 Lv1 首怪位仍写 `MON_goblin_scout`，是否改挂 `MON_slime` 待父 agent 拍板（数据侧已就位，改引用即可）"
       },
       {
         "#": "ST-3",
@@ -292,7 +292,7 @@
       "_口径": "status 是**时点快照**：本文件落盘时读一次 content/data/*.json 的键/列表，命中 = 草稿，未命中 = pending_data。兄弟改名批**正在并行落地**（classes.json 的 mtime 已在本路读取期间变化过），故 status 需在批落地后重跑同一套判定。",
       "content/data/elements.json": "已落 7（ELE_FIRE/WIND/EARTH/WATER/LIGHT/SHADOW/PHYS）⇒ 条目层 6",
       "content/data/classes.json": "已落 7：CLS_ASSASSIN · CLS_BARD · CLS_BERSERKER · CLS_KNIGHT · CLS_MAGE · CLS_PRIEST · CLS_RANGER",
-      "content/data/monsters.json": "已落 16 只（含层主 `BOSS_stone_warden`）；`MON_scroll_eater` 已随改名批落（原 `MON_oath_eater`）；缺 `MON_slime`",
+      "content/data/monsters.json": "已落 17 只（13 普通 + 3 精英 + 层主 `BOSS_stone_warden`）；`MON_scroll_eater` 已随改名批落（原 `MON_oath_eater`）；★ 2026-09-22 第 17 只 `MON_slime`（史莱姆 · 命名总表 §八 日系补位）已落盘，并带 `content/data/drop_pools.json#DROP_slime` ⇒ 该 id 不再计 pending_data",
       "content/data/maps.json": "37 节点（NODE_t0–t8 / l1–l5 / m1–m5 / r1–r5 / d11–d34 / a1），**旧显示名**；与本文件的世界层地点 id 无交集",
       "content/data/npcs.json": "14 位 NPC；势力仅作 `faction` 引用（现值同时存在 `FAC_shoushi_yihui` / `FAC_shouxianren` 与新的 `FAC_gonghui` / `FAC_yijishang` ⇒ 改名批进行中）",
       "content/data/text_specs.json": "**不存在**（槽位目标待建，见 T-1）",
@@ -343,22 +343,21 @@
         "node": 72
       },
       "by_status": {
-        "pending_data": 159,
-        "草稿": 28
+        "pending_data": 158,
+        "草稿": 29
       },
       "by_reveal": {
         "R0": 163,
         "R1": 24
       },
-      "pending_data_total": 159,
+      "pending_data_total": 158,
       "pending_data_breakdown": {
         "① 无上游数据域承运（世界观层专名：世界与纪元/六大陆/城与地标/八特殊区/种族/诸神与异界）": 116,
         "② 势力无独立域（现值仅作 npcs.json 的 faction 引用）": 40,
-        "③ 域已存在但该 id 未落": 3,
+        "③ 域已存在但该 id 未落": 2,
         "③ 明细（id）": [
           "CLS_APPRENTICE",
-          "CLS_NUN",
-          "MON_slime"
+          "CLS_NUN"
         ]
       },
       "pending_data_ids": [
@@ -405,7 +404,6 @@
         "FAC_zaizhaochongbaizhe",
         "FAC_zhanbushihanghui",
         "FAC_zousiwang",
-        "MON_slime",
         "WIKI_cal_shengpingli",
         "WIKI_cont_huangchao",
         "WIKI_cont_jifeng",
@@ -3481,7 +3479,7 @@
     "type": "mon",
     "domain": "content/data/monsters.json",
     "name": "史莱姆",
-    "status": "pending_data",
+    "status": "草稿",
     "phase": "P1",
     "reveal": "R1",
     "aliases": [],
@@ -3491,7 +3489,7 @@
     "source": "content/data/monsters.json#MON_slime",
     "wiki_key": "WIKI_mon_slime",
     "template": "01_条目模板/怪物.md",
-    "_note": "monsters.json 16 只里没有它（命名规范 §C-3 补位要求，P1 主线在补之前不引用）⇒ pending_data"
+    "_note": "上游已落（content/data/monsters.json#MON_slime 命中 · 第 17 只 · 近郊·林带 · Lv1 普通 · 0 技能 · teach:基础/引入）⇒ 草稿；待补 body 后走 §5.1 草稿→待审。补位出处 = 命名总表 §八「日系补位」/ §十一-6 + 命名规范 §9.4 / §C-3；掉落池 = content/data/drop_pools.json#DROP_slime（ITEM_resin · 12.5% = 5.0 ÷ 40.0）"
   },
   "FAC_guangmingjiaohui": {
     "id": "FAC_guangmingjiaohui",

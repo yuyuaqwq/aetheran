@@ -23,12 +23,13 @@
     "additivity": "同档各条**可加**：档内速率和 ≡ 档总需求 ÷ 档击杀（林带·普通 0.625 = 25.0 / 40.0 等）—— 故 kills_per_day 是**该档**口径，不是本池宿主单怪的击杀数",
     "economy_stance": "反通胀：「必掉 = 不值钱」；稀缺物走生活渠道，不走战斗掉落",
     "exp_and_gold_rule": "单只经验 = 怪HP × 0.32 · 单只金币 = 怪HP × 0.06（§6.1 L14–L15）",
-    "item_id_policy": "道具 id 与 items 域（`content/data/items.json`，已建）**逐条对齐** —— 16/16 命中，本域不另立 id、也不抄道具名（名字真源在 items 域，文档名只作私有字段留痕）。",
+    "item_id_policy": "道具 id 与 items 域（`content/data/items.json`，已建）**逐条对齐** —— 17/17 命中，本域不另立 id、也不抄道具名（名字真源在 items 域，文档名只作私有字段留痕）。",
+    "slime_addendum": "★ 2026-09-22 新增 `DROP_slime`（宿主 = 第 17 只怪 `MON_slime`，命名总表 §八「日系补位」/§十一-6 = P1 起点镇外第一只怪）：掉率口径与其余 16 池**完全一致**（rate = 日均需求 ÷ 日均该档击杀 = 5.0 ÷ 40.0 = 12.5%，且落在 [3%, 30%] 门禁内）。★ 连带的口径变化（登记跟账，本批**不改兄弟池**）：林带·普通档由 4 条变 5 条 ⇒ 档总需求 25.0 → 30.0 / 档速率和 0.625 → 0.75 = 30.0 ÷ 40.0；兄弟 4 池 `_derive.check_expr` 里写的仍是入档前的和（它们是「该池入档时点」的留痕）。数值真源 = `_work/W1E_monster_model.py::DROP_POOLS[\"林带·普通\"]`（同一行 P1-17 已同步落进脚本）。",
     "_item_domain_check": {
       "items_domain": "content/data/items.json",
-      "matched": 16,
+      "matched": 17,
       "kind_expected": "material",
-      "note": "16 个 id ↔ 16 个 material 条目的 name 与 §6.2 文档名逐条一致（由一次性复算脚本第⑥段断言）"
+      "note": "17 个 id ↔ 17 个 material 条目**在 items 域里都存在**（16 条与 §6.2 文档名逐条一致；第 17 条 = P1-17 树脂 `ITEM_resin`，随史莱姆补位新增，文档 §6.2 表尚未补行 ⇒ 见 _meta.slime_addendum 跟账）"
     },
     "_not_materialized": {
       "equipment_drop": {
@@ -47,6 +48,44 @@
       }
     },
     "strategy_fix": "★ 2026-09-21 修：原写 type='per_entry_roll'，引擎未注册该策略 ⇒ get_strategy 曾静默回落 weighted（语义从『按掉率逐项掷』变成『必掉一件』）。引擎侧已改 fail-closed（未知策略抛 UnknownStrategy）；本侧改用已注册的 'table'（= 每行独立判定 chance），并把 entries 迁成引擎期望的 rolls 形状。"
+  },
+  "DROP_slime": {
+    "id": "DROP_slime",
+    "host": "MON_slime",
+    "host_name": "史莱姆",
+    "tier": "common",
+    "zone": "近郊·林带",
+    "lv": 1,
+    "type": "table",
+    "desc": "林带普通档：黏合类材料 —— 第 17 只（史莱姆）的料口，起点镇外第一份掉落（胶状怪掉胶）。",
+    "_derive": {
+      "doc_band": "林带·普通",
+      "tier_kills_per_day": 40.0,
+      "check_scope": "band",
+      "check_rate_sum": 0.75,
+      "check_demand_sum": 30.0,
+      "check_expr": "本池入档后同带 5 条可加：0.125 + 0.20 + 0.15 + 0.125 + 0.15 = 0.75 = 30.0 ÷ 40.0（入档前是 0.625 = 25.0 ÷ 40.0，写在兄弟 4 池的 check_expr 里 ⇒ 按「不动其它池」的纪律不改，登记跟账）"
+    },
+    "_note": "★ 2026-09-22 新增：宿主 = 第 17 只怪 `MON_slime`（命名总表 §八「日系补位」+ §十一-6 拍板：放 Lv1 起点镇外当第一只怪）。日均需求 5.0 的依据：`ITEM_resin`（树脂，items.json 记 origin = 低语林带 / use = 粘合与火把）与同带 `ITEM_thornvine_gum`（刺藤胶 P1-03，desc = 黏合类材料·火把与绷带的料口）**同属一个用途料口** ⇒ 取该用途在本带的最低档需求 5.0/天（新怪的首件掉落不高于既有同用途料口）。",
+    "rolls": [
+      {
+        "chance": 0.125,
+        "pool": "item:ITEM_resin",
+        "n": [
+          1,
+          1
+        ],
+        "_derive": {
+          "demand_per_day": 5.0,
+          "kills_per_day": 40.0,
+          "rate_expr": "5.0 ÷ 40.0 = 12.5%",
+          "qty_expr": "5.0 ÷ (0.125 × 40.0) = 1.0 ⇒ n = [1,1]",
+          "item_name_doc": "树脂",
+          "p1_code": "P1-17",
+          "source": "_work/W1E_monster_model.py::DROP_POOLS[\"林带·普通\"]（P1-17 新增行）· content/data/items.json#ITEM_resin · 命名总表 §八「日系补位」"
+        }
+      }
+    ]
   },
   "DROP_goblin_scout": {
     "id": "DROP_goblin_scout",

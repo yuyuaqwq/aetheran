@@ -1,6 +1,17 @@
 {
   "monsters": [
     {
+      "id": "MON_slime",
+      "name": "史莱姆",
+      "zone": "近郊·林带",
+      "tier": "common",
+      "tier_zh": "普通",
+      "lv": 1,
+      "teach": "teach:基础/引入",
+      "note": "★ 第 17 只（命名总表 §八 / §十一-6）：一坨胶，软、黏、打上去「啪」一下 ⇒ Lv1 起点镇外第一只怪。零技能 + 零变体乘区 ⇒ 面板 = 反推基准怪（HP 43 / ATK 7.9，属性 PE 偏置 0.0），教「打一下扣一下血」这条最小闭环；SPD 92 比玩家慢 ⇒ 玩家先手，接手不是挨手。比哥布林斥候（Lv1·SPD 108·HP×0.85）更早遇到",
+      "skills": 0
+    },
+    {
       "id": "MON_goblin_scout",
       "name": "哥布林斥候",
       "zone": "近郊·林带",
@@ -178,12 +189,15 @@
     }
   ],
   "_meta": {
-    "id_source": "aetheran-designer/01_世界观与剧情/02_命名规范.md §2.8（16 行表）",
     "fix": "★ 2026-09-21 修：原导出把 W1E P1_ZONES 的整数序号 'id' 当成了 id ⇒ 15/16 写成占位符 MON_x",
+    "id_source": "aetheran-designer/01_世界观与剧情/02_命名规范.md §9（17 行表：普通 13 + 精英 3 + 层主 1；§9.4 日系补位 = 史莱姆 MON_slime）",
+    "slime_add": "★ 2026-09-22 补第 17 只 MON_slime（史莱姆 · zone 近郊·林带 = 命名总表 §九「低语林带」· Lv1 普通 · 0 技能 · teach:基础/引入 · 排在本数组首行 = 起点镇外第一只怪）：策划案侧只改两处 —— W1E_monster_model.py::P1_ZONES「近郊·林带」首行新增一条，build_package.py 的 slug 映射表加一行 `\"史莱姆\": \"slime\"`；本文件由重跑构建器（临时目录）后**只取这一行**并回，其余 16 行逐字段比对后保留包内版本。数值不在本域（本域不带 HP/ATK/DEF/SPD），真源仍是 _work/W1E_monster_model.py：史莱姆 = 零变体乘区的标准 Lv1 普通怪（HP 42.64→43 / ATK 7.90 / MATK 7.50 / DEF 60 / MDEF 60 / SPD 92 / 暴击 2.5% / 精准 4.0% / 闪避 2.5% · 属性 PE 偏置 0.0）。",
+    "drift_watch": "★ 本次验收顺带查出两条**先于本次改动就存在**的漂移（属 rename 批，未在本批覆盖，登记跟账）：① MON_shadow_bat.note 的「树精」—— 包内已是新名，W1E 源侧仍写旧名「林妖」⇒ 下次全量重跑构建器会把这条 note 退回旧名；② BOSS_stone_warden.zone —— 构建器现输出新名「残塔哨所」（命名总表 §十二），包内仍是旧名「灰塔哨所」。",
     "counts": {
-      "common": 12,
+      "common": 13,
       "elite": 3,
       "boss": 1
-    }
+    },
+    "counts_note": "17 只 = P1_ZONES 16 只（13 普通 + 3 精英）+ 层主 BOSS_stone_warden"
   }
 }
