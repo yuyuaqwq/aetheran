@@ -24,7 +24,7 @@
     },
     {
       "id": "MON_sprite",
-      "name": "林妖",
+      "name": "树精",
       "zone": "近郊·林带",
       "tier": "common",
       "tier_zh": "普通",
@@ -35,7 +35,7 @@
     },
     {
       "id": "MON_giant_rat",
-      "name": "腐鼠",
+      "name": "巨鼠",
       "zone": "近郊·林带",
       "tier": "common",
       "tier_zh": "普通",
@@ -68,7 +68,7 @@
     },
     {
       "id": "MON_rock_beetle",
-      "name": "石甲虫",
+      "name": "岩甲虫",
       "zone": "近郊·矿径",
       "tier": "common",
       "tier_zh": "普通",
@@ -79,7 +79,7 @@
     },
     {
       "id": "MON_hag",
-      "name": "洞穴妖婆",
+      "name": "洞窟妖婆",
       "zone": "近郊·矿径",
       "tier": "common",
       "tier_zh": "普通",
@@ -123,7 +123,7 @@
     },
     {
       "id": "MON_oath_eater",
-      "name": "噬契者",
+      "name": "食卷者",
       "zone": "近郊·废墟",
       "tier": "common",
       "tier_zh": "普通",
@@ -140,12 +140,12 @@
       "tier_zh": "普通",
       "lv": 11,
       "teach": "teach:精准/练手",
-      "note": "高闪避 + 短隐：闪避面板 25%（玩家精准约 13% ⇒ 12% 未命中、有效生命 +19%）⇒ 精准第二课（第一课是林妖）",
+      "note": "高闪避 + 短隐：闪避面板 25%（玩家精准约 13% ⇒ 12% 未命中、有效生命 +19%）⇒ 精准第二课（第一课是树精）",
       "skills": 1
     },
     {
       "id": "MON_skeleton_archer",
-      "name": "骷髅弓手",
+      "name": "骸骨弓手",
       "zone": "近郊·废墟",
       "tier": "common",
       "tier_zh": "普通",
@@ -167,7 +167,7 @@
     },
     {
       "id": "BOSS_stone_warden",
-      "name": "石像守望者",
+      "name": "塔卫",
       "zone": "灰塔哨所",
       "tier": "boss",
       "tier_zh": "层主",

@@ -1330,7 +1330,7 @@
     "src": "06_装备道具/00_装备体系与PE预算.md:L379（§5.2 第 37 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[36]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
   },
   "ITEM_oathbound_amulet": {
-    "name": "誓约护符",
+    "name": "荣誉护符",
     "kind": "equip",
     "slot": "饰品",
     "slot_id": "slot_trinket",
@@ -1398,7 +1398,7 @@
     "src": "06_装备道具/00_装备体系与PE预算.md:L360（§5.2 第 18 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[17]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
   },
   "ITEM_oathbound_boots": {
-    "name": "誓约战靴",
+    "name": "荣誉战靴",
     "kind": "equip",
     "slot": "靴子",
     "slot_id": "slot_boots",
@@ -1461,7 +1461,7 @@
     "src": "06_装备道具/00_装备体系与PE预算.md:L359（§5.2 第 17 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[16]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
   },
   "ITEM_oathbound_chestplate": {
-    "name": "誓约胸甲",
+    "name": "荣誉胸甲",
     "kind": "equip",
     "slot": "上甲",
     "slot_id": "slot_armor_top",
@@ -1526,7 +1526,7 @@
     "src": "06_装备道具/00_装备体系与PE预算.md:L356（§5.2 第 14 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[13]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
   },
   "ITEM_oathbound_helm": {
-    "name": "誓约盔",
+    "name": "荣誉盔",
     "kind": "equip",
     "slot": "头盔",
     "slot_id": "slot_helm",
@@ -1596,7 +1596,7 @@
     "src": "06_装备道具/00_装备体系与PE预算.md:L358（§5.2 第 16 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[15]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
   },
   "ITEM_oathbound_legguards": {
-    "name": "誓约护腿",
+    "name": "荣誉护腿",
     "kind": "equip",
     "slot": "下甲",
     "slot_id": "slot_armor_bottom",
@@ -1666,7 +1666,7 @@
     "src": "06_装备道具/00_装备体系与PE预算.md:L357（§5.2 第 15 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[14]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
   },
   "ITEM_oathbound_longsword": {
-    "name": "誓约长剑",
+    "name": "荣誉长剑",
     "kind": "equip",
     "slot": "武器",
     "slot_id": "slot_weapon",
@@ -2776,7 +2776,7 @@
     "src": "09_经济与掉落/01_掉落经验与金币产出.md:L46（§6.2 掉落池总表） · _work/W1E_monster_model.py:DROP_POOLS[林带·普通]"
   },
   "ITEM_oath_thread_remnant": {
-    "name": "誓约残线",
+    "name": "荣誉残线",
     "kind": "material",
     "slot": "材料",
     "grade": "粗制",
@@ -2950,7 +2950,7 @@
     "src": "01_世界观与剧情/02_命名规范.md:L325（§2.6 材料池 第 1 条）"
   },
   "ITEM_tracing_paper": {
-    "name": "摹录纸",
+    "name": "抄本纸",
     "kind": "material",
     "slot": "材料",
     "grade": "粗制",

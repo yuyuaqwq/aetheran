@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "elements",
-  "$comment": "《艾瑟兰：织誓》elements 域 —— 6 元素相克环 + 物理第 7 种（ELE_PHYS）。真源：策划案仓 00_总纲/02_数据字典.md §2.4（元素表 / 相克环 / 乘区行）· §1.2（ID 命名规则）· §1.3（物理 = ELE_PHYS 裁定）+ 14_会议与决策/02_裁决书.md §8.2 N23（ELE_PHYS 三分裁定）。口径：相克是**单环**（火 → 霜 → 雷 → 毒 → 神圣 → 暗影 → 火，每元素克一个、被一个克）；乘区 克制 ×1.25 / 被克 ×0.80 / 中性（含物理）×1.00 —— 与 content/rules/formula_table.json 的 F2_damage 克制区步（after_elem）以及 _work/W3A_p5_verify.py 的实测断言（elem_mult = 1.25）对齐，倍率不手打。★ 全篇不用 $ref：引擎未装 jsonschema 时走 editor/validate.py 的最小校验器（它虽能解 #/$defs/…，但本包口径是复用形状一律内联 anyOf）。★ 校验口径：editor/validate.py 是拿 $defs[x-primary] 校验**表里一条**的值，不是拿顶层（顶层是「条目表」形状 {条目id: 条目}）。",
+  "$comment": "《艾瑟兰：织誓》elements 域 —— 6 元素相克环 + 物理第 7 种（ELE_PHYS）。真源：策划案仓 00_总纲/02_数据字典.md §2.4（元素表 / 相克环 / 乘区行）· §1.2（ID 命名规则）· §1.3（物理 = ELE_PHYS 裁定）+ 14_会议与决策/02_裁决书.md §8.2 N23（ELE_PHYS 三分裁定）。口径：相克 = **四环 火→风→土→水→火** + **光 ↔ 暗 互克**（每元素克一个、被一个克）；乘区 克制 ×1.25 / 被克 ×0.80 / 中性（含物理）×1.00 —— 与 content/rules/formula_table.json 的 F2_damage 克制区步（after_elem）以及 _work/W3A_p5_verify.py 的实测断言（elem_mult = 1.25）对齐，倍率不手打。★ 全篇不用 $ref：引擎未装 jsonschema 时走 editor/validate.py 的最小校验器（它虽能解 #/$defs/…，但本包口径是复用形状一律内联 anyOf）。★ 校验口径：editor/validate.py 是拿 $defs[x-primary] 校验**表里一条**的值，不是拿顶层（顶层是「条目表」形状 {条目id: 条目}）。",
   "$defs": {
     "element": {
       "type": "object",
@@ -26,24 +26,24 @@
         "id": {
           "type": "string",
           "pattern": "^ELE_[A-Z]+$",
-          "$comment": "ELE_ + 英文大写（数据字典 §1.2）。6 元素 = ELE_FIRE / ELE_FROST / ELE_LIGHTNING / ELE_POISON / ELE_HOLY / ELE_SHADOW；物理 = ELE_PHYS（第 7 种，N23 裁定进 §1.2 的 ID 表）"
+          "$comment": "ELE_ + 英文大写（数据字典 §1.2）。6 元素 = ELE_FIRE / ELE_WIND / ELE_EARTH / ELE_WATER / ELE_LIGHT / ELE_SHADOW；物理 = ELE_PHYS（第 7 种，N23 裁定进 §1.2 的 ID 表）"
         },
         "name": {
           "type": "string",
           "minLength": 1,
           "maxLength": 8,
-          "$comment": "元素中文名（传统西幻化：火 / 霜 / 雷 / 毒 / 神圣 / 暗影 / 物理）。★ 元素条目里**不许出现神名** —— 神 = 誓约的客体只进剧情，元素 = 世界的质料只进数值（2026-09-21 口径更正）；并禁武侠 / 佛教 / 网文词（01_世界观与剧情/02_命名规范.md §3）"
+          "$comment": "元素中文名（传统四元素 + 光暗：火 / 风 / 土 / 水 / 光 / 暗 / 物理）。★ 元素条目里**不许出现神名** —— 神 = 誓约的客体只进剧情，元素 = 世界的质料只进数值（2026-09-21 口径更正）；并禁武侠 / 佛教 / 网文词（01_世界观与剧情/02_命名规范.md §3）"
         },
         "name_en": {
           "type": "string",
           "pattern": "^[A-Z]+$",
-          "$comment": "英文大写短名（FIRE / FROST / LIGHTNING / POISON / HOLY / SHADOW / PHYS）—— 与 id 后半段同源"
+          "$comment": "英文大写短名（FIRE / WIND / EARTH / WATER / LIGHT / SHADOW / PHYS）—— 与 id 后半段同源"
         },
         "imagery": {
           "type": "string",
           "minLength": 1,
           "maxLength": 24,
-          "$comment": "一句话意象（数据字典 §2.4 第 3 列原文）：灼烧·爆发 / 凝滞·破甲 / 迅捷·麻痹 / 侵蚀·持续 / 净化·守护 / 噬咬·腐蚀"
+          "$comment": "一句话意象（数据字典 §2.4 第 3 列原文）：灼烧·爆发 / 迅捷·疾行 / 厚重·坚固 / 凝滞·冲刷 / 净化·守护 / 噬咬·腐蚀"
         },
         "in_ring": {
           "type": "boolean",
@@ -60,7 +60,7 @@
               "type": "null"
             }
           ],
-          "$comment": "环上序号 0–5（ELE_FIRE = 0 起，沿火→霜→雷→毒→神圣→暗影 递增）；ELE_PHYS = null。★ 内联 anyOf 而不用 $ref（下同）"
+          "$comment": "环上序号 0–5（ELE_FIRE = 0 起，沿火→风→土→水→光→暗 递增）；ELE_PHYS = null。★ 内联 anyOf 而不用 $ref（下同）"
         },
         "ring_pos": {
           "anyOf": [
@@ -72,7 +72,7 @@
               "type": "null"
             }
           ],
-          "$comment": "环上的显示串（如「火 → 霜」，玩家侧画环直接用）；ELE_PHYS = null"
+          "$comment": "环上的显示串（如「火 → 风」/「光 ↔ 暗」，玩家侧画环直接用）；ELE_PHYS = null"
         },
         "counters": {
           "anyOf": [
@@ -109,7 +109,7 @@
               "type": "null"
             }
           ],
-          "$comment": "这一条边的直觉理由（数据字典 §2.4 原文）：火融霜 / 霜凝雷（冻结导路）/ 雷灼毒（高温净化）/ 毒蚀圣（腐化信仰）/ 圣驱影 / 影噬火（暗覆火）—— 写文案与教学时直接用；ELE_PHYS = null"
+          "$comment": "这一条边的直觉理由：火焚风 / 风蚀土 / 土掩水 / 水灭火 / 光破暗 / 暗噬光（光 ↔ 暗 互克）—— 写文案与教学时直接用；ELE_PHYS = null"
         },
         "multiplier": {
           "type": "object",

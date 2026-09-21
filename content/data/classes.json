@@ -469,7 +469,7 @@
   },
   "CLS_ARCANIST": {
     "id": "CLS_ARCANIST",
-    "name": "秘术师",
+    "name": "法师",
     "name_en": "Arcanist",
     "slug": "arcanist",
     "skill_prefix": "ARC",
@@ -1122,7 +1122,7 @@
   },
   "CLS_PRIEST": {
     "id": "CLS_PRIEST",
-    "name": "祭司",
+    "name": "修女",
     "name_en": "Priest",
     "slug": "priest",
     "skill_prefix": "PRS",
@@ -1781,7 +1781,7 @@
   },
   "CLS_SHADE": {
     "id": "CLS_SHADE",
-    "name": "暗影",
+    "name": "刺客",
     "name_en": "Shade",
     "slug": "shade",
     "skill_prefix": "SHD",
@@ -2109,7 +2109,7 @@
   },
   "CLS_SKALD": {
     "id": "CLS_SKALD",
-    "name": "战歌",
+    "name": "吟游诗人",
     "name_en": "Skald",
     "slug": "skald",
     "skill_prefix": "SKD",
@@ -2437,7 +2437,7 @@
   },
   "CLS_WARDEN": {
     "id": "CLS_WARDEN",
-    "name": "守卫",
+    "name": "骑士",
     "name_en": "Warden",
     "slug": "warden",
     "skill_prefix": "WDN",

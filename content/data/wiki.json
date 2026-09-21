@@ -3487,7 +3487,7 @@
       "physical_default",
       "admin"
     ],
-    "_note": "数据已落（content/data/elements.json#ELE_FIRE 命中）⇒ 可过 V3；待补 body（01_条目模板/元素.md 的 7 项）后走 草稿→待审；相克环 火→霜→雷→毒→神圣→暗影→火；乘区 克制 ×1.25/被克 ×0.80/中性 ×1.00（数据字典 §2.4 L124–154）；★ content/data/elements.json 里另有 ELE_PHYS（物理），但 00_Wiki §10 W1（L743）裁定**不给它正式条目**（只在元素总览页写第 7 种默认）⇒ 首版元素 6 条"
+    "_note": "数据已落（content/data/elements.json#ELE_FIRE 命中）⇒ 可过 V3；待补 body（01_条目模板/元素.md 的 7 项）后走 草稿→待审；相克环 火→风→土→水→火 + 光 ↔ 暗 互克；乘区 克制 ×1.25/被克 ×0.80/中性 ×1.00（数据字典 §2.4 L124–154）；★ content/data/elements.json 里另有 ELE_PHYS（物理），但 00_Wiki §10 W1（L743）裁定**不给它正式条目**（只在元素总览页写第 7 种默认）⇒ 首版元素 6 条"
   },
   "WIKI_ele_FROST": {
     "id": "WIKI_ele_FROST",
@@ -3500,7 +3500,7 @@
     "reveal": "R0",
     "aliases": [],
     "search_keys": [],
-    "source": "content/data/elements.json#ELE_FROST",
+    "source": "content/data/elements.json#ELE_WATER",
     "ref": [
       "WIKI_formula_F2_final_damage"
     ],
@@ -3516,7 +3516,7 @@
       "physical_default",
       "admin"
     ],
-    "_note": "数据已落（content/data/elements.json#ELE_FROST 命中）⇒ 可过 V3；待补 body（01_条目模板/元素.md 的 7 项）后走 草稿→待审；相克环 火→霜→雷→毒→神圣→暗影→火；乘区 克制 ×1.25/被克 ×0.80/中性 ×1.00（数据字典 §2.4 L124–154）；★ content/data/elements.json 里另有 ELE_PHYS（物理），但 00_Wiki §10 W1（L743）裁定**不给它正式条目**（只在元素总览页写第 7 种默认）⇒ 首版元素 6 条"
+    "_note": "数据已落（content/data/elements.json#ELE_WATER 命中）⇒ 可过 V3；待补 body（01_条目模板/元素.md 的 7 项）后走 草稿→待审；相克环 火→风→土→水→火 + 光 ↔ 暗 互克；乘区 克制 ×1.25/被克 ×0.80/中性 ×1.00（数据字典 §2.4 L124–154）；★ content/data/elements.json 里另有 ELE_PHYS（物理），但 00_Wiki §10 W1（L743）裁定**不给它正式条目**（只在元素总览页写第 7 种默认）⇒ 首版元素 6 条"
   },
   "WIKI_ele_LIGHTNING": {
     "id": "WIKI_ele_LIGHTNING",
@@ -3529,7 +3529,7 @@
     "reveal": "R0",
     "aliases": [],
     "search_keys": [],
-    "source": "content/data/elements.json#ELE_LIGHTNING",
+    "source": "content/data/elements.json#ELE_WIND",
     "ref": [
       "WIKI_formula_F2_final_damage"
     ],
@@ -3545,7 +3545,7 @@
       "physical_default",
       "admin"
     ],
-    "_note": "数据已落（content/data/elements.json#ELE_LIGHTNING 命中）⇒ 可过 V3；待补 body（01_条目模板/元素.md 的 7 项）后走 草稿→待审；相克环 火→霜→雷→毒→神圣→暗影→火；乘区 克制 ×1.25/被克 ×0.80/中性 ×1.00（数据字典 §2.4 L124–154）；★ content/data/elements.json 里另有 ELE_PHYS（物理），但 00_Wiki §10 W1（L743）裁定**不给它正式条目**（只在元素总览页写第 7 种默认）⇒ 首版元素 6 条"
+    "_note": "数据已落（content/data/elements.json#ELE_WIND 命中）⇒ 可过 V3；待补 body（01_条目模板/元素.md 的 7 项）后走 草稿→待审；相克环 火→风→土→水→火 + 光 ↔ 暗 互克；乘区 克制 ×1.25/被克 ×0.80/中性 ×1.00（数据字典 §2.4 L124–154）；★ content/data/elements.json 里另有 ELE_PHYS（物理），但 00_Wiki §10 W1（L743）裁定**不给它正式条目**（只在元素总览页写第 7 种默认）⇒ 首版元素 6 条"
   },
   "WIKI_ele_POISON": {
     "id": "WIKI_ele_POISON",
@@ -3558,7 +3558,7 @@
     "reveal": "R0",
     "aliases": [],
     "search_keys": [],
-    "source": "content/data/elements.json#ELE_POISON",
+    "source": "content/data/elements.json#ELE_EARTH",
     "ref": [
       "WIKI_formula_F2_final_damage"
     ],
@@ -3574,7 +3574,7 @@
       "physical_default",
       "admin"
     ],
-    "_note": "数据已落（content/data/elements.json#ELE_POISON 命中）⇒ 可过 V3；待补 body（01_条目模板/元素.md 的 7 项）后走 草稿→待审；相克环 火→霜→雷→毒→神圣→暗影→火；乘区 克制 ×1.25/被克 ×0.80/中性 ×1.00（数据字典 §2.4 L124–154）；★ content/data/elements.json 里另有 ELE_PHYS（物理），但 00_Wiki §10 W1（L743）裁定**不给它正式条目**（只在元素总览页写第 7 种默认）⇒ 首版元素 6 条"
+    "_note": "数据已落（content/data/elements.json#ELE_EARTH 命中）⇒ 可过 V3；待补 body（01_条目模板/元素.md 的 7 项）后走 草稿→待审；相克环 火→风→土→水→火 + 光 ↔ 暗 互克；乘区 克制 ×1.25/被克 ×0.80/中性 ×1.00（数据字典 §2.4 L124–154）；★ content/data/elements.json 里另有 ELE_PHYS（物理），但 00_Wiki §10 W1（L743）裁定**不给它正式条目**（只在元素总览页写第 7 种默认）⇒ 首版元素 6 条"
   },
   "WIKI_ele_HOLY": {
     "id": "WIKI_ele_HOLY",
@@ -3587,7 +3587,7 @@
     "reveal": "R0",
     "aliases": [],
     "search_keys": [],
-    "source": "content/data/elements.json#ELE_HOLY",
+    "source": "content/data/elements.json#ELE_LIGHT",
     "ref": [
       "WIKI_formula_F2_final_damage"
     ],
@@ -3603,7 +3603,7 @@
       "physical_default",
       "admin"
     ],
-    "_note": "数据已落（content/data/elements.json#ELE_HOLY 命中）⇒ 可过 V3；待补 body（01_条目模板/元素.md 的 7 项）后走 草稿→待审；相克环 火→霜→雷→毒→神圣→暗影→火；乘区 克制 ×1.25/被克 ×0.80/中性 ×1.00（数据字典 §2.4 L124–154）；★ content/data/elements.json 里另有 ELE_PHYS（物理），但 00_Wiki §10 W1（L743）裁定**不给它正式条目**（只在元素总览页写第 7 种默认）⇒ 首版元素 6 条"
+    "_note": "数据已落（content/data/elements.json#ELE_LIGHT 命中）⇒ 可过 V3；待补 body（01_条目模板/元素.md 的 7 项）后走 草稿→待审；相克环 火→风→土→水→火 + 光 ↔ 暗 互克；乘区 克制 ×1.25/被克 ×0.80/中性 ×1.00（数据字典 §2.4 L124–154）；★ content/data/elements.json 里另有 ELE_PHYS（物理），但 00_Wiki §10 W1（L743）裁定**不给它正式条目**（只在元素总览页写第 7 种默认）⇒ 首版元素 6 条"
   },
   "WIKI_ele_SHADOW": {
     "id": "WIKI_ele_SHADOW",
@@ -3632,7 +3632,7 @@
       "physical_default",
       "admin"
     ],
-    "_note": "数据已落（content/data/elements.json#ELE_SHADOW 命中）⇒ 可过 V3；待补 body（01_条目模板/元素.md 的 7 项）后走 草稿→待审；相克环 火→霜→雷→毒→神圣→暗影→火；乘区 克制 ×1.25/被克 ×0.80/中性 ×1.00（数据字典 §2.4 L124–154）；★ content/data/elements.json 里另有 ELE_PHYS（物理），但 00_Wiki §10 W1（L743）裁定**不给它正式条目**（只在元素总览页写第 7 种默认）⇒ 首版元素 6 条"
+    "_note": "数据已落（content/data/elements.json#ELE_SHADOW 命中）⇒ 可过 V3；待补 body（01_条目模板/元素.md 的 7 项）后走 草稿→待审；相克环 火→风→土→水→火 + 光 ↔ 暗 互克；乘区 克制 ×1.25/被克 ×0.80/中性 ×1.00（数据字典 §2.4 L124–154）；★ content/data/elements.json 里另有 ELE_PHYS（物理），但 00_Wiki §10 W1（L743）裁定**不给它正式条目**（只在元素总览页写第 7 种默认）⇒ 首版元素 6 条"
   },
   "WIKI_sys_S1": {
     "id": "WIKI_sys_S1",
