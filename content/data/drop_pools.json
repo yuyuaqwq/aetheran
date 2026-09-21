@@ -14,7 +14,10 @@
       "boss": 2.0
     },
     "kills_basis": "普通怪 40 只/天（25 场 × 1.6 只）· 精英 4 只/天 · 层主 2 次/天（文档 §6.2 L40）",
-    "rate_gate": [0.03, 0.30],
+    "rate_gate": [
+      0.03,
+      0.3
+    ],
     "rate_gate_basis": "★ 门禁：掉率 ∈ [3%, 30%]（< 3% = 等于不存在）（文档 §6.2 L41）",
     "qty_rule": "平均份数 = 日均需求 ÷ (掉率 × 日均击杀) = 1.0 ⇒ 16 条全部 n = [1,1]（§6.2 表内 掉率 × 击杀 ≡ 日均需求，逐行可验）",
     "additivity": "同档各条**可加**：档内速率和 ≡ 档总需求 ÷ 档击杀（林带·普通 0.625 = 25.0 / 40.0 等）—— 故 kills_per_day 是**该档**口径，不是本池宿主单怪的击杀数",
@@ -42,7 +45,8 @@
         "source": "07_怪物Boss/00_怪物与Boss数值框架.md §8 设计卡 L666（跨文档引用，非 §6.2 表内行）",
         "why_absent": "装备 id 属装备域（未建）"
       }
-    }
+    },
+    "strategy_fix": "★ 2026-09-21 修：原写 type='per_entry_roll'，引擎未注册该策略 ⇒ get_strategy 曾静默回落 weighted（语义从『按掉率逐项掷』变成『必掉一件』）。引擎侧已改 fail-closed（未知策略抛 UnknownStrategy）；本侧改用已注册的 'table'（= 每行独立判定 chance），并把 entries 迁成引擎期望的 rolls 形状。"
   },
   "DROP_goblin_scout": {
     "id": "DROP_goblin_scout",
@@ -51,12 +55,24 @@
     "tier": "common",
     "zone": "近郊·林带",
     "lv": 1,
-    "type": "per_entry_roll",
-    "entries": [
+    "type": "table",
+    "desc": "林带普通档：纤维类材料，鞋与布件的料口。",
+    "_derive": {
+      "doc_band": "林带·普通",
+      "tier_kills_per_day": 40.0,
+      "check_scope": "band",
+      "check_rate_sum": 0.625,
+      "check_demand_sum": 25.0,
+      "check_expr": "同带 4 条可加：0.20 + 0.15 + 0.125 + 0.15 = 0.625 = 25.0 ÷ 40.0"
+    },
+    "rolls": [
       {
-        "item": "ITEM_moss_fiber",
-        "rate": 0.2,
-        "n": [1, 1],
+        "chance": 0.2,
+        "pool": "item:ITEM_moss_fiber",
+        "n": [
+          1,
+          1
+        ],
         "_derive": {
           "demand_per_day": 8.0,
           "kills_per_day": 40.0,
@@ -67,16 +83,7 @@
           "source": "09_经济与掉落/01_掉落经验与金币产出.md §6.2 L46"
         }
       }
-    ],
-    "desc": "林带普通档：纤维类材料，鞋与布件的料口。",
-    "_derive": {
-      "doc_band": "林带·普通",
-      "tier_kills_per_day": 40.0,
-      "check_scope": "band",
-      "check_rate_sum": 0.625,
-      "check_demand_sum": 25.0,
-      "check_expr": "同带 4 条可加：0.20 + 0.15 + 0.125 + 0.15 = 0.625 = 25.0 ÷ 40.0"
-    }
+    ]
   },
   "DROP_ghoul": {
     "id": "DROP_ghoul",
@@ -85,12 +92,24 @@
     "tier": "common",
     "zone": "近郊·林带",
     "lv": 2,
-    "type": "per_entry_roll",
-    "entries": [
+    "type": "table",
+    "desc": "林带普通档：骨片类材料，细工与护具的料口。",
+    "_derive": {
+      "doc_band": "林带·普通",
+      "tier_kills_per_day": 40.0,
+      "check_scope": "band",
+      "check_rate_sum": 0.625,
+      "check_demand_sum": 25.0,
+      "check_expr": "同带 4 条可加：0.20 + 0.15 + 0.125 + 0.15 = 0.625 = 25.0 ÷ 40.0"
+    },
+    "rolls": [
       {
-        "item": "ITEM_antler_splinter",
-        "rate": 0.15,
-        "n": [1, 1],
+        "chance": 0.15,
+        "pool": "item:ITEM_antler_splinter",
+        "n": [
+          1,
+          1
+        ],
         "_derive": {
           "demand_per_day": 6.0,
           "kills_per_day": 40.0,
@@ -101,16 +120,7 @@
           "source": "09_经济与掉落/01_掉落经验与金币产出.md §6.2 L47"
         }
       }
-    ],
-    "desc": "林带普通档：骨片类材料，细工与护具的料口。",
-    "_derive": {
-      "doc_band": "林带·普通",
-      "tier_kills_per_day": 40.0,
-      "check_scope": "band",
-      "check_rate_sum": 0.625,
-      "check_demand_sum": 25.0,
-      "check_expr": "同带 4 条可加：0.20 + 0.15 + 0.125 + 0.15 = 0.625 = 25.0 ÷ 40.0"
-    }
+    ]
   },
   "DROP_sprite": {
     "id": "DROP_sprite",
@@ -119,12 +129,24 @@
     "tier": "common",
     "zone": "近郊·林带",
     "lv": 3,
-    "type": "per_entry_roll",
-    "entries": [
+    "type": "table",
+    "desc": "林带普通档：黏合类材料，火把与绷带的料口。",
+    "_derive": {
+      "doc_band": "林带·普通",
+      "tier_kills_per_day": 40.0,
+      "check_scope": "band",
+      "check_rate_sum": 0.625,
+      "check_demand_sum": 25.0,
+      "check_expr": "同带 4 条可加：0.20 + 0.15 + 0.125 + 0.15 = 0.625 = 25.0 ÷ 40.0"
+    },
+    "rolls": [
       {
-        "item": "ITEM_thornvine_gum",
-        "rate": 0.125,
-        "n": [1, 1],
+        "chance": 0.125,
+        "pool": "item:ITEM_thornvine_gum",
+        "n": [
+          1,
+          1
+        ],
         "_derive": {
           "demand_per_day": 5.0,
           "kills_per_day": 40.0,
@@ -135,16 +157,7 @@
           "source": "09_经济与掉落/01_掉落经验与金币产出.md §6.2 L48"
         }
       }
-    ],
-    "desc": "林带普通档：黏合类材料，火把与绷带的料口。",
-    "_derive": {
-      "doc_band": "林带·普通",
-      "tier_kills_per_day": 40.0,
-      "check_scope": "band",
-      "check_rate_sum": 0.625,
-      "check_demand_sum": 25.0,
-      "check_expr": "同带 4 条可加：0.20 + 0.15 + 0.125 + 0.15 = 0.625 = 25.0 ÷ 40.0"
-    }
+    ]
   },
   "DROP_giant_rat": {
     "id": "DROP_giant_rat",
@@ -153,12 +166,24 @@
     "tier": "common",
     "zone": "近郊·林带",
     "lv": 4,
-    "type": "per_entry_roll",
-    "entries": [
+    "type": "table",
+    "desc": "林带普通档：绳缆类材料，捆扎与短绳的料口。",
+    "_derive": {
+      "doc_band": "林带·普通",
+      "tier_kills_per_day": 40.0,
+      "check_scope": "band",
+      "check_rate_sum": 0.625,
+      "check_demand_sum": 25.0,
+      "check_expr": "同带 4 条可加：0.20 + 0.15 + 0.125 + 0.15 = 0.625 = 25.0 ÷ 40.0"
+    },
+    "rolls": [
       {
-        "item": "ITEM_spider_silk_cord",
-        "rate": 0.15,
-        "n": [1, 1],
+        "chance": 0.15,
+        "pool": "item:ITEM_spider_silk_cord",
+        "n": [
+          1,
+          1
+        ],
         "_derive": {
           "demand_per_day": 6.0,
           "kills_per_day": 40.0,
@@ -169,16 +194,7 @@
           "source": "09_经济与掉落/01_掉落经验与金币产出.md §6.2 L49"
         }
       }
-    ],
-    "desc": "林带普通档：绳缆类材料，捆扎与短绳的料口。",
-    "_derive": {
-      "doc_band": "林带·普通",
-      "tier_kills_per_day": 40.0,
-      "check_scope": "band",
-      "check_rate_sum": 0.625,
-      "check_demand_sum": 25.0,
-      "check_expr": "同带 4 条可加：0.20 + 0.15 + 0.125 + 0.15 = 0.625 = 25.0 ÷ 40.0"
-    }
+    ]
   },
   "DROP_dire_wolf": {
     "id": "DROP_dire_wolf",
@@ -187,12 +203,29 @@
     "tier": "elite",
     "zone": "近郊·林带",
     "lv": 5,
-    "type": "per_entry_roll",
-    "entries": [
+    "type": "table",
+    "desc": "林带精英档：心材类材料，铭刻装备的料口。",
+    "_derive": {
+      "doc_band": "林带·精英",
+      "tier_kills_per_day": 4.0,
+      "check_scope": "tier",
+      "check_rows": [
+        "林带·精英",
+        "矿径·精英",
+        "废墟·精英"
+      ],
+      "check_rate_sum": 0.75,
+      "check_demand_sum": 3.0,
+      "check_expr": "精英档 3 条可加：0.25 × 3 = 0.75 = 3.0 ÷ 4.0（分母是档口径，不是单池宿主）"
+    },
+    "rolls": [
       {
-        "item": "ITEM_living_wood_core",
-        "rate": 0.25,
-        "n": [1, 1],
+        "chance": 0.25,
+        "pool": "item:ITEM_living_wood_core",
+        "n": [
+          1,
+          1
+        ],
         "_derive": {
           "demand_per_day": 1.0,
           "kills_per_day": 4.0,
@@ -203,17 +236,7 @@
           "source": "09_经济与掉落/01_掉落经验与金币产出.md §6.2 L50"
         }
       }
-    ],
-    "desc": "林带精英档：心材类材料，铭刻装备的料口。",
-    "_derive": {
-      "doc_band": "林带·精英",
-      "tier_kills_per_day": 4.0,
-      "check_scope": "tier",
-      "check_rows": ["林带·精英", "矿径·精英", "废墟·精英"],
-      "check_rate_sum": 0.75,
-      "check_demand_sum": 3.0,
-      "check_expr": "精英档 3 条可加：0.25 × 3 = 0.75 = 3.0 ÷ 4.0（分母是档口径，不是单池宿主）"
-    }
+    ]
   },
   "DROP_gargoyle": {
     "id": "DROP_gargoyle",
@@ -222,12 +245,24 @@
     "tier": "common",
     "zone": "近郊·矿径",
     "lv": 5,
-    "type": "per_entry_roll",
-    "entries": [
+    "type": "table",
+    "desc": "矿径普通档：砾石类材料，石工与研磨的料口。",
+    "_derive": {
+      "doc_band": "矿径·普通",
+      "tier_kills_per_day": 40.0,
+      "check_scope": "band",
+      "check_rate_sum": 0.65,
+      "check_demand_sum": 26.0,
+      "check_expr": "同带 4 条可加：0.20 + 0.175 + 0.15 + 0.125 = 0.65 = 26.0 ÷ 40.0"
+    },
+    "rolls": [
       {
-        "item": "ITEM_gravel_shard",
-        "rate": 0.2,
-        "n": [1, 1],
+        "chance": 0.2,
+        "pool": "item:ITEM_gravel_shard",
+        "n": [
+          1,
+          1
+        ],
         "_derive": {
           "demand_per_day": 8.0,
           "kills_per_day": 40.0,
@@ -238,16 +273,7 @@
           "source": "09_经济与掉落/01_掉落经验与金币产出.md §6.2 L51"
         }
       }
-    ],
-    "desc": "矿径普通档：砾石类材料，石工与研磨的料口。",
-    "_derive": {
-      "doc_band": "矿径·普通",
-      "tier_kills_per_day": 40.0,
-      "check_scope": "band",
-      "check_rate_sum": 0.65,
-      "check_demand_sum": 26.0,
-      "check_expr": "同带 4 条可加：0.20 + 0.175 + 0.15 + 0.125 = 0.65 = 26.0 ÷ 40.0"
-    }
+    ]
   },
   "DROP_rock_beetle": {
     "id": "DROP_rock_beetle",
@@ -256,12 +282,24 @@
     "tier": "common",
     "zone": "近郊·矿径",
     "lv": 6,
-    "type": "per_entry_roll",
-    "entries": [
+    "type": "table",
+    "desc": "矿径普通档：壳片类材料，护具与盾板的料口。",
+    "_derive": {
+      "doc_band": "矿径·普通",
+      "tier_kills_per_day": 40.0,
+      "check_scope": "band",
+      "check_rate_sum": 0.65,
+      "check_demand_sum": 26.0,
+      "check_expr": "同带 4 条可加：0.20 + 0.175 + 0.15 + 0.125 = 0.65 = 26.0 ÷ 40.0"
+    },
+    "rolls": [
       {
-        "item": "ITEM_stone_shell_plate",
-        "rate": 0.175,
-        "n": [1, 1],
+        "chance": 0.175,
+        "pool": "item:ITEM_stone_shell_plate",
+        "n": [
+          1,
+          1
+        ],
         "_derive": {
           "demand_per_day": 7.0,
           "kills_per_day": 40.0,
@@ -272,16 +310,7 @@
           "source": "09_经济与掉落/01_掉落经验与金币产出.md §6.2 L52"
         }
       }
-    ],
-    "desc": "矿径普通档：壳片类材料，护具与盾板的料口。",
-    "_derive": {
-      "doc_band": "矿径·普通",
-      "tier_kills_per_day": 40.0,
-      "check_scope": "band",
-      "check_rate_sum": 0.65,
-      "check_demand_sum": 26.0,
-      "check_expr": "同带 4 条可加：0.20 + 0.175 + 0.15 + 0.125 = 0.65 = 26.0 ÷ 40.0"
-    }
+    ]
   },
   "DROP_hag": {
     "id": "DROP_hag",
@@ -290,12 +319,24 @@
     "tier": "common",
     "zone": "近郊·矿径",
     "lv": 7,
-    "type": "per_entry_roll",
-    "entries": [
+    "type": "table",
+    "desc": "矿径普通档：砂料，研磨与削甲的料口。",
+    "_derive": {
+      "doc_band": "矿径·普通",
+      "tier_kills_per_day": 40.0,
+      "check_scope": "band",
+      "check_rate_sum": 0.65,
+      "check_demand_sum": 26.0,
+      "check_expr": "同带 4 条可加：0.20 + 0.175 + 0.15 + 0.125 = 0.65 = 26.0 ÷ 40.0"
+    },
+    "rolls": [
       {
-        "item": "ITEM_iron_sand",
-        "rate": 0.15,
-        "n": [1, 1],
+        "chance": 0.15,
+        "pool": "item:ITEM_iron_sand",
+        "n": [
+          1,
+          1
+        ],
         "_derive": {
           "demand_per_day": 6.0,
           "kills_per_day": 40.0,
@@ -306,16 +347,7 @@
           "source": "09_经济与掉落/01_掉落经验与金币产出.md §6.2 L53"
         }
       }
-    ],
-    "desc": "矿径普通档：砂料，研磨与削甲的料口。",
-    "_derive": {
-      "doc_band": "矿径·普通",
-      "tier_kills_per_day": 40.0,
-      "check_scope": "band",
-      "check_rate_sum": 0.65,
-      "check_demand_sum": 26.0,
-      "check_expr": "同带 4 条可加：0.20 + 0.175 + 0.15 + 0.125 = 0.65 = 26.0 ÷ 40.0"
-    }
+    ]
   },
   "DROP_zombie": {
     "id": "DROP_zombie",
@@ -324,12 +356,24 @@
     "tier": "common",
     "zone": "近郊·矿径",
     "lv": 8,
-    "type": "per_entry_roll",
-    "entries": [
+    "type": "table",
+    "desc": "矿径普通档：塌方处的硬核，机关与支座件的料口。",
+    "_derive": {
+      "doc_band": "矿径·普通",
+      "tier_kills_per_day": 40.0,
+      "check_scope": "band",
+      "check_rate_sum": 0.65,
+      "check_demand_sum": 26.0,
+      "check_expr": "同带 4 条可加：0.20 + 0.175 + 0.15 + 0.125 = 0.65 = 26.0 ÷ 40.0"
+    },
+    "rolls": [
       {
-        "item": "ITEM_collapse_sand_core",
-        "rate": 0.125,
-        "n": [1, 1],
+        "chance": 0.125,
+        "pool": "item:ITEM_collapse_sand_core",
+        "n": [
+          1,
+          1
+        ],
         "_derive": {
           "demand_per_day": 5.0,
           "kills_per_day": 40.0,
@@ -340,16 +384,7 @@
           "source": "09_经济与掉落/01_掉落经验与金币产出.md §6.2 L54"
         }
       }
-    ],
-    "desc": "矿径普通档：塌方处的硬核，机关与支座件的料口。",
-    "_derive": {
-      "doc_band": "矿径·普通",
-      "tier_kills_per_day": 40.0,
-      "check_scope": "band",
-      "check_rate_sum": 0.65,
-      "check_demand_sum": 26.0,
-      "check_expr": "同带 4 条可加：0.20 + 0.175 + 0.15 + 0.125 = 0.65 = 26.0 ÷ 40.0"
-    }
+    ]
   },
   "DROP_magma_hound": {
     "id": "DROP_magma_hound",
@@ -358,12 +393,29 @@
     "tier": "elite",
     "zone": "近郊·矿径",
     "lv": 9,
-    "type": "per_entry_roll",
-    "entries": [
+    "type": "table",
+    "desc": "矿径精英档：锭料，锻造与铭刻的料口。",
+    "_derive": {
+      "doc_band": "矿径·精英",
+      "tier_kills_per_day": 4.0,
+      "check_scope": "tier",
+      "check_rows": [
+        "林带·精英",
+        "矿径·精英",
+        "废墟·精英"
+      ],
+      "check_rate_sum": 0.75,
+      "check_demand_sum": 3.0,
+      "check_expr": "精英档 3 条可加：0.25 × 3 = 0.75 = 3.0 ÷ 4.0（分母是档口径，不是单池宿主）"
+    },
+    "rolls": [
       {
-        "item": "ITEM_slag_ingot",
-        "rate": 0.25,
-        "n": [1, 1],
+        "chance": 0.25,
+        "pool": "item:ITEM_slag_ingot",
+        "n": [
+          1,
+          1
+        ],
         "_derive": {
           "demand_per_day": 1.0,
           "kills_per_day": 4.0,
@@ -374,17 +426,7 @@
           "source": "09_经济与掉落/01_掉落经验与金币产出.md §6.2 L55"
         }
       }
-    ],
-    "desc": "矿径精英档：锭料，锻造与铭刻的料口。",
-    "_derive": {
-      "doc_band": "矿径·精英",
-      "tier_kills_per_day": 4.0,
-      "check_scope": "tier",
-      "check_rows": ["林带·精英", "矿径·精英", "废墟·精英"],
-      "check_rate_sum": 0.75,
-      "check_demand_sum": 3.0,
-      "check_expr": "精英档 3 条可加：0.25 × 3 = 0.75 = 3.0 ÷ 4.0（分母是档口径，不是单池宿主）"
-    }
+    ]
   },
   "DROP_wraith": {
     "id": "DROP_wraith",
@@ -393,12 +435,24 @@
     "tier": "common",
     "zone": "近郊·废墟",
     "lv": 9,
-    "type": "per_entry_roll",
-    "entries": [
+    "type": "table",
+    "desc": "废墟普通档：尘粉类材料，灰浆与掩迹的料口。",
+    "_derive": {
+      "doc_band": "废墟·普通",
+      "tier_kills_per_day": 40.0,
+      "check_scope": "band",
+      "check_rate_sum": 0.575,
+      "check_demand_sum": 23.0,
+      "check_expr": "同带 4 条可加：0.15 + 0.15 + 0.15 + 0.125 = 0.575 = 23.0 ÷ 40.0"
+    },
+    "rolls": [
       {
-        "item": "ITEM_ruin_dust",
-        "rate": 0.15,
-        "n": [1, 1],
+        "chance": 0.15,
+        "pool": "item:ITEM_ruin_dust",
+        "n": [
+          1,
+          1
+        ],
         "_derive": {
           "demand_per_day": 6.0,
           "kills_per_day": 40.0,
@@ -409,16 +463,7 @@
           "source": "09_经济与掉落/01_掉落经验与金币产出.md §6.2 L56"
         }
       }
-    ],
-    "desc": "废墟普通档：尘粉类材料，灰浆与掩迹的料口。",
-    "_derive": {
-      "doc_band": "废墟·普通",
-      "tier_kills_per_day": 40.0,
-      "check_scope": "band",
-      "check_rate_sum": 0.575,
-      "check_demand_sum": 23.0,
-      "check_expr": "同带 4 条可加：0.15 + 0.15 + 0.15 + 0.125 = 0.575 = 23.0 ÷ 40.0"
-    }
+    ]
   },
   "DROP_oath_eater": {
     "id": "DROP_oath_eater",
@@ -427,12 +472,24 @@
     "tier": "common",
     "zone": "近郊·废墟",
     "lv": 10,
-    "type": "per_entry_roll",
-    "entries": [
+    "type": "table",
+    "desc": "废墟普通档：铁片类材料，修补与铆接的料口。",
+    "_derive": {
+      "doc_band": "废墟·普通",
+      "tier_kills_per_day": 40.0,
+      "check_scope": "band",
+      "check_rate_sum": 0.575,
+      "check_demand_sum": 23.0,
+      "check_expr": "同带 4 条可加：0.15 + 0.15 + 0.15 + 0.125 = 0.575 = 23.0 ÷ 40.0"
+    },
+    "rolls": [
       {
-        "item": "ITEM_oathbroken_iron_shard",
-        "rate": 0.15,
-        "n": [1, 1],
+        "chance": 0.15,
+        "pool": "item:ITEM_oathbroken_iron_shard",
+        "n": [
+          1,
+          1
+        ],
         "_derive": {
           "demand_per_day": 6.0,
           "kills_per_day": 40.0,
@@ -443,16 +500,7 @@
           "source": "09_经济与掉落/01_掉落经验与金币产出.md §6.2 L57"
         }
       }
-    ],
-    "desc": "废墟普通档：铁片类材料，修补与铆接的料口。",
-    "_derive": {
-      "doc_band": "废墟·普通",
-      "tier_kills_per_day": 40.0,
-      "check_scope": "band",
-      "check_rate_sum": 0.575,
-      "check_demand_sum": 23.0,
-      "check_expr": "同带 4 条可加：0.15 + 0.15 + 0.15 + 0.125 = 0.575 = 23.0 ÷ 40.0"
-    }
+    ]
   },
   "DROP_shadow_bat": {
     "id": "DROP_shadow_bat",
@@ -461,12 +509,24 @@
     "tier": "common",
     "zone": "近郊·废墟",
     "lv": 11,
-    "type": "per_entry_roll",
-    "entries": [
+    "type": "table",
+    "desc": "废墟普通档：甲板类材料，护具与门板的料口。",
+    "_derive": {
+      "doc_band": "废墟·普通",
+      "tier_kills_per_day": 40.0,
+      "check_scope": "band",
+      "check_rate_sum": 0.575,
+      "check_demand_sum": 23.0,
+      "check_expr": "同带 4 条可加：0.15 + 0.15 + 0.15 + 0.125 = 0.575 = 23.0 ÷ 40.0"
+    },
+    "rolls": [
       {
-        "item": "ITEM_rusted_armor_plate",
-        "rate": 0.15,
-        "n": [1, 1],
+        "chance": 0.15,
+        "pool": "item:ITEM_rusted_armor_plate",
+        "n": [
+          1,
+          1
+        ],
         "_derive": {
           "demand_per_day": 6.0,
           "kills_per_day": 40.0,
@@ -477,16 +537,7 @@
           "source": "09_经济与掉落/01_掉落经验与金币产出.md §6.2 L58"
         }
       }
-    ],
-    "desc": "废墟普通档：甲板类材料，护具与门板的料口。",
-    "_derive": {
-      "doc_band": "废墟·普通",
-      "tier_kills_per_day": 40.0,
-      "check_scope": "band",
-      "check_rate_sum": 0.575,
-      "check_demand_sum": 23.0,
-      "check_expr": "同带 4 条可加：0.15 + 0.15 + 0.15 + 0.125 = 0.575 = 23.0 ÷ 40.0"
-    }
+    ]
   },
   "DROP_skeleton_archer": {
     "id": "DROP_skeleton_archer",
@@ -495,12 +546,24 @@
     "tier": "common",
     "zone": "近郊·废墟",
     "lv": 12,
-    "type": "per_entry_roll",
-    "entries": [
+    "type": "table",
+    "desc": "废墟普通档：残线类材料，织补与结绳的料口。",
+    "_derive": {
+      "doc_band": "废墟·普通",
+      "tier_kills_per_day": 40.0,
+      "check_scope": "band",
+      "check_rate_sum": 0.575,
+      "check_demand_sum": 23.0,
+      "check_expr": "同带 4 条可加：0.15 + 0.15 + 0.15 + 0.125 = 0.575 = 23.0 ÷ 40.0"
+    },
+    "rolls": [
       {
-        "item": "ITEM_oath_thread_remnant",
-        "rate": 0.125,
-        "n": [1, 1],
+        "chance": 0.125,
+        "pool": "item:ITEM_oath_thread_remnant",
+        "n": [
+          1,
+          1
+        ],
         "_derive": {
           "demand_per_day": 5.0,
           "kills_per_day": 40.0,
@@ -511,16 +574,7 @@
           "source": "09_经济与掉落/01_掉落经验与金币产出.md §6.2 L59"
         }
       }
-    ],
-    "desc": "废墟普通档：残线类材料，织补与结绳的料口。",
-    "_derive": {
-      "doc_band": "废墟·普通",
-      "tier_kills_per_day": 40.0,
-      "check_scope": "band",
-      "check_rate_sum": 0.575,
-      "check_demand_sum": 23.0,
-      "check_expr": "同带 4 条可加：0.15 + 0.15 + 0.15 + 0.125 = 0.575 = 23.0 ÷ 40.0"
-    }
+    ]
   },
   "DROP_mirror_fiend": {
     "id": "DROP_mirror_fiend",
@@ -529,12 +583,29 @@
     "tier": "elite",
     "zone": "近郊·废墟",
     "lv": 13,
-    "type": "per_entry_roll",
-    "entries": [
+    "type": "table",
+    "desc": "废墟精英档：徽记类材料，铭刻装备的料口。",
+    "_derive": {
+      "doc_band": "废墟·精英",
+      "tier_kills_per_day": 4.0,
+      "check_scope": "tier",
+      "check_rows": [
+        "林带·精英",
+        "矿径·精英",
+        "废墟·精英"
+      ],
+      "check_rate_sum": 0.75,
+      "check_demand_sum": 3.0,
+      "check_expr": "精英档 3 条可加：0.25 × 3 = 0.75 = 3.0 ÷ 4.0（分母是档口径，不是单池宿主）"
+    },
+    "rolls": [
       {
-        "item": "ITEM_deacon_sigil",
-        "rate": 0.25,
-        "n": [1, 1],
+        "chance": 0.25,
+        "pool": "item:ITEM_deacon_sigil",
+        "n": [
+          1,
+          1
+        ],
         "_derive": {
           "demand_per_day": 1.0,
           "kills_per_day": 4.0,
@@ -545,17 +616,7 @@
           "source": "09_经济与掉落/01_掉落经验与金币产出.md §6.2 L60"
         }
       }
-    ],
-    "desc": "废墟精英档：徽记类材料，铭刻装备的料口。",
-    "_derive": {
-      "doc_band": "废墟·精英",
-      "tier_kills_per_day": 4.0,
-      "check_scope": "tier",
-      "check_rows": ["林带·精英", "矿径·精英", "废墟·精英"],
-      "check_rate_sum": 0.75,
-      "check_demand_sum": 3.0,
-      "check_expr": "精英档 3 条可加：0.25 × 3 = 0.75 = 3.0 ÷ 4.0（分母是档口径，不是单池宿主）"
-    }
+    ]
   },
   "DROP_stone_warden": {
     "id": "DROP_stone_warden",
@@ -564,29 +625,15 @@
     "tier": "boss",
     "zone": "灰塔哨所",
     "lv": 8,
-    "type": "per_entry_roll",
-    "entries": [
-      {
-        "item": "ITEM_watcher_oath_mark",
-        "rate": 0.3,
-        "n": [1, 1],
-        "_derive": {
-          "demand_per_day": 0.6,
-          "kills_per_day": 2.0,
-          "rate_expr": "0.6 ÷ 2.0 = 30.0%",
-          "qty_expr": "0.6 ÷ (0.30 × 2.0) = 1.0 ⇒ n = [1,1]",
-          "item_name_doc": "守望誓痕",
-          "p1_code": "P1-16",
-          "source": "09_经济与掉落/01_掉落经验与金币产出.md §6.2 L61"
-        }
-      }
-    ],
+    "type": "table",
     "desc": "哨塔层主档：上限档（30%）—— 稀缺物只在层主身上，且不保证必掉。",
     "_derive": {
       "doc_band": "哨塔·层主",
       "tier_kills_per_day": 2.0,
       "check_scope": "tier",
-      "check_rows": ["哨塔·层主"],
+      "check_rows": [
+        "哨塔·层主"
+      ],
       "check_rate_sum": 0.3,
       "check_demand_sum": 0.6,
       "check_expr": "层主档单条目：0.30 = 0.6 ÷ 2.0（无同档可加项）",
@@ -606,6 +653,25 @@
         "source": "09_经济与掉落/01_掉落经验与金币产出.md §6.3 L70–L73"
       }
     },
-    "_note": "层主战另有「哨塔装备箱（保底 1 件）」，属装备域（未建）⇒ 本次不落成条目（07_怪物Boss/00 设计卡 L666）；层主战经验/金币口径见 _derive.income（单场 963 exp / 150 金，2 次/天 ≈ 普通怪 40 只的 12.6% exp）。"
+    "_note": "层主战另有「哨塔装备箱（保底 1 件）」，属装备域（未建）⇒ 本次不落成条目（07_怪物Boss/00 设计卡 L666）；层主战经验/金币口径见 _derive.income（单场 963 exp / 150 金，2 次/天 ≈ 普通怪 40 只的 12.6% exp）。",
+    "rolls": [
+      {
+        "chance": 0.3,
+        "pool": "item:ITEM_watcher_oath_mark",
+        "n": [
+          1,
+          1
+        ],
+        "_derive": {
+          "demand_per_day": 0.6,
+          "kills_per_day": 2.0,
+          "rate_expr": "0.6 ÷ 2.0 = 30.0%",
+          "qty_expr": "0.6 ÷ (0.30 × 2.0) = 1.0 ⇒ n = [1,1]",
+          "item_name_doc": "守望誓痕",
+          "p1_code": "P1-16",
+          "source": "09_经济与掉落/01_掉落经验与金币产出.md §6.2 L61"
+        }
+      }
+    ]
   }
 }
