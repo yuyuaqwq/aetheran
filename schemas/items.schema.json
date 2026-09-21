@@ -1,0 +1,463 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "《艾瑟兰：织誓》物品域（items）。★ 顶层 = 「条目表」形状：{ITEM_<slug>: 条目}；'_' 开头的顶层键 = 私有/元信息键（不是条目，与框架 editor/packages.py::is_entry_key() 同口径）。★ 本 schema 不含任何 $ref：引擎未装 jsonschema 时走最小校验器（editor/validate.py::_mini_validate），复用子形状一律内联 anyOf。",
+  "title": "items（艾瑟兰：织誓 · 物品域）",
+  "x-primary": "item",
+  "type": "object",
+  "propertyNames": {
+    "pattern": "^(_.*|ITEM_[a-z0-9_]+)$",
+    "$comment": "条目键 = ITEM_ + 英文 slug（00_总纲/02_数据字典.md §1.1「装备 ITEM_<slug>」）；私有键以 '_' 开头（如 _meta）。"
+  },
+  "additionalProperties": {
+    "type": "object",
+    "$comment": "条目本体见 $defs.item。顶层不复述字段字典：引擎只按 $defs[x-primary] 校验单条（editor/validate.py::validate_entry），复述会造出第二份真源。"
+  },
+  "$defs": {
+    "item": {
+      "type": "object",
+      "$comment": "一条 = 一件装备 / 一个消耗品 / 一种材料。字段名与包内 wiki 条目模板（11_数据包Wiki/01_条目模板/装备.md）逐字一致（字段规范 G1）。",
+      "required": [
+        "name",
+        "kind",
+        "slot",
+        "grade",
+        "src"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "title": "名称",
+          "$comment": "玩家可见中文名，取自真源表；不许在包内改名。"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "equip",
+            "consumable",
+            "material"
+          ],
+          "title": "条目种类",
+          "$comment": "equip=六槽装备 44 件；consumable=一次性道具；material=材料（采集物/掉落物/工具料）。"
+        },
+        "slot": {
+          "type": "string",
+          "enum": [
+            "武器",
+            "上甲",
+            "下甲",
+            "头盔",
+            "靴子",
+            "饰品",
+            "消耗品",
+            "材料"
+          ],
+          "title": "槽位 / 分类",
+          "$comment": "六槽正式名取自 01_世界观与剧情/02_命名规范.md §2.5；材料/消耗品不占六槽（装备.md 模板：「材料件走 材料」）。"
+        },
+        "slot_id": {
+          "type": "string",
+          "enum": [
+            "slot_weapon",
+            "slot_armor_top",
+            "slot_armor_bottom",
+            "slot_helm",
+            "slot_boots",
+            "slot_trinket"
+          ],
+          "title": "槽位 id",
+          "$comment": "命名规范 §2.5 的槽位 id（武器/护甲·上/护甲·下/头盔/靴子/饰品）；仅装备件有。"
+        },
+        "grade": {
+          "type": "string",
+          "enum": [
+            "粗制",
+            "精制",
+            "铭刻",
+            "传世"
+          ],
+          "title": "品阶",
+          "$comment": "4 品阶正式名（命名规范 §2.5）。材料/消耗品按模板填「粗制」（11_数据包Wiki/01_条目模板/装备.md §4(b)）。"
+        },
+        "grade_q": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3,
+          "title": "品阶序号 Q",
+          "$comment": "粗制 0 / 精制 1 / 铭刻 2 / 传世 3（06_装备道具/00 §1.2）。"
+        },
+        "grade_coef": {
+          "type": "number",
+          "title": "品阶 PE 系数",
+          "$comment": "1+0.08Q ⇒ 1.00 / 1.08 / 1.16 / 1.24（06_装备道具/00 §1.2；2026-09-21 由 0.10 改 0.08）。"
+        },
+        "ilv": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "title": "装等",
+          "$comment": "P1 台阶 = 段Ⅰ 5/8/10 · 段Ⅱ 12/15/18（06_装备道具/00 §8.3）。"
+        },
+        "band": {
+          "type": "string",
+          "enum": [
+            "Ⅰ",
+            "Ⅱ"
+          ],
+          "title": "等级段",
+          "$comment": "段Ⅰ = Lv1–10 · 段Ⅱ = Lv11–20（06_装备道具/00 §5.1）。"
+        },
+        "unique": {
+          "type": "boolean",
+          "title": "唯一件",
+          "$comment": "true = 章节唯一传奇（P1 共 4 件，各带 1 条机制特效）；门禁 B 对唯一件容差放宽到 10%。"
+        },
+        "variant": {
+          "type": "boolean",
+          "title": "流派变体",
+          "$comment": "true = 第二流派变体（P1 共 4 件）—— 它们存在的唯一目的：让门禁 A 有「同装等+同品阶+同槽」真对子可比（06_装备道具/00 §5.1）。"
+        },
+        "affix_slots": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5,
+          "title": "词条条数",
+          "$comment": "品阶词条数 2/3/4/5；带 1 条机制特效则 −1（06_装备道具/00 §4.2「特效换词条」）。本字段写的是**数值词条位**的实际条数（机制特效另记在 fx，不计入本字段）；4 件唯一件的词条位由生成器手写，逐件见 §5.2 表。"
+        },
+        "main": {
+          "type": "array",
+          "title": "主属性",
+          "$comment": "该件 60% PE 预算的落地值（06_装备道具/00 §1.1）。子形状内联（不用 $ref）。",
+          "items": {
+            "type": "object",
+            "required": [
+              "attr",
+              "attr_zh",
+              "value"
+            ],
+            "properties": {
+              "attr": {
+                "type": "string",
+                "enum": [
+                  "hp",
+                  "atk",
+                  "matk",
+                  "df",
+                  "mdf",
+                  "spd",
+                  "crit",
+                  "critdmg",
+                  "cdr",
+                  "dodge",
+                  "prec"
+                ],
+                "title": "属性键",
+                "$comment": "键名沿用引擎既有属性键（_work/W1B_pe_model.py 的 KEYS + ATTR_ALIAS）。"
+              },
+              "attr_zh": {
+                "type": "string",
+                "title": "属性中文名",
+                "$comment": "带 r 后缀 = rating（走递减函数 r/(r+K)，K=300+30L）；带 % = 百分点类。"
+              },
+              "value": {
+                "type": "number",
+                "minimum": 0,
+                "title": "数值"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "affixes": {
+          "type": "array",
+          "title": "词条",
+          "$comment": "该件 40% PE 预算的落地值。子形状内联（不用 $ref）。",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "name",
+              "attr",
+              "attr_zh",
+              "value"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^W[0-9]{2}$",
+                "title": "词条池 id",
+                "$comment": "38 条词条池 id（06_装备道具/00 §3.2）。同一条复合词条可拆成多行（如 W26 攻击+暴击 = 两行同 id）。"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "title": "词条名"
+              },
+              "attr": {
+                "type": "string",
+                "enum": [
+                  "hp",
+                  "atk",
+                  "matk",
+                  "df",
+                  "mdf",
+                  "spd",
+                  "crit",
+                  "critdmg",
+                  "cdr",
+                  "dodge",
+                  "prec"
+                ],
+                "title": "属性键"
+              },
+              "attr_zh": {
+                "type": "string",
+                "title": "属性中文名"
+              },
+              "value": {
+                "type": "number",
+                "minimum": 0,
+                "title": "数值",
+                "$comment": "★ 硬规则①：词条只给固定 rating / 固定点数，不给百分比。"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "fx": {
+          "type": "array",
+          "maxItems": 1,
+          "title": "机制特效",
+          "$comment": "★ 一件装备最多 1 条（06_装备道具/00 §4.3 硬约束 1，脚本门禁 D）。特效不进 PE，走 FXP（门禁 C）。",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "name",
+              "tier",
+              "fxp",
+              "text"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^W[0-9]{2}$"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "tier": {
+                "type": "string",
+                "enum": [
+                  "F1",
+                  "F2",
+                  "F3",
+                  "F4"
+                ],
+                "title": "特效级"
+              },
+              "fxp": {
+                "type": "number",
+                "minimum": 0,
+                "title": "特效预算点数",
+                "$comment": "F1/F2/F3/F4 = 1/2/3/5 FXP（§4.2）。"
+              },
+              "text": {
+                "type": "string",
+                "minLength": 1,
+                "title": "特效文本"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "specials": {
+          "type": "array",
+          "title": "不计 PE 的附带条",
+          "$comment": "精准（针对性）与套装计数两类：它们挂在装备上但不是 PE 词条（§3.3）。",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "name",
+              "counts_as",
+              "text"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^W[0-9]{2}$"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "counts_as": {
+                "type": "string",
+                "enum": [
+                  "targeted",
+                  "set_count"
+                ],
+                "title": "不计 PE 的类别",
+                "$comment": "targeted = 针对性（精准，标准 PvE 边际 PE = 0）；set_count = 套装计数（走套装池）。"
+              },
+              "text": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "fxp": {
+          "type": "number",
+          "minimum": 0,
+          "title": "FXP 合计",
+          "$comment": "特效预算点数合计（0 = 无特效）。"
+        },
+        "pe_budget": {
+          "type": "number",
+          "minimum": 0,
+          "title": "PE 预算",
+          "$comment": "单件目标预算 = 均件基准(L) × λ(槽) × (1+0.08Q)（§2.1）。"
+        },
+        "pe": {
+          "type": "number",
+          "minimum": 0,
+          "title": "实算 PE",
+          "$comment": "脚本实算值（主属性 + 词条，不含特效）。门禁 B：|偏差| ≤ 2%（唯一件 ≤ 10%）。"
+        },
+        "pe_dev": {
+          "type": "number",
+          "title": "PE 偏差",
+          "$comment": "(PE − PE预算) / PE预算。"
+        },
+        "pe_overflow": {
+          "type": "number",
+          "minimum": 0,
+          "title": "溢出 PE",
+          "$comment": "rating 触总量上限后溢到次要属性的部分（§3.8）。"
+        },
+        "code": {
+          "type": "string",
+          "pattern": "^P1-[0-9]{2}$",
+          "title": "掉落编号",
+          "$comment": "P1-01 ~ P1-16：采集物/掉落统一编号（09_经济与掉落/01 §6.2）。"
+        },
+        "drop_band": {
+          "type": "string",
+          "title": "掉落带",
+          "$comment": "林带·普通 / 林带·精英 / 矿径·普通 / 矿径·精英 / 废墟·普通 / 废墟·精英 / 哨塔·层主。"
+        },
+        "drop_per_day": {
+          "type": "number",
+          "minimum": 0,
+          "title": "日均需求",
+          "$comment": "反推口径：掉率 = 日均需求 ÷ 日均该档击杀（§6.2 门禁：掉率 ∈ [3%, 30%]）。"
+        },
+        "kill_per_day": {
+          "type": "number",
+          "minimum": 0,
+          "title": "日均击杀"
+        },
+        "drop_rate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "title": "掉率"
+        },
+        "origin": {
+          "type": "string",
+          "title": "出处",
+          "$comment": "材料/消耗品的来源或采集点（命名规范 §2.6）。"
+        },
+        "use": {
+          "type": "string",
+          "title": "用途 / 效果口径",
+          "$comment": "材料的用途、消耗品的效果口径（文案层，逐字取自真源表）。"
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "回复",
+            "状态",
+            "工具"
+          ],
+          "title": "消耗品类别",
+          "$comment": "命名规范 §2.6 消耗品池的三类。"
+        },
+        "legacy_id": {
+          "type": "string",
+          "title": "旧 id",
+          "$comment": "命名规范 §2.6 表里登记的 id（含 item_* 旧风格）。★ 00_总纲/02 数据字典 §9.1 U1 要求全量改名 item_* → ITEM_*，故本包统一用 ITEM_<英文slug>，旧 id 留档在此。"
+        },
+        "upgrade_note": {
+          "type": "string",
+          "title": "强化/附魔口径",
+          "$comment": "装备件必填：强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6%）；附魔是「换掉一条词条，不是加一条」。"
+        },
+        "src": {
+          "type": "string",
+          "minLength": 1,
+          "title": "出处（文件:行号）",
+          "$comment": "本条的数值/文案来自哪个文件的哪一行（可复核）。数值权威在脚本产物，不在本表手打。"
+        },
+        "note": {
+          "type": "string",
+          "title": "备注",
+          "$comment": "只写机制与规则；不写「这件很强/推荐」这类评价（条目模板 §5 易错点）。"
+        }
+      },
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "$comment": "装备件（44 件）：六槽 + 装等 + 品阶系数 + 词条 + PE 三件套必填。",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "equip"
+            }
+          },
+          "required": [
+            "slot_id",
+            "ilv",
+            "band",
+            "grade_q",
+            "grade_coef",
+            "unique",
+            "affix_slots",
+            "main",
+            "affixes",
+            "fxp",
+            "pe_budget",
+            "pe",
+            "pe_dev",
+            "upgrade_note"
+          ]
+        },
+        {
+          "$comment": "消耗品：效果口径必填（命名池 13 件 + 任务消耗品）。",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "consumable"
+            }
+          },
+          "required": [
+            "use"
+          ]
+        },
+        {
+          "$comment": "材料：命名池走 use+origin，掉落池走 code+drop_band+掉率 —— 两条来源的必填项不同，故此处不额外收紧。",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "material"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

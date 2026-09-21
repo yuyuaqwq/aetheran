@@ -1,0 +1,184 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "elements",
+  "$comment": "《艾瑟兰：织誓》elements 域 —— 6 元素相克环 + 物理第 7 种（ELE_PHYS）。真源：策划案仓 00_总纲/02_数据字典.md §2.4（元素表 / 相克环 / 乘区行）· §1.2（ID 命名规则）· §1.3（物理 = ELE_PHYS 裁定）+ 14_会议与决策/02_裁决书.md §8.2 N23（ELE_PHYS 三分裁定）。口径：相克是**单环**（火 → 霜 → 雷 → 毒 → 神圣 → 暗影 → 火，每元素克一个、被一个克）；乘区 克制 ×1.25 / 被克 ×0.80 / 中性（含物理）×1.00 —— 与 content/rules/formula_table.json 的 F2_damage 克制区步（after_elem）以及 _work/W3A_p5_verify.py 的实测断言（elem_mult = 1.25）对齐，倍率不手打。★ 全篇不用 $ref：引擎未装 jsonschema 时走 editor/validate.py 的最小校验器（它虽能解 #/$defs/…，但本包口径是复用形状一律内联 anyOf）。★ 校验口径：editor/validate.py 是拿 $defs[x-primary] 校验**表里一条**的值，不是拿顶层（顶层是「条目表」形状 {条目id: 条目}）。",
+  "$defs": {
+    "element": {
+      "type": "object",
+      "title": "一个元素条目（ELE_*）—— 6 元素 + 物理第 7 种 ELE_PHYS",
+      "required": [
+        "id",
+        "name",
+        "name_en",
+        "imagery",
+        "in_ring",
+        "ring_index",
+        "ring_pos",
+        "counters",
+        "countered_by",
+        "ring_reason",
+        "multiplier",
+        "physical_default",
+        "wiki_entry"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^ELE_[A-Z]+$",
+          "$comment": "ELE_ + 英文大写（数据字典 §1.2）。6 元素 = ELE_FIRE / ELE_FROST / ELE_LIGHTNING / ELE_POISON / ELE_HOLY / ELE_SHADOW；物理 = ELE_PHYS（第 7 种，N23 裁定进 §1.2 的 ID 表）"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8,
+          "$comment": "元素中文名（传统西幻化：火 / 霜 / 雷 / 毒 / 神圣 / 暗影 / 物理）。★ 元素条目里**不许出现神名** —— 神 = 誓约的客体只进剧情，元素 = 世界的质料只进数值（2026-09-21 口径更正）；并禁武侠 / 佛教 / 网文词（01_世界观与剧情/02_命名规范.md §3）"
+        },
+        "name_en": {
+          "type": "string",
+          "pattern": "^[A-Z]+$",
+          "$comment": "英文大写短名（FIRE / FROST / LIGHTNING / POISON / HOLY / SHADOW / PHYS）—— 与 id 后半段同源"
+        },
+        "imagery": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24,
+          "$comment": "一句话意象（数据字典 §2.4 第 3 列原文）：灼烧·爆发 / 凝滞·破甲 / 迅捷·麻痹 / 侵蚀·持续 / 净化·守护 / 噬咬·腐蚀"
+        },
+        "in_ring": {
+          "type": "boolean",
+          "$comment": "★ ELE_PHYS 三分裁定 · 判定层落点：是否作元素参与相克。6 元素 = true；ELE_PHYS = **false**（判定层不吃克制、也不被克制 ⇒ 相克表不含它）。数据统一、逻辑分层 —— 数据层所有伤害都有 element 字段，逻辑层靠本字段分流"
+        },
+        "ring_index": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 5
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "$comment": "环上序号 0–5（ELE_FIRE = 0 起，沿火→霜→雷→毒→神圣→暗影 递增）；ELE_PHYS = null。★ 内联 anyOf 而不用 $ref（下同）"
+        },
+        "ring_pos": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "$comment": "环上的显示串（如「火 → 霜」，玩家侧画环直接用）；ELE_PHYS = null"
+        },
+        "counters": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^ELE_(?!PHYS)[A-Z]+$"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "$comment": "它克谁 ⇒ 它打那个目标吃**克制档** ×1.25。单环里恰好一条。pattern 里的负向断言 (?!PHYS) 把「ELE_PHYS 不是相克对象」钉在 schema 上；ELE_PHYS = null"
+        },
+        "countered_by": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^ELE_(?!PHYS)[A-Z]+$"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "$comment": "谁克它 ⇒ 那个元素打它吃**被克档** ×0.80。单环里恰好一条（每元素恰好被克一次）；ELE_PHYS = null"
+        },
+        "ring_reason": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 16
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "$comment": "这一条边的直觉理由（数据字典 §2.4 原文）：火融霜 / 霜凝雷（冻结导路）/ 雷灼毒（高温净化）/ 毒蚀圣（腐化信仰）/ 圣驱影 / 影噬火（暗覆火）—— 写文案与教学时直接用；ELE_PHYS = null"
+        },
+        "multiplier": {
+          "type": "object",
+          "title": "乘区（进 F2 的克制区）",
+          "required": [
+            "克制",
+            "被克",
+            "中性"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "克制": {
+              "type": "number",
+              "enum": [
+                0.8,
+                1.0,
+                1.25
+              ],
+              "$comment": "打自己克的目标：6 元素恒 1.25（= 数据字典 §2.4 乘区行的「克制 ×1.25」，与 W3A_p5_verify.py 的 elem_mult = 1.25 实测断言同源）"
+            },
+            "被克": {
+              "type": "number",
+              "enum": [
+                0.8,
+                1.0,
+                1.25
+              ],
+              "$comment": "打克自己的目标：6 元素恒 0.80"
+            },
+            "中性": {
+              "type": "number",
+              "enum": [
+                0.8,
+                1.0,
+                1.25
+              ],
+              "$comment": "其余（含物理）：恒 1.00"
+            }
+          },
+          "$comment": "★ 三档固定、键名照数据字典 §2.4 乘区行（克制 / 被克 / 中性）。6 元素 = {克制 1.25, 被克 0.80, 中性 1.00}；ELE_PHYS 三档**塌缩为全 1.00**（对谁都 ×1.00 ⇒ 判定层调它永远是中性，不需要 null 分支）。值只许取这三档之一：改档位 = 平衡事故，必须重跑克制矩阵"
+        },
+        "physical_default": {
+          "type": "boolean",
+          "$comment": "★ ELE_PHYS 三分裁定 · 数据层落点：物理 = 第 7 种 ⇒ 数据层给**所有**伤害一个统一 `element` 字段，物理就取它（ELE_PHYS = true，6 元素 = false）。避免「有的伤害有 element 字段、有的没有」的半统一状态"
+        },
+        "wiki_entry": {
+          "type": "boolean",
+          "$comment": "★ ELE_PHYS 三分裁定 · Wiki 层落点：是否建 Wiki 条目。6 元素 = true（元素是唯一建议 P1 就把整张表直给的类型）；ELE_PHYS = **false** —— 它是「无元素」的占位、不是元素（N23：不建 Wiki 条目，只在元素总览页写「第 7 种默认」）"
+        },
+        "note": {
+          "type": "string",
+          "$comment": "一句话说明（西幻；禁武侠 / 佛教 / 网文词，禁神名）"
+        }
+      }
+    },
+    "element_table": {
+      "type": "object",
+      "title": "elements 整表：{条目id: 条目}",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^(ELE_[A-Z]+|_)",
+        "$comment": "引擎侧唯一口径 editor/packages.py::is_entry_key()：`_` 开头的键 = 私有键 / 文件级元信息（本表只用 `_meta`），不算条目；真条目一律 ELE_*（禁 `_ELE_*` 这种假条目）。条目**内部**字段不许用 `_` 前缀"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "description": "一条元素条目（形状见 $defs/element）；`_meta` 键 = 文件级元信息（version / updated / source）"
+      }
+    }
+  },
+  "type": "object",
+  "x-primary": "element"
+}

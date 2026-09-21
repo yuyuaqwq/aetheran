@@ -1,0 +1,175 @@
+{
+  "_meta": {
+    "domain": "elements",
+    "version": "v1.0",
+    "updated": "2026-09-21",
+    "source": "C:/Users/yuyu/aetheran-designer/00_总纲/02_数据字典.md",
+    "source_lines": {
+      "id_rule_§1.2": "02_数据字典.md :62",
+      "ele_phys_data_layer_§1.3": "02_数据字典.md :79-81",
+      "element_table_§2.4": "02_数据字典.md :128-133",
+      "ring_§2.4": "02_数据字典.md :137-140",
+      "phys_seventh_§2.4": "02_数据字典.md :142",
+      "multiplier_§2.4": "02_数据字典.md :144",
+      "ele_enum_§4": "02_数据字典.md :220",
+      "verdict_N23": "02_裁决书.md :222",
+      "multiplier_chain": "content/rules/formula_table.json#F2_damage.after_elem（克制区）",
+      "multiplier_assert": "_work/W3A_p5_verify.py（elem_mult = 1.25 实测断言）"
+    },
+    "ring": {
+      "shape": "single_ring",
+      "steps": 6,
+      "order": [
+        "ELE_FIRE",
+        "ELE_FROST",
+        "ELE_LIGHTNING",
+        "ELE_POISON",
+        "ELE_HOLY",
+        "ELE_SHADOW"
+      ],
+      "closed": true,
+      "excludes": "ELE_PHYS"
+    },
+    "generator": "workspace/build_elements.py（解析真源生成，数值不手打）"
+  },
+  "ELE_FIRE": {
+    "id": "ELE_FIRE",
+    "name": "火",
+    "name_en": "FIRE",
+    "imagery": "灼烧 · 爆发",
+    "in_ring": true,
+    "ring_index": 0,
+    "ring_pos": "火 → 霜",
+    "counters": "ELE_FROST",
+    "countered_by": "ELE_SHADOW",
+    "ring_reason": "火融霜",
+    "multiplier": {
+      "克制": 1.25,
+      "被克": 0.8,
+      "中性": 1.0
+    },
+    "physical_default": false,
+    "wiki_entry": true,
+    "note": "火克霜（火融霜）：火打霜系目标吃克制档 ×1.25；暗影克火：火打暗影系目标吃被克档 ×0.8；其余目标 ×1.0。"
+  },
+  "ELE_FROST": {
+    "id": "ELE_FROST",
+    "name": "霜",
+    "name_en": "FROST",
+    "imagery": "凝滞 · 破甲",
+    "in_ring": true,
+    "ring_index": 1,
+    "ring_pos": "霜 → 雷",
+    "counters": "ELE_LIGHTNING",
+    "countered_by": "ELE_FIRE",
+    "ring_reason": "霜凝雷（冻结导路）",
+    "multiplier": {
+      "克制": 1.25,
+      "被克": 0.8,
+      "中性": 1.0
+    },
+    "physical_default": false,
+    "wiki_entry": true,
+    "note": "霜克雷（霜凝雷）：霜打雷系目标吃克制档 ×1.25；火克霜：霜打火系目标吃被克档 ×0.8；其余目标 ×1.0。"
+  },
+  "ELE_LIGHTNING": {
+    "id": "ELE_LIGHTNING",
+    "name": "雷",
+    "name_en": "LIGHTNING",
+    "imagery": "迅捷 · 麻痹",
+    "in_ring": true,
+    "ring_index": 2,
+    "ring_pos": "雷 → 毒",
+    "counters": "ELE_POISON",
+    "countered_by": "ELE_FROST",
+    "ring_reason": "雷灼毒（高温净化）",
+    "multiplier": {
+      "克制": 1.25,
+      "被克": 0.8,
+      "中性": 1.0
+    },
+    "physical_default": false,
+    "wiki_entry": true,
+    "note": "雷克毒（雷灼毒）：雷打毒系目标吃克制档 ×1.25；霜克雷：雷打霜系目标吃被克档 ×0.8；其余目标 ×1.0。"
+  },
+  "ELE_POISON": {
+    "id": "ELE_POISON",
+    "name": "毒",
+    "name_en": "POISON",
+    "imagery": "侵蚀 · 持续",
+    "in_ring": true,
+    "ring_index": 3,
+    "ring_pos": "毒 → 神圣",
+    "counters": "ELE_HOLY",
+    "countered_by": "ELE_LIGHTNING",
+    "ring_reason": "毒蚀圣（腐化信仰）",
+    "multiplier": {
+      "克制": 1.25,
+      "被克": 0.8,
+      "中性": 1.0
+    },
+    "physical_default": false,
+    "wiki_entry": true,
+    "note": "毒克神圣（毒蚀圣）：毒打神圣系目标吃克制档 ×1.25；雷克毒：毒打雷系目标吃被克档 ×0.8；其余目标 ×1.0。"
+  },
+  "ELE_HOLY": {
+    "id": "ELE_HOLY",
+    "name": "神圣",
+    "name_en": "HOLY",
+    "imagery": "净化 · 守护",
+    "in_ring": true,
+    "ring_index": 4,
+    "ring_pos": "神圣 → 暗影",
+    "counters": "ELE_SHADOW",
+    "countered_by": "ELE_POISON",
+    "ring_reason": "圣驱影",
+    "multiplier": {
+      "克制": 1.25,
+      "被克": 0.8,
+      "中性": 1.0
+    },
+    "physical_default": false,
+    "wiki_entry": true,
+    "note": "神圣克暗影（圣驱影）：神圣打暗影系目标吃克制档 ×1.25；毒克神圣：神圣打毒系目标吃被克档 ×0.8；其余目标 ×1.0。"
+  },
+  "ELE_SHADOW": {
+    "id": "ELE_SHADOW",
+    "name": "暗影",
+    "name_en": "SHADOW",
+    "imagery": "噬咬 · 腐蚀",
+    "in_ring": true,
+    "ring_index": 5,
+    "ring_pos": "暗影 → 火",
+    "counters": "ELE_FIRE",
+    "countered_by": "ELE_HOLY",
+    "ring_reason": "影噬火（暗覆火）",
+    "multiplier": {
+      "克制": 1.25,
+      "被克": 0.8,
+      "中性": 1.0
+    },
+    "physical_default": false,
+    "wiki_entry": true,
+    "note": "暗影克火（影噬火）：暗影打火系目标吃克制档 ×1.25；神圣克暗影：暗影打神圣系目标吃被克档 ×0.8；其余目标 ×1.0。"
+  },
+  "ELE_PHYS": {
+    "id": "ELE_PHYS",
+    "name": "物理",
+    "name_en": "PHYS",
+    "imagery": "无元素 · 稳定",
+    "in_ring": false,
+    "ring_index": null,
+    "ring_pos": null,
+    "counters": null,
+    "countered_by": null,
+    "ring_reason": null,
+    "multiplier": {
+      "克制": 1.0,
+      "被克": 1.0,
+      "中性": 1.0
+    },
+    "physical_default": true,
+    "wiki_entry": false,
+    "note": "第 7 种（无元素）：数据层所有伤害的统一 element 字段取它（数据统一）；判定层不作元素参与相克 —— 相克表不含它 ⇒ 对谁都 ×1.00（逻辑分层）；不建 Wiki 条目，只在元素总览页写「第 7 种默认」。不做元素 build 则伤害稳定但无增益。"
+  }
+}

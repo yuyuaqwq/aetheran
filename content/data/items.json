@@ -1,0 +1,3124 @@
+{
+  "_meta": {
+    "domain": "items",
+    "primary": "item",
+    "version": "v1.0",
+    "updated": "2026-09-21",
+    "status": "已发布",
+    "counts": {
+      "total": 90,
+      "equip": 44,
+      "consumable": 14,
+      "material": 32
+    },
+    "counts_by_source": {
+      "材料（命名规范 §2.6 材料池 15）": 15,
+      "消耗品（命名规范 §2.6 消耗品池 13）": 13,
+      "任务点名物": 2,
+      "掉落材料 P1-01~P1-16": 16,
+      "装备（§5.2 全 44 件）": 44
+    },
+    "sources": [
+      "06_装备道具/00_装备体系与PE预算.md §5.2（44 件装备的槽位/品阶/词条/PE 表，L343–386）",
+      "_work/W1D_equip_model.py（数值权威；机器可读产物 _work/W1D_pe_weights.json#P1_44件）",
+      "01_世界观与剧情/02_命名规范.md §2.6（材料池 15 + 消耗品池 13 ＝ 总纲 §4.5 的 28 配额，L321–357）",
+      "09_经济与掉落/01_掉落经验与金币产出.md §6.2（P1-01~P1-16 掉落池与掉率，L46–61） · _work/W1E_monster_model.py:DROP_POOLS",
+      "05_技能/01_技能PE预算与配平内核.md §1.2（功能性权重表：解控 45 / 驱散 50 / 治疗 55 —— 消耗品效果的 PE 口径）",
+      "00_总纲/01_设计宪法.md §4.5（P1 配额：装备 44 · 消耗品/材料 28 · 道具特效 10）"
+    ],
+    "conventions": [
+      "顶层 = 条目表 {ITEM_<slug>: 条目}；'_' 开头 = 私有/元信息键（不是条目）",
+      "id 规则 = 00_总纲/02_数据字典.md §1.1「装备 ITEM_<slug>」；命名规范 §2.6 里旧的 item_* 写法按 §9.1 U1 全量改名为 ITEM_*，旧 id 留档在 legacy_id",
+      "装备数值一律由脚本生成（不手写）：06_装备道具/00 §7.2 口径「装备全部由脚本生成 + 门禁校验，人不手写」"
+    ],
+    "conflicts": [
+      "C1（掉料编号撞名）：_work/W1E_monster_model.py 里有两套 P1 编号口径 —— DROP_POOLS 按「带」给材料名（P1-01 苔丝纤维 …），逐只怪的 drop 字段又给「怪名」口径（P1-01 哥布林徽记 / P1-05 恐狼皮 / P1-06 石像鬼碎块）。07_怪物Boss/00:L341-342 明确 P1-01/05/06 三件的 ITEM id 已进经济链不许改；08_地图任务关卡/01:L60 采用「按带」口径。本表两条都收：按带口径写成材料条目（带 code/drop_rate），三件已登记名写成命名池材料条目（带 origin/legacy_id），未把 P1-01 强行绑定到任一方 —— 待 W2-A 裁决后回填。",
+      "C2（装备数值：文档表旧一轮）：06_装备道具/00 §2.1/§2.2/§5.2 的表比脚本产物系统性偏高（角色总PE 文档 170.7@Lv1 / 192.2@Lv100 vs 脚本 165.685 / 187.229；单件武器预算 装等5粗制 文档 20.59 vs 脚本 19.9917，差约 3%），个别点数也不同（断誓之刃 文档「攻击+45」vs 脚本「攻击+41」）。本表取**脚本产物**为权威（文档 §10 自述「机器可读 = _work/W1D_pe_weights.json」；脚本自带 6 道门禁 + 反证三步全绿：门禁 A 4 对比较 0 违规 / B 0 / C 0，反证 0→1→0）。⇒ 文档 §2/§5 的表需要用当前脚本重跑一次再入档（**待 W1-D 复核**）。",
+      "C3（配额口径：28 vs 实收 46）：00_总纲/01 设计宪法 §4.5 的 P1 配额是「消耗品/材料 28 件」，而 01_世界观与剧情/02 命名规范 §2.6 自述「本文给命名池（够 28 种）」（材料池 15 + 消耗品池 13 = 28）——两者口径一致。本表在 28 之外另收两类：① 09_经济与掉落/01 §6.2 的 P1-01~P1-16 掉落材料 16 件（08_地图任务关卡/01:L60 明写「采集物/掉落统一用 W1E 的 P1-01 ~ P1-16 编号」⇒ 掉落/地图域要用）；② 任务逐条点名的 2 件（苦苔、粗制伤药，不在命名池里但被 L1/M1 线点名交付）。⇒ 命名池 28（= 配额那一栏）+ 掉落编号 16 + 任务点名 2 = 46，**不是重复计数**；要不要把两套材料合并成一套 28 条，属 W2-A / W1-C 的裁决范围（未合并前两条都在，谁都不丢）。"
+    ],
+    "notes": [
+      "装备 PE 归属（防重复计数，06_装备道具/00 §7.1）：本体 + 自带词条 = 35%（已含词条的 40% 份额，不另计）；强化是同源乘区（满强 +6%）；附魔/宝石/重铸是装备之外的独立 10% 层；套装 4% / 特效 3% 走「被动·天赋·套装」池。",
+      "消耗品不进 PE 来源（一次性）⇒ 本表不给消耗品 PE 字段。",
+      "P1 消耗品定价真源只有一条公式：药水（回 30% 血池）售价 = 玩家标准HP × 0.30 × 0.04（09_经济与掉落/01:L16）；其余消耗品/材料无定价真源 ⇒ 本表不写 price 字段（不编数）。",
+      "P2 才出现的消耗品（元素药水等）不在本表范围（02_流程与阶段/02_扩展玩法设计.md:L1336 属 P2 解锁）。"
+    ]
+  },
+  "ITEM_ancient_oath_amulet": {
+    "name": "古誓护符",
+    "kind": "equip",
+    "slot": "饰品",
+    "slot_id": "slot_trinket",
+    "grade": "铭刻",
+    "grade_q": 2,
+    "grade_coef": 1.16,
+    "ilv": 18,
+    "band": "Ⅱ",
+    "unique": false,
+    "variant": false,
+    "affix_slots": 4,
+    "main": [
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 641
+      },
+      {
+        "attr": "crit",
+        "attr_zh": "暴击r",
+        "value": 70
+      },
+      {
+        "attr": "cdr",
+        "attr_zh": "急速r",
+        "value": 56
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W02",
+        "name": "生命·中",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 198
+      },
+      {
+        "id": "W15",
+        "name": "暴击·中",
+        "attr": "crit",
+        "attr_zh": "暴击r",
+        "value": 15
+      },
+      {
+        "id": "W18",
+        "name": "暴伤·中",
+        "attr": "critdmg",
+        "attr_zh": "暴伤%",
+        "value": 0.55
+      },
+      {
+        "id": "W22",
+        "name": "闪避·中",
+        "attr": "dodge",
+        "attr_zh": "闪避r",
+        "value": 42
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 19.671,
+    "pe": 19.679,
+    "pe_dev": 0.00043862,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L378（§5.2 第 36 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[35]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_ancient_oath_boots": {
+    "name": "古誓战靴",
+    "kind": "equip",
+    "slot": "靴子",
+    "slot_id": "slot_boots",
+    "grade": "铭刻",
+    "grade_q": 2,
+    "grade_coef": 1.16,
+    "ilv": 18,
+    "band": "Ⅱ",
+    "unique": false,
+    "variant": false,
+    "affix_slots": 4,
+    "main": [
+      {
+        "attr": "spd",
+        "attr_zh": "速度",
+        "value": 4
+      },
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 75
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W02",
+        "name": "生命·中",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 52
+      },
+      {
+        "id": "W22",
+        "name": "闪避·中",
+        "attr": "dodge",
+        "attr_zh": "闪避r",
+        "value": 12
+      },
+      {
+        "id": "W21",
+        "name": "闪避·微",
+        "attr": "dodge",
+        "attr_zh": "闪避r",
+        "value": 3
+      },
+      {
+        "id": "W13",
+        "name": "速度·微",
+        "attr": "spd",
+        "attr_zh": "速度",
+        "value": 1
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 4.918,
+    "pe": 4.909,
+    "pe_dev": -0.00180212,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L377（§5.2 第 35 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[34]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_ancient_oath_chestplate": {
+    "name": "古誓胸甲",
+    "kind": "equip",
+    "slot": "上甲",
+    "slot_id": "slot_armor_top",
+    "grade": "铭刻",
+    "grade_q": 2,
+    "grade_coef": 1.16,
+    "ilv": 18,
+    "band": "Ⅱ",
+    "unique": false,
+    "variant": false,
+    "affix_slots": 4,
+    "main": [
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 350
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W02",
+        "name": "生命·中",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 107
+      },
+      {
+        "id": "W09",
+        "name": "防御·中",
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 9
+      },
+      {
+        "id": "W22",
+        "name": "闪避·中",
+        "attr": "dodge",
+        "attr_zh": "闪避r",
+        "value": 18
+      },
+      {
+        "id": "W25",
+        "name": "攻守·生命+防御",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 12
+      },
+      {
+        "id": "W25",
+        "name": "攻守·生命+防御",
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 3
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 7.868,
+    "pe": 7.868,
+    "pe_dev": -5.71e-06,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L374（§5.2 第 32 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[31]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_ancient_oath_helm": {
+    "name": "古誓盔",
+    "kind": "equip",
+    "slot": "头盔",
+    "slot_id": "slot_helm",
+    "grade": "铭刻",
+    "grade_q": 2,
+    "grade_coef": 1.16,
+    "ilv": 18,
+    "band": "Ⅱ",
+    "unique": false,
+    "variant": false,
+    "affix_slots": 4,
+    "main": [
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 110
+      },
+      {
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 29
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W02",
+        "name": "生命·中",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 43
+      },
+      {
+        "id": "W09",
+        "name": "防御·中",
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 7
+      },
+      {
+        "id": "W22",
+        "name": "闪避·中",
+        "attr": "dodge",
+        "attr_zh": "闪避r",
+        "value": 16
+      },
+      {
+        "id": "W25",
+        "name": "攻守·生命+防御",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 7
+      },
+      {
+        "id": "W25",
+        "name": "攻守·生命+防御",
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 2
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 4.918,
+    "pe": 4.916,
+    "pe_dev": -0.00044311,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L376（§5.2 第 34 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[33]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_ancient_oath_legguards": {
+    "name": "古誓护腿",
+    "kind": "equip",
+    "slot": "下甲",
+    "slot_id": "slot_armor_bottom",
+    "grade": "铭刻",
+    "grade_q": 2,
+    "grade_coef": 1.16,
+    "ilv": 18,
+    "band": "Ⅱ",
+    "unique": false,
+    "variant": false,
+    "affix_slots": 4,
+    "main": [
+      {
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 85
+      },
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 30
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W02",
+        "name": "生命·中",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 107
+      },
+      {
+        "id": "W09",
+        "name": "防御·中",
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 9
+      },
+      {
+        "id": "W22",
+        "name": "闪避·中",
+        "attr": "dodge",
+        "attr_zh": "闪避r",
+        "value": 18
+      },
+      {
+        "id": "W28",
+        "name": "坚壁·防御+闪避",
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 3
+      },
+      {
+        "id": "W28",
+        "name": "坚壁·防御+闪避",
+        "attr": "dodge",
+        "attr_zh": "闪避r",
+        "value": 3
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 7.868,
+    "pe": 7.857,
+    "pe_dev": -0.00150087,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L375（§5.2 第 33 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[32]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_ancient_oath_longsword": {
+    "name": "古誓长剑",
+    "kind": "equip",
+    "slot": "武器",
+    "slot_id": "slot_weapon",
+    "grade": "铭刻",
+    "grade_q": 2,
+    "grade_coef": 1.16,
+    "ilv": 18,
+    "band": "Ⅱ",
+    "unique": false,
+    "variant": false,
+    "affix_slots": 4,
+    "main": [
+      {
+        "attr": "atk",
+        "attr_zh": "攻击",
+        "value": 75
+      },
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 86
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W05",
+        "name": "攻击·中",
+        "attr": "atk",
+        "attr_zh": "攻击",
+        "value": 34
+      },
+      {
+        "id": "W14",
+        "name": "暴击·微",
+        "attr": "crit",
+        "attr_zh": "暴击r",
+        "value": 18
+      },
+      {
+        "id": "W17",
+        "name": "暴伤·微",
+        "attr": "critdmg",
+        "attr_zh": "暴伤%",
+        "value": 0.49
+      },
+      {
+        "id": "W26",
+        "name": "锐锋·攻击+暴击",
+        "attr": "atk",
+        "attr_zh": "攻击",
+        "value": 2
+      },
+      {
+        "id": "W26",
+        "name": "锐锋·攻击+暴击",
+        "attr": "crit",
+        "attr_zh": "暴击r",
+        "value": 15
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 23.605,
+    "pe": 23.597,
+    "pe_dev": -0.00032423,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L373（§5.2 第 31 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[30]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_ember_staff": {
+    "name": "余烬长杖",
+    "kind": "equip",
+    "slot": "武器",
+    "slot_id": "slot_weapon",
+    "grade": "传世",
+    "grade_q": 3,
+    "grade_coef": 1.24,
+    "ilv": 18,
+    "band": "Ⅱ",
+    "unique": true,
+    "variant": false,
+    "affix_slots": 3,
+    "main": [
+      {
+        "attr": "matk",
+        "attr_zh": "法强",
+        "value": 80
+      },
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 94
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W07",
+        "name": "法强·中",
+        "attr": "matk",
+        "attr_zh": "法强",
+        "value": 36
+      },
+      {
+        "id": "W16",
+        "name": "暴击·宏",
+        "attr": "crit",
+        "attr_zh": "暴击r",
+        "value": 20
+      },
+      {
+        "id": "W30",
+        "name": "猎手·暴击+暴伤",
+        "attr": "crit",
+        "attr_zh": "暴击r",
+        "value": 65
+      },
+      {
+        "id": "W30",
+        "name": "猎手·暴击+暴伤",
+        "attr": "critdmg",
+        "attr_zh": "暴伤%",
+        "value": 0.35
+      }
+    ],
+    "fxp": 3,
+    "pe_budget": 25.233,
+    "pe": 25.223,
+    "pe_dev": -0.00041102,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L386（§5.2 第 44 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[43]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）",
+    "fx": [
+      {
+        "id": "W37",
+        "name": "织誓回响",
+        "tier": "F3",
+        "fxp": 3.0,
+        "text": "每 5 次技能命中叠 1 层誓约：全伤 +2%，上限 5 层（唯一件限定）"
+      }
+    ],
+    "note": "唯一传奇件：特效从 W37 起，禁重复（06_装备道具/00 §4.3 硬约束 3）"
+  },
+  "ITEM_fineforged_amulet": {
+    "name": "精锻护符",
+    "kind": "equip",
+    "slot": "饰品",
+    "slot_id": "slot_trinket",
+    "grade": "精制",
+    "grade_q": 1,
+    "grade_coef": 1.08,
+    "ilv": 8,
+    "band": "Ⅰ",
+    "unique": false,
+    "variant": false,
+    "affix_slots": 3,
+    "main": [
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 215
+      },
+      {
+        "attr": "crit",
+        "attr_zh": "暴击r",
+        "value": 40
+      },
+      {
+        "attr": "cdr",
+        "attr_zh": "急速r",
+        "value": 30
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W02",
+        "name": "生命·中",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 92
+      },
+      {
+        "id": "W15",
+        "name": "暴击·中",
+        "attr": "crit",
+        "attr_zh": "暴击r",
+        "value": 12
+      },
+      {
+        "id": "W18",
+        "name": "暴伤·中",
+        "attr": "critdmg",
+        "attr_zh": "暴伤%",
+        "value": 0.97
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 18.067,
+    "pe": 18.082,
+    "pe_dev": 0.00086859,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L354（§5.2 第 12 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[11]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_fineforged_boots": {
+    "name": "精锻战靴",
+    "kind": "equip",
+    "slot": "靴子",
+    "slot_id": "slot_boots",
+    "grade": "精制",
+    "grade_q": 1,
+    "grade_coef": 1.08,
+    "ilv": 8,
+    "band": "Ⅰ",
+    "unique": false,
+    "variant": false,
+    "affix_slots": 3,
+    "main": [
+      {
+        "attr": "spd",
+        "attr_zh": "速度",
+        "value": 4
+      },
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 20
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W02",
+        "name": "生命·中",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 22
+      },
+      {
+        "id": "W22",
+        "name": "闪避·中",
+        "attr": "dodge",
+        "attr_zh": "闪避r",
+        "value": 10
+      },
+      {
+        "id": "W21",
+        "name": "闪避·微",
+        "attr": "dodge",
+        "attr_zh": "闪避r",
+        "value": 2
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 4.517,
+    "pe": 4.528,
+    "pe_dev": 0.00249358,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L353（§5.2 第 11 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[10]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_fineforged_chestplate": {
+    "name": "精锻胸甲",
+    "kind": "equip",
+    "slot": "上甲",
+    "slot_id": "slot_armor_top",
+    "grade": "精制",
+    "grade_q": 1,
+    "grade_coef": 1.08,
+    "ilv": 8,
+    "band": "Ⅰ",
+    "unique": false,
+    "variant": false,
+    "affix_slots": 3,
+    "main": [
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 117
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W02",
+        "name": "生命·中",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 39
+      },
+      {
+        "id": "W09",
+        "name": "防御·中",
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 5
+      },
+      {
+        "id": "W22",
+        "name": "闪避·中",
+        "attr": "dodge",
+        "attr_zh": "闪避r",
+        "value": 12
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 7.227,
+    "pe": 7.241,
+    "pe_dev": 0.00194995,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L350（§5.2 第 8 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[7]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_fineforged_helm": {
+    "name": "精锻盔",
+    "kind": "equip",
+    "slot": "头盔",
+    "slot_id": "slot_helm",
+    "grade": "精制",
+    "grade_q": 1,
+    "grade_coef": 1.08,
+    "ilv": 8,
+    "band": "Ⅰ",
+    "unique": false,
+    "variant": false,
+    "affix_slots": 3,
+    "main": [
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 37
+      },
+      {
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 15
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W02",
+        "name": "生命·中",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 17
+      },
+      {
+        "id": "W09",
+        "name": "防御·中",
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 4
+      },
+      {
+        "id": "W22",
+        "name": "闪避·中",
+        "attr": "dodge",
+        "attr_zh": "闪避r",
+        "value": 10
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 4.517,
+    "pe": 4.54,
+    "pe_dev": 0.00511342,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L352（§5.2 第 10 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[9]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_fineforged_legguards": {
+    "name": "精锻护腿",
+    "kind": "equip",
+    "slot": "下甲",
+    "slot_id": "slot_armor_bottom",
+    "grade": "精制",
+    "grade_q": 1,
+    "grade_coef": 1.08,
+    "ilv": 8,
+    "band": "Ⅰ",
+    "unique": false,
+    "variant": false,
+    "affix_slots": 3,
+    "main": [
+      {
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 44
+      },
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 11
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W02",
+        "name": "生命·中",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 39
+      },
+      {
+        "id": "W09",
+        "name": "防御·中",
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 5
+      },
+      {
+        "id": "W22",
+        "name": "闪避·中",
+        "attr": "dodge",
+        "attr_zh": "闪避r",
+        "value": 12
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 7.227,
+    "pe": 7.247,
+    "pe_dev": 0.0028403,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L351（§5.2 第 9 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[8]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_fineforged_longsword": {
+    "name": "精锻长剑",
+    "kind": "equip",
+    "slot": "武器",
+    "slot_id": "slot_weapon",
+    "grade": "精制",
+    "grade_q": 1,
+    "grade_coef": 1.08,
+    "ilv": 8,
+    "band": "Ⅰ",
+    "unique": false,
+    "variant": false,
+    "affix_slots": 3,
+    "main": [
+      {
+        "attr": "atk",
+        "attr_zh": "攻击",
+        "value": 28
+      },
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 31
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W05",
+        "name": "攻击·中",
+        "attr": "atk",
+        "attr_zh": "攻击",
+        "value": 14
+      },
+      {
+        "id": "W14",
+        "name": "暴击·微",
+        "attr": "crit",
+        "attr_zh": "暴击r",
+        "value": 10
+      },
+      {
+        "id": "W17",
+        "name": "暴伤·微",
+        "attr": "critdmg",
+        "attr_zh": "暴伤%",
+        "value": 0.68
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 21.68,
+    "pe": 21.657,
+    "pe_dev": -0.00103574,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L349（§5.2 第 7 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[6]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_fineforged_ward_amulet": {
+    "name": "精锻守护护符",
+    "kind": "equip",
+    "slot": "饰品",
+    "slot_id": "slot_trinket",
+    "grade": "精制",
+    "grade_q": 1,
+    "grade_coef": 1.08,
+    "ilv": 8,
+    "band": "Ⅰ",
+    "unique": false,
+    "variant": true,
+    "affix_slots": 3,
+    "main": [
+      {
+        "attr": "dodge",
+        "attr_zh": "闪避r",
+        "value": 87
+      },
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 98
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W02",
+        "name": "生命·中",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 107
+      },
+      {
+        "id": "W22",
+        "name": "闪避·中",
+        "attr": "dodge",
+        "attr_zh": "闪避r",
+        "value": 26
+      },
+      {
+        "id": "W21",
+        "name": "闪避·微",
+        "attr": "dodge",
+        "attr_zh": "闪避r",
+        "value": 13
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 18.067,
+    "pe": 18.065,
+    "pe_dev": -6.467e-05,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L381（§5.2 第 39 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[38]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_homecoming_ring": {
+    "name": "归乡之环",
+    "kind": "equip",
+    "slot": "饰品",
+    "slot_id": "slot_trinket",
+    "grade": "传世",
+    "grade_q": 3,
+    "grade_coef": 1.24,
+    "ilv": 10,
+    "band": "Ⅰ",
+    "unique": true,
+    "variant": false,
+    "affix_slots": 3,
+    "main": [
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 325
+      },
+      {
+        "attr": "crit",
+        "attr_zh": "暴击r",
+        "value": 52
+      },
+      {
+        "attr": "cdr",
+        "attr_zh": "急速r",
+        "value": 40
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W02",
+        "name": "生命·中",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 101
+      },
+      {
+        "id": "W18",
+        "name": "暴伤·中",
+        "attr": "critdmg",
+        "attr_zh": "暴伤%",
+        "value": 1.48
+      }
+    ],
+    "fxp": 3,
+    "pe_budget": 20.8,
+    "pe": 20.824,
+    "pe_dev": 0.00117371,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L384（§5.2 第 42 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[41]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）",
+    "fx": [
+      {
+        "id": "W35",
+        "name": "免疫控制",
+        "tier": "F3",
+        "fxp": 3.0,
+        "text": "每 45 秒免疫 1 次控制效果"
+      }
+    ],
+    "specials": [
+      {
+        "id": "W24",
+        "name": "精准·中",
+        "counts_as": "targeted",
+        "text": "+X 精准 rating（同上；PvP / 高闪避 Boss 场景才计入）"
+      }
+    ],
+    "note": "唯一传奇件：特效从 W35 起，禁重复（06_装备道具/00 §4.3 硬约束 3）"
+  },
+  "ITEM_iron_amulet": {
+    "name": "粗铁护符",
+    "kind": "equip",
+    "slot": "饰品",
+    "slot_id": "slot_trinket",
+    "grade": "粗制",
+    "grade_q": 0,
+    "grade_coef": 1,
+    "ilv": 5,
+    "band": "Ⅰ",
+    "unique": false,
+    "variant": false,
+    "affix_slots": 2,
+    "main": [
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 110
+      },
+      {
+        "attr": "crit",
+        "attr_zh": "暴击r",
+        "value": 30
+      },
+      {
+        "attr": "cdr",
+        "attr_zh": "急速r",
+        "value": 23
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W02",
+        "name": "生命·中",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 87
+      },
+      {
+        "id": "W15",
+        "name": "暴击·中",
+        "attr": "crit",
+        "attr_zh": "暴击r",
+        "value": 17
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 16.66,
+    "pe": 16.632,
+    "pe_dev": -0.00164334,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L348（§5.2 第 6 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[5]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_iron_boots": {
+    "name": "粗铁战靴",
+    "kind": "equip",
+    "slot": "靴子",
+    "slot_id": "slot_boots",
+    "grade": "粗制",
+    "grade_q": 0,
+    "grade_coef": 1,
+    "ilv": 5,
+    "band": "Ⅰ",
+    "unique": false,
+    "variant": false,
+    "affix_slots": 2,
+    "main": [
+      {
+        "attr": "spd",
+        "attr_zh": "速度",
+        "value": 3
+      },
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 15
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W02",
+        "name": "生命·中",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 11
+      },
+      {
+        "id": "W22",
+        "name": "闪避·中",
+        "attr": "dodge",
+        "attr_zh": "闪避r",
+        "value": 9
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 4.165,
+    "pe": 4.129,
+    "pe_dev": -0.00862278,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L347（§5.2 第 5 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[4]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_iron_chestplate": {
+    "name": "粗铁胸甲",
+    "kind": "equip",
+    "slot": "上甲",
+    "slot_id": "slot_armor_top",
+    "grade": "粗制",
+    "grade_q": 0,
+    "grade_coef": 1,
+    "ilv": 5,
+    "band": "Ⅰ",
+    "unique": false,
+    "variant": false,
+    "affix_slots": 2,
+    "main": [
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 60
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W02",
+        "name": "生命·中",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 29
+      },
+      {
+        "id": "W09",
+        "name": "防御·中",
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 6
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 6.664,
+    "pe": 6.651,
+    "pe_dev": -0.00192457,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L344（§5.2 第 2 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[1]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_iron_helm": {
+    "name": "粗铁盔",
+    "kind": "equip",
+    "slot": "头盔",
+    "slot_id": "slot_helm",
+    "grade": "粗制",
+    "grade_q": 0,
+    "grade_coef": 1,
+    "ilv": 5,
+    "band": "Ⅰ",
+    "unique": false,
+    "variant": false,
+    "affix_slots": 2,
+    "main": [
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 18
+      },
+      {
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 11
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W02",
+        "name": "生命·中",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 16
+      },
+      {
+        "id": "W09",
+        "name": "防御·中",
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 5
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 4.165,
+    "pe": 4.139,
+    "pe_dev": -0.00634527,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L346（§5.2 第 4 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[3]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_iron_legguards": {
+    "name": "粗铁护腿",
+    "kind": "equip",
+    "slot": "下甲",
+    "slot_id": "slot_armor_bottom",
+    "grade": "粗制",
+    "grade_q": 0,
+    "grade_coef": 1,
+    "ilv": 5,
+    "band": "Ⅰ",
+    "unique": false,
+    "variant": false,
+    "affix_slots": 2,
+    "main": [
+      {
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 31
+      },
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 6
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W02",
+        "name": "生命·中",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 29
+      },
+      {
+        "id": "W09",
+        "name": "防御·中",
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 6
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 6.664,
+    "pe": 6.653,
+    "pe_dev": -0.00164606,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L345（§5.2 第 3 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[2]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_iron_longsword": {
+    "name": "粗铁长剑",
+    "kind": "equip",
+    "slot": "武器",
+    "slot_id": "slot_weapon",
+    "grade": "粗制",
+    "grade_q": 0,
+    "grade_coef": 1,
+    "ilv": 5,
+    "band": "Ⅰ",
+    "unique": false,
+    "variant": false,
+    "affix_slots": 2,
+    "main": [
+      {
+        "attr": "atk",
+        "attr_zh": "攻击",
+        "value": 15
+      },
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 20
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W05",
+        "name": "攻击·中",
+        "attr": "atk",
+        "attr_zh": "攻击",
+        "value": 10
+      },
+      {
+        "id": "W14",
+        "name": "暴击·微",
+        "attr": "crit",
+        "attr_zh": "暴击r",
+        "value": 19
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 19.992,
+    "pe": 19.997,
+    "pe_dev": 0.00026289,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L343（§5.2 第 1 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[0]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_iron_staff": {
+    "name": "粗铁法杖",
+    "kind": "equip",
+    "slot": "武器",
+    "slot_id": "slot_weapon",
+    "grade": "粗制",
+    "grade_q": 0,
+    "grade_coef": 1,
+    "ilv": 5,
+    "band": "Ⅰ",
+    "unique": false,
+    "variant": true,
+    "affix_slots": 2,
+    "main": [
+      {
+        "attr": "matk",
+        "attr_zh": "法强",
+        "value": 15
+      },
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 20
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W06",
+        "name": "法强·微",
+        "attr": "matk",
+        "attr_zh": "法强",
+        "value": 10
+      },
+      {
+        "id": "W19",
+        "name": "急速·微",
+        "attr": "cdr",
+        "attr_zh": "急速r",
+        "value": 18
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 19.992,
+    "pe": 19.993,
+    "pe_dev": 5.194e-05,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L379（§5.2 第 37 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[36]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_oathbound_amulet": {
+    "name": "誓约护符",
+    "kind": "equip",
+    "slot": "饰品",
+    "slot_id": "slot_trinket",
+    "grade": "铭刻",
+    "grade_q": 2,
+    "grade_coef": 1.16,
+    "ilv": 10,
+    "band": "Ⅰ",
+    "unique": false,
+    "variant": false,
+    "affix_slots": 4,
+    "main": [
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 305
+      },
+      {
+        "attr": "crit",
+        "attr_zh": "暴击r",
+        "value": 48
+      },
+      {
+        "attr": "cdr",
+        "attr_zh": "急速r",
+        "value": 37
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W02",
+        "name": "生命·中",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 95
+      },
+      {
+        "id": "W15",
+        "name": "暴击·中",
+        "attr": "crit",
+        "attr_zh": "暴击r",
+        "value": 11
+      },
+      {
+        "id": "W18",
+        "name": "暴伤·中",
+        "attr": "critdmg",
+        "attr_zh": "暴伤%",
+        "value": 0.69
+      },
+      {
+        "id": "W22",
+        "name": "闪避·中",
+        "attr": "dodge",
+        "attr_zh": "闪避r",
+        "value": 29
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 19.458,
+    "pe": 19.457,
+    "pe_dev": -3.165e-05,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L360（§5.2 第 18 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[17]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_oathbound_boots": {
+    "name": "誓约战靴",
+    "kind": "equip",
+    "slot": "靴子",
+    "slot_id": "slot_boots",
+    "grade": "铭刻",
+    "grade_q": 2,
+    "grade_coef": 1.16,
+    "ilv": 10,
+    "band": "Ⅰ",
+    "unique": false,
+    "variant": false,
+    "affix_slots": 4,
+    "main": [
+      {
+        "attr": "spd",
+        "attr_zh": "速度",
+        "value": 4
+      },
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 34
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W02",
+        "name": "生命·中",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 25
+      },
+      {
+        "id": "W22",
+        "name": "闪避·中",
+        "attr": "dodge",
+        "attr_zh": "闪避r",
+        "value": 8
+      },
+      {
+        "id": "W21",
+        "name": "闪避·微",
+        "attr": "dodge",
+        "attr_zh": "闪避r",
+        "value": 2
+      },
+      {
+        "id": "W13",
+        "name": "速度·微",
+        "attr": "spd",
+        "attr_zh": "速度",
+        "value": 1
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 4.864,
+    "pe": 4.857,
+    "pe_dev": -0.00160412,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L359（§5.2 第 17 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[16]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_oathbound_chestplate": {
+    "name": "誓约胸甲",
+    "kind": "equip",
+    "slot": "上甲",
+    "slot_id": "slot_armor_top",
+    "grade": "铭刻",
+    "grade_q": 2,
+    "grade_coef": 1.16,
+    "ilv": 10,
+    "band": "Ⅰ",
+    "unique": false,
+    "variant": false,
+    "affix_slots": 4,
+    "main": [
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 166
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W02",
+        "name": "生命·中",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 48
+      },
+      {
+        "id": "W09",
+        "name": "防御·中",
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 6
+      },
+      {
+        "id": "W22",
+        "name": "闪避·中",
+        "attr": "dodge",
+        "attr_zh": "闪避r",
+        "value": 13
+      },
+      {
+        "id": "W25",
+        "name": "攻守·生命+防御",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 6
+      },
+      {
+        "id": "W25",
+        "name": "攻守·生命+防御",
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 2
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 7.783,
+    "pe": 7.773,
+    "pe_dev": -0.00134473,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L356（§5.2 第 14 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[13]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_oathbound_helm": {
+    "name": "誓约盔",
+    "kind": "equip",
+    "slot": "头盔",
+    "slot_id": "slot_helm",
+    "grade": "铭刻",
+    "grade_q": 2,
+    "grade_coef": 1.16,
+    "ilv": 10,
+    "band": "Ⅰ",
+    "unique": false,
+    "variant": false,
+    "affix_slots": 4,
+    "main": [
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 51
+      },
+      {
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 19
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W02",
+        "name": "生命·中",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 21
+      },
+      {
+        "id": "W09",
+        "name": "防御·中",
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 5
+      },
+      {
+        "id": "W22",
+        "name": "闪避·中",
+        "attr": "dodge",
+        "attr_zh": "闪避r",
+        "value": 11
+      },
+      {
+        "id": "W25",
+        "name": "攻守·生命+防御",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 3
+      },
+      {
+        "id": "W25",
+        "name": "攻守·生命+防御",
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 1
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 4.864,
+    "pe": 4.869,
+    "pe_dev": 0.00084327,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L358（§5.2 第 16 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[15]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_oathbound_legguards": {
+    "name": "誓约护腿",
+    "kind": "equip",
+    "slot": "下甲",
+    "slot_id": "slot_armor_bottom",
+    "grade": "铭刻",
+    "grade_q": 2,
+    "grade_coef": 1.16,
+    "ilv": 10,
+    "band": "Ⅰ",
+    "unique": false,
+    "variant": false,
+    "affix_slots": 4,
+    "main": [
+      {
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 55
+      },
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 14
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W02",
+        "name": "生命·中",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 49
+      },
+      {
+        "id": "W09",
+        "name": "防御·中",
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 6
+      },
+      {
+        "id": "W22",
+        "name": "闪避·中",
+        "attr": "dodge",
+        "attr_zh": "闪避r",
+        "value": 13
+      },
+      {
+        "id": "W28",
+        "name": "坚壁·防御+闪避",
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 2
+      },
+      {
+        "id": "W28",
+        "name": "坚壁·防御+闪避",
+        "attr": "dodge",
+        "attr_zh": "闪避r",
+        "value": 2
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 7.783,
+    "pe": 7.782,
+    "pe_dev": -0.00018465,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L357（§5.2 第 15 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[14]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_oathbound_longsword": {
+    "name": "誓约长剑",
+    "kind": "equip",
+    "slot": "武器",
+    "slot_id": "slot_weapon",
+    "grade": "铭刻",
+    "grade_q": 2,
+    "grade_coef": 1.16,
+    "ilv": 10,
+    "band": "Ⅰ",
+    "unique": false,
+    "variant": false,
+    "affix_slots": 4,
+    "main": [
+      {
+        "attr": "atk",
+        "attr_zh": "攻击",
+        "value": 39
+      },
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 39
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W05",
+        "name": "攻击·中",
+        "attr": "atk",
+        "attr_zh": "攻击",
+        "value": 18
+      },
+      {
+        "id": "W14",
+        "name": "暴击·微",
+        "attr": "crit",
+        "attr_zh": "暴击r",
+        "value": 13
+      },
+      {
+        "id": "W17",
+        "name": "暴伤·微",
+        "attr": "critdmg",
+        "attr_zh": "暴伤%",
+        "value": 0.6
+      },
+      {
+        "id": "W26",
+        "name": "锐锋·攻击+暴击",
+        "attr": "atk",
+        "attr_zh": "攻击",
+        "value": 1
+      },
+      {
+        "id": "W26",
+        "name": "锐锋·攻击+暴击",
+        "attr": "crit",
+        "attr_zh": "暴击r",
+        "value": 10
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 23.349,
+    "pe": 23.352,
+    "pe_dev": 0.00010221,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L355（§5.2 第 13 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[12]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_oathbreaker_blade": {
+    "name": "断誓之刃",
+    "kind": "equip",
+    "slot": "武器",
+    "slot_id": "slot_weapon",
+    "grade": "传世",
+    "grade_q": 3,
+    "grade_coef": 1.24,
+    "ilv": 10,
+    "band": "Ⅰ",
+    "unique": true,
+    "variant": false,
+    "affix_slots": 3,
+    "main": [
+      {
+        "attr": "atk",
+        "attr_zh": "攻击",
+        "value": 41
+      },
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 50
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W05",
+        "name": "攻击·中",
+        "attr": "atk",
+        "attr_zh": "攻击",
+        "value": 19
+      },
+      {
+        "id": "W16",
+        "name": "暴击·宏",
+        "attr": "crit",
+        "attr_zh": "暴击r",
+        "value": 14
+      },
+      {
+        "id": "W18",
+        "name": "暴伤·中",
+        "attr": "critdmg",
+        "attr_zh": "暴伤%",
+        "value": 0.86
+      }
+    ],
+    "fxp": 2,
+    "pe_budget": 24.96,
+    "pe": 24.962,
+    "pe_dev": 0.0001003,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L383（§5.2 第 41 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[40]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）",
+    "fx": [
+      {
+        "id": "W33",
+        "name": "连击回响",
+        "tier": "F2",
+        "fxp": 2.0,
+        "text": "暴击后 25% 概率追加一次 30% 伤害"
+      }
+    ],
+    "note": "唯一传奇件：特效从 W33 起，禁重复（06_装备道具/00 §4.3 硬约束 3）"
+  },
+  "ITEM_oathweaver_sigil": {
+    "name": "织誓者徽记",
+    "kind": "equip",
+    "slot": "饰品",
+    "slot_id": "slot_trinket",
+    "grade": "传世",
+    "grade_q": 3,
+    "grade_coef": 1.24,
+    "ilv": 18,
+    "band": "Ⅱ",
+    "unique": true,
+    "variant": false,
+    "affix_slots": 4,
+    "main": [
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 686
+      },
+      {
+        "attr": "crit",
+        "attr_zh": "暴击r",
+        "value": 74
+      },
+      {
+        "attr": "cdr",
+        "attr_zh": "急速r",
+        "value": 60
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W02",
+        "name": "生命·中",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 213
+      },
+      {
+        "id": "W18",
+        "name": "暴伤·中",
+        "attr": "critdmg",
+        "attr_zh": "暴伤%",
+        "value": 0.58
+      },
+      {
+        "id": "W22",
+        "name": "闪避·中",
+        "attr": "dodge",
+        "attr_zh": "闪避r",
+        "value": 53
+      }
+    ],
+    "fxp": 5,
+    "pe_budget": 21.027,
+    "pe": 21.023,
+    "pe_dev": -0.00022228,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L385（§5.2 第 43 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[42]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）",
+    "fx": [
+      {
+        "id": "W36",
+        "name": "复活意志",
+        "tier": "F4",
+        "fxp": 5.0,
+        "text": "每场战斗 1 次，阵亡后以 30% 生命复活（唯一件限定）"
+      }
+    ],
+    "specials": [
+      {
+        "id": "W38",
+        "name": "誓约共鸣",
+        "counts_as": "set_count",
+        "text": "套装计数词条：2 件 +6% 生命 / 4 件 +4% 全伤（走 §7 套装池，不走 PE）"
+      }
+    ],
+    "note": "唯一传奇件：特效从 W36 起，禁重复（06_装备道具/00 §4.3 硬约束 3）"
+  },
+  "ITEM_settlement_amulet": {
+    "name": "聚落护符",
+    "kind": "equip",
+    "slot": "饰品",
+    "slot_id": "slot_trinket",
+    "grade": "精制",
+    "grade_q": 1,
+    "grade_coef": 1.08,
+    "ilv": 15,
+    "band": "Ⅱ",
+    "unique": false,
+    "variant": false,
+    "affix_slots": 3,
+    "main": [
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 474
+      },
+      {
+        "attr": "crit",
+        "attr_zh": "暴击r",
+        "value": 57
+      },
+      {
+        "attr": "cdr",
+        "attr_zh": "急速r",
+        "value": 45
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W02",
+        "name": "生命·中",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 203
+      },
+      {
+        "id": "W15",
+        "name": "暴击·中",
+        "attr": "crit",
+        "attr_zh": "暴击r",
+        "value": 18
+      },
+      {
+        "id": "W18",
+        "name": "暴伤·中",
+        "attr": "critdmg",
+        "attr_zh": "暴伤%",
+        "value": 0.76
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 18.24,
+    "pe": 18.233,
+    "pe_dev": -0.00038847,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L372（§5.2 第 30 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[29]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_settlement_boots": {
+    "name": "聚落战靴",
+    "kind": "equip",
+    "slot": "靴子",
+    "slot_id": "slot_boots",
+    "grade": "精制",
+    "grade_q": 1,
+    "grade_coef": 1.08,
+    "ilv": 15,
+    "band": "Ⅱ",
+    "unique": false,
+    "variant": false,
+    "affix_slots": 3,
+    "main": [
+      {
+        "attr": "spd",
+        "attr_zh": "速度",
+        "value": 4
+      },
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 47
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W02",
+        "name": "生命·中",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 49
+      },
+      {
+        "id": "W22",
+        "name": "闪避·中",
+        "attr": "dodge",
+        "attr_zh": "闪避r",
+        "value": 14
+      },
+      {
+        "id": "W21",
+        "name": "闪避·微",
+        "attr": "dodge",
+        "attr_zh": "闪避r",
+        "value": 3
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 4.56,
+    "pe": 4.568,
+    "pe_dev": 0.00171177,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L371（§5.2 第 29 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[28]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_settlement_chestplate": {
+    "name": "聚落胸甲",
+    "kind": "equip",
+    "slot": "上甲",
+    "slot_id": "slot_armor_top",
+    "grade": "精制",
+    "grade_q": 1,
+    "grade_coef": 1.08,
+    "ilv": 15,
+    "band": "Ⅱ",
+    "unique": false,
+    "variant": false,
+    "affix_slots": 3,
+    "main": [
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 258
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W02",
+        "name": "生命·中",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 86
+      },
+      {
+        "id": "W09",
+        "name": "防御·中",
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 8
+      },
+      {
+        "id": "W22",
+        "name": "闪避·中",
+        "attr": "dodge",
+        "attr_zh": "闪避r",
+        "value": 17
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 7.296,
+    "pe": 7.29,
+    "pe_dev": -0.00084316,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L368（§5.2 第 26 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[25]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_settlement_helm": {
+    "name": "聚落盔",
+    "kind": "equip",
+    "slot": "头盔",
+    "slot_id": "slot_helm",
+    "grade": "精制",
+    "grade_q": 1,
+    "grade_coef": 1.08,
+    "ilv": 15,
+    "band": "Ⅱ",
+    "unique": false,
+    "variant": false,
+    "affix_slots": 3,
+    "main": [
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 82
+      },
+      {
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 23
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W02",
+        "name": "生命·中",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 39
+      },
+      {
+        "id": "W09",
+        "name": "防御·中",
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 6
+      },
+      {
+        "id": "W22",
+        "name": "闪避·中",
+        "attr": "dodge",
+        "attr_zh": "闪避r",
+        "value": 14
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 4.56,
+    "pe": 4.561,
+    "pe_dev": 0.00026027,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L370（§5.2 第 28 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[27]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_settlement_legguards": {
+    "name": "聚落护腿",
+    "kind": "equip",
+    "slot": "下甲",
+    "slot_id": "slot_armor_bottom",
+    "grade": "精制",
+    "grade_q": 1,
+    "grade_coef": 1.08,
+    "ilv": 15,
+    "band": "Ⅱ",
+    "unique": false,
+    "variant": false,
+    "affix_slots": 3,
+    "main": [
+      {
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 69
+      },
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 21
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W02",
+        "name": "生命·中",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 86
+      },
+      {
+        "id": "W09",
+        "name": "防御·中",
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 8
+      },
+      {
+        "id": "W22",
+        "name": "闪避·中",
+        "attr": "dodge",
+        "attr_zh": "闪避r",
+        "value": 17
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 7.296,
+    "pe": 7.298,
+    "pe_dev": 0.00035474,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L369（§5.2 第 27 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[26]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_settlement_longsword": {
+    "name": "聚落长剑",
+    "kind": "equip",
+    "slot": "武器",
+    "slot_id": "slot_weapon",
+    "grade": "精制",
+    "grade_q": 1,
+    "grade_coef": 1.08,
+    "ilv": 15,
+    "band": "Ⅱ",
+    "unique": false,
+    "variant": false,
+    "affix_slots": 3,
+    "main": [
+      {
+        "attr": "atk",
+        "attr_zh": "攻击",
+        "value": 57
+      },
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 62
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W05",
+        "name": "攻击·中",
+        "attr": "atk",
+        "attr_zh": "攻击",
+        "value": 28
+      },
+      {
+        "id": "W14",
+        "name": "暴击·微",
+        "attr": "crit",
+        "attr_zh": "暴击r",
+        "value": 17
+      },
+      {
+        "id": "W17",
+        "name": "暴伤·微",
+        "attr": "critdmg",
+        "attr_zh": "暴伤%",
+        "value": 0.53
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 21.888,
+    "pe": 21.878,
+    "pe_dev": -0.00042919,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L367（§5.2 第 25 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[24]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_settlement_staff": {
+    "name": "聚落法杖",
+    "kind": "equip",
+    "slot": "武器",
+    "slot_id": "slot_weapon",
+    "grade": "精制",
+    "grade_q": 1,
+    "grade_coef": 1.08,
+    "ilv": 15,
+    "band": "Ⅱ",
+    "unique": false,
+    "variant": true,
+    "affix_slots": 3,
+    "main": [
+      {
+        "attr": "matk",
+        "attr_zh": "法强",
+        "value": 57
+      },
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 62
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W07",
+        "name": "法强·中",
+        "attr": "matk",
+        "attr_zh": "法强",
+        "value": 28
+      },
+      {
+        "id": "W19",
+        "name": "急速·微",
+        "attr": "cdr",
+        "attr_zh": "急速r",
+        "value": 23
+      },
+      {
+        "id": "W20",
+        "name": "急速·中",
+        "attr": "cdr",
+        "attr_zh": "急速r",
+        "value": 77
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 21.888,
+    "pe": 21.887,
+    "pe_dev": -1.846e-05,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L380（§5.2 第 38 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[37]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_wilds_amulet": {
+    "name": "荒野护符",
+    "kind": "equip",
+    "slot": "饰品",
+    "slot_id": "slot_trinket",
+    "grade": "粗制",
+    "grade_q": 0,
+    "grade_coef": 1,
+    "ilv": 12,
+    "band": "Ⅱ",
+    "unique": false,
+    "variant": false,
+    "affix_slots": 2,
+    "main": [
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 330
+      },
+      {
+        "attr": "crit",
+        "attr_zh": "暴击r",
+        "value": 46
+      },
+      {
+        "attr": "cdr",
+        "attr_zh": "急速r",
+        "value": 36
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W02",
+        "name": "生命·中",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 262
+      },
+      {
+        "id": "W15",
+        "name": "暴击·中",
+        "attr": "crit",
+        "attr_zh": "暴击r",
+        "value": 26
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 16.82,
+    "pe": 16.799,
+    "pe_dev": -0.00125756,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L366（§5.2 第 24 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[23]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_wilds_boots": {
+    "name": "荒野战靴",
+    "kind": "equip",
+    "slot": "靴子",
+    "slot_id": "slot_boots",
+    "grade": "粗制",
+    "grade_q": 0,
+    "grade_coef": 1,
+    "ilv": 12,
+    "band": "Ⅱ",
+    "unique": false,
+    "variant": false,
+    "affix_slots": 2,
+    "main": [
+      {
+        "attr": "spd",
+        "attr_zh": "速度",
+        "value": 3
+      },
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 47
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W02",
+        "name": "生命·中",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 36
+      },
+      {
+        "id": "W22",
+        "name": "闪避·中",
+        "attr": "dodge",
+        "attr_zh": "闪避r",
+        "value": 13
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 4.205,
+    "pe": 4.198,
+    "pe_dev": -0.00156368,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L365（§5.2 第 23 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[22]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_wilds_chestplate": {
+    "name": "荒野胸甲",
+    "kind": "equip",
+    "slot": "上甲",
+    "slot_id": "slot_armor_top",
+    "grade": "粗制",
+    "grade_q": 0,
+    "grade_coef": 1,
+    "ilv": 12,
+    "band": "Ⅱ",
+    "unique": false,
+    "variant": false,
+    "affix_slots": 2,
+    "main": [
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 180
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W02",
+        "name": "生命·中",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 90
+      },
+      {
+        "id": "W09",
+        "name": "防御·中",
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 10
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 6.728,
+    "pe": 6.73,
+    "pe_dev": 0.00035502,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L362（§5.2 第 20 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[19]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_wilds_helm": {
+    "name": "荒野盔",
+    "kind": "equip",
+    "slot": "头盔",
+    "slot_id": "slot_helm",
+    "grade": "粗制",
+    "grade_q": 0,
+    "grade_coef": 1,
+    "ilv": 12,
+    "band": "Ⅱ",
+    "unique": false,
+    "variant": false,
+    "affix_slots": 2,
+    "main": [
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 58
+      },
+      {
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 18
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W02",
+        "name": "生命·中",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 48
+      },
+      {
+        "id": "W09",
+        "name": "防御·中",
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 9
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 4.205,
+    "pe": 4.225,
+    "pe_dev": 0.00473226,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L364（§5.2 第 22 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[21]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_wilds_legguards": {
+    "name": "荒野护腿",
+    "kind": "equip",
+    "slot": "下甲",
+    "slot_id": "slot_armor_bottom",
+    "grade": "粗制",
+    "grade_q": 0,
+    "grade_coef": 1,
+    "ilv": 12,
+    "band": "Ⅱ",
+    "unique": false,
+    "variant": false,
+    "affix_slots": 2,
+    "main": [
+      {
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 54
+      },
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 15
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W02",
+        "name": "生命·中",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 90
+      },
+      {
+        "id": "W09",
+        "name": "防御·中",
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 10
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 6.728,
+    "pe": 6.74,
+    "pe_dev": 0.00182197,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L363（§5.2 第 21 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[20]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_wilds_light_armor": {
+    "name": "荒野轻甲",
+    "kind": "equip",
+    "slot": "上甲",
+    "slot_id": "slot_armor_top",
+    "grade": "粗制",
+    "grade_q": 0,
+    "grade_coef": 1,
+    "ilv": 12,
+    "band": "Ⅱ",
+    "unique": false,
+    "variant": true,
+    "affix_slots": 2,
+    "main": [
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 91
+      },
+      {
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 29
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W02",
+        "name": "生命·中",
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 90
+      },
+      {
+        "id": "W09",
+        "name": "防御·中",
+        "attr": "df",
+        "attr_zh": "防御",
+        "value": 10
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 6.728,
+    "pe": 6.727,
+    "pe_dev": -0.00015118,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L382（§5.2 第 40 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[39]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_wilds_longsword": {
+    "name": "荒野长剑",
+    "kind": "equip",
+    "slot": "武器",
+    "slot_id": "slot_weapon",
+    "grade": "粗制",
+    "grade_q": 0,
+    "grade_coef": 1,
+    "ilv": 12,
+    "band": "Ⅱ",
+    "unique": false,
+    "variant": false,
+    "affix_slots": 2,
+    "main": [
+      {
+        "attr": "atk",
+        "attr_zh": "攻击",
+        "value": 41
+      },
+      {
+        "attr": "hp",
+        "attr_zh": "生命",
+        "value": 45
+      }
+    ],
+    "affixes": [
+      {
+        "id": "W05",
+        "name": "攻击·中",
+        "attr": "atk",
+        "attr_zh": "攻击",
+        "value": 28
+      },
+      {
+        "id": "W14",
+        "name": "暴击·微",
+        "attr": "crit",
+        "attr_zh": "暴击r",
+        "value": 15
+      }
+    ],
+    "fxp": 0,
+    "pe_budget": 20.184,
+    "pe": 20.186,
+    "pe_dev": 0.0001146,
+    "pe_overflow": 0,
+    "upgrade_note": "可强化 +0→+15（装备PE ×(1+0.004×强化等级)，满强 +6% 装备PE）；可附魔一条（附魔是**换掉**一条词条，不是加一条）",
+    "src": "06_装备道具/00_装备体系与PE预算.md:L361（§5.2 第 19 件：槽位/品阶/词条配方/PE） · 数值=_work/W1D_pe_weights.json#P1_44件[18]（机械权威；文档表为旧一轮，见 _meta.conflicts C2）"
+  },
+  "ITEM_antler_splinter": {
+    "name": "鹿角骨片",
+    "kind": "material",
+    "slot": "材料",
+    "grade": "粗制",
+    "code": "P1-02",
+    "drop_band": "林带·普通",
+    "drop_per_day": 6,
+    "kill_per_day": 40,
+    "drop_rate": 0.15,
+    "use": "采集物/掉落材料：进修理与锻造链（P2 解锁），也是商店的收料口",
+    "src": "09_经济与掉落/01_掉落经验与金币产出.md:L47（§6.2 掉落池总表） · _work/W1E_monster_model.py:DROP_POOLS[林带·普通]"
+  },
+  "ITEM_bitter_moss": {
+    "name": "苦苔",
+    "kind": "material",
+    "slot": "材料",
+    "grade": "粗制",
+    "origin": "低语林带 · 蛛网林窗（采集点）",
+    "use": "药铺的常备药材（药铺别名「苦苔台」的来源）；L1 支线的采集目标之一",
+    "src": "08_地图任务关卡/01_地图拓扑与节点清单.md:L32（T3 药铺 · 苦苔台） · L73（L3 蛛网林窗采集：苦苔 ×2）· 08_地图任务关卡/02_任务线与推进节奏.md:L40（L1 露缇的药单）"
+  },
+  "ITEM_collapse_sand_core": {
+    "name": "塌砂核",
+    "kind": "material",
+    "slot": "材料",
+    "grade": "粗制",
+    "code": "P1-09",
+    "drop_band": "矿径·普通",
+    "drop_per_day": 5,
+    "kill_per_day": 40,
+    "drop_rate": 0.125,
+    "use": "采集物/掉落材料：进修理与锻造链（P2 解锁），也是商店的收料口",
+    "src": "09_经济与掉落/01_掉落经验与金币产出.md:L54（§6.2 掉落池总表） · _work/W1E_monster_model.py:DROP_POOLS[矿径·普通]"
+  },
+  "ITEM_deacon_sigil": {
+    "name": "执事徽记",
+    "kind": "material",
+    "slot": "材料",
+    "grade": "粗制",
+    "code": "P1-15",
+    "drop_band": "废墟·精英",
+    "drop_per_day": 1,
+    "kill_per_day": 4,
+    "drop_rate": 0.25,
+    "use": "采集物/掉落材料：进修理与锻造链（P2 解锁），也是商店的收料口",
+    "src": "09_经济与掉落/01_掉落经验与金币产出.md:L60（§6.2 掉落池总表） · _work/W1E_monster_model.py:DROP_POOLS[废墟·精英]"
+  },
+  "ITEM_dire_wolf_pelt": {
+    "name": "恐狼皮",
+    "kind": "material",
+    "slot": "材料",
+    "grade": "粗制",
+    "origin": "精英恐狼首领",
+    "use": "精英材料（铭刻装备）",
+    "legacy_id": "ITEM_dire_wolf_pelt",
+    "src": "01_世界观与剧情/02_命名规范.md:L337（§2.6 材料池 第 13 条）"
+  },
+  "ITEM_gargoyle_shard": {
+    "name": "石像鬼碎块",
+    "kind": "material",
+    "slot": "材料",
+    "grade": "粗制",
+    "origin": "石像鬼",
+    "use": "武器与护具",
+    "legacy_id": "ITEM_gargoyle_shard",
+    "src": "01_世界观与剧情/02_命名规范.md:L331（§2.6 材料池 第 7 条）"
+  },
+  "ITEM_goblin_token": {
+    "name": "哥布林徽记",
+    "kind": "material",
+    "slot": "材料",
+    "grade": "粗制",
+    "origin": "哥布林斥候",
+    "use": "轻材料（鞋/布）",
+    "legacy_id": "ITEM_goblin_token",
+    "src": "01_世界观与剧情/02_命名规范.md:L329（§2.6 材料池 第 5 条）"
+  },
+  "ITEM_gravel_shard": {
+    "name": "砾石碎块",
+    "kind": "material",
+    "slot": "材料",
+    "grade": "粗制",
+    "code": "P1-06",
+    "drop_band": "矿径·普通",
+    "drop_per_day": 8,
+    "kill_per_day": 40,
+    "drop_rate": 0.2,
+    "use": "采集物/掉落材料：进修理与锻造链（P2 解锁），也是商店的收料口",
+    "src": "09_经济与掉落/01_掉落经验与金币产出.md:L51（§6.2 掉落池总表） · _work/W1E_monster_model.py:DROP_POOLS[矿径·普通]"
+  },
+  "ITEM_iron_fitting": {
+    "name": "铁件",
+    "kind": "material",
+    "slot": "材料",
+    "grade": "粗制",
+    "origin": "断线废墟 · 灰塔外层",
+    "use": "修理与副本材料",
+    "legacy_id": "item_tiejian",
+    "src": "01_世界观与剧情/02_命名规范.md:L336（§2.6 材料池 第 12 条）"
+  },
+  "ITEM_iron_ore": {
+    "name": "铁矿",
+    "kind": "material",
+    "slot": "材料",
+    "grade": "粗制",
+    "origin": "铁脊矿径",
+    "use": "修理与 K1 交付",
+    "legacy_id": "item_tiekuang",
+    "src": "01_世界观与剧情/02_命名规范.md:L330（§2.6 材料池 第 6 条）"
+  },
+  "ITEM_iron_sand": {
+    "name": "铁砂",
+    "kind": "material",
+    "slot": "材料",
+    "grade": "粗制",
+    "code": "P1-08",
+    "drop_band": "矿径·普通",
+    "drop_per_day": 6,
+    "kill_per_day": 40,
+    "drop_rate": 0.15,
+    "use": "采集物/掉落材料：进修理与锻造链（P2 解锁），也是商店的收料口",
+    "src": "09_经济与掉落/01_掉落经验与金币产出.md:L53（§6.2 掉落池总表） · _work/W1E_monster_model.py:DROP_POOLS[矿径·普通]"
+  },
+  "ITEM_lamp_oil": {
+    "name": "矿灯油",
+    "kind": "material",
+    "slot": "材料",
+    "grade": "粗制",
+    "origin": "第二竖井",
+    "use": "矿灯的消耗品原料",
+    "legacy_id": "item_dengyou",
+    "src": "01_世界观与剧情/02_命名规范.md:L332（§2.6 材料池 第 8 条）"
+  },
+  "ITEM_living_wood_core": {
+    "name": "活木心材",
+    "kind": "material",
+    "slot": "材料",
+    "grade": "粗制",
+    "code": "P1-05",
+    "drop_band": "林带·精英",
+    "drop_per_day": 1,
+    "kill_per_day": 4,
+    "drop_rate": 0.25,
+    "use": "采集物/掉落材料：进修理与锻造链（P2 解锁），也是商店的收料口",
+    "src": "09_经济与掉落/01_掉落经验与金币产出.md:L50（§6.2 掉落池总表） · _work/W1E_monster_model.py:DROP_POOLS[林带·精英]"
+  },
+  "ITEM_moss_fiber": {
+    "name": "苔丝纤维",
+    "kind": "material",
+    "slot": "材料",
+    "grade": "粗制",
+    "code": "P1-01",
+    "drop_band": "林带·普通",
+    "drop_per_day": 8,
+    "kill_per_day": 40,
+    "drop_rate": 0.2,
+    "use": "采集物/掉落材料：进修理与锻造链（P2 解锁），也是商店的收料口",
+    "src": "09_经济与掉落/01_掉落经验与金币产出.md:L46（§6.2 掉落池总表） · _work/W1E_monster_model.py:DROP_POOLS[林带·普通]"
+  },
+  "ITEM_oath_thread_remnant": {
+    "name": "誓约残线",
+    "kind": "material",
+    "slot": "材料",
+    "grade": "粗制",
+    "code": "P1-14",
+    "drop_band": "废墟·普通",
+    "drop_per_day": 5,
+    "kill_per_day": 40,
+    "drop_rate": 0.125,
+    "use": "采集物/掉落材料：进修理与锻造链（P2 解锁），也是商店的收料口",
+    "src": "09_经济与掉落/01_掉落经验与金币产出.md:L59（§6.2 掉落池总表） · _work/W1E_monster_model.py:DROP_POOLS[废墟·普通]"
+  },
+  "ITEM_oathbroken_iron_shard": {
+    "name": "断誓铁片",
+    "kind": "material",
+    "slot": "材料",
+    "grade": "粗制",
+    "code": "P1-12",
+    "drop_band": "废墟·普通",
+    "drop_per_day": 6,
+    "kill_per_day": 40,
+    "drop_rate": 0.15,
+    "use": "采集物/掉落材料：进修理与锻造链（P2 解锁），也是商店的收料口",
+    "src": "09_经济与掉落/01_掉落经验与金币产出.md:L57（§6.2 掉落池总表） · _work/W1E_monster_model.py:DROP_POOLS[废墟·普通]"
+  },
+  "ITEM_old_brick": {
+    "name": "旧砖",
+    "kind": "material",
+    "slot": "材料",
+    "grade": "粗制",
+    "origin": "断线废墟",
+    "use": "建筑与废墟的物证",
+    "legacy_id": "item_jiuzhuan",
+    "src": "01_世界观与剧情/02_命名规范.md:L335（§2.6 材料池 第 11 条）"
+  },
+  "ITEM_peeled_bark": {
+    "name": "剥皮树皮",
+    "kind": "material",
+    "slot": "材料",
+    "grade": "粗制",
+    "origin": "第三道 · 剥皮树群",
+    "use": "物证型材料（**P1 现象的实物**）",
+    "legacy_id": "item_shupi",
+    "src": "01_世界观与剧情/02_命名规范.md:L327（§2.6 材料池 第 3 条）"
+  },
+  "ITEM_resin": {
+    "name": "树脂",
+    "kind": "material",
+    "slot": "材料",
+    "grade": "粗制",
+    "origin": "低语林带",
+    "use": "粘合与火把",
+    "legacy_id": "item_shuzhi",
+    "src": "01_世界观与剧情/02_命名规范.md:L328（§2.6 材料池 第 4 条）"
+  },
+  "ITEM_ruin_dust": {
+    "name": "残垣尘",
+    "kind": "material",
+    "slot": "材料",
+    "grade": "粗制",
+    "code": "P1-11",
+    "drop_band": "废墟·普通",
+    "drop_per_day": 6,
+    "kill_per_day": 40,
+    "drop_rate": 0.15,
+    "use": "采集物/掉落材料：进修理与锻造链（P2 解锁），也是商店的收料口",
+    "src": "09_经济与掉落/01_掉落经验与金币产出.md:L56（§6.2 掉落池总表） · _work/W1E_monster_model.py:DROP_POOLS[废墟·普通]"
+  },
+  "ITEM_rusted_armor_plate": {
+    "name": "锈甲板",
+    "kind": "material",
+    "slot": "材料",
+    "grade": "粗制",
+    "code": "P1-13",
+    "drop_band": "废墟·普通",
+    "drop_per_day": 6,
+    "kill_per_day": 40,
+    "drop_rate": 0.15,
+    "use": "采集物/掉落材料：进修理与锻造链（P2 解锁），也是商店的收料口",
+    "src": "09_经济与掉落/01_掉落经验与金币产出.md:L58（§6.2 掉落池总表） · _work/W1E_monster_model.py:DROP_POOLS[废墟·普通]"
+  },
+  "ITEM_scorch_sample": {
+    "name": "焦痕样本",
+    "kind": "material",
+    "slot": "材料",
+    "grade": "粗制",
+    "origin": "第三竖井（K2）",
+    "use": "**剧情物**：断口的实物（\"塔上才有的东西\"）",
+    "legacy_id": "item_jiaohen_yangben",
+    "src": "01_世界观与剧情/02_命名规范.md:L339（§2.6 材料池 第 15 条）"
+  },
+  "ITEM_slag_chunk": {
+    "name": "炉渣块",
+    "kind": "material",
+    "slot": "材料",
+    "grade": "粗制",
+    "origin": "熔岩犬",
+    "use": "精英材料（P2 锻造前置）",
+    "legacy_id": "item_luzhakuai",
+    "src": "01_世界观与剧情/02_命名规范.md:L334（§2.6 材料池 第 10 条）"
+  },
+  "ITEM_slag_ingot": {
+    "name": "熔渣锭",
+    "kind": "material",
+    "slot": "材料",
+    "grade": "粗制",
+    "code": "P1-10",
+    "drop_band": "矿径·精英",
+    "drop_per_day": 1,
+    "kill_per_day": 4,
+    "drop_rate": 0.25,
+    "use": "采集物/掉落材料：进修理与锻造链（P2 解锁），也是商店的收料口",
+    "src": "09_经济与掉落/01_掉落经验与金币产出.md:L55（§6.2 掉落池总表） · _work/W1E_monster_model.py:DROP_POOLS[矿径·精英]"
+  },
+  "ITEM_spider_silk_cord": {
+    "name": "蛛丝绳",
+    "kind": "material",
+    "slot": "材料",
+    "grade": "粗制",
+    "code": "P1-04",
+    "drop_band": "林带·普通",
+    "drop_per_day": 6,
+    "kill_per_day": 40,
+    "drop_rate": 0.15,
+    "use": "采集物/掉落材料：进修理与锻造链（P2 解锁），也是商店的收料口",
+    "src": "09_经济与掉落/01_掉落经验与金币产出.md:L49（§6.2 掉落池总表） · _work/W1E_monster_model.py:DROP_POOLS[林带·普通]"
+  },
+  "ITEM_stone_shell_plate": {
+    "name": "岩壳片",
+    "kind": "material",
+    "slot": "材料",
+    "grade": "粗制",
+    "code": "P1-07",
+    "drop_band": "矿径·普通",
+    "drop_per_day": 7,
+    "kill_per_day": 40,
+    "drop_rate": 0.175,
+    "use": "采集物/掉落材料：进修理与锻造链（P2 解锁），也是商店的收料口",
+    "src": "09_经济与掉落/01_掉落经验与金币产出.md:L52（§6.2 掉落池总表） · _work/W1E_monster_model.py:DROP_POOLS[矿径·普通]"
+  },
+  "ITEM_sulfur_sand": {
+    "name": "硫砂",
+    "kind": "material",
+    "slot": "材料",
+    "grade": "粗制",
+    "origin": "第二 / 三竖井",
+    "use": "一次性增伤（抹刀）",
+    "legacy_id": "item_liusha",
+    "src": "01_世界观与剧情/02_命名规范.md:L333（§2.6 材料池 第 9 条）"
+  },
+  "ITEM_thornvine_gum": {
+    "name": "刺藤胶",
+    "kind": "material",
+    "slot": "材料",
+    "grade": "粗制",
+    "code": "P1-03",
+    "drop_band": "林带·普通",
+    "drop_per_day": 5,
+    "kill_per_day": 40,
+    "drop_rate": 0.125,
+    "use": "采集物/掉落材料：进修理与锻造链（P2 解锁），也是商店的收料口",
+    "src": "09_经济与掉落/01_掉落经验与金币产出.md:L48（§6.2 掉落池总表） · _work/W1E_monster_model.py:DROP_POOLS[林带·普通]"
+  },
+  "ITEM_tinder_herb": {
+    "name": "火绒草",
+    "kind": "material",
+    "slot": "材料",
+    "grade": "粗制",
+    "origin": "低语林带 · 第二道",
+    "use": "药引；也是\"一捆柴\"任务里的硬通货",
+    "legacy_id": "item_huorongcao",
+    "src": "01_世界观与剧情/02_命名规范.md:L325（§2.6 材料池 第 1 条）"
+  },
+  "ITEM_tracing_paper": {
+    "name": "摹录纸",
+    "kind": "material",
+    "slot": "材料",
+    "grade": "粗制",
+    "origin": "抄录营地（可买）",
+    "use": "摹录（剧情物产出）",
+    "legacy_id": "item_tuoyin_zhi",
+    "src": "01_世界观与剧情/02_命名规范.md:L338（§2.6 材料池 第 14 条）"
+  },
+  "ITEM_watcher_oath_mark": {
+    "name": "守望誓痕",
+    "kind": "material",
+    "slot": "材料",
+    "grade": "粗制",
+    "code": "P1-16",
+    "drop_band": "哨塔·层主",
+    "drop_per_day": 0.6,
+    "kill_per_day": 2,
+    "drop_rate": 0.3,
+    "use": "采集物/掉落材料：进修理与锻造链（P2 解锁），也是商店的收料口",
+    "src": "09_经济与掉落/01_掉落经验与金币产出.md:L61（§6.2 掉落池总表） · _work/W1E_monster_model.py:DROP_POOLS[哨塔·层主]"
+  },
+  "ITEM_whitedown_grass": {
+    "name": "白毛草",
+    "kind": "material",
+    "slot": "材料",
+    "grade": "粗制",
+    "origin": "低语林带",
+    "use": "药铺招牌的来源（叶背有白毛的那种才有用）",
+    "legacy_id": "item_baimaocao",
+    "src": "01_世界观与剧情/02_命名规范.md:L326（§2.6 材料池 第 2 条）"
+  },
+  "ITEM_armor_solvent": {
+    "name": "解甲油",
+    "kind": "consumable",
+    "slot": "消耗品",
+    "grade": "粗制",
+    "category": "工具",
+    "use": "抹在武器上，一次性**削对方护甲**（K2/K4 的教具）",
+    "legacy_id": "item_jiejia_you",
+    "src": "01_世界观与剧情/02_命名规范.md:L352（§2.6 消耗品池 第 8 条）"
+  },
+  "ITEM_binding_wrap": {
+    "name": "缚伤布",
+    "kind": "consumable",
+    "slot": "消耗品",
+    "grade": "粗制",
+    "category": "状态",
+    "use": "止血（清流血）",
+    "legacy_id": "item_fushang_bu",
+    "src": "01_世界观与剧情/02_命名规范.md:L349（§2.6 消耗品池 第 5 条）"
+  },
+  "ITEM_crude_wound_medicine": {
+    "name": "粗制伤药",
+    "kind": "consumable",
+    "slot": "消耗品",
+    "grade": "粗制",
+    "use": "战斗中当面使用（行动类别「道具」，自带前摇）；M1 用它做「第一次用道具」的教学",
+    "note": "P1 的两种带解控消耗品之一（解控类效果的 PE 权重 45，见 05_技能/01 §1.2）",
+    "src": "01_世界观与剧情/04_剧情与NPC.md:L201-202（M1 环 3 交付物：粗制伤药 ×3） · 08_地图任务关卡/02_任务线与推进节奏.md:L40（L1 支线奖励 ×5） · 02_流程与阶段/01_核心循环与系统设计.md:L146（道具决策）"
+  },
+  "ITEM_dry_ration": {
+    "name": "干粮",
+    "kind": "consumable",
+    "slot": "消耗品",
+    "grade": "粗制",
+    "category": "回复",
+    "use": "垫一顿（小幅回复，脱战用）",
+    "legacy_id": "item_ganliang",
+    "src": "01_世界观与剧情/02_命名规范.md:L347（§2.6 消耗品池 第 3 条）"
+  },
+  "ITEM_hot_soup": {
+    "name": "热汤",
+    "kind": "consumable",
+    "slot": "消耗品",
+    "grade": "粗制",
+    "category": "回复",
+    "use": "旅店限定（休息的替代口）",
+    "legacy_id": "item_retang",
+    "src": "01_世界观与剧情/02_命名规范.md:L348（§2.6 消耗品池 第 4 条）"
+  },
+  "ITEM_miner_lamp": {
+    "name": "矿灯",
+    "kind": "consumable",
+    "slot": "消耗品",
+    "grade": "粗制",
+    "category": "工具",
+    "use": "短时**提升精准**（K5\"一盏灯的距离\"）",
+    "legacy_id": "item_kuangdeng",
+    "src": "01_世界观与剧情/02_命名规范.md:L353（§2.6 消耗品池 第 9 条）"
+  },
+  "ITEM_short_rope": {
+    "name": "短绳",
+    "kind": "consumable",
+    "slot": "消耗品",
+    "grade": "粗制",
+    "category": "工具",
+    "use": "副本与塌方处用（非战斗）",
+    "legacy_id": "item_duansheng",
+    "src": "01_世界观与剧情/02_命名规范.md:L354（§2.6 消耗品池 第 10 条）"
+  },
+  "ITEM_staunching_sand": {
+    "name": "止血砂",
+    "kind": "consumable",
+    "slot": "消耗品",
+    "grade": "粗制",
+    "category": "状态",
+    "use": "一样的功效，更便宜、更慢",
+    "legacy_id": "item_zhixue_sha",
+    "src": "01_世界观与剧情/02_命名规范.md:L350（§2.6 消耗品池 第 6 条）"
+  },
+  "ITEM_straw_bundle": {
+    "name": "干草束",
+    "kind": "consumable",
+    "slot": "消耗品",
+    "grade": "粗制",
+    "category": "工具",
+    "use": "引火与铺地（旅店补柴用）",
+    "legacy_id": "item_gancao_shu",
+    "src": "01_世界观与剧情/02_命名规范.md:L357（§2.6 消耗品池 第 13 条）"
+  },
+  "ITEM_tinder_decoction": {
+    "name": "火绒煎",
+    "kind": "consumable",
+    "slot": "消耗品",
+    "grade": "粗制",
+    "category": "回复",
+    "use": "醒神、回暖（回资源）",
+    "legacy_id": "item_huorong_jian",
+    "src": "01_世界观与剧情/02_命名规范.md:L346（§2.6 消耗品池 第 2 条）"
+  },
+  "ITEM_tinder_stick": {
+    "name": "火折",
+    "kind": "consumable",
+    "slot": "消耗品",
+    "grade": "粗制",
+    "category": "工具",
+    "use": "点灯/点火（非战斗）",
+    "legacy_id": "item_huozhe",
+    "src": "01_世界观与剧情/02_命名规范.md:L355（§2.6 消耗品池 第 11 条）"
+  },
+  "ITEM_waking_ash": {
+    "name": "醒神草灰",
+    "kind": "consumable",
+    "slot": "消耗品",
+    "grade": "粗制",
+    "category": "状态",
+    "use": "解\"慢\"（清减速）",
+    "legacy_id": "item_xingshen_hui",
+    "src": "01_世界观与剧情/02_命名规范.md:L351（§2.6 消耗品池 第 7 条）"
+  },
+  "ITEM_whetstone": {
+    "name": "磨石",
+    "kind": "consumable",
+    "slot": "消耗品",
+    "grade": "粗制",
+    "category": "工具",
+    "use": "修刀口（临时小幅增伤）",
+    "legacy_id": "item_moshi",
+    "src": "01_世界观与剧情/02_命名规范.md:L356（§2.6 消耗品池 第 12 条）"
+  },
+  "ITEM_whitedown_salve": {
+    "name": "白毛膏",
+    "kind": "consumable",
+    "slot": "消耗品",
+    "grade": "粗制",
+    "category": "回复",
+    "use": "把伤压回去（回生命）",
+    "legacy_id": "item_baimao_gao",
+    "src": "01_世界观与剧情/02_命名规范.md:L345（§2.6 消耗品池 第 1 条）"
+  }
+}

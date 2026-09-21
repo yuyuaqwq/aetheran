@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "drop_pools",
+  "$comment": "《艾瑟兰：织誓》掉落池域 —— **顶层 = 条目表** {条目id: 条目}，一条 = 一只宿主的掉落池。真源 = 策划案仓 `09_经济与掉落/01_掉落经验与金币产出.md` §6.2（掉落池总表）· §6.3（层主战单场收益）；怪物 id 真源 = `content/data/monsters.json`。★ 铁律：**掉率 = 日均需求 ÷ 日均该档击杀数**（§6.2 标题即口径）—— 每个 rate 必须能从 `_derive.demand_per_day ÷ _derive.kills_per_day` 复算出来，不许手打一个好看的百分数；两个数就写在条目里（`_` 前缀键 = 私有/元信息，不算条目）。子形状（含 `n` 的整数/区间两态）一律**内联 anyOf**，本文件只有顶层指向 $defs 的一次 $ref。",
+  "type": "object",
+  "propertyNames": {
+    "pattern": "^(DROP_|_)",
+    "$comment": "条目键 = `DROP_<slug>`（slug 取宿主怪 id 去掉 MON_/BOSS_ 前缀，如 DROP_goblin_scout）；`_` 前缀 = 私有/元信息键（如 _meta），**不算条目** —— 顶层的 `patternProperties: {\"^_\": true}` 让它不受条目形状约束。"
+  },
+  "patternProperties": {
+    "^_": true
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/drop_pool"
+  },
+  "$defs": {
+    "drop_pool": {
+      "type": "object",
+      "title": "一只宿主的掉落池",
+      "required": ["id", "host", "entries"],
+      "additionalProperties": false,
+      "patternProperties": {
+        "^_": true
+      },
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^DROP_[a-z0-9_]+$",
+          "$comment": "与条目键逐字一致（编辑器/审计用同一条断言）。"
+        },
+        "host": {
+          "type": "string",
+          "pattern": "^(MON|BOSS)_[a-z0-9_]+$",
+          "$comment": "宿主怪物 id —— 与 `content/data/monsters.json` 的 id **同源**（MON_* / BOSS_*），不另造一套怪 id。"
+        },
+        "host_name": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "宿主中文名（文档侧写法，便于对账）；权威名以 monsters.json 的 name 为准。"
+        },
+        "tier": {
+          "type": "string",
+          "enum": ["common", "elite", "boss"],
+          "$comment": "与 `schemas/monsters.schema.json` 的 tier **同一把尺**（普通/精英/层主）—— 击杀口径就挂在这一档上（40 / 4 / 2 只每天）。"
+        },
+        "zone": {
+          "type": "string",
+          "$comment": "区域写法照 monsters.json 的 zone（近郊·林带 / 近郊·矿径 / 近郊·废墟 / 灰塔哨所）。"
+        },
+        "lv": {
+          "type": "integer",
+          "minimum": 1,
+          "$comment": "宿主等级（照 monsters.json）。"
+        },
+        "type": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "策略名，**不设 enum**（策略名归内容侧，同引擎 drop_pools 模板的纪律）。本域用 `per_entry_roll`：每次击杀对 entries **逐条独立**掷一次 rate（同档各条的期望件数可加）。⚠️ 引擎 `saintess_engine.loot.LootTable` 不认识这个名字（未知策略按 `weighted` 兜底 ⇒「必掉一件」语义不符）—— 装配前须 `register_strategy(\"per_entry_roll\", ...)`，或由内容侧直接按本域的 rate 判定。"
+        },
+        "entries": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["item", "rate", "n", "_derive"],
+            "additionalProperties": false,
+            "patternProperties": {
+              "^_": true
+            },
+            "properties": {
+              "item": {
+                "type": "string",
+                "pattern": "^ITEM_[a-z0-9_]+$",
+                "$comment": "道具 id —— 与 items 域主键同源。★ 本域**不抄道具名**（名字的真源在 items 域），文档名只作私有字段 `_derive.item_name_doc` 留痕，免得出现第二套真源。"
+              },
+              "rate": {
+                "type": "number",
+                "minimum": 0.03,
+                "maximum": 0.30,
+                "$comment": "掉率（0~1）= **日均需求 ÷ 日均该档击杀数**（§6.2 口径 · 文档 L37）。★ 门禁 [3%, 30%]（文档 L41）直接写进 schema：< 3% 的「等于不存在」掉率与 > 30% 的「必掉 = 不值钱」当场被拦（反通胀：必掉即不值钱，稀缺物走生活渠道不走战斗）。两个源数写在同条 `_derive.demand_per_day` / `_derive.kills_per_day`，复算脚本按 rate == demand / kills 重算断言。"
+              },
+              "n": {
+                "$comment": "单次掉落份数（数量范围）。两态 = 整数（固定份数）或 [min,max] 闭区间 —— 与引擎 pool_entry.n **同形**，故此处**内联 anyOf**（不新造子 def、不用 $ref：引擎未装 jsonschema 时走的最小校验器对子形状一律要求内联）。",
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  {
+                    "type": "array",
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "items": {
+                      "type": "integer",
+                      "minimum": 1
+                    }
+                  }
+                ]
+              },
+              "_derive": {
+                "type": "object",
+                "title": "掉率反推（私有）",
+                "required": ["demand_per_day", "kills_per_day", "rate_expr"],
+                "additionalProperties": true,
+                "$comment": "掉率的**两个源数 + 算式**必须齐：没有这两个数，这条 rate 就是「不可反推的数」（旧版 0.21% 那种）⇒ 判红。",
+                "properties": {
+                  "demand_per_day": {
+                    "type": "number",
+                    "minimum": 0,
+                    "$comment": "日均需求（件/天）—— §6.2 表「日均需求」列。"
+                  },
+                  "kills_per_day": {
+                    "type": "number",
+                    "minimum": 0,
+                    "$comment": "日均该档击杀（只/天）—— §6.2 表「日均击杀」列（该**档**口径，不是本池宿主单怪）。"
+                  },
+                  "rate_expr": {
+                    "type": "string",
+                    "minLength": 1,
+                    "$comment": "人读算式，如「8.0 ÷ 40.0 = 20.0%」。"
+                  },
+                  "qty_expr": {
+                    "type": "string",
+                    "$comment": "份数反推：rate × kills × 平均份数 = 需求 ⇒ 平均份数 1.0（故 n = [1,1]）。"
+                  },
+                  "item_name_doc": {
+                    "type": "string",
+                    "$comment": "文档侧道具名（留痕用，不是名字真源）。"
+                  },
+                  "p1_code": {
+                    "type": "string",
+                    "$comment": "策划案编号 P1-01 … P1-16（09 §6.2 / 08 地图节点清单 / 07 怪物框架共用同一套编号）。"
+                  },
+                  "source": {
+                    "type": "string",
+                    "$comment": "单一真源指针：`<文档> §<节> L<行>`。"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "desc": {
+          "type": "string",
+          "$comment": "一句话说明（编辑器/文档用）；风格红线：西幻，禁武侠/佛教/网文词。"
+        },
+        "_derive": {
+          "type": "object",
+          "title": "档位口径与同档校验（私有）",
+          "$comment": "放该档的击杀口径、同档各条速率和（= 档总需求 ÷ 档击杀）等可机检数据；键位自由。"
+        },
+        "_note": {
+          "type": "string",
+          "$comment": "私有备注（跨文档引用、未落成条目的内容等）。"
+        }
+      }
+    }
+  },
+  "x-primary": "drop_pool"
+}

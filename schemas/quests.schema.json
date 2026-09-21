@@ -1,0 +1,424 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "《艾瑟兰：织誓》任务域 schema（P1 主线 12 + 支线/委托 18）。真源：08_地图任务关卡/02_任务线与推进节奏.md §3/§6 · 01_世界观与剧情/04_剧情与NPC.md §2；节点 id 与 content/data/maps.json 对齐；道具 id 走 ITEM_ 前缀（items 域未落地，见各条目 _todo）。顶层 = 条目表 {条目 id: 条目}，`_` 前缀键 = 私有/元信息键（与引擎 editor/packages.py 的 is_entry_key 口径一致）。★ 复用子形状（目标 / 奖励 / 环）一律内联，不用 $ref —— 引擎未装 jsonschema 时走最小校验器，它不解析 $ref。",
+  "$defs": {
+    "quest": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "kind",
+        "level_min",
+        "giver",
+        "giver_node",
+        "nodes",
+        "objectives",
+        "rings",
+        "rewards",
+        "text",
+        "_source"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^QUEST_",
+          "$comment": "QUEST_ + 英文 slug；带内序号沿用真源编号（M1-1 → QUEST_M1_1_*，L1 → QUEST_L1_*）"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "任务专名（真源原词，不手打改字）"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "主线",
+            "支线",
+            "委托"
+          ],
+          "$comment": "主线 = 主 lane（不可拒、不可弃）；支线 = NPC 个人之约（可弃 = 断线）；委托 = 当班者按战绩下达的精英差事（见文件内 _meta.kind_rule）"
+        },
+        "chapter": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4,
+          "$comment": "主线专有：第几章（一落脚 / 二近郊的断口 / 三灰塔 / 四第一根新线）"
+        },
+        "band": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "支线/委托专有：挂在哪条近郊带（低语林带 / 铁脊矿径 / 断线废墟）"
+        },
+        "level_min": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "level_max": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "trigger": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "触发条件（机械式描述，不含玩家可见文案）：如「首次进入 NODE_t3」「等级≥6 且完成 QUEST_L2_hunter_three_days」"
+        },
+        "prereq": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^QUEST_"
+          },
+          "$comment": "前置任务 id（多前置 = 全部满足）"
+        },
+        "prereq_note": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "非任务型门槛（等级 / 履历 / 装备），如「支线数≥3」「需已装备武器」"
+        },
+        "giver": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "接任务 NPC 名（以 01_世界观与剧情/04_剧情与NPC.md §4 为准）"
+        },
+        "giver_node": {
+          "type": "string",
+          "pattern": "^NODE_"
+        },
+        "nodes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "^NODE_"
+          },
+          "$comment": "本任务涉及的全部地点节点 id，必须存在于 content/data/maps.json 的 nodes[].id"
+        },
+        "objectives": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "target",
+              "count"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "击杀",
+                  "收集",
+                  "到达",
+                  "交付",
+                  "通关"
+                ],
+                "$comment": "真源 §2.0 的六型里，`进入` 归 `到达`、`交付`（对话/物名）单列；`通关` 走 run 名"
+              },
+              "target": {
+                "type": "string",
+                "minLength": 1,
+                "$comment": "进度键真源：击杀型记怪名、采集/收集型记物名、到达型记节点名、通关型记 run 名（与引擎 fold 补丁键同构）"
+              },
+              "count": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "node": {
+                "type": "string",
+                "pattern": "^NODE_"
+              },
+              "npc": {
+                "type": "string",
+                "minLength": 1
+              },
+              "monster": {
+                "type": "string",
+                "pattern": "^(MON|BOSS)_",
+                "$comment": "只在 content/data/monsters.json 已有非占位 id 时填（如 MON_dire_wolf / BOSS_stone_warden）"
+              },
+              "item": {
+                "type": "string",
+                "pattern": "^ITEM_"
+              },
+              "progress_key": {
+                "type": "string",
+                "minLength": 1,
+                "$comment": "聚合型目标的固定键（如 `点的灯`）"
+              },
+              "_todo": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "rings": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "key",
+              "id",
+              "objectives"
+            ],
+            "properties": {
+              "key": {
+                "type": "string",
+                "enum": [
+                  "a",
+                  "b",
+                  "c"
+                ]
+              },
+              "id": {
+                "type": "string",
+                "pattern": "^QUEST_",
+                "$comment": "三环 id 串成 next 链（真源 §2.0：M1-1-a → -b → -c，第 3 环 next 指向下一任务首环）"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "objectives": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "kind",
+                    "target",
+                    "count"
+                  ],
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "击杀",
+                        "收集",
+                        "到达",
+                        "交付",
+                        "通关"
+                      ]
+                    },
+                    "target": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "count": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "node": {
+                      "type": "string",
+                      "pattern": "^NODE_"
+                    },
+                    "npc": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "monster": {
+                      "type": "string",
+                      "pattern": "^(MON|BOSS)_"
+                    },
+                    "item": {
+                      "type": "string",
+                      "pattern": "^ITEM_"
+                    },
+                    "progress_key": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "_todo": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "exp": {
+                "type": "integer",
+                "minimum": 0,
+                "$comment": "环级经验；真源只给总线时省略（不摊派、不编数）"
+              },
+              "upgrade": {
+                "type": "string",
+                "minLength": 1,
+                "$comment": "第 3 环必给可见升级物（总纲 §4.3 硬要求）"
+              },
+              "text": {
+                "type": "string",
+                "pattern": "^QUEST_",
+                "$comment": "环回显文案槽位 key"
+              },
+              "next": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^QUEST_"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "_todo": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "rewards": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "exp"
+          ],
+          "properties": {
+            "exp": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "gold": {
+              "type": "integer",
+              "minimum": 0,
+              "$comment": "真源未给数时不写此键（宁可缺，不编数）"
+            },
+            "copper": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "id",
+                  "count"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^ITEM_"
+                  },
+                  "count": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "$comment": "真源里的物名原文（人读用；items 域落地后以 items.json 为准）"
+                  },
+                  "_todo": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "growth": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "attr_points": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "skill_points": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "specialization_slots": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "perks": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "$comment": "非物品型产出（系统解锁 / 折扣 / 情报 / 内容侧标记）"
+                }
+              }
+            },
+            "upgrade": {
+              "type": "string",
+              "minLength": 1,
+              "$comment": "本任务第 3 环交付时玩家能指出「来自哪一件」的可见升级物"
+            },
+            "_todo": {
+              "type": "string"
+            }
+          }
+        },
+        "teach": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "教学意图（真源词表 teach:* 原样引用；词表待 W1-E 对齐，见 04 §9 D6）"
+        },
+        "skippable": {
+          "type": "boolean",
+          "$comment": "主线 false（不给你选）；支线/委托 true（可跳、不阻塞主线）"
+        },
+        "text": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "intro",
+            "complete"
+          ],
+          "properties": {
+            "intro": {
+              "type": "string",
+              "pattern": "^QUEST_"
+            },
+            "progress": {
+              "type": "string",
+              "pattern": "^QUEST_"
+            },
+            "complete": {
+              "type": "string",
+              "pattern": "^QUEST_"
+            },
+            "abandon": {
+              "type": "string",
+              "pattern": "^QUEST_",
+              "$comment": "放弃 = 断线：支线/委托的专属断线台词槽位（主线无此槽）"
+            },
+            "note": {
+              "type": "string",
+              "$comment": "★ 本域只传槽位 key，真实句子真源 = content/data/text_specs.json（代码只传槽位）"
+            }
+          }
+        },
+        "_source": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "真源文件 + 行号（人查用）"
+        },
+        "_todo": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "type": "object",
+  "properties": {
+    "_meta": {
+      "type": "object",
+      "$comment": "文件级元信息（私有键，不是条目）"
+    }
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/quest"
+  },
+  "x-primary": "quest"
+}

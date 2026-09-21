@@ -1,0 +1,3501 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "《艾瑟兰：织誓》职业（classes）域 schema。顶层 = 条目表 {CLS_*: 职业}；`_` 开头的键 = 文件级私有元信息（引擎 is_entry_key 口径，见 11_数据包Wiki/00_Wiki设计与模板.md:307-322），不是条目。★ 子形状一律**内联 anyOf**，**全文不写 JSON-Schema 引用关键字**（引擎未装 jsonschema 时走 editor/validate.py 的最小校验器）。`$defs.class` 与顶层 `patternProperties` 里那份**逐字节相同**（由生成脚本保证）：前者是引擎的单条校验入口（editor/validate.py:118-134 取 `$defs[primary]`），后者供整表校验用。",
+  "$defs": {
+    "class": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "name_en",
+        "role",
+        "axis",
+        "axis_multiplier",
+        "primary_attr",
+        "five_dim",
+        "growth",
+        "panel",
+        "rating",
+        "resource",
+        "refs"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^CLS_[A-Z0-9_]+$",
+          "$comment": "职业 id 前缀（数据字典 §1.2:59 的 7 值枚举：WDN/BSK/RNG/ARC/PRS/SHD/SKD 缩写见 §4:213）"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name_en": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[A-Za-z][A-Za-z ]*$"
+        },
+        "slug": {
+          "type": "string",
+          "pattern": "^[a-z0-9_]+$"
+        },
+        "skill_prefix": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$",
+          "$comment": "技能 id 用的职业缩写（SKILL_<缩写>_<slug>，数据字典 §1.1:44）"
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "定位一句话"
+        },
+        "feel": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "体感一句话（3 秒能答出「长什么样 / 打上去什么感觉」）"
+        },
+        "position": {
+          "type": "object",
+          "required": [
+            "default",
+            "source"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "default": {
+              "type": "string",
+              "minLength": 1
+            },
+            "source": {
+              "type": "string",
+              "minLength": 1
+            },
+            "$comment": {
+              "type": "string"
+            }
+          },
+          "description": "天然站位档名（贴身/近/中/远/全场）+ 来源"
+        },
+        "axis": {
+          "type": "object",
+          "required": [
+            "out",
+            "sur",
+            "fun",
+            "source"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "out": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "sur": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "fun": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "mob": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "$comment": "机动轴：数据字典 §7:274-279 要求四轴，但 04_职业/01 尚未跟账（U4）⇒ 暂为 null"
+            },
+            "sum": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 3
+            },
+            "source": {
+              "type": "string",
+              "minLength": 1
+            },
+            "$comment": {
+              "type": "string"
+            }
+          }
+        },
+        "axis_multiplier": {
+          "type": "object",
+          "required": [
+            "out",
+            "sur",
+            "fun"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "out": {
+              "type": "object",
+              "required": [
+                "final",
+                "base"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "final": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "base": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            },
+            "sur": {
+              "type": "object",
+              "required": [
+                "final",
+                "base"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "final": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "base": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            },
+            "fun": {
+              "type": "object",
+              "required": [
+                "final",
+                "base"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "final": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "base": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "$comment": "终态倍数 = 轴占比/33.333%；基础倍数 = 1+(终态−1)×43.5%（04_职业/01:44-46,597-607）"
+        },
+        "primary_attr": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "items": {
+            "type": "string",
+            "enum": [
+              "VIT",
+              "STR",
+              "AGI",
+              "INT",
+              "PER"
+            ]
+          }
+        },
+        "secondary_attr": {
+          "type": "array",
+          "minItems": 0,
+          "maxItems": 2,
+          "items": {
+            "type": "string",
+            "enum": [
+              "VIT",
+              "STR",
+              "AGI",
+              "INT",
+              "PER"
+            ]
+          }
+        },
+        "attr_basis": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "主/副维的推导依据（含 file:line）"
+        },
+        "five_dim": {
+          "type": "object",
+          "required": [
+            "lv1",
+            "lv1_status",
+            "gain"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "lv1": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "number"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "$comment": "Lv1 五维初始值；真源缺项 ⇒ null（C11），不臆造"
+            },
+            "lv1_status": {
+              "type": "string",
+              "minLength": 1
+            },
+            "gain": {
+              "type": "object",
+              "required": [
+                "lv1_start",
+                "per_level",
+                "cumulative"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "lv1_start": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "per_level": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "cumulative": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "lv100_total": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "cap_note": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                }
+              }
+            },
+            "coefficients_ref": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            }
+          }
+        },
+        "growth": {
+          "type": "object",
+          "required": [
+            "closed",
+            "axis_scale"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "closed": {
+              "type": "object",
+              "required": [
+                "hp",
+                "atk",
+                "matk",
+                "def",
+                "mdef",
+                "spd"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "hp": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "atk": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "matk": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "def": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "mdef": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "spd": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "axis_scale": {
+              "type": "object",
+              "required": [
+                "hp",
+                "atk",
+                "matk",
+                "def",
+                "mdef",
+                "spd"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "hp": {
+                  "type": "string",
+                  "enum": [
+                    "out",
+                    "sur",
+                    "fun"
+                  ]
+                },
+                "atk": {
+                  "type": "string",
+                  "enum": [
+                    "out",
+                    "sur",
+                    "fun"
+                  ]
+                },
+                "matk": {
+                  "type": "string",
+                  "enum": [
+                    "out",
+                    "sur",
+                    "fun"
+                  ]
+                },
+                "def": {
+                  "type": "string",
+                  "enum": [
+                    "out",
+                    "sur",
+                    "fun"
+                  ]
+                },
+                "mdef": {
+                  "type": "string",
+                  "enum": [
+                    "out",
+                    "sur",
+                    "fun"
+                  ]
+                },
+                "spd": {
+                  "type": "string",
+                  "enum": [
+                    "out",
+                    "sur",
+                    "fun"
+                  ]
+                }
+              }
+            },
+            "spd_note": {
+              "type": "string"
+            },
+            "rates_ref": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            }
+          }
+        },
+        "panel": {
+          "type": "object",
+          "required": [
+            "1",
+            "10",
+            "20",
+            "30",
+            "40",
+            "50",
+            "60",
+            "70",
+            "80",
+            "90",
+            "100"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "1": {
+              "type": "object",
+              "required": [
+                "hp",
+                "atk",
+                "matk",
+                "def",
+                "mdef",
+                "spd"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "hp": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "atk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "matk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "def": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "mdef": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "spd": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            },
+            "10": {
+              "type": "object",
+              "required": [
+                "hp",
+                "atk",
+                "matk",
+                "def",
+                "mdef",
+                "spd"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "hp": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "atk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "matk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "def": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "mdef": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "spd": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            },
+            "20": {
+              "type": "object",
+              "required": [
+                "hp",
+                "atk",
+                "matk",
+                "def",
+                "mdef",
+                "spd"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "hp": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "atk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "matk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "def": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "mdef": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "spd": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            },
+            "30": {
+              "type": "object",
+              "required": [
+                "hp",
+                "atk",
+                "matk",
+                "def",
+                "mdef",
+                "spd"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "hp": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "atk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "matk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "def": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "mdef": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "spd": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            },
+            "40": {
+              "type": "object",
+              "required": [
+                "hp",
+                "atk",
+                "matk",
+                "def",
+                "mdef",
+                "spd"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "hp": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "atk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "matk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "def": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "mdef": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "spd": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            },
+            "50": {
+              "type": "object",
+              "required": [
+                "hp",
+                "atk",
+                "matk",
+                "def",
+                "mdef",
+                "spd"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "hp": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "atk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "matk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "def": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "mdef": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "spd": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            },
+            "60": {
+              "type": "object",
+              "required": [
+                "hp",
+                "atk",
+                "matk",
+                "def",
+                "mdef",
+                "spd"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "hp": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "atk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "matk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "def": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "mdef": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "spd": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            },
+            "70": {
+              "type": "object",
+              "required": [
+                "hp",
+                "atk",
+                "matk",
+                "def",
+                "mdef",
+                "spd"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "hp": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "atk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "matk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "def": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "mdef": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "spd": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            },
+            "80": {
+              "type": "object",
+              "required": [
+                "hp",
+                "atk",
+                "matk",
+                "def",
+                "mdef",
+                "spd"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "hp": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "atk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "matk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "def": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "mdef": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "spd": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            },
+            "90": {
+              "type": "object",
+              "required": [
+                "hp",
+                "atk",
+                "matk",
+                "def",
+                "mdef",
+                "spd"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "hp": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "atk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "matk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "def": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "mdef": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "spd": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            },
+            "100": {
+              "type": "object",
+              "required": [
+                "hp",
+                "atk",
+                "matk",
+                "def",
+                "mdef",
+                "spd"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "hp": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "atk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "matk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "def": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "mdef": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "spd": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "$comment": "职业基础面板（Lv1–100 每 10 级，11 格）；取整：HP/DEF/MDEF/SPD 整数、ATK/MATK 1 位（04_职业/01:232）"
+        },
+        "rating": {
+          "type": "object",
+          "required": [
+            "1",
+            "10",
+            "20",
+            "30",
+            "40",
+            "50",
+            "60",
+            "70",
+            "80",
+            "90",
+            "100"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "1": {
+              "type": "object",
+              "required": [
+                "crit",
+                "prec",
+                "dodge",
+                "haste",
+                "cast_spd",
+                "tenacity",
+                "block",
+                "pene"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "crit": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "prec": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "dodge": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "haste": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "cast_spd": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "tenacity": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "block": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "pene": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              }
+            },
+            "10": {
+              "type": "object",
+              "required": [
+                "crit",
+                "prec",
+                "dodge",
+                "haste",
+                "cast_spd",
+                "tenacity",
+                "block",
+                "pene"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "crit": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "prec": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "dodge": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "haste": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "cast_spd": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "tenacity": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "block": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "pene": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              }
+            },
+            "20": {
+              "type": "object",
+              "required": [
+                "crit",
+                "prec",
+                "dodge",
+                "haste",
+                "cast_spd",
+                "tenacity",
+                "block",
+                "pene"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "crit": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "prec": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "dodge": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "haste": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "cast_spd": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "tenacity": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "block": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "pene": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              }
+            },
+            "30": {
+              "type": "object",
+              "required": [
+                "crit",
+                "prec",
+                "dodge",
+                "haste",
+                "cast_spd",
+                "tenacity",
+                "block",
+                "pene"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "crit": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "prec": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "dodge": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "haste": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "cast_spd": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "tenacity": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "block": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "pene": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              }
+            },
+            "40": {
+              "type": "object",
+              "required": [
+                "crit",
+                "prec",
+                "dodge",
+                "haste",
+                "cast_spd",
+                "tenacity",
+                "block",
+                "pene"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "crit": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "prec": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "dodge": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "haste": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "cast_spd": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "tenacity": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "block": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "pene": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              }
+            },
+            "50": {
+              "type": "object",
+              "required": [
+                "crit",
+                "prec",
+                "dodge",
+                "haste",
+                "cast_spd",
+                "tenacity",
+                "block",
+                "pene"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "crit": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "prec": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "dodge": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "haste": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "cast_spd": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "tenacity": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "block": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "pene": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              }
+            },
+            "60": {
+              "type": "object",
+              "required": [
+                "crit",
+                "prec",
+                "dodge",
+                "haste",
+                "cast_spd",
+                "tenacity",
+                "block",
+                "pene"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "crit": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "prec": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "dodge": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "haste": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "cast_spd": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "tenacity": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "block": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "pene": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              }
+            },
+            "70": {
+              "type": "object",
+              "required": [
+                "crit",
+                "prec",
+                "dodge",
+                "haste",
+                "cast_spd",
+                "tenacity",
+                "block",
+                "pene"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "crit": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "prec": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "dodge": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "haste": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "cast_spd": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "tenacity": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "block": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "pene": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              }
+            },
+            "80": {
+              "type": "object",
+              "required": [
+                "crit",
+                "prec",
+                "dodge",
+                "haste",
+                "cast_spd",
+                "tenacity",
+                "block",
+                "pene"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "crit": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "prec": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "dodge": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "haste": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "cast_spd": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "tenacity": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "block": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "pene": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              }
+            },
+            "90": {
+              "type": "object",
+              "required": [
+                "crit",
+                "prec",
+                "dodge",
+                "haste",
+                "cast_spd",
+                "tenacity",
+                "block",
+                "pene"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "crit": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "prec": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "dodge": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "haste": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "cast_spd": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "tenacity": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "block": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "pene": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              }
+            },
+            "100": {
+              "type": "object",
+              "required": [
+                "crit",
+                "prec",
+                "dodge",
+                "haste",
+                "cast_spd",
+                "tenacity",
+                "block",
+                "pene"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "crit": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "prec": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "dodge": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "haste": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "cast_spd": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "tenacity": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "block": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "pene": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              }
+            }
+          },
+          "$comment": "评级属性（单位 = 百分数，如 27.0 = 27.0%）；键名对齐数据字典 §2.2:100-109 的 ATTR_*（去掉前缀）"
+        },
+        "pe_total": {
+          "type": "object",
+          "required": [
+            "lv1",
+            "lv20",
+            "lv50",
+            "lv100"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "lv1": {
+              "type": "number",
+              "minimum": 0
+            },
+            "lv20": {
+              "type": "number",
+              "minimum": 0
+            },
+            "lv50": {
+              "type": "number",
+              "minimum": 0
+            },
+            "lv100": {
+              "type": "number",
+              "minimum": 0
+            },
+            "std_lv100": {
+              "type": "number",
+              "minimum": 0
+            },
+            "ratio_vs_standard": {
+              "type": "number",
+              "minimum": 0
+            },
+            "basis": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            }
+          }
+        },
+        "resource": {
+          "type": "object",
+          "required": [
+            "id",
+            "name",
+            "cap",
+            "accrual",
+            "ult"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^RES_[A-Z0-9_]+$",
+              "$comment": "数据字典 §1.2:63 与 §4:214 的 7 值资源枚举"
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "cap": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "accrual": {
+              "type": "object",
+              "required": [
+                "kind"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "event",
+                    "tick",
+                    "combo",
+                    "hybrid"
+                  ],
+                  "$comment": "获取方式：event 靠事件 / tick 每刻 / combo 连击计数 / hybrid 二者兼有"
+                },
+                "events": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "event",
+                      "amount"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "event": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "amount": {
+                        "type": "number"
+                      }
+                    }
+                  }
+                },
+                "per_tick": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "tick_note": {
+                  "type": "string"
+                },
+                "modifiers": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "when",
+                      "factor"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "when": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "factor": {
+                        "type": "number",
+                        "minimum": 0
+                      }
+                    }
+                  }
+                },
+                "decay": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "required": [
+                        "event",
+                        "amount",
+                        "unit"
+                      ],
+                      "additionalProperties": false,
+                      "properties": {
+                        "event": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "amount": {
+                          "type": "number"
+                        },
+                        "unit": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "reset": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "$comment": "归零条件（暗影：被击中清零）"
+                }
+              }
+            },
+            "ult": {
+              "type": "object",
+              "required": [
+                "cost",
+                "acts_per_ult"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "cost": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "acts_per_ult": {
+                  "type": "number",
+                  "minimum": 1
+                },
+                "gate": {
+                  "type": "string"
+                }
+              }
+            },
+            "feel": {
+              "type": "string"
+            },
+            "formula": {
+              "type": "string",
+              "pattern": "^FORMULA_"
+            },
+            "source": {
+              "type": "string"
+            }
+          }
+        },
+        "refs": {
+          "type": "object",
+          "required": [
+            "panel",
+            "rating",
+            "axis",
+            "resource"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "panel": {
+              "type": "string"
+            },
+            "rating": {
+              "type": "string"
+            },
+            "axis": {
+              "type": "string"
+            },
+            "resource": {
+              "type": "string"
+            },
+            "five_dim": {
+              "type": "string"
+            },
+            "growth": {
+              "type": "string"
+            },
+            "pe": {
+              "type": "string"
+            },
+            "position": {
+              "type": "string"
+            }
+          }
+        },
+        "status": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "type": "object",
+  "minProperties": 1,
+  "propertyNames": {
+    "pattern": "^(CLS_[A-Z0-9_]+|_.+)$"
+  },
+  "patternProperties": {
+    "^CLS_[A-Z0-9_]+$": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "name_en",
+        "role",
+        "axis",
+        "axis_multiplier",
+        "primary_attr",
+        "five_dim",
+        "growth",
+        "panel",
+        "rating",
+        "resource",
+        "refs"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^CLS_[A-Z0-9_]+$",
+          "$comment": "职业 id 前缀（数据字典 §1.2:59 的 7 值枚举：WDN/BSK/RNG/ARC/PRS/SHD/SKD 缩写见 §4:213）"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name_en": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[A-Za-z][A-Za-z ]*$"
+        },
+        "slug": {
+          "type": "string",
+          "pattern": "^[a-z0-9_]+$"
+        },
+        "skill_prefix": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$",
+          "$comment": "技能 id 用的职业缩写（SKILL_<缩写>_<slug>，数据字典 §1.1:44）"
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "定位一句话"
+        },
+        "feel": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "体感一句话（3 秒能答出「长什么样 / 打上去什么感觉」）"
+        },
+        "position": {
+          "type": "object",
+          "required": [
+            "default",
+            "source"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "default": {
+              "type": "string",
+              "minLength": 1
+            },
+            "source": {
+              "type": "string",
+              "minLength": 1
+            },
+            "$comment": {
+              "type": "string"
+            }
+          },
+          "description": "天然站位档名（贴身/近/中/远/全场）+ 来源"
+        },
+        "axis": {
+          "type": "object",
+          "required": [
+            "out",
+            "sur",
+            "fun",
+            "source"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "out": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "sur": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "fun": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "mob": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "$comment": "机动轴：数据字典 §7:274-279 要求四轴，但 04_职业/01 尚未跟账（U4）⇒ 暂为 null"
+            },
+            "sum": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 3
+            },
+            "source": {
+              "type": "string",
+              "minLength": 1
+            },
+            "$comment": {
+              "type": "string"
+            }
+          }
+        },
+        "axis_multiplier": {
+          "type": "object",
+          "required": [
+            "out",
+            "sur",
+            "fun"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "out": {
+              "type": "object",
+              "required": [
+                "final",
+                "base"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "final": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "base": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            },
+            "sur": {
+              "type": "object",
+              "required": [
+                "final",
+                "base"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "final": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "base": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            },
+            "fun": {
+              "type": "object",
+              "required": [
+                "final",
+                "base"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "final": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "base": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "$comment": "终态倍数 = 轴占比/33.333%；基础倍数 = 1+(终态−1)×43.5%（04_职业/01:44-46,597-607）"
+        },
+        "primary_attr": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "items": {
+            "type": "string",
+            "enum": [
+              "VIT",
+              "STR",
+              "AGI",
+              "INT",
+              "PER"
+            ]
+          }
+        },
+        "secondary_attr": {
+          "type": "array",
+          "minItems": 0,
+          "maxItems": 2,
+          "items": {
+            "type": "string",
+            "enum": [
+              "VIT",
+              "STR",
+              "AGI",
+              "INT",
+              "PER"
+            ]
+          }
+        },
+        "attr_basis": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "主/副维的推导依据（含 file:line）"
+        },
+        "five_dim": {
+          "type": "object",
+          "required": [
+            "lv1",
+            "lv1_status",
+            "gain"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "lv1": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "number"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "$comment": "Lv1 五维初始值；真源缺项 ⇒ null（C11），不臆造"
+            },
+            "lv1_status": {
+              "type": "string",
+              "minLength": 1
+            },
+            "gain": {
+              "type": "object",
+              "required": [
+                "lv1_start",
+                "per_level",
+                "cumulative"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "lv1_start": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "per_level": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "cumulative": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "lv100_total": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "cap_note": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                }
+              }
+            },
+            "coefficients_ref": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            }
+          }
+        },
+        "growth": {
+          "type": "object",
+          "required": [
+            "closed",
+            "axis_scale"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "closed": {
+              "type": "object",
+              "required": [
+                "hp",
+                "atk",
+                "matk",
+                "def",
+                "mdef",
+                "spd"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "hp": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "atk": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "matk": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "def": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "mdef": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "spd": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "axis_scale": {
+              "type": "object",
+              "required": [
+                "hp",
+                "atk",
+                "matk",
+                "def",
+                "mdef",
+                "spd"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "hp": {
+                  "type": "string",
+                  "enum": [
+                    "out",
+                    "sur",
+                    "fun"
+                  ]
+                },
+                "atk": {
+                  "type": "string",
+                  "enum": [
+                    "out",
+                    "sur",
+                    "fun"
+                  ]
+                },
+                "matk": {
+                  "type": "string",
+                  "enum": [
+                    "out",
+                    "sur",
+                    "fun"
+                  ]
+                },
+                "def": {
+                  "type": "string",
+                  "enum": [
+                    "out",
+                    "sur",
+                    "fun"
+                  ]
+                },
+                "mdef": {
+                  "type": "string",
+                  "enum": [
+                    "out",
+                    "sur",
+                    "fun"
+                  ]
+                },
+                "spd": {
+                  "type": "string",
+                  "enum": [
+                    "out",
+                    "sur",
+                    "fun"
+                  ]
+                }
+              }
+            },
+            "spd_note": {
+              "type": "string"
+            },
+            "rates_ref": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            }
+          }
+        },
+        "panel": {
+          "type": "object",
+          "required": [
+            "1",
+            "10",
+            "20",
+            "30",
+            "40",
+            "50",
+            "60",
+            "70",
+            "80",
+            "90",
+            "100"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "1": {
+              "type": "object",
+              "required": [
+                "hp",
+                "atk",
+                "matk",
+                "def",
+                "mdef",
+                "spd"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "hp": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "atk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "matk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "def": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "mdef": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "spd": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            },
+            "10": {
+              "type": "object",
+              "required": [
+                "hp",
+                "atk",
+                "matk",
+                "def",
+                "mdef",
+                "spd"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "hp": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "atk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "matk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "def": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "mdef": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "spd": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            },
+            "20": {
+              "type": "object",
+              "required": [
+                "hp",
+                "atk",
+                "matk",
+                "def",
+                "mdef",
+                "spd"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "hp": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "atk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "matk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "def": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "mdef": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "spd": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            },
+            "30": {
+              "type": "object",
+              "required": [
+                "hp",
+                "atk",
+                "matk",
+                "def",
+                "mdef",
+                "spd"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "hp": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "atk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "matk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "def": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "mdef": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "spd": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            },
+            "40": {
+              "type": "object",
+              "required": [
+                "hp",
+                "atk",
+                "matk",
+                "def",
+                "mdef",
+                "spd"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "hp": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "atk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "matk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "def": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "mdef": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "spd": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            },
+            "50": {
+              "type": "object",
+              "required": [
+                "hp",
+                "atk",
+                "matk",
+                "def",
+                "mdef",
+                "spd"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "hp": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "atk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "matk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "def": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "mdef": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "spd": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            },
+            "60": {
+              "type": "object",
+              "required": [
+                "hp",
+                "atk",
+                "matk",
+                "def",
+                "mdef",
+                "spd"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "hp": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "atk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "matk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "def": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "mdef": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "spd": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            },
+            "70": {
+              "type": "object",
+              "required": [
+                "hp",
+                "atk",
+                "matk",
+                "def",
+                "mdef",
+                "spd"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "hp": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "atk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "matk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "def": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "mdef": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "spd": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            },
+            "80": {
+              "type": "object",
+              "required": [
+                "hp",
+                "atk",
+                "matk",
+                "def",
+                "mdef",
+                "spd"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "hp": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "atk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "matk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "def": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "mdef": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "spd": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            },
+            "90": {
+              "type": "object",
+              "required": [
+                "hp",
+                "atk",
+                "matk",
+                "def",
+                "mdef",
+                "spd"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "hp": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "atk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "matk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "def": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "mdef": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "spd": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            },
+            "100": {
+              "type": "object",
+              "required": [
+                "hp",
+                "atk",
+                "matk",
+                "def",
+                "mdef",
+                "spd"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "hp": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "atk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "matk": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "def": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "mdef": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "spd": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "$comment": "职业基础面板（Lv1–100 每 10 级，11 格）；取整：HP/DEF/MDEF/SPD 整数、ATK/MATK 1 位（04_职业/01:232）"
+        },
+        "rating": {
+          "type": "object",
+          "required": [
+            "1",
+            "10",
+            "20",
+            "30",
+            "40",
+            "50",
+            "60",
+            "70",
+            "80",
+            "90",
+            "100"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "1": {
+              "type": "object",
+              "required": [
+                "crit",
+                "prec",
+                "dodge",
+                "haste",
+                "cast_spd",
+                "tenacity",
+                "block",
+                "pene"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "crit": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "prec": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "dodge": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "haste": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "cast_spd": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "tenacity": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "block": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "pene": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              }
+            },
+            "10": {
+              "type": "object",
+              "required": [
+                "crit",
+                "prec",
+                "dodge",
+                "haste",
+                "cast_spd",
+                "tenacity",
+                "block",
+                "pene"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "crit": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "prec": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "dodge": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "haste": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "cast_spd": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "tenacity": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "block": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "pene": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              }
+            },
+            "20": {
+              "type": "object",
+              "required": [
+                "crit",
+                "prec",
+                "dodge",
+                "haste",
+                "cast_spd",
+                "tenacity",
+                "block",
+                "pene"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "crit": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "prec": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "dodge": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "haste": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "cast_spd": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "tenacity": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "block": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "pene": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              }
+            },
+            "30": {
+              "type": "object",
+              "required": [
+                "crit",
+                "prec",
+                "dodge",
+                "haste",
+                "cast_spd",
+                "tenacity",
+                "block",
+                "pene"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "crit": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "prec": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "dodge": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "haste": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "cast_spd": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "tenacity": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "block": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "pene": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              }
+            },
+            "40": {
+              "type": "object",
+              "required": [
+                "crit",
+                "prec",
+                "dodge",
+                "haste",
+                "cast_spd",
+                "tenacity",
+                "block",
+                "pene"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "crit": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "prec": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "dodge": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "haste": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "cast_spd": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "tenacity": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "block": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "pene": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              }
+            },
+            "50": {
+              "type": "object",
+              "required": [
+                "crit",
+                "prec",
+                "dodge",
+                "haste",
+                "cast_spd",
+                "tenacity",
+                "block",
+                "pene"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "crit": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "prec": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "dodge": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "haste": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "cast_spd": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "tenacity": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "block": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "pene": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              }
+            },
+            "60": {
+              "type": "object",
+              "required": [
+                "crit",
+                "prec",
+                "dodge",
+                "haste",
+                "cast_spd",
+                "tenacity",
+                "block",
+                "pene"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "crit": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "prec": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "dodge": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "haste": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "cast_spd": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "tenacity": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "block": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "pene": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              }
+            },
+            "70": {
+              "type": "object",
+              "required": [
+                "crit",
+                "prec",
+                "dodge",
+                "haste",
+                "cast_spd",
+                "tenacity",
+                "block",
+                "pene"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "crit": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "prec": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "dodge": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "haste": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "cast_spd": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "tenacity": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "block": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "pene": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              }
+            },
+            "80": {
+              "type": "object",
+              "required": [
+                "crit",
+                "prec",
+                "dodge",
+                "haste",
+                "cast_spd",
+                "tenacity",
+                "block",
+                "pene"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "crit": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "prec": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "dodge": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "haste": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "cast_spd": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "tenacity": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "block": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "pene": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              }
+            },
+            "90": {
+              "type": "object",
+              "required": [
+                "crit",
+                "prec",
+                "dodge",
+                "haste",
+                "cast_spd",
+                "tenacity",
+                "block",
+                "pene"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "crit": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "prec": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "dodge": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "haste": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "cast_spd": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "tenacity": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "block": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "pene": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              }
+            },
+            "100": {
+              "type": "object",
+              "required": [
+                "crit",
+                "prec",
+                "dodge",
+                "haste",
+                "cast_spd",
+                "tenacity",
+                "block",
+                "pene"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "crit": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "prec": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "dodge": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "haste": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "cast_spd": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "tenacity": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "block": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "pene": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              }
+            }
+          },
+          "$comment": "评级属性（单位 = 百分数，如 27.0 = 27.0%）；键名对齐数据字典 §2.2:100-109 的 ATTR_*（去掉前缀）"
+        },
+        "pe_total": {
+          "type": "object",
+          "required": [
+            "lv1",
+            "lv20",
+            "lv50",
+            "lv100"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "lv1": {
+              "type": "number",
+              "minimum": 0
+            },
+            "lv20": {
+              "type": "number",
+              "minimum": 0
+            },
+            "lv50": {
+              "type": "number",
+              "minimum": 0
+            },
+            "lv100": {
+              "type": "number",
+              "minimum": 0
+            },
+            "std_lv100": {
+              "type": "number",
+              "minimum": 0
+            },
+            "ratio_vs_standard": {
+              "type": "number",
+              "minimum": 0
+            },
+            "basis": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            }
+          }
+        },
+        "resource": {
+          "type": "object",
+          "required": [
+            "id",
+            "name",
+            "cap",
+            "accrual",
+            "ult"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^RES_[A-Z0-9_]+$",
+              "$comment": "数据字典 §1.2:63 与 §4:214 的 7 值资源枚举"
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "cap": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "accrual": {
+              "type": "object",
+              "required": [
+                "kind"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "event",
+                    "tick",
+                    "combo",
+                    "hybrid"
+                  ],
+                  "$comment": "获取方式：event 靠事件 / tick 每刻 / combo 连击计数 / hybrid 二者兼有"
+                },
+                "events": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "event",
+                      "amount"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "event": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "amount": {
+                        "type": "number"
+                      }
+                    }
+                  }
+                },
+                "per_tick": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "tick_note": {
+                  "type": "string"
+                },
+                "modifiers": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "when",
+                      "factor"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "when": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "factor": {
+                        "type": "number",
+                        "minimum": 0
+                      }
+                    }
+                  }
+                },
+                "decay": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "required": [
+                        "event",
+                        "amount",
+                        "unit"
+                      ],
+                      "additionalProperties": false,
+                      "properties": {
+                        "event": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "amount": {
+                          "type": "number"
+                        },
+                        "unit": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "reset": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "$comment": "归零条件（暗影：被击中清零）"
+                }
+              }
+            },
+            "ult": {
+              "type": "object",
+              "required": [
+                "cost",
+                "acts_per_ult"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "cost": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "acts_per_ult": {
+                  "type": "number",
+                  "minimum": 1
+                },
+                "gate": {
+                  "type": "string"
+                }
+              }
+            },
+            "feel": {
+              "type": "string"
+            },
+            "formula": {
+              "type": "string",
+              "pattern": "^FORMULA_"
+            },
+            "source": {
+              "type": "string"
+            }
+          }
+        },
+        "refs": {
+          "type": "object",
+          "required": [
+            "panel",
+            "rating",
+            "axis",
+            "resource"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "panel": {
+              "type": "string"
+            },
+            "rating": {
+              "type": "string"
+            },
+            "axis": {
+              "type": "string"
+            },
+            "resource": {
+              "type": "string"
+            },
+            "five_dim": {
+              "type": "string"
+            },
+            "growth": {
+              "type": "string"
+            },
+            "pe": {
+              "type": "string"
+            },
+            "position": {
+              "type": "string"
+            }
+          }
+        },
+        "status": {
+          "type": "string"
+        }
+      }
+    },
+    "^_.+$": {
+      "type": "object"
+    }
+  },
+  "x-primary": "class"
+}

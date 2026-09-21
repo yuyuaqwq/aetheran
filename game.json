@@ -5,9 +5,15 @@
   "engine": ">=0.1",
   "entry": "content/apply.py",
   "domains": [
+    "classes",
+    "drop_pools",
+    "elements",
+    "items",
     "maps",
     "monsters",
-    "skills"
+    "npcs",
+    "skills",
+    "wiki"
   ],
   "created": "2026-09-21"
 }

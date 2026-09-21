@@ -1,0 +1,157 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "《艾瑟兰：织誓》NPC 14 位 schema —— 顶层 = **条目表** `{NPC_id: 条目}`（外层键升序），条目形状见 `$defs.npc`。★ 文案真源 = `content/data/text_specs.json`（00_总纲/02_数据字典.md §0）：本域**只传槽位 key**，`name` / `role` / `lines` / `locked_lines` / `dialogue_trees[].slot` 一律是槽位名，**禁裸文案**。★ 地点 id 与 `content/data/maps.json` 的节点 id 逐字对齐（`NODE_*`）。★ 子形状复用一律**内联 anyOf**、不用 $ref（引擎未装 jsonschema 时走最小校验器，它只解析本文件内的 `#/$defs/NAME`）。",
+  "$defs": {
+    "npc": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "role",
+        "node",
+        "faction",
+        "quests",
+        "lines"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^NPC_[a-z0-9_]+$",
+          "$comment": "必须与所在条目表的键**逐字相同**（表键 = 真源 id；内联一份便于编辑器单条校验时看到 id）。前缀口径见 00_总纲/02_数据字典.md §1；slug 走 01_世界观与剧情/02_命名规范.md §2.2（叙事专名 = 拼音转写）"
+        },
+        "name": {
+          "type": "string",
+          "pattern": "^NPC_[a-z0-9_]+_name$",
+          "$comment": "槽位：称呼（正名/绰号）。14 位名字的正式写法见 命名规范 §2.2，正文一律由文案表渲染 ⇒ 这里只有槽位，不写名字本身"
+        },
+        "role": {
+          "type": "string",
+          "pattern": "^NPC_[a-z0-9_]+_role$",
+          "$comment": "槽位：职务或身份（如守誓人 / 镇务官）"
+        },
+        "faction": {
+          "$comment": "所属派系 id；无派系 ⇒ null（**不猜**：14 位里只有明确归属的那几位给值，其余照 04_剧情与NPC.md 原文留 null）",
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^FAC_[a-z0-9_]+$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "node": {
+          "type": "string",
+          "pattern": "^NODE_[a-z0-9]+$",
+          "$comment": "★ 所在地点节点 id —— 必须与 content/data/maps.json 的节点 id 逐字一致（maps.json 的命名规范：`NODE_` + 小写原 id，如 T0 → NODE_t0 / D23 → NODE_d23）"
+        },
+        "roam_nodes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^NODE_[a-z0-9]+$"
+          },
+          "$comment": "会走动的 NPC 才给（如蒂亚在林带 5 节点间随机刷），列该 NPC 的活动节点全集；`node` 仍是常驻主节点"
+        },
+        "quests": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^QUEST_[A-Za-z0-9_]+$"
+          },
+          "$comment": "可接任务 id 列表（该 NPC 发布/交付的主线与支线）。id 口径见 00_总纲/02_数据字典.md §1.2「任务」：`QUEST_<主/支><带><序号>`；quests 域落盘后逐条对齐。无支线的 NPC 刻意给空数组（04_剧情与NPC.md §4.3：卡德里安 / 格里姆 / 缄默者 无支线）"
+        },
+        "quests_join": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^QUEST_[A-Za-z0-9_]+$"
+          },
+          "$comment": "**参与**（非发布）的任务：被寻人 / 被交付对象 / 同行者 / 线索源。与 `quests`（发布）分开，防止把参与也算成挂名（04_剧情与NPC.md §4.3 的挂名计数只数发布方）"
+        },
+        "lines": {
+          "type": "object",
+          "minProperties": 2,
+          "propertyNames": {
+            "pattern": "^line_[0-9]{2}$"
+          },
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^NPC_[a-z0-9_]+_line_[0-9]{2}$"
+          },
+          "$comment": "对白槽位：键 = 槽位用途（按 04_剧情与NPC.md §4 的台词样例序 line_01…line_0N），值 = 文案表槽位 key。每位 ≥2 句成稿台词（§4.3 硬要求）"
+        },
+        "locked_lines": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^NPC_[a-z0-9_]+_locked_[a-z0-9_]+$"
+          },
+          "$comment": "未解锁系统的 fail-closed 回执槽位（04_剧情与NPC.md §8「未解锁系统的灰显文案」的出口 NPC；总纲 §4.4 末条：不给静默失败）"
+        },
+        "dialogue_trees": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "slot",
+              "start"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^DIALOG_[a-z0-9_]+$"
+              },
+              "slot": {
+                "type": "string",
+                "pattern": "^NPC_[a-z0-9_]+_tree_[a-z0-9_]+$",
+                "$comment": "该对话树的文案槽位（树里每个节点的行文都在文案表，本域不抄对话全文）"
+              },
+              "start": {
+                "type": "string",
+                "minLength": 1,
+                "$comment": "引擎 dialogue 形状：树 = start + nodes；这里只登记起始节点名（04_剧情与NPC.md §5 的 YAML 里已给）"
+              },
+              "subject_key": {
+                "type": "string",
+                "minLength": 1,
+                "$comment": "会话游标的 subject_key（由内容侧给）；缺席 = 不需要游标"
+              },
+              "node_key": {
+                "type": "string",
+                "minLength": 1,
+                "$comment": "会话游标的 node_key（由内容侧给）"
+              }
+            },
+            "additionalProperties": false
+          },
+          "$comment": "有分支的对话（P1 共 5 个，分布在卡德里安 / 陶德 / 缄默者 三人身上）"
+        },
+        "board": {
+          "type": "boolean",
+          "$comment": "是否支线中枢（任务板）出口 —— 18 条支线全部经此接取；挂名（`quests`）仍只写发布者本人"
+        }
+      },
+      "patternProperties": {
+        "^_": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "$comment": "★ additionalProperties:false 是本游戏的收紧（字段名写错当场红）；`_` 前缀键 = 私有 / 元信息键（如 _src 记策划案出处），不进玩家可见面"
+    }
+  },
+  "type": "object",
+  "additionalProperties": {
+    "$ref": "#/$defs/npc"
+  },
+  "x-primary": "npc"
+}

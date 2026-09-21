@@ -1,0 +1,341 @@
+{
+  "NPC_aodeng": {
+    "id": "NPC_aodeng",
+    "name": "NPC_aodeng_name",
+    "role": "NPC_aodeng_role",
+    "faction": null,
+    "node": "NODE_t6",
+    "quests": [
+      "QUEST_M1_2",
+      "QUEST_L6"
+    ],
+    "lines": {
+      "line_01": "NPC_aodeng_line_01",
+      "line_02": "NPC_aodeng_line_02",
+      "line_03": "NPC_aodeng_line_03"
+    },
+    "locked_lines": [
+      "NPC_aodeng_locked_pvp"
+    ],
+    "_src": "04_story_npc.md#N6 | 01_topology.md#T6"
+  },
+  "NPC_basike": {
+    "id": "NPC_basike",
+    "name": "NPC_basike_name",
+    "role": "NPC_basike_role",
+    "faction": null,
+    "node": "NODE_m1",
+    "quests": [
+      "QUEST_M2_2",
+      "QUEST_K2",
+      "QUEST_K5",
+      "QUEST_K6"
+    ],
+    "quests_join": [
+      "QUEST_K3"
+    ],
+    "lines": {
+      "line_01": "NPC_basike_line_01",
+      "line_02": "NPC_basike_line_02",
+      "line_03": "NPC_basike_line_03"
+    },
+    "_src": "04_story_npc.md#N11 | 01_topology.md#M1"
+  },
+  "NPC_bulanda": {
+    "id": "NPC_bulanda",
+    "name": "NPC_bulanda_name",
+    "role": "NPC_bulanda_role",
+    "faction": null,
+    "node": "NODE_t7",
+    "quests": [
+      "QUEST_M3_1",
+      "QUEST_M3_3",
+      "QUEST_L6",
+      "QUEST_R6"
+    ],
+    "lines": {
+      "line_01": "NPC_bulanda_line_01",
+      "line_02": "NPC_bulanda_line_02",
+      "line_03": "NPC_bulanda_line_03"
+    },
+    "locked_lines": [
+      "NPC_bulanda_locked_companion"
+    ],
+    "_src": "04_story_npc.md#N7 | 01_topology.md#T7"
+  },
+  "NPC_diya": {
+    "id": "NPC_diya",
+    "name": "NPC_diya_name",
+    "role": "NPC_diya_role",
+    "faction": null,
+    "node": "NODE_l4",
+    "roam_nodes": [
+      "NODE_l1",
+      "NODE_l2",
+      "NODE_l3",
+      "NODE_l4",
+      "NODE_l5"
+    ],
+    "quests": [],
+    "quests_join": [
+      "QUEST_L3"
+    ],
+    "lines": {
+      "line_01": "NPC_diya_line_01",
+      "line_02": "NPC_diya_line_02",
+      "line_03": "NPC_diya_line_03"
+    },
+    "_src": "04_story_npc.md#N10 | 01_topology.md#L4"
+  },
+  "NPC_gelimu": {
+    "id": "NPC_gelimu",
+    "name": "NPC_gelimu_name",
+    "role": "NPC_gelimu_role",
+    "faction": null,
+    "node": "NODE_r5",
+    "quests": [],
+    "quests_join": [
+      "QUEST_M3_2"
+    ],
+    "lines": {
+      "line_01": "NPC_gelimu_line_01",
+      "line_02": "NPC_gelimu_line_02",
+      "line_03": "NPC_gelimu_line_03"
+    },
+    "_src": "04_story_npc.md#N13 | 01_topology.md#R5"
+  },
+  "NPC_jianmozhe": {
+    "id": "NPC_jianmozhe",
+    "name": "NPC_jianmozhe_name",
+    "role": "NPC_jianmozhe_role",
+    "faction": null,
+    "node": "NODE_a1",
+    "quests": [
+      "QUEST_M4_2",
+      "QUEST_M4_3"
+    ],
+    "lines": {
+      "line_01": "NPC_jianmozhe_line_01",
+      "line_02": "NPC_jianmozhe_line_02",
+      "line_03": "NPC_jianmozhe_line_03",
+      "line_04": "NPC_jianmozhe_line_04"
+    },
+    "dialogue_trees": [
+      {
+        "id": "DIALOG_jianmozhe_rite",
+        "slot": "NPC_jianmozhe_tree_rite",
+        "start": "rite_offer",
+        "subject_key": "altar",
+        "node_key": "rite_stage"
+      }
+    ],
+    "_src": "04_story_npc.md#N14 | 01_topology.md#A1"
+  },
+  "NPC_kadelian": {
+    "id": "NPC_kadelian",
+    "name": "NPC_kadelian_name",
+    "role": "NPC_kadelian_role",
+    "faction": "FAC_shouxianren",
+    "node": "NODE_t1",
+    "quests": [
+      "QUEST_M1_1",
+      "QUEST_M4_1"
+    ],
+    "lines": {
+      "line_01": "NPC_kadelian_line_01",
+      "line_02": "NPC_kadelian_line_02",
+      "line_03": "NPC_kadelian_line_03"
+    },
+    "locked_lines": [
+      "NPC_kadelian_locked_renown"
+    ],
+    "dialogue_trees": [
+      {
+        "id": "DIALOG_kadelian_first_oath",
+        "slot": "NPC_kadelian_tree_first_oath",
+        "start": "m1_1_intro",
+        "subject_key": "npc",
+        "node_key": "talk"
+      },
+      {
+        "id": "DIALOG_kadelian_name13",
+        "slot": "NPC_kadelian_tree_name13",
+        "start": "m4_1_name13",
+        "subject_key": "npc",
+        "node_key": "talk"
+      },
+      {
+        "id": "DIALOG_kadelian_pledge",
+        "slot": "NPC_kadelian_tree_pledge",
+        "start": "m4_1_pledge",
+        "subject_key": "npc",
+        "node_key": "talk"
+      }
+    ],
+    "_src": "04_story_npc.md#N1 | 01_topology.md#T1"
+  },
+  "NPC_keer": {
+    "id": "NPC_keer",
+    "name": "NPC_keer_name",
+    "role": "NPC_keer_role",
+    "faction": null,
+    "node": "NODE_l4",
+    "quests": [
+      "QUEST_M2_1",
+      "QUEST_L2",
+      "QUEST_L4"
+    ],
+    "quests_join": [
+      "QUEST_L1"
+    ],
+    "lines": {
+      "line_01": "NPC_keer_line_01",
+      "line_02": "NPC_keer_line_02",
+      "line_03": "NPC_keer_line_03"
+    },
+    "_src": "04_story_npc.md#N9 | 01_topology.md#L4"
+  },
+  "NPC_luti": {
+    "id": "NPC_luti",
+    "name": "NPC_luti_name",
+    "role": "NPC_luti_role",
+    "faction": null,
+    "node": "NODE_t3",
+    "quests": [
+      "QUEST_L1",
+      "QUEST_L3"
+    ],
+    "quests_join": [
+      "QUEST_L5"
+    ],
+    "lines": {
+      "line_01": "NPC_luti_line_01",
+      "line_02": "NPC_luti_line_02",
+      "line_03": "NPC_luti_line_03"
+    },
+    "locked_lines": [
+      "NPC_luti_locked_lifeprof"
+    ],
+    "_src": "04_story_npc.md#N3 | 01_topology.md#T3"
+  },
+  "NPC_maerda": {
+    "id": "NPC_maerda",
+    "name": "NPC_maerda_name",
+    "role": "NPC_maerda_role",
+    "faction": null,
+    "node": "NODE_t5",
+    "quests": [
+      "QUEST_L5"
+    ],
+    "quests_join": [
+      "QUEST_M1_1"
+    ],
+    "lines": {
+      "line_01": "NPC_maerda_line_01",
+      "line_02": "NPC_maerda_line_02",
+      "line_03": "NPC_maerda_line_03"
+    },
+    "locked_lines": [
+      "NPC_maerda_locked_stall"
+    ],
+    "_src": "04_story_npc.md#N5 | 01_topology.md#T5"
+  },
+  "NPC_saixien": {
+    "id": "NPC_saixien",
+    "name": "NPC_saixien_name",
+    "role": "NPC_saixien_role",
+    "faction": null,
+    "node": "NODE_t4",
+    "quests": [
+      "QUEST_K3",
+      "QUEST_R3"
+    ],
+    "lines": {
+      "line_01": "NPC_saixien_line_01",
+      "line_02": "NPC_saixien_line_02",
+      "line_03": "NPC_saixien_line_03"
+    },
+    "locked_lines": [
+      "NPC_saixien_locked_guild"
+    ],
+    "board": true,
+    "_src": "04_story_npc.md#N4 | 01_topology.md#T4"
+  },
+  "NPC_taode": {
+    "id": "NPC_taode",
+    "name": "NPC_taode_name",
+    "role": "NPC_taode_role",
+    "faction": null,
+    "node": "NODE_t8",
+    "quests": [
+      "QUEST_M1_3",
+      "QUEST_R5"
+    ],
+    "quests_join": [
+      "QUEST_L5"
+    ],
+    "lines": {
+      "line_01": "NPC_taode_line_01",
+      "line_02": "NPC_taode_line_02",
+      "line_03": "NPC_taode_line_03"
+    },
+    "dialogue_trees": [
+      {
+        "id": "DIALOG_taode_readline",
+        "slot": "NPC_taode_tree_readline",
+        "start": "todd_look_up",
+        "subject_key": "npc",
+        "node_key": "paper_line"
+      }
+    ],
+    "_src": "04_story_npc.md#N8 | 01_topology.md#T8"
+  },
+  "NPC_weila_tieji": {
+    "id": "NPC_weila_tieji",
+    "name": "NPC_weila_tieji_name",
+    "role": "NPC_weila_tieji_role",
+    "faction": null,
+    "node": "NODE_t2",
+    "quests": [
+      "QUEST_K1",
+      "QUEST_K4",
+      "QUEST_K6"
+    ],
+    "lines": {
+      "line_01": "NPC_weila_tieji_line_01",
+      "line_02": "NPC_weila_tieji_line_02",
+      "line_03": "NPC_weila_tieji_line_03"
+    },
+    "locked_lines": [
+      "NPC_weila_tieji_locked_forge",
+      "NPC_weila_tieji_locked_reforge"
+    ],
+    "_src": "04_story_npc.md#N2 | 01_topology.md#T2"
+  },
+  "NPC_yilan": {
+    "id": "NPC_yilan",
+    "name": "NPC_yilan_name",
+    "role": "NPC_yilan_role",
+    "faction": "FAC_shoushi_yihui",
+    "node": "NODE_r1",
+    "quests": [
+      "QUEST_M2_3",
+      "QUEST_M3_3",
+      "QUEST_R1",
+      "QUEST_R2",
+      "QUEST_R4"
+    ],
+    "quests_join": [
+      "QUEST_M3_2"
+    ],
+    "lines": {
+      "line_01": "NPC_yilan_line_01",
+      "line_02": "NPC_yilan_line_02",
+      "line_03": "NPC_yilan_line_03"
+    },
+    "locked_lines": [
+      "NPC_yilan_locked_worldboss"
+    ],
+    "_src": "04_story_npc.md#N12 | 01_topology.md#R1"
+  }
+}

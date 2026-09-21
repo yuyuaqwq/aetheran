@@ -20,5 +20,47 @@
     "schema": "schemas/skill.schema.json",
     "primary": "skill",
     "icon": "⚔️"
+  },
+  "classes": {
+    "label": "职业",
+    "kind": "data",
+    "schema": "schemas/classes.schema.json",
+    "primary": "class",
+    "icon": "🛡️"
+  },
+  "drop_pools": {
+    "label": "掉落池",
+    "kind": "data",
+    "schema": "schemas/drop_pools.schema.json",
+    "primary": "drop_pool",
+    "icon": "🎁"
+  },
+  "elements": {
+    "label": "元素",
+    "kind": "data",
+    "schema": "schemas/elements.schema.json",
+    "primary": "element",
+    "icon": "🔥"
+  },
+  "items": {
+    "label": "道具与装备",
+    "kind": "data",
+    "schema": "schemas/items.schema.json",
+    "primary": "item",
+    "icon": "🗡️"
+  },
+  "npcs": {
+    "label": "NPC",
+    "kind": "data",
+    "schema": "schemas/npcs.schema.json",
+    "primary": "npc",
+    "icon": "🧑"
+  },
+  "wiki": {
+    "label": "百科条目",
+    "kind": "data",
+    "schema": "schemas/wiki.schema.json",
+    "primary": "entry",
+    "icon": "📖"
   }
 }
