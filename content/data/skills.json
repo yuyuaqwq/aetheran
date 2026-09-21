@@ -1,0 +1,350 @@
+{
+  "SKILL_WDN_riftslash": {
+    "name": "裂地斩",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_WDN_riftslash_desc",
+    "cd": 5,
+    "cast": {
+      "base": 0.8
+    },
+    "recover": {
+      "base": 0.5
+    },
+    "range": 2,
+    "mp": 0,
+    "res_cost": {
+      "RES_OATH": 30
+    },
+    "power": 1.074103,
+    "owner_class": "CLS_WARDEN",
+    "lv_band": "P1",
+    "element": "ELE_FIRE"
+  },
+  "SKILL_WDN_oathwall": {
+    "name": "誓约壁垒",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_WDN_oathwall_desc",
+    "cd": 19,
+    "cast": {
+      "base": 1.2
+    },
+    "recover": {
+      "base": 0.8
+    },
+    "range": 1,
+    "mp": 0,
+    "res_cost": {
+      "RES_OATH": 55
+    },
+    "power": 0.0,
+    "owner_class": "CLS_WARDEN",
+    "lv_band": "P1",
+    "mech": "无敌1行动",
+    "mech_val": 130.0,
+    "mech2": "嘲讽",
+    "mech2_val": 50.0,
+    "effect": "无敌1行动130+嘲讽50+护盾50=230PE"
+  },
+  "SKILL_BSK_rampage": {
+    "name": "狂袭",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_BSK_rampage_desc",
+    "cd": 4,
+    "cast": {
+      "base": 0.6
+    },
+    "recover": {
+      "base": 0.4
+    },
+    "range": 1,
+    "mp": 0,
+    "res_cost": {
+      "RES_RAGE": 25
+    },
+    "power": 0.932673,
+    "owner_class": "CLS_BERSERKER",
+    "lv_band": "P1",
+    "element": "ELE_PHYS"
+  },
+  "SKILL_BSK_bloodfury_finale": {
+    "name": "血怒·终章",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_BSK_bloodfury_finale_desc",
+    "cd": 16,
+    "cast": {
+      "base": 1.6
+    },
+    "recover": {
+      "base": 1.0
+    },
+    "range": 1,
+    "mp": 0,
+    "res_cost": {
+      "RES_RAGE": 70
+    },
+    "power": 1.314575,
+    "owner_class": "CLS_BERSERKER",
+    "lv_band": "P1",
+    "element": "ELE_PHYS",
+    "mech": "真伤",
+    "mech_val": 70.0,
+    "mech2": "吸血",
+    "mech2_val": 35.0,
+    "effect": "真伤70+吸血35=105PE"
+  },
+  "SKILL_RNG_pierce": {
+    "name": "穿心箭",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_RNG_pierce_desc",
+    "cd": 5,
+    "cast": {
+      "base": 1.0
+    },
+    "recover": {
+      "base": 0.4
+    },
+    "range": 4,
+    "mp": 0,
+    "res_cost": {
+      "RES_FOCUS": 25
+    },
+    "power": 0.954558,
+    "owner_class": "CLS_RANGER",
+    "lv_band": "P1",
+    "element": "ELE_FROST"
+  },
+  "SKILL_RNG_stormvolley": {
+    "name": "风暴箭雨",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_RNG_stormvolley_desc",
+    "cd": 15,
+    "cast": {
+      "base": 1.8
+    },
+    "recover": {
+      "base": 0.8
+    },
+    "range": 5,
+    "mp": 0,
+    "res_cost": {
+      "RES_FOCUS": 55
+    },
+    "power": 0.758846,
+    "owner_class": "CLS_RANGER",
+    "lv_band": "P1",
+    "element": "ELE_PHYS",
+    "mech": "减益20%",
+    "mech_val": 45.0,
+    "mech2": "DOT",
+    "mech2_val": 35.0,
+    "effect": "减益20%45+DOT35=80PE"
+  },
+  "SKILL_ARC_arcanebolt": {
+    "name": "秘能冲击",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_ARC_arcanebolt_desc",
+    "cd": 6,
+    "cast": {
+      "base": 1.4
+    },
+    "recover": {
+      "base": 0.4
+    },
+    "range": 3,
+    "mp": 0,
+    "res_cost": {
+      "RES_MANA": 35
+    },
+    "power": 1.30417,
+    "owner_class": "CLS_ARCANIST",
+    "lv_band": "P1",
+    "element": "ELE_PHYS"
+  },
+  "SKILL_ARC_annihilation_ring": {
+    "name": "湮灭之环",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_ARC_annihilation_ring_desc",
+    "cd": 17,
+    "cast": {
+      "base": 2.4
+    },
+    "recover": {
+      "base": 1.2
+    },
+    "range": 5,
+    "mp": 0,
+    "res_cost": {
+      "RES_MANA": 100
+    },
+    "power": 1.086908,
+    "owner_class": "CLS_ARCANIST",
+    "lv_band": "P1",
+    "element": "ELE_PHYS",
+    "mech": "真伤",
+    "mech_val": 70.0,
+    "effect": "真伤70=70PE"
+  },
+  "SKILL_PRS_holyword": {
+    "name": "圣言术",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_PRS_holyword_desc",
+    "cd": 5,
+    "cast": {
+      "base": 1.2
+    },
+    "recover": {
+      "base": 0.5
+    },
+    "range": 3,
+    "mp": 0,
+    "res_cost": {
+      "RES_FAITH": 20
+    },
+    "power": 0.49082,
+    "owner_class": "CLS_PRIEST",
+    "lv_band": "P1",
+    "element": "ELE_PHYS",
+    "mech": "治疗",
+    "mech_val": 55.0,
+    "effect": "治疗55=55PE"
+  },
+  "SKILL_PRS_lifeweave": {
+    "name": "生命织线",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_PRS_lifeweave_desc",
+    "cd": 23,
+    "cast": {
+      "base": 2.0
+    },
+    "recover": {
+      "base": 1.0
+    },
+    "range": 5,
+    "mp": 0,
+    "res_cost": {
+      "RES_FAITH": 60
+    },
+    "power": 0.0,
+    "owner_class": "CLS_PRIEST",
+    "lv_band": "P1",
+    "mech": "群体治疗",
+    "mech_val": 95.0,
+    "mech2": "团队增益",
+    "mech2_val": 50.0,
+    "effect": "群体治疗95+团队增益50+解控45=190PE",
+    "aoe": true
+  },
+  "SKILL_SHD_shadowstrike": {
+    "name": "影袭",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_SHD_shadowstrike_desc",
+    "cd": 5,
+    "cast": {
+      "base": 0.5
+    },
+    "recover": {
+      "base": 0.4
+    },
+    "range": 1,
+    "mp": 0,
+    "res_cost": {
+      "RES_SHADE": 25
+    },
+    "power": 0.386031,
+    "owner_class": "CLS_SHADE",
+    "lv_band": "P1",
+    "element": "ELE_SHADOW",
+    "mech": "层数叠层",
+    "mech_val": 45.0,
+    "effect": "层数叠层45=45PE"
+  },
+  "SKILL_SHD_execution": {
+    "name": "断影·处决",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_SHD_execution_desc",
+    "cd": 15,
+    "cast": {
+      "base": 1.2
+    },
+    "recover": {
+      "base": 0.9
+    },
+    "range": 1,
+    "mp": 0,
+    "res_cost": {
+      "RES_SHADE": 65
+    },
+    "power": 0.661496,
+    "owner_class": "CLS_SHADE",
+    "lv_band": "P1",
+    "element": "ELE_PHYS",
+    "mech": "真伤",
+    "mech_val": 70.0,
+    "mech2": "控制1行动",
+    "mech2_val": 60.0,
+    "effect": "真伤70+控制1行动60=130PE"
+  },
+  "SKILL_SKD_warcry_break": {
+    "name": "破阵号",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_SKD_warcry_break_desc",
+    "cd": 6,
+    "cast": {
+      "base": 1.0
+    },
+    "recover": {
+      "base": 0.6
+    },
+    "range": 3,
+    "mp": 0,
+    "res_cost": {
+      "RES_ANTHEM": 25
+    },
+    "power": 0.65,
+    "owner_class": "CLS_SKALD",
+    "lv_band": "P1",
+    "element": "ELE_PHYS",
+    "mech": "团队增益",
+    "mech_val": 50.0,
+    "effect": "团队增益50=50PE"
+  },
+  "SKILL_SKD_finale_ensemble": {
+    "name": "终章·合奏",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_SKD_finale_ensemble_desc",
+    "cd": 18,
+    "cast": {
+      "base": 2.2
+    },
+    "recover": {
+      "base": 1.4
+    },
+    "range": 5,
+    "mp": 0,
+    "res_cost": {
+      "RES_ANTHEM": 60
+    },
+    "power": 0.0,
+    "owner_class": "CLS_SKALD",
+    "lv_band": "P1",
+    "mech": "减益30%",
+    "mech_val": 65.0,
+    "mech2": "控制1行动",
+    "mech2_val": 60.0,
+    "effect": "减益30%65+控制1行动60+团队增益50=175PE"
+  }
+}

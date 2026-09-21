@@ -1,7 +1,7 @@
 {
   "monsters": [
     {
-      "id": "MON_x",
+      "id": "MON_goblin_scout",
       "name": "哥布林斥候",
       "zone": "近郊·林带",
       "tier": "common",
@@ -12,7 +12,7 @@
       "skills": 1
     },
     {
-      "id": "MON_x",
+      "id": "MON_ghoul",
       "name": "食尸鬼",
       "zone": "近郊·林带",
       "tier": "common",
@@ -23,7 +23,7 @@
       "skills": 0
     },
     {
-      "id": "MON_x",
+      "id": "MON_sprite",
       "name": "林妖",
       "zone": "近郊·林带",
       "tier": "common",
@@ -34,7 +34,7 @@
       "skills": 1
     },
     {
-      "id": "MON_x",
+      "id": "MON_giant_rat",
       "name": "腐鼠",
       "zone": "近郊·林带",
       "tier": "common",
@@ -56,7 +56,7 @@
       "skills": 3
     },
     {
-      "id": "MON_x",
+      "id": "MON_gargoyle",
       "name": "石像鬼",
       "zone": "近郊·矿径",
       "tier": "common",
@@ -67,7 +67,7 @@
       "skills": 1
     },
     {
-      "id": "MON_x",
+      "id": "MON_rock_beetle",
       "name": "石甲虫",
       "zone": "近郊·矿径",
       "tier": "common",
@@ -78,7 +78,7 @@
       "skills": 1
     },
     {
-      "id": "MON_x",
+      "id": "MON_hag",
       "name": "洞穴妖婆",
       "zone": "近郊·矿径",
       "tier": "common",
@@ -89,7 +89,7 @@
       "skills": 2
     },
     {
-      "id": "MON_x",
+      "id": "MON_zombie",
       "name": "僵尸",
       "zone": "近郊·矿径",
       "tier": "common",
@@ -100,7 +100,7 @@
       "skills": 2
     },
     {
-      "id": "MON_x",
+      "id": "MON_magma_hound",
       "name": "熔岩犬",
       "zone": "近郊·矿径",
       "tier": "elite",
@@ -111,7 +111,7 @@
       "skills": 3
     },
     {
-      "id": "MON_x",
+      "id": "MON_wraith",
       "name": "恸哭幽魂",
       "zone": "近郊·废墟",
       "tier": "common",
@@ -122,7 +122,7 @@
       "skills": 2
     },
     {
-      "id": "MON_x",
+      "id": "MON_oath_eater",
       "name": "噬契者",
       "zone": "近郊·废墟",
       "tier": "common",
@@ -133,7 +133,7 @@
       "skills": 2
     },
     {
-      "id": "MON_x",
+      "id": "MON_shadow_bat",
       "name": "暗影蝠",
       "zone": "近郊·废墟",
       "tier": "common",
@@ -144,7 +144,7 @@
       "skills": 1
     },
     {
-      "id": "MON_x",
+      "id": "MON_skeleton_archer",
       "name": "骷髅弓手",
       "zone": "近郊·废墟",
       "tier": "common",
@@ -155,7 +155,7 @@
       "skills": 2
     },
     {
-      "id": "MON_x",
+      "id": "MON_mirror_fiend",
       "name": "镜魔",
       "zone": "近郊·废墟",
       "tier": "elite",
@@ -176,5 +176,14 @@
       "note": "称号「第十三个人」；3 阶段（HP 70/40/15）· 轮次 3/4/5 可调 · 弱点窗口 = 打断",
       "skills": 4
     }
-  ]
+  ],
+  "_meta": {
+    "id_source": "aetheran-designer/01_世界观与剧情/02_命名规范.md §2.8（16 行表）",
+    "fix": "★ 2026-09-21 修：原导出把 W1E P1_ZONES 的整数序号 'id' 当成了 id ⇒ 15/16 写成占位符 MON_x",
+    "counts": {
+      "common": 12,
+      "elite": 3,
+      "boss": 1
+    }
+  }
 }
