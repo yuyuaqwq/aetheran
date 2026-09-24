@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import os
+import time
 import sys
 from pathlib import Path
 
@@ -27,7 +28,7 @@ def chk(label, cond, extra=""):
 
 
 print("探针：maps 域（地图）")
-st = load_stack(str(REPO))
+st = load_stack(str(REPO), inject={"db_path": os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp", "ast_probe.db"), "clock": time.time})
 st.install()
 
 mp = st.domain("maps")

@@ -14,6 +14,7 @@
 """
 import json
 import os
+import time
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -40,7 +41,7 @@ except PackageError as e:
 
 print("")
 print("② load_stack + install()")
-st = load_stack(PKG, exts=EXT)
+st = load_stack(PKG, exts=EXT, inject={"db_path": os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp", "ast_probe.db"), "clock": time.time})
 st.install()
 print("   ✅ 装载并装配成功")
 

@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import os
+import time
 import re
 import sys
 from pathlib import Path
@@ -29,7 +30,7 @@ def chk(label, cond, extra=""):
 
 
 print("探针：texts 域（文案槽位表）")
-st = load_stack(str(REPO))
+st = load_stack(str(REPO), inject={"db_path": os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp", "ast_probe.db"), "clock": time.time})
 st.install()
 tx = st.domain("texts")
 chk("texts 域读得到", tx is not None, "%d 条" % (len(tx) if tx else 0))

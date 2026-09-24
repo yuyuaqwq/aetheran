@@ -8,6 +8,7 @@
   atk 62.4→62.2（成长系数微调）。**数据没动，是探针的期望值过时**（面板探针此前一直没跑）。
 """
 import os
+import time
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -18,7 +19,7 @@ sys.path.insert(0, os.path.join(ENGINE, "extends"))
 
 from saintess_engine.package import load_stack          # noqa: E402
 
-st = load_stack(PKG, exts=[os.path.join(ENGINE, "extends")])
+st = load_stack(PKG, exts=[os.path.join(ENGINE, "extends")], inject={"db_path": os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp", "ast_probe.db"), "clock": time.time})
 st.install()
 
 from content import panel_build                          # noqa: E402
