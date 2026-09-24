@@ -1,1 +1,1192 @@
-{}
+{
+  "enter_town": {
+    "patterns": [
+      "^进镇$",
+      "^风车镇$",
+      "^回镇$"
+    ],
+    "category": "移动与世界",
+    "desc": "打开镇子",
+    "usage": "进镇",
+    "visible": true,
+    "order": 0,
+    "bind": {
+      "handler": "content.cmds_ast:enter_town",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    },
+    "guard_desc": "在北口或野外"
+  },
+  "go_north": {
+    "patterns": [
+      "^北口$",
+      "^往北$",
+      "^出北门$"
+    ],
+    "category": "移动与世界",
+    "desc": "往骨田",
+    "usage": "北口",
+    "visible": true,
+    "order": 1,
+    "bind": {
+      "handler": "content.cmds_ast:go_north",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    },
+    "guard_desc": "在镇上"
+  },
+  "go_east": {
+    "patterns": [
+      "^往东$",
+      "^东边$"
+    ],
+    "category": "移动与世界",
+    "desc": "往白桦林",
+    "usage": "往东",
+    "visible": true,
+    "order": 2,
+    "bind": {
+      "handler": "content.cmds_ast:go_east",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    },
+    "guard_desc": "在镇上"
+  },
+  "go_west": {
+    "patterns": [
+      "^往西$",
+      "^西边$"
+    ],
+    "category": "移动与世界",
+    "desc": "往浅滩渡口",
+    "usage": "往西",
+    "visible": true,
+    "order": 3,
+    "bind": {
+      "handler": "content.cmds_ast:go_west",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    },
+    "guard_desc": "在镇上"
+  },
+  "go_back": {
+    "patterns": [
+      "^返回$",
+      "^回$",
+      "^退回去$"
+    ],
+    "category": "移动与世界",
+    "desc": "回上一个节点",
+    "usage": "返回",
+    "visible": true,
+    "order": 4,
+    "bind": {
+      "handler": "content.cmds_ast:go_back",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    },
+    "guard_desc": "在野外"
+  },
+  "map": {
+    "patterns": [
+      "^地图$",
+      "^m$"
+    ],
+    "category": "移动与世界",
+    "desc": "当前位置与可走的路",
+    "usage": "地图",
+    "visible": true,
+    "order": 5,
+    "bind": {
+      "handler": "content.cmds_ast:map_view",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    },
+    "guard_desc": "随时"
+  },
+  "look": {
+    "patterns": [
+      "^观察$",
+      "^看$",
+      "^看四周$"
+    ],
+    "category": "移动与世界",
+    "desc": "当前场景的细节",
+    "usage": "观察",
+    "visible": true,
+    "order": 6,
+    "bind": {
+      "handler": "content.cmds_ast:look",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    },
+    "guard_desc": "随时"
+  },
+  "touch": {
+    "patterns": [
+      "^触摸$",
+      "^摸$",
+      "^碰$"
+    ],
+    "category": "移动与世界",
+    "desc": "摸一摸眼前的东西",
+    "usage": "触摸",
+    "visible": true,
+    "order": 7,
+    "bind": {
+      "handler": "content.cmds_ast:touch",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    },
+    "guard_desc": "有可交互动时"
+  },
+  "listen": {
+    "patterns": [
+      "^聆听$",
+      "^听$"
+    ],
+    "category": "移动与世界",
+    "desc": "听见什么",
+    "usage": "聆听",
+    "visible": true,
+    "order": 8,
+    "bind": {
+      "handler": "content.cmds_ast:listen",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    },
+    "guard_desc": "随时"
+  },
+  "ask_way": {
+    "patterns": [
+      "^问路$",
+      "^打听$"
+    ],
+    "category": "移动与世界",
+    "desc": "问一件事",
+    "usage": "问路",
+    "visible": true,
+    "order": 9,
+    "guard_desc": "有人时"
+  },
+  "time": {
+    "patterns": [
+      "^时间$",
+      "^天$",
+      "^时辰$"
+    ],
+    "category": "移动与世界",
+    "desc": "现在什么时辰",
+    "usage": "时间",
+    "visible": true,
+    "order": 10,
+    "bind": {
+      "handler": "content.cmds_ast:time_now",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    },
+    "guard_desc": "随时"
+  },
+  "guild": {
+    "patterns": [
+      "^公会$",
+      "^柜台$"
+    ],
+    "category": "公会与委托",
+    "desc": "打开公会",
+    "usage": "公会",
+    "visible": true,
+    "order": 11,
+    "guard_desc": "在镇上"
+  },
+  "register": {
+    "patterns": [
+      "^登记$",
+      "^办证$"
+    ],
+    "category": "公会与委托",
+    "desc": "办见习证",
+    "usage": "登记",
+    "visible": true,
+    "order": 12,
+    "guard_desc": "在公会且未登记"
+  },
+  "board": {
+    "patterns": [
+      "^悬赏$",
+      "^看板$",
+      "^委托$"
+    ],
+    "category": "公会与委托",
+    "desc": "悬赏板列表",
+    "usage": "悬赏",
+    "visible": true,
+    "order": 13,
+    "guard_desc": "在公会"
+  },
+  "board_show": {
+    "patterns": [
+      "^看\\s*(.+)$"
+    ],
+    "category": "公会与委托",
+    "desc": "委托全文",
+    "usage": "看 <参数>",
+    "visible": true,
+    "order": 14,
+    "guard_desc": "在公会"
+  },
+  "quest_accept": {
+    "patterns": [
+      "^接\\s*(.+)$",
+      "^接取\\s*(.+)$"
+    ],
+    "category": "公会与委托",
+    "desc": "接活",
+    "usage": "接 <参数>",
+    "visible": true,
+    "order": 15,
+    "guard_desc": "已登记且未接"
+  },
+  "quest_deliver": {
+    "patterns": [
+      "^交\\s*(.+)$",
+      "^交活\\s*(.+)$"
+    ],
+    "category": "公会与委托",
+    "desc": "交活结算",
+    "usage": "交 <参数>",
+    "visible": true,
+    "order": 16,
+    "guard_desc": "条件达成"
+  },
+  "quest_abandon": {
+    "patterns": [
+      "^放弃\\s*(.+)$"
+    ],
+    "category": "公会与委托",
+    "desc": "放弃委托",
+    "usage": "放弃 <参数>",
+    "visible": true,
+    "order": 17,
+    "guard_desc": "已接"
+  },
+  "quest_mine": {
+    "patterns": [
+      "^我的委托$",
+      "^任务$"
+    ],
+    "category": "公会与委托",
+    "desc": "进行中的委托",
+    "usage": "我的委托",
+    "visible": true,
+    "order": 18,
+    "guard_desc": "随时"
+  },
+  "rank": {
+    "patterns": [
+      "^评级$",
+      "^我的等级$"
+    ],
+    "category": "公会与委托",
+    "desc": "见习·铜·银·金·白金",
+    "usage": "评级",
+    "visible": true,
+    "order": 19,
+    "guard_desc": "已登记"
+  },
+  "rank_up": {
+    "patterns": [
+      "^升级证$",
+      "^换证$"
+    ],
+    "category": "公会与委托",
+    "desc": "换证",
+    "usage": "升级证",
+    "visible": true,
+    "order": 20,
+    "guard_desc": "评级达标"
+  },
+  "status": {
+    "patterns": [
+      "^状态$",
+      "^面板$"
+    ],
+    "category": "角色",
+    "desc": "生命·法力·等级·经验",
+    "usage": "状态",
+    "visible": true,
+    "order": 21,
+    "bind": {
+      "handler": "content.cmds_ast:status",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    },
+    "guard_desc": "随时"
+  },
+  "attrs": {
+    "patterns": [
+      "^属性$"
+    ],
+    "category": "角色",
+    "desc": "五维与二级属性明细",
+    "usage": "属性",
+    "visible": true,
+    "order": 22,
+    "guard_desc": "随时"
+  },
+  "alloc": {
+    "patterns": [
+      "^加点\\s*(.+)$"
+    ],
+    "category": "角色",
+    "desc": "分配属性点",
+    "usage": "加点 <参数>",
+    "visible": true,
+    "order": 23,
+    "guard_desc": "有属性点"
+  },
+  "skills": {
+    "patterns": [
+      "^技能$",
+      "^技能表$"
+    ],
+    "category": "角色",
+    "desc": "已学技能",
+    "usage": "技能",
+    "visible": true,
+    "order": 24,
+    "guard_desc": "随时"
+  },
+  "skill_learn": {
+    "patterns": [
+      "^学习\\s*(.+)$",
+      "^学\\s*(.+)$"
+    ],
+    "category": "角色",
+    "desc": "学技能",
+    "usage": "学习 <参数>",
+    "visible": true,
+    "order": 25,
+    "guard_desc": "等级与点数够"
+  },
+  "equip": {
+    "patterns": [
+      "^装备\\s*(.+)$",
+      "^装\\s*(.+)$",
+      "^穿\\s*(.+)$"
+    ],
+    "category": "角色",
+    "desc": "穿上",
+    "usage": "装备 <参数>",
+    "visible": true,
+    "order": 26,
+    "guard_desc": "背包里有"
+  },
+  "unequip": {
+    "patterns": [
+      "^卸下\\s*(.+)$",
+      "^卸\\s*(.+)$",
+      "^脱\\s*(.+)$"
+    ],
+    "category": "角色",
+    "desc": "脱",
+    "usage": "卸下 <参数>",
+    "visible": true,
+    "order": 27,
+    "guard_desc": "已装备"
+  },
+  "titles": {
+    "patterns": [
+      "^称号$"
+    ],
+    "category": "角色",
+    "desc": "佩戴展示",
+    "usage": "称号",
+    "visible": true,
+    "order": 28,
+    "guard_desc": "有称号"
+  },
+  "rename": {
+    "patterns": [
+      "^改名$",
+      "^名字$"
+    ],
+    "category": "角色",
+    "desc": "改一次名字",
+    "usage": "改名",
+    "visible": true,
+    "order": 29,
+    "guard_desc": "未用过"
+  },
+  "origin": {
+    "patterns": [
+      "^出身$"
+    ],
+    "category": "角色",
+    "desc": "看见开局的族与那句「为什么来」",
+    "usage": "出身",
+    "visible": true,
+    "order": 30,
+    "bind": {
+      "handler": "content.cmds_ast:origin",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    },
+    "guard_desc": "随时"
+  },
+  "bag": {
+    "patterns": [
+      "^背包$",
+      "^包$",
+      "^包裹$",
+      "^inv$"
+    ],
+    "category": "背包与物品",
+    "desc": "打开背包（分页）",
+    "usage": "背包",
+    "visible": true,
+    "order": 31,
+    "bind": {
+      "handler": "content.cmds_ast:bag",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    },
+    "guard_desc": "随时"
+  },
+  "item_show": {
+    "patterns": [
+      "^查看\\s*(.+)$",
+      "^看\\s*(.+)$"
+    ],
+    "category": "背包与物品",
+    "desc": "物品详情",
+    "usage": "查看 <参数>",
+    "visible": true,
+    "order": 32,
+    "guard_desc": "背包里有"
+  },
+  "item_use": {
+    "patterns": [
+      "^使用\\s*(.+)$",
+      "^用\\s*(.+)$",
+      "^吃\\s*(.+)$"
+    ],
+    "category": "背包与物品",
+    "desc": "使用",
+    "usage": "使用 <参数>",
+    "visible": true,
+    "order": 33,
+    "guard_desc": "可用"
+  },
+  "item_drop": {
+    "patterns": [
+      "^丢弃\\s*(.+)$",
+      "^丢\\s*(.+)$"
+    ],
+    "category": "背包与物品",
+    "desc": "丢弃",
+    "usage": "丢弃 <参数>",
+    "visible": true,
+    "order": 34,
+    "guard_desc": "背包里有"
+  },
+  "item_sell": {
+    "patterns": [
+      "^卖出\\s*(.+)$",
+      "^卖\\s*(.+)$"
+    ],
+    "category": "背包与物品",
+    "desc": "卖",
+    "usage": "卖出 <参数>",
+    "visible": true,
+    "order": 35,
+    "guard_desc": "在铺子"
+  },
+  "item_buy": {
+    "patterns": [
+      "^购买\\s*(.+)$",
+      "^买\\s*(.+)$"
+    ],
+    "category": "背包与物品",
+    "desc": "买",
+    "usage": "购买 <参数>",
+    "visible": true,
+    "order": 36,
+    "guard_desc": "在铺子且钱够"
+  },
+  "stash": {
+    "patterns": [
+      "^存放\\s*(.+)$",
+      "^取出\\s*(.+)$",
+      "^存\\s*(.+)$",
+      "^取\\s*(.+)$"
+    ],
+    "category": "背包与物品",
+    "desc": "仓库存取",
+    "usage": "存放 <参数>",
+    "visible": true,
+    "order": 37,
+    "guard_desc": "在客栈"
+  },
+  "bag_sort": {
+    "patterns": [
+      "^整理背包$",
+      "^整理$"
+    ],
+    "category": "背包与物品",
+    "desc": "分类整理",
+    "usage": "整理背包",
+    "visible": true,
+    "order": 38,
+    "guard_desc": "随时"
+  },
+  "item_compare": {
+    "patterns": [
+      "^对比\\s*(.+)$",
+      "^装备对比\\s*(.+)$"
+    ],
+    "category": "背包与物品",
+    "desc": "换不换",
+    "usage": "对比 <参数>",
+    "visible": true,
+    "order": 39,
+    "guard_desc": "背包里有"
+  },
+  "money": {
+    "patterns": [
+      "^钱袋$",
+      "^钱$",
+      "^金$"
+    ],
+    "category": "背包与物品",
+    "desc": "钱与开销",
+    "usage": "钱袋",
+    "visible": true,
+    "order": 40,
+    "bind": {
+      "handler": "content.cmds_ast:money",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    },
+    "guard_desc": "随时"
+  },
+  "attack": {
+    "patterns": [
+      "^攻击$",
+      "^打$",
+      "^a$"
+    ],
+    "category": "战斗",
+    "desc": "普攻",
+    "usage": "攻击",
+    "visible": true,
+    "order": 41,
+    "guard_desc": "战斗中"
+  },
+  "interrupt": {
+    "patterns": [
+      "^打断$",
+      "^断$"
+    ],
+    "category": "战斗",
+    "desc": "打断动作（名称随职业）",
+    "usage": "打断",
+    "visible": true,
+    "order": 42,
+    "guard_desc": "战斗中"
+  },
+  "defend": {
+    "patterns": [
+      "^防御$",
+      "^防$",
+      "^守$"
+    ],
+    "category": "战斗",
+    "desc": "少挨一半，后摇短",
+    "usage": "防御",
+    "visible": true,
+    "order": 43,
+    "guard_desc": "战斗中"
+  },
+  "retreat": {
+    "patterns": [
+      "^后撤$",
+      "^退$"
+    ],
+    "category": "战斗",
+    "desc": "换位",
+    "usage": "后撤",
+    "visible": true,
+    "order": 44,
+    "guard_desc": "战斗中"
+  },
+  "skill_cast": {
+    "patterns": [
+      "^技能\\s*(.+)$",
+      "^技\\s*(.+)$",
+      "^放\\s*(.+)$"
+    ],
+    "category": "战斗",
+    "desc": "放技能",
+    "usage": "技能 <参数>",
+    "visible": true,
+    "order": 45,
+    "guard_desc": "战斗中"
+  },
+  "battle_item": {
+    "patterns": [
+      "^使用\\s*(.+)$",
+      "^用\\s*(.+)$",
+      "^吃\\s*(.+)$"
+    ],
+    "category": "战斗",
+    "desc": "药与道具",
+    "usage": "使用 <参数>",
+    "visible": false,
+    "order": 46,
+    "guard_desc": "战斗中"
+  },
+  "flee": {
+    "patterns": [
+      "^逃跑$",
+      "^逃$",
+      "^脱离$"
+    ],
+    "category": "战斗",
+    "desc": "逃跑（可能失败）",
+    "usage": "逃跑",
+    "visible": true,
+    "order": 47,
+    "guard_desc": "战斗中"
+  },
+  "focus_fire": {
+    "patterns": [
+      "^集火\\s*(.+)$"
+    ],
+    "category": "战斗",
+    "desc": "多人时指定目标",
+    "usage": "集火 <参数>",
+    "visible": true,
+    "order": 48,
+    "guard_desc": "多人战斗"
+  },
+  "swap_weapon": {
+    "patterns": [
+      "^换武器$"
+    ],
+    "category": "战斗",
+    "desc": "换武器（吃一次行动）",
+    "usage": "换武器",
+    "visible": true,
+    "order": 49,
+    "guard_desc": "战斗中"
+  },
+  "auto_battle": {
+    "patterns": [
+      "^自动$"
+    ],
+    "category": "战斗",
+    "desc": "自动打完并给日志",
+    "usage": "自动",
+    "visible": true,
+    "order": 50,
+    "guard_desc": "战斗中"
+  },
+  "battle_log": {
+    "patterns": [
+      "^战斗日志$"
+    ],
+    "category": "战斗",
+    "desc": "复盘（谁打断过谁）",
+    "usage": "战斗日志",
+    "visible": true,
+    "order": 51,
+    "guard_desc": "随时"
+  },
+  "gather": {
+    "patterns": [
+      "^采集$",
+      "^采$"
+    ],
+    "category": "野外采集",
+    "desc": "采",
+    "usage": "采集",
+    "visible": true,
+    "order": 52,
+    "guard_desc": "有采集点"
+  },
+  "dig": {
+    "patterns": [
+      "^挖掘$",
+      "^挖$"
+    ],
+    "category": "野外采集",
+    "desc": "挖（挖出旧东西 → 旧物谱）",
+    "usage": "挖掘",
+    "visible": true,
+    "order": 53,
+    "guard_desc": "有挖点"
+  },
+  "fish": {
+    "patterns": [
+      "^垂钓$",
+      "^钓$"
+    ],
+    "category": "野外采集",
+    "desc": "钓（鱼种按时辰变）",
+    "usage": "垂钓",
+    "visible": true,
+    "order": 54,
+    "guard_desc": "在水边"
+  },
+  "search": {
+    "patterns": [
+      "^搜查$",
+      "^搜$"
+    ],
+    "category": "野外采集",
+    "desc": "搜（不认识的东西进旧物谱）",
+    "usage": "搜查",
+    "visible": true,
+    "order": 55,
+    "guard_desc": "有可搜物"
+  },
+  "rest": {
+    "patterns": [
+      "^歇脚$",
+      "^点篝火$",
+      "^歇$"
+    ],
+    "category": "野外采集",
+    "desc": "回一点血",
+    "usage": "歇脚",
+    "visible": true,
+    "order": 56,
+    "guard_desc": "有篝火"
+  },
+  "pick_up": {
+    "patterns": [
+      "^拾取$",
+      "^捡$"
+    ],
+    "category": "野外采集",
+    "desc": "捡",
+    "usage": "拾取",
+    "visible": true,
+    "order": 57,
+    "guard_desc": "有掉落"
+  },
+  "climb": {
+    "patterns": [
+      "^攀爬$",
+      "^爬$",
+      "^翻$"
+    ],
+    "category": "野外采集",
+    "desc": "攀（通往隐藏点）",
+    "usage": "攀爬",
+    "visible": true,
+    "order": 58,
+    "guard_desc": "有断墙或树"
+  },
+  "sneak": {
+    "patterns": [
+      "^潜行$",
+      "^绕开$"
+    ],
+    "category": "野外采集",
+    "desc": "试着绕过去",
+    "usage": "潜行",
+    "visible": true,
+    "order": 59,
+    "guard_desc": "有怪"
+  },
+  "smith": {
+    "patterns": [
+      "^铁匠铺$",
+      "^铁匠$"
+    ],
+    "category": "生产与铺子",
+    "desc": "修装备与强化",
+    "usage": "铁匠铺",
+    "visible": true,
+    "order": 60,
+    "guard_desc": "在镇上"
+  },
+  "enhance": {
+    "patterns": [
+      "^强化\\s*(.+)$"
+    ],
+    "category": "生产与铺子",
+    "desc": "强化",
+    "usage": "强化 <参数>",
+    "visible": true,
+    "order": 61,
+    "guard_desc": "有材料"
+  },
+  "herbalist": {
+    "patterns": [
+      "^药铺$",
+      "^买药$"
+    ],
+    "category": "生产与铺子",
+    "desc": "买药",
+    "usage": "药铺",
+    "visible": true,
+    "order": 62,
+    "guard_desc": "在镇上"
+  },
+  "chapel": {
+    "patterns": [
+      "^教堂$"
+    ],
+    "category": "生产与铺子",
+    "desc": "治疗与问事",
+    "usage": "教堂",
+    "visible": true,
+    "order": 63,
+    "guard_desc": "在镇上"
+  },
+  "junk_shop": {
+    "patterns": [
+      "^旧货$",
+      "^收旧货$"
+    ],
+    "category": "生产与铺子",
+    "desc": "卖旧东西与看旧物谱",
+    "usage": "旧货",
+    "visible": true,
+    "order": 64,
+    "guard_desc": "在镇上"
+  },
+  "inn": {
+    "patterns": [
+      "^客栈$"
+    ],
+    "category": "生产与铺子",
+    "desc": "住店与打听",
+    "usage": "客栈",
+    "visible": true,
+    "order": 65,
+    "guard_desc": "在镇上"
+  },
+  "caravan": {
+    "patterns": [
+      "^商队$"
+    ],
+    "category": "生产与铺子",
+    "desc": "歇脚处打听消息",
+    "usage": "商队",
+    "visible": true,
+    "order": 66,
+    "guard_desc": "在镇上"
+  },
+  "codex": {
+    "patterns": [
+      "^图鉴$",
+      "^谱$"
+    ],
+    "category": "图鉴与记录",
+    "desc": "四本谱一览",
+    "usage": "图鉴",
+    "visible": true,
+    "order": 67,
+    "guard_desc": "随时"
+  },
+  "codex_material": {
+    "patterns": [
+      "^材料谱$"
+    ],
+    "category": "图鉴与记录",
+    "desc": "材料谱",
+    "usage": "材料谱",
+    "visible": true,
+    "order": 68,
+    "guard_desc": "随时"
+  },
+  "codex_flavor": {
+    "patterns": [
+      "^风味谱$"
+    ],
+    "category": "图鉴与记录",
+    "desc": "风味谱",
+    "usage": "风味谱",
+    "visible": true,
+    "order": 69,
+    "guard_desc": "随时"
+  },
+  "codex_monster": {
+    "patterns": [
+      "^怪物谱$"
+    ],
+    "category": "图鉴与记录",
+    "desc": "怪物谱",
+    "usage": "怪物谱",
+    "visible": true,
+    "order": 70,
+    "guard_desc": "随时"
+  },
+  "codex_relic": {
+    "patterns": [
+      "^旧物谱$"
+    ],
+    "category": "图鉴与记录",
+    "desc": "旧物谱",
+    "usage": "旧物谱",
+    "visible": true,
+    "order": 71,
+    "guard_desc": "随时"
+  },
+  "footprint": {
+    "patterns": [
+      "^记录$",
+      "^足迹$"
+    ],
+    "category": "图鉴与记录",
+    "desc": "去过哪儿、打过什么",
+    "usage": "记录",
+    "visible": true,
+    "order": 72,
+    "guard_desc": "随时"
+  },
+  "tower_enter": {
+    "patterns": [
+      "^进塔$",
+      "^进副本$"
+    ],
+    "category": "副本",
+    "desc": "进塔",
+    "usage": "进塔",
+    "visible": true,
+    "order": 73,
+    "guard_desc": "在入口"
+  },
+  "tower_next": {
+    "patterns": [
+      "^下一层$"
+    ],
+    "category": "副本",
+    "desc": "推进一层",
+    "usage": "下一层",
+    "visible": true,
+    "order": 74,
+    "guard_desc": "副本内"
+  },
+  "tower_map": {
+    "patterns": [
+      "^副本地图$"
+    ],
+    "category": "副本",
+    "desc": "看这一层",
+    "usage": "副本地图",
+    "visible": true,
+    "order": 75,
+    "guard_desc": "副本内"
+  },
+  "tower_investigate": {
+    "patterns": [
+      "^调查$"
+    ],
+    "category": "副本",
+    "desc": "查（塔里的线索多在这类指令后面）",
+    "usage": "调查",
+    "visible": true,
+    "order": 76,
+    "guard_desc": "副本内"
+  },
+  "tower_leave": {
+    "patterns": [
+      "^撤退$",
+      "^撤$"
+    ],
+    "category": "副本",
+    "desc": "退出",
+    "usage": "撤退",
+    "visible": true,
+    "order": 77,
+    "guard_desc": "副本内"
+  },
+  "party": {
+    "patterns": [
+      "^队伍$",
+      "^组队$"
+    ],
+    "category": "社交与系统",
+    "desc": "建队与看队",
+    "usage": "队伍",
+    "visible": true,
+    "order": 78,
+    "guard_desc": "非战斗"
+  },
+  "party_invite": {
+    "patterns": [
+      "^邀请\\s*(.+)$"
+    ],
+    "category": "社交与系统",
+    "desc": "邀请",
+    "usage": "邀请 <参数>",
+    "visible": false,
+    "order": 79,
+    "guard_desc": "非战斗"
+  },
+  "party_leave": {
+    "patterns": [
+      "^离队$"
+    ],
+    "category": "社交与系统",
+    "desc": "离队",
+    "usage": "离队",
+    "visible": true,
+    "order": 80,
+    "guard_desc": "在队里"
+  },
+  "help": {
+    "patterns": [
+      "^帮助$",
+      "^指令$"
+    ],
+    "category": "社交与系统",
+    "desc": "指令表（分类）",
+    "usage": "帮助",
+    "visible": true,
+    "order": 81,
+    "bind": {
+      "handler": "content.cmds_ast:help_cmd",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    },
+    "guard_desc": "随时"
+  },
+  "hint": {
+    "patterns": [
+      "^提示$",
+      "^去哪$"
+    ],
+    "category": "社交与系统",
+    "desc": "给一条当前该做什么的提示",
+    "usage": "提示",
+    "visible": true,
+    "order": 82,
+    "bind": {
+      "handler": "content.cmds_ast:hint",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    },
+    "guard_desc": "随时"
+  },
+  "notice": {
+    "patterns": [
+      "^公告$"
+    ],
+    "category": "社交与系统",
+    "desc": "服务器消息",
+    "usage": "公告",
+    "visible": true,
+    "order": 83,
+    "guard_desc": "随时"
+  },
+  "feedback": {
+    "patterns": [
+      "^反馈$"
+    ],
+    "category": "社交与系统",
+    "desc": "提意见",
+    "usage": "反馈",
+    "visible": true,
+    "order": 84,
+    "guard_desc": "随时"
+  },
+  "settings": {
+    "patterns": [
+      "^设置$"
+    ],
+    "category": "社交与系统",
+    "desc": "战斗偏好与分页偏好",
+    "usage": "设置",
+    "visible": true,
+    "order": 85,
+    "guard_desc": "随时"
+  },
+  "battle_pref": {
+    "patterns": [
+      "^自动战斗偏好$"
+    ],
+    "category": "社交与系统",
+    "desc": "技能优先级",
+    "usage": "自动战斗偏好",
+    "visible": true,
+    "order": 86,
+    "guard_desc": "随时"
+  },
+  "ranking": {
+    "patterns": [
+      "^排行$",
+      "^榜$"
+    ],
+    "category": "社交与系统",
+    "desc": "第一阶段的榜只有本地",
+    "usage": "排行",
+    "visible": true,
+    "order": 87,
+    "guard_desc": "随时"
+  },
+  "achievements": {
+    "patterns": [
+      "^成就$"
+    ],
+    "category": "社交与系统",
+    "desc": "成就与称号",
+    "usage": "成就",
+    "visible": true,
+    "order": 88,
+    "guard_desc": "随时"
+  }
+}
