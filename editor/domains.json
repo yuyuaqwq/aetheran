@@ -115,5 +115,14 @@
     "icon": "📜",
     "owner": "package",
     "tier": "portable"
+  },
+  "drop_pools": {
+    "label": "掉落池与未鉴定",
+    "kind": "data",
+    "schema": "schemas/drop_pools.schema.json",
+    "primary": "pool",
+    "icon": "🎁",
+    "owner": "package",
+    "tier": "portable"
   }
 }

@@ -9,6 +9,7 @@ from __future__ import annotations
 from .cmds_ast import _data, _p, _save, _map_of, _name_of_node, T
 from .cmds_talk import _arg
 from . import combat as CB
+from . import loot as LT
 
 
 def _encounter(p, uid, seed=None):
@@ -46,10 +47,26 @@ async def attack(env, sink, uid, player):
         gold = lv * (8 if m.get("role") == "精英" else (20 if m.get("role") in ("头目", "层主", "boss") else 3))
         p["gold"] = int(p.get("gold", 0)) + gold
         p["hp"] = hp_after
+        # ★ 掉落（B2-3）：按怪身上的 dp_* 池抽（可复现：种子 = 玩家 uid + 怪 id）
+        drops = []
+        for pool_id in (m.get("drops") or []):
+            drops.extend(LT.roll_pool(pool_id, level=lv,
+                                     rnd=__import__("random").Random("%s:%s" % (uid, pick[0]))))
+        first = LT.add_to_bag(p, drops) if drops else []
         if player is not None:
             player.update(p)
         _save(env)
         yield "铜板 +%d（现在 %d）｜ 生命 %d" % (gold, p["gold"], hp_after)
+        if drops:
+            it = LT.items()
+            for d in drops:
+                nm = it.get(d["id"], {}).get("name", d["id"])
+                ic = it.get(d["id"], {}).get("icon", "·")
+                yield "拾取：%s %s ×%s" % (ic, nm, d.get("n", 1))
+                if d.get("story"):
+                    yield "  （%s）" % d["story"]
+            if first:
+                yield "★ 第一次见到的东西记进了旧物谱（%d 件）" % len(first)
     else:
         yield "✖ 你倒下了。" if res == "defeat" else "（战斗结束：%s）" % res
         p["hp"] = max(1, hp_after)

@@ -1,0 +1,203 @@
+{
+  "dp_trash_small": {
+    "label": "小钱小料（普通怪）",
+    "rolls": 1,
+    "entries": [
+      {
+        "out": "i_material_iron_chip",
+        "kind": "材料",
+        "w": 40,
+        "n": [
+          1,
+          2
+        ]
+      },
+      {
+        "out": "i_material_herb_common",
+        "kind": "材料",
+        "w": 30,
+        "n": [
+          1,
+          2
+        ]
+      },
+      {
+        "out": "i_potion_minor",
+        "kind": "道具",
+        "w": 20,
+        "n": [
+          1,
+          1
+        ]
+      },
+      {
+        "out": "unid_common",
+        "kind": "未鉴定",
+        "w": 10
+      }
+    ]
+  },
+  "dp_trash_mid": {
+    "label": "中料（精英怪）",
+    "rolls": 1,
+    "entries": [
+      {
+        "out": "i_material_old_iron",
+        "kind": "材料",
+        "w": 35,
+        "n": [
+          1,
+          2
+        ]
+      },
+      {
+        "out": "i_potion_minor",
+        "kind": "道具",
+        "w": 25,
+        "n": [
+          1,
+          2
+        ]
+      },
+      {
+        "out": "unid_common",
+        "kind": "未鉴定",
+        "w": 25
+      },
+      {
+        "out": "dp_elite_gear",
+        "kind": "池",
+        "w": 15
+      }
+    ]
+  },
+  "dp_elite_gear": {
+    "label": "精英装备池（按等级抽一件）",
+    "rolls": 1,
+    "level_gated": true,
+    "entries": [
+      {
+        "out": "*armor_random",
+        "kind": "装备",
+        "w": 60,
+        "quality": [
+          "普通",
+          "精制"
+        ]
+      },
+      {
+        "out": "*weapon_random",
+        "kind": "装备",
+        "w": 30,
+        "quality": [
+          "精制"
+        ]
+      },
+      {
+        "out": "unid_rare",
+        "kind": "未鉴定",
+        "w": 10
+      }
+    ]
+  },
+  "dp_boss_minor": {
+    "label": "Boss 主掉（不只一件）",
+    "rolls": 2,
+    "unique": true,
+    "entries": [
+      {
+        "out": "i_horn_half",
+        "kind": "信物",
+        "w": 100,
+        "story": "半截号角 —— 主线 8 的交付物"
+      }
+    ]
+  },
+  "unid_common": {
+    "name": "一块看不出用途的旧东西",
+    "icon": "❓",
+    "tier": "普通",
+    "from": [
+      "普通怪掉落",
+      "野外搜"
+    ],
+    "hint": "硬的。有点锈。埋在下面很久了。",
+    "seen_after": "unid_common",
+    "pool": [
+      {
+        "out": "i_material_iron_chip",
+        "kind": "材料",
+        "w": 45
+      },
+      {
+        "out": "i_material_herb_common",
+        "kind": "材料",
+        "w": 20
+      },
+      {
+        "out": "*armor_random",
+        "kind": "装备",
+        "w": 20,
+        "quality": [
+          "普通"
+        ]
+      },
+      {
+        "out": "i_junk_bone",
+        "kind": "垃圾",
+        "w": 15
+      }
+    ],
+    "kind": "未鉴定"
+  },
+  "unid_rare": {
+    "name": "一块刻着字的石片",
+    "icon": "❓",
+    "tier": "稀有",
+    "from": [
+      "挖掘",
+      "隐藏点",
+      "稀有种掉落"
+    ],
+    "hint": "上面有字。不是这儿的话。",
+    "seen_after": "unid_rare",
+    "identify_by": [
+      "npc_durin",
+      "npc_lian"
+    ],
+    "pool": [
+      {
+        "out": "*armor_random",
+        "kind": "装备",
+        "w": 30,
+        "quality": [
+          "稀有",
+          "遗物"
+        ]
+      },
+      {
+        "out": "i_material_old_iron",
+        "kind": "材料",
+        "w": 45
+      },
+      {
+        "out": "i_junk_bone",
+        "kind": "垃圾",
+        "w": 15
+      },
+      {
+        "out": "i_token_stone_shard",
+        "kind": "信物",
+        "w": 7,
+        "story": "刻字的石片 —— 与「白桦上的名字」同源，瑟兰认得"
+      },
+      {
+        "out": "i_clue_page",
+        "kind": "线索",
+        "w": 3,
+        "story": "一段话：哈根那句「不该拿走的东西」的碎片"
+      }
+    ],
+    "kind": "未鉴定"
+  }
+}

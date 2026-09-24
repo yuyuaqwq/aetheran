@@ -1925,5 +1925,71 @@
     "kind": "道具",
     "price": 0,
     "desc": "旧哨塔的号角只剩一半。它不响。"
+  },
+  "i_material_iron_chip": {
+    "name": "铁屑",
+    "icon": "🔩",
+    "kind": "材料",
+    "quality": "普通",
+    "price": 4,
+    "desc": "打铁剩的。攒着能修东西。"
+  },
+  "i_material_herb_common": {
+    "name": "苦叶",
+    "icon": "🌿",
+    "kind": "材料",
+    "quality": "普通",
+    "price": 3,
+    "desc": "娜娜摊上最常见的那种。"
+  },
+  "i_material_old_iron": {
+    "name": "旧铁",
+    "icon": "⚙️",
+    "kind": "材料",
+    "quality": "精制",
+    "price": 25,
+    "desc": "好铁。柯尔看一眼就知道不是这地方的。"
+  },
+  "i_potion_minor": {
+    "name": "伤药",
+    "icon": "🧪",
+    "kind": "道具",
+    "quality": "普通",
+    "price": 12,
+    "desc": "回 40 点生命。苦的。"
+  },
+  "i_junk_bone": {
+    "name": "骨头",
+    "icon": "🦴",
+    "kind": "垃圾",
+    "quality": "普通",
+    "price": 1,
+    "desc": "到处都是。没什么用。"
+  },
+  "i_horn_half": {
+    "name": "半截号角",
+    "icon": "📯",
+    "kind": "信物",
+    "quality": "遗物",
+    "price": 0,
+    "lore": "断口往里卷。不是用坏的 —— 是被人掰断的。",
+    "desc": "主线 8 的交付物。谁掰的？为什么？"
+  },
+  "i_token_stone_shard": {
+    "name": "刻字的石片",
+    "icon": "🪨",
+    "kind": "信物",
+    "quality": "遗物",
+    "price": 0,
+    "lore": "上面有字。不是这儿的话。",
+    "desc": "与白桦树上的名字同源。"
+  },
+  "i_clue_page": {
+    "name": "半页纸",
+    "icon": "📜",
+    "kind": "线索",
+    "quality": "普通",
+    "price": 0,
+    "desc": "泡过水，只剩半页能读。"
   }
 }

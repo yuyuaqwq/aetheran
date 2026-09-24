@@ -18,8 +18,18 @@ sys.path.insert(0, ENGINE)
 from saintess_engine.package import load_stack                       # noqa: E402
 
 ok = True
-KINDS = {"武器", "上甲", "下甲", "头盔", "靴子", "饰品", "材料", "道具"}
+# ★ kind 从 schema 读（单一真源）—— 写死一份副本就会漂（本次实测：加了信物/线索/垃圾后忘了同步）
+_KINDS_SCHEMA = os.path.join(REPO, "schemas", "items.schema.json")
+try:
+    import json as _json
+    with open(_KINDS_SCHEMA, encoding="utf-8") as _f:
+        _s = _json.load(_f)
+    KINDS = set(_s["patternProperties"]["^i_[a-z0-9_]+$"]["properties"]["kind"]["enum"])
+except Exception:
+    KINDS = {"武器", "上甲", "下甲", "头盔", "靴子", "饰品", "材料", "道具"}
 QUALITIES = {"普通", "精制", "稀有", "遗物"}
+# ★ 只有「装备类」才判 slot 与词条（材料/道具/垃圾/信物/线索不算装备）
+EQUIP_KINDS = {"武器", "上甲", "下甲", "头盔", "靴子", "饰品"}
 SLOTS = {"weapon", "armor_top", "armor_bottom", "helmet", "boots", "accessory"}
 # 数值类（必须用属性字典标准键）—— 照 11_装备特色词条池 §六
 NUMERIC = {"hp", "atk", "matk", "def", "res", "spd", "hit", "eva", "crit", "critdmg",
@@ -43,7 +53,7 @@ chk("items 域读得到", it is not None, "%d 条" % (len(it) if it else 0))
 if not it:
     sys.exit(1)
 
-equip = {k: v for k, v in it.items() if v["kind"] in KINDS - {"材料", "道具"}}
+equip = {k: v for k, v in it.items() if v["kind"] in EQUIP_KINDS}   # ★ 只筛装备类（含新加的信物/线索/垃圾会被排除）
 
 # ① 三键合法
 chk("kind 合法", not [k for k, v in it.items() if v["kind"] not in KINDS])

@@ -1,0 +1,72 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "阿斯特兰 · 掉落池与未鉴定（drop_pools 域）",
+  "description": "怪身上的 dp_* 池 + 未鉴定表。权重 w 不必归一。out 以 * 开头 = 动态挑选（按等级/品质）。",
+  "type": "object",
+  "patternProperties": {
+    "^(dp_|unid_)[a-z0-9_]+$": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "tier": {
+          "enum": [
+            "普通",
+            "精制",
+            "稀有",
+            "遗物"
+          ]
+        },
+        "kind": {
+          "type": "string"
+        },
+        "rolls": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "level_gated": {
+          "type": "boolean"
+        },
+        "unique": {
+          "type": "boolean"
+        },
+        "from": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "hint": {
+          "type": "string"
+        },
+        "seen_after": {
+          "type": "string"
+        },
+        "identify_by": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "entries": {
+          "type": "array"
+        },
+        "pool": {
+          "type": "array"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}
