@@ -59,7 +59,7 @@ for name, tier, lv, arch in RB.MOS:
         bad4.append("%s 不在域里" % name); continue
     want = RB.panel_of(lv, tier, arch)
     for k, wv in want.items():
-        if abs(float(rec["panel"].get(k, -1)) - float(wv)) > 0.06:
+        if abs(float(rec["panel"].get(k, -1)) - round(float(wv))) > 0.06:   # 取整口径
             bad4.append("%s.%s 包=%s 算=%s" % (name, k, rec["panel"].get(k), wv))
 chk("★ panel 逐只可复算（档位 × 原型偏移）", not bad4, " · ".join(bad4[:4]))
 

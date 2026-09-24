@@ -7,13 +7,13 @@
     "lv": 3,
     "panel": {
       "hp": 52,
-      "atk": 8.3,
-      "def": 9.0,
-      "res": 8.5,
+      "atk": 8,
+      "def": 9,
+      "res": 9,
       "spd": 101,
-      "hit": 48.2,
-      "eva": 8.0,
-      "crit": 12.9
+      "hit": 48,
+      "eva": 8,
+      "crit": 13
     },
     "skills": [
       "ms_skill_bite"
@@ -39,13 +39,13 @@
     "lv": 4,
     "panel": {
       "hp": 60,
-      "atk": 9.4,
-      "def": 10.2,
-      "res": 9.4,
+      "atk": 9,
+      "def": 10,
+      "res": 9,
       "spd": 101,
-      "hit": 49.2,
-      "eva": 8.5,
-      "crit": 14.3
+      "hit": 49,
+      "eva": 9,
+      "crit": 14
     },
     "skills": [
       "ms_skill_pack_bite"
@@ -71,13 +71,13 @@
     "lv": 6,
     "panel": {
       "hp": 237,
-      "atk": 12.9,
-      "def": 22.3,
-      "res": 20.0,
+      "atk": 13,
+      "def": 22,
+      "res": 20,
       "spd": 78,
-      "hit": 68.2,
-      "eva": 12.8,
-      "crit": 22.8
+      "hit": 68,
+      "eva": 13,
+      "crit": 23
     },
     "skills": [
       "ms_skill_bone_swing"
@@ -103,13 +103,13 @@
     "lv": 4,
     "panel": {
       "hp": 93,
-      "atk": 13.7,
-      "def": 9.0,
-      "res": 8.4,
+      "atk": 14,
+      "def": 9,
+      "res": 8,
       "spd": 119,
-      "hit": 49.2,
-      "eva": 8.5,
-      "crit": 14.3
+      "hit": 49,
+      "eva": 9,
+      "crit": 14
     },
     "skills": [
       "ms_skill_eye_peck"
@@ -135,13 +135,13 @@
     "lv": 6,
     "panel": {
       "hp": 170,
-      "atk": 15.2,
-      "def": 14.0,
-      "res": 12.5,
+      "atk": 15,
+      "def": 14,
+      "res": 12,
       "spd": 92,
-      "hit": 56.8,
-      "eva": 10.7,
-      "crit": 19.0
+      "hit": 57,
+      "eva": 11,
+      "crit": 19
     },
     "skills": [
       "ms_skill_bite"
@@ -167,13 +167,13 @@
     "lv": 8,
     "panel": {
       "hp": 206,
-      "atk": 16.1,
-      "def": 16.6,
-      "res": 14.5,
+      "atk": 16,
+      "def": 17,
+      "res": 14,
       "spd": 92,
-      "hit": 59.0,
-      "eva": 11.9,
-      "crit": 22.1
+      "hit": 59,
+      "eva": 12,
+      "crit": 22
     },
     "skills": [
       "ms_skill_leg_drag"
@@ -199,13 +199,13 @@
     "lv": 9,
     "panel": {
       "hp": 314,
-      "atk": 16.3,
-      "def": 28.7,
-      "res": 24.8,
+      "atk": 16,
+      "def": 29,
+      "res": 25,
       "spd": 78,
-      "hit": 72.2,
-      "eva": 15.0,
-      "crit": 28.3
+      "hit": 72,
+      "eva": 15,
+      "crit": 28
     },
     "skills": [
       "ms_skill_pincer"
@@ -231,13 +231,13 @@
     "lv": 7,
     "panel": {
       "hp": 395,
-      "atk": 24.7,
-      "def": 13.5,
-      "res": 11.9,
+      "atk": 25,
+      "def": 13,
+      "res": 12,
       "spd": 93,
-      "hit": 57.4,
-      "eva": 11.2,
-      "crit": 20.3
+      "hit": 57,
+      "eva": 11,
+      "crit": 20
     },
     "skills": [
       "ms_skill_snatch"
@@ -263,13 +263,13 @@
     "lv": 9,
     "panel": {
       "hp": 674,
-      "atk": 17.3,
-      "def": 19.7,
-      "res": 17.0,
+      "atk": 17,
+      "def": 20,
+      "res": 17,
       "spd": 104,
-      "hit": 66.2,
-      "eva": 13.7,
-      "crit": 26.0
+      "hit": 66,
+      "eva": 14,
+      "crit": 26
     },
     "skills": [
       "ms_skill_frenzied_bite"
@@ -295,13 +295,13 @@
     "lv": 11,
     "panel": {
       "hp": 627,
-      "atk": 20.8,
-      "def": 15.9,
-      "res": 13.5,
+      "atk": 21,
+      "def": 16,
+      "res": 13,
       "spd": 104,
-      "hit": 109.7,
-      "eva": 24.1,
-      "crit": 47.0
+      "hit": 110,
+      "eva": 24,
+      "crit": 47
     },
     "skills": [
       "ms_skill_birch_mark"
@@ -327,13 +327,13 @@
     "lv": 12,
     "panel": {
       "hp": 838,
-      "atk": 18.6,
-      "def": 24.1,
-      "res": 20.3,
+      "atk": 19,
+      "def": 24,
+      "res": 20,
       "spd": 104,
-      "hit": 76.8,
-      "eva": 17.3,
-      "crit": 34.2
+      "hit": 77,
+      "eva": 17,
+      "crit": 34
     },
     "skills": [
       "ms_skill_call_drowned"
@@ -359,13 +359,13 @@
     "lv": 13,
     "panel": {
       "hp": 625,
-      "atk": 36.8,
-      "def": 20.5,
-      "res": 17.2,
+      "atk": 37,
+      "def": 20,
+      "res": 17,
       "spd": 93,
-      "hit": 63.9,
-      "eva": 14.7,
-      "crit": 29.5
+      "hit": 64,
+      "eva": 15,
+      "crit": 29
     },
     "skills": [
       "ms_skill_shadow_strike"
@@ -391,13 +391,13 @@
     "lv": 14,
     "panel": {
       "hp": 1549,
-      "atk": 22.0,
-      "def": 47.2,
-      "res": 39.3,
+      "atk": 22,
+      "def": 47,
+      "res": 39,
       "spd": 83,
-      "hit": 94.6,
-      "eva": 22.3,
-      "crit": 45.1
+      "hit": 95,
+      "eva": 22,
+      "crit": 45
     },
     "skills": [
       "ms_skill_stance_guard"
@@ -423,13 +423,13 @@
     "lv": 10,
     "panel": {
       "hp": 595,
-      "atk": 22.6,
-      "def": 18.5,
-      "res": 15.8,
+      "atk": 23,
+      "def": 19,
+      "res": 16,
       "spd": 127,
-      "hit": 66.2,
-      "eva": 14.1,
-      "crit": 27.2
+      "hit": 66,
+      "eva": 14,
+      "crit": 27
     },
     "skills": [
       "ms_skill_pack_howl"
@@ -455,13 +455,13 @@
     "lv": 15,
     "panel": {
       "hp": 1639,
-      "atk": 23.1,
-      "def": 49.8,
-      "res": 41.3,
+      "atk": 23,
+      "def": 50,
+      "res": 41,
       "spd": 83,
-      "hit": 96.2,
-      "eva": 23.1,
-      "crit": 47.4
+      "hit": 96,
+      "eva": 23,
+      "crit": 47
     },
     "skills": [
       "ms_skill_undertow"
@@ -487,13 +487,13 @@
     "lv": 17,
     "panel": {
       "hp": 1336,
-      "atk": 28.4,
-      "def": 24.0,
-      "res": 19.7,
+      "atk": 28,
+      "def": 24,
+      "res": 20,
       "spd": 96,
-      "hit": 132.4,
-      "eva": 33.2,
-      "crit": 69.1
+      "hit": 132,
+      "eva": 33,
+      "crit": 69
     },
     "skills": [
       "ms_skill_sweep"
@@ -518,13 +518,14 @@
     "role": "boss",
     "lv": 19,
     "panel": {
-      "hp": 7340,
-      "atk": 32.6,
-      "def": 62.5,
-      "spd": 102,
-      "hit": 142.4,
-      "eva": 36.9,
-      "crit": 78.1
+      "hp": 10275,
+      "atk": 28,
+      "def": 100,
+      "res": 82,
+      "spd": 86,
+      "hit": 171,
+      "eva": 44,
+      "crit": 94
     },
     "skills": [
       "ms_skill_hold",
