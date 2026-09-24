@@ -1,0 +1,495 @@
+{
+  "_meta": {
+    "count": 10,
+    "title": "十条彩蛋（跨文本呼应）",
+    "source": "06_第一阶段垂直切片/19_世界热闹度与可发现物_v1.md 三 B",
+    "spec": "00_总纲/15_彩蛋域口径_v1.md"
+  },
+  "egg_one_hand": {
+    "no": 1,
+    "title": "镇口石头上的第三种字 = 塔顶那行字的同一只手",
+    "line": "三种笔迹里最新那一种，和塔顶那行刻名是同一只手。刻完塔顶，这个人又回过镇上。",
+    "pair": [
+      "镇口",
+      "塔顶"
+    ],
+    "how": "精灵玩家／后学铭文",
+    "cond": {
+      "op": "and",
+      "args": [
+        {
+          "op": "truthy",
+          "arg": {
+            "field": [
+              {
+                "key": "lore_scripts"
+              }
+            ]
+          }
+        },
+        {
+          "op": "contains",
+          "elem": {
+            "const": "poi_stone_scripts"
+          },
+          "seq": {
+            "field": [
+              {
+                "key": "read"
+              }
+            ]
+          }
+        },
+        {
+          "op": "contains",
+          "elem": {
+            "const": "old_watchtower:tower_top"
+          },
+          "seq": {
+            "field": [
+              {
+                "key": "been"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "egg_stone_corner": {
+    "no": 2,
+    "title": "小满捡的石头 = 北带那块碑缺的一角",
+    "line": "你手里这块石片的缺口，和碑上那道缺口是同一道。有人把碑凿了，还带走了一角。",
+    "pair": [
+      "小孩",
+      "碑"
+    ],
+    "how": "拿石头去比",
+    "cond": {
+      "op": "and",
+      "args": [
+        {
+          "op": "contains",
+          "elem": {
+            "const": "i_token_stone_shard"
+          },
+          "seq": {
+            "field": [
+              {
+                "key": "hold"
+              }
+            ]
+          }
+        },
+        {
+          "op": "contains",
+          "elem": {
+            "const": "poi_half_buried_stele"
+          },
+          "seq": {
+            "field": [
+              {
+                "key": "read"
+              }
+            ]
+          }
+        },
+        {
+          "op": "eq",
+          "left": {
+            "field": [
+              {
+                "key": "where"
+              }
+            ]
+          },
+          "right": {
+            "const": "belt_north:bn_bone"
+          }
+        }
+      ]
+    }
+  },
+  "egg_pete_place": {
+    "no": 3,
+    "title": "皮特醉话里的地名 = 北边裂口古代的名字",
+    "line": "皮特喝多时念叨的那个地名，不是附近任何一个地方 —— 那是裂口从前的叫法。",
+    "pair": [
+      "酒鬼",
+      "裂口"
+    ],
+    "how": "学铭文后回听",
+    "cond": {
+      "op": "and",
+      "args": [
+        {
+          "op": "truthy",
+          "arg": {
+            "field": [
+              {
+                "key": "lore_scripts"
+              }
+            ]
+          }
+        },
+        {
+          "op": "eq",
+          "left": {
+            "field": [
+              {
+                "key": "where"
+              }
+            ]
+          },
+          "right": {
+            "const": "windmill_town:wt_inn"
+          }
+        }
+      ]
+    }
+  },
+  "egg_hagen_horn": {
+    "no": 4,
+    "title": "哈根那句「我们不该拿走的东西」= Boss 掉的那截号角",
+    "line": "哈根说的「不该拿走的东西」，就是这半截号角。他见过它整支的样子。",
+    "pair": [
+      "老人",
+      "Boss"
+    ],
+    "how": "打完 Boss 回镇",
+    "cond": {
+      "op": "and",
+      "args": [
+        {
+          "op": "contains",
+          "elem": {
+            "const": "ms_boss_oath_sentry"
+          },
+          "seq": {
+            "field": [
+              {
+                "key": "kill"
+              }
+            ]
+          }
+        },
+        {
+          "op": "contains",
+          "elem": {
+            "const": "i_horn_half"
+          },
+          "seq": {
+            "field": [
+              {
+                "key": "hold"
+              }
+            ]
+          }
+        },
+        {
+          "op": "eq",
+          "left": {
+            "field": [
+              {
+                "key": "map"
+              }
+            ]
+          },
+          "right": {
+            "const": "windmill_town"
+          }
+        }
+      ]
+    }
+  },
+  "egg_old_road": {
+    "no": 5,
+    "title": "老陶讲的旧路 = 地图上不存在的一条路（西带更西）",
+    "line": "老陶说的那条路，地图上没有 —— 它在西带更西，出了这张纸。",
+    "pair": [
+      "向导",
+      "隐藏点"
+    ],
+    "how": "走到底再看地图",
+    "cond": {
+      "op": "and",
+      "args": [
+        {
+          "op": "contains",
+          "elem": {
+            "const": "q_side_09"
+          },
+          "seq": {
+            "field": [
+              {
+                "key": "done"
+              }
+            ]
+          }
+        },
+        {
+          "op": "eq",
+          "left": {
+            "field": [
+              {
+                "key": "where"
+              }
+            ]
+          },
+          "right": {
+            "const": "belt_west:bw_old_ferry"
+          }
+        }
+      ]
+    }
+  },
+  "egg_cole_iron": {
+    "no": 6,
+    "title": "柯尔打的铁 = 用的是骨田挖出的旧铁（他以为是废铁）",
+    "line": "柯尔随手打的铁，全是从骨田底下挖出来的旧铁。他打了十年，不知道自己在打什么。",
+    "pair": [
+      "铁匠",
+      "挖掘"
+    ],
+    "how": "挖到旧铁给他看",
+    "cond": {
+      "op": "and",
+      "args": [
+        {
+          "op": "contains",
+          "elem": {
+            "const": "i_material_old_iron"
+          },
+          "seq": {
+            "field": [
+              {
+                "key": "hold"
+              }
+            ]
+          }
+        },
+        {
+          "op": "eq",
+          "left": {
+            "field": [
+              {
+                "key": "where"
+              }
+            ]
+          },
+          "right": {
+            "const": "windmill_town:wt_forge"
+          }
+        }
+      ]
+    }
+  },
+  "egg_ed_prayer": {
+    "no": 7,
+    "title": "艾德念的祷词少了一句（他以为是全本）",
+    "line": "艾德念的祷词少了一句，他自己以为是全本 —— 少的那一句正好是收尾。",
+    "pair": [
+      "修士",
+      "精灵读懂的全本"
+    ],
+    "how": "精灵发现",
+    "cond": {
+      "op": "and",
+      "args": [
+        {
+          "op": "eq",
+          "left": {
+            "field": [
+              {
+                "key": "race"
+              }
+            ]
+          },
+          "right": {
+            "const": "elf"
+          }
+        },
+        {
+          "op": "eq",
+          "left": {
+            "field": [
+              {
+                "key": "where"
+              }
+            ]
+          },
+          "right": {
+            "const": "windmill_town:wt_chapel"
+          }
+        }
+      ]
+    }
+  },
+  "egg_three_names": {
+    "no": 8,
+    "title": "树上的名字与碑上的名字有 3 个重名",
+    "line": "白桦上刻的名字，和你读过的十一块碑上的名字有三个是同一个。有人从碑那儿回来过。",
+    "pair": [
+      "东带",
+      "北带"
+    ],
+    "how": "都读过之后",
+    "cond": {
+      "op": "and",
+      "args": [
+        {
+          "op": "contains",
+          "elem": {
+            "const": "poi_named_birch"
+          },
+          "seq": {
+            "field": [
+              {
+                "key": "read"
+              }
+            ]
+          }
+        },
+        {
+          "op": "contains",
+          "elem": {
+            "const": "poi_eleven_stones"
+          },
+          "seq": {
+            "field": [
+              {
+                "key": "read"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "egg_bella_set": {
+    "no": 9,
+    "title": "客栈贝拉收藏的旧物里有一件是套装件",
+    "line": "你身上这件旧东西不是散件 —— 杜林只看了一眼，就认出它和某件东西是一套的。",
+    "pair": [
+      "客栈",
+      "套装收集"
+    ],
+    "how": "拿给杜林鉴定",
+    "cond": {
+      "op": "and",
+      "args": [
+        {
+          "op": "or",
+          "args": [
+            {
+              "op": "contains",
+              "elem": {
+                "const": "set_sentry"
+              },
+              "seq": {
+                "field": [
+                  {
+                    "key": "set"
+                  }
+                ]
+              }
+            },
+            {
+              "op": "contains",
+              "elem": {
+                "const": "set_northwall"
+              },
+              "seq": {
+                "field": [
+                  {
+                    "key": "set"
+                  }
+                ]
+              }
+            },
+            {
+              "op": "contains",
+              "elem": {
+                "const": "set_scavenger"
+              },
+              "seq": {
+                "field": [
+                  {
+                    "key": "set"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "op": "eq",
+          "left": {
+            "field": [
+              {
+                "key": "where"
+              }
+            ]
+          },
+          "right": {
+            "const": "windmill_town:wt_inn"
+          }
+        }
+      ]
+    }
+  },
+  "egg_steps_downstream": {
+    "no": 10,
+    "title": "水下的石阶通向下游某个地方（退潮能看见，涨潮不能）",
+    "line": "石阶不是断在水里的。退潮那几级是往下的 —— 它通向下游，而下游不在这一带。",
+    "pair": [
+      "西带",
+      "全流程后段"
+    ],
+    "how": "特定时辰带着灯下水",
+    "cond": {
+      "op": "and",
+      "args": [
+        {
+          "op": "eq",
+          "left": {
+            "field": [
+              {
+                "key": "where"
+              }
+            ]
+          },
+          "right": {
+            "const": "belt_west:bw_old_ferry"
+          }
+        },
+        {
+          "op": "contains",
+          "elem": {
+            "const": "i_set_northwall_lantern"
+          },
+          "seq": {
+            "field": [
+              {
+                "key": "worn"
+              }
+            ]
+          }
+        },
+        {
+          "op": "eq",
+          "left": {
+            "field": [
+              {
+                "key": "hour"
+              }
+            ]
+          },
+          "right": {
+            "const": "夜"
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1503,5 +1503,25 @@
         "player"
       ]
     }
+  },
+  "eggs": {
+    "patterns": [
+      "^彩蛋$",
+      "^连起来$"
+    ],
+    "category": "图鉴与记录",
+    "desc": "看自己把哪些事连起来了",
+    "usage": "彩蛋",
+    "visible": true,
+    "order": 73,
+    "guard_desc": "随时",
+    "bind": {
+      "handler": "content.cmds_egg:eggs_book",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   }
 }

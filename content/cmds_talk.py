@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from .cmds_ast import _data, _p, _save, _map_of, _name_of_node, T, _texts, _npcs_here
+from .cmds_ast import egg_lines
 from . import calendar as CAL
 from . import codex as CX
 
@@ -107,6 +108,8 @@ async def talk(env, sink, uid, player):
                 yield T("SYS_CODEX_REVEAL", name=CX.name_of("relic", rid))
                 yield T("SYS_CODEX_RELIC_KNOWN", name=CX.name_of("relic", rid),
                         known=CX.line_of("relic", rid, "known"))
+    for line in egg_lines(p, player, env):      # ★ B3-1：人 + 东西，可能就在这一下连起来
+        yield line
 
 
 async def ask_way(env, sink, uid, player):

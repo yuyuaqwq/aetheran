@@ -14,6 +14,7 @@ import os
 
 from . import calendar as CAL        # 时辰/天气的唯一出口（它不 import 本模块，无环）
 from . import codex as CX            # 图鉴四谱的唯一记录口（B2-7）
+from . import eggs as EG              # 彩蛋（B3-1）：条件在 eggs 域，判定走引擎声明算子
 
 _DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 _CACHE: dict = {}
@@ -136,6 +137,24 @@ def _move(p, loc, node, sink_lines):
     return p
 
 
+def egg_lines(p, player=None, env=None) -> list:
+    """扫一遍彩蛋：这次够格连起来的那几条 → 要说的行（★ 有新发现才落档）。
+
+    触发点（口径 §一）：观察 · 触摸 · 地图 · 搭话 —— 都在各自实现体的末尾调一次。
+    """
+    new = EG.scan(p, CAL.state())
+    if not new:
+        return []
+    if player is not None:
+        player.update(p)
+    _save(env)
+    out = []
+    for eid in new:
+        out.append(T("SYS_EGG_FOUND", title=EG.title_of(eid)))
+        out.append(T("SYS_EGG_LINE", line=EG.line_of(eid)))
+    return out
+
+
 # ══════════════════════════════════════════════════════════════
 # 一、移动与世界
 # ══════════════════════════════════════════════════════════════
@@ -156,6 +175,8 @@ async def look(env, sink, uid, player):
     if npc_here:
         yield "人在：" + " · ".join("『%s』%s" % (v.get("name"), v.get("icon", "")) for v in npc_here)
     yield "「『触摸』可以上手摸，『聆听』可以听，『地图』看全貌。」"
+    for line in egg_lines(p, player, env):      # ★ B3-1：看四周那一下可能把两件事连起来
+        yield line
 
 
 async def map_view(env, sink, uid, player):
@@ -167,6 +188,8 @@ async def map_view(env, sink, uid, player):
     for n in nodes:
         mark = "▸" if n.get("id") == node else " "
         yield "%s %s%s" % (mark, n.get("name"), "（你现在在这儿）" if mark == "▸" else "")
+    for line in egg_lines(p, player, env):      # ★ B3-1：走到底再看地图
+        yield line
 
 
 async def listen(env, sink, uid, player):
@@ -357,6 +380,8 @@ async def touch(env, sink, uid, player):
         _save(env)
         for pid in got:
             yield T("SYS_CODEX_NEW", book=CX.label("relic"), name=CX.name_of("relic", pid))
+    for line in egg_lines(p, player, env):      # ★ B3-1：读过东西那一处可能连上另一处
+        yield line
 
 
 async def read_thing(env, sink, uid, player):

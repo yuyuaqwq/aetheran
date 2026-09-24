@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "阿斯特兰 · 彩蛋（eggs 域）—— 十条跨文本呼应 = 触发条件 + 连起来之后那句话",
+  "description": "本域由 scripts/rebuild_eggs.py 从 00_总纲/15_彩蛋域口径_v1.md 与 19_世界热闹度 §三 B 解析生成；条件用引擎 conditions.declarative 的算子写成声明节点，由 content/eggs.py 现算 ctx 求值。",
+  "type": "object",
+  "patternProperties": {
+    "^_": {
+      "type": "object",
+      "description": "私有键（_meta 那类）—— 与编辑器/装载器同口径：不是条目"
+    },
+    "^egg_[a-z0-9_]+$": {
+      "type": "object",
+      "required": ["no", "title", "line", "pair", "how", "cond"],
+      "properties": {
+        "no": {"type": "integer", "minimum": 1, "description": "19 文档 §三 B 表里的编号"},
+        "title": {"type": "string", "description": "照抄 19 文档那一行（两处相呼应的东西）"},
+        "line": {"type": "string", "description": "连起来之后那句话（12–60 字）"},
+        "pair": {
+          "type": "array", "minItems": 2, "maxItems": 2,
+          "items": {"type": "string"},
+          "description": "呼应的两端（照抄 19 文档「呼应在哪」）"
+        },
+        "how": {"type": "string", "description": "发现方式（照抄 19 文档）"},
+        "cond": {
+          "type": "object",
+          "description": "触发条件 —— 引擎 declarative 声明节点（and/or/contains/eq/truthy），ctx 由 content/eggs.py 出",
+          "required": ["op"],
+          "properties": {"op": {"type": "string"}},
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

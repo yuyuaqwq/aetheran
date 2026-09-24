@@ -169,5 +169,14 @@
     "icon": "📖",
     "owner": "package",
     "tier": "portable"
+  },
+  "eggs": {
+    "label": "彩蛋",
+    "kind": "data",
+    "schema": "schemas/eggs.schema.json",
+    "primary": "egg",
+    "icon": "✨",
+    "owner": "package",
+    "tier": "portable"
   }
 }

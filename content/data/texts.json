@@ -1269,5 +1269,60 @@
     "params": [],
     "category": "系统",
     "desc": "记录 · 空"
+  },
+  "SYS_EGG_HEAD": {
+    "value": "【彩蛋】你已经把 {n} 件事连起来了（一共 {total} 件）",
+    "params": [
+      "n",
+      "total"
+    ],
+    "category": "彩蛋",
+    "desc": "彩蛋册 · 小计"
+  },
+  "SYS_EGG_ROW": {
+    "value": "✦ {title}",
+    "params": [
+      "title"
+    ],
+    "category": "彩蛋",
+    "desc": "彩蛋册 · 已连起来的一条"
+  },
+  "SYS_EGG_ROW_LINE": {
+    "value": "     「{line}」",
+    "params": [
+      "line"
+    ],
+    "category": "彩蛋",
+    "desc": "彩蛋册 · 那一条的「啊」一声"
+  },
+  "SYS_EGG_TAIL": {
+    "value": "剩下 {left} 件散在镇上和三条带里 —— 不列出来，撞上才知道。",
+    "params": [
+      "left"
+    ],
+    "category": "彩蛋",
+    "desc": "彩蛋册 · 未连起来的不列"
+  },
+  "SYS_EGG_NONE": {
+    "value": "你还没把哪两件事连起来过。走着看着，总会有那么一下。",
+    "params": [],
+    "category": "彩蛋",
+    "desc": "彩蛋册 · 一条都没有时"
+  },
+  "SYS_EGG_FOUND": {
+    "value": "✦ 你忽然把两件事连起来了 —— {title}",
+    "params": [
+      "title"
+    ],
+    "category": "彩蛋",
+    "desc": "撞上那一下的抬头"
+  },
+  "SYS_EGG_LINE": {
+    "value": "「{line}」",
+    "params": [
+      "line"
+    ],
+    "category": "彩蛋",
+    "desc": "连起来之后那句话"
   }
 }
