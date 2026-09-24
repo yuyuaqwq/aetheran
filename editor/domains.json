@@ -178,5 +178,14 @@
     "icon": "✨",
     "owner": "package",
     "tier": "portable"
+  },
+  "titles": {
+    "label": "称号",
+    "kind": "data",
+    "schema": "schemas/titles.schema.json",
+    "primary": "title",
+    "icon": "🏷️",
+    "owner": "package",
+    "tier": "portable"
   }
 }

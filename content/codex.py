@@ -94,8 +94,10 @@ def _foot(p: dict) -> dict:
         f = {}
     if not isinstance(f.get("nodes"), dict):
         f["nodes"] = {}
-    for k in ("kills", "reads", "gathers"):
+    for k in ("kills", "reads", "gathers", "interrupts", "clears"):
         f[k] = int(f.get(k) or 0)
+    if not isinstance(f.get("visits"), dict):     # ★ B3-2：去过几回（「骨田的常客」靠它）
+        f["visits"] = {}
     p["foot"] = f
     return f
 
@@ -211,6 +213,19 @@ def note_visit(p: dict, loc: str, node: str) -> bool:
     return True
 
 
+def note_step(p: dict, loc: str, node: str) -> int:
+    """**走到**一个节点 → 累计去过几回（★ 与 note_visit 的「第一回到」分开：这条每次都加）。
+
+    为什么单独一个口：note_visit 还挂在「拿东西 / 读书 / 打怪」那些地方（mark_here），
+    拿它当次数会把「路过一次捡了个东西」也算成一趟 —— 所以计数只认**真的走到**。
+    返回这个节点累计去过的回数。
+    """
+    v = _foot(p)["visits"]
+    key = "%s:%s" % (loc, node)
+    v[key] = int(v.get(key) or 0) + 1
+    return v[key]
+
+
 def note_gather(p: dict, n: int = 1) -> None:
     _foot(p)["gathers"] += int(n)
 
@@ -268,4 +283,5 @@ def foot(p: dict) -> dict:
     f = _foot(p)
     days = sorted(set(int(d) for d in f["nodes"].values()))
     return {"nodes": dict(f["nodes"]), "kills": f["kills"], "reads": f["reads"],
-            "gathers": f["gathers"], "days": max(1, len(days))}
+            "gathers": f["gathers"], "visits": dict(f["visits"]),
+            "interrupts": f["interrupts"], "clears": f["clears"], "days": max(1, len(days))}

@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from .cmds_ast import _data, _p, _save, _map_of, _name_of_node, T, _texts, _npcs_here
-from .cmds_ast import egg_lines
+from .cmds_ast import egg_lines, title_lines
 from . import calendar as CAL
 from . import codex as CX
+from . import heard as HD
 
 
 def _arg(env, default=""):
@@ -15,16 +16,17 @@ def _arg(env, default=""):
     return parts[1].strip() if len(parts) > 1 else default
 
 
-def _pick_line(lines, p, st=None):
+def _pick_indexed(lines, p, st=None):
     """按 need 条件择优：**按顺序挑第一条满足的**（照奥兰迪亚的精华）。
 
     ★ 时辰 / 天气是真判断（名 → 时辰或天气，唯一出口 = `calendar`）；判不过就是判不过。
+    ★ 返回 `(序号, 台词)`；一条都挑不出就 `(None, None)` —— 序号给「听过哪一句」记账用（B3-2）。
     """
     flags = p.get("flags") or {}
-    for ln in lines or []:
+    for i, ln in enumerate(lines or []):
         need = ln.get("need")
         if not need:
-            return ln.get("text")
+            return i, ln.get("text")
         ok = True
         for k, v in need.items():
             if k == "flag":
@@ -50,8 +52,13 @@ def _pick_line(lines, p, st=None):
             else:
                 ok = True
         if ok:
-            return ln.get("text")
-    return None
+            return i, ln.get("text")
+    return None, None
+
+
+def _pick_line(lines, p, st=None):
+    """（老签名保持不变：只要那句话说啥 —— 探针与别处都在用它）"""
+    return _pick_indexed(lines, p, st)[1]
 
 
 async def talk(env, sink, uid, player):
@@ -84,16 +91,22 @@ async def talk(env, sink, uid, player):
     nodes = dlg.get("nodes") or {}
     # 节点择优：先看剧情节点（main / hidden），没有再看 meet / daily
     spoke = False
+    heard_new = False
     for nn in ("main", "hidden", "meet", "daily", "idle"):
         if nn in nodes:
-            txt = _pick_line(nodes[nn].get("texts"), p, st)
+            idx, txt = _pick_indexed(nodes[nn].get("texts"), p, st)
             if txt:
                 for line in str(txt).split("\n"):
                     yield line
                 spoke = True
+                # ★ B3-2：听过哪一句记下来（称号「听完哈根的全部对话」靠它）
+                heard_new = HD.note(p, npc.get("dialogue") or "", nn, idx)
                 break
     if not spoke:
         yield "（他没说话。）"
+    if heard_new and player is not None:
+        player.update(p)
+        _save(env)
     # ★ B2-7：他要是认得你谱里那些还留着问号的旧东西 —— 名字当场说出来
     if spoke:
         first = True
@@ -109,6 +122,8 @@ async def talk(env, sink, uid, player):
                 yield T("SYS_CODEX_RELIC_KNOWN", name=CX.name_of("relic", rid),
                         known=CX.line_of("relic", rid, "known"))
     for line in egg_lines(p, player, env):      # ★ B3-1：人 + 东西，可能就在这一下连起来
+        yield line
+    for line in title_lines(p, player, env):    # ★ B3-2：话说完，名字可能就挂上来了
         yield line
 
 

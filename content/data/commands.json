@@ -495,14 +495,23 @@
   },
   "titles": {
     "patterns": [
-      "^称号$"
+      "^称号$",
+      "^头衔$"
     ],
     "category": "角色",
-    "desc": "佩戴展示",
+    "desc": "看自己挣到了哪些称号",
     "usage": "称号",
     "visible": true,
     "order": 28,
-    "guard_desc": "有称号"
+    "guard_desc": "有称号",
+    "bind": {
+      "handler": "content.cmds_title:titles_book",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "rename": {
     "patterns": [

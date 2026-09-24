@@ -1324,5 +1324,54 @@
     ],
     "category": "彩蛋",
     "desc": "连起来之后那句话"
+  },
+  "SYS_TITLE_FOUND": {
+    "value": "✦ 有人开始这么叫你 —— 「{name}」",
+    "params": [
+      "name"
+    ],
+    "category": "称号",
+    "desc": "拿到称号那一下"
+  },
+  "SYS_TITLE_BY_NAME": {
+    "value": "{who} · {name}",
+    "params": [
+      "who",
+      "name"
+    ],
+    "category": "称号",
+    "desc": "称号跟着名字走（观察 / 状态）"
+  },
+  "SYS_TITLE_HEAD": {
+    "value": "【称号】{n} / {total}",
+    "params": [
+      "n",
+      "total"
+    ],
+    "category": "称号",
+    "desc": "称号册小计"
+  },
+  "SYS_TITLE_ROW": {
+    "value": "✦ {name} —— {how}",
+    "params": [
+      "name",
+      "how"
+    ],
+    "category": "称号",
+    "desc": "称号册一行（名 + 怎么拿到）"
+  },
+  "SYS_TITLE_TAIL": {
+    "value": "还没到手的 {left} 个不列出来 —— 那些是自己长出来的。",
+    "params": [
+      "left"
+    ],
+    "category": "称号",
+    "desc": "称号册 · 没拿到的不列"
+  },
+  "SYS_TITLE_NONE": {
+    "value": "你还没有名字之外的称呼。走到哪儿、碰上谁，名字会自己长出来。",
+    "params": [],
+    "category": "称号",
+    "desc": "一个称号都没有时"
   }
 }

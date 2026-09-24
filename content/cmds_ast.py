@@ -15,6 +15,7 @@ import os
 from . import calendar as CAL        # 时辰/天气的唯一出口（它不 import 本模块，无环）
 from . import codex as CX            # 图鉴四谱的唯一记录口（B2-7）
 from . import eggs as EG              # 彩蛋（B3-1）：条件在 eggs 域，判定走引擎声明算子
+from . import titles as TT            # 称号（B3-2）：显示跟着名字走 · 判定在 titles 域
 
 _DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 _CACHE: dict = {}
@@ -134,7 +135,32 @@ def _move(p, loc, node, sink_lines):
     p["loc"] = loc
     p["node"] = node
     CX.note_visit(p, loc, node)               # ★ 记录（去过哪儿）
+    CX.note_step(p, loc, node)                # ★ B3-2：记一趟（「骨田的常客」靠它）
     return p
+
+
+def name_with_title(p) -> str:
+    """★ B3-2：名字后面跟称号（一个称号都没有就是名字本身）。
+
+    显示位置照口径 §一：称号跟着名字走，**只显示最近拿到的那个**（21 §一「同上（替换）」）。
+    """
+    nm = p.get("name") or "无名者"
+    n = TT.newest(p)
+    return T("SYS_TITLE_BY_NAME", who=nm, name=n[1]) if n else nm
+
+
+def title_lines(p, player=None, env=None) -> list:
+    """扫一遍称号：这次新挂上的那几个 → 要说的行（★ 有新称号才落档）。
+
+    触发点与彩蛋同一批（口径 §一 的显示规则 + 21 §一 的拿法）：观察 · 触摸 · 地图 · 搭话。
+    """
+    new = TT.scan(p, CAL.state())
+    if not new:
+        return []
+    if player is not None:
+        player.update(p)
+    _save(env)
+    return [T("SYS_TITLE_FOUND", name=TT.name_of(t)) for t in new]
 
 
 def egg_lines(p, player=None, env=None) -> list:
@@ -160,6 +186,8 @@ def egg_lines(p, player=None, env=None) -> list:
 # ══════════════════════════════════════════════════════════════
 async def look(env, sink, uid, player):
     p = _p(player)
+    if TT.newest(p):                            # ★ B3-2：称号跟着名字走（一个都没拿到就不多这一行）
+        yield name_with_title(p)
     loc, node = p["loc"], p["node"]
     m = _map_of(loc) or {}
     yield T("SCENE_" + loc.upper(), name=m.get("name", loc)) if ("SCENE_" + loc.upper()) in _texts() \
@@ -177,6 +205,8 @@ async def look(env, sink, uid, player):
     yield "「『触摸』可以上手摸，『聆听』可以听，『地图』看全貌。」"
     for line in egg_lines(p, player, env):      # ★ B3-1：看四周那一下可能把两件事连起来
         yield line
+    for line in title_lines(p, player, env):    # ★ B3-2：看四周那一下也可能把名字挂上来
+        yield line
 
 
 async def map_view(env, sink, uid, player):
@@ -189,6 +219,8 @@ async def map_view(env, sink, uid, player):
         mark = "▸" if n.get("id") == node else " "
         yield "%s %s%s" % (mark, n.get("name"), "（你现在在这儿）" if mark == "▸" else "")
     for line in egg_lines(p, player, env):      # ★ B3-1：走到底再看地图
+        yield line
+    for line in title_lines(p, player, env):    # ★ B3-2：走了那么多趟，名字该挂上来了
         yield line
 
 
@@ -247,6 +279,7 @@ async def enter_town(env, sink, uid, player):
     p["loc"] = "windmill_town"
     p["node"] = "wt_gate_n"
     CX.note_visit(p, "windmill_town", "wt_gate_n")
+    CX.note_step(p, "windmill_town", "wt_gate_n")
     if player is not None:
         player.update(p)
     _save(env)
@@ -263,6 +296,7 @@ async def go_back(env, sink, uid, player):
     loc, node = prev[-1]
     p["prev"] = prev[:-1]
     p["loc"], p["node"] = loc, node
+    CX.note_step(p, loc, node)                # ★ B3-2：退回也是走到了一趟
     if player is not None:
         player.update(p)
     _save(env)
@@ -303,6 +337,7 @@ async def go_to(env, sink, uid, player):
     p["prev"] = (p.get("prev") or [])[-8:] + [(loc, node)]
     p["node"] = hit
     CX.note_visit(p, loc, hit)
+    CX.note_step(p, loc, hit)                 # ★ B3-2：走到的那一趟
     if player is not None:
         player.update(p)
     _save(env)
@@ -320,7 +355,7 @@ async def go_to(env, sink, uid, player):
 # ══════════════════════════════════════════════════════════════
 async def status(env, sink, uid, player):
     p = _p(player)
-    nm = p.get("name") or "无名者"
+    nm = name_with_title(p)                     # ★ B3-2：称号跟着名字走进面板
     yield "【%s】%s · %s · %s 级" % (nm, p.get("race") or "未定", p.get("cls") or "未定", p.get("level"))
     yield "生命 %s/%s ｜ 法力 %s/%s ｜ 铜板 %s" % (p.get("hp"), p.get("hp_max"),
                                                     p.get("mo"), p.get("mo_max"), p.get("gold"))
@@ -381,6 +416,8 @@ async def touch(env, sink, uid, player):
         for pid in got:
             yield T("SYS_CODEX_NEW", book=CX.label("relic"), name=CX.name_of("relic", pid))
     for line in egg_lines(p, player, env):      # ★ B3-1：读过东西那一处可能连上另一处
+        yield line
+    for line in title_lines(p, player, env):    # ★ B3-2：读过的东西也算数
         yield line
 
 

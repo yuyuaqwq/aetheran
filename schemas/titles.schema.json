@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "阿斯特兰 · 称号（titles 域）—— 十个不给数值的名字 = 获取条件 + 显示位置",
+  "description": "本域由 scripts/rebuild_titles.py 从 00_总纲/16_称号域口径_v1.md 与 06_第一阶段垂直切片/21_长期目标层_v1.md 一 解析生成；条件用引擎 conditions.declarative 的算子写成声明节点，由 content/titles.py 现算 ctx 求值（ctx 底子 = content/eggs.py::ctx）。",
+  "type": "object",
+  "patternProperties": {
+    "^_": {
+      "type": "object",
+      "description": "私有键（_meta 那类）—— 与编辑器/装载器同口径：不是条目"
+    },
+    "^title_[a-z0-9_]+$": {
+      "type": "object",
+      "required": ["no", "name", "how", "seen", "where", "why", "cond"],
+      "properties": {
+        "no": {"type": "integer", "minimum": 1, "description": "21 文档 一 表里的编号"},
+        "name": {"type": "string", "description": "照抄 21 文档那一行（称号本身）"},
+        "how": {"type": "string", "description": "怎么拿到（照抄 21 文档）"},
+        "seen": {"type": "string", "description": "玩家看到（照抄 21 文档，可能是「同上（替换）」或空）"},
+        "where": {"type": "string", "description": "显示位置（口径 一 的唯一一条显示规则）"},
+        "why": {"type": "string", "description": "依据（为什么是这个条件）—— 判定可回查"},
+        "cond": {
+          "type": "object",
+          "description": "获取条件 —— 引擎 declarative 声明节点（and/or/eq/ge/contains/truthy），ctx 由 content/titles.py 出",
+          "required": ["op"],
+          "properties": {"op": {"type": "string"}},
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

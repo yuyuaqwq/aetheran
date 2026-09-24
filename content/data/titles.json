@@ -1,0 +1,261 @@
+{
+  "_meta": {
+    "count": 10,
+    "title": "十个称号（长期目标层 · 不给数值）",
+    "source": "06_第一阶段垂直切片/21_长期目标层_v1.md 一",
+    "spec": "00_总纲/16_称号域口径_v1.md",
+    "display": "名字后面（观察 / 状态）",
+    "note": "名/怎么拿到/条件全部由 scripts/rebuild_titles.py 从源文档解析 —— 别手改本文件"
+  },
+  "title_read_stone": {
+    "no": 1,
+    "name": "读碑的人",
+    "how": "第一次读懂镇口那块碑（精灵或有铭文之眼）",
+    "seen": "「XX · 读碑的人」",
+    "where": "名字后面（观察 / 状态）",
+    "why": "21 §一「第一次读懂镇口那块碑（精灵或有铭文之眼）」；镇口那块碑 = poi_stone_scripts（pois 域）",
+    "cond": {
+      "op": "and",
+      "args": [
+        {
+          "op": "contains",
+          "elem": {
+            "const": "poi_stone_scripts"
+          },
+          "seq": {
+            "field": [
+              {
+                "key": "read"
+              }
+            ]
+          }
+        },
+        {
+          "op": "truthy",
+          "arg": {
+            "field": [
+              {
+                "key": "lore_scripts"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "title_three_scripts": {
+    "no": 2,
+    "name": "认得三种字的人",
+    "how": "读完全部 12 类可读物",
+    "seen": "同上（替换）",
+    "where": "名字后面（观察 / 状态）",
+    "why": "21「读完全部 12 类可读物」；12 = pois 里 into_codex 的条数（rebuild 现算，不手打）",
+    "cond": {
+      "op": "ge",
+      "left": {
+        "field": [
+          {
+            "key": "read_all"
+          }
+        ]
+      },
+      "right": {
+        "const": 12
+      }
+    }
+  },
+  "title_night_net": {
+    "no": 3,
+    "name": "夜里下网的",
+    "how": "钓上第一种只在夜里出的鱼",
+    "seen": "",
+    "where": "名字后面（观察 / 状态）",
+    "why": "21「钓上第一种只在夜里出的鱼」；i_fish_rare 的两个出产口（gt_bw_fish_1 的条目 when=夜 / gt_bw_fish_2 这个点 time=夜）都是夜 —— rebuild 逐口验",
+    "cond": {
+      "op": "contains",
+      "elem": {
+        "const": "i_fish_rare"
+      },
+      "seq": {
+        "field": [
+          {
+            "key": "mat"
+          }
+        ]
+      }
+    }
+  },
+  "title_bone_regular": {
+    "no": 4,
+    "name": "骨田的常客",
+    "how": "骨田累计去过 20 次",
+    "seen": "",
+    "where": "名字后面（观察 / 状态）",
+    "why": "21「骨田累计去过 20 次」；骨田 = 北带那张图的 bn_bone 节点",
+    "cond": {
+      "op": "ge",
+      "left": {
+        "field": [
+          {
+            "key": "visited"
+          },
+          {
+            "key": "belt_north:bn_bone",
+            "default": 0
+          }
+        ]
+      },
+      "right": {
+        "const": 20
+      }
+    }
+  },
+  "title_three_interrupts": {
+    "no": 5,
+    "name": "三次打断",
+    "how": "打断成功累计 10 次",
+    "seen": "",
+    "where": "名字后面（观察 / 状态）",
+    "why": "21「打断成功累计 10 次」；计数口 foot.interrupts —— 等战斗交互层（轮流制）把「打断成功」写进去",
+    "cond": {
+      "op": "ge",
+      "left": {
+        "field": [
+          {
+            "key": "interrupt"
+          }
+        ]
+      },
+      "right": {
+        "const": 10
+      }
+    }
+  },
+  "title_no_down": {
+    "no": 6,
+    "name": "没让人倒下的",
+    "how": "副本通关且无人倒地",
+    "seen": "",
+    "where": "名字后面（观察 / 状态）",
+    "why": "21「副本通关且无人倒地」；计数口 foot.clears —— 等第一个副本的结算写进去",
+    "cond": {
+      "op": "ge",
+      "left": {
+        "field": [
+          {
+            "key": "clean"
+          }
+        ]
+      },
+      "right": {
+        "const": 1
+      }
+    }
+  },
+  "title_scavenger_friend": {
+    "no": 7,
+    "name": "拾荒人的朋友",
+    "how": "完成拾荒人的两条支线",
+    "seen": "",
+    "where": "名字后面（观察 / 状态）",
+    "why": "21「完成拾荒人的两条支线」；这两条支线都是小满给的（24 §二 支 13 / 14），数据里没有别的「拾荒人」NPC —— 见 P-13",
+    "cond": {
+      "op": "and",
+      "args": [
+        {
+          "op": "contains",
+          "elem": {
+            "const": "q_side_13"
+          },
+          "seq": {
+            "field": [
+              {
+                "key": "done"
+              }
+            ]
+          }
+        },
+        {
+          "op": "contains",
+          "elem": {
+            "const": "q_side_14"
+          },
+          "seq": {
+            "field": [
+              {
+                "key": "done"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "title_tower_top": {
+    "no": 8,
+    "name": "塔上的人",
+    "how": "到达旧哨塔塔顶",
+    "seen": "",
+    "where": "名字后面（观察 / 状态）",
+    "why": "21「到达旧哨塔塔顶」；塔顶 = old_watchtower 那张图 chain 末端的 tower_top 节点",
+    "cond": {
+      "op": "contains",
+      "elem": {
+        "const": "old_watchtower:tower_top"
+      },
+      "seq": {
+        "field": [
+          {
+            "key": "been"
+          }
+        ]
+      }
+    }
+  },
+  "title_horn_fixed": {
+    "no": 9,
+    "name": "把号角修好的人",
+    "how": "走完隐藏线「号角」（修好，不一定吹）",
+    "seen": "",
+    "where": "名字后面（观察 / 状态）",
+    "why": "21「走完隐藏线「号角」（修好，不一定吹）」；计数口 flags.horn_fixed —— 隐藏线口径还没落，等它",
+    "cond": {
+      "op": "ge",
+      "left": {
+        "field": [
+          {
+            "key": "horn"
+          }
+        ]
+      },
+      "right": {
+        "const": 1
+      }
+    }
+  },
+  "title_wall_listener": {
+    "no": 10,
+    "name": "北墙根的听众",
+    "how": "听完哈根的全部对话",
+    "seen": "",
+    "where": "名字后面（观察 / 状态）",
+    "why": "21「听完哈根的全部对话」；8 = dlg_hagen 全部台词条数（rebuild 现算）—— 取句顺序那条坑见 P-12",
+    "cond": {
+      "op": "ge",
+      "left": {
+        "field": [
+          {
+            "key": "heard"
+          },
+          {
+            "key": "dlg_hagen",
+            "default": 0
+          }
+        ]
+      },
+      "right": {
+        "const": 8
+      }
+    }
+  }
+}
