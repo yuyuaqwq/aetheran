@@ -88,5 +88,14 @@
     "icon": "💬",
     "owner": "package",
     "tier": "portable"
+  },
+  "monsters": {
+    "label": "怪物",
+    "kind": "data",
+    "schema": "schemas/monsters.schema.json",
+    "primary": "monster",
+    "icon": "👹",
+    "owner": "package",
+    "tier": "portable"
   }
 }

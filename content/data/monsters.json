@@ -6,13 +6,14 @@
     "role": "普通",
     "lv": 3,
     "panel": {
-      "hp": 115,
-      "atk": 11.1,
-      "def": 10.0,
-      "spd": 92,
-      "hit": 53.5,
-      "eva": 8.9,
-      "crit": 14.3
+      "hp": 52,
+      "atk": 8.3,
+      "def": 9.0,
+      "res": 8.5,
+      "spd": 101,
+      "hit": 48.2,
+      "eva": 8.0,
+      "crit": 12.9
     },
     "skills": [
       "ms_skill_bite"
@@ -37,13 +38,14 @@
     "role": "普通",
     "lv": 4,
     "panel": {
-      "hp": 133,
-      "atk": 12.5,
-      "def": 11.3,
-      "spd": 92,
-      "hit": 54.6,
-      "eva": 9.5,
-      "crit": 15.9
+      "hp": 60,
+      "atk": 9.4,
+      "def": 10.2,
+      "res": 9.4,
+      "spd": 101,
+      "hit": 49.2,
+      "eva": 8.5,
+      "crit": 14.3
     },
     "skills": [
       "ms_skill_pack_bite"
@@ -68,13 +70,14 @@
     "role": "普通",
     "lv": 6,
     "panel": {
-      "hp": 170,
-      "atk": 15.2,
-      "def": 14.0,
-      "spd": 92,
-      "hit": 56.8,
-      "eva": 10.7,
-      "crit": 19.0
+      "hp": 237,
+      "atk": 12.9,
+      "def": 22.3,
+      "res": 20.0,
+      "spd": 78,
+      "hit": 68.2,
+      "eva": 12.8,
+      "crit": 22.8
     },
     "skills": [
       "ms_skill_bone_swing"
@@ -99,13 +102,14 @@
     "role": "普通",
     "lv": 4,
     "panel": {
-      "hp": 133,
-      "atk": 12.5,
-      "def": 11.3,
-      "spd": 92,
-      "hit": 54.6,
-      "eva": 9.5,
-      "crit": 15.9
+      "hp": 93,
+      "atk": 13.7,
+      "def": 9.0,
+      "res": 8.4,
+      "spd": 119,
+      "hit": 49.2,
+      "eva": 8.5,
+      "crit": 14.3
     },
     "skills": [
       "ms_skill_eye_peck"
@@ -133,6 +137,7 @@
       "hp": 170,
       "atk": 15.2,
       "def": 14.0,
+      "res": 12.5,
       "spd": 92,
       "hit": 56.8,
       "eva": 10.7,
@@ -162,8 +167,9 @@
     "lv": 8,
     "panel": {
       "hp": 206,
-      "atk": 17.8,
+      "atk": 16.1,
       "def": 16.6,
+      "res": 14.5,
       "spd": 92,
       "hit": 59.0,
       "eva": 11.9,
@@ -192,13 +198,14 @@
     "role": "普通",
     "lv": 9,
     "panel": {
-      "hp": 225,
-      "atk": 19.2,
-      "def": 18.0,
-      "spd": 92,
-      "hit": 60.1,
-      "eva": 12.5,
-      "crit": 23.6
+      "hp": 314,
+      "atk": 16.3,
+      "def": 28.7,
+      "res": 24.8,
+      "spd": 78,
+      "hit": 72.2,
+      "eva": 15.0,
+      "crit": 28.3
     },
     "skills": [
       "ms_skill_pincer"
@@ -223,13 +230,14 @@
     "role": "精英",
     "lv": 7,
     "panel": {
-      "hp": 564,
-      "atk": 16.5,
-      "def": 16.8,
-      "spd": 104,
-      "hit": 63.7,
-      "eva": 12.4,
-      "crit": 22.6
+      "hp": 395,
+      "atk": 24.7,
+      "def": 13.5,
+      "res": 11.9,
+      "spd": 93,
+      "hit": 57.4,
+      "eva": 11.2,
+      "crit": 20.3
     },
     "skills": [
       "ms_skill_snatch"
@@ -255,8 +263,9 @@
     "lv": 9,
     "panel": {
       "hp": 674,
-      "atk": 19.2,
+      "atk": 17.3,
       "def": 19.7,
+      "res": 17.0,
       "spd": 104,
       "hit": 66.2,
       "eva": 13.7,
@@ -285,13 +294,14 @@
     "role": "精英",
     "lv": 11,
     "panel": {
-      "hp": 783,
-      "atk": 21.9,
-      "def": 22.7,
+      "hp": 627,
+      "atk": 20.8,
+      "def": 15.9,
+      "res": 13.5,
       "spd": 104,
-      "hit": 68.6,
-      "eva": 15.0,
-      "crit": 29.4
+      "hit": 109.7,
+      "eva": 24.1,
+      "crit": 47.0
     },
     "skills": [
       "ms_skill_birch_mark"
@@ -317,12 +327,13 @@
     "lv": 12,
     "panel": {
       "hp": 838,
-      "atk": 23.2,
+      "atk": 18.6,
       "def": 24.1,
+      "res": 20.3,
       "spd": 104,
-      "hit": 69.8,
-      "eva": 15.7,
-      "crit": 31.1
+      "hit": 76.8,
+      "eva": 17.3,
+      "crit": 34.2
     },
     "skills": [
       "ms_skill_call_drowned"
@@ -347,13 +358,14 @@
     "role": "精英",
     "lv": 13,
     "panel": {
-      "hp": 893,
-      "atk": 24.5,
-      "def": 25.6,
-      "spd": 104,
-      "hit": 71.0,
-      "eva": 16.4,
-      "crit": 32.8
+      "hp": 625,
+      "atk": 36.8,
+      "def": 20.5,
+      "res": 17.2,
+      "spd": 93,
+      "hit": 63.9,
+      "eva": 14.7,
+      "crit": 29.5
     },
     "skills": [
       "ms_skill_shadow_strike"
@@ -378,13 +390,14 @@
     "role": "头目",
     "lv": 14,
     "panel": {
-      "hp": 1106,
-      "atk": 25.9,
-      "def": 29.5,
-      "spd": 98,
-      "hit": 78.8,
-      "eva": 18.6,
-      "crit": 37.6
+      "hp": 1549,
+      "atk": 22.0,
+      "def": 47.2,
+      "res": 39.3,
+      "spd": 83,
+      "hit": 94.6,
+      "eva": 22.3,
+      "crit": 45.1
     },
     "skills": [
       "ms_skill_stance_guard"
@@ -409,13 +422,14 @@
     "role": "头目",
     "lv": 10,
     "panel": {
-      "hp": 850,
-      "atk": 20.5,
-      "def": 23.1,
-      "spd": 98,
-      "hit": 73.5,
-      "eva": 15.7,
-      "crit": 30.2
+      "hp": 595,
+      "atk": 22.6,
+      "def": 18.5,
+      "res": 15.8,
+      "spd": 127,
+      "hit": 66.2,
+      "eva": 14.1,
+      "crit": 27.2
     },
     "skills": [
       "ms_skill_pack_howl"
@@ -440,13 +454,14 @@
     "role": "头目",
     "lv": 15,
     "panel": {
-      "hp": 1170,
-      "atk": 27.2,
-      "def": 31.1,
-      "spd": 98,
-      "hit": 80.1,
-      "eva": 19.3,
-      "crit": 39.5
+      "hp": 1639,
+      "atk": 23.1,
+      "def": 49.8,
+      "res": 41.3,
+      "spd": 83,
+      "hit": 96.2,
+      "eva": 23.1,
+      "crit": 47.4
     },
     "skills": [
       "ms_skill_undertow"
@@ -471,13 +486,14 @@
     "role": "层主",
     "lv": 17,
     "panel": {
-      "hp": 1670,
-      "atk": 29.9,
-      "def": 34.3,
+      "hp": 1336,
+      "atk": 28.4,
+      "def": 24.0,
+      "res": 19.7,
       "spd": 96,
-      "hit": 82.8,
-      "eva": 20.7,
-      "crit": 43.2
+      "hit": 132.4,
+      "eva": 33.2,
+      "crit": 69.1
     },
     "skills": [
       "ms_skill_sweep"

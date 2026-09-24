@@ -1,0 +1,1916 @@
+{
+  "i_weapon_knight_wall_common": {
+    "name": "拾荒人的重剑",
+    "icon": "⚔️",
+    "kind": "武器",
+    "quality": "普通",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "atk",
+        "v": 9
+      }
+    ]
+  },
+  "i_weapon_knight_wall_refined": {
+    "name": "拾荒人的重剑",
+    "icon": "⚔️",
+    "kind": "武器",
+    "quality": "精制",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "atk",
+        "v": 10
+      },
+      {
+        "stat": "def",
+        "v": 4
+      },
+      {
+        "stat": "hp",
+        "v": 16
+      }
+    ]
+  },
+  "i_weapon_knight_wall_rare": {
+    "name": "拾荒人的重剑",
+    "icon": "⚔️",
+    "kind": "武器",
+    "quality": "稀有",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "atk",
+        "v": 11
+      },
+      {
+        "stat": "def",
+        "v": 4
+      },
+      {
+        "stat": "res_element",
+        "v": 60,
+        "note": "元素抗 +60（火/冰/暗 选一）"
+      }
+    ]
+  },
+  "i_weapon_knight_wall_relic": {
+    "name": "拾荒人的重剑",
+    "icon": "⚔️",
+    "kind": "武器",
+    "quality": "遗物",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "atk",
+        "v": 11
+      },
+      {
+        "stat": "def",
+        "v": 4
+      },
+      {
+        "stat": "reflect",
+        "v": 15
+      }
+    ],
+    "lore": "剑柄上缠的布是一块头巾。磨破的地方他补过两回，没换。"
+  },
+  "i_weapon_knight_oath_common": {
+    "name": "哨兵的长剑",
+    "icon": "⚔️",
+    "kind": "武器",
+    "quality": "普通",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "atk",
+        "v": 9
+      }
+    ]
+  },
+  "i_weapon_knight_oath_refined": {
+    "name": "哨兵的长剑",
+    "icon": "⚔️",
+    "kind": "武器",
+    "quality": "精制",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "atk",
+        "v": 10
+      },
+      {
+        "stat": "spd",
+        "v": 13
+      },
+      {
+        "stat": "crit",
+        "v": 10
+      }
+    ]
+  },
+  "i_weapon_knight_oath_rare": {
+    "name": "哨兵的长剑",
+    "icon": "⚔️",
+    "kind": "武器",
+    "quality": "稀有",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "atk",
+        "v": 11
+      },
+      {
+        "stat": "spd",
+        "v": 14
+      },
+      {
+        "stat": "res_element",
+        "v": 60,
+        "note": "元素抗 +60（火/冰/暗 选一）"
+      }
+    ]
+  },
+  "i_weapon_knight_oath_relic": {
+    "name": "哨兵的长剑",
+    "icon": "⚔️",
+    "kind": "武器",
+    "quality": "遗物",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "atk",
+        "v": 11
+      },
+      {
+        "stat": "spd",
+        "v": 15
+      },
+      {
+        "stat": "oath_gain_pct",
+        "v": 25,
+        "note": "受击攒值 +25%"
+      }
+    ],
+    "lore": "兵器架上空着一格。这一把掉在楼下的灰里，刃朝上。"
+  },
+  "i_weapon_berserker_burn_common": {
+    "name": "裂口的短斧",
+    "icon": "🪓",
+    "kind": "武器",
+    "quality": "普通",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "atk",
+        "v": 9
+      }
+    ]
+  },
+  "i_weapon_berserker_burn_refined": {
+    "name": "裂口的短斧",
+    "icon": "🪓",
+    "kind": "武器",
+    "quality": "精制",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "atk",
+        "v": 10
+      },
+      {
+        "stat": "hp",
+        "v": 32
+      },
+      {
+        "stat": "atk",
+        "v": 8
+      }
+    ]
+  },
+  "i_weapon_berserker_burn_rare": {
+    "name": "裂口的短斧",
+    "icon": "🪓",
+    "kind": "武器",
+    "quality": "稀有",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "atk",
+        "v": 11
+      },
+      {
+        "stat": "hp",
+        "v": 34
+      },
+      {
+        "stat": "res_element",
+        "v": 60
+      }
+    ]
+  },
+  "i_weapon_berserker_burn_relic": {
+    "name": "裂口的短斧",
+    "icon": "🪓",
+    "kind": "武器",
+    "quality": "遗物",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "atk",
+        "v": 11
+      },
+      {
+        "stat": "hp",
+        "v": 36
+      },
+      {
+        "stat": "lifesteal",
+        "v": 5
+      }
+    ],
+    "lore": "斧口是他自己砍裂的。裂了以后他还在用 —— 柄上多了两道缠绳。"
+  },
+  "i_weapon_berserker_gale_common": {
+    "name": "拾荒人的快刃",
+    "icon": "🗡️",
+    "kind": "武器",
+    "quality": "普通",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "atk",
+        "v": 9
+      }
+    ]
+  },
+  "i_weapon_berserker_gale_refined": {
+    "name": "拾荒人的快刃",
+    "icon": "🗡️",
+    "kind": "武器",
+    "quality": "精制",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "atk",
+        "v": 10
+      },
+      {
+        "stat": "spd",
+        "v": 13
+      },
+      {
+        "stat": "crit",
+        "v": 10
+      }
+    ]
+  },
+  "i_weapon_berserker_gale_rare": {
+    "name": "拾荒人的快刃",
+    "icon": "🗡️",
+    "kind": "武器",
+    "quality": "稀有",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "atk",
+        "v": 11
+      },
+      {
+        "stat": "spd",
+        "v": 14
+      },
+      {
+        "stat": "res_element",
+        "v": 60
+      }
+    ]
+  },
+  "i_weapon_berserker_gale_relic": {
+    "name": "拾荒人的快刃",
+    "icon": "🗡️",
+    "kind": "武器",
+    "quality": "遗物",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "atk",
+        "v": 11
+      },
+      {
+        "stat": "spd",
+        "v": 15
+      },
+      {
+        "stat": "spd_per_action",
+        "v": 1,
+        "note": "每次行动后 spd +1（最多 10 层）"
+      }
+    ],
+    "lore": "刀鞘比刀新。鞘上刻着一行数，刻到一半停了。"
+  },
+  "i_weapon_ranger_snipe_common": {
+    "name": "塔顶的短弓",
+    "icon": "🏹",
+    "kind": "武器",
+    "quality": "普通",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "atk",
+        "v": 9
+      }
+    ]
+  },
+  "i_weapon_ranger_snipe_refined": {
+    "name": "塔顶的短弓",
+    "icon": "🏹",
+    "kind": "武器",
+    "quality": "精制",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "atk",
+        "v": 10
+      },
+      {
+        "stat": "crit",
+        "v": 5
+      },
+      {
+        "stat": "hit",
+        "v": 8
+      }
+    ]
+  },
+  "i_weapon_ranger_snipe_rare": {
+    "name": "塔顶的短弓",
+    "icon": "🏹",
+    "kind": "武器",
+    "quality": "稀有",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "atk",
+        "v": 11
+      },
+      {
+        "stat": "crit",
+        "v": 5
+      },
+      {
+        "stat": "res_element",
+        "v": 60
+      }
+    ]
+  },
+  "i_weapon_ranger_snipe_relic": {
+    "name": "塔顶的短弓",
+    "icon": "🏹",
+    "kind": "武器",
+    "quality": "遗物",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "atk",
+        "v": 11
+      },
+      {
+        "stat": "crit",
+        "v": 6
+      },
+      {
+        "stat": "dmg_aim_pct",
+        "v": 10,
+        "note": "狙击伤害 +10%"
+      }
+    ],
+    "lore": "弦断过两回，都接上了。第三回没接。"
+  },
+  "i_weapon_ranger_skirmish_common": {
+    "name": "白桦的长弓",
+    "icon": "🏹",
+    "kind": "武器",
+    "quality": "普通",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "atk",
+        "v": 9
+      }
+    ]
+  },
+  "i_weapon_ranger_skirmish_refined": {
+    "name": "白桦的长弓",
+    "icon": "🏹",
+    "kind": "武器",
+    "quality": "精制",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "atk",
+        "v": 10
+      },
+      {
+        "stat": "spd",
+        "v": 13
+      },
+      {
+        "stat": "eva",
+        "v": 4
+      }
+    ]
+  },
+  "i_weapon_ranger_skirmish_rare": {
+    "name": "白桦的长弓",
+    "icon": "🏹",
+    "kind": "武器",
+    "quality": "稀有",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "atk",
+        "v": 11
+      },
+      {
+        "stat": "spd",
+        "v": 14
+      },
+      {
+        "stat": "res_element",
+        "v": 60
+      }
+    ]
+  },
+  "i_weapon_ranger_skirmish_relic": {
+    "name": "白桦的长弓",
+    "icon": "🏹",
+    "kind": "武器",
+    "quality": "遗物",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "atk",
+        "v": 11
+      },
+      {
+        "stat": "spd",
+        "v": 15
+      },
+      {
+        "stat": "eva_when_melee",
+        "v": 15,
+        "note": "被贴脸时 eva +15"
+      }
+    ],
+    "lore": "树上有他的名字，刻得不深。弓挂在树杈上，够得着的地方。"
+  },
+  "i_weapon_mage_burst_common": {
+    "name": "焰痕的法杖",
+    "icon": "🪄",
+    "kind": "武器",
+    "quality": "普通",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "matk",
+        "v": 11
+      }
+    ]
+  },
+  "i_weapon_mage_burst_refined": {
+    "name": "焰痕的法杖",
+    "icon": "🪄",
+    "kind": "武器",
+    "quality": "精制",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "matk",
+        "v": 12
+      },
+      {
+        "stat": "crit",
+        "v": 5
+      },
+      {
+        "stat": "hit",
+        "v": 8
+      }
+    ]
+  },
+  "i_weapon_mage_burst_rare": {
+    "name": "焰痕的法杖",
+    "icon": "🪄",
+    "kind": "武器",
+    "quality": "稀有",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "matk",
+        "v": 13
+      },
+      {
+        "stat": "crit",
+        "v": 5
+      },
+      {
+        "stat": "res_element",
+        "v": 60
+      }
+    ]
+  },
+  "i_weapon_mage_burst_relic": {
+    "name": "焰痕的法杖",
+    "icon": "🪄",
+    "kind": "武器",
+    "quality": "遗物",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "matk",
+        "v": 14
+      },
+      {
+        "stat": "crit",
+        "v": 6
+      },
+      {
+        "stat": "dmg_ignite_pct",
+        "v": 8,
+        "note": "引燃伤害 +8%"
+      }
+    ],
+    "lore": "杖头烧黑了一圈。火房地上也有这么一圈，大小一样。"
+  },
+  "i_weapon_mage_charge_common": {
+    "name": "星屑的指杖",
+    "icon": "🪄",
+    "kind": "武器",
+    "quality": "普通",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "matk",
+        "v": 11
+      }
+    ]
+  },
+  "i_weapon_mage_charge_refined": {
+    "name": "星屑的指杖",
+    "icon": "🪄",
+    "kind": "武器",
+    "quality": "精制",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "matk",
+        "v": 12
+      },
+      {
+        "stat": "mo",
+        "v": 9
+      },
+      {
+        "stat": "spd",
+        "v": 6
+      }
+    ]
+  },
+  "i_weapon_mage_charge_rare": {
+    "name": "星屑的指杖",
+    "icon": "🪄",
+    "kind": "武器",
+    "quality": "稀有",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "matk",
+        "v": 13
+      },
+      {
+        "stat": "mo",
+        "v": 9
+      },
+      {
+        "stat": "res_element",
+        "v": 60
+      }
+    ]
+  },
+  "i_weapon_mage_charge_relic": {
+    "name": "星屑的指杖",
+    "icon": "🪄",
+    "kind": "武器",
+    "quality": "遗物",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "matk",
+        "v": 14
+      },
+      {
+        "stat": "mo",
+        "v": 10
+      },
+      {
+        "stat": "mark_cap",
+        "v": 1,
+        "note": "印记上限 +1"
+      }
+    ],
+    "lore": "望窗的窗台上摆着它，朝着北。灰铺得很匀，像没人动过。"
+  },
+  "i_weapon_priest_bless_common": {
+    "name": "白烛堂的圣杖",
+    "icon": "🪄",
+    "kind": "武器",
+    "quality": "普通",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "matk",
+        "v": 11
+      }
+    ]
+  },
+  "i_weapon_priest_bless_refined": {
+    "name": "白烛堂的圣杖",
+    "icon": "🪄",
+    "kind": "武器",
+    "quality": "精制",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "matk",
+        "v": 12
+      },
+      {
+        "stat": "heal_pow",
+        "v": 1
+      },
+      {
+        "stat": "res",
+        "v": 5
+      }
+    ]
+  },
+  "i_weapon_priest_bless_rare": {
+    "name": "白烛堂的圣杖",
+    "icon": "🪄",
+    "kind": "武器",
+    "quality": "稀有",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "matk",
+        "v": 13
+      },
+      {
+        "stat": "heal_pow",
+        "v": 2
+      },
+      {
+        "stat": "res_element",
+        "v": 60
+      }
+    ]
+  },
+  "i_weapon_priest_bless_relic": {
+    "name": "白烛堂的圣杖",
+    "icon": "🪄",
+    "kind": "武器",
+    "quality": "遗物",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "matk",
+        "v": 14
+      },
+      {
+        "stat": "heal_pow",
+        "v": 2
+      },
+      {
+        "stat": "heal_pct",
+        "v": 8,
+        "note": "治疗量 +8%"
+      }
+    ],
+    "lore": "白烛堂的柜里少着一把。艾德说，那把不是他的。"
+  },
+  "i_weapon_priest_ascetic_common": {
+    "name": "北墙根的木杖",
+    "icon": "🪄",
+    "kind": "武器",
+    "quality": "普通",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "matk",
+        "v": 11
+      }
+    ]
+  },
+  "i_weapon_priest_ascetic_refined": {
+    "name": "北墙根的木杖",
+    "icon": "🪄",
+    "kind": "武器",
+    "quality": "精制",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "matk",
+        "v": 12
+      },
+      {
+        "stat": "hp",
+        "v": 32
+      },
+      {
+        "stat": "block",
+        "v": 8
+      }
+    ]
+  },
+  "i_weapon_priest_ascetic_rare": {
+    "name": "北墙根的木杖",
+    "icon": "🪄",
+    "kind": "武器",
+    "quality": "稀有",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "matk",
+        "v": 13
+      },
+      {
+        "stat": "hp",
+        "v": 34
+      },
+      {
+        "stat": "res_element",
+        "v": 60
+      }
+    ]
+  },
+  "i_weapon_priest_ascetic_relic": {
+    "name": "北墙根的木杖",
+    "icon": "🪄",
+    "kind": "武器",
+    "quality": "遗物",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "matk",
+        "v": 14
+      },
+      {
+        "stat": "hp",
+        "v": 36
+      },
+      {
+        "stat": "ally_down_dr_pct",
+        "v": 20,
+        "note": "队友倒下时全队减伤 20%（300 刻）"
+      }
+    ],
+    "lore": "木杖靠在墙上，比哈根坐的地方离那堆骨头更近。"
+  },
+  "i_weapon_assassin_shade_common": {
+    "name": "断势的短刃",
+    "icon": "🗡️",
+    "kind": "武器",
+    "quality": "普通",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "atk",
+        "v": 9
+      }
+    ]
+  },
+  "i_weapon_assassin_shade_refined": {
+    "name": "断势的短刃",
+    "icon": "🗡️",
+    "kind": "武器",
+    "quality": "精制",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "atk",
+        "v": 10
+      },
+      {
+        "stat": "crit",
+        "v": 5
+      },
+      {
+        "stat": "hit",
+        "v": 8
+      }
+    ]
+  },
+  "i_weapon_assassin_shade_rare": {
+    "name": "断势的短刃",
+    "icon": "🗡️",
+    "kind": "武器",
+    "quality": "稀有",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "atk",
+        "v": 11
+      },
+      {
+        "stat": "crit",
+        "v": 5
+      },
+      {
+        "stat": "res_element",
+        "v": 60
+      }
+    ]
+  },
+  "i_weapon_assassin_shade_relic": {
+    "name": "断势的短刃",
+    "icon": "🗡️",
+    "kind": "武器",
+    "quality": "遗物",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "atk",
+        "v": 11
+      },
+      {
+        "stat": "crit",
+        "v": 6
+      },
+      {
+        "stat": "act_refund_on_interrupt",
+        "v": 1,
+        "note": "打断成功时回一次行动"
+      }
+    ],
+    "lore": "断口往里卷。不是被人打断的 —— 是打断别人的东西时断的。"
+  },
+  "i_weapon_assassin_venom_common": {
+    "name": "拾荒人的毒囊",
+    "icon": "☠️",
+    "kind": "武器",
+    "quality": "普通",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "atk",
+        "v": 9
+      }
+    ]
+  },
+  "i_weapon_assassin_venom_refined": {
+    "name": "拾荒人的毒囊",
+    "icon": "☠️",
+    "kind": "武器",
+    "quality": "精制",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "atk",
+        "v": 10
+      },
+      {
+        "stat": "spd",
+        "v": 13
+      },
+      {
+        "stat": "crit",
+        "v": 8
+      }
+    ]
+  },
+  "i_weapon_assassin_venom_rare": {
+    "name": "拾荒人的毒囊",
+    "icon": "☠️",
+    "kind": "武器",
+    "quality": "稀有",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "atk",
+        "v": 11
+      },
+      {
+        "stat": "spd",
+        "v": 14
+      },
+      {
+        "stat": "res_element",
+        "v": 60
+      }
+    ]
+  },
+  "i_weapon_assassin_venom_relic": {
+    "name": "拾荒人的毒囊",
+    "icon": "☠️",
+    "kind": "武器",
+    "quality": "遗物",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "atk",
+        "v": 11
+      },
+      {
+        "stat": "spd",
+        "v": 15
+      },
+      {
+        "stat": "bleed_cap",
+        "v": 2,
+        "note": "流血层数上限 +2"
+      }
+    ],
+    "lore": "囊口用牙咬开过。刚咬一半，人就到跟前了。"
+  },
+  "i_armor_top_heavy_common": {
+    "name": "重上甲",
+    "icon": "🛡️",
+    "kind": "上甲",
+    "quality": "普通",
+    "slot": "armor_top",
+    "affixes": [
+      {
+        "stat": "def",
+        "v": 4
+      }
+    ]
+  },
+  "i_armor_top_heavy_refined": {
+    "name": "重上甲",
+    "icon": "🛡️",
+    "kind": "上甲",
+    "quality": "精制",
+    "slot": "armor_top",
+    "affixes": [
+      {
+        "stat": "def",
+        "v": 4
+      },
+      {
+        "stat": "hp",
+        "v": 21
+      },
+      {
+        "stat": "dmg_half_chance",
+        "v": 10,
+        "note": "受伤时 10% 概率减半"
+      }
+    ]
+  },
+  "i_armor_top_heavy_rare": {
+    "name": "重上甲",
+    "icon": "🛡️",
+    "kind": "上甲",
+    "quality": "稀有",
+    "slot": "armor_top",
+    "affixes": [
+      {
+        "stat": "def",
+        "v": 4
+      },
+      {
+        "stat": "hp",
+        "v": 23
+      },
+      {
+        "stat": "res_fire",
+        "v": 60
+      }
+    ]
+  },
+  "i_armor_top_heavy_relic": {
+    "name": "重上甲",
+    "icon": "🛡️",
+    "kind": "上甲",
+    "quality": "遗物",
+    "slot": "armor_top",
+    "affixes": [
+      {
+        "stat": "def",
+        "v": 5
+      },
+      {
+        "stat": "hp",
+        "v": 24
+      },
+      {
+        "stat": "reflect",
+        "v": 10
+      }
+    ],
+    "lore": "甲片换过，缝线的针脚是新的；甲是旧的。"
+  },
+  "i_armor_top_tough_common": {
+    "name": "韧上甲",
+    "icon": "🧥",
+    "kind": "上甲",
+    "quality": "普通",
+    "slot": "armor_top",
+    "affixes": [
+      {
+        "stat": "def",
+        "v": 4
+      }
+    ]
+  },
+  "i_armor_top_tough_refined": {
+    "name": "韧上甲",
+    "icon": "🧥",
+    "kind": "上甲",
+    "quality": "精制",
+    "slot": "armor_top",
+    "affixes": [
+      {
+        "stat": "def",
+        "v": 4
+      },
+      {
+        "stat": "res",
+        "v": 2
+      },
+      {
+        "stat": "resilience",
+        "v": 15,
+        "note": "控制减免 15%"
+      }
+    ]
+  },
+  "i_armor_top_tough_rare": {
+    "name": "韧上甲",
+    "icon": "🧥",
+    "kind": "上甲",
+    "quality": "稀有",
+    "slot": "armor_top",
+    "affixes": [
+      {
+        "stat": "def",
+        "v": 4
+      },
+      {
+        "stat": "res",
+        "v": 2
+      },
+      {
+        "stat": "res_ice",
+        "v": 60
+      }
+    ]
+  },
+  "i_armor_top_tough_relic": {
+    "name": "韧上甲",
+    "icon": "🧥",
+    "kind": "上甲",
+    "quality": "遗物",
+    "slot": "armor_top",
+    "affixes": [
+      {
+        "stat": "def",
+        "v": 5
+      },
+      {
+        "stat": "res",
+        "v": 2
+      },
+      {
+        "stat": "auto_cleanse_cd",
+        "v": 300,
+        "note": "被控时立刻解一次（300 刻 CD）"
+      }
+    ],
+    "lore": "里衬上缝着一块布。布上写了半句祷词，写到一半换了行。"
+  },
+  "i_armor_bottom_weighted_common": {
+    "name": "沉下甲",
+    "icon": "👖",
+    "kind": "下甲",
+    "quality": "普通",
+    "slot": "armor_bottom",
+    "affixes": [
+      {
+        "stat": "hp",
+        "v": 33
+      }
+    ]
+  },
+  "i_armor_bottom_weighted_refined": {
+    "name": "沉下甲",
+    "icon": "👖",
+    "kind": "下甲",
+    "quality": "精制",
+    "slot": "armor_bottom",
+    "affixes": [
+      {
+        "stat": "hp",
+        "v": 35
+      },
+      {
+        "stat": "def",
+        "v": 3
+      },
+      {
+        "stat": "oath_gain_pct",
+        "v": 10,
+        "note": "受击攒值 +10%"
+      }
+    ]
+  },
+  "i_armor_bottom_weighted_rare": {
+    "name": "沉下甲",
+    "icon": "👖",
+    "kind": "下甲",
+    "quality": "稀有",
+    "slot": "armor_bottom",
+    "affixes": [
+      {
+        "stat": "hp",
+        "v": 38
+      },
+      {
+        "stat": "def",
+        "v": 3
+      },
+      {
+        "stat": "res_shadow",
+        "v": 60
+      }
+    ]
+  },
+  "i_armor_bottom_weighted_relic": {
+    "name": "沉下甲",
+    "icon": "👖",
+    "kind": "下甲",
+    "quality": "遗物",
+    "slot": "armor_bottom",
+    "affixes": [
+      {
+        "stat": "hp",
+        "v": 41
+      },
+      {
+        "stat": "def",
+        "v": 3
+      },
+      {
+        "stat": "def_low_hp_pct",
+        "v": 20,
+        "note": "血 <30% 时 def +20%"
+      }
+    ],
+    "lore": "地板下压着它，旁边是一本没写完的账。"
+  },
+  "i_armor_bottom_light_common": {
+    "name": "轻下甲",
+    "icon": "🩳",
+    "kind": "下甲",
+    "quality": "普通",
+    "slot": "armor_bottom",
+    "affixes": [
+      {
+        "stat": "hp",
+        "v": 33
+      }
+    ]
+  },
+  "i_armor_bottom_light_refined": {
+    "name": "轻下甲",
+    "icon": "🩳",
+    "kind": "下甲",
+    "quality": "精制",
+    "slot": "armor_bottom",
+    "affixes": [
+      {
+        "stat": "hp",
+        "v": 35
+      },
+      {
+        "stat": "spd",
+        "v": 9
+      },
+      {
+        "stat": "eva_when_melee",
+        "v": 10,
+        "note": "被贴脸时 eva +10"
+      }
+    ]
+  },
+  "i_armor_bottom_light_rare": {
+    "name": "轻下甲",
+    "icon": "🩳",
+    "kind": "下甲",
+    "quality": "稀有",
+    "slot": "armor_bottom",
+    "affixes": [
+      {
+        "stat": "hp",
+        "v": 38
+      },
+      {
+        "stat": "spd",
+        "v": 9
+      },
+      {
+        "stat": "res_fire",
+        "v": 60
+      }
+    ]
+  },
+  "i_armor_bottom_light_relic": {
+    "name": "轻下甲",
+    "icon": "🩳",
+    "kind": "下甲",
+    "quality": "遗物",
+    "slot": "armor_bottom",
+    "affixes": [
+      {
+        "stat": "hp",
+        "v": 41
+      },
+      {
+        "stat": "spd",
+        "v": 10
+      },
+      {
+        "stat": "retreat_free",
+        "v": 1,
+        "note": "后撤不消耗行动"
+      }
+    ],
+    "lore": "叠好了放在铺位上。上头没有血。"
+  },
+  "i_helmet_thick_common": {
+    "name": "厚头盔",
+    "icon": "🪖",
+    "kind": "头盔",
+    "quality": "普通",
+    "slot": "helmet",
+    "affixes": [
+      {
+        "stat": "res",
+        "v": 3
+      }
+    ]
+  },
+  "i_helmet_thick_refined": {
+    "name": "厚头盔",
+    "icon": "🪖",
+    "kind": "头盔",
+    "quality": "精制",
+    "slot": "helmet",
+    "affixes": [
+      {
+        "stat": "res",
+        "v": 3
+      },
+      {
+        "stat": "hp",
+        "v": 17
+      },
+      {
+        "stat": "resilience",
+        "v": 10,
+        "note": "控制减免 10%"
+      }
+    ]
+  },
+  "i_helmet_thick_rare": {
+    "name": "厚头盔",
+    "icon": "🪖",
+    "kind": "头盔",
+    "quality": "稀有",
+    "slot": "helmet",
+    "affixes": [
+      {
+        "stat": "res",
+        "v": 3
+      },
+      {
+        "stat": "hp",
+        "v": 18
+      },
+      {
+        "stat": "res_shadow",
+        "v": 60
+      }
+    ]
+  },
+  "i_helmet_thick_relic": {
+    "name": "厚头盔",
+    "icon": "🪖",
+    "kind": "头盔",
+    "quality": "遗物",
+    "slot": "helmet",
+    "affixes": [
+      {
+        "stat": "res",
+        "v": 3
+      },
+      {
+        "stat": "hp",
+        "v": 19
+      },
+      {
+        "stat": "stun_immune",
+        "v": 1,
+        "note": "免疫一次眩晕"
+      }
+    ],
+    "lore": "盔里垫的草还是干的。它被摘下来的时候，人还在。"
+  },
+  "i_helmet_bright_common": {
+    "name": "明头盔",
+    "icon": "⛑️",
+    "kind": "头盔",
+    "quality": "普通",
+    "slot": "helmet",
+    "affixes": [
+      {
+        "stat": "res",
+        "v": 3
+      }
+    ]
+  },
+  "i_helmet_bright_refined": {
+    "name": "明头盔",
+    "icon": "⛑️",
+    "kind": "头盔",
+    "quality": "精制",
+    "slot": "helmet",
+    "affixes": [
+      {
+        "stat": "res",
+        "v": 3
+      },
+      {
+        "stat": "hit",
+        "v": 5
+      },
+      {
+        "stat": "hit_pct",
+        "v": 5,
+        "note": "命中 +5%"
+      }
+    ]
+  },
+  "i_helmet_bright_rare": {
+    "name": "明头盔",
+    "icon": "⛑️",
+    "kind": "头盔",
+    "quality": "稀有",
+    "slot": "helmet",
+    "affixes": [
+      {
+        "stat": "res",
+        "v": 3
+      },
+      {
+        "stat": "hit",
+        "v": 6
+      },
+      {
+        "stat": "res_ice",
+        "v": 60
+      }
+    ]
+  },
+  "i_helmet_bright_relic": {
+    "name": "明头盔",
+    "icon": "⛑️",
+    "kind": "头盔",
+    "quality": "遗物",
+    "slot": "helmet",
+    "affixes": [
+      {
+        "stat": "res",
+        "v": 3
+      },
+      {
+        "stat": "hit",
+        "v": 6
+      },
+      {
+        "stat": "see_stealth",
+        "v": 1,
+        "note": "看破潜行/隐藏点"
+      }
+    ],
+    "lore": "盔沿只磨亮了一处。戴它的人只朝一个方向看。"
+  },
+  "i_boots_steady_common": {
+    "name": "稳靴子",
+    "icon": "👢",
+    "kind": "靴子",
+    "quality": "普通",
+    "slot": "boots",
+    "affixes": [
+      {
+        "stat": "def",
+        "v": 3
+      }
+    ]
+  },
+  "i_boots_steady_refined": {
+    "name": "稳靴子",
+    "icon": "👢",
+    "kind": "靴子",
+    "quality": "精制",
+    "slot": "boots",
+    "affixes": [
+      {
+        "stat": "def",
+        "v": 3
+      },
+      {
+        "stat": "hp",
+        "v": 17
+      },
+      {
+        "stat": "block_pct",
+        "v": 10,
+        "note": "格挡 +10%"
+      }
+    ]
+  },
+  "i_boots_steady_rare": {
+    "name": "稳靴子",
+    "icon": "👢",
+    "kind": "靴子",
+    "quality": "稀有",
+    "slot": "boots",
+    "affixes": [
+      {
+        "stat": "def",
+        "v": 4
+      },
+      {
+        "stat": "hp",
+        "v": 18
+      },
+      {
+        "stat": "res_fire",
+        "v": 60
+      }
+    ]
+  },
+  "i_boots_steady_relic": {
+    "name": "稳靴子",
+    "icon": "👢",
+    "kind": "靴子",
+    "quality": "遗物",
+    "slot": "boots",
+    "affixes": [
+      {
+        "stat": "def",
+        "v": 4
+      },
+      {
+        "stat": "hp",
+        "v": 19
+      },
+      {
+        "stat": "def_stand_pct",
+        "v": 15,
+        "note": "不动时 def +15%"
+      }
+    ],
+    "lore": "两只并在一起，朝北放着。靴底钉过掌。"
+  },
+  "i_boots_swift_common": {
+    "name": "疾靴子",
+    "icon": "👟",
+    "kind": "靴子",
+    "quality": "普通",
+    "slot": "boots",
+    "affixes": [
+      {
+        "stat": "spd",
+        "v": 11
+      }
+    ]
+  },
+  "i_boots_swift_refined": {
+    "name": "疾靴子",
+    "icon": "👟",
+    "kind": "靴子",
+    "quality": "精制",
+    "slot": "boots",
+    "affixes": [
+      {
+        "stat": "spd",
+        "v": 12
+      },
+      {
+        "stat": "eva",
+        "v": 1
+      },
+      {
+        "stat": "snatch_cd",
+        "v": -2,
+        "note": "抢拍 CD −2 刻"
+      }
+    ]
+  },
+  "i_boots_swift_rare": {
+    "name": "疾靴子",
+    "icon": "👟",
+    "kind": "靴子",
+    "quality": "稀有",
+    "slot": "boots",
+    "affixes": [
+      {
+        "stat": "spd",
+        "v": 12
+      },
+      {
+        "stat": "eva",
+        "v": 1
+      },
+      {
+        "stat": "res_ice",
+        "v": 60
+      }
+    ]
+  },
+  "i_boots_swift_relic": {
+    "name": "疾靴子",
+    "icon": "👟",
+    "kind": "靴子",
+    "quality": "遗物",
+    "slot": "boots",
+    "affixes": [
+      {
+        "stat": "spd",
+        "v": 13
+      },
+      {
+        "stat": "eva",
+        "v": 1
+      },
+      {
+        "stat": "retreat_free_when_melee",
+        "v": 1,
+        "note": "贴脸时仍可后撤（不损失行动）"
+      }
+    ],
+    "lore": "左脚那只系了两遍。那天出门的时候很急。"
+  },
+  "i_accessory_stat_common": {
+    "name": "属性向饰品",
+    "icon": "💍",
+    "kind": "饰品",
+    "quality": "普通",
+    "slot": "accessory",
+    "affixes": [
+      {
+        "stat": "crit",
+        "v": 4
+      },
+      {
+        "stat": "hit",
+        "v": 4
+      }
+    ]
+  },
+  "i_accessory_stat_refined": {
+    "name": "属性向饰品",
+    "icon": "💍",
+    "kind": "饰品",
+    "quality": "精制",
+    "slot": "accessory",
+    "affixes": [
+      {
+        "stat": "crit",
+        "v": 4
+      },
+      {
+        "stat": "hit",
+        "v": 5
+      }
+    ]
+  },
+  "i_accessory_stat_rare": {
+    "name": "属性向饰品",
+    "icon": "💍",
+    "kind": "饰品",
+    "quality": "稀有",
+    "slot": "accessory",
+    "affixes": [
+      {
+        "stat": "crit",
+        "v": 5
+      },
+      {
+        "stat": "hit",
+        "v": 5
+      }
+    ]
+  },
+  "i_accessory_stat_relic": {
+    "name": "属性向饰品",
+    "icon": "💍",
+    "kind": "饰品",
+    "quality": "遗物",
+    "slot": "accessory",
+    "affixes": [
+      {
+        "stat": "crit",
+        "v": 5
+      },
+      {
+        "stat": "hit",
+        "v": 5
+      }
+    ],
+    "lore": "一枚戒指。内侧刻着两个字母，磨得快看不见了。"
+  },
+  "i_accessory_effect_common": {
+    "name": "效果向饰品",
+    "icon": "📿",
+    "kind": "饰品",
+    "quality": "普通",
+    "slot": "accessory",
+    "affixes": [
+      {
+        "stat": "hp",
+        "v": 13
+      },
+      {
+        "stat": "res_element",
+        "v": 60,
+        "note": "元素抗 +60（火/冰/暗 选一）"
+      }
+    ]
+  },
+  "i_accessory_effect_refined": {
+    "name": "效果向饰品",
+    "icon": "📿",
+    "kind": "饰品",
+    "quality": "精制",
+    "slot": "accessory",
+    "affixes": [
+      {
+        "stat": "hp",
+        "v": 14
+      },
+      {
+        "stat": "res_element",
+        "v": 65,
+        "note": "元素抗 +65（火/冰/暗 选一）"
+      }
+    ]
+  },
+  "i_accessory_effect_rare": {
+    "name": "效果向饰品",
+    "icon": "📿",
+    "kind": "饰品",
+    "quality": "稀有",
+    "slot": "accessory",
+    "affixes": [
+      {
+        "stat": "hp",
+        "v": 15
+      },
+      {
+        "stat": "res_element",
+        "v": 70,
+        "note": "元素抗 +70（火/冰/暗 选一）"
+      }
+    ]
+  },
+  "i_accessory_effect_relic": {
+    "name": "效果向饰品",
+    "icon": "📿",
+    "kind": "饰品",
+    "quality": "遗物",
+    "slot": "accessory",
+    "affixes": [
+      {
+        "stat": "hp",
+        "v": 16
+      },
+      {
+        "stat": "res_element",
+        "v": 74,
+        "note": "元素抗 +74（火/冰/暗 选一）"
+      }
+    ],
+    "lore": "坠子空了。里面有东西那阵子，它挂在别人身上。"
+  },
+  "i_set_scavenger_blade": {
+    "name": "拾荒者的短刃",
+    "icon": "🗡️",
+    "kind": "武器",
+    "quality": "精制",
+    "slot": "weapon",
+    "affixes": [
+      {
+        "stat": "atk",
+        "v": 9
+      },
+      {
+        "stat": "crit",
+        "v": 10
+      }
+    ],
+    "set_id": "set_scavenger"
+  },
+  "i_set_scavenger_cloak": {
+    "name": "补丁斗篷",
+    "icon": "🧥",
+    "kind": "上甲",
+    "quality": "精制",
+    "slot": "armor_top",
+    "affixes": [
+      {
+        "stat": "def",
+        "v": 4
+      },
+      {
+        "stat": "hp",
+        "v": 16
+      }
+    ],
+    "set_id": "set_scavenger"
+  },
+  "i_set_scavenger_hook": {
+    "name": "捡来的钩子",
+    "icon": "🪝",
+    "kind": "饰品",
+    "quality": "精制",
+    "slot": "accessory",
+    "affixes": [
+      {
+        "stat": "hit",
+        "v": 5
+      },
+      {
+        "stat": "gather_pct",
+        "v": 15,
+        "note": "采集加成 +15%"
+      }
+    ],
+    "set_id": "set_scavenger"
+  },
+  "i_set_sentry_gauntlet": {
+    "name": "哨兵的护手",
+    "icon": "🧤",
+    "kind": "上甲",
+    "quality": "稀有",
+    "slot": "armor_top",
+    "affixes": [
+      {
+        "stat": "def",
+        "v": 5
+      },
+      {
+        "stat": "hp",
+        "v": 17
+      },
+      {
+        "stat": "oath_gain_pct",
+        "v": 25,
+        "note": "受击攒值 +25%"
+      }
+    ],
+    "set_id": "set_sentry"
+  },
+  "i_set_sentry_cape": {
+    "name": "塔顶的披风",
+    "icon": "🧣",
+    "kind": "下甲",
+    "quality": "稀有",
+    "slot": "armor_bottom",
+    "affixes": [
+      {
+        "stat": "hp",
+        "v": 19
+      },
+      {
+        "stat": "eva",
+        "v": 6
+      },
+      {
+        "stat": "dmg_half_chance",
+        "v": 20,
+        "note": "受伤时 20% 概率减半"
+      }
+    ],
+    "set_id": "set_sentry"
+  },
+  "i_set_sentry_horn": {
+    "name": "生锈的号角",
+    "icon": "📯",
+    "kind": "饰品",
+    "quality": "稀有",
+    "slot": "accessory",
+    "affixes": [
+      {
+        "stat": "atk",
+        "v": 11
+      },
+      {
+        "stat": "team_haste_ticks",
+        "v": 20,
+        "note": "全队行动提前 20 刻（每场一次）"
+      }
+    ],
+    "set_id": "set_sentry"
+  },
+  "i_set_northwall_amulet": {
+    "name": "老人的护符",
+    "icon": "🧿",
+    "kind": "饰品",
+    "quality": "稀有",
+    "slot": "accessory",
+    "affixes": [
+      {
+        "stat": "res",
+        "v": 6
+      },
+      {
+        "stat": "dmg_vs_skeleton_pct",
+        "v": 15,
+        "note": "对骸骨类伤害 +15%"
+      }
+    ],
+    "set_id": "set_northwall"
+  },
+  "i_set_northwall_shard": {
+    "name": "刻字的石片",
+    "icon": "🪨",
+    "kind": "饰品",
+    "quality": "稀有",
+    "slot": "accessory",
+    "affixes": [
+      {
+        "stat": "hp",
+        "v": 12
+      },
+      {
+        "stat": "identify_pct",
+        "v": 20,
+        "note": "旧物鉴定成功率 +20%"
+      }
+    ],
+    "set_id": "set_northwall"
+  },
+  "i_set_northwall_lantern": {
+    "name": "守夜人的灯",
+    "icon": "🏮",
+    "kind": "头盔",
+    "quality": "稀有",
+    "slot": "helmet",
+    "affixes": [
+      {
+        "stat": "res",
+        "v": 5
+      },
+      {
+        "stat": "night_sight",
+        "v": 1,
+        "note": "夜里视野不减"
+      }
+    ],
+    "set_id": "set_northwall"
+  },
+  "i_material_iron_scrap": {
+    "name": "铁屑",
+    "icon": "⛓️",
+    "kind": "材料",
+    "price": 8,
+    "desc": "采矿产。强化用。"
+  },
+  "i_material_hard_bone": {
+    "name": "硬骨",
+    "icon": "🦴",
+    "kind": "材料",
+    "price": 10,
+    "desc": "怪身上掉的。强化用。"
+  },
+  "i_potion_heal": {
+    "name": "药水",
+    "icon": "🧪",
+    "kind": "道具",
+    "price": 12,
+    "desc": "苦叶摊的常备药。一天要喝掉十几瓶。"
+  },
+  "i_item_horn_half": {
+    "name": "半截号角",
+    "icon": "🎺",
+    "kind": "道具",
+    "price": 0,
+    "desc": "旧哨塔的号角只剩一半。它不响。"
+  }
+}

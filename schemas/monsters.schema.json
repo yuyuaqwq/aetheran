@@ -1,0 +1,133 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "真源在包。字段照 ext_combat 的消费端（面板栈 + 效果总线 + phases）。panel 由 scripts/rebuild_monsters.py 按「档位 × 原型」复算，不手打。",
+  "type": "object",
+  "minProperties": 1,
+  "patternProperties": {
+    "^ms_[a-z_]+$": {
+      "type": "object",
+      "required": [
+        "name",
+        "archetype",
+        "role",
+        "lv",
+        "panel",
+        "mods"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "archetype": {
+          "enum": [
+            "杂兵",
+            "快速",
+            "厚甲",
+            "法系",
+            "群居",
+            "消耗",
+            "爆发",
+            "支援"
+          ]
+        },
+        "role": {
+          "enum": [
+            "普通",
+            "精英",
+            "头目",
+            "层主",
+            "boss"
+          ]
+        },
+        "lv": {
+          "type": "integer"
+        },
+        "panel": {
+          "type": "object",
+          "required": [
+            "hp",
+            "atk",
+            "def",
+            "spd",
+            "hit",
+            "eva",
+            "crit"
+          ],
+          "properties": {
+            "hp": {
+              "type": "number"
+            },
+            "atk": {
+              "type": "number"
+            },
+            "def": {
+              "type": "number"
+            },
+            "res": {
+              "type": "number"
+            },
+            "spd": {
+              "type": "number"
+            },
+            "hit": {
+              "type": "number"
+            },
+            "eva": {
+              "type": "number"
+            },
+            "crit": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false
+        },
+        "skills": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "drops": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "mods": {
+          "type": "object",
+          "properties": {
+            "hp_mult": {
+              "type": "number"
+            },
+            "atk_mult": {
+              "type": "number"
+            },
+            "mech": {
+              "type": "string"
+            },
+            "phases": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "elite_pool": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "type": "string"
+          },
+          "description": "该怪可出的精英词条（Boss 为空）"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
