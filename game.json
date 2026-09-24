@@ -1,0 +1,28 @@
+{
+  "id": "aetheran",
+  "kind": "game",
+  "name": "阿斯特兰",
+  "desc": "《阿斯特兰》内容侧数据包 —— 第二刀：最小可跑骨架（三份默认域 + 数值宪法公式表 + 装配入口）",
+  "engine": ">=0.1",
+  "entry": "content/apply.py",
+  "domains": [
+    "commands",
+    "texts",
+    "tlogs"
+  ],
+  "created": "2026-09-24",
+  "depends": [
+    "ext_combat",
+    "ext_world",
+    "ext_life",
+    "ext_economy",
+    "ext_social",
+    "ext_loot",
+    "ext_dialogue",
+    "ext_quest",
+    "ext_reward",
+    "ext_achieve"
+  ],
+  "version": "0.1.0",
+  "author": "鱼鱼"
+}

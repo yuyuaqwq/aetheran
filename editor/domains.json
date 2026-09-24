@@ -1,0 +1,29 @@
+{
+  "commands": {
+    "label": "指令",
+    "kind": "data",
+    "schema": null,
+    "primary": null,
+    "icon": "⌨️",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "texts": {
+    "label": "文案",
+    "kind": "data",
+    "schema": null,
+    "primary": null,
+    "icon": "💬",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "tlogs": {
+    "label": "流水",
+    "kind": "data",
+    "schema": null,
+    "primary": null,
+    "icon": "🧾",
+    "owner": "package",
+    "tier": "portable"
+  }
+}

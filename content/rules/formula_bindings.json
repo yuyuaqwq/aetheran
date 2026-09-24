@@ -1,0 +1,8 @@
+{
+  "_note": "语义槽位 → 声明 id（E1b）。引擎槽位全集 = damage/miss/crit_pct/crit_mult/act_time/cd/heal/threat/drop_rate；当前唯一有消费端的是 damage。miss 不绑：引擎槽位语义是「未命中率」，本作 F2 给的是命中率（要 1-x，待消费端确认）。act_time 不绑：它走 time_model_fn 那条注入面。",
+  "damage": "damage_full",
+  "crit_pct": "F3_crit_rate",
+  "crit_mult": "F4_crit_mult",
+  "cd": "F5_cd_actual",
+  "heal": "F8_heal"
+}

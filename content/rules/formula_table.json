@@ -1,0 +1,325 @@
+{
+  "$const": {
+    "K_def": 300,
+    "K_rate": 500,
+    "K_block": 200,
+    "pene_cap": 0.6,
+    "spd_ref": 100,
+    "spd_alpha": 0.5,
+    "crit_base": 1.5,
+    "shield_gain": 1.4
+  },
+  "F1_eff_def": {
+    "kind": "formula",
+    "label": "F1 有效防御（穿透后，下限 1）",
+    "version": 1,
+    "vars": [
+      "def",
+      "pene_pct",
+      "pene_flat"
+    ],
+    "guard": {
+      "def": {
+        "floor": 0
+      },
+      "pene_pct": {
+        "floor": 0,
+        "cap": 0.6
+      },
+      "pene_flat": {
+        "floor": 0
+      }
+    },
+    "expr": "def * (1 - pene_pct) - pene_flat",
+    "clamp": [
+      1,
+      null
+    ],
+    "returns": "number",
+    "round": 6,
+    "note": "变量名 = 引擎消费端契约（ext_combat.calc_damage）。宪法 F1 简化写法 max(1, def-pen) 等价于 pene_flat=pen"
+  },
+  "F1_def_mit": {
+    "kind": "formula",
+    "label": "F1 防御减免率",
+    "version": 1,
+    "vars": [
+      "def_eff"
+    ],
+    "params": {
+      "K": {
+        "ref": "const.K_def"
+      }
+    },
+    "expr": "K / (K + def_eff)",
+    "clamp": [
+      0.0,
+      0.75
+    ],
+    "returns": "pct",
+    "round": 6
+  },
+  "F2_hit_rate": {
+    "kind": "formula",
+    "label": "F2 命中率（对冲）",
+    "version": 1,
+    "vars": [
+      "hit",
+      "eva"
+    ],
+    "guard": {
+      "hit": {
+        "floor": 1
+      },
+      "eva": {
+        "floor": 1
+      }
+    },
+    "expr": "hit / (hit + eva)",
+    "clamp": [
+      0.05,
+      0.95
+    ],
+    "returns": "pct",
+    "round": 6
+  },
+  "F3_crit_rate": {
+    "kind": "formula",
+    "label": "F3 暴击率",
+    "version": 1,
+    "vars": [
+      "crit"
+    ],
+    "params": {
+      "K": {
+        "ref": "const.K_rate"
+      }
+    },
+    "guard": {
+      "crit": {
+        "floor": 0
+      }
+    },
+    "expr": "crit / (crit + K)",
+    "clamp": [
+      0.0,
+      0.75
+    ],
+    "returns": "pct",
+    "round": 6
+  },
+  "F4_crit_mult": {
+    "kind": "formula",
+    "label": "F4 暴击倍率",
+    "version": 1,
+    "vars": [
+      "critdmg"
+    ],
+    "params": {
+      "base": {
+        "ref": "const.crit_base"
+      }
+    },
+    "expr": "base + critdmg / 100",
+    "clamp": [
+      1.0,
+      3.0
+    ],
+    "returns": "number",
+    "round": 6
+  },
+  "F5_cd_actual": {
+    "kind": "formula",
+    "label": "F5 实际冷却（LOL 口径）",
+    "version": 1,
+    "vars": [
+      "cd_base",
+      "haste"
+    ],
+    "guard": {
+      "haste": {
+        "floor": 0
+      }
+    },
+    "expr": "cd_base / (1 + haste / 100)",
+    "returns": "tick",
+    "round": 6
+  },
+  "F5_equiv_cdr": {
+    "kind": "formula",
+    "label": "F5 等效冷却缩减（只用于显示）",
+    "version": 1,
+    "vars": [
+      "haste"
+    ],
+    "guard": {
+      "haste": {
+        "floor": 0
+      }
+    },
+    "expr": "haste / (100 + haste)",
+    "returns": "pct",
+    "round": 6
+  },
+  "F6_act_time": {
+    "kind": "formula",
+    "label": "F6 行动耗时",
+    "version": 1,
+    "vars": [
+      "base",
+      "spd"
+    ],
+    "params": {
+      "spd_ref": {
+        "ref": "const.spd_ref"
+      },
+      "alpha": {
+        "ref": "const.spd_alpha"
+      }
+    },
+    "guard": {
+      "spd": {
+        "floor": 1,
+        "cap": 400
+      }
+    },
+    "expr": "base * (spd_ref / spd) ^ alpha",
+    "returns": "tick",
+    "round": 6,
+    "note": "宪法写 spd ∈ [1, spd_cap] 未给数；代入例到 spd=400 ⇒ cap 暂定 400（待拍）"
+  },
+  "damage_full": {
+    "kind": "chain",
+    "label": "F7 伤害全链（level+敌防+穿透 → 最终伤害）",
+    "version": 1,
+    "returns": "int",
+    "vars": [
+      "level",
+      "def",
+      "pene_pct",
+      "pene_flat",
+      "base",
+      "mult_skill",
+      "amp",
+      "mitigation",
+      "crit_mult",
+      "elem_mult",
+      "variance"
+    ],
+    "random": {
+      "key": "var_roll",
+      "pct": "variance"
+    },
+    "steps": [
+      {
+        "id": "def_eff",
+        "use": "F1_eff_def",
+        "trace": "有效防御（穿透后）"
+      },
+      {
+        "id": "def_mit",
+        "use": "F1_def_mit",
+        "trace": "防御减免率（上限 75%）"
+      },
+      {
+        "id": "raw",
+        "expr": "base * mult_skill",
+        "returns": "number",
+        "trace": "基数×技能倍率"
+      },
+      {
+        "id": "after_amp",
+        "expr": "raw * (1 + amp)",
+        "returns": "number",
+        "trace": "增伤"
+      },
+      {
+        "id": "after_def",
+        "expr": "after_amp * (1 - def_mit)",
+        "returns": "number",
+        "trace": "防御减免"
+      },
+      {
+        "id": "after_mit",
+        "expr": "after_def * (1 - mitigation)",
+        "returns": "number",
+        "trace": "免伤"
+      },
+      {
+        "id": "after_elem",
+        "expr": "after_mit * elem_mult",
+        "returns": "number",
+        "trace": "元素克制（合成倍率）"
+      },
+      {
+        "id": "after_crit",
+        "expr": "after_elem * crit_mult",
+        "returns": "number",
+        "trace": "暴击"
+      },
+      {
+        "id": "final",
+        "expr": "after_crit * (1 + var_roll)",
+        "returns": "int",
+        "floor": 1,
+        "trace": "波动"
+      }
+    ],
+    "note": "★ 变量名是 ext_combat.calc_damage 的 _v 契约（引擎侧唯一读点，它写死映射）。宪法 F7 的抗性步由调用方传抗性值走同一形状（dmg_type=magi）；元素区压成 elem_mult 一个数"
+  },
+  "F8_heal": {
+    "kind": "formula",
+    "label": "F8 治疗量",
+    "version": 1,
+    "vars": [
+      "heal_pow",
+      "mult",
+      "heal_bonus"
+    ],
+    "expr": "heal_pow * mult * (1 + heal_bonus / 100)",
+    "returns": "number",
+    "round": 6
+  },
+  "F9_shield": {
+    "kind": "formula",
+    "label": "F9 护盾量",
+    "version": 1,
+    "vars": [
+      "heal_pow",
+      "mult"
+    ],
+    "params": {
+      "gain": {
+        "ref": "const.shield_gain"
+      }
+    },
+    "expr": "heal_pow * mult * gain",
+    "returns": "number",
+    "round": 6
+  },
+  "F10_block_mit": {
+    "kind": "formula",
+    "label": "F10 格挡减免",
+    "version": 1,
+    "vars": [
+      "block"
+    ],
+    "params": {
+      "K": {
+        "ref": "const.K_block"
+      }
+    },
+    "guard": {
+      "block": {
+        "floor": 0
+      }
+    },
+    "expr": "K / (K + block)",
+    "clamp": [
+      0.0,
+      0.6
+    ],
+    "returns": "pct",
+    "round": 6
+  }
+}
