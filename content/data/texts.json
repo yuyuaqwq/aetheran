@@ -1684,5 +1684,74 @@
     "params": [],
     "category": "系统",
     "desc": "帮助 · 指令没写分类时的兜底类名"
+  },
+  "SYS_TALK_NOBODY": {
+    "value": "这儿没有别人。",
+    "params": [],
+    "category": "系统",
+    "desc": "搭话 · 这处没有人"
+  },
+  "SYS_TALK_HERE": {
+    "value": "这儿有：{list}",
+    "params": [
+      "list"
+    ],
+    "category": "系统",
+    "desc": "搭话 · 报这儿有谁"
+  },
+  "SYS_TALK_HOW": {
+    "value": "想搭话就打『搭话 {name}』。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "搭话 · 教怎么搭"
+  },
+  "SYS_TALK_NOSUCH": {
+    "value": "这儿没有叫「{name}」的。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "搭话 · 名字对不上"
+  },
+  "SYS_TALK_NO_LINES": {
+    "value": "（这个人还没写台词。）",
+    "params": [],
+    "category": "系统",
+    "desc": "搭话 · 这棵树还没写"
+  },
+  "SYS_TALK_SILENT": {
+    "value": "（他没说话。）",
+    "params": [],
+    "category": "系统",
+    "desc": "搭话 · 一句也挑不出"
+  },
+  "SYS_ASK_NOBODY": {
+    "value": "没人可问。",
+    "params": [],
+    "category": "系统",
+    "desc": "问路 · 这处没有人"
+  },
+  "SYS_ASK_HEAD": {
+    "value": "「往哪走？」",
+    "params": [],
+    "category": "系统",
+    "desc": "问路 · 抬头"
+  },
+  "SYS_ASK_ANSWER": {
+    "value": "{who}想了想：「{list}。」",
+    "params": [
+      "who",
+      "list"
+    ],
+    "category": "系统",
+    "desc": "问路 · 他想了想的那一句"
+  },
+  "SYS_ASK_ONLY_WAY": {
+    "value": "就这一条路",
+    "params": [],
+    "category": "系统",
+    "desc": "问路 · 没有别的去处"
   }
 }

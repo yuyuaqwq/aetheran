@@ -34,7 +34,7 @@ from saintess_engine.package import load_stack                       # noqa: E40
 MISSING = "[MISSING TEXT"
 
 #: ★ 已收口（必须 0）—— 收口一个就往这里搬一个
-SEALED = ("cmds_ast.py",)
+SEALED = ("cmds_ast.py", "cmds_talk.py")
 
 #: 快照上限（B3-6b 收口时的实测值；**只降不升**，不在表里的文件必须 0）
 BUDGET = {                      # B3-6b 收口时实测（124 条）；下一批往下压，只能降
@@ -42,7 +42,6 @@ BUDGET = {                      # B3-6b 收口时实测（124 条）；下一批
     "cmds_gather.py": 17,       # 采集四动词（含触发词别名 —— 那属 commands 域）
     "cmds_battle.py": 16,       # 战斗结算与日志
     "loot.py": 12,              # 掉落 / 未鉴定 / 鉴定那几句话
-    "cmds_talk.py": 11,         # 搭话与问路
     "cmds_recipe.py": 9,        # 配方 / 烹饪 / 强化
     "codex.py": 6,              # 谱的分类名
     "panel_build.py": 6,        # 面板的分段名
@@ -187,6 +186,7 @@ def main():
 
     # ⑥ 真跑实现体：产出的行里不许有取不到文案的标记
     from content import cmds_ast as CA                                    # noqa: E402
+    from content import cmds_talk as CT                                   # noqa: E402
 
     town = _node_names(st, "windmill_town")
     belt = _node_names(st, "belt_north")
@@ -220,6 +220,11 @@ def main():
         ("返回(有上一处)", CA.go_back, "", {"loc": "belt_east", "node": "be_birch",
                                           "prev": [["windmill_town", "wt_gate_n"]]}),
         ("返回(没上一处)", CA.go_back, "", {"loc": "windmill_town", "node": "wt_gate_n", "prev": []}),
+        ("搭话(这儿有谁)", CT.talk, "搭话", {"loc": "windmill_town", "node": "wt_gate_n"}),
+        ("搭话(没有这个人)", CT.talk, "搭话 不存在的人", {"loc": "windmill_town", "node": "wt_gate_n"}),
+        ("搭话(这儿没人)", CT.talk, "搭话", {"loc": "belt_north", "node": "bn_bone"}),
+        ("问路(镇上)", CT.ask_way, "", {"loc": "windmill_town", "node": "wt_gate_n"}),
+        ("问路(野外)", CT.ask_way, "", {"loc": "belt_north", "node": "bn_bone"}),
     ]
     bad, empty, sample = [], [], []
     for label, fn, text, over_ in cases:

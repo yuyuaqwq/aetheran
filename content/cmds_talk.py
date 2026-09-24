@@ -66,12 +66,12 @@ async def talk(env, sink, uid, player):
     st = CAL.state()                       # 现在几时、什么天气（一次，全用它）
     here = _npcs_here(p["loc"], p["node"], st)
     if not here:
-        yield "这儿没有别人。"
+        yield T("SYS_TALK_NOBODY")
         return
     want = _arg(env)
     if not want:
-        yield "这儿有：" + " · ".join("『%s』" % v.get("name") for _, v in here)
-        yield "想搭话就打『搭话 %s』。" % here[0][1].get("name")
+        yield T("SYS_TALK_HERE", list=" · ".join("『%s』" % v.get("name") for _, v in here))
+        yield T("SYS_TALK_HOW", name=here[0][1].get("name"))
         return
     hit = None
     for k, v in here:
@@ -79,14 +79,14 @@ async def talk(env, sink, uid, player):
             hit = (k, v)
             break
     if not hit:
-        yield "这儿没有叫「%s」的。" % want
-        yield "这儿有：" + " · ".join("『%s』" % v.get("name") for _, v in here)
+        yield T("SYS_TALK_NOSUCH", name=want)
+        yield T("SYS_TALK_HERE", list=" · ".join("『%s』" % v.get("name") for _, v in here))
         return
     k, npc = hit
     dlg = _data("dialogues").get(npc.get("dialogue") or "")
     yield "%s %s" % (npc.get("icon", "💬"), npc.get("name"))
     if not dlg:
-        yield npc.get("desc") or "（这个人还没写台词。）"
+        yield npc.get("desc") or T("SYS_TALK_NO_LINES")
         return
     nodes = dlg.get("nodes") or {}
     # 节点择优：先看剧情节点（main / hidden），没有再看 meet / daily
@@ -103,7 +103,7 @@ async def talk(env, sink, uid, player):
                 heard_new = HD.note(p, npc.get("dialogue") or "", nn, idx)
                 break
     if not spoke:
-        yield "（他没说话。）"
+        yield T("SYS_TALK_SILENT")
     if heard_new and player is not None:
         player.update(p)
         _save(env)
@@ -131,13 +131,13 @@ async def ask_way(env, sink, uid, player):
     p = _p(player)
     here = _npcs_here(p["loc"], p["node"])
     if not here:
-        yield "没人可问。"
+        yield T("SYS_ASK_NOBODY")
         return
     nb = []
     m = _map_of(p["loc"]) or {}
     for n in m.get("nodes") or []:
         if n.get("id") != p["node"]:
             nb.append(n.get("name"))
-    yield "「往哪走？」"
-    yield "%s想了想：「%s。」" % (here[0][1].get("name"),
-                                 " · ".join("『%s』" % x for x in nb[:3]) if nb else "就这一条路")
+    yield T("SYS_ASK_HEAD")
+    yield T("SYS_ASK_ANSWER", who=here[0][1].get("name"),
+            list=" · ".join("『%s』" % x for x in nb[:3]) if nb else T("SYS_ASK_ONLY_WAY"))
