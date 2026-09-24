@@ -104,3 +104,20 @@ def _panel_layers(stack_id):
     """`panel_layers_fn` 供体：栈 id → 面板栈声明（内容侧现算并登记，引擎当不透明字符串）。"""
     from . import panel_build
     return panel_build.stacks().get(stack_id)
+
+
+# ══════════════════════════════════════════════════════════════
+# 新玩家初始档（引擎 `Package.initial_save(uid, ctx)` 调它）
+# ══════════════════════════════════════════════════════════════
+def initial_save(uid: str, ctx: dict | None = None) -> dict:
+    """第一次来的人在哪儿、有什么。
+
+    ★ 起始位置 = 风车镇北口（玩家第一眼看到的就是那块刻字的石头）。
+    ★ 30 枚铜板是一个人在镇上活三天的钱（住店 8 / 一顿饭 2）；给多了镇子就没意义了。
+    """
+    return {
+        "name": "", "race": "", "cls": "", "level": 1, "exp": 0,
+        "loc": "windmill_town", "node": "wt_gate_n", "prev": [],
+        "hp": 100, "hp_max": 100, "mo": 0, "mo_max": 0,
+        "gold": 30, "bag": {}, "equipped": {}, "flags": {}, "codex": {},
+    }
