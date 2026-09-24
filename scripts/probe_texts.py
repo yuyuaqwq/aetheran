@@ -74,6 +74,57 @@ for k, v in tx.items():
     by_cat[v["category"]] += 1
 print("  · " + " · ".join("%s %d" % (c, n) for c, n in sorted(by_cat.items(), key=lambda x: -x[1])))
 
+# ⑦ ★ B3-6a：场景口 —— 每个节点都取得到场景槽位（观察取的就是它）
+from content.scene import resolve as _resolve, node_key as _nk        # noqa: E402
+
+mp = st.domain("maps") or {}
+nodes = [(loc, n["id"]) for loc, m in mp.items() for n in (m.get("nodes") or [])]
+unr = [(loc, nd) for loc, nd in nodes if not _resolve(tx, loc, nd)]
+chk("★ 地图上 %d 个节点都能取到场景槽位（节点级 %d）"
+    % (len(nodes), len([1 for _l, nd in nodes if _nk(nd) in tx])), not unr, "取不到：%s" % unr)
+
+# ⑧ ★ 真调「观察」（造档逐节点）—— 第一位那行必须就是该节点的场景正文
+import asyncio                                                        # noqa: E402
+
+from content import cmds_ast as CA                                    # noqa: E402
+
+
+class _E:               # 「观察」只要 env.save()（落档是处理器的责任）
+    text = ""
+
+    def save(self):
+        pass
+
+
+def _look_first(loc, node):
+    p = dict(CA.DEFAULT_PLAYER)
+    p.update({"loc": loc, "node": node})
+    out = []
+
+    async def _go():
+        async for line in CA.look(_E(), None, "u_scene", p):
+            out.append(line)
+
+    asyncio.run(_go())
+    return out
+
+
+wrong = []
+for loc, nd in nodes:
+    sk = _resolve(tx, loc, nd)
+    first = _look_first(loc, nd)[0]
+    if first != tx[sk]["value"]:
+        wrong.append((nd, first[:24]))
+chk("★ 观察 逐节点产出的就是该节点的场景正文（%d 个节点）" % len(nodes), not wrong, "对不上：%s" % wrong[:4])
+
+# ⑨ 节点级场景是正文（≥80 字 —— 工单占位只有 7~16 字，一跑就露）
+short = [(k, len(tx[k]["value"])) for _l, nd in nodes if _nk(nd) in tx and len(tx[_nk(nd)]["value"]) < 80]
+chk("★ 节点级场景都是正文（≥80 字）", not short, "%s" % short[:5])
+
+# ⑩ 场景类没有待填（这一批的工单清完了）
+todo_scene = [k for k, v in tx.items() if v.get("category") == "场景" and "〔待填" in v["value"]]
+chk("场景类 0 条待填", not todo_scene, "%s" % todo_scene[:5])
+
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
 sys.exit(0 if ok else 1)

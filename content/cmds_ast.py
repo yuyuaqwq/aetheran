@@ -16,6 +16,7 @@ from . import calendar as CAL        # 时辰/天气的唯一出口（它不 imp
 from . import codex as CX            # 图鉴四谱的唯一记录口（B2-7）
 from . import eggs as EG              # 彩蛋（B3-1）：条件在 eggs 域，判定走引擎声明算子
 from . import titles as TT            # 称号（B3-2）：显示跟着名字走 · 判定在 titles 域
+from . import scene as SC           # 场景槽位解析（B3-6a）：节点级近景 → 退地图级第一眼
 
 _DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 _CACHE: dict = {}
@@ -41,6 +42,26 @@ def T(key: str, **slots):
     for k, v in slots.items():
         s = s.replace("{%s}" % k, str(v))
     return s
+
+
+def _scene_line(loc, node, m=None):
+    """观察那一段场景 —— 节点级 SCENE_<节点>（近景）→ 退 SCENE_<地图>（这张图的第一眼）。
+
+    ★ 解析口只有一处（content/scene.py）—— 落域脚本与这里共用，别各写一遍。
+    """
+    sk = SC.resolve(_texts(), loc, node)
+    m = m if m is not None else (_map_of(loc) or {})
+    if sk:
+        return T(sk, name=m.get("name", loc))
+    return "【%s · %s】" % (m.get("name", loc), _name_of_node(loc, node))
+
+
+def _map_scene(loc):
+    """踏进这张图的第一眼（野外带到达时显示）—— 只取地图级槽位，取不到退回一行占位。"""
+    sk = SC.resolve_map(_texts(), loc)
+    if sk:
+        return T(sk)
+    return "【%s】" % ((_map_of(loc) or {}).get("name", loc))
 
 
 # ── 玩家档（形状：location/level/race/class/name/hp…）──────────────
@@ -190,8 +211,7 @@ async def look(env, sink, uid, player):
         yield name_with_title(p)
     loc, node = p["loc"], p["node"]
     m = _map_of(loc) or {}
-    yield T("SCENE_" + loc.upper(), name=m.get("name", loc)) if ("SCENE_" + loc.upper()) in _texts() \
-        else "【%s · %s】" % (m.get("name", loc), _name_of_node(loc, node))
+    yield _scene_line(loc, node, m)           # ★ B3-6a：节点级近景 → 退地图级第一眼
     yield "━" * 12
     nb = [_name_of_node(loc, x) for x in _neighbors(loc, node)]
     yield "往哪走：" + " · ".join("『%s』" % x for x in nb) if nb else "这里是尽头。"
@@ -250,7 +270,7 @@ async def go_north(env, sink, uid, player):
         player.update(p)
     _save(env)
     yield "你走出北门。风车在背后慢慢转，声音越来越远。"
-    yield "【骨田】半埋的碑一块挨着一块，土是灰的。往北是拾荒营地与旧哨塔。"
+    yield _map_scene("belt_north")            # ★ B3-6a：地一屏从 texts 来（原先内联在代码里）
 
 
 async def go_east(env, sink, uid, player):
@@ -260,7 +280,7 @@ async def go_east(env, sink, uid, player):
         player.update(p)
     _save(env)
     yield "你往东走。路两边很快全是白桦，树皮上刻着东西。"
-    yield "【白桦林】鸟叫得很密。往深处还有空地。"
+    yield _map_scene("belt_east")             # ★ B3-6a：同上
 
 
 async def go_west(env, sink, uid, player):
@@ -270,7 +290,7 @@ async def go_west(env, sink, uid, player):
         player.update(p)
     _save(env)
     yield "你往西走。脚下的土越来越湿，能听见水。"
-    yield "【浅滩渡口】水退下去了一块，露出一段石阶，一级一级往水里去。"
+    yield _map_scene("belt_west")             # ★ B3-6a：同上
 
 
 async def enter_town(env, sink, uid, player):
@@ -283,7 +303,7 @@ async def enter_town(env, sink, uid, player):
     if player is not None:
         player.update(p)
     _save(env)
-    yield "风车镇。三架风车，一条土路，镇口有块刻着字的石头。"
+    yield _map_scene("windmill_town")         # ★ B3-6a：进镇那一屏从 texts 来（原内联）
     yield "「『观察』看细节，『往东』『往西』『北口』出门，『公会』在挂板墙。」"
 
 
