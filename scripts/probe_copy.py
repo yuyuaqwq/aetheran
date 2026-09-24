@@ -9,6 +9,7 @@
   ⑤ 口径文档里每条槽位都在 texts 里、且被代码引用（防「写了等于没写」）
   ⑥ 真跑一遍实现体（含公会 / 悬赏 / 接 / 交 / 放弃 / 我的委托 六个）：产出的行里不许出现 [MISSING TEXT 标记
   ⑦ quests 域按 chain（ASCII）判别主/支线 —— 数据里挑不出 main / side 就红（B3-6b-2b）
+  ⑧ gathering 域按 verb（ASCII）判别采集点 —— 挑不出 herb / dig / fish / search 就红（B3-6b-2c）
 
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_copy.py [--inventory]
 """
@@ -35,11 +36,10 @@ from saintess_engine.package import load_stack                       # noqa: E40
 MISSING = "[MISSING TEXT"
 
 #: ★ 已收口（必须 0）—— 收口一个就往这里搬一个
-SEALED = ("cmds_ast.py", "cmds_talk.py", "cmds_quest.py")
+SEALED = ("cmds_ast.py", "cmds_talk.py", "cmds_quest.py", "cmds_gather.py")
 
 #: 快照上限（B3-6b 收口时的实测值；**只降不升**，不在表里的文件必须 0）
 BUDGET = {                      # B3-6b 收口时实测（124 条）；下一批往下压，只能降
-    "cmds_gather.py": 17,       # 采集四动词（含触发词别名 —— 那属 commands 域）
     "cmds_battle.py": 16,       # 战斗结算与日志
     "loot.py": 12,              # 掉落 / 未鉴定 / 鉴定那几句话
     "cmds_recipe.py": 9,        # 配方 / 烹饪 / 强化
@@ -183,6 +183,13 @@ def main():
     chk("★ 代码按 chain 判别主线/支线：数据里真有 main / side（%d 条委托）" % len(qs),
         not miss_chain, "缺：%s" % miss_chain)
 
+    # ⑧ 采集动词键（B3-6b-2c：中文 kind -> ASCII verb）
+    g = st.domain("gathering") or {}
+    have_verb = {v.get("verb") for v in g.values()}
+    miss_verb = sorted({"herb", "dig", "fish", "search"} - have_verb)
+    chk("★ 代码按 verb 判别采集点：数据里真有 herb / dig / fish / search（%d 个点）" % len(g),
+        not miss_verb, "缺：%s" % miss_verb)
+
     # ④ 代码引用的键都在 texts 里
     miss = sorted(k for k in ref if k not in tx)
     chk("★ 代码里 T(\"…\") 引用的键都在 texts 里（%d 个键）" % len(ref), not miss, "%s" % miss[:6])
@@ -202,6 +209,7 @@ def main():
     from content import cmds_ast as CA                                    # noqa: E402
     from content import cmds_talk as CT                                   # noqa: E402
     from content import cmds_quest as CQ                                  # noqa: E402
+    from content import cmds_gather as CG                                 # noqa: E402
 
     town = _node_names(st, "windmill_town")
     belt = _node_names(st, "belt_north")
@@ -261,6 +269,17 @@ def main():
         ("我的委托(空的)", CQ.quest_mine, "", {}),
         ("我的委托(有活)", CQ.quest_mine, "", {"flags": {"quests_active": ["q_main_01"],
                                                           "quests_done": ["q_main_02"]}}),
+        # 野外采集（B3-6b-2c：11 个槽位逐个真跑一遍）
+        ("采集(有)", CG.gather, "", {"loc": "windmill_town", "node": "wt_wall"}),
+        ("采集(这儿没有)", CG.gather, "", {"loc": "windmill_town", "node": "wt_gate_n"}),
+        ("采集(今天翻过了)", CG.gather, "", {"loc": "windmill_town", "node": "wt_wall",
+                                              "flags": {"gather_used": {"gt_wt_herb_1": 3}}}),
+        ("挖掘(有)", CG.dig, "", {"loc": "belt_north", "node": "bn_bone"}),
+        ("垂钓(有)", CG.fish, "", {"loc": "belt_west", "node": "bw_old_ferry"}),
+        ("搜查(有)", CG.search, "", {"loc": "belt_east", "node": "be_birch"}),
+        ("歇脚(不累)", CG.rest, "", {"hp": 100, "hp_max": 100}),
+        ("歇脚(歇下了)", CG.rest, "", {"hp": 40, "hp_max": 100}),
+        ("拾取", CG.pick_up, "", {}),
     ]
     bad, empty, sample = [], [], []
     for label, fn, text, over_ in cases:

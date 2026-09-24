@@ -32,6 +32,21 @@ def items() -> dict:
     return _d("items")
 
 
+K_MATERIAL = "材料"          # 物品 kind 的兜底（条目没写、物品表也没有时）
+
+
+def kind_of(oid: str, kind: str | None = None) -> str:
+    """条目的 kind 归一 —— **唯一的一口**：条目写的 → 物品表的 → 未鉴定池自己写的 → 兜底。
+
+    ★ `unid_*` 不是物品表里的东西，它的 marker 写在 `drop_pools` 的池上（`kind`）——
+      别在调用方手写「未鉴定」（K48 同族）。
+    """
+    k = kind or (items().get(oid) or {}).get("kind")
+    if not k and str(oid).startswith("unid_"):
+        k = (pools().get(oid) or {}).get("kind")
+    return k or K_MATERIAL
+
+
 def _pick(entries, rnd: random.Random):
     """按权重抽一条。"""
     if not entries:
@@ -94,7 +109,7 @@ def roll_pool(pool_id: str, *, level: int = 1, rnd: random.Random | None = None)
         rng = e.get("n")
         if isinstance(rng, list) and len(rng) == 2:
             n = rnd.randint(int(rng[0]), int(rng[1]))
-        rec = {"id": oid, "n": n, "kind": e.get("kind") or (it.get(oid, {}).get("kind") or "材料")}
+        rec = {"id": oid, "n": n, "kind": kind_of(oid, e.get("kind"))}
         if e.get("story"):
             rec["story"] = e["story"]
         out.append(rec)
@@ -114,8 +129,7 @@ def open_unid(unid_id: str, *, rnd: random.Random | None = None) -> dict:
     oid = _resolve(str(e.get("out")), e, 1, rnd, it)
     if not oid:
         return {}
-    r = {"id": oid, "kind": e.get("kind") or (it.get(oid, {}).get("kind") or "材料"),
-         "from_unid": unid_id}
+    r = {"id": oid, "kind": kind_of(oid, e.get("kind")), "from_unid": unid_id}
     if e.get("story"):
         r["story"] = e["story"]
     return r

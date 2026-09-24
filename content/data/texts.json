@@ -1993,5 +1993,83 @@
     "params": [],
     "category": "系统",
     "desc": "我的委托 · 评级"
+  },
+  "SYS_GATHER_VERB_HERB": {
+    "value": "采",
+    "params": [],
+    "category": "系统",
+    "desc": "采集 · 「这儿没什么可X的」里的那个 X"
+  },
+  "SYS_GATHER_VERB_DIG": {
+    "value": "挖",
+    "params": [],
+    "category": "系统",
+    "desc": "挖掘 · 同上"
+  },
+  "SYS_GATHER_VERB_FISH": {
+    "value": "钓",
+    "params": [],
+    "category": "系统",
+    "desc": "垂钓 · 同上"
+  },
+  "SYS_GATHER_VERB_SEARCH": {
+    "value": "搜",
+    "params": [],
+    "category": "系统",
+    "desc": "搜查 · 同上"
+  },
+  "SYS_GATHER_NONE": {
+    "value": "这儿没什么可{word}的。",
+    "params": [
+      "word"
+    ],
+    "category": "系统",
+    "desc": "采集 · 这处没有这类点"
+  },
+  "SYS_GATHER_USED_TODAY": {
+    "value": "{name}今天已经被翻过了。明天再来。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "采集 · 今天的次数用光了"
+  },
+  "SYS_GATHER_GET": {
+    "value": "得到：{icon} {name} ×{n}",
+    "params": [
+      "icon",
+      "name",
+      "n"
+    ],
+    "category": "系统",
+    "desc": "采集 · 出产那一行"
+  },
+  "SYS_REST_FULL": {
+    "value": "你不累。",
+    "params": [],
+    "category": "系统",
+    "desc": "歇脚 · 血是满的"
+  },
+  "SYS_REST_DONE": {
+    "value": "你坐下来歇了一会儿。风从北边来。",
+    "params": [],
+    "category": "系统",
+    "desc": "歇脚 · 坐下了"
+  },
+  "SYS_REST_HEAL": {
+    "value": "生命 +{add}（{hp}/{max}）",
+    "params": [
+      "add",
+      "hp",
+      "max"
+    ],
+    "category": "系统",
+    "desc": "歇脚 · 回了多少"
+  },
+  "SYS_PICKUP_NONE": {
+    "value": "地上没什么可捡的 —— 打怪掉的东西会自己进背包。",
+    "params": [],
+    "category": "系统",
+    "desc": "拾取 · 地上没东西"
   }
 }

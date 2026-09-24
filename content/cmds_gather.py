@@ -15,11 +15,11 @@ from . import codex as CX
 from . import loot as LT
 
 
-def _points_here(p, kind=None):
+def _points_here(p, verb=None):
     out = []
     for gid, v in _data("gathering").items():
         if v.get("map") == p["loc"] and v.get("subarea") == p["node"]:
-            if kind is None or v.get("kind") == kind:
+            if verb is None or v.get("verb") == verb:
                 out.append((gid, v))
     return out
 
@@ -36,11 +36,11 @@ def _bump_used(p, gid):
     p["flags"] = f
 
 
-async def _do_gather(env, sink, uid, player, kind: str, verb: str):
+async def _do_gather(env, sink, uid, player, verb: str, word: str):
     p = _p(player)
-    pts = _points_here(p, kind)
+    pts = _points_here(p, verb)
     if not pts:
-        yield "这儿没什么可%s的。" % verb
+        yield T("SYS_GATHER_NONE", word=word)
         return
     gid, pt = pts[0]
     st = CAL.tick(p)                       # ★ 时辰/天气现算；跨（游戏）日把采集次数归零
@@ -51,7 +51,7 @@ async def _do_gather(env, sink, uid, player, kind: str, verb: str):
         yield T("SYS_TIME_GATED", what=pt["name"], when=pt["time"])
         return
     if _used(p, gid) >= int(pt.get("times_per_day", 3)):
-        yield "%s今天已经被翻过了。明天再来。" % pt["name"]
+        yield T("SYS_GATHER_USED_TODAY", name=pt["name"])
         return
     rnd = random.Random("%s:%s:%s" % (uid, gid, p.get("day", 0)))
     # 采集点自己就是一张池（形状与 dp_* 一致）
@@ -77,12 +77,8 @@ async def _do_gather(env, sink, uid, player, kind: str, verb: str):
             rng = e.get("n")
             if isinstance(rng, list) and len(rng) == 2:
                 n = rnd.randint(int(rng[0]), int(rng[1]))
-            if oid.startswith("unid_"):
-                got.append({"id": oid, "n": n, "kind": "未鉴定"})
-            else:
-                it = LT.items()
-                got.append({"id": oid, "n": n,
-                            "kind": e.get("kind") or it.get(oid, {}).get("kind") or "材料"})
+            # kind 归一（未鉴定那类走池自己的 marker）—— 唯一的一口在 loot.kind_of
+            got.append({"id": oid, "n": n, "kind": LT.kind_of(oid, e.get("kind"))})
             break
     _bump_used(p, gid)
     if got:
@@ -99,7 +95,8 @@ async def _do_gather(env, sink, uid, player, kind: str, verb: str):
     it = LT.items()
     for d in got:
         rec = it.get(d["id"]) or LT.pools().get(d["id"]) or {}
-        yield "得到：%s %s ×%s" % (rec.get("icon", "·"), rec.get("name", d["id"]), d.get("n", 1))
+        yield T("SYS_GATHER_GET", icon=rec.get("icon", "·"), name=rec.get("name", d["id"]),
+                n=d.get("n", 1))
         if rec.get("hint"):
             yield "  （%s）" % rec["hint"]
     for line in new_lines(new):
@@ -107,22 +104,22 @@ async def _do_gather(env, sink, uid, player, kind: str, verb: str):
 
 
 async def gather(env, sink, uid, player):
-    async for line in _do_gather(env, sink, uid, player, "采药", "采"):
+    async for line in _do_gather(env, sink, uid, player, "herb", T("SYS_GATHER_VERB_HERB")):
         yield line
 
 
 async def dig(env, sink, uid, player):
-    async for line in _do_gather(env, sink, uid, player, "挖掘", "挖"):
+    async for line in _do_gather(env, sink, uid, player, "dig", T("SYS_GATHER_VERB_DIG")):
         yield line
 
 
 async def fish(env, sink, uid, player):
-    async for line in _do_gather(env, sink, uid, player, "垂钓", "钓"):
+    async for line in _do_gather(env, sink, uid, player, "fish", T("SYS_GATHER_VERB_FISH")):
         yield line
 
 
 async def search(env, sink, uid, player):
-    async for line in _do_gather(env, sink, uid, player, "搜查", "搜"):
+    async for line in _do_gather(env, sink, uid, player, "search", T("SYS_GATHER_VERB_SEARCH")):
         yield line
 
 
@@ -131,16 +128,16 @@ async def rest(env, sink, uid, player):
     mx = int(p.get("hp_max") or 100)
     hp = int(p.get("hp") or mx)
     if hp >= mx:
-        yield "你不累。"
+        yield T("SYS_REST_FULL")
         return
     heal = max(1, int(mx * 0.2))
     p["hp"] = min(mx, hp + heal)
     if player is not None:
         player.update(p)
     _save(env)
-    yield "你坐下来歇了一会儿。风从北边来。"
-    yield "生命 +%d（%d/%d）" % (heal, p["hp"], mx)
+    yield T("SYS_REST_DONE")
+    yield T("SYS_REST_HEAL", add=heal, hp=p["hp"], max=mx)
 
 
 async def pick_up(env, sink, uid, player):
-    yield "地上没什么可捡的 —— 打怪掉的东西会自己进背包。"
+    yield T("SYS_PICKUP_NONE")

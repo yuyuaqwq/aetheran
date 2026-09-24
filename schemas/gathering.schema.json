@@ -32,6 +32,17 @@
             "矿脉"
           ]
         },
+        "verb": {
+          "type": "string",
+          "enum": [
+            "herb",
+            "dig",
+            "fish",
+            "search",
+            "nest",
+            "vein"
+          ]
+        },
         "pool": {
           "type": "array"
         },

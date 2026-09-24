@@ -4,6 +4,7 @@
     "map": "windmill_town",
     "subarea": "wt_wall",
     "kind": "采药",
+    "verb": "herb",
     "pool": [
       {
         "out": "i_material_herb_common",
@@ -31,6 +32,7 @@
     "map": "belt_north",
     "subarea": "bn_bone",
     "kind": "采药",
+    "verb": "herb",
     "pool": [
       {
         "out": "i_material_herb_common",
@@ -58,6 +60,7 @@
     "map": "belt_north",
     "subarea": "bn_bone",
     "kind": "挖掘",
+    "verb": "dig",
     "pool": [
       {
         "out": "i_material_old_iron",
@@ -89,6 +92,7 @@
     "map": "belt_north",
     "subarea": "bn_camp",
     "kind": "挖掘",
+    "verb": "dig",
     "pool": [
       {
         "out": "unid_rare",
@@ -120,6 +124,7 @@
     "map": "belt_north",
     "subarea": "bn_tower",
     "kind": "采药",
+    "verb": "herb",
     "pool": [
       {
         "out": "i_material_herb_rare",
@@ -147,6 +152,7 @@
     "map": "belt_east",
     "subarea": "be_birch",
     "kind": "采药",
+    "verb": "herb",
     "pool": [
       {
         "out": "i_material_herb_common",
@@ -174,6 +180,7 @@
     "map": "belt_east",
     "subarea": "be_birch",
     "kind": "搜查",
+    "verb": "search",
     "pool": [
       {
         "out": "i_junk_bone",
@@ -201,6 +208,7 @@
     "map": "belt_west",
     "subarea": "bw_old_ferry",
     "kind": "垂钓",
+    "verb": "fish",
     "pool": [
       {
         "out": "i_fish_common",
@@ -229,6 +237,7 @@
     "map": "belt_west",
     "subarea": "bw_shoal",
     "kind": "垂钓",
+    "verb": "fish",
     "pool": [
       {
         "out": "i_fish_common",
@@ -264,6 +273,7 @@
     "map": "belt_west",
     "subarea": "bw_shoal",
     "kind": "搜查",
+    "verb": "search",
     "pool": [
       {
         "out": "i_junk_bone",
@@ -295,6 +305,7 @@
     "map": "old_watchtower",
     "subarea": "tower_storage",
     "kind": "搜查",
+    "verb": "search",
     "pool": [
       {
         "out": "i_material_old_iron",
@@ -326,6 +337,7 @@
     "map": "old_watchtower",
     "subarea": "tower_empty_room",
     "kind": "搜查",
+    "verb": "search",
     "pool": [
       {
         "out": "i_clue_page",
