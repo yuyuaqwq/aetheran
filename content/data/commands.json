@@ -1373,5 +1373,29 @@
         "player"
       ]
     }
+  },
+  "go_to": {
+    "patterns": [
+      "^去\\s*(.+)$",
+      "^走到\\s*(.+)$",
+      "^前往\\s*(.+)$"
+    ],
+    "category": "移动与世界",
+    "desc": "在镇里或带内走到另一个地方",
+    "usage": "去 <地方>",
+    "guard_desc": "随时",
+    "visible": true,
+    "order": 5,
+    "params": [
+      "cmd=去"
+    ],
+    "bind": {
+      "handler": "content.cmds_ast:go_to",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   }
 }

@@ -100,15 +100,20 @@ def _node_of(loc, node):
 
 
 def _neighbors(loc, node):
-    """按拓扑算邻居：chain 取前后，star 取首节点为中心。"""
+    """按拓扑算邻居。
+
+    · `star`（城镇）：**全互通** —— 在镇子里走路不该有障碍（玩家体验优先）。
+      取「中心 = nodes[0]」是错的：本包节点顺序是「8 场所 + 3 镇口」，
+      中心会被算成老风车 ⇒ 北墙根（哈根）永远走不到。
+    · `chain`（野外/副本）：线性，取前后。
+    """
     m = _map_of(loc) or {}
     nodes = [n.get("id") for n in (m.get("nodes") or [])]
     if node not in nodes:
         return []
-    i = nodes.index(node)
     if (m.get("topology") or "chain") == "star":
-        center = nodes[0]
-        return [x for x in nodes if x != node] if node == center else [center]
+        return [x for x in nodes if x != node]
+    i = nodes.index(node)
     out = []
     if i > 0:
         out.append(nodes[i - 1])
@@ -236,6 +241,51 @@ async def go_back(env, sink, uid, player):
         player.update(p)
     _save(env)
     yield "你退回 %s。" % _name_of_node(loc, node)
+
+
+async def go_to(env, sink, uid, player):
+    """`去 <地方>` —— 在同一张图里走到另一个节点。
+
+    ★ 为什么需要它：玩家到了镇上（风车镇是 star 拓扑 11 个节点），若只能在
+      「北口 / 东口 / 西口」之间跳，北墙根（哈根）、白烛堂（艾德/莉安）这些地方
+      **永远走不到** —— 而 NPC 在那儿。
+    规则：目标必须是**当前节点的邻居**（不是任意节点）—— 跨图要先出门。
+    """
+    p = _p(player)
+    raw = (getattr(env, "text", "") or "").strip()
+    parts = raw.split(None, 1)
+    want = parts[1].strip() if len(parts) > 1 else ""
+    loc, node = p["loc"], p["node"]
+    nb = _neighbors(loc, node)
+    if not want:
+        yield "去哪儿？现在能走到：" + " · ".join("『%s』" % _name_of_node(loc, x) for x in nb)
+        return
+    hit = None
+    for x in nb:
+        if want == x or want == _name_of_node(loc, x):
+            hit = x
+            break
+    if hit is None:
+        for n in (_map_of(loc) or {}).get("nodes") or []:
+            if want in (n.get("id"), n.get("name")):
+                yield "「%s」从这儿过不去 —— 得先走到附近。" % n.get("name")
+                yield "现在能走到：" + " · ".join("『%s』" % _name_of_node(loc, x) for x in nb)
+                return
+        yield "这儿没有叫「%s」的地方。" % want
+        yield "现在能走到：" + " · ".join("『%s』" % _name_of_node(loc, x) for x in nb)
+        return
+    p["prev"] = (p.get("prev") or [])[-8:] + [(loc, node)]
+    p["node"] = hit
+    if player is not None:
+        player.update(p)
+    _save(env)
+    yield "你走到 %s。" % _name_of_node(loc, hit)
+    poi_here = [v for v in _data("pois").values() if v.get("map") == loc and v.get("subarea") == hit]
+    npc_here = [v for v in _data("npcs").values() if v.get("map") == loc and v.get("subarea") == hit]
+    if poi_here:
+        yield "看得见：" + " · ".join("『%s』%s" % (v.get("name"), v.get("icon", "")) for v in poi_here)
+    if npc_here:
+        yield "人在：" + " · ".join("『%s』%s" % (v.get("name"), v.get("icon", "")) for v in npc_here)
 
 
 # ══════════════════════════════════════════════════════════════
