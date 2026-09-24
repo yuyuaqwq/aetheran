@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "真源在包。三卡（人设/灵魂/语气）是 NPC 设定的核心，写进域以便编辑器可见、写文案时对着写。",
+  "type": "object",
+  "minProperties": 1,
+  "patternProperties": {
+    "^npc_[a-z_]+$": {
+      "type": "object",
+      "required": [
+        "name",
+        "icon",
+        "map",
+        "subarea",
+        "persona",
+        "soul",
+        "tone",
+        "dialogue"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "map": {
+          "type": "string"
+        },
+        "subarea": {
+          "type": "string"
+        },
+        "persona": {
+          "type": "object",
+          "description": "人设卡七项（外貌/穿着/性格/喜好/讨厌/癖好/作息）+ 口头禅"
+        },
+        "soul": {
+          "type": "object",
+          "description": "灵魂卡：要什么/怕什么/矛盾/为什么在这/主题句"
+        },
+        "tone": {
+          "type": "object",
+          "description": "语气档：用词/节奏/态度/关注点/停顿"
+        },
+        "funcs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "condition": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "出现条件（时辰/天气/事件）"
+        },
+        "dialogue": {
+          "type": "string",
+          "description": "对话树 id（指向 dialogues 域）"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,560 @@
+{
+  "ms_field_mouse": {
+    "name": "田鼠",
+    "icon": "🐀",
+    "archetype": "群居",
+    "role": "普通",
+    "lv": 3,
+    "panel": {
+      "hp": 115,
+      "atk": 11.1,
+      "def": 10.0,
+      "spd": 92,
+      "hit": 53.5,
+      "eva": 8.9,
+      "crit": 14.3
+    },
+    "skills": [
+      "ms_skill_bite"
+    ],
+    "drops": [
+      "dp_trash_small"
+    ],
+    "mods": {
+      "hp_mult": 1.0,
+      "atk_mult": 1.0
+    },
+    "elite_pool": [
+      "af_bountiful",
+      "af_puny",
+      "af_swarm"
+    ]
+  },
+  "ms_scavenger_dog": {
+    "name": "拾荒野狗",
+    "icon": "🐕",
+    "archetype": "群居",
+    "role": "普通",
+    "lv": 4,
+    "panel": {
+      "hp": 133,
+      "atk": 12.5,
+      "def": 11.3,
+      "spd": 92,
+      "hit": 54.6,
+      "eva": 9.5,
+      "crit": 15.9
+    },
+    "skills": [
+      "ms_skill_pack_bite"
+    ],
+    "drops": [
+      "dp_trash_small"
+    ],
+    "mods": {
+      "hp_mult": 1.0,
+      "atk_mult": 1.0
+    },
+    "elite_pool": [
+      "af_swarm",
+      "af_swift",
+      "af_frenzy"
+    ]
+  },
+  "ms_bone_wanderer": {
+    "name": "游荡的骸骨",
+    "icon": "💀",
+    "archetype": "厚甲",
+    "role": "普通",
+    "lv": 6,
+    "panel": {
+      "hp": 170,
+      "atk": 15.2,
+      "def": 14.0,
+      "spd": 92,
+      "hit": 56.8,
+      "eva": 10.7,
+      "crit": 19.0
+    },
+    "skills": [
+      "ms_skill_bone_swing"
+    ],
+    "drops": [
+      "dp_trash_mid"
+    ],
+    "mods": {
+      "hp_mult": 1.0,
+      "atk_mult": 1.0
+    },
+    "elite_pool": [
+      "af_hard_shell",
+      "af_plague",
+      "af_home_guard"
+    ]
+  },
+  "ms_birch_crow": {
+    "name": "林鸦",
+    "icon": "🐦",
+    "archetype": "快速",
+    "role": "普通",
+    "lv": 4,
+    "panel": {
+      "hp": 133,
+      "atk": 12.5,
+      "def": 11.3,
+      "spd": 92,
+      "hit": 54.6,
+      "eva": 9.5,
+      "crit": 15.9
+    },
+    "skills": [
+      "ms_skill_eye_peck"
+    ],
+    "drops": [
+      "dp_trash_small"
+    ],
+    "mods": {
+      "hp_mult": 1.0,
+      "atk_mult": 1.0
+    },
+    "elite_pool": [
+      "af_swarm",
+      "af_ambush",
+      "af_swift"
+    ]
+  },
+  "ms_wild_dog": {
+    "name": "野狗",
+    "icon": "🐺",
+    "archetype": "杂兵",
+    "role": "普通",
+    "lv": 6,
+    "panel": {
+      "hp": 170,
+      "atk": 15.2,
+      "def": 14.0,
+      "spd": 92,
+      "hit": 56.8,
+      "eva": 10.7,
+      "crit": 19.0
+    },
+    "skills": [
+      "ms_skill_bite"
+    ],
+    "drops": [
+      "dp_trash_mid"
+    ],
+    "mods": {
+      "hp_mult": 1.0,
+      "atk_mult": 1.0
+    },
+    "elite_pool": [
+      "af_swarm",
+      "af_frenzy",
+      "af_pursuit"
+    ]
+  },
+  "ms_shallow_ghoul": {
+    "name": "浅滩水鬼",
+    "icon": "👻",
+    "archetype": "消耗",
+    "role": "普通",
+    "lv": 8,
+    "panel": {
+      "hp": 206,
+      "atk": 17.8,
+      "def": 16.6,
+      "spd": 92,
+      "hit": 59.0,
+      "eva": 11.9,
+      "crit": 22.1
+    },
+    "skills": [
+      "ms_skill_leg_drag"
+    ],
+    "drops": [
+      "dp_trash_mid"
+    ],
+    "mods": {
+      "hp_mult": 1.0,
+      "atk_mult": 1.0
+    },
+    "elite_pool": [
+      "af_plague",
+      "af_ambush",
+      "af_disarm"
+    ]
+  },
+  "ms_stone_crab": {
+    "name": "石滩螃蟹",
+    "icon": "🦀",
+    "archetype": "厚甲",
+    "role": "普通",
+    "lv": 9,
+    "panel": {
+      "hp": 225,
+      "atk": 19.2,
+      "def": 18.0,
+      "spd": 92,
+      "hit": 60.1,
+      "eva": 12.5,
+      "crit": 23.6
+    },
+    "skills": [
+      "ms_skill_pincer"
+    ],
+    "drops": [
+      "dp_trash_mid"
+    ],
+    "mods": {
+      "hp_mult": 1.0,
+      "atk_mult": 1.0
+    },
+    "elite_pool": [
+      "af_hard_shell",
+      "af_thorns",
+      "af_bountiful"
+    ]
+  },
+  "ms_pick_scavenger": {
+    "name": "拾荒人",
+    "icon": "🧺",
+    "archetype": "爆发",
+    "role": "精英",
+    "lv": 7,
+    "panel": {
+      "hp": 564,
+      "atk": 16.5,
+      "def": 16.8,
+      "spd": 104,
+      "hit": 63.7,
+      "eva": 12.4,
+      "crit": 22.6
+    },
+    "skills": [
+      "ms_skill_snatch"
+    ],
+    "drops": [
+      "dp_elite_gear"
+    ],
+    "mods": {
+      "hp_mult": 1.0,
+      "atk_mult": 1.0
+    },
+    "elite_pool": [
+      "af_disarm",
+      "af_vampiric",
+      "af_hoarder"
+    ]
+  },
+  "ms_bitten_lumberjack": {
+    "name": "被咬过的伐木工",
+    "icon": "🪓",
+    "archetype": "消耗",
+    "role": "精英",
+    "lv": 9,
+    "panel": {
+      "hp": 674,
+      "atk": 19.2,
+      "def": 19.7,
+      "spd": 104,
+      "hit": 66.2,
+      "eva": 13.7,
+      "crit": 26.0
+    },
+    "skills": [
+      "ms_skill_frenzied_bite"
+    ],
+    "drops": [
+      "dp_elite_gear"
+    ],
+    "mods": {
+      "hp_mult": 1.0,
+      "atk_mult": 1.0
+    },
+    "elite_pool": [
+      "af_plague",
+      "af_frenzy",
+      "af_stealth_interrupt"
+    ]
+  },
+  "ms_birch_treant": {
+    "name": "白桦树精",
+    "icon": "🌳",
+    "archetype": "法系",
+    "role": "精英",
+    "lv": 11,
+    "panel": {
+      "hp": 783,
+      "atk": 21.9,
+      "def": 22.7,
+      "spd": 104,
+      "hit": 68.6,
+      "eva": 15.0,
+      "crit": 29.4
+    },
+    "skills": [
+      "ms_skill_birch_mark"
+    ],
+    "drops": [
+      "dp_elite_gear"
+    ],
+    "mods": {
+      "hp_mult": 1.0,
+      "atk_mult": 1.0
+    },
+    "elite_pool": [
+      "af_hard_shell",
+      "af_thorns",
+      "af_fire_ward"
+    ]
+  },
+  "ms_ferryman": {
+    "name": "摆渡人",
+    "icon": "🛶",
+    "archetype": "支援",
+    "role": "精英",
+    "lv": 12,
+    "panel": {
+      "hp": 838,
+      "atk": 23.2,
+      "def": 24.1,
+      "spd": 104,
+      "hit": 69.8,
+      "eva": 15.7,
+      "crit": 31.1
+    },
+    "skills": [
+      "ms_skill_call_drowned"
+    ],
+    "drops": [
+      "dp_elite_gear"
+    ],
+    "mods": {
+      "hp_mult": 1.0,
+      "atk_mult": 1.0
+    },
+    "elite_pool": [
+      "af_shield",
+      "af_plague",
+      "af_rare_breed"
+    ]
+  },
+  "ms_thing_in_water": {
+    "name": "水里的东西",
+    "icon": "🌫️",
+    "archetype": "爆发",
+    "role": "精英",
+    "lv": 13,
+    "panel": {
+      "hp": 893,
+      "atk": 24.5,
+      "def": 25.6,
+      "spd": 104,
+      "hit": 71.0,
+      "eva": 16.4,
+      "crit": 32.8
+    },
+    "skills": [
+      "ms_skill_shadow_strike"
+    ],
+    "drops": [
+      "dp_elite_gear"
+    ],
+    "mods": {
+      "hp_mult": 1.0,
+      "atk_mult": 1.0
+    },
+    "elite_pool": [
+      "af_ambush",
+      "af_vampiric",
+      "af_shield"
+    ]
+  },
+  "ms_tower_guard": {
+    "name": "旧哨塔的守兵",
+    "icon": "🛡️",
+    "archetype": "厚甲",
+    "role": "头目",
+    "lv": 14,
+    "panel": {
+      "hp": 1106,
+      "atk": 25.9,
+      "def": 29.5,
+      "spd": 98,
+      "hit": 78.8,
+      "eva": 18.6,
+      "crit": 37.6
+    },
+    "skills": [
+      "ms_skill_stance_guard"
+    ],
+    "drops": [
+      "dp_boss_minor"
+    ],
+    "mods": {
+      "hp_mult": 1.0,
+      "atk_mult": 1.0
+    },
+    "elite_pool": [
+      "af_hard_shell",
+      "af_interrupt",
+      "af_home_guard"
+    ]
+  },
+  "ms_head_dog": {
+    "name": "头狗",
+    "icon": "🐕🦺",
+    "archetype": "快速",
+    "role": "头目",
+    "lv": 10,
+    "panel": {
+      "hp": 850,
+      "atk": 20.5,
+      "def": 23.1,
+      "spd": 98,
+      "hit": 73.5,
+      "eva": 15.7,
+      "crit": 30.2
+    },
+    "skills": [
+      "ms_skill_pack_howl"
+    ],
+    "drops": [
+      "dp_boss_minor"
+    ],
+    "mods": {
+      "hp_mult": 1.0,
+      "atk_mult": 1.0
+    },
+    "elite_pool": [
+      "af_swarm",
+      "af_frenzy",
+      "af_swift"
+    ]
+  },
+  "ms_sunken_corpse": {
+    "name": "沉尸",
+    "icon": "🧟",
+    "archetype": "厚甲",
+    "role": "头目",
+    "lv": 15,
+    "panel": {
+      "hp": 1170,
+      "atk": 27.2,
+      "def": 31.1,
+      "spd": 98,
+      "hit": 80.1,
+      "eva": 19.3,
+      "crit": 39.5
+    },
+    "skills": [
+      "ms_skill_undertow"
+    ],
+    "drops": [
+      "dp_boss_minor"
+    ],
+    "mods": {
+      "hp_mult": 1.0,
+      "atk_mult": 1.0
+    },
+    "elite_pool": [
+      "af_hard_shell",
+      "af_vampiric",
+      "af_hoarder"
+    ]
+  },
+  "ms_bone_warden": {
+    "name": "守塔的骨架",
+    "icon": "🦴",
+    "archetype": "法系",
+    "role": "层主",
+    "lv": 17,
+    "panel": {
+      "hp": 1670,
+      "atk": 29.9,
+      "def": 34.3,
+      "spd": 96,
+      "hit": 82.8,
+      "eva": 20.7,
+      "crit": 43.2
+    },
+    "skills": [
+      "ms_skill_sweep"
+    ],
+    "drops": [
+      "dp_boss_minor"
+    ],
+    "mods": {
+      "hp_mult": 1.0,
+      "atk_mult": 1.0
+    },
+    "elite_pool": [
+      "af_interrupt",
+      "af_shield",
+      "af_plague"
+    ]
+  },
+  "ms_boss_oath_sentry": {
+    "name": "旧誓哨兵",
+    "icon": "🗿",
+    "archetype": "厚甲",
+    "role": "boss",
+    "lv": 19,
+    "panel": {
+      "hp": 7340,
+      "atk": 32.6,
+      "def": 62.5,
+      "spd": 102,
+      "hit": 142.4,
+      "eva": 36.9,
+      "crit": 78.1
+    },
+    "skills": [
+      "ms_skill_hold",
+      "ms_skill_line",
+      "ms_skill_sweep"
+    ],
+    "drops": [
+      "i_horn_half"
+    ],
+    "mods": {
+      "hp_mult": 1.0,
+      "atk_mult": 1.0,
+      "mech": "phase",
+      "phases": [
+        {
+          "min": 100,
+          "name": "站桩",
+          "atk_mult": 1.0,
+          "def_add": 0,
+          "note": "开场；不攻击，只挡"
+        },
+        {
+          "min": 80,
+          "name": "列阵",
+          "atk_mult": 1.3,
+          "def_add": 60,
+          "turns": 8,
+          "note": "玩家第一次打到它（激怒）"
+        },
+        {
+          "min": 40,
+          "name": "散架",
+          "atk_mult": 0.8,
+          "def_add": -120,
+          "dmg_taken_mult": 1.4,
+          "act_rate_mult": 0.5,
+          "turns": 5,
+          "note": "列阵结束 / 血 <50%（疲态）"
+        },
+        {
+          "min": 0,
+          "name": "回塔",
+          "note": "血 <20%（终局）；停止攻击，走向塔边"
+        }
+      ]
+    },
+    "elite_pool": []
+  }
+}
