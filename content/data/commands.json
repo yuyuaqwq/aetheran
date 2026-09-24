@@ -194,7 +194,15 @@
     "usage": "问路",
     "visible": true,
     "order": 9,
-    "guard_desc": "有人时"
+    "guard_desc": "有人时",
+    "bind": {
+      "handler": "content.cmds_talk:ask_way",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "time": {
     "patterns": [
@@ -1188,5 +1196,29 @@
     "visible": true,
     "order": 88,
     "guard_desc": "随时"
+  },
+  "talk": {
+    "patterns": [
+      "^搭话(?:\\s+(.+))?$",
+      "^说话(?:\\s+(.+))?$",
+      "^聊(?:\\s+(.+))?$"
+    ],
+    "category": "移动与世界",
+    "desc": "和身边的人说话",
+    "usage": "搭话 <名字>",
+    "guard_desc": "有人时",
+    "visible": true,
+    "order": 99,
+    "params": [
+      "cmd=搭话"
+    ],
+    "bind": {
+      "handler": "content.cmds_talk:talk",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   }
 }
