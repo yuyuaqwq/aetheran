@@ -14,6 +14,8 @@
   ⑩ 去(脚下这一站) 回「到了」不回「过不去」（B3-10 ① —— HERE 那一支真取到）
   ⑪ 呈现口不漏机器键的覆盖面：战斗 / 配方 / 图鉴 / 称号 / 彩蛋 / 时间 也逐行扫（B3-10 ②）
   ⑫ 四条出口（北口/往东/往西/进镇）站在**目的地**上敲 = 回 HERE、不演出门、不塞历史（B3-11 · K60）
+  ⑬ 默认档不许被就地改（B3-12 · K57）：真跑完一遍后 bag/equipped/flags/codex 必须原样；
+     半截老档（缺这几个键）采集一趟，不许把东西写进默认档、也不许串给下一个人
 
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_copy.py [--inventory]
 """
@@ -21,6 +23,7 @@ from __future__ import annotations
 
 import ast
 import asyncio
+import copy
 import io
 import json
 import os
@@ -369,6 +372,9 @@ def main():
                          "gathering", "drop_pools", "recipes", "npcs", "skills", "eggs",
                          "titles", "dialogues")
              for k in (st.domain(d) or {})]
+    # ★ B3-12：跑之前先给默认档那四个容器拍快照（跑完必须一模一样）
+    _MUT = ("bag", "equipped", "flags", "codex")
+    _DEF_SNAP = {_k: copy.deepcopy(CA.DEFAULT_PLAYER.get(_k)) for _k in _MUT}
     for label, fn, text, over_ in cases:
         out = _drive(fn, _player(**over_), text)
         for line in out:                       # ★ B3-9：呈现口不许漏机器键（B3-7 同族）
@@ -385,6 +391,25 @@ def main():
     chk("★ 一个取不到文案的都没有（不出现 %s）" % MISSING, not bad, "%s" % bad)
     chk("★ 呈现口不漏机器键（%d 个域键 · %d 条用例逐行扫）" % (len(_KEYS), len(cases)), not leaked,
         "%s" % leaked[:4])
+
+    # ⑬ B3-12 ★ 默认档不许被就地改（K57 的活口）：跑完这么多实现体，那四个容器必须没动
+    _soiled = [(_k, _DEF_SNAP[_k], CA.DEFAULT_PLAYER.get(_k)) for _k in _MUT
+               if CA.DEFAULT_PLAYER.get(_k) != _DEF_SNAP[_k]]
+    chk("★ 默认档不许被就地改（跑完 %d 个实现体后 bag / equipped / flags / codex 原样）" % len(cases),
+        not _soiled, "%s" % _soiled[:2])
+
+    # ⑬-b 半截老档（缺 bag / flags / codex）采集一趟 —— 不许写进默认档，也不许串给下一个人
+    _pA = {"loc": "windmill_town", "node": "wt_wall", "hp": 100, "hp_max": 100}
+    _drive(CG.gather, _pA, "")
+    _pB = {"loc": "windmill_town", "node": "wt_gate_n", "hp": 100, "hp_max": 100}
+    _bagB = _drive(CA.bag, _pB, "")
+    chk("★ 半截老档采集：默认档没被写 · 下一个人的背包还是空的",
+        CA.DEFAULT_PLAYER.get("bag") == _DEF_SNAP["bag"]
+        and CA.DEFAULT_PLAYER.get("codex") == _DEF_SNAP["codex"]
+        and _pB.get("bag") in ({}, None)
+        and any("空的" in ln for ln in _bagB),
+        "默认=%s 下一个人的包=%s %s" % (CA.DEFAULT_PLAYER.get("bag"), _pB.get("bag"), _bagB[:1]))
+
     # ⑩ B3-10 ①：`去 <脚下这一站>` —— 回的是「到了」，不是「过不去」
     here_out = _drive(CA.go_to, _player(loc="windmill_town", node="wt_gate_n"), "去 %s" % cur)
     here_want = tx["SYS_MOVE_HERE"]["value"].replace("{name}", cur)

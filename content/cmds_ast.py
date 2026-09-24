@@ -95,12 +95,33 @@ def _save(env):
         pass
 
 
+#: ★ B3-12（K57 的活口）：默认档里的**可变容器** —— 出档一律换新对象，别把默认档当草稿纸
+_MUTABLE = ("bag", "equipped", "flags", "codex")
+
+
+def _fresh(base) -> dict:
+    """一份可以随便改的玩家档（四个容器各拷一层；`prev` 只用重建、没人原地加）。"""
+    out = dict(base)
+    for _k in _MUTABLE:
+        _v = out.get(_k)
+        if isinstance(_v, dict):
+            out[_k] = dict(_v)
+    return out
+
+
 def _p(player):
-    """玩家档（引擎给的是 dict；缺字段用默认值补齐 —— 不改原档）。"""
-    if not isinstance(player, dict):
-        return dict(DEFAULT_PLAYER)
+    """玩家档（引擎给的是 dict；缺字段用默认值补齐 —— 不改原档）。
+
+    ★ B3-12：`dict(DEFAULT_PLAYER)` 只是**浅**拷贝 —— `bag / equipped / flags / codex`
+      这四个值仍是默认档里的**同一个对象**。谁在原地改（`loot.add_to_bag` 就是
+      `setdefault` + 原地写）就把默认档改脏：进程内跨玩家串档、探针之间也串。
+      ⇒ 出档一律走 `_fresh()`（默认档那一边、引擎给的档那一边，两边都不当草稿纸）。
+      判据：probe_copy ⑬（真跑完一遍之后默认档四个容器必须原样 + 半截老档采集不串给下一个人）。
+    """
     p = dict(DEFAULT_PLAYER)
-    p.update(player)
+    if isinstance(player, dict):
+        p.update(player)
+    p = _fresh(p)
     if not isinstance(p.get("prev"), list):
         p["prev"] = []
     return p
