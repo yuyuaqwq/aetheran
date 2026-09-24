@@ -6,7 +6,7 @@
 """
 from __future__ import annotations
 
-from .cmds_ast import _data, _p, _save, _map_of, _name_of_node, T
+from .cmds_ast import _data, _p, _save, _map_of, _name_of_node, T, exp_need
 from .cmds_talk import _arg
 from .cmds_ast import _npcs_here
 
@@ -143,8 +143,8 @@ async def quest_deliver(env, sink, uid, player):
     p["exp"] = p.get("exp", 0) + x["reward_exp"]
     p["gold"] = p.get("gold", 0) + x["reward_gold"]
     lv = p.get("level", 1)
-    while p["exp"] >= lv * lv * 40:
-        p["exp"] -= lv * lv * 40
+    while p["exp"] >= exp_need(lv):                 # ★ 曲线只有 cmds_ast.exp_need 一个口
+        p["exp"] -= exp_need(lv)
         lv += 1
     if lv != p.get("level"):
         p["level"] = lv

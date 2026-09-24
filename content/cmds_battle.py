@@ -3,15 +3,48 @@
 
 第一版范围有意收窄：先把「遇敌 → 打完 → 拿日志与结果」打通。
 轮流制（输入窗口）+ 技能选择留 B2-2b（引擎已支持 `Battle.human_act` / `focus()`）。
+
+★ B3-8 战斗收尾：输了要**真的落地**（回白烛堂 · 血回满 · 掉当前等级经验的 10% ·
+  不掉装备 —— 口径 `00_总纲/03_主要玩法 §4.9`，曲线走 `cmds_ast.exp_need` 一个口）；
+  倒地与掉经验的话走向 `texts` 槽位（`SYS_DEATH_WILD` / `SYS_DEATH_QUEST_LOSS`）；
+  每场结束写 `flags.last_battle` —— 那是『战斗日志』**唯一**的来源（原先只有读端）。
 """
 from __future__ import annotations
 
-from .cmds_ast import _data, _p, _save, _map_of, _name_of_node, T
+from .cmds_ast import _data, _p, _save, _map_of, _name_of_node, T, CHAPEL, exp_need
 from .cmds_talk import _arg
 from .cmds_codex import new_lines
 from . import codex as CX
 from . import combat as CB
 from . import loot as LT
+
+
+def _flags(p):
+    """档上的 flags 拷一份再改 —— `_p()` 是浅拷贝，就地改会污染默认档（跨玩家串档）。"""
+    f = dict(p.get("flags") or {})
+    p["flags"] = f
+    return f
+
+
+def _note_battle(p, enemy, logs, res):
+    """把这一场记进 flags —— 『战斗日志』读的就是它（原先只在读端、没人写）。"""
+    _flags(p)["last_battle"] = {"enemy": enemy, "result": res,
+                                "logs": [str(x) for x in logs]}
+
+
+def _wake_in_chapel(p):
+    """★ 死亡落地（03 §4.9）：回白烛堂 · 血回满 · 掉当前等级经验的 10% · 不掉装备。
+
+    「当前等级经验」= 该级升级所需经验（与升级判定同一个口 `exp_need`）；扣到 0 为止。
+    返回掉掉的经验（给回话/探针用）。★ 醒来不是「走到」白烛堂 ⇒ 不记 `note_step`。
+    """
+    p["loc"], p["node"] = CHAPEL
+    p["prev"] = []
+    p["hp"] = int(p.get("hp_max") or 100)
+    had = int(p.get("exp") or 0)
+    lost = min(had, int(exp_need(int(p.get("level", 1) or 1)) * 0.1))
+    p["exp"] = had - lost
+    return lost
 
 
 def _encounter(p, uid, seed=None):
@@ -58,6 +91,7 @@ async def attack(env, sink, uid, player):
         if drops:
             LT.add_to_bag(p, drops)
         new = CX.note_items(p, [d["id"] for d in drops]) if drops else []
+        _note_battle(p, m.get("name", pick[0]), logs, res)
         if player is not None:
             player.update(p)
         _save(env)
@@ -75,12 +109,17 @@ async def attack(env, sink, uid, player):
     else:
         if seen:
             yield T("SYS_CODEX_NEW", book=CX.label("monster"), name=CX.name_of("monster", pick[0]))
-        yield "✖ 你倒下了。" if res == "defeat" else "（战斗结束：%s）" % res
-        p["hp"] = max(1, hp_after)
+        if res == "defeat":
+            _wake_in_chapel(p)                      # ★ 真的回白烛堂（原先只说了这句话）
+            yield T("SYS_DEATH_WILD")
+            yield T("SYS_DEATH_QUEST_LOSS")
+        else:
+            yield "（战斗结束：%s）" % res
+            p["hp"] = max(1, hp_after)
+        _note_battle(p, ms[pick[0]].get("name", pick[0]), logs, res)
         if player is not None:
             player.update(p)
         _save(env)
-        yield "（野外血空回白烛堂 —— 掉当前等级经验的 10%，不掉装备）"
 
 
 async def defend(env, sink, uid, player):

@@ -69,6 +69,69 @@ r2 = CB.run_auto({"cls": "cls_knight", "level": 3, "hp": 140, "uid": "u1"}, [mid
 s = PB.panel_of("cls_knight", 3)
 (ok if s.get("hp") and s.get("atk") else bad)("面板栈可用（hp=%s atk=%s · 宪法键名）" % (s.get("hp"), s.get("atk")))
 
+# ⑧ ★ B3-8 死亡落地：真调「攻击」+ 造 1 血档，遭遇钉死在最强的那只上（必输）
+import asyncio                                                       # noqa: E402
+
+from content import cmds_ast as CA                                   # noqa: E402
+from content import cmds_battle as CBAT                              # noqa: E402
+from content import combat as CBmod                                  # noqa: E402
+
+
+class _E:                       # handler 只要 env.save()（落档是处理器的责任）
+    text = ""
+
+    def save(self):
+        pass
+
+
+def _drive(fn, p, uid="u_die"):
+    out = []
+
+    async def _go():
+        async for line in fn(_E(), None, uid, p):
+            out.append(line)
+
+    asyncio.run(_go())
+    return out
+
+
+def _lose_once(p):
+    """下一场遭遇钉死在最强的那只怪上 —— 1 血必输，好验死亡那条线。"""
+    strongest = max(MON, key=lambda k: int(MON[k].get("lv", 1) or 1))
+    real = CBmod.pick_encounter
+    CBmod.pick_encounter = lambda *a, **k: [strongest]
+    try:
+        return _drive(CBAT.attack, p)
+    finally:
+        CBmod.pick_encounter = real
+
+
+_DIE = dict(CA.DEFAULT_PLAYER)
+_DIE.update({"cls": "cls_knight", "level": 3, "hp": 1, "hp_max": 100, "exp": 200,
+             "bag": {"i_potion_heal": 2}, "loc": "belt_north", "node": "bn_bone",
+             "uid": "u_die"})
+_lines_die = _lose_once(_DIE)
+(ok if any("眼前一黑" in x for x in _lines_die) else bad)("死亡走 texts 槽位（SYS_DEATH_WILD 真取到）")
+(ok if (_DIE["loc"], _DIE["node"]) == CA.CHAPEL else bad)(
+    "★ 血空回白烛堂（%s / %s）" % (_DIE["loc"], _DIE["node"]))
+(ok if int(_DIE["hp"]) == int(_DIE["hp_max"]) else bad)(
+    "★ 输了血回满（hp=%s / %s）—— 不许卡在 1 血" % (_DIE["hp"], _DIE["hp_max"]))
+_LOST = 200 - int(_DIE["exp"])
+_NEED = int(CA.exp_need(3) * 0.1)
+(ok if _LOST == _NEED else bad)("掉当前等级经验的 10%%（掉 %s · 口径 %s · 剩 %s）" % (_LOST, _NEED, _DIE["exp"]))
+(ok if (_DIE.get("bag") or {}) == {"i_potion_heal": 2} else bad)("★ 不掉装备（背包原样）")
+(ok if (_DIE.get("flags") or {}).get("last_battle") else bad)("★ 每场写 flags.last_battle（『战斗日志』的唯一来源）")
+
+# ⑨ ★ 『战斗日志』取得到上一场（原先只有读端、没人写 ⇒ 永远「还没有打过」）
+_LOG = _drive(CBAT.battle_log, _DIE)
+(ok if _LOG and not any("还没有打过" in x for x in _LOG) else bad)(
+    "★『战斗日志』取得到上一场（%d 行）" % len(_LOG))
+
+# ⑩ ★ 复活点必须是 maps 域里的真节点（id 写错就落在空中 —— 造档验不出这个）
+_MP = st.domain("maps") or {}
+_NODES = [n.get("id") for n in ((_MP.get(CA.CHAPEL[0]) or {}).get("nodes") or [])]
+(ok if CA.CHAPEL[1] in _NODES else bad)("★ 复活点 %s 是 maps 域里的真节点" % (CA.CHAPEL[1],))
+
 print()
 print("结果：%s" % ("全绿 ✓" if not fails else "有红 ✗"))
 sys.exit(1 if fails else 0)

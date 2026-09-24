@@ -41,8 +41,8 @@ SEALED = ("cmds_ast.py", "cmds_talk.py", "cmds_quest.py", "cmds_gather.py", "pan
 
 #: 快照上限（B3-6b 收口时的实测值；**只降不升**，不在表里的文件必须 0）
 BUDGET = {                      # B3-6b 收口时实测（124 条）；下一批往下压，只能降
-    "cmds_battle.py": 16,       # 战斗结算与日志
-    "loot.py": 12,              # 掉落 / 未鉴定 / 鉴定那几句话
+    "cmds_battle.py": 14,       # 战斗结算与日志（B3-8 收掉死亡那两句：改走 SYS_DEATH_*）
+    "loot.py": 11,              # 掉落 / 未鉴定 / 鉴定那几句话（B3-7 收掉一条）
     "cmds_recipe.py": 9,        # 配方 / 烹饪 / 强化
     "codex.py": 6,              # 谱的分类名
     "combat.py": 5,             # 战斗里的兜底名
