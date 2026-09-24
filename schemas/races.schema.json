@@ -1,0 +1,107 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "真源在包（设计裁决：schema 住包，引擎默认域集不新增 races 域）。同 skills.schema.json 口径。",
+  "type": "object",
+  "properties": {},
+  "$defs": {
+    "race": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "path",
+        "flip",
+        "talents",
+        "cost",
+        "recommend",
+        "line"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "home": {
+          "type": "string"
+        },
+        "lifespan": {
+          "type": "string"
+        },
+        "build": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string",
+          "description": "专属通路（别族走不了的路）"
+        },
+        "flip": {
+          "type": "string",
+          "description": "同一条路的反面"
+        },
+        "talents": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "$ref": "#/$defs/talent"
+          }
+        },
+        "cost": {
+          "$ref": "#/$defs/talent"
+        },
+        "recommend": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "line": {
+          "type": "string",
+          "description": "建号第四步「为什么来」"
+        }
+      }
+    },
+    "talent": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "kind",
+        "effect"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "可见性",
+            "数值",
+            "经济"
+          ]
+        },
+        "effect": {
+          "type": "string"
+        },
+        "values": {
+          "type": "object",
+          "description": "数值类的具体系数（面板挂载用）"
+        }
+      }
+    }
+  },
+  "minProperties": 1,
+  "patternProperties": {
+    "^race_[a-z]+$": {
+      "$ref": "#/$defs/race"
+    }
+  },
+  "additionalProperties": false
+}

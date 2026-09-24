@@ -2,12 +2,14 @@
   "id": "aetheran",
   "kind": "game",
   "name": "阿斯特兰",
-  "desc": "《阿斯特兰》内容侧数据包 —— 第四刀：六职业 + 30 条技能 + 行动类别基准表",
+  "desc": "《阿斯特兰》内容侧数据包 —— 第四刀 + races 域（六族天赋）",
   "engine": ">=0.1",
   "entry": "content/apply.py",
   "domains": [
     "classes",
     "commands",
+    "maps",
+    "races",
     "skills",
     "texts",
     "tlogs"

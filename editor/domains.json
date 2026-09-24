@@ -43,5 +43,23 @@
     "icon": "⚔️",
     "owner": "package",
     "tier": "portable"
+  },
+  "races": {
+    "label": "种族",
+    "kind": "data",
+    "schema": "schemas/races.schema.json",
+    "primary": "race",
+    "icon": "🧬",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "maps": {
+    "label": "地图",
+    "kind": "data",
+    "schema": "schemas/maps.schema.json",
+    "primary": "map",
+    "icon": "🗺️",
+    "owner": "package",
+    "tier": "portable"
   }
 }

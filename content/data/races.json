@@ -1,0 +1,238 @@
+{
+  "race_human": {
+    "name": "人类",
+    "home": "萤穗原野",
+    "lifespan": "百年上下",
+    "build": "什么样的人都算人类",
+    "path": "诸国哪都进得去，NPC 默认信你 —— 打听与谈判最顺",
+    "flip": "没人怕你",
+    "talents": [
+      {
+        "id": "tal_human_contacts",
+        "name": "人脉",
+        "kind": "可见性",
+        "effect": "城镇 NPC 默认跟你说真话；商会与公会的隐藏信息对你开放"
+      },
+      {
+        "id": "tal_human_adapt",
+        "name": "适应",
+        "kind": "数值",
+        "effect": "四项主属性各 +1",
+        "values": {
+          "STR": 1,
+          "AGI": 1,
+          "INT": 1,
+          "VIT": 1
+        }
+      }
+    ],
+    "cost": {
+      "id": "tal_human_nofear",
+      "name": "无威慑",
+      "kind": "可见性",
+      "effect": "威吓 / 强索类对话选项不可用；敌人不会因你退缩"
+    },
+    "recommend": [
+      "任意"
+    ],
+    "line": "你是跟着商队来的。北边的路最近不太平，商队要多雇一个人。"
+  },
+  "race_elf": {
+    "name": "精灵",
+    "home": "银月林海",
+    "lifespan": "长到记不清",
+    "build": "瘦高，耳尖，眼睛比人亮",
+    "path": "读得懂旧铭文与盟约残页 —— 镇口那块石头上的字，只有你的族还认得出",
+    "flip": "诸国当你是外人，人类老兵不待见你",
+    "talents": [
+      {
+        "id": "tal_elf_scripts",
+        "name": "铭文之眼",
+        "kind": "可见性",
+        "effect": "隐藏点与密文必定看得见"
+      },
+      {
+        "id": "tal_elf_keen",
+        "name": "锐感",
+        "kind": "数值",
+        "effect": "命中 +8%",
+        "values": {
+          "hit_pct": 8
+        }
+      }
+    ],
+    "cost": {
+      "id": "tal_elf_frail",
+      "name": "体质单薄",
+      "kind": "数值",
+      "effect": "生命上限 −8%",
+      "values": {
+        "hp_pct": -8
+      }
+    },
+    "recommend": [
+      "法师",
+      "游侠"
+    ],
+    "line": "你来是为了看那块石头。上面刻的字，据说只有你的族还读得懂。"
+  },
+  "race_dwarf": {
+    "name": "矮人",
+    "home": "深炉山系",
+    "lifespan": "百五十年上下",
+    "build": "矮，宽，手上全是旧茧",
+    "path": "认得旧锻造物；深炉山系的内门对你开",
+    "flip": "往上走没人瞧得起你，防具还得小一号",
+    "talents": [
+      {
+        "id": "tal_dwarf_forge",
+        "name": "锻造眼",
+        "kind": "可见性",
+        "effect": "旧物鉴定必定成功（问号直接出答案）"
+      },
+      {
+        "id": "tal_dwarf_stout",
+        "name": "厚重",
+        "kind": "数值",
+        "effect": "防御 +15%、格挡 +20%",
+        "values": {
+          "def_pct": 15,
+          "block_pct": 20
+        }
+      }
+    ],
+    "cost": {
+      "id": "tal_dwarf_short",
+      "name": "矮腿",
+      "kind": "数值",
+      "effect": "速度 −8%",
+      "values": {
+        "spd_pct": -8
+      }
+    },
+    "recommend": [
+      "骑士",
+      "修女"
+    ],
+    "line": "你来是送一批货。货单上写着风车镇 —— 这地方订货的人已经死了一百年。"
+  },
+  "race_orc": {
+    "name": "兽人",
+    "home": "古战场边缘",
+    "lifespan": "六十年上下",
+    "build": "魁梧，獠牙，肩比门框窄不了多少",
+    "path": "古战场与荒原上没人盘你；兽人部族不拿你当外人",
+    "flip": "诸国城镇里店家加价、守卫盯着你",
+    "talents": [
+      {
+        "id": "tal_orc_wild",
+        "name": "野地直觉",
+        "kind": "可见性",
+        "effect": "野外遭遇前先看见对方（可绕行）；采集点远处就能认出来"
+      },
+      {
+        "id": "tal_orc_savage",
+        "name": "凶性",
+        "kind": "数值",
+        "effect": "攻击 +8%",
+        "values": {
+          "atk_pct": 8
+        }
+      }
+    ],
+    "cost": {
+      "id": "tal_orc_distrust",
+      "name": "城镇嫌恶",
+      "kind": "经济",
+      "effect": "所有商店价格 +15%",
+      "values": {
+        "shop_price_pct": 15
+      }
+    },
+    "recommend": [
+      "狂战士",
+      "刺客"
+    ],
+    "line": "你来是因为没人管。南边每一座城都在赶你走 —— 那就往北。"
+  },
+  "race_dragonkin": {
+    "name": "龙裔",
+    "home": "霜角北境",
+    "lifespan": "一百二十年上下",
+    "build": "鳞片在颈侧，竖瞳",
+    "path": "北方的事你本能地懂一些 —— 冰原、龙、旧誓",
+    "flip": "两边都不认你；教会对你冷淡",
+    "talents": [
+      {
+        "id": "tal_dragonkin_eye",
+        "name": "元素之眼",
+        "kind": "可见性",
+        "effect": "看得见元素的残留 —— 这里烧过、那里冻过、那东西什么时候被雷劈过"
+      },
+      {
+        "id": "tal_dragonkin_elem",
+        "name": "元素亲和",
+        "kind": "数值",
+        "effect": "元素伤害 +10%、火与冰抗 +40",
+        "values": {
+          "elem_dmg_pct": 10,
+          "res_fire": 40,
+          "res_ice": 40
+        }
+      }
+    ],
+    "cost": {
+      "id": "tal_dragonkin_shunned",
+      "name": "被忌讳",
+      "kind": "经济",
+      "effect": "教会相关服务费用 +20%、受治疗量 −10%",
+      "values": {
+        "church_price_pct": 20,
+        "heal_taken_pct": -10
+      }
+    },
+    "recommend": [
+      "法师"
+    ],
+    "line": "你来是因为北方有什么在叫你。你说不清是从什么时候开始的。"
+  },
+  "race_beastkin": {
+    "name": "亚人",
+    "home": "季风群岛（散居诸国城镇）",
+    "lifespan": "七十年上下",
+    "build": "兽耳兽尾，体型近人",
+    "path": "底层消息网向你开 —— 城镇里打听得又快又准",
+    "flip": "守卫盘问你、贵族不接话",
+    "talents": [
+      {
+        "id": "tal_beastkin_rumor",
+        "name": "消息灵",
+        "kind": "可见性",
+        "effect": "打听成功率 +20%、支线线索更多",
+        "values": {
+          "ask_pct": 20
+        }
+      },
+      {
+        "id": "tal_beastkin_swift",
+        "name": "轻捷",
+        "kind": "数值",
+        "effect": "速度 +8%",
+        "values": {
+          "spd_pct": 8
+        }
+      }
+    ],
+    "cost": {
+      "id": "tal_beastkin_low",
+      "name": "地位低",
+      "kind": "可见性",
+      "effect": "贵族 / 高层 NPC 的对话选项受限；部分委托不可接"
+    },
+    "recommend": [
+      "游侠",
+      "刺客"
+    ],
+    "line": "你来是因为有人托你带一句话。托你的人没说自己是谁。"
+  }
+}

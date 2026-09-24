@@ -1,0 +1,143 @@
+{
+  "windmill_town": {
+    "name": "风车镇",
+    "roles": {
+      "hub": "镇上",
+      "through": "街上",
+      "exit": "镇口"
+    },
+    "topology": "star",
+    "nodes": [
+      {
+        "id": "wt_mill",
+        "name": "老风车",
+        "role": "镇上"
+      },
+      {
+        "id": "wt_inn",
+        "name": "转叶客栈",
+        "role": "镇上"
+      },
+      {
+        "id": "wt_forge",
+        "name": "半截铁砧",
+        "role": "镇上"
+      },
+      {
+        "id": "wt_board",
+        "name": "挂板墙",
+        "role": "镇上"
+      },
+      {
+        "id": "wt_herbs",
+        "name": "苦叶摊",
+        "role": "镇上"
+      },
+      {
+        "id": "wt_chapel",
+        "name": "白烛堂",
+        "role": "镇上"
+      },
+      {
+        "id": "wt_wall",
+        "name": "北墙根",
+        "role": "镇上"
+      },
+      {
+        "id": "wt_shed",
+        "name": "歇脚棚",
+        "role": "镇上"
+      },
+      {
+        "id": "wt_gate_n",
+        "name": "北口",
+        "role": "镇口"
+      },
+      {
+        "id": "wt_gate_e",
+        "name": "东口",
+        "role": "镇口"
+      },
+      {
+        "id": "wt_gate_w",
+        "name": "西口",
+        "role": "镇口"
+      }
+    ]
+  },
+  "belt_north": {
+    "name": "北带 · 骨田",
+    "roles": {
+      "through": "野外",
+      "exit": "深处"
+    },
+    "topology": "chain",
+    "nodes": [
+      {
+        "id": "bn_bone",
+        "name": "骨田",
+        "role": "野外"
+      },
+      {
+        "id": "bn_camp",
+        "name": "拾荒营地",
+        "role": "野外"
+      },
+      {
+        "id": "bn_tower",
+        "name": "旧哨塔下",
+        "role": "深处"
+      }
+    ]
+  },
+  "belt_east": {
+    "name": "东带 · 白桦林",
+    "roles": {
+      "through": "野外",
+      "exit": "深处"
+    },
+    "topology": "chain",
+    "nodes": [
+      {
+        "id": "be_birch",
+        "name": "白桦林",
+        "role": "野外"
+      },
+      {
+        "id": "be_dogs",
+        "name": "野狗窝",
+        "role": "野外"
+      },
+      {
+        "id": "be_shed",
+        "name": "伐木棚",
+        "role": "野外"
+      }
+    ]
+  },
+  "belt_west": {
+    "name": "西带 · 浅滩",
+    "roles": {
+      "through": "野外",
+      "exit": "深处"
+    },
+    "topology": "chain",
+    "nodes": [
+      {
+        "id": "bw_shoal",
+        "name": "浅滩",
+        "role": "野外"
+      },
+      {
+        "id": "bw_ferry",
+        "name": "石滩渡口",
+        "role": "野外"
+      },
+      {
+        "id": "bw_old_ferry",
+        "name": "旧渡口",
+        "role": "野外"
+      }
+    ]
+  }
+}
