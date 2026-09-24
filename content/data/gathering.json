@@ -1,0 +1,350 @@
+{
+  "gt_wt_herb_1": {
+    "name": "城墙根的苦叶",
+    "map": "windmill_town",
+    "subarea": "wt_wall",
+    "kind": "采药",
+    "pool": [
+      {
+        "out": "i_material_herb_common",
+        "w": 80,
+        "n": [
+          1,
+          2
+        ]
+      },
+      {
+        "out": "i_material_herb_rare",
+        "w": 20,
+        "n": [
+          1,
+          1
+        ]
+      }
+    ],
+    "time": null,
+    "desc": "墙根背风，长的东西比别处早。娜娜说过这个位置。",
+    "times_per_day": 3
+  },
+  "gt_bn_herb_1": {
+    "name": "碑缝里的草",
+    "map": "belt_north",
+    "subarea": "bn_bone",
+    "kind": "采药",
+    "pool": [
+      {
+        "out": "i_material_herb_common",
+        "w": 70,
+        "n": [
+          1,
+          2
+        ]
+      },
+      {
+        "out": "i_material_old_iron",
+        "w": 30,
+        "n": [
+          1,
+          1
+        ]
+      }
+    ],
+    "time": null,
+    "desc": "从碑缝里长出来的。根扎得很深 —— 底下有东西。",
+    "times_per_day": 3
+  },
+  "gt_bn_dig_1": {
+    "name": "塌了一半的坑",
+    "map": "belt_north",
+    "subarea": "bn_bone",
+    "kind": "挖掘",
+    "pool": [
+      {
+        "out": "i_material_old_iron",
+        "w": 50,
+        "n": [
+          1,
+          2
+        ]
+      },
+      {
+        "out": "unid_rare",
+        "w": 30
+      },
+      {
+        "out": "i_junk_bone",
+        "w": 20,
+        "n": [
+          1,
+          3
+        ]
+      }
+    ],
+    "time": null,
+    "desc": "土是松的，像被人翻过。挖下去能听见铁碰铁。",
+    "times_per_day": 1
+  },
+  "gt_bn_dig_2": {
+    "name": "拾荒营地角落",
+    "map": "belt_north",
+    "subarea": "bn_camp",
+    "kind": "挖掘",
+    "pool": [
+      {
+        "out": "unid_rare",
+        "w": 45
+      },
+      {
+        "out": "i_material_old_iron",
+        "w": 40,
+        "n": [
+          1,
+          1
+        ]
+      },
+      {
+        "out": "i_junk_bone",
+        "w": 15,
+        "n": [
+          1,
+          2
+        ]
+      }
+    ],
+    "time": null,
+    "desc": "营地边上有一块土的颜色不一样。他们埋过什么。",
+    "times_per_day": 1
+  },
+  "gt_bn_herb_2": {
+    "name": "塔下的白茅",
+    "map": "belt_north",
+    "subarea": "bn_tower",
+    "kind": "采药",
+    "pool": [
+      {
+        "out": "i_material_herb_rare",
+        "w": 60,
+        "n": [
+          1,
+          1
+        ]
+      },
+      {
+        "out": "i_material_herb_common",
+        "w": 40,
+        "n": [
+          1,
+          2
+        ]
+      }
+    ],
+    "time": "夜",
+    "desc": "只在夜里开。娜娜说这种草采的时候不能出声。",
+    "times_per_day": 3
+  },
+  "gt_be_herb_1": {
+    "name": "树根边的菌",
+    "map": "belt_east",
+    "subarea": "be_birch",
+    "kind": "采药",
+    "pool": [
+      {
+        "out": "i_material_herb_common",
+        "w": 60,
+        "n": [
+          1,
+          3
+        ]
+      },
+      {
+        "out": "i_material_fungus",
+        "w": 40,
+        "n": [
+          1,
+          1
+        ]
+      }
+    ],
+    "time": "雨",
+    "desc": "雨后才长的东西。晴天来只能看见一片湿木头。",
+    "times_per_day": 3
+  },
+  "gt_be_search_1": {
+    "name": "刻满东西的树",
+    "map": "belt_east",
+    "subarea": "be_birch",
+    "kind": "搜查",
+    "pool": [
+      {
+        "out": "i_junk_bone",
+        "w": 40,
+        "n": [
+          1,
+          1
+        ]
+      },
+      {
+        "out": "i_clue_page",
+        "w": 30
+      },
+      {
+        "out": "unid_rare",
+        "w": 30
+      }
+    ],
+    "time": null,
+    "desc": "名字、记号、还有几个看不出是什么的。有一个刻得特别深。",
+    "times_per_day": 3
+  },
+  "gt_bw_fish_1": {
+    "name": "渡口石阶下",
+    "map": "belt_west",
+    "subarea": "bw_old_ferry",
+    "kind": "垂钓",
+    "pool": [
+      {
+        "out": "i_fish_common",
+        "w": 70,
+        "n": [
+          1,
+          1
+        ]
+      },
+      {
+        "out": "i_fish_rare",
+        "w": 30,
+        "n": [
+          1,
+          1
+        ]
+      }
+    ],
+    "time": null,
+    "desc": "水退下去之后，石阶最下面那两级正好露出水面。",
+    "times_per_day": 3
+  },
+  "gt_bw_fish_2": {
+    "name": "水最深的地方",
+    "map": "belt_west",
+    "subarea": "bw_shoal",
+    "kind": "垂钓",
+    "pool": [
+      {
+        "out": "i_fish_common",
+        "w": 40,
+        "n": [
+          1,
+          1
+        ]
+      },
+      {
+        "out": "i_fish_rare",
+        "w": 40,
+        "n": [
+          1,
+          1
+        ]
+      },
+      {
+        "out": "i_junk_boot",
+        "w": 20,
+        "n": [
+          1,
+          1
+        ]
+      }
+    ],
+    "time": "夜",
+    "desc": "白天钓不到 —— 娜娜说这下面的东西怕光。",
+    "times_per_day": 3
+  },
+  "gt_bw_search_1": {
+    "name": "退潮后的滩",
+    "map": "belt_west",
+    "subarea": "bw_shoal",
+    "kind": "搜查",
+    "pool": [
+      {
+        "out": "i_junk_bone",
+        "w": 45,
+        "n": [
+          1,
+          2
+        ]
+      },
+      {
+        "out": "unid_common",
+        "w": 35
+      },
+      {
+        "out": "i_material_old_iron",
+        "w": 20,
+        "n": [
+          1,
+          1
+        ]
+      }
+    ],
+    "time": null,
+    "desc": "退潮露出来的地方，什么都可能有。昨天有人在这儿捡到过东西。",
+    "times_per_day": 3
+  },
+  "gt_tw_search_1": {
+    "name": "储藏室的架子",
+    "map": "old_watchtower",
+    "subarea": "tower_storage",
+    "kind": "搜查",
+    "pool": [
+      {
+        "out": "i_material_old_iron",
+        "w": 40,
+        "n": [
+          1,
+          2
+        ]
+      },
+      {
+        "out": "i_potion_minor",
+        "w": 30,
+        "n": [
+          1,
+          2
+        ]
+      },
+      {
+        "out": "unid_rare",
+        "w": 30
+      }
+    ],
+    "time": null,
+    "desc": "架子空了大半。剩下的都是没人要的东西 —— 或者说，他们走的时候来不及拿。",
+    "times_per_day": 3
+  },
+  "gt_tw_search_2": {
+    "name": "空营房的铺位",
+    "map": "old_watchtower",
+    "subarea": "tower_empty_room",
+    "kind": "搜查",
+    "pool": [
+      {
+        "out": "i_clue_page",
+        "w": 50
+      },
+      {
+        "out": "unid_rare",
+        "w": 30
+      },
+      {
+        "out": "i_junk_bone",
+        "w": 20,
+        "n": [
+          1,
+          1
+        ]
+      }
+    ],
+    "time": null,
+    "desc": "草垫还是整的。有人每天来整理，整理了很多年。",
+    "times_per_day": 3
+  }
+}

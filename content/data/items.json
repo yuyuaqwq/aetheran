@@ -1991,5 +1991,45 @@
     "quality": "普通",
     "price": 0,
     "desc": "泡过水，只剩半页能读。"
+  },
+  "i_material_herb_rare": {
+    "name": "夜明砂",
+    "icon": "🌟",
+    "kind": "材料",
+    "quality": "精制",
+    "price": 18,
+    "desc": "夜里才采得到的药。娜娜要这个。"
+  },
+  "i_material_fungus": {
+    "name": "雨菌",
+    "icon": "🍄",
+    "kind": "材料",
+    "quality": "精制",
+    "price": 15,
+    "desc": "雨后才有。做菌汤的料（支线 4）。"
+  },
+  "i_fish_common": {
+    "name": "石斑",
+    "icon": "🐟",
+    "kind": "材料",
+    "quality": "普通",
+    "price": 6,
+    "desc": "渡口最常见的那种。烤着吃还行。"
+  },
+  "i_fish_rare": {
+    "name": "无鳞鱼",
+    "icon": "🐠",
+    "kind": "材料",
+    "quality": "稀有",
+    "price": 40,
+    "desc": "水里最深的地方才有。鳞退掉了，肉是甜的。"
+  },
+  "i_junk_boot": {
+    "name": "一只旧靴子",
+    "icon": "🥾",
+    "kind": "垃圾",
+    "quality": "普通",
+    "price": 0,
+    "desc": "左脚的。谁把它扔水里的。"
   }
 }

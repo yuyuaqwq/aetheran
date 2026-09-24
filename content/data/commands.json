@@ -860,7 +860,15 @@
     "usage": "采集",
     "visible": true,
     "order": 52,
-    "guard_desc": "有采集点"
+    "guard_desc": "有采集点",
+    "bind": {
+      "handler": "content.cmds_gather:gather",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "dig": {
     "patterns": [
@@ -872,7 +880,15 @@
     "usage": "挖掘",
     "visible": true,
     "order": 53,
-    "guard_desc": "有挖点"
+    "guard_desc": "有挖点",
+    "bind": {
+      "handler": "content.cmds_gather:dig",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "fish": {
     "patterns": [
@@ -884,7 +900,15 @@
     "usage": "垂钓",
     "visible": true,
     "order": 54,
-    "guard_desc": "在水边"
+    "guard_desc": "在水边",
+    "bind": {
+      "handler": "content.cmds_gather:fish",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "search": {
     "patterns": [
@@ -896,7 +920,15 @@
     "usage": "搜查",
     "visible": true,
     "order": 55,
-    "guard_desc": "有可搜物"
+    "guard_desc": "有可搜物",
+    "bind": {
+      "handler": "content.cmds_gather:search",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "rest": {
     "patterns": [
@@ -909,7 +941,15 @@
     "usage": "歇脚",
     "visible": true,
     "order": 56,
-    "guard_desc": "有篝火"
+    "guard_desc": "有篝火",
+    "bind": {
+      "handler": "content.cmds_gather:rest",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "pick_up": {
     "patterns": [
@@ -921,7 +961,15 @@
     "usage": "拾取",
     "visible": true,
     "order": 57,
-    "guard_desc": "有掉落"
+    "guard_desc": "有掉落",
+    "bind": {
+      "handler": "content.cmds_gather:pick_up",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "climb": {
     "patterns": [
@@ -1049,7 +1097,15 @@
     "usage": "材料谱",
     "visible": true,
     "order": 68,
-    "guard_desc": "随时"
+    "guard_desc": "随时",
+    "bind": {
+      "handler": "content.cmds_gather:codex_materials",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "codex_flavor": {
     "patterns": [
