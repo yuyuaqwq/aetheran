@@ -70,5 +70,749 @@
     "params": [],
     "category": "可读物",
     "desc": "风车镇 · 挂板墙"
+  },
+  "SCENE_WINDMILL_TOWN": {
+    "value": "〔待填：风车镇第一屏〕",
+    "params": [],
+    "category": "场景",
+    "desc": "第一屏 · 见 02_风车镇_一屏打样"
+  },
+  "SCENE_WT_MILL": {
+    "value": "〔待填：老风车〕",
+    "params": [],
+    "category": "场景",
+    "desc": "风车镇 · 老风车"
+  },
+  "SCENE_WT_INN": {
+    "value": "〔待填：转叶客栈〕",
+    "params": [],
+    "category": "场景",
+    "desc": "风车镇 · 转叶客栈"
+  },
+  "SCENE_WT_FORGE": {
+    "value": "〔待填：半截铁砧〕",
+    "params": [],
+    "category": "场景",
+    "desc": "风车镇 · 半截铁砧"
+  },
+  "SCENE_WT_BOARD": {
+    "value": "〔待填：挂板墙〕",
+    "params": [],
+    "category": "场景",
+    "desc": "风车镇 · 挂板墙"
+  },
+  "SCENE_WT_HERBS": {
+    "value": "〔待填：苦叶摊〕",
+    "params": [],
+    "category": "场景",
+    "desc": "风车镇 · 苦叶摊"
+  },
+  "SCENE_WT_CHAPEL": {
+    "value": "〔待填：白烛堂〕",
+    "params": [],
+    "category": "场景",
+    "desc": "风车镇 · 白烛堂"
+  },
+  "SCENE_WT_WALL": {
+    "value": "〔待填：北墙根〕",
+    "params": [],
+    "category": "场景",
+    "desc": "风车镇 · 北墙根"
+  },
+  "SCENE_WT_SHED": {
+    "value": "〔待填：歇脚棚〕",
+    "params": [],
+    "category": "场景",
+    "desc": "风车镇 · 歇脚棚"
+  },
+  "SCENE_BN_BONE": {
+    "value": "〔待填：骨田〕",
+    "params": [],
+    "category": "场景",
+    "desc": "带 · 骨田"
+  },
+  "SCENE_BN_CAMP": {
+    "value": "〔待填：拾荒营地〕",
+    "params": [],
+    "category": "场景",
+    "desc": "带 · 拾荒营地"
+  },
+  "SCENE_BN_TOWER": {
+    "value": "〔待填：旧哨塔下〕",
+    "params": [],
+    "category": "场景",
+    "desc": "带 · 旧哨塔下"
+  },
+  "SCENE_BE_BIRCH": {
+    "value": "〔待填：白桦林〕",
+    "params": [],
+    "category": "场景",
+    "desc": "带 · 白桦林"
+  },
+  "SCENE_BE_DOGS": {
+    "value": "〔待填：野狗窝〕",
+    "params": [],
+    "category": "场景",
+    "desc": "带 · 野狗窝"
+  },
+  "SCENE_BE_SHED": {
+    "value": "〔待填：伐木棚〕",
+    "params": [],
+    "category": "场景",
+    "desc": "带 · 伐木棚"
+  },
+  "SCENE_BW_SHOAL": {
+    "value": "〔待填：浅滩〕",
+    "params": [],
+    "category": "场景",
+    "desc": "带 · 浅滩"
+  },
+  "SCENE_BW_FERRY": {
+    "value": "〔待填：石滩渡口〕",
+    "params": [],
+    "category": "场景",
+    "desc": "带 · 石滩渡口"
+  },
+  "SCENE_BW_OLD_FERRY": {
+    "value": "〔待填：旧渡口〕",
+    "params": [],
+    "category": "场景",
+    "desc": "带 · 旧渡口"
+  },
+  "SCENE_TOWER_GATE": {
+    "value": "〔待填：旧哨塔 · 塔门〕",
+    "params": [],
+    "category": "场景",
+    "desc": "副本 · 塔门（每间房要回答「这一间教什么」）"
+  },
+  "SCENE_TOWER_HALL": {
+    "value": "〔待填：旧哨塔 · 门厅〕",
+    "params": [],
+    "category": "场景",
+    "desc": "副本 · 门厅（每间房要回答「这一间教什么」）"
+  },
+  "SCENE_TOWER_ARMORY": {
+    "value": "〔待填：旧哨塔 · 武器架室〕",
+    "params": [],
+    "category": "场景",
+    "desc": "副本 · 武器架室（每间房要回答「这一间教什么」）"
+  },
+  "SCENE_TOWER_STAIR1": {
+    "value": "〔待填：旧哨塔 · 楼梯前〕",
+    "params": [],
+    "category": "场景",
+    "desc": "副本 · 楼梯前（每间房要回答「这一间教什么」）"
+  },
+  "SCENE_TOWER_OUTPOST_OUT": {
+    "value": "〔待填：旧哨塔 · 哨所（外）〕",
+    "params": [],
+    "category": "场景",
+    "desc": "副本 · 哨所（外）（每间房要回答「这一间教什么」）"
+  },
+  "SCENE_TOWER_OUTPOST_IN": {
+    "value": "〔待填：旧哨塔 · 哨所（内）〕",
+    "params": [],
+    "category": "场景",
+    "desc": "副本 · 哨所（内）（每间房要回答「这一间教什么」）"
+  },
+  "SCENE_TOWER_WATER_ROOM": {
+    "value": "〔待填：旧哨塔 · 水房〕",
+    "params": [],
+    "category": "场景",
+    "desc": "副本 · 水房（每间房要回答「这一间教什么」）"
+  },
+  "SCENE_TOWER_STORAGE": {
+    "value": "〔待填：旧哨塔 · 储藏室〕",
+    "params": [],
+    "category": "场景",
+    "desc": "副本 · 储藏室（每间房要回答「这一间教什么」）"
+  },
+  "SCENE_TOWER_EMPTY_ROOM": {
+    "value": "〔待填：旧哨塔 · 空营房〕",
+    "params": [],
+    "category": "场景",
+    "desc": "副本 · 空营房（每间房要回答「这一间教什么」）"
+  },
+  "SCENE_TOWER_HORN_ROOM": {
+    "value": "〔待填：旧哨塔 · 号角室〕",
+    "params": [],
+    "category": "场景",
+    "desc": "副本 · 号角室（每间房要回答「这一间教什么」）"
+  },
+  "SCENE_TOWER_STAIR2": {
+    "value": "〔待填：旧哨塔 · 阶梯〕",
+    "params": [],
+    "category": "场景",
+    "desc": "副本 · 阶梯（每间房要回答「这一间教什么」）"
+  },
+  "SCENE_TOWER_TOP": {
+    "value": "〔待填：旧哨塔 · 塔顶〕",
+    "params": [],
+    "category": "场景",
+    "desc": "副本 · 塔顶（每间房要回答「这一间教什么」）"
+  },
+  "COMBAT_INTERRUPT_OK": {
+    "value": "⚔️ {t} 刻，{who}打断成功，「{skill}」被截断",
+    "params": [
+      "skill",
+      "t",
+      "who"
+    ],
+    "category": "战斗",
+    "desc": "打断成功"
+  },
+  "COMBAT_INTERRUPT_FAIL": {
+    "value": "⚠️ {t} 刻，{who}的打断落空了",
+    "params": [
+      "t",
+      "who"
+    ],
+    "category": "战斗",
+    "desc": "打断失败"
+  },
+  "COMBAT_SUPERARMOR": {
+    "value": "🛡️ {who}纹丝不动 —— 霸体期间打断无效",
+    "params": [
+      "who"
+    ],
+    "category": "战斗",
+    "desc": "霸体挡打断"
+  },
+  "COMBAT_CRIT": {
+    "value": "✨ {t} 刻，{who}{act}{tgt}，暴击！造成 {dmg} 点伤害",
+    "params": [
+      "act",
+      "dmg",
+      "t",
+      "tgt",
+      "who"
+    ],
+    "category": "战斗",
+    "desc": "暴击"
+  },
+  "COMBAT_FALL": {
+    "value": "💀 {who}倒下了",
+    "params": [
+      "who"
+    ],
+    "category": "战斗",
+    "desc": "倒下"
+  },
+  "COMBAT_WINDOW": {
+    "value": "† {name}剩余 {t} 刻，{effect} †",
+    "params": [
+      "effect",
+      "name",
+      "t"
+    ],
+    "category": "战斗",
+    "desc": "窗口提示行"
+  },
+  "COMBAT_ELITE_SPAWN": {
+    "value": "† {affix}的{name} †\n{hint}",
+    "params": [
+      "affix",
+      "hint",
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "精英怪出现"
+  },
+  "COMBAT_BOSS_PHASE": {
+    "value": "⚠️ {name}进入「{phase}」\n👁️ {note}\n💡 {tip}",
+    "params": [
+      "name",
+      "note",
+      "phase",
+      "tip"
+    ],
+    "category": "战斗",
+    "desc": "Boss 阶段转换"
+  },
+  "COMBAT_DOT": {
+    "value": "🩸 {who}受到 {dmg} 点伤害（{dot} {layers} 层 · 每刻 {per} · 剩余 {left} 刻）",
+    "params": [
+      "dmg",
+      "dot",
+      "layers",
+      "left",
+      "per",
+      "who"
+    ],
+    "category": "战斗",
+    "desc": "DoT 结算"
+  },
+  "COMBAT_DEFEND": {
+    "value": "🛡️ {who}进入防御",
+    "params": [
+      "who"
+    ],
+    "category": "战斗",
+    "desc": "防御"
+  },
+  "COMBAT_MISS": {
+    "value": "⚔️ {t} 刻，{who}的攻击落空了",
+    "params": [
+      "t",
+      "who"
+    ],
+    "category": "战斗",
+    "desc": "未命中"
+  },
+  "SYS_BAG_FULL": {
+    "value": "🎒 背包满了\n💡 旧装备可以「拆解」成材料，也可以「卖出」",
+    "params": [],
+    "category": "系统",
+    "desc": "背包满"
+  },
+  "SYS_HP_LOW": {
+    "value": "💡 血不多了 —— 回镇上有两条路：歇脚棚买药 · 白烛堂找修士艾德",
+    "params": [],
+    "category": "系统",
+    "desc": "血<40%"
+  },
+  "SYS_FIRST_BATTLE": {
+    "value": "💡 你现在能做的是：「攻击」「防御」「技能 <名>」「后撤」「逃生」\n（这条只提示一次，以后敲「帮助」）",
+    "params": [],
+    "category": "系统",
+    "desc": "第一次进战斗"
+  },
+  "SYS_DEATH_WILD": {
+    "value": "💀 眼前一黑。\n（你在白烛堂醒来。艾德在拨灯芯。）",
+    "params": [],
+    "category": "系统",
+    "desc": "野外倒下"
+  },
+  "SYS_DEATH_QUEST_LOSS": {
+    "value": "💀 掉了一些经验（当前等级的 10%）—— 装备没丢",
+    "params": [],
+    "category": "系统",
+    "desc": "死亡惩罚说明"
+  },
+  "SYS_ROUND_HOLD": {
+    "value": "⏳ 还没轮到你 —— 你在等 {who}",
+    "params": [
+      "who"
+    ],
+    "category": "系统",
+    "desc": "组队等待提示"
+  },
+  "SYS_TIMEOUT_DEFEND": {
+    "value": "⏳ {who} 超时，自动防御",
+    "params": [
+      "who"
+    ],
+    "category": "系统",
+    "desc": "超时自动防御"
+  },
+  "SYS_UNKNOWN_CMD": {
+    "value": "⚠️ 没听懂「{input}」\n💡 敲「帮助」看能用什么",
+    "params": [
+      "input"
+    ],
+    "category": "系统",
+    "desc": "未知指令"
+  },
+  "SYS_LEVEL_UP": {
+    "value": "✨ 升级到 Lv.{lv}\n📊 生命 {hp}、攻击 {atk}、防御 {def}\n💡 有 {pts} 点属性可加（敲「加点」）",
+    "params": [
+      "atk",
+      "def",
+      "hp",
+      "lv",
+      "pts"
+    ],
+    "category": "系统",
+    "desc": "升级"
+  },
+  "SYS_REWARD": {
+    "value": "💰 金币 +{gold}，✨ 经验 +{exp}",
+    "params": [
+      "exp",
+      "gold"
+    ],
+    "category": "系统",
+    "desc": "奖励"
+  },
+  "SYS_CARAVAN_ARRIVED": {
+    "value": "🛒 商队到了 —— 镇口多了一辆大车，和两个生人。",
+    "params": [],
+    "category": "系统",
+    "desc": "商队到达"
+  },
+  "SYS_WEATHER_CHANGE": {
+    "value": "📍 {place} · {hour} · {weather}\n{flavor}",
+    "params": [
+      "flavor",
+      "hour",
+      "place",
+      "weather"
+    ],
+    "category": "系统",
+    "desc": "天气变化"
+  },
+  "QUEST_MAIN01_STORY": {
+    "value": "〔待填：镇口的石头 · 接时行文〕",
+    "params": [],
+    "category": "任务",
+    "desc": "主线 1 镇口的石头"
+  },
+  "QUEST_MAIN01_PROGRESS": {
+    "value": "〔待填：镇口的石头 · 进行中行文〕",
+    "params": [],
+    "category": "任务",
+    "desc": "主线 1 镇口的石头"
+  },
+  "QUEST_MAIN01_DELIVER": {
+    "value": "〔待填：镇口的石头 · 交时行文〕",
+    "params": [],
+    "category": "任务",
+    "desc": "主线 1 镇口的石头"
+  },
+  "QUEST_MAIN02_STORY": {
+    "value": "〔待填：半句话 · 接时行文〕",
+    "params": [],
+    "category": "任务",
+    "desc": "主线 2 半句话"
+  },
+  "QUEST_MAIN02_PROGRESS": {
+    "value": "〔待填：半句话 · 进行中行文〕",
+    "params": [],
+    "category": "任务",
+    "desc": "主线 2 半句话"
+  },
+  "QUEST_MAIN02_DELIVER": {
+    "value": "〔待填：半句话 · 交时行文〕",
+    "params": [],
+    "category": "任务",
+    "desc": "主线 2 半句话"
+  },
+  "QUEST_MAIN03_STORY": {
+    "value": "〔待填：三张牌 · 接时行文〕",
+    "params": [],
+    "category": "任务",
+    "desc": "主线 3 三张牌"
+  },
+  "QUEST_MAIN03_PROGRESS": {
+    "value": "〔待填：三张牌 · 进行中行文〕",
+    "params": [],
+    "category": "任务",
+    "desc": "主线 3 三张牌"
+  },
+  "QUEST_MAIN03_DELIVER": {
+    "value": "〔待填：三张牌 · 交时行文〕",
+    "params": [],
+    "category": "任务",
+    "desc": "主线 3 三张牌"
+  },
+  "QUEST_MAIN04_STORY": {
+    "value": "〔待填：骨田 · 接时行文〕",
+    "params": [],
+    "category": "任务",
+    "desc": "主线 4 骨田"
+  },
+  "QUEST_MAIN04_PROGRESS": {
+    "value": "〔待填：骨田 · 进行中行文〕",
+    "params": [],
+    "category": "任务",
+    "desc": "主线 4 骨田"
+  },
+  "QUEST_MAIN04_DELIVER": {
+    "value": "〔待填：骨田 · 交时行文〕",
+    "params": [],
+    "category": "任务",
+    "desc": "主线 4 骨田"
+  },
+  "QUEST_MAIN05_STORY": {
+    "value": "〔待填：拾荒人 · 接时行文〕",
+    "params": [],
+    "category": "任务",
+    "desc": "主线 5 拾荒人"
+  },
+  "QUEST_MAIN05_PROGRESS": {
+    "value": "〔待填：拾荒人 · 进行中行文〕",
+    "params": [],
+    "category": "任务",
+    "desc": "主线 5 拾荒人"
+  },
+  "QUEST_MAIN05_DELIVER": {
+    "value": "〔待填：拾荒人 · 交时行文〕",
+    "params": [],
+    "category": "任务",
+    "desc": "主线 5 拾荒人"
+  },
+  "QUEST_MAIN06_STORY": {
+    "value": "〔待填：塔门 · 接时行文〕",
+    "params": [],
+    "category": "任务",
+    "desc": "主线 6 塔门"
+  },
+  "QUEST_MAIN06_PROGRESS": {
+    "value": "〔待填：塔门 · 进行中行文〕",
+    "params": [],
+    "category": "任务",
+    "desc": "主线 6 塔门"
+  },
+  "QUEST_MAIN06_DELIVER": {
+    "value": "〔待填：塔门 · 交时行文〕",
+    "params": [],
+    "category": "任务",
+    "desc": "主线 6 塔门"
+  },
+  "QUEST_MAIN07_STORY": {
+    "value": "〔待填：最后一夜的账 · 接时行文〕",
+    "params": [],
+    "category": "任务",
+    "desc": "主线 7 最后一夜的账"
+  },
+  "QUEST_MAIN07_PROGRESS": {
+    "value": "〔待填：最后一夜的账 · 进行中行文〕",
+    "params": [],
+    "category": "任务",
+    "desc": "主线 7 最后一夜的账"
+  },
+  "QUEST_MAIN07_DELIVER": {
+    "value": "〔待填：最后一夜的账 · 交时行文〕",
+    "params": [],
+    "category": "任务",
+    "desc": "主线 7 最后一夜的账"
+  },
+  "QUEST_MAIN08_STORY": {
+    "value": "〔待填：号角不响 · 接时行文〕",
+    "params": [],
+    "category": "任务",
+    "desc": "主线 8 号角不响"
+  },
+  "QUEST_MAIN08_PROGRESS": {
+    "value": "〔待填：号角不响 · 进行中行文〕",
+    "params": [],
+    "category": "任务",
+    "desc": "主线 8 号角不响"
+  },
+  "QUEST_MAIN08_DELIVER": {
+    "value": "〔待填：号角不响 · 交时行文〕",
+    "params": [],
+    "category": "任务",
+    "desc": "主线 8 号角不响"
+  },
+  "QUEST_MAIN09_STORY": {
+    "value": "〔待填：守塔的东西 · 接时行文〕",
+    "params": [],
+    "category": "任务",
+    "desc": "主线 9 守塔的东西"
+  },
+  "QUEST_MAIN09_PROGRESS": {
+    "value": "〔待填：守塔的东西 · 进行中行文〕",
+    "params": [],
+    "category": "任务",
+    "desc": "主线 9 守塔的东西"
+  },
+  "QUEST_MAIN09_DELIVER": {
+    "value": "〔待填：守塔的东西 · 交时行文〕",
+    "params": [],
+    "category": "任务",
+    "desc": "主线 9 守塔的东西"
+  },
+  "QUEST_MAIN10_STORY": {
+    "value": "〔待填：北墙根的骨头 · 接时行文〕",
+    "params": [],
+    "category": "任务",
+    "desc": "主线 10 北墙根的骨头"
+  },
+  "QUEST_MAIN10_PROGRESS": {
+    "value": "〔待填：北墙根的骨头 · 进行中行文〕",
+    "params": [],
+    "category": "任务",
+    "desc": "主线 10 北墙根的骨头"
+  },
+  "QUEST_MAIN10_DELIVER": {
+    "value": "〔待填：北墙根的骨头 · 交时行文〕",
+    "params": [],
+    "category": "任务",
+    "desc": "主线 10 北墙根的骨头"
+  },
+  "QUEST_MAIN11_STORY": {
+    "value": "〔待填：白桦上的名字 · 接时行文〕",
+    "params": [],
+    "category": "任务",
+    "desc": "主线 11 白桦上的名字"
+  },
+  "QUEST_MAIN11_PROGRESS": {
+    "value": "〔待填：白桦上的名字 · 进行中行文〕",
+    "params": [],
+    "category": "任务",
+    "desc": "主线 11 白桦上的名字"
+  },
+  "QUEST_MAIN11_DELIVER": {
+    "value": "〔待填：白桦上的名字 · 交时行文〕",
+    "params": [],
+    "category": "任务",
+    "desc": "主线 11 白桦上的名字"
+  },
+  "QUEST_MAIN12_STORY": {
+    "value": "〔待填：往北的路 · 接时行文〕",
+    "params": [],
+    "category": "任务",
+    "desc": "主线 12 往北的路"
+  },
+  "QUEST_MAIN12_PROGRESS": {
+    "value": "〔待填：往北的路 · 进行中行文〕",
+    "params": [],
+    "category": "任务",
+    "desc": "主线 12 往北的路"
+  },
+  "QUEST_MAIN12_DELIVER": {
+    "value": "〔待填：往北的路 · 交时行文〕",
+    "params": [],
+    "category": "任务",
+    "desc": "主线 12 往北的路"
+  },
+  "TITLE_READER": {
+    "value": "读碑的人",
+    "params": [],
+    "category": "称号",
+    "desc": "称号 · 跟着名字走，不给数值"
+  },
+  "TITLE_THREE_SCRIPTS": {
+    "value": "认得三种字的人",
+    "params": [],
+    "category": "称号",
+    "desc": "称号 · 跟着名字走，不给数值"
+  },
+  "TITLE_NIGHT_NET": {
+    "value": "夜里下网的",
+    "params": [],
+    "category": "称号",
+    "desc": "称号 · 跟着名字走，不给数值"
+  },
+  "TITLE_BONEFIELD_REGULAR": {
+    "value": "骨田的常客",
+    "params": [],
+    "category": "称号",
+    "desc": "称号 · 跟着名字走，不给数值"
+  },
+  "TITLE_TRIPLE_INTERRUPT": {
+    "value": "三次打断",
+    "params": [],
+    "category": "称号",
+    "desc": "称号 · 跟着名字走，不给数值"
+  },
+  "TITLE_NO_ONE_FELL": {
+    "value": "没让人倒下的",
+    "params": [],
+    "category": "称号",
+    "desc": "称号 · 跟着名字走，不给数值"
+  },
+  "TITLE_SCAVENGER_FRIEND": {
+    "value": "拾荒人的朋友",
+    "params": [],
+    "category": "称号",
+    "desc": "称号 · 跟着名字走，不给数值"
+  },
+  "TITLE_ON_THE_TOWER": {
+    "value": "塔上的人",
+    "params": [],
+    "category": "称号",
+    "desc": "称号 · 跟着名字走，不给数值"
+  },
+  "TITLE_HORN_MENDER": {
+    "value": "把号角修好的人",
+    "params": [],
+    "category": "称号",
+    "desc": "称号 · 跟着名字走，不给数值"
+  },
+  "TITLE_WALL_LISTENER": {
+    "value": "北墙根的听众",
+    "params": [],
+    "category": "称号",
+    "desc": "称号 · 跟着名字走，不给数值"
+  },
+  "WEATHER_SUNNY": {
+    "value": "晴",
+    "params": [],
+    "category": "世界动静",
+    "desc": "天气名"
+  },
+  "WEATHER_RAIN": {
+    "value": "雨",
+    "params": [],
+    "category": "世界动静",
+    "desc": "天气名"
+  },
+  "WEATHER_FOG": {
+    "value": "雾",
+    "params": [],
+    "category": "世界动静",
+    "desc": "天气名"
+  },
+  "WEATHER_SNOW": {
+    "value": "初雪",
+    "params": [],
+    "category": "世界动静",
+    "desc": "天气名"
+  },
+  "HOUR_DAWN": {
+    "value": "晨",
+    "params": [],
+    "category": "世界动静",
+    "desc": "时辰名"
+  },
+  "HOUR_DAY": {
+    "value": "昼",
+    "params": [],
+    "category": "世界动静",
+    "desc": "时辰名"
+  },
+  "HOUR_DUSK": {
+    "value": "昏",
+    "params": [],
+    "category": "世界动静",
+    "desc": "时辰名"
+  },
+  "HOUR_NIGHT": {
+    "value": "夜",
+    "params": [],
+    "category": "世界动静",
+    "desc": "时辰名"
+  },
+  "UNID_PICKUP": {
+    "value": "❓ 你捡到一样东西：{name}\n{hint}",
+    "params": [
+      "hint",
+      "name"
+    ],
+    "category": "未鉴定",
+    "desc": "未鉴定 · 捡到"
+  },
+  "UNID_APPRAISE_DURIN": {
+    "value": "（他翻了两下，忽然不出声了）\n「你知道这是什么吗。」\n「{lore}」\n（他抬头看你）「你在哪儿捡的。」",
+    "params": [
+      "lore"
+    ],
+    "category": "未鉴定",
+    "desc": "杜林鉴定"
+  },
+  "UNID_APPRAISE_FAIL": {
+    "value": "「这我看不懂。」",
+    "params": [],
+    "category": "未鉴定",
+    "desc": "认不出来"
+  },
+  "UNID_RESULT_ITEM": {
+    "value": "🎁 你得到了 {name}",
+    "params": [
+      "name"
+    ],
+    "category": "未鉴定",
+    "desc": "开出装备"
+  },
+  "UNID_RESULT_LORE": {
+    "value": "📜 {title}\n{text}\n💡 已进旧物谱",
+    "params": [
+      "text",
+      "title"
+    ],
+    "category": "未鉴定",
+    "desc": "开出线索"
   }
 }
