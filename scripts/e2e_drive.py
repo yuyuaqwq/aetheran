@@ -47,7 +47,12 @@ def run(texts):
         os.remove(db)
     except OSError:
         pass
-    host = Host(ad, PKG, inject={"db_path": db, "clock": time.time})
+    #: ★ 假钟：AST_E2E_EPOCH=<epoch> 可以让「时辰/天气」这条线可复现（默认走系统钟）
+    fixed = os.environ.get("AST_E2E_EPOCH")
+    clock = (lambda: float(fixed)) if fixed else time.time
+    host = Host(ad, PKG, inject={"db_path": db, "clock": clock})
+    if fixed:
+        print("  （假钟 epoch=%s）" % fixed)
     stack = host.boot()
     print("== 装配 ==")
     print("  包:", stack.id, "| 域:", len(stack.domains),

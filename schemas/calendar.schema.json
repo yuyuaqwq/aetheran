@@ -1,0 +1,48 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "阿斯特兰 · 时辰表（calendar 域）",
+  "description": "四个时辰（晨/昼/昏/夜）。★ 名字是文案槽位（真源 = texts 域），域里只存槽位名；窗界是小时数。",
+  "type": "object",
+  "patternProperties": {
+    "^_": {
+      "type": "object"
+    },
+    "^hr_[a-z0-9_]+$": {
+      "type": "object",
+      "required": [
+        "slot",
+        "desc_slot",
+        "from_hour",
+        "to_hour"
+      ],
+      "properties": {
+        "slot": {
+          "type": "string",
+          "pattern": "^HOUR_[A-Z0-9_]+$"
+        },
+        "desc_slot": {
+          "type": "string",
+          "pattern": "^HOUR_[A-Z0-9_]+$"
+        },
+        "from_hour": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 23
+        },
+        "to_hour": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 23
+        },
+        "flags": {
+          "type": "object"
+        },
+        "source": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

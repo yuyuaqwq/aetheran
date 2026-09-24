@@ -12,6 +12,8 @@ from __future__ import annotations
 import json
 import os
 
+from . import calendar as CAL        # 时辰/天气的唯一出口（它不 import 本模块，无环）
+
 _DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 _CACHE: dict = {}
 
@@ -64,6 +66,25 @@ def _p(player):
     if not isinstance(p.get("prev"), list):
         p["prev"] = []
     return p
+
+
+def _npcs_here(loc, node, st=None):
+    """这个节点此刻的活人 —— ★ 出场条件（时辰/天气）现看。
+
+    条件是「与」：写了 time 与 weather 就两个都要满足；`event` 类条件留给事件层（B3-5），
+    这里**不判**（判了会让商队那两位永远不出现 —— 而那属于事件层的事）。
+    """
+    if st is None:
+        st = CAL.state()
+    out = []
+    for k, v in _data("npcs").items():
+        if v.get("map") != loc or v.get("subarea") != node:
+            continue
+        cond = v.get("condition") or {}
+        if not (CAL.allows(cond.get("time"), st) and CAL.allows(cond.get("weather"), st)):
+            continue
+        out.append((k, v))
+    return out
 
 
 def _map_of(loc):
@@ -124,8 +145,7 @@ async def look(env, sink, uid, player):
                 if v.get("map") == loc and v.get("subarea") == node]
     if poi_here:
         yield "看得见：" + " · ".join("『%s』%s" % (v.get("name"), v.get("icon", "")) for v in poi_here)
-    npc_here = [v for v in _data("npcs").values()
-                if v.get("map") == loc and v.get("subarea") == node]
+    npc_here = [v for _k, v in _npcs_here(loc, node)]
     if npc_here:
         yield "人在：" + " · ".join("『%s』%s" % (v.get("name"), v.get("icon", "")) for v in npc_here)
     yield "「『触摸』可以上手摸，『聆听』可以听，『地图』看全貌。」"
@@ -149,7 +169,16 @@ async def listen(env, sink, uid, player):
 
 
 async def time_now(env, sink, uid, player):
-    yield "现在是白昼。这一带的天黑得早，入夜之后外面会有别的东西走动。"
+    """★ 时辰与天气的唯一呈现口（模板 SYS_WEATHER_CHANGE = 26 消息模板第 13 类）。"""
+    p = _p(player)
+    st = CAL.tick(p)                       # 钟源 = 宿主注入（facade.clock），本模块不自己取钟
+    if player is not None:
+        player.update(p)
+    _save(env)
+    yield T("SYS_WEATHER_CHANGE", place=_name_of_node(p["loc"], p["node"]),
+            hour=st["hour_name"], weather=st["weather_name"],
+            flavor=T(CAL.desc_slot(st["weather"])))
+    yield T(CAL.desc_slot(st["hour"]))
 
 
 async def go_north(env, sink, uid, player):

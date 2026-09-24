@@ -1,0 +1,54 @@
+{
+  "_rules": {
+    "cycle": "game_day",
+    "pick": "weighted_stable_hash",
+    "weights_source": "games/orlandia/content/time_weather.py::today_weather 文档串：日期哈希伪随机。晴50/多云20/雨15/暴雨5/雪(冬)15/雾(特定地图)10。（只取本作四类）",
+    "skipped": {
+      "多云": "不在 19 文档的四类里（本作 P1 不落）",
+      "暴雨": "不在 19 文档的四类里（本作 P1 不落）"
+    },
+    "affects": [
+      "encounter",
+      "gather",
+      "element"
+    ],
+    "seasons": "P1 未开（05_系统总表与阶段开放：季节自 P2 起）",
+    "maps": "P1 全图一致（雾不按地图分）",
+    "source": "06_第一阶段垂直切片/19_世界热闹度与可发现物_v1.md §三 D 世界动静"
+  },
+  "w_sunny": {
+    "slot": "WEATHER_SUNNY",
+    "desc_slot": "WEATHER_SUNNY_DESC",
+    "weight": 50,
+    "flags": {},
+    "source": "06_第一阶段垂直切片/19_世界热闹度与可发现物_v1.md §三 D 世界动静（名：晴）· 权重 games/orlandia/content/time_weather.py::today_weather 文档串：日期哈希伪随机。晴50/多云20/雨15/暴雨5/雪(冬)15/雾(特定地图)10。（只取本作四类）"
+  },
+  "w_rain": {
+    "slot": "WEATHER_RAIN",
+    "desc_slot": "WEATHER_RAIN_DESC",
+    "weight": 15,
+    "flags": {
+      "gather_growth": true,
+      "elem_bonus": {
+        "雷": 10
+      }
+    },
+    "source": "06_第一阶段垂直切片/19_世界热闹度与可发现物_v1.md §三 D 世界动静（名：雨）· 权重 games/orlandia/content/time_weather.py::today_weather 文档串：日期哈希伪随机。晴50/多云20/雨15/暴雨5/雪(冬)15/雾(特定地图)10。（只取本作四类）"
+  },
+  "w_fog": {
+    "slot": "WEATHER_FOG",
+    "desc_slot": "WEATHER_FOG_DESC",
+    "weight": 10,
+    "flags": {
+      "elite_up": true
+    },
+    "source": "06_第一阶段垂直切片/19_世界热闹度与可发现物_v1.md §三 D 世界动静（名：雾）· 权重 games/orlandia/content/time_weather.py::today_weather 文档串：日期哈希伪随机。晴50/多云20/雨15/暴雨5/雪(冬)15/雾(特定地图)10。（只取本作四类）"
+  },
+  "w_snow": {
+    "slot": "WEATHER_SNOW",
+    "desc_slot": "WEATHER_SNOW_DESC",
+    "weight": 15,
+    "flags": {},
+    "source": "06_第一阶段垂直切片/19_世界热闹度与可发现物_v1.md §三 D 世界动静（名：初雪）· 权重 games/orlandia/content/time_weather.py::today_weather 文档串：日期哈希伪随机。晴50/多云20/雨15/暴雨5/雪(冬)15/雾(特定地图)10。（只取本作四类）"
+  }
+}

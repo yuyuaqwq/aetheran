@@ -9,6 +9,7 @@ from __future__ import annotations
 import random
 
 from .cmds_ast import _data, _p, _save, _map_of, _name_of_node, T
+from . import calendar as CAL
 from . import loot as LT
 
 
@@ -40,13 +41,29 @@ async def _do_gather(env, sink, uid, player, kind: str, verb: str):
         yield "这儿没什么可%s的。" % verb
         return
     gid, pt = pts[0]
+    st = CAL.tick(p)                       # ★ 时辰/天气现算；跨（游戏）日把采集次数归零
+    if not CAL.allows(pt.get("time"), st):          # 整点门槛：夜明砂那类
+        if player is not None:
+            player.update(p)
+        _save(env)
+        yield T("SYS_TIME_GATED", what=pt["name"], when=pt["time"])
+        return
     if _used(p, gid) >= int(pt.get("times_per_day", 3)):
         yield "%s今天已经被翻过了。明天再来。" % pt["name"]
         return
     rnd = random.Random("%s:%s:%s" % (uid, gid, p.get("day", 0)))
     # 采集点自己就是一张池（形状与 dp_* 一致）
     got = []
-    entries = pt.get("pool") or []
+    pool = pt.get("pool") or []
+    # ★ 条目级门槛 `when`（「稀有鱼只在夜里」这种按条算的）
+    entries = [e for e in pool if CAL.allows(e.get("when"), st)]
+    if not entries:
+        if player is not None:
+            player.update(p)
+        _save(env)
+        yield T("SYS_TIME_GATED", what=pt["name"],
+                when=" · ".join(sorted({str(e.get("when")) for e in pool if e.get("when")})))
+        return
     tot = sum(int(e.get("w", 1)) for e in entries)
     r = rnd.uniform(0, tot or 1)
     acc = 0.0
@@ -73,7 +90,7 @@ async def _do_gather(env, sink, uid, player, kind: str, verb: str):
     _save(env)
     yield "【%s】%s" % (pt["name"], pt.get("desc") or "")
     if pt.get("time"):
-        yield "（这东西只在「%s」出。）" % pt["time"]
+        yield T("SYS_TIME_ONLY", when=pt["time"])
     it = LT.items()
     for d in got:
         rec = it.get(d["id"]) or LT.pools().get(d["id"]) or {}

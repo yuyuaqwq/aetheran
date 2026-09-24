@@ -2,7 +2,8 @@
 """《阿斯特兰》指令实现体 · 第二组（对话 / 战斗外的交互）"""
 from __future__ import annotations
 
-from .cmds_ast import _data, _p, _save, _map_of, _name_of_node, T, _texts
+from .cmds_ast import _data, _p, _save, _map_of, _name_of_node, T, _texts, _npcs_here
+from . import calendar as CAL
 
 
 def _arg(env, default=""):
@@ -12,13 +13,11 @@ def _arg(env, default=""):
     return parts[1].strip() if len(parts) > 1 else default
 
 
-def _npc_here(loc, node):
-    return [(k, v) for k, v in _data("npcs").items()
-            if v.get("map") == loc and v.get("subarea") == node]
+def _pick_line(lines, p, st=None):
+    """按 need 条件择优：**按顺序挑第一条满足的**（照奥兰迪亚的精华）。
 
-
-def _pick_line(lines, p):
-    """按 need 条件择优：**按顺序挑第一条满足的**（照奥兰迪亚的精华）。"""
+    ★ 时辰 / 天气是真判断（名 → 时辰或天气，唯一出口 = `calendar`）；判不过就是判不过。
+    """
     flags = p.get("flags") or {}
     for ln in lines or []:
         need = ln.get("need")
@@ -33,7 +32,8 @@ def _pick_line(lines, p):
                 if not (p.get("bag") or {}).get(v):
                     ok = False
             elif k == "time" or k == "weather":
-                ok = True          # 第一版：时辰/天气还没接，先当满足
+                if not CAL.allows(v, st):        # ★ B2-5：真判断（原来是「先当满足」）
+                    ok = False
             elif k == "event":
                 ok = bool(flags.get("event_" + str(v)))
             elif k == "last":
@@ -49,7 +49,8 @@ def _pick_line(lines, p):
 
 async def talk(env, sink, uid, player):
     p = _p(player)
-    here = _npc_here(p["loc"], p["node"])
+    st = CAL.state()                       # 现在几时、什么天气（一次，全用它）
+    here = _npcs_here(p["loc"], p["node"], st)
     if not here:
         yield "这儿没有别人。"
         return
@@ -77,7 +78,7 @@ async def talk(env, sink, uid, player):
     # 节点择优：先看剧情节点（main / hidden），没有再看 meet / daily
     for nn in ("main", "hidden", "meet", "daily", "idle"):
         if nn in nodes:
-            txt = _pick_line(nodes[nn].get("texts"), p)
+            txt = _pick_line(nodes[nn].get("texts"), p, st)
             if txt:
                 for line in str(txt).split("\n"):
                     yield line
@@ -87,7 +88,7 @@ async def talk(env, sink, uid, player):
 
 async def ask_way(env, sink, uid, player):
     p = _p(player)
-    here = _npc_here(p["loc"], p["node"])
+    here = _npcs_here(p["loc"], p["node"])
     if not here:
         yield "没人可问。"
         return

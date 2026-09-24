@@ -7,7 +7,8 @@
 from __future__ import annotations
 
 from .cmds_ast import _data, _p, _save, _map_of, _name_of_node, T
-from .cmds_talk import _arg, _npc_here
+from .cmds_talk import _arg
+from .cmds_ast import _npcs_here
 
 
 def _mine(p):
@@ -29,7 +30,7 @@ def _set(p, key, val):
 
 async def guild(env, sink, uid, player):
     p = _p(player)
-    here = _npc_here(p["loc"], p["node"])
+    here = _npcs_here(p["loc"], p["node"])
     yield "【公会】门面比镇上任何一家都像样：一块木牌，牌上画着一把断了的剑和一只手。"
     yield "柜台在挂板墙那边。玛莎坐在后头。"
     yield "「『悬赏』看板 · 『接 <编号>』接活 · 『我的委托』看进度 · 『交 <编号>』交活」"
@@ -60,7 +61,7 @@ async def board(env, sink, uid, player):
         else:
             yield "  接下来：『接 %d』" % v["order"]
     side = [v for v in qs.values() if v["kind"] == "支线" and v["giver"] in
-            [k for k, _ in _npc_here(p["loc"], p["node"])]]
+            [k for k, _ in _npcs_here(p["loc"], p["node"])]]
     if side:
         yield "这人手上还有："
         for v in side[:3]:

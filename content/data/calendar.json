@@ -1,0 +1,45 @@
+{
+  "_clock": {
+    "zone": "Asia/Shanghai",
+    "real_seconds_per_game_day": 7200,
+    "source": "06_第一阶段垂直切片/05_玩法数值口径_v1.md §七：游戏内 1 天 = 现实 2 小时（可调）",
+    "note": "游戏时刻 = 宿主注入的 epoch × (86400 / real_seconds_per_game_day)；刻度在表里，调时间快慢只改这一个数"
+  },
+  "hr_dawn": {
+    "slot": "HOUR_DAWN",
+    "desc_slot": "HOUR_DAWN_DESC",
+    "from_hour": 5,
+    "to_hour": 8,
+    "flags": {},
+    "source": "06_第一阶段垂直切片/19_世界热闹度与可发现物_v1.md §三 D 世界动静（名：晨）· 窗界照 games/orlandia/content/time_weather.py::PERIODS"
+  },
+  "hr_day": {
+    "slot": "HOUR_DAY",
+    "desc_slot": "HOUR_DAY_DESC",
+    "from_hour": 8,
+    "to_hour": 18,
+    "flags": {},
+    "source": "06_第一阶段垂直切片/19_世界热闹度与可发现物_v1.md §三 D 世界动静（名：昼）· 窗界照 games/orlandia/content/time_weather.py::PERIODS"
+  },
+  "hr_dusk": {
+    "slot": "HOUR_DUSK",
+    "desc_slot": "HOUR_DUSK_DESC",
+    "from_hour": 18,
+    "to_hour": 20,
+    "flags": {
+      "npc_window": true
+    },
+    "source": "06_第一阶段垂直切片/19_世界热闹度与可发现物_v1.md §三 D 世界动静（名：昏）· 窗界照 games/orlandia/content/time_weather.py::PERIODS"
+  },
+  "hr_night": {
+    "slot": "HOUR_NIGHT",
+    "desc_slot": "HOUR_NIGHT_DESC",
+    "from_hour": 20,
+    "to_hour": 5,
+    "flags": {
+      "rare_fish": true,
+      "nocturnal_spawn": true
+    },
+    "source": "06_第一阶段垂直切片/19_世界热闹度与可发现物_v1.md §三 D 世界动静（名：夜）· 窗界照 games/orlandia/content/time_weather.py::PERIODS"
+  }
+}

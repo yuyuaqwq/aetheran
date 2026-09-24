@@ -1,4 +1,13 @@
 {
+  "calendar": {
+    "label": "时辰表",
+    "kind": "data",
+    "schema": "schemas/calendar.schema.json",
+    "primary": "hour",
+    "icon": "🕯️",
+    "owner": "package",
+    "tier": "portable"
+  },
   "commands": {
     "label": "指令",
     "kind": "data",
@@ -131,6 +140,15 @@
     "schema": "schemas/gathering.schema.json",
     "primary": "spot",
     "icon": "🌿",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "weather": {
+    "label": "天气表",
+    "kind": "data",
+    "schema": "schemas/weather.schema.json",
+    "primary": "weather",
+    "icon": "🌦️",
     "owner": "package",
     "tier": "portable"
   }

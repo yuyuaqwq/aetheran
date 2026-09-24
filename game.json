@@ -6,6 +6,7 @@
   "engine": ">=0.1",
   "entry": "content/apply.py",
   "domains": [
+    "calendar",
     "classes",
     "commands",
     "dialogues",
@@ -20,7 +21,8 @@
     "races",
     "skills",
     "texts",
-    "tlogs"
+    "tlogs",
+    "weather"
   ],
   "created": "2026-09-24",
   "depends": [

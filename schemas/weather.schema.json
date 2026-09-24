@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "阿斯特兰 · 天气表（weather 域）",
+  "description": "四种天气（晴/雨/雾/初雪）。★ 名字是文案槽位（真源 = texts 域）；weight 是当日抽取权重。",
+  "type": "object",
+  "patternProperties": {
+    "^_": {
+      "type": "object"
+    },
+    "^w_[a-z0-9_]+$": {
+      "type": "object",
+      "required": [
+        "slot",
+        "desc_slot",
+        "weight"
+      ],
+      "properties": {
+        "slot": {
+          "type": "string",
+          "pattern": "^WEATHER_[A-Z0-9_]+$"
+        },
+        "desc_slot": {
+          "type": "string",
+          "pattern": "^WEATHER_[A-Z0-9_]+$"
+        },
+        "weight": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "flags": {
+          "type": "object"
+        },
+        "source": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}
