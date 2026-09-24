@@ -204,6 +204,20 @@
         "note": {
           "type": "string",
           "$comment": "设计备注（不进玩法，只给编辑器和文档看）"
+        },
+        "tier": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5,
+          "$comment": "技能层：1=职业基础(1–20) · 2=第一次转职(21–40) · 3=机制扩展(41–60) · 4=第二次转职(61–80) · 5=终局(81–100)。见 03_职业与技能/02_技能体系规划_v1.md"
+        },
+        "branch": {
+          "type": "string",
+          "$comment": "转职分支专属标记；T1（职业基础）留空 —— 谁都能用"
+        },
+        "upgrade_of": {
+          "type": "string",
+          "$comment": "技能改造（机制表 H3）：指向被升级的原技能 id —— 同一招升级换形态，不是替代"
         }
       },
       "additionalProperties": false,
