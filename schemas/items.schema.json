@@ -1,0 +1,93 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "真源在包。词条 stat 的命名规范见策划案 06_.../11_装备特色词条池_v1.md §六：数值类用属性字典标准键，效果类自由命名但必须带 note。",
+  "type": "object",
+  "minProperties": 1,
+  "patternProperties": {
+    "^i_[a-z0-9_]+$": {
+      "type": "object",
+      "required": [
+        "name",
+        "icon",
+        "kind"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "武器",
+            "上甲",
+            "下甲",
+            "头盔",
+            "靴子",
+            "饰品",
+            "材料",
+            "道具"
+          ]
+        },
+        "quality": {
+          "enum": [
+            "普通",
+            "精制",
+            "稀有",
+            "遗物"
+          ]
+        },
+        "slot": {
+          "enum": [
+            "weapon",
+            "armor_top",
+            "armor_bottom",
+            "helmet",
+            "boots",
+            "accessory"
+          ]
+        },
+        "affixes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "stat",
+              "v"
+            ],
+            "properties": {
+              "stat": {
+                "type": "string"
+              },
+              "v": {
+                "type": "number"
+              },
+              "note": {
+                "type": "string",
+                "description": "效果类词条必填"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "set_id": {
+          "type": "string",
+          "description": "套装 id（套装件才有）"
+        },
+        "lore": {
+          "type": "string",
+          "description": "★ 遗物的「来处」一句（遗物必填）"
+        },
+        "price": {
+          "type": "number"
+        },
+        "desc": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
