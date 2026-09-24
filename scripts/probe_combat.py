@@ -44,7 +44,7 @@ sk = pa.get("skills") or []
 mid = "ms_field_mouse"
 ea = CB.monster_actor(mid, MON[mid])
 (ok if ea.get("uid") == mid and ea.get("side") == "enemy" else bad)("怪 actor 造得出（%s）" % mid)
-(ok if ea.get("_player_lv") else bad)("怪 actor 带 _player_lv（★ 引擎算 k_def 要它；缺了 fail-closed 抛错）")
+(ok if int(ea.get("level", 0)) == int(MON[mid].get("lv", 0)) else bad)("怪 actor 带 level（★ 等级真源 = actor 的 level，玩家与怪一视同仁）")
 
 # ④ ★ 真打一场：出伤害 · 有结果 · 日志非空
 res, logs, hp_after = CB.run_auto({"cls": "cls_knight", "level": 3, "hp": 140, "uid": "u1"},
@@ -55,10 +55,10 @@ dmg_lines = [x for x in logs if "伤害" in x]
 (ok if res in ("victory", "defeat", "fled") else bad)("战斗有结果（%s）" % res)
 (ok if 0 <= hp_after <= 99999 else bad)("战后血量合法（%s）" % hp_after)
 
-# ⑤ ★ 技能 expr 全覆盖（缺 expr 的主动技会走引擎的「非 expr 分支」⇒ 那里读 _player_lv ⇒ 怪侧必炸）
+# ⑤ ★ 无 expr 的主动技也能打出伤害（引擎修好后，非 expr 分支从 actor 取等级）
 SKD = st.domain("skills")
-no_expr = [k for k, v in SKD.items() if v.get("kind") == "主动" and not v.get("expr")]
-(ok if not no_expr else bad)("★ 所有主动技都有 expr（缺 %s）" % (no_expr or "无"))
+plain = [k for k, v in SKD.items() if v.get("kind") == "主动" and not v.get("expr")]
+(ok if plain else bad)("★ 存在「无 expr」的主动技（%d 条）—— 下面的战斗正是靠它们打的" % len(plain))
 
 # ⑥ ★ 可复现（同种子同结果）
 r1 = CB.run_auto({"cls": "cls_knight", "level": 3, "hp": 140, "uid": "u1"}, [mid], MON, seed=7)

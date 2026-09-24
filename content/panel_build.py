@@ -71,10 +71,9 @@ def _layers_of(cls_id: str, level: int, alloc: dict | None):
         for k, v in (c["conv"].get(stat) or {}).items():
             attr[k] = attr.get(k, 0) + v * n
     drop = ("crit",)
-    # ★ `_player_lv`：引擎算 k_def（等级标定的对抗常数）要读它 ——
-    #   它不是面板属性，而是「这一层是按几级算的」这个事实；放 base 层当常量。
-    _lv = {"_player_lv": float(level)}
-    return (dict(to_engine({k: v for k, v in base.items() if k not in drop}), **_lv),
+    # ★ 不再往层里塞等级：引擎 `stats.actor_stats` 已把 `level` 统一带出
+    #   （真源 = actor["level"]，玩家与怪一视同仁）—— 内容侧只给面板属性。
+    return (to_engine({k: v for k, v in base.items() if k not in drop}),
             to_engine({k: v for k, v in grow.items() if k not in drop}),
             to_engine({k: v for k, v in attr.items() if k not in drop}))
 

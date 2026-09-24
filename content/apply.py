@@ -100,9 +100,7 @@ def install_engine():
         basic_skill_fn=_basic_skill,
         basic_fallback={"name": "挥击", "kind": "主动", "power": 1.0, "cd": 0,
                         "cast": {"base": 60}, "recover": {"base": 0}, "range": 1, "mp": 0,
-                        # ★ 兜底也要 expr：普攻若走「非 expr 分支」，那里读 st["_player_lv"]
-                        #   而怪的 _monster_base_stats 不产出它 ⇒ 引擎 fail-closed 抛错
-                        "expr": "atk * 1.0", "_basic": True},
+                        "_basic": True},
     )
     _MOUNTED = True
 

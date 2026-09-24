@@ -68,8 +68,6 @@ def monster_actor(mid: str, m: dict) -> dict:
                    level=int(m.get("lv", 1) or 1), **panel)
     a["role"] = m.get("role") or "普通"
     a["is_boss"] = (a["role"] == "boss")
-    # ★ 引擎算 k_def 要读 `_player_lv`（怪走 _monster_base_stats，不会由面板栈补）
-    a["_player_lv"] = float(a.get("level", 1) or 1)
     if m.get("skills"):
         a["skills"] = list(m["skills"])
     return a

@@ -78,11 +78,8 @@ def monster_skill(key: str):
     for mid, m in monsters().items():
         for sid in (m.get("skills") or []):
             if sid == key:
-                m_panel = m.get("panel") or {}
-                # ★ 怪技能必须给 expr：否则引擎走「非 expr 分支」，那里读 st["_player_lv"]
-                #   而 _monster_base_stats 不产出该字段 ⇒ 报「调用方没给 level」（引擎 fail-closed）
                 return {"name": key, "kind": "主动", "power": 1.0, "cd": 0,
-                        "expr": "atk * 1.0", "owner_monster": mid, "_basic": False}
+                        "owner_monster": mid, "_basic": False}
     return None
 
 
