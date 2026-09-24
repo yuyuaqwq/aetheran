@@ -2107,5 +2107,13 @@
     "params": [],
     "category": "系统",
     "desc": "面板 · food 层（最后那层 mul）"
+  },
+  "SYS_MOVE_HERE": {
+    "value": "你就在「{name}」—— 已经到了。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "去 · 目标就是脚下这一站"
   }
 }

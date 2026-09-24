@@ -388,6 +388,11 @@ async def go_to(env, sink, uid, player):
     if hit is None:
         for n in (_map_of(loc) or {}).get("nodes") or []:
             if want in (n.get("id"), n.get("name")):
+                # ★ B3-10：目标就是脚下这一站 —— 别说「过不去」（玩家会以为路被堵了）
+                if n.get("id") == node:
+                    yield T("SYS_MOVE_HERE", name=n.get("name"))
+                    yield T("SYS_MOVE_CAN", list=" · ".join("『%s』" % _name_of_node(loc, x) for x in nb))
+                    return
                 yield T("SYS_MOVE_FAR", name=n.get("name"))
                 yield T("SYS_MOVE_CAN", list=" · ".join("『%s』" % _name_of_node(loc, x) for x in nb))
                 return
