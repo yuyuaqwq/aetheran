@@ -2,12 +2,13 @@
   "id": "aetheran",
   "kind": "game",
   "name": "阿斯特兰",
-  "desc": "《阿斯特兰》内容侧数据包 —— 第二刀：最小可跑骨架（三份默认域 + 数值宪法公式表 + 装配入口）",
+  "desc": "《阿斯特兰》内容侧数据包 —— 第四刀：六职业 + 30 条技能 + 行动类别基准表",
   "engine": ">=0.1",
   "entry": "content/apply.py",
   "domains": [
     "classes",
     "commands",
+    "skills",
     "texts",
     "tlogs"
   ],

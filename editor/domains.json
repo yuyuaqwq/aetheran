@@ -34,5 +34,14 @@
     "icon": "🛡️",
     "owner": "package",
     "tier": "portable"
+  },
+  "skills": {
+    "label": "技能",
+    "kind": "data",
+    "schema": "schemas/skills.schema.json",
+    "primary": "skill",
+    "icon": "⚔️",
+    "owner": "package",
+    "tier": "portable"
   }
 }

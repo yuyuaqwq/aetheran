@@ -1,0 +1,21 @@
+{
+  "note": "行动类别 → 基准耗时（刻，1 刻 = 1 游戏秒）。引擎 action_base_fn / recover_base_fn 的供体；这两张表只给「用类别名写的动作」兜底，技能自己写了 cast/recover 的就用技能自己的。",
+  "cast": {
+    "attack": 60,
+    "skill": 80,
+    "defend": 40,
+    "item": 50,
+    "move": 30
+  },
+  "recover": {
+    "attack": 40,
+    "skill": 50,
+    "defend": 30,
+    "item": 40,
+    "move": 20
+  },
+  "default": {
+    "cast": 80,
+    "recover": 50
+  }
+}

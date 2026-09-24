@@ -1,0 +1,657 @@
+{
+  "SKILL_KNT_slash": {
+    "name": "横剑",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_KNT_slash_desc",
+    "cd": 0,
+    "cast": {
+      "base": 60
+    },
+    "recover": {
+      "base": 0
+    },
+    "range": 1,
+    "mp": 0,
+    "power": 1.0,
+    "owner_class": "cls_knight",
+    "lv_band": "P1",
+    "element": "ELE_PHYS",
+    "res_gain": {
+      "RES_OATH": 3
+    },
+    "note": "挨打段的普攻：伤害低，但攒守誓"
+  },
+  "SKILL_KNT_oathwall": {
+    "name": "盾墙",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_KNT_oathwall_desc",
+    "cd": 6,
+    "cast": {
+      "base": 40
+    },
+    "recover": {
+      "base": 20
+    },
+    "range": 1,
+    "mp": 8,
+    "power": 0.0,
+    "owner_class": "cls_knight",
+    "lv_band": "P1",
+    "res_gain": {
+      "RES_OATH": 12
+    },
+    "mech": "protect",
+    "note": "替队友接下一次指向技能"
+  },
+  "SKILL_KNT_taunt": {
+    "name": "挑战咆哮",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_KNT_taunt_desc",
+    "cd": 12,
+    "cast": {
+      "base": 40
+    },
+    "recover": {
+      "base": 40
+    },
+    "range": 3,
+    "mp": 12,
+    "power": 0.0,
+    "owner_class": "cls_knight",
+    "lv_band": "P1",
+    "mech": "taunt",
+    "mech_val": 3.0,
+    "note": "仇恨 ×3，把对面的出手拉过来"
+  },
+  "SKILL_KNT_oathslash": {
+    "name": "守誓斩",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_KNT_oathslash_desc",
+    "cd": 5,
+    "cast": {
+      "base": 50
+    },
+    "recover": {
+      "base": 50
+    },
+    "range": 1,
+    "mp": 15,
+    "power": 2.2,
+    "owner_class": "cls_knight",
+    "lv_band": "P1",
+    "element": "ELE_PHYS",
+    "res_cost": {
+      "RES_OATH": 25
+    },
+    "note": "挨打换来的那一刀"
+  },
+  "SKILL_KNT_standfast": {
+    "name": "不退",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_KNT_standfast_desc",
+    "cd": 30,
+    "cast": {
+      "base": 80
+    },
+    "recover": {
+      "base": 80
+    },
+    "range": 1,
+    "mp": 30,
+    "power": 0.0,
+    "owner_class": "cls_knight",
+    "lv_band": "P1",
+    "res_cost": {
+      "RES_OATH": 100
+    },
+    "mech": "unstoppable",
+    "mech_val": 300.0,
+    "note": "300 刻霸体 + 全队减伤 30%"
+  },
+  "SKILL_BSK_cleave": {
+    "name": "横劈",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_BSK_cleave_desc",
+    "cd": 0,
+    "cast": {
+      "base": 60
+    },
+    "recover": {
+      "base": 0
+    },
+    "range": 1,
+    "mp": 0,
+    "power": 1.0,
+    "owner_class": "cls_berserker",
+    "lv_band": "P1",
+    "element": "ELE_PHYS",
+    "note": "普攻"
+  },
+  "SKILL_BSK_sunder": {
+    "name": "破势",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_BSK_sunder_desc",
+    "cd": 4,
+    "cast": {
+      "base": 40
+    },
+    "recover": {
+      "base": 40
+    },
+    "range": 1,
+    "mp": 0,
+    "power": 1.6,
+    "owner_class": "cls_berserker",
+    "lv_band": "P1",
+    "element": "ELE_PHYS",
+    "mech": "def_break",
+    "mech_val": 30.0,
+    "note": "自伤 8% max_hp；目标 def −30%（300 刻）"
+  },
+  "SKILL_BSK_rampage": {
+    "name": "狂斩",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_BSK_rampage_desc",
+    "cd": 6,
+    "cast": {
+      "base": 60
+    },
+    "recover": {
+      "base": 60
+    },
+    "range": 1,
+    "mp": 0,
+    "power": 2.4,
+    "owner_class": "cls_berserker",
+    "lv_band": "P1",
+    "element": "ELE_PHYS",
+    "note": "自伤 12% max_hp"
+  },
+  "SKILL_BSK_immolate": {
+    "name": "焚身",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_BSK_immolate_desc",
+    "cd": 30,
+    "cast": {
+      "base": 90
+    },
+    "recover": {
+      "base": 80
+    },
+    "range": 1,
+    "mp": 0,
+    "power": 3.2,
+    "owner_class": "cls_berserker",
+    "lv_band": "P1",
+    "element": "ELE_FIRE",
+    "note": "自伤 35% 当前 hp（上限 40）；一场一次"
+  },
+  "SKILL_RNG_shortbow": {
+    "name": "短弓",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_RNG_shortbow_desc",
+    "cd": 0,
+    "cast": {
+      "base": 60
+    },
+    "recover": {
+      "base": 10
+    },
+    "range": 3,
+    "mp": 0,
+    "power": 1.0,
+    "owner_class": "cls_ranger",
+    "lv_band": "P1",
+    "element": "ELE_PHYS",
+    "res_gain": {
+      "RES_AIM": 1
+    },
+    "note": "距离 3 才攒准星"
+  },
+  "SKILL_RNG_aimshot": {
+    "name": "点射",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_RNG_aimshot_desc",
+    "cd": 3,
+    "cast": {
+      "base": 30
+    },
+    "recover": {
+      "base": 20
+    },
+    "range": 2,
+    "mp": 8,
+    "power": 1.5,
+    "owner_class": "cls_ranger",
+    "lv_band": "P1",
+    "element": "ELE_PHYS",
+    "note": "距离 2 也能用"
+  },
+  "SKILL_RNG_snipe": {
+    "name": "狙击",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_RNG_snipe_desc",
+    "cd": 8,
+    "cast": {
+      "base": 80
+    },
+    "recover": {
+      "base": 40
+    },
+    "range": 3,
+    "mp": 20,
+    "power": 2.8,
+    "owner_class": "cls_ranger",
+    "lv_band": "P1",
+    "element": "ELE_PHYS",
+    "res_cost": {
+      "RES_AIM": 4
+    },
+    "note": "花 4 层准星换一发重击"
+  },
+  "SKILL_RNG_volley": {
+    "name": "连射",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_RNG_volley_desc",
+    "cd": 30,
+    "cast": {
+      "base": 120
+    },
+    "recover": {
+      "base": 60
+    },
+    "range": 3,
+    "mp": 40,
+    "power": 0.9,
+    "owner_class": "cls_ranger",
+    "lv_band": "P1",
+    "element": "ELE_PHYS",
+    "res_cost": {
+      "RES_AIM": 6
+    },
+    "note": "清空准星，每一层打一发（0.9 × 层数）"
+  },
+  "SKILL_RNG_quickstep": {
+    "name": "抢拍",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_RNG_quickstep_desc",
+    "cd": 8,
+    "cast": {
+      "base": 30
+    },
+    "recover": {
+      "base": 30
+    },
+    "range": 3,
+    "mp": 12,
+    "power": 0.0,
+    "owner_class": "cls_ranger",
+    "lv_band": "P1",
+    "mech": "advance_ct",
+    "mech_val": 30.0,
+    "note": "把自己的下一次行动提前 30 刻"
+  },
+  "SKILL_RNG_backstep": {
+    "name": "后撤",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_RNG_backstep_desc",
+    "cd": 2,
+    "cast": {
+      "base": 30
+    },
+    "recover": {
+      "base": 20
+    },
+    "range": 1,
+    "mp": 0,
+    "power": 0.0,
+    "owner_class": "cls_ranger",
+    "lv_band": "P1",
+    "mech": "retreat",
+    "note": "贴脸时唯一的出手：拉开距离"
+  },
+  "SKILL_MAG_stardust": {
+    "name": "星屑",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_MAG_stardust_desc",
+    "cd": 0,
+    "cast": {
+      "base": 40
+    },
+    "recover": {
+      "base": 20
+    },
+    "range": 3,
+    "mp": 0,
+    "power": 1.0,
+    "owner_class": "cls_mage",
+    "lv_band": "P1",
+    "element": "ELE_ARCANE",
+    "res_gain": {
+      "RES_MARK": 1
+    },
+    "note": "普攻：铺 1 层印记"
+  },
+  "SKILL_MAG_iceshard": {
+    "name": "冰棱",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_MAG_iceshard_desc",
+    "cd": 4,
+    "cast": {
+      "base": 40
+    },
+    "recover": {
+      "base": 20
+    },
+    "range": 3,
+    "mp": 10,
+    "power": 1.1,
+    "owner_class": "cls_mage",
+    "lv_band": "P1",
+    "element": "ELE_ICE",
+    "res_gain": {
+      "RES_MARK": 1
+    }
+  },
+  "SKILL_MAG_flameprint": {
+    "name": "焰痕",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_MAG_flameprint_desc",
+    "cd": 6,
+    "cast": {
+      "base": 80
+    },
+    "recover": {
+      "base": 30
+    },
+    "range": 3,
+    "mp": 16,
+    "power": 1.4,
+    "owner_class": "cls_mage",
+    "lv_band": "P1",
+    "element": "ELE_FIRE",
+    "res_gain": {
+      "RES_MARK": 2
+    },
+    "note": "铺 2 层印记"
+  },
+  "SKILL_MAG_ignite": {
+    "name": "引燃",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_MAG_ignite_desc",
+    "cd": 8,
+    "cast": {
+      "base": 200
+    },
+    "recover": {
+      "base": 40
+    },
+    "range": 3,
+    "mp": 38,
+    "power": 1.0,
+    "owner_class": "cls_mage",
+    "lv_band": "P1",
+    "element": "ELE_FIRE",
+    "res_cost": {
+      "RES_MARK": 99
+    },
+    "mech": "mark_burst",
+    "mech_val": 0.35,
+    "note": "清空印记：power 1.0 + 0.35×层数；★ 200 刻前摇比刺客的打断窗口（160 刻）长"
+  },
+  "SKILL_MAG_fallenstar": {
+    "name": "垂星",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_MAG_fallenstar_desc",
+    "cd": 30,
+    "cast": {
+      "base": 240
+    },
+    "recover": {
+      "base": 50
+    },
+    "range": 4,
+    "mp": 60,
+    "power": 0.8,
+    "owner_class": "cls_mage",
+    "lv_band": "P1",
+    "element": "ELE_ARCANE",
+    "res_cost": {
+      "RES_MARK": 99
+    },
+    "mech": "mark_burst",
+    "mech_val": 0.8,
+    "note": "清空印记：0.8×层数 + 眩晕 100 刻"
+  },
+  "SKILL_PRS_staff": {
+    "name": "圣杖",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_PRS_staff_desc",
+    "cd": 0,
+    "cast": {
+      "base": 60
+    },
+    "recover": {
+      "base": 20
+    },
+    "range": 2,
+    "mp": 0,
+    "power": 1.0,
+    "owner_class": "cls_priest",
+    "lv_band": "P1",
+    "element": "ELE_HOLY",
+    "note": "普攻（她基本不输出）"
+  },
+  "SKILL_PRS_lullaby": {
+    "name": "安神曲",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_PRS_lullaby_desc",
+    "cd": 6,
+    "cast": {
+      "base": 60
+    },
+    "recover": {
+      "base": 30
+    },
+    "range": 3,
+    "mp": 14,
+    "power": 1.5,
+    "owner_class": "cls_priest",
+    "lv_band": "P1",
+    "element": "ELE_HOLY",
+    "mech": "hot",
+    "mech_val": 300.0,
+    "note": "一次挂 300 刻再生（每刻 heal 的 1/4）"
+  },
+  "SKILL_PRS_absolve": {
+    "name": "净罪",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_PRS_absolve_desc",
+    "cd": 10,
+    "cast": {
+      "base": 50
+    },
+    "recover": {
+      "base": 30
+    },
+    "range": 3,
+    "mp": 16,
+    "power": 0.0,
+    "owner_class": "cls_priest",
+    "lv_band": "P1",
+    "element": "ELE_HOLY",
+    "mech": "cleanse",
+    "note": "解掉一个控制效果"
+  },
+  "SKILL_PRS_aegis": {
+    "name": "庇护",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_PRS_aegis_desc",
+    "cd": 12,
+    "cast": {
+      "base": 40
+    },
+    "recover": {
+      "base": 30
+    },
+    "range": 3,
+    "mp": 18,
+    "power": 0.0,
+    "owner_class": "cls_priest",
+    "lv_band": "P1",
+    "mech": "shield_ally",
+    "mech_val": 30.0,
+    "note": "200 刻减伤 30%（吃预判）"
+  },
+  "SKILL_PRS_matins": {
+    "name": "晨祷",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_PRS_matins_desc",
+    "cd": 30,
+    "cast": {
+      "base": 100
+    },
+    "recover": {
+      "base": 60
+    },
+    "range": 4,
+    "mp": 36,
+    "power": 0.0,
+    "owner_class": "cls_priest",
+    "lv_band": "P1",
+    "element": "ELE_HOLY",
+    "res_cost": {
+      "RES_LITANY": 3
+    },
+    "mech": "immune_window",
+    "mech_val": 100.0,
+    "note": "全队 100 刻免疫窗口"
+  },
+  "SKILL_SHD_blade": {
+    "name": "短刃",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_SHD_blade_desc",
+    "cd": 0,
+    "cast": {
+      "base": 60
+    },
+    "recover": {
+      "base": 30
+    },
+    "range": 1,
+    "mp": 0,
+    "power": 0.9,
+    "owner_class": "cls_assassin",
+    "lv_band": "P1",
+    "element": "ELE_PHYS",
+    "note": "窗口外最弱的普攻"
+  },
+  "SKILL_SHD_sever": {
+    "name": "断势",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_SHD_sever_desc",
+    "cd": 5,
+    "cast": {
+      "base": 30
+    },
+    "recover": {
+      "base": 30
+    },
+    "range": 4,
+    "mp": 12,
+    "power": 1.2,
+    "owner_class": "cls_assassin",
+    "lv_band": "P1",
+    "element": "ELE_PHYS",
+    "mech": "interrupt",
+    "mech_val": 200.0,
+    "note": "打断待发动作 + 挂破绽 200 刻（承伤 ×1.35）"
+  },
+  "SKILL_SHD_findgap": {
+    "name": "寻隙",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_SHD_findgap_desc",
+    "cd": 3,
+    "cast": {
+      "base": 20
+    },
+    "recover": {
+      "base": 20
+    },
+    "range": 2,
+    "mp": 10,
+    "power": 1.6,
+    "owner_class": "cls_assassin",
+    "lv_band": "P1",
+    "element": "ELE_PHYS",
+    "note": "进窗后的小爆发"
+  },
+  "SKILL_SHD_shadowstrike": {
+    "name": "影袭",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_SHD_shadowstrike_desc",
+    "cd": 20,
+    "cast": {
+      "base": 70
+    },
+    "recover": {
+      "base": 50
+    },
+    "range": 2,
+    "mp": 30,
+    "power": 3.0,
+    "owner_class": "cls_assassin",
+    "lv_band": "P1",
+    "element": "ELE_PHYS",
+    "note": "窗口内的大招"
+  },
+  "SKILL_SHD_backstep": {
+    "name": "后撤",
+    "kind": "主动",
+    "lv": 1,
+    "desc": "SKILL_SHD_backstep_desc",
+    "cd": 2,
+    "cast": {
+      "base": 30
+    },
+    "recover": {
+      "base": 20
+    },
+    "range": 1,
+    "mp": 0,
+    "power": 0.0,
+    "owner_class": "cls_assassin",
+    "lv_band": "P1",
+    "mech": "retreat",
+    "note": "对面霸体时的唯一选择"
+  }
+}

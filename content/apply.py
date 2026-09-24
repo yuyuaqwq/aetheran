@@ -9,6 +9,9 @@
 | `formula_bindings_fn` | `content/rules/formula_bindings.json` | 语义槽位 → 声明 id（E1b）|
 | `time_model_fn` | 委托声明 `F6_act_time` | CTB 行动耗时 —— 不自己实现公式 |
 | `panel_layers_fn` | `content/panel_build.py` 的栈登记表 | 面板栈声明（E2）—— 形状在 `ext_combat.panel` |
+| `action_base_fn` | `content/rules/action_base.json` 的 `cast` 表 | 行动类别 → 第一段基准耗时（刻）|
+| `recover_base_fn` | `content/rules/action_base.json` 的 `recover` 表 | 行动类别 → 第二段基准耗时（刻）|
+| `recover_model_fn` | 委托声明 `F6_act_time` | 第二段的时间模型（与第一段同一形状）|
 
 ★ 零双源纪律：本文件不手写任何公式或常数；钳位归声明的 `guard`/`clamp`，
 本文件只负责喂变量。速度形状是内容侧的选择（宪法 F6），不是引擎规则。
@@ -25,6 +28,7 @@ _RULES = Path(__file__).resolve().parent.parent / "content" / "rules"
 
 _TABLE = None
 _BINDINGS = None
+_ACTION = None
 _MOUNTED = False
 
 
@@ -49,6 +53,30 @@ def _time_model(spd, base):
     return _table().eval("F6_act_time", {"base": float(base), "spd": float(spd or 0)})
 
 
+def _action() -> dict:
+    global _ACTION
+    if _ACTION is None:
+        _ACTION = json.loads((_RULES / "action_base.json").read_text(encoding="utf-8"))
+    return _ACTION
+
+
+def _action_base_fn(action):
+    """`action_base_fn` 供体：行动类别 → 第一段基准（刻）；未知类别落 `default.cast`。"""
+    a = _action()
+    return float(a["cast"].get(action, a["default"]["cast"]))
+
+
+def _recover_base_fn(action):
+    """`recover_base_fn` 供体：行动类别 → 第二段基准（刻）；未知类别落 `default.recover`。"""
+    a = _action()
+    return float(a["recover"].get(action, a["default"]["recover"]))
+
+
+def _recover_model(spd, base):
+    """`recover_model_fn` 供体：第二段时间模型 = 与第一段同一形状（F6）。"""
+    return _table().eval("F6_act_time", {"base": float(base), "spd": float(spd or 0)})
+
+
 def install_engine():
     """把本包的 hook 挂进引擎 config（全局一次、幂等）。"""
     global _MOUNTED
@@ -60,6 +88,9 @@ def install_engine():
         formula_table_fn=lambda: tbl,
         formula_bindings_fn=lambda slot: bind.get(slot),
         time_model_fn=_time_model,
+        action_base_fn=_action_base_fn,
+        recover_model_fn=_recover_model,
+        recover_base_fn=_recover_base_fn,
         panel_layers_fn=_panel_layers,
     )
     _MOUNTED = True
