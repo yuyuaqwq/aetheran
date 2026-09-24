@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "真源在包。字段照 ext_world 的节点级挂载 + 条件槽（judges）的消费端。",
+  "type": "object",
+  "minProperties": 1,
+  "patternProperties": {
+    "^poi_[a-z_]+$": {
+      "type": "object",
+      "required": [
+        "name",
+        "icon",
+        "kind",
+        "map",
+        "subarea"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "可读物",
+            "触摸",
+            "生息",
+            "发现",
+            "危险",
+            "隐藏点"
+          ]
+        },
+        "map": {
+          "type": "string"
+        },
+        "subarea": {
+          "type": "string"
+        },
+        "hint": {
+          "type": "string",
+          "description": "观察时看到的一行"
+        },
+        "read_text": {
+          "type": "string",
+          "description": "可读物：正文的文案槽位"
+        },
+        "into_codex": {
+          "type": "string",
+          "description": "读完后进哪本谱"
+        },
+        "effect": {
+          "type": "object",
+          "description": "触摸/生息/隐藏点的效果"
+        },
+        "condition": {
+          "type": "object",
+          "description": "出现条件（时辰/flag 等）"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

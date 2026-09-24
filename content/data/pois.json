@@ -1,0 +1,215 @@
+{
+  "poi_stone_scripts": {
+    "name": "镇口的石头",
+    "icon": "🪨",
+    "kind": "可读物",
+    "map": "windmill_town",
+    "subarea": "wt_gate_n",
+    "hint": "石头上刻着三种字",
+    "read_text": "READ_STONE_SCRIPTS",
+    "into_codex": "relic_codex"
+  },
+  "poi_half_buried_stele": {
+    "name": "半埋的碑",
+    "icon": "🪦",
+    "kind": "可读物",
+    "map": "belt_north",
+    "subarea": "bn_bone",
+    "hint": "碑大半埋在土里",
+    "read_text": "READ_HALF_BURIED_STELE",
+    "into_codex": "relic_codex"
+  },
+  "poi_named_birch": {
+    "name": "刻着名字的树",
+    "icon": "🌳",
+    "kind": "可读物",
+    "map": "belt_east",
+    "subarea": "be_birch",
+    "hint": "树皮上刻满了名字",
+    "read_text": "READ_NAMED_BIRCH",
+    "into_codex": "relic_codex"
+  },
+  "poi_underwater_steps": {
+    "name": "水下的石阶",
+    "icon": "🌊",
+    "kind": "可读物",
+    "map": "belt_west",
+    "subarea": "bw_old_ferry",
+    "hint": "退潮时能看见一级级石阶",
+    "read_text": "READ_UNDERWATER_STEPS",
+    "into_codex": "relic_codex",
+    "condition": {
+      "time": [
+        "退潮"
+      ]
+    }
+  },
+  "poi_wall_marks": {
+    "name": "墙上的划痕",
+    "icon": "🧱",
+    "kind": "可读物",
+    "map": "old_watchtower",
+    "subarea": "tower_water_room",
+    "hint": "墙上有一道道很浅的划痕",
+    "read_text": "READ_WALL_MARKS",
+    "into_codex": "relic_codex"
+  },
+  "poi_scavenger_note": {
+    "name": "拾荒人留的字条",
+    "icon": "📄",
+    "kind": "可读物",
+    "map": "belt_north",
+    "subarea": "bn_camp",
+    "hint": "压在石头下的一张字条",
+    "read_text": "READ_SCAVENGER_NOTE",
+    "into_codex": "relic_codex"
+  },
+  "poi_soaked_journal": {
+    "name": "泡水的游记",
+    "icon": "📖",
+    "kind": "可读物",
+    "map": "belt_east",
+    "subarea": "be_shed",
+    "hint": "半页还能读",
+    "read_text": "READ_SOAKED_JOURNAL",
+    "into_codex": "relic_codex"
+  },
+  "poi_unsent_letter": {
+    "name": "没寄出的信",
+    "icon": "✉️",
+    "kind": "可读物",
+    "map": "old_watchtower",
+    "subarea": "tower_empty_room",
+    "hint": "桌上摊着一封信",
+    "read_text": "READ_UNSENT_LETTER",
+    "into_codex": "relic_codex"
+  },
+  "poi_eleven_stones": {
+    "name": "十一块碑",
+    "icon": "🪦",
+    "kind": "可读物",
+    "map": "belt_north",
+    "subarea": "bn_bone",
+    "hint": "十一块碑，九块有名有姓",
+    "read_text": "READ_ELEVEN_STONES",
+    "into_codex": "relic_codex"
+  },
+  "poi_repeated_mark": {
+    "name": "重复七次的记号",
+    "icon": "✂️",
+    "kind": "可读物",
+    "map": "belt_east",
+    "subarea": "be_dogs",
+    "hint": "一个歪扭的符号，重复了七次",
+    "read_text": "READ_REPEATED_MARK",
+    "into_codex": "relic_codex"
+  },
+  "poi_church_inscription": {
+    "name": "教会刻的铭文",
+    "icon": "⛪",
+    "kind": "可读物",
+    "map": "windmill_town",
+    "subarea": "wt_chapel",
+    "hint": "后墙上的一方铭文",
+    "read_text": "READ_CHURCH_INSCRIPTION",
+    "into_codex": "relic_codex"
+  },
+  "poi_old_ledger": {
+    "name": "商会旧账簿",
+    "icon": "📚",
+    "kind": "可读物",
+    "map": "windmill_town",
+    "subarea": "wt_board",
+    "hint": "一本摊开的旧账簿",
+    "read_text": "READ_OLD_LEDGER",
+    "into_codex": "relic_codex",
+    "condition": {
+      "flag": "main06_done"
+    }
+  },
+  "poi_shrine_bonefield": {
+    "name": "骨田边的神龛",
+    "icon": "⛩️",
+    "kind": "触摸",
+    "map": "belt_north",
+    "subarea": "bn_bone",
+    "effect": {
+      "buff": "buff_shrine_blessing",
+      "duration": 900
+    }
+  },
+  "poi_campfire_north": {
+    "name": "北带的篝火",
+    "icon": "🔥",
+    "kind": "生息",
+    "map": "belt_north",
+    "subarea": "bn_camp",
+    "effect": {
+      "rest": true,
+      "talk": "talk_campfire_north"
+    }
+  },
+  "poi_campfire_east": {
+    "name": "东带的篝火",
+    "icon": "🔥",
+    "kind": "生息",
+    "map": "belt_east",
+    "subarea": "be_dogs",
+    "effect": {
+      "rest": true,
+      "talk": "talk_campfire_east"
+    }
+  },
+  "poi_campfire_west": {
+    "name": "西带的篝火",
+    "icon": "🔥",
+    "kind": "生息",
+    "map": "belt_west",
+    "subarea": "bw_shoal",
+    "effect": {
+      "rest": true,
+      "talk": "talk_campfire_west"
+    }
+  },
+  "poi_hidden_camp": {
+    "name": "营地角落的东西",
+    "icon": "📦",
+    "kind": "隐藏点",
+    "map": "belt_north",
+    "subarea": "bn_camp",
+    "effect": {
+      "loot": "dp_hidden_camp",
+      "need": "search"
+    }
+  },
+  "poi_hidden_birch": {
+    "name": "白桦林深处的记号",
+    "icon": "📍",
+    "kind": "隐藏点",
+    "map": "belt_east",
+    "subarea": "be_dogs",
+    "effect": {
+      "loot": "dp_hidden_birch",
+      "need": "search"
+    },
+    "condition": {
+      "flag": "read_repeated_mark"
+    }
+  },
+  "poi_hidden_shoal": {
+    "name": "退潮后的石缝",
+    "icon": "🐚",
+    "kind": "隐藏点",
+    "map": "belt_west",
+    "subarea": "bw_shoal",
+    "effect": {
+      "loot": "dp_hidden_shoal",
+      "need": "search"
+    },
+    "condition": {
+      "time": [
+        "退潮"
+      ]
+    }
+  }
+}

@@ -1,1 +1,74 @@
-{}
+{
+  "READ_STONE_SCRIPTS": {
+    "value": "三种笔迹。第一种刻得最深，边角磨圆了；第二种浅，像随手划的；第三种是新的 —— 刻痕还很利。",
+    "params": [],
+    "category": "可读物",
+    "desc": "镇口的石头 · 主 1"
+  },
+  "READ_HALF_BURIED_STELE": {
+    "value": "碑大半埋在土里。露出来的那截有字，字迹被凿掉了 —— 凿得很仔细，一个字都没剩。",
+    "params": [],
+    "category": "可读物",
+    "desc": "北带 · 半埋的碑"
+  },
+  "READ_NAMED_BIRCH": {
+    "value": "树皮上刻满了名字。最下面那个刻痕还新 —— 树脂没干。",
+    "params": [],
+    "category": "可读物",
+    "desc": "东带 · 刻着名字的树"
+  },
+  "READ_UNDERWATER_STEPS": {
+    "value": "退潮的时候能看见。一级一级往下，通到水里。石阶上长满了东西，但台阶本身很整齐 —— 是有人修的。",
+    "params": [],
+    "category": "可读物",
+    "desc": "西带 · 水下的石阶"
+  },
+  "READ_WALL_MARKS": {
+    "value": "一道一道，刻得很浅。前二十道之间距离差不多，后面越来越近。数到第四十七道，停了。",
+    "params": [],
+    "category": "可读物",
+    "desc": "旧哨塔二层 · 水房"
+  },
+  "READ_SCAVENGER_NOTE": {
+    "value": "字写得很潦草，越写越急：「给后来的人 —— 我把东西留在里面了。别学我。」最后一行被划掉了。",
+    "params": [],
+    "category": "可读物",
+    "desc": "北带 · 拾荒营地"
+  },
+  "READ_SOAKED_JOURNAL": {
+    "value": "只剩半页能读。上面写着北边有一条「会走的裂缝」，作者说自己见过三次，每次都离村子更近。",
+    "params": [],
+    "category": "可读物",
+    "desc": "东带 · 伐木棚"
+  },
+  "READ_UNSENT_LETTER": {
+    "value": "纸是新的，字是旧的写法。收信人的名字被划掉了，划得很用力。",
+    "params": [],
+    "category": "可读物",
+    "desc": "旧哨塔三层 · 空营房"
+  },
+  "READ_ELEVEN_STONES": {
+    "value": "十一块。九块有名有姓，两块是空的。名字刻得很深，像怕被磨掉。",
+    "params": [],
+    "category": "可读物",
+    "desc": "北带 · 骨田"
+  },
+  "READ_REPEATED_MARK": {
+    "value": "一个歪歪扭扭的符号，重复刻了七次，位置一次比一次靠里。",
+    "params": [],
+    "category": "可读物",
+    "desc": "东带 · 野狗窝"
+  },
+  "READ_CHURCH_INSCRIPTION": {
+    "value": "官面上的说法：此地为「北境安抚使驻地」，立于立约后九百零二年。字很工整。",
+    "params": [],
+    "category": "可读物",
+    "desc": "风车镇 · 白烛堂"
+  },
+  "READ_OLD_LEDGER": {
+    "value": "最后一页记着一笔进货：「旧铁廿斤 · 来源不明」。日期是三十七年前。",
+    "params": [],
+    "category": "可读物",
+    "desc": "风车镇 · 挂板墙"
+  }
+}

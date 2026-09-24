@@ -61,5 +61,14 @@
     "icon": "🗺️",
     "owner": "package",
     "tier": "portable"
+  },
+  "pois": {
+    "label": "地图元素",
+    "kind": "data",
+    "schema": "schemas/pois.schema.json",
+    "primary": "poi",
+    "icon": "🔎",
+    "owner": "package",
+    "tier": "portable"
   }
 }

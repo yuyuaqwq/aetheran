@@ -139,5 +139,76 @@
         "role": "野外"
       }
     ]
+  },
+  "old_watchtower": {
+    "name": "旧哨塔",
+    "roles": {
+      "entry": "塔门",
+      "through": "塔内",
+      "exit": "塔顶"
+    },
+    "topology": "chain",
+    "nodes": [
+      {
+        "id": "tower_gate",
+        "name": "塔门",
+        "role": "塔门"
+      },
+      {
+        "id": "tower_hall",
+        "name": "门厅",
+        "role": "塔内"
+      },
+      {
+        "id": "tower_armory",
+        "name": "武器架室",
+        "role": "塔内"
+      },
+      {
+        "id": "tower_stair1",
+        "name": "楼梯前",
+        "role": "塔内"
+      },
+      {
+        "id": "tower_outpost_out",
+        "name": "哨所（外）",
+        "role": "塔内"
+      },
+      {
+        "id": "tower_outpost_in",
+        "name": "哨所（内）",
+        "role": "塔内"
+      },
+      {
+        "id": "tower_water_room",
+        "name": "水房",
+        "role": "塔内"
+      },
+      {
+        "id": "tower_storage",
+        "name": "储藏室",
+        "role": "塔内"
+      },
+      {
+        "id": "tower_empty_room",
+        "name": "空营房",
+        "role": "塔内"
+      },
+      {
+        "id": "tower_horn_room",
+        "name": "号角室",
+        "role": "塔内"
+      },
+      {
+        "id": "tower_stair2",
+        "name": "阶梯",
+        "role": "塔内"
+      },
+      {
+        "id": "tower_top",
+        "name": "塔顶",
+        "role": "塔顶"
+      }
+    ]
   }
 }
