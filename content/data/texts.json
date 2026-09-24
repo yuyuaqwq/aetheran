@@ -2071,5 +2071,41 @@
     "params": [],
     "category": "系统",
     "desc": "拾取 · 地上没东西"
+  },
+  "SYS_PANEL_PROF_BASE": {
+    "value": "职业基础",
+    "params": [],
+    "category": "系统",
+    "desc": "面板 · prof_base 层（职业基础值）"
+  },
+  "SYS_PANEL_GROWTH": {
+    "value": "等级成长",
+    "params": [],
+    "category": "系统",
+    "desc": "面板 · growth 层（成长 ×（级-1））"
+  },
+  "SYS_PANEL_ATTR": {
+    "value": "主属性加点",
+    "params": [],
+    "category": "系统",
+    "desc": "面板 · attr 层（主属性换算）"
+  },
+  "SYS_PANEL_GEAR": {
+    "value": "装备",
+    "params": [],
+    "category": "系统",
+    "desc": "面板 · gear 层（装备词条）"
+  },
+  "SYS_PANEL_CRIT_RATE": {
+    "value": "暴击率（F3 换算）",
+    "params": [],
+    "category": "系统",
+    "desc": "面板 · crit_rate 层（数值 → 率）"
+  },
+  "SYS_PANEL_FOOD": {
+    "value": "食物增益",
+    "params": [],
+    "category": "系统",
+    "desc": "面板 · food 层（最后那层 mul）"
   }
 }

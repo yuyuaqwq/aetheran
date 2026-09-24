@@ -9,6 +9,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from .cmds_ast import T     # 文案真源只有 texts 域（B3-6b-2d）：分段名只传槽位
+
 _DATA = Path(__file__).resolve().parent / "data"
 _CLASSES = None
 
@@ -99,18 +101,18 @@ def build_actor(cls_id: str, level: int, alloc: dict | None = None,
         "version": 1,
         "base": {"mode": "value", "value": {k: 0 for k in keys + ["crit"]}},
         "layers": [
-            {"id": "prof_base", "src": "职业基础", "group": "base", "mode": "add",
+            {"id": "prof_base", "src": T("SYS_PANEL_PROF_BASE"), "group": "base", "mode": "add",
              "keys": keys, "values": {k: base_e.get(k, 0) for k in keys}},
-            {"id": "growth", "src": "等级成长", "group": "base", "mode": "add",
+            {"id": "growth", "src": T("SYS_PANEL_GROWTH"), "group": "base", "mode": "add",
              "keys": keys, "values": {k: grow_e.get(k, 0) for k in keys}},
-            {"id": "attr", "src": "主属性加点", "group": "attr", "mode": "add",
+            {"id": "attr", "src": T("SYS_PANEL_ATTR"), "group": "attr", "mode": "add",
              "keys": keys, "values": {k: attr_e.get(k, 0) for k in keys}},
-            {"id": "gear", "src": "装备", "group": "gear", "mode": "add",
+            {"id": "gear", "src": T("SYS_PANEL_GEAR"), "group": "gear", "mode": "add",
              "keys": keys, "values": {k: gear_e.get(k, 0) for k in keys}},
             # crit 是非线性率（F3），三层相加无意义 ⇒ 内容侧算好后用 set 层一次性写入
-            {"id": "crit_rate", "src": "暴击率（F3 换算）", "group": "rate", "mode": "set",
+            {"id": "crit_rate", "src": T("SYS_PANEL_CRIT_RATE"), "group": "rate", "mode": "set",
              "keys": ["crit"], "values": {"crit": crit_rate}},
-        ] + ([{"id": "food", "src": "食物增益", "group": "buff", "mode": "mul",
+        ] + ([{"id": "food", "src": T("SYS_PANEL_FOOD"), "group": "buff", "mode": "mul",
                "keys": sorted(buffs), "values": dict(buffs)}] if buffs else []),
         "emit": {"int_keys": [k for k in INT_KEYS if k in keys], "round": 4},
     }

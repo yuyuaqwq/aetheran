@@ -10,6 +10,7 @@
   ⑥ 真跑一遍实现体（含公会 / 悬赏 / 接 / 交 / 放弃 / 我的委托 六个）：产出的行里不许出现 [MISSING TEXT 标记
   ⑦ quests 域按 chain（ASCII）判别主/支线 —— 数据里挑不出 main / side 就红（B3-6b-2b）
   ⑧ gathering 域按 verb（ASCII）判别采集点 —— 挑不出 herb / dig / fish / search 就红（B3-6b-2c）
+  ⑨ 面板分层名（B3-6b-2d）真造一个 actor 逐层核 `src` —— 必须正好是 texts 里那 6 条的字
 
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_copy.py [--inventory]
 """
@@ -36,7 +37,7 @@ from saintess_engine.package import load_stack                       # noqa: E40
 MISSING = "[MISSING TEXT"
 
 #: ★ 已收口（必须 0）—— 收口一个就往这里搬一个
-SEALED = ("cmds_ast.py", "cmds_talk.py", "cmds_quest.py", "cmds_gather.py")
+SEALED = ("cmds_ast.py", "cmds_talk.py", "cmds_quest.py", "cmds_gather.py", "panel_build.py")
 
 #: 快照上限（B3-6b 收口时的实测值；**只降不升**，不在表里的文件必须 0）
 BUDGET = {                      # B3-6b 收口时实测（124 条）；下一批往下压，只能降
@@ -44,7 +45,6 @@ BUDGET = {                      # B3-6b 收口时实测（124 条）；下一批
     "loot.py": 12,              # 掉落 / 未鉴定 / 鉴定那几句话
     "cmds_recipe.py": 9,        # 配方 / 烹饪 / 强化
     "codex.py": 6,              # 谱的分类名
-    "panel_build.py": 6,        # 面板的分段名
     "combat.py": 5,             # 战斗里的兜底名
     "apply.py": 2,              # 技能标签（挥击 / 主动）
     "skills_lookup.py": 2,      # 技能标签
@@ -189,6 +189,18 @@ def main():
     miss_verb = sorted({"herb", "dig", "fish", "search"} - have_verb)
     chk("★ 代码按 verb 判别采集点：数据里真有 herb / dig / fish / search（%d 个点）" % len(g),
         not miss_verb, "缺：%s" % miss_verb)
+
+    # ⑨ 面板分层名（B3-6b-2d）：真造一个 actor（骑士 10 级 + 食物增益 ⇒ 六层全在），逐层核 src
+    from content import panel_build as PBL                                # noqa: E402
+
+    pal = sorted(k for k in tx if k.startswith("SYS_PANEL_"))
+    want_src = {tx[k]["value"] for k in pal}
+    pact = PBL.build_actor("cls_knight", 10, {"STR": 18, "VIT": 13, "WIL": 4}, buffs={"atk": 1.1})
+    psrc = [L.get("src") for L in ((PBL.stacks().get(pact["panel_stack"]) or {}).get("layers") or [])]
+    chk("★ 面板真跑：%d 层的分段名逐层取自 texts（%s）" % (len(psrc), " / ".join(str(s) for s in psrc)),
+        len(pal) == 6 and len(psrc) == 6 and set(psrc) == want_src
+        and not any(MISSING in str(s) for s in psrc),
+        "槽位 %d · 层 %d · 对不上 %s" % (len(pal), len(psrc), sorted(set(psrc) ^ want_src)))
 
     # ④ 代码引用的键都在 texts 里
     miss = sorted(k for k in ref if k not in tx)
