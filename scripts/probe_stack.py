@@ -74,8 +74,8 @@ print("⑤ 端到端：ext_combat.calc_damage 走声明链")
 from ext_combat.battle.formulas import calc_damage                     # noqa: E402
 
 declared = calc_damage(100, 50, level=20, variance=0.0)
-print("   calc_damage(100, 50, level=20, variance=0) = %s（期望 25：def_mit 截到 0.75）" % declared)
-ok &= declared == 25
+print("   calc_damage(100, 50, level=20, variance=0) = %s（期望 85：def_mit = 50/350 = 0.142857）" % declared)
+ok &= declared == 85
 config.set_hook("formula_bindings_fn", None)
 legacy = calc_damage(100, 50, variance=0.0)
 print("   摘掉绑定表 → %s（旧算法 atk²/(atk+def) = 66）⇒ 上面那条真的走了声明" % legacy)

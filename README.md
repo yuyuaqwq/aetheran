@@ -22,7 +22,7 @@ GWEN_ENGINE=C:/Users/yuyu/framework-engine "$PY" scripts/probe_stack.py
 ```
 
 期望输出：11 层装入（ext_combat → … → ext_achieve → aetheran）· `install()` 通过 ·
-三域可读 · `binding('damage') = damage_full` · `calc_damage = 25`（走声明）对 `66`（摘掉绑定表）·
+三域可读 · `binding('damage') = damage_full` · `calc_damage = 85`（走声明）对 `66`（摘掉绑定表）·
 `time_model = 70.710678`。
 
 ## 三条落地纪律（踩过才写的）

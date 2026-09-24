@@ -51,7 +51,7 @@
         "ref": "const.K_def"
       }
     },
-    "expr": "K / (K + def_eff)",
+    "expr": "def_eff / (def_eff + K)",
     "clamp": [
       0.0,
       0.75
@@ -314,7 +314,7 @@
         "floor": 0
       }
     },
-    "expr": "K / (K + block)",
+    "expr": "block / (block + K)",
     "clamp": [
       0.0,
       0.6
