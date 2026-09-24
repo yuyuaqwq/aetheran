@@ -2,7 +2,7 @@
   "id": "aetheran",
   "kind": "game",
   "name": "阿斯特兰",
-  "desc": "《阿斯特兰》内容侧数据包 —— 第四刀 + races 域（六族天赋）",
+  "desc": "《阿斯特兰》内容侧数据包 —— 第一阶能跑版（89 指令声明 + 18 处理器 + 存档半边）",
   "engine": ">=0.1",
   "entry": "content/apply.py",
   "domains": [
@@ -33,5 +33,9 @@
     "ext_achieve"
   ],
   "version": "0.1.0",
-  "author": "鱼鱼"
+  "author": "鱼鱼",
+  "bind": {
+    "module": "content/facade.py",
+    "func": "bind_host"
+  }
 }
