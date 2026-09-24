@@ -7,7 +7,8 @@
   ③ 其余文件 ≤ 快照上限（BUDGET，只降不升）；不在表里的（含新加的文件）默认必须 0
   ④ 代码里 T("KEY") 引用的键都在 texts 里（写错键名 = 运行时静默缺文案，这里拦）
   ⑤ 口径文档里每条槽位都在 texts 里、且被代码引用（防「写了等于没写」）
-  ⑥ 真跑一遍实现体：产出的行里不许出现 [MISSING TEXT 标记
+  ⑥ 真跑一遍实现体（含公会 / 悬赏 / 接 / 交 / 放弃 / 我的委托 六个）：产出的行里不许出现 [MISSING TEXT 标记
+  ⑦ quests 域按 chain（ASCII）判别主/支线 —— 数据里挑不出 main / side 就红（B3-6b-2b）
 
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_copy.py [--inventory]
 """
@@ -34,11 +35,10 @@ from saintess_engine.package import load_stack                       # noqa: E40
 MISSING = "[MISSING TEXT"
 
 #: ★ 已收口（必须 0）—— 收口一个就往这里搬一个
-SEALED = ("cmds_ast.py", "cmds_talk.py")
+SEALED = ("cmds_ast.py", "cmds_talk.py", "cmds_quest.py")
 
 #: 快照上限（B3-6b 收口时的实测值；**只降不升**，不在表里的文件必须 0）
 BUDGET = {                      # B3-6b 收口时实测（124 条）；下一批往下压，只能降
-    "cmds_quest.py": 38,        # 公会 / 挂板墙 / 接交活 / 我的委托
     "cmds_gather.py": 17,       # 采集四动词（含触发词别名 —— 那属 commands 域）
     "cmds_battle.py": 16,       # 战斗结算与日志
     "loot.py": 12,              # 掉落 / 未鉴定 / 鉴定那几句话
@@ -129,6 +129,13 @@ def _node_names(st, loc):
     return [n.get("name") for n in (m.get("nodes") or [])]
 
 
+def _main_ids():
+    """主线那几条（按 chain=main 挑 —— 与 cmds_quest 同一个判别符）。"""
+    from content import cmds_ast as CA
+    qs = CA._data("quests")
+    return [k for k, v in qs.items() if v.get("chain") == "main"]
+
+
 def _player(**kw):
     from content import cmds_ast as CA
     p = dict(CA.DEFAULT_PLAYER)
@@ -169,6 +176,13 @@ def main():
     st.install()
     tx = st.domain("texts") or {}
 
+    # ⑦ 主/支线判别符（B3-6b-2b：中文枚举 kind -> ASCII chain）
+    qs = st.domain("quests") or {}
+    have_chain = {v.get("chain") for v in qs.values()}
+    miss_chain = sorted({"main", "side"} - have_chain)
+    chk("★ 代码按 chain 判别主线/支线：数据里真有 main / side（%d 条委托）" % len(qs),
+        not miss_chain, "缺：%s" % miss_chain)
+
     # ④ 代码引用的键都在 texts 里
     miss = sorted(k for k in ref if k not in tx)
     chk("★ 代码里 T(\"…\") 引用的键都在 texts 里（%d 个键）" % len(ref), not miss, "%s" % miss[:6])
@@ -187,6 +201,7 @@ def main():
     # ⑥ 真跑实现体：产出的行里不许有取不到文案的标记
     from content import cmds_ast as CA                                    # noqa: E402
     from content import cmds_talk as CT                                   # noqa: E402
+    from content import cmds_quest as CQ                                  # noqa: E402
 
     town = _node_names(st, "windmill_town")
     belt = _node_names(st, "belt_north")
@@ -225,6 +240,27 @@ def main():
         ("搭话(这儿没人)", CT.talk, "搭话", {"loc": "belt_north", "node": "bn_bone"}),
         ("问路(镇上)", CT.ask_way, "", {"loc": "windmill_town", "node": "wt_gate_n"}),
         ("问路(野外)", CT.ask_way, "", {"loc": "belt_north", "node": "bn_bone"}),
+        # 公会与委托（B3-6b-2b：34 个槽位逐个真跑一遍 —— 不许出现取不到文案）
+        ("公会", CQ.guild, "", {}),
+        ("悬赏(下一条)", CQ.board, "", {"level": 3}),
+        ("悬赏(已接)", CQ.board, "", {"level": 3, "flags": {"quests_active": ["q_main_01"]}}),
+        ("悬赏(主线走完)", CQ.board, "", {"flags": {"quests_done": _main_ids()}}),
+        ("接(没给编号)", CQ.quest_accept, "接", {"level": 5}),
+        ("接(接下了)", CQ.quest_accept, "接 1", {"level": 5}),
+        ("接(等级不够)", CQ.quest_accept, "接 12", {"level": 1}),
+        ("接(没这条)", CQ.quest_accept, "接 99", {"level": 5}),
+        ("接(已经接过)", CQ.quest_accept, "接 1", {"level": 5, "flags": {"quests_active": ["q_main_01"]}}),
+        ("交(手上没有)", CQ.quest_deliver, "交 1", {"level": 5}),
+        ("交(不在手上)", CQ.quest_deliver, "交 99", {"level": 5, "flags": {"quests_active": ["q_main_01"]}}),
+        ("交(还没做完)", CQ.quest_deliver, "交 12", {"level": 5, "flags": {"quests_active": ["q_main_12"]}}),
+        ("交(交掉了·升级)", CQ.quest_deliver, "交 1", {"level": 1, "exp": 39,
+                                                        "flags": {"quests_active": ["q_main_01"]}}),
+        ("放弃(手上没活)", CQ.quest_abandon, "放弃", {}),
+        ("放弃(没这条)", CQ.quest_abandon, "放弃 不存在这条", {"flags": {"quests_active": ["q_main_01"]}}),
+        ("放弃(放弃了)", CQ.quest_abandon, "放弃", {"flags": {"quests_active": ["q_main_01"]}}),
+        ("我的委托(空的)", CQ.quest_mine, "", {}),
+        ("我的委托(有活)", CQ.quest_mine, "", {"flags": {"quests_active": ["q_main_01"],
+                                                          "quests_done": ["q_main_02"]}}),
     ]
     bad, empty, sample = [], [], []
     for label, fn, text, over_ in cases:

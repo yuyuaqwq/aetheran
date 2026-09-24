@@ -1753,5 +1753,245 @@
     "params": [],
     "category": "系统",
     "desc": "问路 · 没有别的去处"
+  },
+  "SYS_GUILD_HEAD": {
+    "value": "【公会】门面比镇上任何一家都像样：一块木牌，牌上画着一把断了的剑和一只手。",
+    "params": [],
+    "category": "系统",
+    "desc": "公会 · 抬头"
+  },
+  "SYS_GUILD_DESK": {
+    "value": "柜台在挂板墙那边。玛莎坐在后头。",
+    "params": [],
+    "category": "系统",
+    "desc": "公会 · 第二行"
+  },
+  "SYS_GUILD_HOW": {
+    "value": "「『悬赏』看板 · 『接 <编号>』接活 · 『我的委托』看进度 · 『交 <编号>』交活」",
+    "params": [],
+    "category": "系统",
+    "desc": "公会 · 尾注"
+  },
+  "SYS_BOARD_HEAD": {
+    "value": "【挂板墙】板上钉着一叠单子。最新的一张还有墨味。",
+    "params": [],
+    "category": "系统",
+    "desc": "悬赏 · 抬头"
+  },
+  "SYS_BOARD_NOMAIN": {
+    "value": "主线上没有新的了。板子最底下那一栏（黄纸）还是没人动过。",
+    "params": [],
+    "category": "系统",
+    "desc": "悬赏 · 主线走完"
+  },
+  "SYS_BOARD_ACTIVE": {
+    "value": "（进行中）",
+    "params": [],
+    "category": "系统",
+    "desc": "悬赏 · 已接标记"
+  },
+  "SYS_BOARD_MAIN_ROW": {
+    "value": "主线 {order} · {name}{mark}  等级 {level}+",
+    "params": [
+      "order",
+      "name",
+      "mark",
+      "level"
+    ],
+    "category": "系统",
+    "desc": "悬赏 · 下一条主线那一行"
+  },
+  "SYS_BOARD_TODO": {
+    "value": "要做什么：{objective}",
+    "params": [
+      "objective"
+    ],
+    "category": "系统",
+    "desc": "悬赏 · 那一条要做什么"
+  },
+  "SYS_BOARD_DELIVER": {
+    "value": "交付：『交 {order}』",
+    "params": [
+      "order"
+    ],
+    "category": "系统",
+    "desc": "悬赏 · 已接"
+  },
+  "SYS_BOARD_NEXT": {
+    "value": "接下来：『接 {order}』",
+    "params": [
+      "order"
+    ],
+    "category": "系统",
+    "desc": "悬赏 · 未接"
+  },
+  "SYS_BOARD_SIDE_HEAD": {
+    "value": "这人手上还有：",
+    "params": [],
+    "category": "系统",
+    "desc": "悬赏 · 这位手上的支线"
+  },
+  "SYS_BOARD_HOW": {
+    "value": "「『接 <编号>』接活 · 『我的委托』看进度」",
+    "params": [],
+    "category": "系统",
+    "desc": "悬赏 · 尾注"
+  },
+  "SYS_JOB_ASK": {
+    "value": "接哪一条？打『悬赏』看板上有什么。",
+    "params": [],
+    "category": "系统",
+    "desc": "接活 · 没给编号"
+  },
+  "SYS_JOB_NOSUCH": {
+    "value": "板上没有「{name}」这条。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "接活 · 名字对不上"
+  },
+  "SYS_JOB_ALREADY": {
+    "value": "这条你已经接了（或交过了）。",
+    "params": [],
+    "category": "系统",
+    "desc": "接活 · 重复接"
+  },
+  "SYS_JOB_LOWLEVEL": {
+    "value": "「{name}」要 {need} 级。你现在 {now} 级。",
+    "params": [
+      "name",
+      "need",
+      "now"
+    ],
+    "category": "系统",
+    "desc": "接活 · 等级不够"
+  },
+  "SYS_JOB_MARTHA": {
+    "value": "玛莎没抬头：「接不了就别接。」",
+    "params": [],
+    "category": "系统",
+    "desc": "接活 · 等级不够（她那一句）"
+  },
+  "SYS_JOB_TAKEN": {
+    "value": "接下：{name}",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "接活 · 接下了"
+  },
+  "SYS_JOB_TODO": {
+    "value": "要做什么：{objective}",
+    "params": [
+      "objective"
+    ],
+    "category": "系统",
+    "desc": "接活 · 那一条要做什么"
+  },
+  "SYS_JOB_INSIGHT": {
+    "value": "（这件事背后：{insight}）",
+    "params": [
+      "insight"
+    ],
+    "category": "系统",
+    "desc": "接活 · 背后的事"
+  },
+  "SYS_JOB_GO": {
+    "value": "接活就该出门了 —— 『提示』会告诉你往哪走。",
+    "params": [],
+    "category": "系统",
+    "desc": "接活 · 尾注"
+  },
+  "SYS_JOB_NONE": {
+    "value": "你手上没有活。",
+    "params": [],
+    "category": "系统",
+    "desc": "交活 · 手上空的"
+  },
+  "SYS_JOB_NOT_MINE": {
+    "value": "你手上没这条。进行中的有：",
+    "params": [],
+    "category": "系统",
+    "desc": "交活 · 不在手上"
+  },
+  "SYS_JOB_NOT_DONE": {
+    "value": "还没做完。",
+    "params": [],
+    "category": "系统",
+    "desc": "交活 · 条件没满足"
+  },
+  "SYS_JOB_DELIVERED": {
+    "value": "交了：{name}",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "交活 · 交掉了"
+  },
+  "SYS_JOB_REWARD": {
+    "value": "经验 +{exp} ｜ 铜板 +{gold}",
+    "params": [
+      "exp",
+      "gold"
+    ],
+    "category": "系统",
+    "desc": "交活 · 奖励那一行"
+  },
+  "SYS_JOB_LEVELUP": {
+    "value": "★ 你升到 {level} 级了。",
+    "params": [
+      "level"
+    ],
+    "category": "系统",
+    "desc": "交活 · 升级"
+  },
+  "SYS_JOB_NO_ACTIVE": {
+    "value": "你没接活。",
+    "params": [],
+    "category": "系统",
+    "desc": "放弃 · 手上空的"
+  },
+  "SYS_JOB_NO_ACTIVE_ONE": {
+    "value": "没有这一条。",
+    "params": [],
+    "category": "系统",
+    "desc": "放弃 · 手上没这条"
+  },
+  "SYS_JOB_ABANDONED": {
+    "value": "🗑️ 放弃了：{name}",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "放弃 · 放弃了"
+  },
+  "SYS_MINE_NONE": {
+    "value": "手上没有活。打『悬赏』看看板上有什么。",
+    "params": [],
+    "category": "系统",
+    "desc": "我的委托 · 手上空的"
+  },
+  "SYS_MINE_HEAD": {
+    "value": "【进行中】{n} 条",
+    "params": [
+      "n"
+    ],
+    "category": "系统",
+    "desc": "我的委托 · 进行中表头"
+  },
+  "SYS_MINE_DONE": {
+    "value": "【已交】{n} 条",
+    "params": [
+      "n"
+    ],
+    "category": "系统",
+    "desc": "我的委托 · 已交表头"
+  },
+  "SYS_MINE_RANK": {
+    "value": "【评级】见习（交 5 条升铜 · 15 条 + 打掉 1 个头目升银）",
+    "params": [],
+    "category": "系统",
+    "desc": "我的委托 · 评级"
   }
 }
