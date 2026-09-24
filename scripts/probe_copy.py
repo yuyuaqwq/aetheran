@@ -235,6 +235,8 @@ def main():
         ("地图", CA.map_view, "", {"loc": "windmill_town", "node": "wt_gate_n"}),
         ("聆听", CA.listen, "", {"loc": "windmill_town", "node": "wt_gate_n"}),
         ("状态", CA.status, "", {"loc": "windmill_town", "node": "wt_gate_n", "level": 3}),
+        ("状态(族与职业都定过)", CA.status, "",
+         {"loc": "windmill_town", "node": "wt_gate_n", "level": 3, "cls": "cls_knight", "race": "elf"}),
         ("出身", CA.origin, "", {"race": "elf"}),
         ("背包(空)", CA.bag, "", {"bag": {}}),
         ("背包(有东西)", CA.bag, "", {"bag": {"i_material_iron_chip": 2}}),
@@ -294,8 +296,17 @@ def main():
         ("拾取", CG.pick_up, "", {}),
     ]
     bad, empty, sample = [], [], []
+    leaked = []
+    _KEYS = [k for d in ("items", "monsters", "pois", "classes", "races", "quests",
+                         "gathering", "drop_pools", "recipes", "npcs", "skills", "eggs",
+                         "titles", "dialogues")
+             for k in (st.domain(d) or {})]
     for label, fn, text, over_ in cases:
         out = _drive(fn, _player(**over_), text)
+        for line in out:                       # ★ B3-9：呈现口不许漏机器键（B3-7 同族）
+            hit = [k for k in _KEYS if k in line]
+            if hit:
+                leaked.append((label, hit[:2], line[:40]))
         if not out:
             empty.append(label)
         if any(MISSING in ln for ln in out):
@@ -304,6 +315,8 @@ def main():
             sample.append("%s -> %s" % (label, out[0][:26] if out else "(空)"))
     chk("★ 真跑 %d 个实现体：每一个都出话（没有空回）" % len(cases), not empty, "%s" % empty)
     chk("★ 一个取不到文案的都没有（不出现 %s）" % MISSING, not bad, "%s" % bad)
+    chk("★ 呈现口不漏机器键（%d 个域键 · %d 条用例逐行扫）" % (len(_KEYS), len(cases)), not leaked,
+        "%s" % leaked[:4])
     print("  · 打样：%s" % " ｜ ".join(sample))
 
     print("")

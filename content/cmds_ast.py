@@ -106,6 +106,31 @@ def _p(player):
     return p
 
 
+def _race_rec(race):
+    """档上的族 id（短名：`elf`）→ races 域里那条记录（认不出给空表）。"""
+    r = str(race or "").strip().lower()
+    if not r:
+        return {}
+    d = _data("races")
+    return d.get("race_" + r) or d.get(r) or {}
+
+
+def _race_label(race):
+    """呈现口用：族 id → 中文名（`elf` → 精灵）；没定给 SYS_UNSET，认不出就原样回显。"""
+    if not str(race or "").strip():
+        return T("SYS_UNSET")
+    return _race_rec(race).get("name") or str(race)
+
+
+def _cls_label(cls):
+    """呈现口用：职业 id → 中文名（`cls_knight` → 骑士）；没定给 SYS_UNSET。"""
+    c = str(cls or "").strip()
+    if not c:
+        return T("SYS_UNSET")
+    d = _data("classes")
+    return (d.get(c) or d.get("cls_" + c.lower()) or {}).get("name") or c
+
+
 def _npcs_here(loc, node, st=None):
     """这个节点此刻的活人 —— ★ 出场条件（时辰/天气）现看。
 
@@ -391,8 +416,8 @@ async def go_to(env, sink, uid, player):
 async def status(env, sink, uid, player):
     p = _p(player)
     nm = name_with_title(p)                     # ★ B3-2：称号跟着名字走进面板
-    yield T("SYS_STATUS_HEAD", who=nm, race=p.get("race") or T("SYS_UNSET"),
-            cls=p.get("cls") or T("SYS_UNSET"), level=p.get("level"))
+    yield T("SYS_STATUS_HEAD", who=nm, race=_race_label(p.get("race")),
+            cls=_cls_label(p.get("cls")), level=p.get("level"))
     yield T("SYS_STATUS_VITALS", hp=p.get("hp"), hp_max=p.get("hp_max"),
             mo=p.get("mo"), mo_max=p.get("mo_max"), gold=p.get("gold"))
     yield T("SYS_STATUS_EXP", exp=p.get("exp"),
@@ -404,8 +429,8 @@ async def origin(env, sink, uid, player):
     if not p.get("race"):
         yield T("SYS_ORIGIN_NONE")
         return
-    rs = _data("races").get("race_" + (p.get("race") or "").lower()) or {}
-    yield T("SYS_ORIGIN_WHO", name=rs.get("name", p.get("race")))
+    rs = _race_rec(p.get("race"))
+    yield T("SYS_ORIGIN_WHO", name=rs.get("name") or _race_label(p.get("race")))
     yield T("SYS_ORIGIN_WHY", why=rs.get("why") or T("SYS_ORIGIN_WHY_TODO"))
 
 
