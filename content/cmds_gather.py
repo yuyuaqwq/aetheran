@@ -92,9 +92,8 @@ async def _do_gather(env, sink, uid, player, verb: str, word: str):
     yield "【%s】%s" % (pt["name"], pt.get("desc") or "")
     if pt.get("time"):
         yield T("SYS_TIME_ONLY", when=pt["time"])
-    it = LT.items()
     for d in got:
-        rec = it.get(d["id"]) or LT.pools().get(d["id"]) or {}
+        rec = LT.rec_of(d["id"])
         yield T("SYS_GATHER_GET", icon=rec.get("icon", "·"), name=rec.get("name", d["id"]),
                 n=d.get("n", 1))
         if rec.get("hint"):

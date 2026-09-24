@@ -402,9 +402,10 @@ async def bag(env, sink, uid, player):
         yield T("SYS_BAG_EMPTY")
         return
     yield T("SYS_BAG_HEAD", n=len(items))
+    from . import loot as LT                      # 本地 import：避免包装载期的环
     for k, v in list(items.items())[:20]:
-        it = _data("items").get(k) or {}
-        yield "· %s %s ×%s" % (it.get("icon", ""), it.get("name", k), v)
+        rec = LT.rec_of(k)                        # ★ 未鉴定的 marker：名字与图标写在池上
+        yield "· %s %s ×%s" % (rec.get("icon", ""), rec.get("name", k), v)
     if len(items) > 20:
         yield T("SYS_BAG_MORE", n=len(items) - 20)
 

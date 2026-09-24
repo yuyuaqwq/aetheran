@@ -35,6 +35,16 @@ def items() -> dict:
 K_MATERIAL = "材料"          # 物品 kind 的兜底（条目没写、物品表也没有时）
 
 
+def rec_of(oid: str) -> dict:
+    """一件东西的显示记录 —— **唯一一口**：物品表 → 池表（未鉴定的 marker 挂在池上）。
+
+    为什么要有它：`unid_*` 不在物品表里，name / icon / hint 只写在 `drop_pools` 的池上。
+    呈现口（背包那几行 / 「得到」那一行 / 进谱归属）都走这里 ——
+    别各自写一遍 items-or-pools（B3-3 前修补：背包原先只查物品表，把裸 id 显示给玩家）。
+    """
+    return items().get(oid) or pools().get(oid) or {}
+
+
 def kind_of(oid: str, kind: str | None = None) -> str:
     """条目的 kind 归一 —— **唯一的一口**：条目写的 → 物品表的 → 未鉴定池自己写的 → 兜底。
 

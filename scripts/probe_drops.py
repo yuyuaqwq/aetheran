@@ -5,6 +5,7 @@
 """
 from __future__ import annotations
 
+import io
 import os
 import random
 import sys
@@ -92,6 +93,40 @@ first = LT.add_to_bag(p, [{"id": "i_material_iron_chip", "n": 2}])
 second = LT.add_to_bag(p, [{"id": "i_material_iron_chip", "n": 1}])
 (ok if p["bag"]["i_material_iron_chip"] == 3 and first and not second
  else bad)("重复掉落累计进背包、图鉴只记第一次（%s）" % p["bag"])
+
+# ⑩ ★ 背包呈现口（真调 handler）：未鉴定的 marker 显示**池上的名字**，不是裸 id
+import asyncio                                                          # noqa: E402
+sys.path.insert(0, REPO)
+from content import cmds_ast as CA                                      # noqa: E402
+
+_bag_out = []
+
+
+async def _go_bag():
+    p10 = dict(CA.DEFAULT_PLAYER, bag={"unid_rare": 1, "i_material_iron_chip": 2})
+    async for ln in CA.bag(None, None, "u_probe", p10):
+        _bag_out.append(str(ln))
+
+
+asyncio.run(_go_bag())
+_joined = "\n".join(_bag_out)
+_want_pool = (DP.get("unid_rare") or {}).get("name")
+_want_item = (IT.get("i_material_iron_chip") or {}).get("name")
+(ok if _want_pool and _want_pool in _joined and _want_item in _joined and "unid_" not in _joined
+ else bad)("★ 背包真跑：未鉴定显示池上的名字「%s」、不裸 id（%s）" % (_want_pool, _bag_out))
+
+# ⑪ ★ rec_of 是唯一一口（物品表 → 池表）：背包里可能出现的每条 id 都取得到名字
+_bagable = list(IT) + [k for k, v in DP.items() if v.get("kind") == "未鉴定"]
+_miss = [k for k in _bagable if not (LT.rec_of(k) or {}).get("name")]
+(ok if not _miss else bad)("★ rec_of 覆盖能进背包的每一条（物品 %d + 未鉴定 %d 条 · 缺名字 %s）"
+                           % (len(IT), len(_bagable) - len(IT), _miss or "无"))
+(ok if LT.rec_of("i_nope_nothing_at_all") == {} else bad)("rec_of 对不认识的 id 回空表（不编一个）")
+
+# ⑫ ★ 「唯一一口」防回退：四个呈现口都走 loot.rec_of（别再各写一遍 items-or-pools）
+_view = ("cmds_ast.py", "cmds_gather.py", "cmds_battle.py", "codex.py")
+_no = sorted(n for n in _view
+             if "rec_of(" not in io.open(os.path.join(REPO, "content", n), encoding="utf-8").read())
+(ok if not _no else bad)("★ 呈现口都走 loot.rec_of（没走的：%s）" % (_no or "无"))
 
 print()
 print("结果：%s" % ("全绿 ✓" if not fails else "有红 ✗"))

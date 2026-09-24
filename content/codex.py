@@ -137,7 +137,7 @@ def mark_here(p: dict) -> None:
 def note_item(p: dict, iid: str) -> str | None:
     """一件东西到手 → 归谱（★ 只记第一次）。返回归到哪本（没归就不回）。"""
     from . import loot as LT                       # 本地 import：避免包装载期的环
-    rec = LT.items().get(iid) or LT.pools().get(iid) or {}
+    rec = LT.rec_of(iid)
     bk = KIND_BOOK.get(rec.get("kind")) or PICK_BOOK.get(rec.get("kind"))
     if not bk:
         return None

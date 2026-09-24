@@ -63,10 +63,10 @@ async def attack(env, sink, uid, player):
         _save(env)
         yield "铜板 +%d（现在 %d）｜ 生命 %d" % (gold, p["gold"], hp_after)
         if drops:
-            it = LT.items()
             for d in drops:
-                nm = it.get(d["id"], {}).get("name", d["id"])
-                ic = it.get(d["id"], {}).get("icon", "·")
+                rec = LT.rec_of(d["id"])     # ★ 未鉴定的 marker 名字在池上（唯一一口）
+                nm = rec.get("name", d["id"])
+                ic = rec.get("icon", "·")
                 yield "拾取：%s %s ×%s" % (ic, nm, d.get("n", 1))
                 if d.get("story"):
                     yield "  （%s）" % d["story"]
