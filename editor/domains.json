@@ -25,5 +25,14 @@
     "icon": "🧾",
     "owner": "package",
     "tier": "portable"
+  },
+  "classes": {
+    "label": "职业",
+    "kind": "data",
+    "schema": null,
+    "primary": "class_entry",
+    "icon": "🛡️",
+    "owner": "package",
+    "tier": "portable"
   }
 }

@@ -1,0 +1,72 @@
+{
+  "cls_knight": {
+    "name": "骑士",
+    "role": "坦克",
+    "icon": "🛡️",
+    "desc": "披着旧誓的甲。他不抢那一刀，他只是不让它落到别人身上。",
+    "mech": "受击攒守誓值；盾墙替队友接招；满值开霸体",
+    "base": {
+      "hp": 110,
+      "mo": 50,
+      "atk": 12,
+      "matk": 5,
+      "def": 14,
+      "res": 10,
+      "spd": 100,
+      "hit": 95,
+      "eva": 10,
+      "crit": 15,
+      "block": 30,
+      "heal_pow": 5
+    },
+    "growth": {
+      "hp": 10,
+      "atk": 1.2,
+      "def": 1.6,
+      "res": 0.8,
+      "spd": 1.0,
+      "hit": 1.5,
+      "eva": 0.4,
+      "crit": 1.0,
+      "block": 1.2,
+      "heal_pow": 0.3
+    },
+    "conv": {
+      "STR": {
+        "atk": 2.2,
+        "hp": 6.0
+      },
+      "VIT": {
+        "hp": 10.0,
+        "def": 2.0
+      },
+      "WIL": {
+        "res": 1.8,
+        "mo": 4.0,
+        "heal_pow": 0.6
+      },
+      "AGI": {
+        "spd": 1.2,
+        "hit": 1.0,
+        "eva": 1.0
+      },
+      "INT": {
+        "matk": 2.0,
+        "mo": 3.0
+      }
+    },
+    "alloc_hint": {
+      "STR": 18,
+      "VIT": 13,
+      "WIL": 4
+    },
+    "resource": {
+      "key": "oath",
+      "name": "守誓值",
+      "max": 100
+    },
+    "weapon_type": "sword_shield",
+    "reach": 1,
+    "rank_label": "前排"
+  }
+}

@@ -8,6 +8,7 @@
 | `formula_table_fn` | `content/rules/formula_table.json` | 声明式公式表（E1），12 条 |
 | `formula_bindings_fn` | `content/rules/formula_bindings.json` | 语义槽位 → 声明 id（E1b）|
 | `time_model_fn` | 委托声明 `F6_act_time` | CTB 行动耗时 —— 不自己实现公式 |
+| `panel_layers_fn` | `content/panel_build.py` 的栈登记表 | 面板栈声明（E2）—— 形状在 `ext_combat.panel` |
 
 ★ 零双源纪律：本文件不手写任何公式或常数；钳位归声明的 `guard`/`clamp`，
 本文件只负责喂变量。速度形状是内容侧的选择（宪法 F6），不是引擎规则。
@@ -59,6 +60,7 @@ def install_engine():
         formula_table_fn=lambda: tbl,
         formula_bindings_fn=lambda slot: bind.get(slot),
         time_model_fn=_time_model,
+        panel_layers_fn=_panel_layers,
     )
     _MOUNTED = True
 
@@ -66,3 +68,8 @@ def install_engine():
 def apply_game_content(actor):        # noqa: ARG001 —— 最小骨架阶段暂无 actor 级内容
     """单个 actor 的装配（第二阶段为空；职业/机制待后续轮次）。"""
     return None
+
+def _panel_layers(stack_id):
+    """`panel_layers_fn` 供体：栈 id → 面板栈声明（内容侧现算并登记，引擎当不透明字符串）。"""
+    from . import panel_build
+    return panel_build.stacks().get(stack_id)
