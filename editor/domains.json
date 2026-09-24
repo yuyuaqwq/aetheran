@@ -106,5 +106,14 @@
     "icon": "🎒",
     "owner": "package",
     "tier": "portable"
+  },
+  "quests": {
+    "label": "任务与委托",
+    "kind": "data",
+    "schema": "schemas/quests.schema.json",
+    "primary": "quest",
+    "icon": "📜",
+    "owner": "package",
+    "tier": "portable"
   }
 }

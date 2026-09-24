@@ -1,0 +1,101 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "阿斯特兰 · 任务与委托（quests 域）",
+  "description": "12 主线（认知推进链）+ 18 支线 + 悬赏档。字段契约见 08_第1批_字段级设计_v1.md。",
+  "type": "object",
+  "patternProperties": {
+    "^q_[a-z0-9_]+$": {
+      "type": "object",
+      "required": [
+        "name",
+        "kind",
+        "giver",
+        "map",
+        "min_level",
+        "objective",
+        "reward_exp",
+        "reward_gold"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "主线",
+            "支线",
+            "悬赏",
+            "世界事件",
+            "生活"
+          ]
+        },
+        "chain": {
+          "type": "string"
+        },
+        "order": {
+          "type": "integer"
+        },
+        "giver": {
+          "type": "string"
+        },
+        "map": {
+          "type": "string"
+        },
+        "min_level": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "need": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "objective": {
+          "type": "string"
+        },
+        "reward_exp": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reward_gold": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "story": {
+          "type": "string"
+        },
+        "progress_text": {
+          "type": "string"
+        },
+        "deliver_text": {
+          "type": "string"
+        },
+        "teach": {
+          "type": "string"
+        },
+        "insight": {
+          "type": "string"
+        },
+        "hook": {
+          "type": "string"
+        },
+        "unlock": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "repeat": {
+          "enum": [
+            "daily",
+            "weekly",
+            "once"
+          ]
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}
