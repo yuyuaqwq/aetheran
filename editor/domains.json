@@ -151,5 +151,14 @@
     "icon": "🌦️",
     "owner": "package",
     "tier": "portable"
+  },
+  "recipes": {
+    "label": "配方（烹饪与强化）",
+    "kind": "data",
+    "schema": "schemas/recipes.schema.json",
+    "primary": "recipe",
+    "icon": "🍳",
+    "owner": "package",
+    "tier": "portable"
   }
 }

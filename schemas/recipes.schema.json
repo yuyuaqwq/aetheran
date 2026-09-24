@@ -1,0 +1,159 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "阿斯特兰 · 配方（recipes 域）—— 烹饪与强化",
+  "type": "object",
+  "patternProperties": {
+    "^_": {
+      "type": "object",
+      "description": "私有键（`_meta` 那类）—— 与编辑器/装载器同口径：不是条目"
+    },
+    "^rc_cook_[a-z0-9_]+$": {
+      "type": "object",
+      "required": [
+        "name",
+        "kind",
+        "icon",
+        "inputs",
+        "out",
+        "buff"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "烹饪"
+          ]
+        },
+        "icon": {
+          "type": "string"
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "n"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "n": {
+                "type": "integer"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "out": {
+          "type": "string"
+        },
+        "out_n": {
+          "type": "integer"
+        },
+        "buff": {
+          "type": "object",
+          "properties": {
+            "stat": {
+              "enum": [
+                "atk",
+                "def",
+                "hp"
+              ]
+            },
+            "stat_name": {
+              "type": "string"
+            },
+            "pct": {
+              "type": "integer"
+            },
+            "seconds": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
+        },
+        "learn": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "null = 一开始就会；{quest: id} = 交掉那条委托才学会",
+          "properties": {
+            "quest": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "desc": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "^rc_enh_[0-9]+$": {
+      "type": "object",
+      "required": [
+        "name",
+        "kind",
+        "level",
+        "inputs",
+        "gold",
+        "rate"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "强化"
+          ]
+        },
+        "level": {
+          "type": "integer"
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "n"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "n": {
+                "type": "integer"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "gold": {
+          "type": "integer"
+        },
+        "rate": {
+          "type": "number"
+        },
+        "float": {
+          "type": "number"
+        },
+        "source": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

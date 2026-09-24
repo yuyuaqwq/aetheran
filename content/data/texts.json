@@ -903,5 +903,173 @@
     "params": [],
     "category": "场景",
     "desc": "★ 已写正文"
+  },
+  "SYS_RECIPE_HEAD": {
+    "value": "【配方】会做 {known} 道 · 还没学会 {locked} 道（凑到料就能做）",
+    "params": [
+      "known",
+      "locked"
+    ],
+    "category": "系统",
+    "desc": "配方一览表头"
+  },
+  "SYS_RECIPE_ROW": {
+    "value": "· {icon} {name} —— {ing} → {buff}",
+    "params": [
+      "buff",
+      "icon",
+      "ing",
+      "name"
+    ],
+    "category": "系统",
+    "desc": "配方一览一行"
+  },
+  "SYS_RECIPE_LOCKED": {
+    "value": "· ？？？ —— 交掉「{from}」才学会",
+    "params": [
+      "from"
+    ],
+    "category": "系统",
+    "desc": "配方一览 · 没学会的那几道"
+  },
+  "SYS_COOK_OK": {
+    "value": "【{name}】{icon} 做好了，进了背包。\n吃下去：{buff}（{minutes} 分钟）。",
+    "params": [
+      "buff",
+      "icon",
+      "minutes",
+      "name"
+    ],
+    "category": "系统",
+    "desc": "做成了"
+  },
+  "SYS_COOK_MISSING": {
+    "value": "做{name}要：{need}。\n你还差：{lack}。",
+    "params": [
+      "lack",
+      "name",
+      "need"
+    ],
+    "category": "系统",
+    "desc": "材料不够"
+  },
+  "SYS_COOK_LOCKED": {
+    "value": "你还不会做{name} —— 交掉「{from}」才学会。",
+    "params": [
+      "from",
+      "name"
+    ],
+    "category": "系统",
+    "desc": "配方没学会"
+  },
+  "SYS_COOK_UNKNOWN": {
+    "value": "没有叫「{input}」的菜谱。打『配方』看一眼。",
+    "params": [
+      "input"
+    ],
+    "category": "系统",
+    "desc": "菜谱名对不上"
+  },
+  "SYS_ENHANCE_OK": {
+    "value": "🔨 {item} → +{lv}（加成 {bonus}，走装备本体 —— 上限 +{cap}%）。",
+    "params": [
+      "bonus",
+      "cap",
+      "item",
+      "lv"
+    ],
+    "category": "系统",
+    "desc": "强化成功"
+  },
+  "SYS_ENHANCE_FAIL": {
+    "value": "🔨 没接上。{item} 还是 +{lv}。\n（材料吃了，钱没扣、等级没掉 —— 再攒一批。）",
+    "params": [
+      "item",
+      "lv"
+    ],
+    "category": "系统",
+    "desc": "强化失败"
+  },
+  "SYS_ENHANCE_CAP": {
+    "value": "{item} 已经是 +{cap} —— 柯尔说往上没路了。",
+    "params": [
+      "cap",
+      "item"
+    ],
+    "category": "系统",
+    "desc": "强化到顶"
+  },
+  "SYS_ENHANCE_MISSING": {
+    "value": "强化到 +{lv} 要：{need} + {gold} 铜板。\n你还差：{lack}。",
+    "params": [
+      "gold",
+      "lack",
+      "lv",
+      "need"
+    ],
+    "category": "系统",
+    "desc": "强化材料/钱不够"
+  },
+  "SYS_ENHANCE_SHOP": {
+    "value": "柯尔的炉子还热着。\n强化 = 材料（铁屑 · 硬骨）+ 钱；+1..+5 必成，+6 起看运气。\n打『强化 <装备名>』。",
+    "params": [],
+    "category": "系统",
+    "desc": "铁匠铺"
+  },
+  "SYS_ENHANCE_NOITEM": {
+    "value": "背包里没有叫「{input}」的装备。打『背包』看看。",
+    "params": [
+      "input"
+    ],
+    "category": "系统",
+    "desc": "强化目标找不到"
+  },
+  "SYS_USE_FOOD": {
+    "value": "你吃了{name}。{buff} 撑着（{minutes} 分钟）。",
+    "params": [
+      "buff",
+      "minutes",
+      "name"
+    ],
+    "category": "系统",
+    "desc": "吃东西"
+  },
+  "SYS_USE_HEAL": {
+    "value": "你喝下{name}。生命 +{heal}（{hp}/{hp_max}）。",
+    "params": [
+      "heal",
+      "hp",
+      "hp_max",
+      "name"
+    ],
+    "category": "系统",
+    "desc": "喝药"
+  },
+  "SYS_USE_NOT": {
+    "value": "{name}不是这么用的。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "用错东西"
+  },
+  "SYS_ENHANCE_ROW": {
+    "value": "· +{lv}：{need} + {gold} 铜板（成率 {rate}）",
+    "params": [
+      "gold",
+      "lv",
+      "need",
+      "rate"
+    ],
+    "category": "系统",
+    "desc": "铁匠铺 · 每一档要什么"
+  },
+  "SYS_MONEY": {
+    "value": "铜板 {gold}",
+    "params": [
+      "gold"
+    ],
+    "category": "系统",
+    "desc": "钱"
   }
 }

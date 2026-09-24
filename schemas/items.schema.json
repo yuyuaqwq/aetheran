@@ -30,7 +30,8 @@
             "道具",
             "垃圾",
             "信物",
-            "线索"
+            "线索",
+            "食物"
           ]
         },
         "quality": {
@@ -81,6 +82,24 @@
         "lore": {
           "type": "string",
           "description": "★ 遗物的「来处」一句（遗物必填）"
+        },
+        "heal": {
+          "type": "integer",
+          "description": "药水/伤药：回多少生命（从 desc 解析出来，不手打 —— 见 scripts/rebuild_recipes.py）"
+        },
+        "food": {
+          "type": "object",
+          "description": "菜：吃下去给 15 分钟的增益（三选一 攻击/防御/生命上限）",
+          "properties": {
+            "stat": {"type": "string"},
+            "pct": {"type": "integer"},
+            "seconds": {"type": "integer"}
+          },
+          "additionalProperties": false
+        },
+        "from_recipe": {
+          "type": "string",
+          "description": "这道菜是哪个配方做出来的（指向 recipes 域）"
         },
         "price": {
           "type": "number"

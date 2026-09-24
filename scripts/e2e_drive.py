@@ -3,6 +3,9 @@
 
 为什么不用 host-skeleton：它不给 inject，而本包声明了 bind（引擎 fail-closed 会拒）。
 用法：python scripts/e2e_drive.py "观察" "往东" "观察"
+
+★ `AST_E2E_SEED='{"bag":{...},"gold":200,"equipped":{...}}'` —— 给冒烟一个起手档
+  （有些流程要手里先有东西才走得通：烹饪要有食材、强化要有装备与材料）。
 """
 from __future__ import annotations
 
@@ -42,6 +45,11 @@ class FakeAdapter:
 
 def run(texts):
     ad = FakeAdapter(texts)
+    seed = os.environ.get("AST_E2E_SEED")
+    if seed:
+        import json
+        ad.saved = json.loads(seed)          # 起手档（宿主 load_player 会拿它当玩家档）
+        print("  （起手档：%s）" % sorted(ad.saved))
     db = os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp", "ast_e2e.db")
     try:
         os.remove(db)

@@ -580,7 +580,15 @@
     "usage": "使用 <参数>",
     "visible": true,
     "order": 33,
-    "guard_desc": "可用"
+    "guard_desc": "可用",
+    "bind": {
+      "handler": "content.cmds_recipe:item_use",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "item_drop": {
     "patterns": [
@@ -1006,7 +1014,15 @@
     "usage": "铁匠铺",
     "visible": true,
     "order": 60,
-    "guard_desc": "在镇上"
+    "guard_desc": "在镇上",
+    "bind": {
+      "handler": "content.cmds_recipe:smith",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "enhance": {
     "patterns": [
@@ -1017,7 +1033,15 @@
     "usage": "强化 <参数>",
     "visible": true,
     "order": 61,
-    "guard_desc": "有材料"
+    "guard_desc": "有材料",
+    "bind": {
+      "handler": "content.cmds_recipe:enhance",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "herbalist": {
     "patterns": [
@@ -1391,6 +1415,48 @@
     ],
     "bind": {
       "handler": "content.cmds_ast:go_to",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
+  },
+  "cook": {
+    "patterns": [
+      "^烹饪\\s*(.+)$",
+      "^做\\s*(.+)$",
+      "^煮\\s*(.+)$"
+    ],
+    "category": "生产与铺子",
+    "desc": "做菜",
+    "usage": "烹饪 <参数>",
+    "visible": true,
+    "order": 62,
+    "guard_desc": "有食材且会做",
+    "bind": {
+      "handler": "content.cmds_recipe:cook",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
+  },
+  "recipes": {
+    "patterns": [
+      "^配方$",
+      "^菜谱$",
+      "^配方一览$"
+    ],
+    "category": "生产与铺子",
+    "desc": "会做什么菜",
+    "usage": "配方",
+    "visible": true,
+    "order": 63,
+    "guard_desc": "随时",
+    "bind": {
+      "handler": "content.cmds_recipe:recipe_list",
       "call": "run",
       "args": [
         "uid",

@@ -1,0 +1,447 @@
+{
+  "_meta": {
+    "note": "数值全部由 scripts/rebuild_recipes.py 从源文档解析 —— 别手改本文件",
+    "cook": {
+      "ingredients": [
+        2,
+        3
+      ],
+      "seconds": 900,
+      "choices": [
+        "攻击",
+        "防御",
+        "生命上限"
+      ]
+    },
+    "enhance": {
+      "cap": 10,
+      "sure_until": 5,
+      "rate_from": 6,
+      "drop_pct_per_level": 10,
+      "rate_floor_pct": 50,
+      "float_from": 6,
+      "float_pct": 10,
+      "fee_mult": 2,
+      "fee_step": 10,
+      "bonus_per_level": 0.004,
+      "bonus_at_cap_pct": 4.0
+    },
+    "source": [
+      "05_玩法数值口径_v1 §三",
+      "13_装备玩法与随机性_v1 §1.2",
+      "24_任务线_v1 §二",
+      "00_总纲/13_配方域口径_v1",
+      "旧案 00_装备体系与PE预算 §7.2"
+    ]
+  },
+  "rc_cook_jun_tang": {
+    "name": "菌汤",
+    "kind": "烹饪",
+    "icon": "🍜",
+    "inputs": [
+      {
+        "id": "i_material_fungus",
+        "n": 1
+      },
+      {
+        "id": "i_material_herb_common",
+        "n": 2
+      }
+    ],
+    "out": "i_food_jun_tang",
+    "out_n": 1,
+    "buff": {
+      "stat": "def",
+      "stat_name": "防御",
+      "pct": 15,
+      "seconds": 900
+    },
+    "learn": {
+      "quest": "q_side_04"
+    },
+    "desc": "雨后树根底下那点东西，全在这一碗里。",
+    "source": "13_配方域口径_v1 §三"
+  },
+  "rc_cook_kao_shiban": {
+    "name": "烤石斑",
+    "kind": "烹饪",
+    "icon": "🍢",
+    "inputs": [
+      {
+        "id": "i_fish_common",
+        "n": 1
+      },
+      {
+        "id": "i_material_herb_common",
+        "n": 1
+      }
+    ],
+    "out": "i_food_kao_shiban",
+    "out_n": 1,
+    "buff": {
+      "stat": "atk",
+      "stat_name": "攻击",
+      "pct": 10,
+      "seconds": 900
+    },
+    "learn": null,
+    "desc": "渡口人把鱼穿在树枝上烤。皮焦了，肉还是嫩的。",
+    "source": "13_配方域口径_v1 §三"
+  },
+  "rc_cook_koye_tang": {
+    "name": "苦叶汤",
+    "kind": "烹饪",
+    "icon": "🍵",
+    "inputs": [
+      {
+        "id": "i_material_herb_common",
+        "n": 2
+      },
+      {
+        "id": "i_fish_common",
+        "n": 1
+      }
+    ],
+    "out": "i_food_koye_tang",
+    "out_n": 1,
+    "buff": {
+      "stat": "hp",
+      "stat_name": "生命上限",
+      "pct": 10,
+      "seconds": 900
+    },
+    "learn": null,
+    "desc": "苦。喝完身上暖，嘴还是苦的。",
+    "source": "13_配方域口径_v1 §三"
+  },
+  "rc_cook_xian_yu_gan": {
+    "name": "咸鱼干",
+    "kind": "烹饪",
+    "icon": "🐟",
+    "inputs": [
+      {
+        "id": "i_fish_common",
+        "n": 2
+      },
+      {
+        "id": "i_material_herb_common",
+        "n": 1
+      }
+    ],
+    "out": "i_food_xian_yu_gan",
+    "out_n": 1,
+    "buff": {
+      "stat": "hp",
+      "stat_name": "生命上限",
+      "pct": 10,
+      "seconds": 900
+    },
+    "learn": null,
+    "desc": "腌过、晒过，能揣在怀里走很远的路。",
+    "source": "13_配方域口径_v1 §三"
+  },
+  "rc_cook_yeming_zhou": {
+    "name": "夜明粥",
+    "kind": "烹饪",
+    "icon": "🥣",
+    "inputs": [
+      {
+        "id": "i_material_herb_rare",
+        "n": 2
+      },
+      {
+        "id": "i_fish_common",
+        "n": 1
+      }
+    ],
+    "out": "i_food_yeming_zhou",
+    "out_n": 1,
+    "buff": {
+      "stat": "def",
+      "stat_name": "防御",
+      "pct": 15,
+      "seconds": 900
+    },
+    "learn": null,
+    "desc": "娜娜说这粥是给夜里还醒着的人熬的。",
+    "source": "13_配方域口径_v1 §三"
+  },
+  "rc_cook_yi_guo_dun": {
+    "name": "一锅炖",
+    "kind": "烹饪",
+    "icon": "🥘",
+    "inputs": [
+      {
+        "id": "i_fish_rare",
+        "n": 1
+      },
+      {
+        "id": "i_fish_common",
+        "n": 1
+      },
+      {
+        "id": "i_material_fungus",
+        "n": 1
+      }
+    ],
+    "out": "i_food_yi_guo_dun",
+    "out_n": 1,
+    "buff": {
+      "stat": "hp",
+      "stat_name": "生命上限",
+      "pct": 20,
+      "seconds": 900
+    },
+    "learn": {
+      "quest": "q_side_06"
+    },
+    "desc": "什么都往里丢。丢的人心里有数，喝的人没有。",
+    "source": "13_配方域口径_v1 §三"
+  },
+  "rc_cook_yu_ye": {
+    "name": "雨夜的一碗",
+    "kind": "烹饪",
+    "icon": "🍲",
+    "inputs": [
+      {
+        "id": "i_material_herb_rare",
+        "n": 1
+      },
+      {
+        "id": "i_material_fungus",
+        "n": 1
+      }
+    ],
+    "out": "i_food_yu_ye",
+    "out_n": 1,
+    "buff": {
+      "stat": "atk",
+      "stat_name": "攻击",
+      "pct": 15,
+      "seconds": 900
+    },
+    "learn": null,
+    "desc": "雨停了才想起来做 —— 雨里的味道还在碗里。",
+    "source": "13_配方域口径_v1 §三"
+  },
+  "rc_cook_zhaopai": {
+    "name": "客栈的招牌",
+    "kind": "烹饪",
+    "icon": "🍛",
+    "inputs": [
+      {
+        "id": "i_fish_rare",
+        "n": 1
+      },
+      {
+        "id": "i_material_herb_rare",
+        "n": 1
+      },
+      {
+        "id": "i_material_herb_common",
+        "n": 1
+      }
+    ],
+    "out": "i_food_zhaopai",
+    "out_n": 1,
+    "buff": {
+      "stat": "atk",
+      "stat_name": "攻击",
+      "pct": 20,
+      "seconds": 900
+    },
+    "learn": null,
+    "desc": "贝拉不肯说方子。吃过一次，你就记住了。",
+    "source": "13_配方域口径_v1 §三"
+  },
+  "rc_enh_01": {
+    "name": "强化 +1",
+    "kind": "强化",
+    "level": 1,
+    "inputs": [
+      {
+        "id": "i_material_iron_scrap",
+        "n": 1
+      },
+      {
+        "id": "i_material_hard_bone",
+        "n": 1
+      }
+    ],
+    "gold": 40,
+    "rate": 1.0,
+    "float": 0.0,
+    "source": "13_配方域口径_v1 §二 §六"
+  },
+  "rc_enh_02": {
+    "name": "强化 +2",
+    "kind": "强化",
+    "level": 2,
+    "inputs": [
+      {
+        "id": "i_material_iron_scrap",
+        "n": 1
+      },
+      {
+        "id": "i_material_hard_bone",
+        "n": 1
+      }
+    ],
+    "gold": 40,
+    "rate": 1.0,
+    "float": 0.0,
+    "source": "13_配方域口径_v1 §二 §六"
+  },
+  "rc_enh_03": {
+    "name": "强化 +3",
+    "kind": "强化",
+    "level": 3,
+    "inputs": [
+      {
+        "id": "i_material_iron_scrap",
+        "n": 2
+      },
+      {
+        "id": "i_material_hard_bone",
+        "n": 2
+      }
+    ],
+    "gold": 70,
+    "rate": 1.0,
+    "float": 0.0,
+    "source": "13_配方域口径_v1 §二 §六"
+  },
+  "rc_enh_04": {
+    "name": "强化 +4",
+    "kind": "强化",
+    "level": 4,
+    "inputs": [
+      {
+        "id": "i_material_iron_scrap",
+        "n": 2
+      },
+      {
+        "id": "i_material_hard_bone",
+        "n": 2
+      }
+    ],
+    "gold": 70,
+    "rate": 1.0,
+    "float": 0.0,
+    "source": "13_配方域口径_v1 §二 §六"
+  },
+  "rc_enh_05": {
+    "name": "强化 +5",
+    "kind": "强化",
+    "level": 5,
+    "inputs": [
+      {
+        "id": "i_material_iron_scrap",
+        "n": 3
+      },
+      {
+        "id": "i_material_hard_bone",
+        "n": 3
+      }
+    ],
+    "gold": 110,
+    "rate": 1.0,
+    "float": 0.0,
+    "source": "13_配方域口径_v1 §二 §六"
+  },
+  "rc_enh_06": {
+    "name": "强化 +6",
+    "kind": "强化",
+    "level": 6,
+    "inputs": [
+      {
+        "id": "i_material_iron_scrap",
+        "n": 3
+      },
+      {
+        "id": "i_material_hard_bone",
+        "n": 3
+      }
+    ],
+    "gold": 110,
+    "rate": 0.9,
+    "float": 0.1,
+    "source": "13_配方域口径_v1 §二 §六"
+  },
+  "rc_enh_07": {
+    "name": "强化 +7",
+    "kind": "强化",
+    "level": 7,
+    "inputs": [
+      {
+        "id": "i_material_iron_scrap",
+        "n": 4
+      },
+      {
+        "id": "i_material_hard_bone",
+        "n": 4
+      }
+    ],
+    "gold": 140,
+    "rate": 0.8,
+    "float": 0.1,
+    "source": "13_配方域口径_v1 §二 §六"
+  },
+  "rc_enh_08": {
+    "name": "强化 +8",
+    "kind": "强化",
+    "level": 8,
+    "inputs": [
+      {
+        "id": "i_material_iron_scrap",
+        "n": 4
+      },
+      {
+        "id": "i_material_hard_bone",
+        "n": 4
+      }
+    ],
+    "gold": 140,
+    "rate": 0.7,
+    "float": 0.1,
+    "source": "13_配方域口径_v1 §二 §六"
+  },
+  "rc_enh_09": {
+    "name": "强化 +9",
+    "kind": "强化",
+    "level": 9,
+    "inputs": [
+      {
+        "id": "i_material_iron_scrap",
+        "n": 5
+      },
+      {
+        "id": "i_material_hard_bone",
+        "n": 5
+      }
+    ],
+    "gold": 180,
+    "rate": 0.6,
+    "float": 0.1,
+    "source": "13_配方域口径_v1 §二 §六"
+  },
+  "rc_enh_10": {
+    "name": "强化 +10",
+    "kind": "强化",
+    "level": 10,
+    "inputs": [
+      {
+        "id": "i_material_iron_scrap",
+        "n": 5
+      },
+      {
+        "id": "i_material_hard_bone",
+        "n": 5
+      }
+    ],
+    "gold": 180,
+    "rate": 0.5,
+    "float": 0.1,
+    "source": "13_配方域口径_v1 §二 §六"
+  }
+}

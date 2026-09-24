@@ -1956,7 +1956,8 @@
     "kind": "道具",
     "quality": "普通",
     "price": 12,
-    "desc": "回 40 点生命。苦的。"
+    "desc": "回 40 点生命。苦的。",
+    "heal": 40
   },
   "i_junk_bone": {
     "name": "骨头",
@@ -2031,5 +2032,109 @@
     "quality": "普通",
     "price": 0,
     "desc": "左脚的。谁把它扔水里的。"
+  },
+  "i_food_koye_tang": {
+    "name": "苦叶汤",
+    "icon": "🍵",
+    "kind": "食物",
+    "price": 6,
+    "desc": "苦。喝完身上暖，嘴还是苦的。",
+    "food": {
+      "stat": "hp",
+      "pct": 10,
+      "seconds": 900
+    },
+    "from_recipe": "rc_cook_koye_tang"
+  },
+  "i_food_kao_shiban": {
+    "name": "烤石斑",
+    "icon": "🍢",
+    "kind": "食物",
+    "price": 5,
+    "desc": "渡口人把鱼穿在树枝上烤。皮焦了，肉还是嫩的。",
+    "food": {
+      "stat": "atk",
+      "pct": 10,
+      "seconds": 900
+    },
+    "from_recipe": "rc_cook_kao_shiban"
+  },
+  "i_food_xian_yu_gan": {
+    "name": "咸鱼干",
+    "icon": "🐟",
+    "kind": "食物",
+    "price": 8,
+    "desc": "腌过、晒过，能揣在怀里走很远的路。",
+    "food": {
+      "stat": "hp",
+      "pct": 10,
+      "seconds": 900
+    },
+    "from_recipe": "rc_cook_xian_yu_gan"
+  },
+  "i_food_yeming_zhou": {
+    "name": "夜明粥",
+    "icon": "🥣",
+    "kind": "食物",
+    "price": 21,
+    "desc": "娜娜说这粥是给夜里还醒着的人熬的。",
+    "food": {
+      "stat": "def",
+      "pct": 15,
+      "seconds": 900
+    },
+    "from_recipe": "rc_cook_yeming_zhou"
+  },
+  "i_food_yu_ye": {
+    "name": "雨夜的一碗",
+    "icon": "🍲",
+    "kind": "食物",
+    "price": 17,
+    "desc": "雨停了才想起来做 —— 雨里的味道还在碗里。",
+    "food": {
+      "stat": "atk",
+      "pct": 15,
+      "seconds": 900
+    },
+    "from_recipe": "rc_cook_yu_ye"
+  },
+  "i_food_zhaopai": {
+    "name": "客栈的招牌",
+    "icon": "🍛",
+    "kind": "食物",
+    "price": 31,
+    "desc": "贝拉不肯说方子。吃过一次，你就记住了。",
+    "food": {
+      "stat": "atk",
+      "pct": 20,
+      "seconds": 900
+    },
+    "from_recipe": "rc_cook_zhaopai"
+  },
+  "i_food_jun_tang": {
+    "name": "菌汤",
+    "icon": "🍜",
+    "kind": "食物",
+    "price": 11,
+    "desc": "雨后树根底下那点东西，全在这一碗里。",
+    "food": {
+      "stat": "def",
+      "pct": 15,
+      "seconds": 900
+    },
+    "from_recipe": "rc_cook_jun_tang"
+  },
+  "i_food_yi_guo_dun": {
+    "name": "一锅炖",
+    "icon": "🥘",
+    "kind": "食物",
+    "price": 31,
+    "desc": "什么都往里丢。丢的人心里有数，喝的人没有。",
+    "food": {
+      "stat": "hp",
+      "pct": 20,
+      "seconds": 900
+    },
+    "from_recipe": "rc_cook_yi_guo_dun"
   }
 }

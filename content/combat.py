@@ -16,6 +16,7 @@ from ext_combat import Battle
 from ext_combat.battle.actors import make_actor
 
 from . import panel_build as PB
+from . import gear as GB
 
 PLAYER_SIDE = "player"
 ENEMY_SIDE = "enemy"
@@ -25,8 +26,11 @@ def player_actor(player: dict, stack_prefix: str = "aetheran") -> dict:
     """玩家档 → 战斗 actor（面板走本包的面板栈）。"""
     cls = player.get("cls") or "cls_knight"
     lv = int(player.get("level", 1) or 1)
-    a = PB.build_actor(cls, lv, player.get("alloc"), player.get("equip_stats") or {},
-                       stack_prefix=stack_prefix)
+    # ★ 装备与强化走唯一取值口（B2-6）：`gear_stats` 会按强化等级放大主词条；
+    #   食物增益走最后一层 mul（时效过了自动失效 —— 时钟是宿主注入的那根）。
+    gear = GB.gear_stats(player) or (player.get("equip_stats") or {})
+    a = PB.build_actor(cls, lv, player.get("alloc"), gear,
+                       buffs=GB.food_buff(player) or None, stack_prefix=stack_prefix)
     a["uid"] = str(player.get("uid") or "p1")
     a["name"] = player.get("name") or "无名者"
     a["side"] = PLAYER_SIDE

@@ -79,8 +79,14 @@ def _layers_of(cls_id: str, level: int, alloc: dict | None):
 
 
 def build_actor(cls_id: str, level: int, alloc: dict | None = None,
-                equipment: dict | None = None, *, stack_prefix: str = "aetheran") -> dict:
-    """造一个玩家 actor：自带 panel_stack（栈 id）与战斗侧字段。"""
+                equipment: dict | None = None, buffs: dict | None = None,
+                *, stack_prefix: str = "aetheran") -> dict:
+    """造一个玩家 actor：自带 panel_stack（栈 id）与战斗侧字段。
+
+    `buffs` —— `{面板键: 乘数}`（B2-6 食物增益那类），走**最后**一层 `mul`：
+      乘层必须排在加层之后（引擎逐层作用：先加后乘，值才是对的）；
+      只乘列出的键（引擎面板栈的 per-key mul），不写 `apply: whole`。
+    """
     base_e, grow_e, attr_e = _layers_of(cls_id, level, alloc)
     gear_e = {KEYMAP.get(k, k): v for k, v in (equipment or {}).items()}
 
@@ -104,7 +110,8 @@ def build_actor(cls_id: str, level: int, alloc: dict | None = None,
             # crit 是非线性率（F3），三层相加无意义 ⇒ 内容侧算好后用 set 层一次性写入
             {"id": "crit_rate", "src": "暴击率（F3 换算）", "group": "rate", "mode": "set",
              "keys": ["crit"], "values": {"crit": crit_rate}},
-        ],
+        ] + ([{"id": "food", "src": "食物增益", "group": "buff", "mode": "mul",
+               "keys": sorted(buffs), "values": dict(buffs)}] if buffs else []),
         "emit": {"int_keys": [k for k in INT_KEYS if k in keys], "round": 4},
     }
     actor = {k: sum((base_e, grow_e, attr_e, gear_e)[i].get(k, 0) for i in range(4)) for k in keys}
