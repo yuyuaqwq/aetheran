@@ -79,5 +79,14 @@
     "icon": "🧑",
     "owner": "package",
     "tier": "portable"
+  },
+  "dialogues": {
+    "label": "对话树",
+    "kind": "data",
+    "schema": "schemas/dialogues.schema.json",
+    "primary": "dialogue",
+    "icon": "💬",
+    "owner": "package",
+    "tier": "portable"
   }
 }

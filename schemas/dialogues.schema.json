@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "真源在包。照 ext_dialogue.dialogue 的消费端：start + nodes{节点:{texts[{need,text}]}} + 会话游标。★ need 从具体到宽松排列，引擎挑第一条满足的。",
+  "type": "object",
+  "minProperties": 1,
+  "patternProperties": {
+    "^dlg_[a-z_]+$": {
+      "type": "object",
+      "required": [
+        "start",
+        "nodes"
+      ],
+      "properties": {
+        "start": {
+          "type": "string"
+        },
+        "nodes": {
+          "type": "object",
+          "patternProperties": {
+            "^[a-z_]+$": {
+              "type": "object",
+              "required": [
+                "texts"
+              ],
+              "properties": {
+                "texts": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "need",
+                      "text"
+                    ],
+                    "properties": {
+                      "need": {
+                        "type": [
+                          "object",
+                          "null"
+                        ],
+                        "description": "条件：flag/quest_done/time/event/holding/weather/…（null=兜底）"
+                      },
+                      "text": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "next": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

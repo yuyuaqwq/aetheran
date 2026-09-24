@@ -8,6 +8,7 @@
   "domains": [
     "classes",
     "commands",
+    "dialogues",
     "maps",
     "npcs",
     "pois",
