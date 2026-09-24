@@ -84,7 +84,9 @@ def install_engine():
         return
     tbl = _table()
     bind = _bindings()
+    from ext_combat.battle import formulas as _formulas   # 引擎自带纯公式模块（引擎侧，非内容）
     config.mount(
+        formulas=_formulas,                     # ★ 缺了它引擎走 _NullFormulas：伤害算不出来
         formula_table_fn=lambda: tbl,
         formula_bindings_fn=lambda slot: bind.get(slot),
         time_model_fn=_time_model,
@@ -92,8 +94,33 @@ def install_engine():
         recover_model_fn=_recover_model,
         recover_base_fn=_recover_base_fn,
         panel_layers_fn=_panel_layers,
+        # ★ 技能取件口（缺了引擎索引不到技能 ⇒ 玩家/怪「静默空放」默认技）
+        skill_lookup=_skills_mod(),
+        monster_skill_fn=_monster_skill,
+        basic_skill_fn=_basic_skill,
+        basic_fallback={"name": "挥击", "kind": "主动", "power": 1.0, "cd": 0,
+                        "cast": {"base": 60}, "recover": {"base": 0}, "range": 1, "mp": 0,
+                        # ★ 兜底也要 expr：普攻若走「非 expr 分支」，那里读 st["_player_lv"]
+                        #   而怪的 _monster_base_stats 不产出它 ⇒ 引擎 fail-closed 抛错
+                        "expr": "atk * 1.0", "_basic": True},
     )
     _MOUNTED = True
+
+
+def _skills_mod():
+    """技能查询模块对象（引擎按属性取 .skill_info / .skill_by_key）。"""
+    from . import skills_lookup
+    return skills_lookup
+
+
+def _monster_skill(key):
+    from . import skills_lookup
+    return skills_lookup.monster_skill(key)
+
+
+def _basic_skill(class_name):
+    from . import skills_lookup
+    return skills_lookup.basic_skill_of(class_name)
 
 
 def apply_game_content(actor):        # noqa: ARG001 —— 最小骨架阶段暂无 actor 级内容

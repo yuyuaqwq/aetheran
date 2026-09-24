@@ -21,7 +21,9 @@
       "RES_OATH": 3
     },
     "note": "挨打段的普攻：伤害低，但攒守誓",
-    "tier": 1
+    "tier": 1,
+    "expr": "atk * 1.0",
+    "_expr_note": "声明式伤害（E1）：expr 段由引擎 resolve_formula 解析；power 保留作备查"
   },
   "SKILL_KNT_oathwall": {
     "name": "盾墙",
@@ -45,7 +47,9 @@
     },
     "mech": "protect",
     "note": "替队友接下一次指向技能",
-    "tier": 1
+    "tier": 1,
+    "expr": "atk * 1.0",
+    "_expr_note": "声明式伤害（E1）：expr 段由引擎 resolve_formula 解析；power 保留作备查"
   },
   "SKILL_KNT_taunt": {
     "name": "挑战咆哮",
@@ -67,7 +71,9 @@
     "mech": "taunt",
     "mech_val": 3.0,
     "note": "仇恨 ×3，把对面的出手拉过来",
-    "tier": 1
+    "tier": 1,
+    "expr": "atk * 1.0",
+    "_expr_note": "声明式伤害（E1）：expr 段由引擎 resolve_formula 解析；power 保留作备查"
   },
   "SKILL_KNT_oathslash": {
     "name": "守誓斩",
@@ -91,7 +97,9 @@
       "RES_OATH": 25
     },
     "note": "挨打换来的那一刀",
-    "tier": 1
+    "tier": 1,
+    "expr": "atk * 2.2",
+    "_expr_note": "声明式伤害（E1）：expr 段由引擎 resolve_formula 解析；power 保留作备查"
   },
   "SKILL_KNT_standfast": {
     "name": "不退",
@@ -116,7 +124,9 @@
     "mech": "unstoppable",
     "mech_val": 300.0,
     "note": "300 刻霸体 + 全队减伤 30%",
-    "tier": 1
+    "tier": 1,
+    "expr": "atk * 1.0",
+    "_expr_note": "声明式伤害（E1）：expr 段由引擎 resolve_formula 解析；power 保留作备查"
   },
   "SKILL_BSK_cleave": {
     "name": "横劈",
@@ -137,7 +147,9 @@
     "lv_band": "P1",
     "element": "ELE_PHYS",
     "note": "普攻",
-    "tier": 1
+    "tier": 1,
+    "expr": "atk * 1.0",
+    "_expr_note": "声明式伤害（E1）：expr 段由引擎 resolve_formula 解析；power 保留作备查"
   },
   "SKILL_BSK_sunder": {
     "name": "破势",
@@ -160,7 +172,9 @@
     "mech": "def_break",
     "mech_val": 30.0,
     "note": "自伤 8% max_hp；目标 def −30%（300 刻）",
-    "tier": 1
+    "tier": 1,
+    "expr": "atk * 1.6",
+    "_expr_note": "声明式伤害（E1）：expr 段由引擎 resolve_formula 解析；power 保留作备查"
   },
   "SKILL_BSK_rampage": {
     "name": "狂斩",
@@ -181,7 +195,9 @@
     "lv_band": "P1",
     "element": "ELE_PHYS",
     "note": "自伤 12% max_hp",
-    "tier": 1
+    "tier": 1,
+    "expr": "atk * 2.4",
+    "_expr_note": "声明式伤害（E1）：expr 段由引擎 resolve_formula 解析；power 保留作备查"
   },
   "SKILL_BSK_immolate": {
     "name": "焚身",
@@ -202,7 +218,9 @@
     "lv_band": "P1",
     "element": "ELE_FIRE",
     "note": "自伤 35% 当前 hp（上限 40）；一场一次",
-    "tier": 1
+    "tier": 1,
+    "expr": "matk * 3.2",
+    "_expr_note": "声明式伤害（E1）：expr 段由引擎 resolve_formula 解析；power 保留作备查"
   },
   "SKILL_RNG_shortbow": {
     "name": "短弓",
@@ -226,7 +244,9 @@
       "RES_AIM": 1
     },
     "note": "距离 3 才攒准星",
-    "tier": 1
+    "tier": 1,
+    "expr": "atk * 1.0",
+    "_expr_note": "声明式伤害（E1）：expr 段由引擎 resolve_formula 解析；power 保留作备查"
   },
   "SKILL_RNG_aimshot": {
     "name": "点射",
@@ -247,7 +267,9 @@
     "lv_band": "P1",
     "element": "ELE_PHYS",
     "note": "距离 2 也能用",
-    "tier": 1
+    "tier": 1,
+    "expr": "atk * 1.5",
+    "_expr_note": "声明式伤害（E1）：expr 段由引擎 resolve_formula 解析；power 保留作备查"
   },
   "SKILL_RNG_snipe": {
     "name": "狙击",
@@ -271,7 +293,9 @@
       "RES_AIM": 4
     },
     "note": "花 4 层准星换一发重击",
-    "tier": 1
+    "tier": 1,
+    "expr": "atk * 2.8",
+    "_expr_note": "声明式伤害（E1）：expr 段由引擎 resolve_formula 解析；power 保留作备查"
   },
   "SKILL_RNG_volley": {
     "name": "连射",
@@ -295,7 +319,9 @@
       "RES_AIM": 6
     },
     "note": "清空准星，每一层打一发（0.9 × 层数）",
-    "tier": 1
+    "tier": 1,
+    "expr": "atk * 0.9",
+    "_expr_note": "声明式伤害（E1）：expr 段由引擎 resolve_formula 解析；power 保留作备查"
   },
   "SKILL_RNG_quickstep": {
     "name": "抢拍",
@@ -317,7 +343,9 @@
     "mech": "advance_ct",
     "mech_val": 30.0,
     "note": "把自己的下一次行动提前 30 刻",
-    "tier": 1
+    "tier": 1,
+    "expr": "atk * 1.0",
+    "_expr_note": "声明式伤害（E1）：expr 段由引擎 resolve_formula 解析；power 保留作备查"
   },
   "SKILL_RNG_backstep": {
     "name": "后撤",
@@ -338,7 +366,9 @@
     "lv_band": "P1",
     "mech": "retreat",
     "note": "贴脸时唯一的出手：拉开距离",
-    "tier": 1
+    "tier": 1,
+    "expr": "atk * 1.0",
+    "_expr_note": "声明式伤害（E1）：expr 段由引擎 resolve_formula 解析；power 保留作备查"
   },
   "SKILL_MAG_stardust": {
     "name": "星屑",
@@ -362,7 +392,9 @@
       "RES_MARK": 1
     },
     "note": "普攻：铺 1 层印记",
-    "tier": 1
+    "tier": 1,
+    "expr": "matk * 1.0",
+    "_expr_note": "声明式伤害（E1）：expr 段由引擎 resolve_formula 解析；power 保留作备查"
   },
   "SKILL_MAG_iceshard": {
     "name": "冰棱",
@@ -385,7 +417,9 @@
     "res_gain": {
       "RES_MARK": 1
     },
-    "tier": 1
+    "tier": 1,
+    "expr": "matk * 1.1",
+    "_expr_note": "声明式伤害（E1）：expr 段由引擎 resolve_formula 解析；power 保留作备查"
   },
   "SKILL_MAG_flameprint": {
     "name": "焰痕",
@@ -409,7 +443,9 @@
       "RES_MARK": 2
     },
     "note": "铺 2 层印记",
-    "tier": 1
+    "tier": 1,
+    "expr": "matk * 1.4",
+    "_expr_note": "声明式伤害（E1）：expr 段由引擎 resolve_formula 解析；power 保留作备查"
   },
   "SKILL_MAG_ignite": {
     "name": "引燃",
@@ -435,7 +471,9 @@
     "mech": "mark_burst",
     "mech_val": 0.35,
     "note": "清空印记：power 1.0 + 0.35×层数；★ 200 刻前摇比刺客的打断窗口（160 刻）长",
-    "tier": 1
+    "tier": 1,
+    "expr": "matk * 1.0",
+    "_expr_note": "声明式伤害（E1）：expr 段由引擎 resolve_formula 解析；power 保留作备查"
   },
   "SKILL_MAG_fallenstar": {
     "name": "垂星",
@@ -461,7 +499,9 @@
     "mech": "mark_burst",
     "mech_val": 0.8,
     "note": "清空印记：0.8×层数 + 眩晕 100 刻",
-    "tier": 1
+    "tier": 1,
+    "expr": "matk * 0.8",
+    "_expr_note": "声明式伤害（E1）：expr 段由引擎 resolve_formula 解析；power 保留作备查"
   },
   "SKILL_PRS_staff": {
     "name": "圣杖",
@@ -482,7 +522,9 @@
     "lv_band": "P1",
     "element": "ELE_HOLY",
     "note": "普攻（她基本不输出）",
-    "tier": 1
+    "tier": 1,
+    "expr": "matk * 1.0",
+    "_expr_note": "声明式伤害（E1）：expr 段由引擎 resolve_formula 解析；power 保留作备查"
   },
   "SKILL_PRS_lullaby": {
     "name": "安神曲",
@@ -505,7 +547,9 @@
     "mech": "hot",
     "mech_val": 300.0,
     "note": "一次挂 300 刻再生（每刻 heal 的 1/4）",
-    "tier": 1
+    "tier": 1,
+    "expr": "matk * 1.5",
+    "_expr_note": "声明式伤害（E1）：expr 段由引擎 resolve_formula 解析；power 保留作备查"
   },
   "SKILL_PRS_absolve": {
     "name": "净罪",
@@ -527,7 +571,9 @@
     "element": "ELE_HOLY",
     "mech": "cleanse",
     "note": "解掉一个控制效果",
-    "tier": 1
+    "tier": 1,
+    "expr": "matk * 1.0",
+    "_expr_note": "声明式伤害（E1）：expr 段由引擎 resolve_formula 解析；power 保留作备查"
   },
   "SKILL_PRS_aegis": {
     "name": "庇护",
@@ -549,7 +595,9 @@
     "mech": "shield_ally",
     "mech_val": 30.0,
     "note": "200 刻减伤 30%（吃预判）",
-    "tier": 1
+    "tier": 1,
+    "expr": "atk * 1.0",
+    "_expr_note": "声明式伤害（E1）：expr 段由引擎 resolve_formula 解析；power 保留作备查"
   },
   "SKILL_PRS_matins": {
     "name": "晨祷",
@@ -575,7 +623,9 @@
     "mech": "immune_window",
     "mech_val": 100.0,
     "note": "全队 100 刻免疫窗口",
-    "tier": 1
+    "tier": 1,
+    "expr": "matk * 1.0",
+    "_expr_note": "声明式伤害（E1）：expr 段由引擎 resolve_formula 解析；power 保留作备查"
   },
   "SKILL_SHD_blade": {
     "name": "短刃",
@@ -596,7 +646,9 @@
     "lv_band": "P1",
     "element": "ELE_PHYS",
     "note": "窗口外最弱的普攻",
-    "tier": 1
+    "tier": 1,
+    "expr": "atk * 0.9",
+    "_expr_note": "声明式伤害（E1）：expr 段由引擎 resolve_formula 解析；power 保留作备查"
   },
   "SKILL_SHD_sever": {
     "name": "断势",
@@ -619,7 +671,9 @@
     "mech": "interrupt",
     "mech_val": 200.0,
     "note": "打断待发动作 + 挂破绽 200 刻（承伤 ×1.35）",
-    "tier": 1
+    "tier": 1,
+    "expr": "atk * 1.2",
+    "_expr_note": "声明式伤害（E1）：expr 段由引擎 resolve_formula 解析；power 保留作备查"
   },
   "SKILL_SHD_findgap": {
     "name": "寻隙",
@@ -640,7 +694,9 @@
     "lv_band": "P1",
     "element": "ELE_PHYS",
     "note": "进窗后的小爆发",
-    "tier": 1
+    "tier": 1,
+    "expr": "atk * 1.6",
+    "_expr_note": "声明式伤害（E1）：expr 段由引擎 resolve_formula 解析；power 保留作备查"
   },
   "SKILL_SHD_shadowstrike": {
     "name": "影袭",
@@ -661,7 +717,9 @@
     "lv_band": "P1",
     "element": "ELE_PHYS",
     "note": "窗口内的大招",
-    "tier": 1
+    "tier": 1,
+    "expr": "atk * 3.0",
+    "_expr_note": "声明式伤害（E1）：expr 段由引擎 resolve_formula 解析；power 保留作备查"
   },
   "SKILL_SHD_backstep": {
     "name": "后撤",
@@ -682,6 +740,8 @@
     "lv_band": "P1",
     "mech": "retreat",
     "note": "对面霸体时的唯一选择",
-    "tier": 1
+    "tier": 1,
+    "expr": "atk * 1.0",
+    "_expr_note": "声明式伤害（E1）：expr 段由引擎 resolve_formula 解析；power 保留作备查"
   }
 }

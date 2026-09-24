@@ -688,7 +688,15 @@
     "usage": "攻击",
     "visible": true,
     "order": 41,
-    "guard_desc": "战斗中"
+    "guard_desc": "战斗中",
+    "bind": {
+      "handler": "content.cmds_battle:attack",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "interrupt": {
     "patterns": [
@@ -713,7 +721,15 @@
     "usage": "防御",
     "visible": true,
     "order": 43,
-    "guard_desc": "战斗中"
+    "guard_desc": "战斗中",
+    "bind": {
+      "handler": "content.cmds_battle:defend",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "retreat": {
     "patterns": [
@@ -764,7 +780,15 @@
     "usage": "逃跑",
     "visible": true,
     "order": 47,
-    "guard_desc": "战斗中"
+    "guard_desc": "战斗中",
+    "bind": {
+      "handler": "content.cmds_battle:flee",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "focus_fire": {
     "patterns": [
@@ -797,7 +821,15 @@
     "usage": "自动",
     "visible": true,
     "order": 50,
-    "guard_desc": "战斗中"
+    "guard_desc": "战斗中",
+    "bind": {
+      "handler": "content.cmds_battle:auto_battle",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "battle_log": {
     "patterns": [
@@ -808,7 +840,15 @@
     "usage": "战斗日志",
     "visible": true,
     "order": 51,
-    "guard_desc": "随时"
+    "guard_desc": "随时",
+    "bind": {
+      "handler": "content.cmds_battle:battle_log",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "gather": {
     "patterns": [
