@@ -13,6 +13,7 @@ import json
 import os
 
 from . import calendar as CAL        # 时辰/天气的唯一出口（它不 import 本模块，无环）
+from . import codex as CX            # 图鉴四谱的唯一记录口（B2-7）
 
 _DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 _CACHE: dict = {}
@@ -131,6 +132,7 @@ def _move(p, loc, node, sink_lines):
     p["prev"] = (p.get("prev") or [])[-8:] + [(p.get("loc"), p.get("node"))]
     p["loc"] = loc
     p["node"] = node
+    CX.note_visit(p, loc, node)               # ★ 记录（去过哪儿）
     return p
 
 
@@ -221,6 +223,7 @@ async def enter_town(env, sink, uid, player):
     p["prev"] = (p.get("prev") or [])[-8:] + [(p.get("loc"), p.get("node"))]
     p["loc"] = "windmill_town"
     p["node"] = "wt_gate_n"
+    CX.note_visit(p, "windmill_town", "wt_gate_n")
     if player is not None:
         player.update(p)
     _save(env)
@@ -276,6 +279,7 @@ async def go_to(env, sink, uid, player):
         return
     p["prev"] = (p.get("prev") or [])[-8:] + [(loc, node)]
     p["node"] = hit
+    CX.note_visit(p, loc, hit)
     if player is not None:
         player.update(p)
     _save(env)
@@ -334,16 +338,25 @@ async def money(env, sink, uid, player):
 # ══════════════════════════════════════════════════════════════
 async def touch(env, sink, uid, player):
     p = _p(player)
-    here = [v for v in _data("pois").values()
+    here = [(k, v) for k, v in _data("pois").items()
             if v.get("map") == p["loc"] and v.get("subarea") == p["node"]]
     if not here:
         yield "这里没有什么可以上手的。"
         return
-    for v in here:
+    got = []
+    for pid, v in here:
         yield "%s你摸到%s。" % (v.get("icon", ""), v.get("name"))
         rt = v.get("read_text")
         if rt:
             yield "「%s」" % T(rt)
+        if v.get("into_codex") and CX.note_read(p, pid):     # ★ 读到就进旧物谱（先一行问号）
+            got.append(pid)
+    if got:
+        if player is not None:
+            player.update(p)
+        _save(env)
+        for pid in got:
+            yield T("SYS_CODEX_NEW", book=CX.label("relic"), name=CX.name_of("relic", pid))
 
 
 async def read_thing(env, sink, uid, player):
@@ -357,8 +370,11 @@ async def read_thing(env, sink, uid, player):
     k, v = here[0]
     yield "【%s】" % v.get("name")
     yield T(v["read_text"])
-    if v.get("into_codex"):
-        yield "（这一条已经进你的%s）" % v["into_codex"]
+    if v.get("into_codex") and CX.note_read(p, k):
+        if player is not None:
+            player.update(p)
+        _save(env)
+        yield T("SYS_CODEX_NEW", book=CX.label("relic"), name=CX.name_of("relic", k))
 
 
 async def hint(env, sink, uid, player):

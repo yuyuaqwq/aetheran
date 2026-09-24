@@ -18,6 +18,8 @@ import random
 
 from .cmds_ast import _data, _p, _save, T
 from .cmds_talk import _arg
+from .cmds_codex import new_lines
+from . import codex as CX
 from . import loot as LT
 from . import gear as GB
 
@@ -157,7 +159,8 @@ async def cook(env, sink, uid, player):
         _take(p, e["id"], int(e["n"]))
     out = rec.get("out")
     n = int(rec.get("out_n") or 1)
-    first = LT.add_to_bag(p, [{"id": out, "n": n}])
+    LT.add_to_bag(p, [{"id": out, "n": n}])
+    new = CX.note_items(p, [out])              # ★ 做出来就进风味谱
     f = dict(p.get("flags") or {})
     cooked = dict(f.get("cooked") or {})
     cooked[rid] = int(cooked.get(rid, 0)) + 1
@@ -168,8 +171,8 @@ async def cook(env, sink, uid, player):
     _save(env)
     yield T("SYS_COOK_OK", name=rec.get("name", rid), icon=rec.get("icon", "🍲"),
             buff=_buff_label(rec), minutes=int((rec.get("buff") or {}).get("seconds", 0)) // 60)
-    if first:
-        yield "★ %d 件第一次见到的东西记进了旧物谱。" % len(first)
+    for line in new_lines(new):
+        yield line
 
 
 # ══════════════════════════════════════════════════════════════
@@ -282,6 +285,7 @@ async def item_use(env, sink, uid, player):
         from . import facade
         p["food_buff"] = {"stat": food.get("stat"), "pct": int(food.get("pct") or 0),
                           "until": float(facade.clock()) + int(food.get("seconds") or 0)}
+        CX.note_items(p, [iid])                # ★ 吃过也算（买来的菜也记）
         _take(p, iid, 1)
         if player is not None:
             player.update(p)

@@ -1,0 +1,355 @@
+{
+  "_meta": {
+    "book_label": {
+      "flavor": "风味谱",
+      "material": "材料谱",
+      "monster": "怪物谱",
+      "relic": "旧物谱"
+    },
+    "counts": {
+      "flavor": 8,
+      "material": 12,
+      "monster": 17,
+      "relic": 16
+    },
+    "material_reachable": [
+      "i_clue_page",
+      "i_fish_common",
+      "i_fish_rare",
+      "i_junk_bone",
+      "i_junk_boot",
+      "i_material_fungus",
+      "i_material_herb_common",
+      "i_material_herb_rare",
+      "i_material_iron_chip",
+      "i_material_old_iron"
+    ],
+    "material_unreachable": [
+      "i_material_hard_bone",
+      "i_material_iron_scrap"
+    ],
+    "note": "四本谱的条目与文案由 scripts/rebuild_codex.py 从源文档解析 —— 别手改本文件",
+    "source": [
+      "00_总纲/14_图鉴四谱口径_v1.md",
+      "06_第一阶段垂直切片/05_玩法数值口径_v1.md §五",
+      "06_第一阶段垂直切片/19_世界热闹度与可发现物_v1.md §三A"
+    ],
+    "targets": {
+      "flavor": 8,
+      "material": 10,
+      "monster": 12
+    }
+  },
+  "flavor": {
+    "i_food_jun_tang": {
+      "line": "娜娜教的做法（交掉「雨后的东西」才肯说）。雨后树根底下那点东西全在碗里。",
+      "name": "菌汤"
+    },
+    "i_food_kao_shiban": {
+      "line": "渡口人把鱼穿在树枝上烤。皮焦了，肉还是嫩的。",
+      "name": "烤石斑"
+    },
+    "i_food_koye_tang": {
+      "line": "娜娜摊上的做法。喝完身上暖，嘴还是苦的。",
+      "name": "苦叶汤"
+    },
+    "i_food_xian_yu_gan": {
+      "line": "渡口人腌过、晒过的。揣在怀里能走很远的路。",
+      "name": "咸鱼干"
+    },
+    "i_food_yeming_zhou": {
+      "line": "娜娜说这粥是给夜里还醒着的人熬的。米是碎的，喝了不困。",
+      "name": "夜明粥"
+    },
+    "i_food_yi_guo_dun": {
+      "line": "贝拉的做法（交掉「下一顿」才肯说）。什么都往里丢 —— 丢的人心里有数，喝的人没有。",
+      "name": "一锅炖"
+    },
+    "i_food_yu_ye": {
+      "line": "自己做的 —— 雨停了才想起来。雨里的味道还在碗里。",
+      "name": "雨夜的一碗"
+    },
+    "i_food_zhaopai": {
+      "line": "贝拉不肯说方子。吃过一次，你就记住了。",
+      "name": "客栈的招牌"
+    }
+  },
+  "material": {
+    "i_clue_page": {
+      "line": "白桦林那棵刻满名字的树下，还有旧哨塔的架子缝里。泡过水。",
+      "name": "半页纸"
+    },
+    "i_fish_common": {
+      "line": "渡口石阶最下两级。水退下去的时候正好露出来。",
+      "name": "石斑"
+    },
+    "i_fish_rare": {
+      "line": "水最深的地方才有 —— 它只在夜里上来。鳞退掉了，肉是甜的。",
+      "name": "无鳞鱼"
+    },
+    "i_junk_bone": {
+      "line": "骨田里到处都是。分不清是谁的。",
+      "name": "骨头"
+    },
+    "i_junk_boot": {
+      "line": "从浅滩里钓上来的。左脚的 —— 扔它的人没打算回来。",
+      "name": "一只旧靴子"
+    },
+    "i_material_fungus": {
+      "line": "雨后树根底下那一点。晴天来，只看见一片湿木头。",
+      "name": "雨菌"
+    },
+    "i_material_hard_bone": {
+      "line": "柯尔的报价单第二行：强化要它。怪身上掉 —— 现在还没掉过。",
+      "name": "硬骨"
+    },
+    "i_material_herb_common": {
+      "line": "娜娜摊上最常见的一格。城墙根背风的地方也长，比别处早。",
+      "name": "苦叶"
+    },
+    "i_material_herb_rare": {
+      "line": "塔下的白茅，只在夜里开。娜娜采它的时候不出声。",
+      "name": "夜明砂"
+    },
+    "i_material_iron_chip": {
+      "line": "打铁剩的，柯尔扫到墙角。攒着能修东西。",
+      "name": "铁屑"
+    },
+    "i_material_iron_scrap": {
+      "line": "柯尔的报价单第一行：强化要它。矿上出 —— 现在还没挖到。",
+      "name": "铁屑"
+    },
+    "i_material_old_iron": {
+      "line": "骨田的土里挖出来的，比这地方的东西都老。柯尔看一眼就不说话了。",
+      "name": "旧铁"
+    }
+  },
+  "monster": {
+    "ms_birch_crow": {
+      "line": "群攻，先动的是眼睛那一下。落在树上看你 —— 谁抬头就冲谁。",
+      "name": "林鸦"
+    },
+    "ms_birch_treant": {
+      "line": "只在有人刻字的时候动。树皮上的那些名字，它都记着。",
+      "name": "白桦树精"
+    },
+    "ms_bitten_lumberjack": {
+      "line": "还在干活 —— 但已经不是在砍树。听见木头响它就来。",
+      "name": "被咬过的伐木工"
+    },
+    "ms_bone_wanderer": {
+      "line": "只剩架子，很硬。走一步响一声，像在数什么。",
+      "name": "游荡的骸骨"
+    },
+    "ms_bone_warden": {
+      "line": "守的是同一件东西，守了不止一代人。",
+      "name": "守塔的骨架"
+    },
+    "ms_boss_oath_sentry": {
+      "line": "它不追你。你走到塔前，它才站起来。站桩 → 列阵 → 散架 → 回塔：每一步都有名字。",
+      "name": "旧誓哨兵"
+    },
+    "ms_ferryman": {
+      "line": "早就死了，还在摆渡。它一喊，水里那些就都上来。",
+      "name": "摆渡人"
+    },
+    "ms_field_mouse": {
+      "line": "骨头堆里成群出没。一只跑起来，整片都跟着动。",
+      "name": "田鼠"
+    },
+    "ms_head_dog": {
+      "line": "带着一群。杀了它，剩下的就散。",
+      "name": "头狗"
+    },
+    "ms_pick_scavenger": {
+      "line": "人形，抢东西，出手很重。只在你弯腰的时候上来。",
+      "name": "拾荒人"
+    },
+    "ms_scavenger_dog": {
+      "line": "成群，怕火。你在营地生火的那晚，它们在圈子外面站了很久。",
+      "name": "拾荒野狗"
+    },
+    "ms_shallow_ghoul": {
+      "line": "拽脚，会把人往水里拖。它不追上岸 —— 水是它的。",
+      "name": "浅滩水鬼"
+    },
+    "ms_stone_crab": {
+      "line": "硬壳，砍不动。翻过来才有力气。",
+      "name": "石滩螃蟹"
+    },
+    "ms_sunken_corpse": {
+      "line": "水底那个最大的。它不动的时候，像一段沉木。",
+      "name": "沉尸"
+    },
+    "ms_thing_in_water": {
+      "line": "只看得到影子。水一动，人已经在水里了。",
+      "name": "水里的东西"
+    },
+    "ms_tower_guard": {
+      "line": "门卫。它不追，只是不让进 —— 站了很多年，姿势没换过。",
+      "name": "旧哨塔的守兵"
+    },
+    "ms_wild_dog": {
+      "line": "白桦林与路口的常客，东带的主力。一群里总有一只先上。",
+      "name": "野狗"
+    }
+  },
+  "relic": {
+    "i_horn_half": {
+      "ask": [
+        "npc_durin"
+      ],
+      "from": "pick",
+      "hint": "只剩一半。它不响。谁掰的？为什么？",
+      "known": "断口是向外掰的 —— 掰它的人站在塔里，冲着北边。",
+      "name": "半截号角"
+    },
+    "i_token_stone_shard": {
+      "ask": [
+        "npc_lian"
+      ],
+      "from": "pick",
+      "hint": "与白桦树上的名字同源 —— 刻字的石头，不知道是谁留下的。",
+      "known": "刻的是一个人的名字，不是族名。刻痕的深浅与树上那批对得上。",
+      "name": "刻字的石片"
+    },
+    "poi_church_inscription": {
+      "ask": [
+        "npc_ed"
+      ],
+      "from": "read",
+      "hint": "官面上的说法：此地为「北境安抚使驻地」，立于立约后九百零二年。字很工整。",
+      "known": "工整得过了头。教会刻这行字的时候，镇子已经在这里站了几百年。",
+      "name": "教会刻的铭文"
+    },
+    "poi_eleven_stones": {
+      "ask": [
+        "npc_hagen",
+        "npc_ed"
+      ],
+      "from": "read",
+      "hint": "十一块。九块有名有姓，两块是空的。名字刻得很深，像怕被磨掉。",
+      "known": "空的两块不是还没来得及刻 —— 是刻的时候人还在，位置先留着。",
+      "name": "十一块碑"
+    },
+    "poi_half_buried_stele": {
+      "ask": [
+        "npc_lian",
+        "npc_durin"
+      ],
+      "from": "read",
+      "hint": "露出来的那截有字，被凿掉了 —— 凿得很仔细，一个字都没剩。",
+      "known": "凿它的人不是不认字，是不想让人认出来。碑面朝上，压的是底下的东西。",
+      "name": "半埋的碑"
+    },
+    "poi_named_birch": {
+      "ask": [
+        "npc_lian",
+        "npc_laotao"
+      ],
+      "from": "read",
+      "hint": "树皮上刻满了名字。最下面那个刻痕还新 —— 树脂没干。",
+      "known": "刻名字的人换过手。最早那一批刻得很深，后来的越刻越浅，像不敢用力。",
+      "name": "刻着名字的树"
+    },
+    "poi_old_ledger": {
+      "ask": [
+        "npc_durin",
+        "npc_masha"
+      ],
+      "from": "read",
+      "hint": "最后一页记着一笔进货：「旧铁廿斤 · 来源不明」。日期是三十七年前。",
+      "known": "三十七年前就有旧铁从北边流过来 —— 商会没问过来路，只记了斤两。",
+      "name": "商会旧账簿"
+    },
+    "poi_repeated_mark": {
+      "ask": [
+        "npc_seran",
+        "npc_lian"
+      ],
+      "from": "read",
+      "hint": "一个歪歪扭扭的符号，重复刻了七次，位置一次比一次靠里。",
+      "known": "刻的人每次都在往回走。第七次之后，他没再进来。",
+      "name": "重复七次的记号"
+    },
+    "poi_scavenger_note": {
+      "ask": [
+        "npc_durin",
+        "npc_grey"
+      ],
+      "from": "read",
+      "hint": "越写越急：「给后来的人 —— 我把东西留在里面了。别学我。」最后一行被划掉了。",
+      "known": "划掉的那行是给谁看的：他没打算活着回来，但也没打算让别人重走一遍。",
+      "name": "拾荒人留的字条"
+    },
+    "poi_soaked_journal": {
+      "ask": [
+        "npc_laotao",
+        "npc_seran"
+      ],
+      "from": "read",
+      "hint": "只剩半页能读。写着北边有一条「会走的裂缝」，作者见过三次，每次都离村子更近。",
+      "known": "写这半页的人最后没写完。裂缝不是走的 —— 是村里的人在往它那边挪。",
+      "name": "泡水的游记"
+    },
+    "poi_stone_scripts": {
+      "ask": [
+        "npc_lian",
+        "npc_seran"
+      ],
+      "from": "read",
+      "hint": "三种笔迹刻在同一块石头上。中间那种谁也不认得。",
+      "known": "最早那行是立镇的时候刻的。后面两行是有人后来加上去的 —— 最后一行，刻痕还新。",
+      "name": "镇口的石头"
+    },
+    "poi_underwater_steps": {
+      "ask": [
+        "npc_lian"
+      ],
+      "from": "read",
+      "hint": "退潮才看得见，一级一级往下，通到水里。台阶很整齐 —— 是有人修的。",
+      "known": "石头是从北边运来的（本地没有这种石）。修它的人不打算让它留在水面以上。",
+      "name": "水下的石阶"
+    },
+    "poi_unsent_letter": {
+      "ask": [
+        "npc_bella",
+        "npc_pete"
+      ],
+      "from": "read",
+      "hint": "纸是新的，字是旧的写法。收信人的名字被划掉了，划得很用力。",
+      "known": "划名字不是为了忘记，是为了不连累。写信的人后来回了镇上。",
+      "name": "没寄出的信"
+    },
+    "poi_wall_marks": {
+      "ask": [
+        "npc_laotao",
+        "npc_hagen"
+      ],
+      "from": "read",
+      "hint": "一道一道，刻得很浅。前二十道距离差不多，后面越来越近 —— 数到第四十七道停了。",
+      "known": "数日子的人最后二十天没睡好。停的那天，塔里出了别的事。",
+      "name": "墙上的划痕"
+    },
+    "unid_common": {
+      "ask": [
+        "npc_durin",
+        "npc_cole"
+      ],
+      "from": "pick",
+      "hint": "硬的，有点锈。埋在下面很久了。不知道是做什么的。",
+      "known": "是农具上掉下来的一截 —— 但这地方的人早就不用这种农具了。",
+      "name": "一块看不出用途的旧东西"
+    },
+    "unid_rare": {
+      "ask": [
+        "npc_durin",
+        "npc_lian"
+      ],
+      "from": "pick",
+      "hint": "上面有字。不是这儿的话。",
+      "known": "与镇口那块石头上的第二种字同一只手。石片是从别处带来的。",
+      "name": "一块刻着字的石片"
+    }
+  }
+}

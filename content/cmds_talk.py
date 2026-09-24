@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from .cmds_ast import _data, _p, _save, _map_of, _name_of_node, T, _texts, _npcs_here
 from . import calendar as CAL
+from . import codex as CX
 
 
 def _arg(env, default=""):
@@ -40,6 +41,11 @@ def _pick_line(lines, p, st=None):
                 ok = bool(flags.get("last_" + str(v)))
             elif k == "quest_done":
                 ok = bool(flags.get(v))
+            elif k == "codex":
+                # `codex: "<谱>:<条目>"` —— 谱里有了才出这句（B2-7：图鉴与对话接上）
+                bk, _, rid = str(v).partition(":")
+                if not (bk and rid and CX.has(p, bk, rid)):
+                    ok = False
             else:
                 ok = True
         if ok:
@@ -76,14 +82,31 @@ async def talk(env, sink, uid, player):
         return
     nodes = dlg.get("nodes") or {}
     # 节点择优：先看剧情节点（main / hidden），没有再看 meet / daily
+    spoke = False
     for nn in ("main", "hidden", "meet", "daily", "idle"):
         if nn in nodes:
             txt = _pick_line(nodes[nn].get("texts"), p, st)
             if txt:
                 for line in str(txt).split("\n"):
                     yield line
-                return
-    yield "（他没说话。）"
+                spoke = True
+                break
+    if not spoke:
+        yield "（他没说话。）"
+    # ★ B2-7：他要是认得你谱里那些还留着问号的旧东西 —— 名字当场说出来
+    if spoke:
+        first = True
+        for rid in CX.revealable(p, k):
+            if CX.reveal(p, rid):
+                if player is not None:
+                    player.update(p)
+                _save(env)
+                if first:                       # 那句话一次对话只说一遍
+                    yield T("SYS_CODEX_ASK", who=npc.get("name"))
+                    first = False
+                yield T("SYS_CODEX_REVEAL", name=CX.name_of("relic", rid))
+                yield T("SYS_CODEX_RELIC_KNOWN", name=CX.name_of("relic", rid),
+                        known=CX.line_of("relic", rid, "known"))
 
 
 async def ask_way(env, sink, uid, player):

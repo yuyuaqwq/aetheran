@@ -1110,7 +1110,15 @@
     "usage": "图鉴",
     "visible": true,
     "order": 67,
-    "guard_desc": "随时"
+    "guard_desc": "随时",
+    "bind": {
+      "handler": "content.cmds_codex:codex",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "codex_material": {
     "patterns": [
@@ -1123,7 +1131,7 @@
     "order": 68,
     "guard_desc": "随时",
     "bind": {
-      "handler": "content.cmds_gather:codex_materials",
+      "handler": "content.cmds_codex:codex_material",
       "call": "run",
       "args": [
         "uid",
@@ -1140,7 +1148,15 @@
     "usage": "风味谱",
     "visible": true,
     "order": 69,
-    "guard_desc": "随时"
+    "guard_desc": "随时",
+    "bind": {
+      "handler": "content.cmds_codex:codex_flavor",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "codex_monster": {
     "patterns": [
@@ -1151,7 +1167,15 @@
     "usage": "怪物谱",
     "visible": true,
     "order": 70,
-    "guard_desc": "随时"
+    "guard_desc": "随时",
+    "bind": {
+      "handler": "content.cmds_codex:codex_monster",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "codex_relic": {
     "patterns": [
@@ -1162,7 +1186,15 @@
     "usage": "旧物谱",
     "visible": true,
     "order": 71,
-    "guard_desc": "随时"
+    "guard_desc": "随时",
+    "bind": {
+      "handler": "content.cmds_codex:codex_relic",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "footprint": {
     "patterns": [
@@ -1174,7 +1206,15 @@
     "usage": "记录",
     "visible": true,
     "order": 72,
-    "guard_desc": "随时"
+    "guard_desc": "随时",
+    "bind": {
+      "handler": "content.cmds_codex:footprint",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "tower_enter": {
     "patterns": [

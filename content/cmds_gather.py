@@ -9,7 +9,9 @@ from __future__ import annotations
 import random
 
 from .cmds_ast import _data, _p, _save, _map_of, _name_of_node, T
+from .cmds_codex import new_lines
 from . import calendar as CAL
+from . import codex as CX
 from . import loot as LT
 
 
@@ -83,7 +85,10 @@ async def _do_gather(env, sink, uid, player, kind: str, verb: str):
                             "kind": e.get("kind") or it.get(oid, {}).get("kind") or "材料"})
             break
     _bump_used(p, gid)
-    first = LT.add_to_bag(p, got) if got else []
+    if got:
+        LT.add_to_bag(p, got)
+    new = CX.note_items(p, [d["id"] for d in got]) if got else []
+    CX.note_gather(p)
     p["hp"] = p.get("hp", 1)
     if player is not None:
         player.update(p)
@@ -97,8 +102,8 @@ async def _do_gather(env, sink, uid, player, kind: str, verb: str):
         yield "得到：%s %s ×%s" % (rec.get("icon", "·"), rec.get("name", d["id"]), d.get("n", 1))
         if rec.get("hint"):
             yield "  （%s）" % rec["hint"]
-    if first:
-        yield "★ %d 件第一次见到的东西记进了旧物谱。" % len(first)
+    for line in new_lines(new):
+        yield line
 
 
 async def gather(env, sink, uid, player):
@@ -139,17 +144,3 @@ async def rest(env, sink, uid, player):
 
 async def pick_up(env, sink, uid, player):
     yield "地上没什么可捡的 —— 打怪掉的东西会自己进背包。"
-
-
-async def codex_materials(env, sink, uid, player):
-    p = _p(player)
-    bag = p.get("bag") or {}
-    mats = [(k, v) for k, v in bag.items()
-            if (LT.items().get(k, {}).get("kind") in ("材料", "垃圾"))]
-    if not mats:
-        yield "【材料谱】空的。"
-        return
-    yield "【材料谱】%d 种" % len(mats)
-    for k, n in mats[:15]:
-        rec = LT.items().get(k, {})
-        yield "· %s %s ×%s" % (rec.get("icon", "·"), rec.get("name", k), n)

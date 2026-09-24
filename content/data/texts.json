@@ -1071,5 +1071,203 @@
     ],
     "category": "系统",
     "desc": "钱"
+  },
+  "SYS_CODEX_HEAD": {
+    "value": "【图鉴】四本谱 —— 见过的都记在这里。",
+    "params": [],
+    "category": "系统",
+    "desc": "图鉴一览表头"
+  },
+  "SYS_CODEX_ROW": {
+    "value": "· {book} {n}/{target} —— {note}",
+    "params": [
+      "book",
+      "n",
+      "note",
+      "target"
+    ],
+    "category": "系统",
+    "desc": "图鉴一览一行"
+  },
+  "SYS_CODEX_ROW_RELIC": {
+    "value": "· {book} {n} 条 —— 还留着 {q} 个问号",
+    "params": [
+      "book",
+      "n",
+      "q"
+    ],
+    "category": "系统",
+    "desc": "图鉴一览 · 旧物谱那一行"
+  },
+  "SYS_CODEX_FULL": {
+    "value": "记满了",
+    "params": [],
+    "category": "系统",
+    "desc": "谱记满"
+  },
+  "SYS_CODEX_TODO": {
+    "value": "还差 {left} 条",
+    "params": [
+      "left"
+    ],
+    "category": "系统",
+    "desc": "谱还没记满"
+  },
+  "SYS_CODEX_HINT": {
+    "value": "「图鉴」下面那四个词（材料谱 · 风味谱 · 怪物谱 · 旧物谱）能单独打开。",
+    "params": [],
+    "category": "系统",
+    "desc": "图鉴一览 · 尾注"
+  },
+  "SYS_CODEX_BOOK_HEAD": {
+    "value": "【{book}】{n} 条（记满 {target}）",
+    "params": [
+      "book",
+      "n",
+      "target"
+    ],
+    "category": "系统",
+    "desc": "一本谱的表头 · 有记满的那种"
+  },
+  "SYS_CODEX_BOOK_HEAD_OPEN": {
+    "value": "【{book}】{n} 条",
+    "params": [
+      "book",
+      "n"
+    ],
+    "category": "系统",
+    "desc": "一本谱的表头 · 旧物谱"
+  },
+  "SYS_CODEX_ENTRY": {
+    "value": "· {name} —— {line}",
+    "params": [
+      "line",
+      "name"
+    ],
+    "category": "系统",
+    "desc": "谱里一行"
+  },
+  "SYS_CODEX_ENTRY_KILL": {
+    "value": "· {name}（打过 {kills} 回）—— {line}",
+    "params": [
+      "kills",
+      "line",
+      "name"
+    ],
+    "category": "系统",
+    "desc": "怪物谱一行"
+  },
+  "SYS_CODEX_RELIC_UNKNOWN": {
+    "value": "？ {hint}",
+    "params": [
+      "hint"
+    ],
+    "category": "系统",
+    "desc": "旧物谱 · 还没认出来的那一行"
+  },
+  "SYS_CODEX_RELIC_KNOWN": {
+    "value": "· {name} —— {known}",
+    "params": [
+      "known",
+      "name"
+    ],
+    "category": "系统",
+    "desc": "旧物谱 · 认出来之后那一行"
+  },
+  "SYS_CODEX_RELIC_ASK_HINT": {
+    "value": "（留着问号的，拿去问对人 —— 镇上会有人认得。）",
+    "params": [],
+    "category": "系统",
+    "desc": "旧物谱 · 问号尾注"
+  },
+  "SYS_CODEX_NEW": {
+    "value": "★ 新进谱：{book} · {name}",
+    "params": [
+      "book",
+      "name"
+    ],
+    "category": "系统",
+    "desc": "新记进谱"
+  },
+  "SYS_CODEX_REVEAL": {
+    "value": "★ 旧物谱：「{name}」认出来了。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "问号换成名字"
+  },
+  "SYS_CODEX_ASK": {
+    "value": "{who}看了很久。「这个……我见过。不是在这儿。」",
+    "params": [
+      "who"
+    ],
+    "category": "系统",
+    "desc": "问对人那一下"
+  },
+  "SYS_CODEX_EMPTY_MATERIAL": {
+    "value": "材料谱还是空的 —— 采一把、挖一锹，就有了。",
+    "params": [],
+    "category": "系统",
+    "desc": "材料谱 · 空"
+  },
+  "SYS_CODEX_EMPTY_FLAVOR": {
+    "value": "风味谱还是空的 —— 做一道菜，或者吃一口别人做的。",
+    "params": [],
+    "category": "系统",
+    "desc": "风味谱 · 空"
+  },
+  "SYS_CODEX_EMPTY_MONSTER": {
+    "value": "怪物谱还是空的 —— 出镇打一场。",
+    "params": [],
+    "category": "系统",
+    "desc": "怪物谱 · 空"
+  },
+  "SYS_CODEX_EMPTY_RELIC": {
+    "value": "旧物谱还是空的 —— 读点东西，或者捡点什么回来。",
+    "params": [],
+    "category": "系统",
+    "desc": "旧物谱 · 空"
+  },
+  "SYS_FOOT_HEAD": {
+    "value": "【记录】走过 {places} 个地方 · 打过 {kills} 只 · {days} 个游戏日",
+    "params": [
+      "days",
+      "kills",
+      "places"
+    ],
+    "category": "系统",
+    "desc": "记录 · 表头"
+  },
+  "SYS_FOOT_MORE": {
+    "value": "· 读过 {reads} 处 · 采过 {gathers} 次 · 交过 {quests} 条委托",
+    "params": [
+      "gathers",
+      "quests",
+      "reads"
+    ],
+    "category": "系统",
+    "desc": "记录 · 中段"
+  },
+  "SYS_FOOT_BOOKS": {
+    "value": "· 谱：材料 {material}/{mt} · 风味 {flavor}/{ft} · 怪物 {monster}/{ot} · 旧物 {relic} 条（问号 {q}）",
+    "params": [
+      "flavor",
+      "ft",
+      "material",
+      "monster",
+      "mt",
+      "ot",
+      "q",
+      "relic"
+    ],
+    "category": "系统",
+    "desc": "记录 · 四本谱进度"
+  },
+  "SYS_FOOT_EMPTY": {
+    "value": "【记录】你还哪儿都没去过。",
+    "params": [],
+    "category": "系统",
+    "desc": "记录 · 空"
   }
 }

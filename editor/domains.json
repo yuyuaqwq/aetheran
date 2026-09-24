@@ -160,5 +160,14 @@
     "icon": "🍳",
     "owner": "package",
     "tier": "portable"
+  },
+  "codex": {
+    "label": "图鉴四谱",
+    "kind": "data",
+    "schema": "schemas/codex.schema.json",
+    "primary": "codex",
+    "icon": "📖",
+    "owner": "package",
+    "tier": "portable"
   }
 }

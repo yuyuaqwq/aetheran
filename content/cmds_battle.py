@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from .cmds_ast import _data, _p, _save, _map_of, _name_of_node, T
 from .cmds_talk import _arg
+from .cmds_codex import new_lines
+from . import codex as CX
 from . import combat as CB
 from . import loot as LT
 
@@ -35,6 +37,7 @@ async def attack(env, sink, uid, player):
         yield "这一带暂时没有遇到什么。"
         return
     yield "⚠️ 遭遇：%s" % ms[pick[0]].get("name", pick[0])
+    seen = CX.note_kill(p, pick[0])            # ★ 打过一次就进谱（输了也算「见过」）
     res, logs, hp_after = CB.run_auto(p, pick, ms)
     for line in _fmt(logs):
         yield line
@@ -52,7 +55,9 @@ async def attack(env, sink, uid, player):
         for pool_id in (m.get("drops") or []):
             drops.extend(LT.roll_pool(pool_id, level=lv,
                                      rnd=__import__("random").Random("%s:%s" % (uid, pick[0]))))
-        first = LT.add_to_bag(p, drops) if drops else []
+        if drops:
+            LT.add_to_bag(p, drops)
+        new = CX.note_items(p, [d["id"] for d in drops]) if drops else []
         if player is not None:
             player.update(p)
         _save(env)
@@ -65,9 +70,11 @@ async def attack(env, sink, uid, player):
                 yield "拾取：%s %s ×%s" % (ic, nm, d.get("n", 1))
                 if d.get("story"):
                     yield "  （%s）" % d["story"]
-            if first:
-                yield "★ 第一次见到的东西记进了旧物谱（%d 件）" % len(first)
+            for line in new_lines(new):
+                yield line
     else:
+        if seen:
+            yield T("SYS_CODEX_NEW", book=CX.label("monster"), name=CX.name_of("monster", pick[0]))
         yield "✖ 你倒下了。" if res == "defeat" else "（战斗结束：%s）" % res
         p["hp"] = max(1, hp_after)
         if player is not None:
