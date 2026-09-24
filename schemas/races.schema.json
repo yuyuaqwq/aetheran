@@ -7,7 +7,6 @@
     "race": {
       "type": "object",
       "required": [
-        "id",
         "name",
         "path",
         "flip",
@@ -62,7 +61,8 @@
           "type": "string",
           "description": "建号第四步「为什么来」"
         }
-      }
+      },
+      "$comment": "id 由顶层键承担（patternProperties 已限定 race_*），不列为记录必填 —— 2026-09-25 按引擎门禁 test_item_field_coverage 修"
     },
     "talent": {
       "type": "object",

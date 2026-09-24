@@ -14,7 +14,6 @@
         "recover",
         "range",
         "mp",
-        "res_cost",
         "power"
       ],
       "properties": {
@@ -221,7 +220,7 @@
         }
       },
       "additionalProperties": false,
-      "$comment": "★ additionalProperties:false 是新游戏的收紧（字段名写错当场红）。框架那份回退副本保持 additionalProperties:true，旧包不受影响。"
+      "$comment": "★ additionalProperties:false 是新游戏的收紧（字段名写错当场红）。框架那份回退副本保持 additionalProperties:true，旧包不受影响。 · res_cost 可选：狂战士无资源条（设计：烧自己的血），不是每条技能都消耗职业资源 —— 2026-09-25 按引擎门禁修"
     }
   },
   "type": "object",
