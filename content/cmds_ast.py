@@ -37,7 +37,7 @@ def T(key: str, **slots):
     """取一条文案（fail-closed：缺 key 直接回显 key，不静默）。"""
     rec = _texts().get(key)
     if not rec:
-        return "【缺文案：%s】" % key
+        return "[MISSING TEXT: %s]" % key
     s = rec.get("value", "")
     for k, v in slots.items():
         s = s.replace("{%s}" % k, str(v))
@@ -165,7 +165,7 @@ def name_with_title(p) -> str:
 
     显示位置照口径 §一：称号跟着名字走，**只显示最近拿到的那个**（21 §一「同上（替换）」）。
     """
-    nm = p.get("name") or "无名者"
+    nm = p.get("name") or T("SYS_NAME_UNKNOWN")
     n = TT.newest(p)
     return T("SYS_TITLE_BY_NAME", who=nm, name=n[1]) if n else nm
 
@@ -214,15 +214,15 @@ async def look(env, sink, uid, player):
     yield _scene_line(loc, node, m)           # ★ B3-6a：节点级近景 → 退地图级第一眼
     yield "━" * 12
     nb = [_name_of_node(loc, x) for x in _neighbors(loc, node)]
-    yield "往哪走：" + " · ".join("『%s』" % x for x in nb) if nb else "这里是尽头。"
+    yield T("SYS_LOOK_WAY", list=" · ".join("『%s』" % x for x in nb)) if nb else T("SYS_LOOK_DEAD_END")
     poi_here = [v for v in _data("pois").values()
                 if v.get("map") == loc and v.get("subarea") == node]
     if poi_here:
-        yield "看得见：" + " · ".join("『%s』%s" % (v.get("name"), v.get("icon", "")) for v in poi_here)
+        yield T("SYS_LOOK_SEES", list=" · ".join("『%s』%s" % (v.get("name"), v.get("icon", "")) for v in poi_here))
     npc_here = [v for _k, v in _npcs_here(loc, node)]
     if npc_here:
-        yield "人在：" + " · ".join("『%s』%s" % (v.get("name"), v.get("icon", "")) for v in npc_here)
-    yield "「『触摸』可以上手摸，『聆听』可以听，『地图』看全貌。」"
+        yield T("SYS_LOOK_WHO", list=" · ".join("『%s』%s" % (v.get("name"), v.get("icon", "")) for v in npc_here))
+    yield T("SYS_LOOK_HINT")
     for line in egg_lines(p, player, env):      # ★ B3-1：看四周那一下可能把两件事连起来
         yield line
     for line in title_lines(p, player, env):    # ★ B3-2：看四周那一下也可能把名字挂上来
@@ -234,10 +234,11 @@ async def map_view(env, sink, uid, player):
     loc, node = p["loc"], p["node"]
     m = _map_of(loc) or {}
     nodes = m.get("nodes") or []
-    yield "【%s（%s）】" % (m.get("name", loc), "村镇" if m.get("topology") == "star" else "野外")
+    yield T("SYS_MAP_HEAD", name=m.get("name", loc),
+            kind=T("SYS_MAP_KIND_TOWN") if m.get("topology") == "star" else T("SYS_MAP_KIND_WILD"))
     for n in nodes:
         mark = "▸" if n.get("id") == node else " "
-        yield "%s %s%s" % (mark, n.get("name"), "（你现在在这儿）" if mark == "▸" else "")
+        yield "%s %s%s" % (mark, n.get("name"), T("SYS_MAP_HERE") if mark == "▸" else "")
     for line in egg_lines(p, player, env):      # ★ B3-1：走到底再看地图
         yield line
     for line in title_lines(p, player, env):    # ★ B3-2：走了那么多趟，名字该挂上来了
@@ -247,7 +248,7 @@ async def map_view(env, sink, uid, player):
 async def listen(env, sink, uid, player):
     p = _p(player)
     yield T("WORLD_LISHEN_%s" % p["loc"].upper()) if ("WORLD_LISHEN_%s" % p["loc"].upper()) in _texts() \
-        else "风声。远处有水声。没有别的声音。"
+        else T("SYS_LISTEN_DEFAULT")
 
 
 async def time_now(env, sink, uid, player):
@@ -269,7 +270,7 @@ async def go_north(env, sink, uid, player):
     if player is not None:
         player.update(p)
     _save(env)
-    yield "你走出北门。风车在背后慢慢转，声音越来越远。"
+    yield T("SYS_MOVE_OUT_NORTH")
     yield _map_scene("belt_north")            # ★ B3-6a：地一屏从 texts 来（原先内联在代码里）
 
 
@@ -279,7 +280,7 @@ async def go_east(env, sink, uid, player):
     if player is not None:
         player.update(p)
     _save(env)
-    yield "你往东走。路两边很快全是白桦，树皮上刻着东西。"
+    yield T("SYS_MOVE_OUT_EAST")
     yield _map_scene("belt_east")             # ★ B3-6a：同上
 
 
@@ -289,7 +290,7 @@ async def go_west(env, sink, uid, player):
     if player is not None:
         player.update(p)
     _save(env)
-    yield "你往西走。脚下的土越来越湿，能听见水。"
+    yield T("SYS_MOVE_OUT_WEST")
     yield _map_scene("belt_west")             # ★ B3-6a：同上
 
 
@@ -304,14 +305,14 @@ async def enter_town(env, sink, uid, player):
         player.update(p)
     _save(env)
     yield _map_scene("windmill_town")         # ★ B3-6a：进镇那一屏从 texts 来（原内联）
-    yield "「『观察』看细节，『往东』『往西』『北口』出门，『公会』在挂板墙。」"
+    yield T("SYS_TOWN_ENTER_HINT")
 
 
 async def go_back(env, sink, uid, player):
     p = _p(player)
     prev = p.get("prev") or []
     if not prev:
-        yield "再往回就是你来时的地方了 —— 没什么可回的。"
+        yield T("SYS_MOVE_BACK_NONE")
         return
     loc, node = prev[-1]
     p["prev"] = prev[:-1]
@@ -320,7 +321,7 @@ async def go_back(env, sink, uid, player):
     if player is not None:
         player.update(p)
     _save(env)
-    yield "你退回 %s。" % _name_of_node(loc, node)
+    yield T("SYS_MOVE_BACK", name=_name_of_node(loc, node))
 
 
 async def go_to(env, sink, uid, player):
@@ -338,7 +339,7 @@ async def go_to(env, sink, uid, player):
     loc, node = p["loc"], p["node"]
     nb = _neighbors(loc, node)
     if not want:
-        yield "去哪儿？现在能走到：" + " · ".join("『%s』" % _name_of_node(loc, x) for x in nb)
+        yield T("SYS_MOVE_ASK", list=" · ".join("『%s』" % _name_of_node(loc, x) for x in nb))
         return
     hit = None
     for x in nb:
@@ -348,11 +349,11 @@ async def go_to(env, sink, uid, player):
     if hit is None:
         for n in (_map_of(loc) or {}).get("nodes") or []:
             if want in (n.get("id"), n.get("name")):
-                yield "「%s」从这儿过不去 —— 得先走到附近。" % n.get("name")
-                yield "现在能走到：" + " · ".join("『%s』" % _name_of_node(loc, x) for x in nb)
+                yield T("SYS_MOVE_FAR", name=n.get("name"))
+                yield T("SYS_MOVE_CAN", list=" · ".join("『%s』" % _name_of_node(loc, x) for x in nb))
                 return
-        yield "这儿没有叫「%s」的地方。" % want
-        yield "现在能走到：" + " · ".join("『%s』" % _name_of_node(loc, x) for x in nb)
+        yield T("SYS_MOVE_NOSUCH", name=want)
+        yield T("SYS_MOVE_CAN", list=" · ".join("『%s』" % _name_of_node(loc, x) for x in nb))
         return
     p["prev"] = (p.get("prev") or [])[-8:] + [(loc, node)]
     p["node"] = hit
@@ -361,13 +362,13 @@ async def go_to(env, sink, uid, player):
     if player is not None:
         player.update(p)
     _save(env)
-    yield "你走到 %s。" % _name_of_node(loc, hit)
+    yield T("SYS_MOVE_TO", name=_name_of_node(loc, hit))
     poi_here = [v for v in _data("pois").values() if v.get("map") == loc and v.get("subarea") == hit]
     npc_here = [v for v in _data("npcs").values() if v.get("map") == loc and v.get("subarea") == hit]
     if poi_here:
-        yield "看得见：" + " · ".join("『%s』%s" % (v.get("name"), v.get("icon", "")) for v in poi_here)
+        yield T("SYS_LOOK_SEES", list=" · ".join("『%s』%s" % (v.get("name"), v.get("icon", "")) for v in poi_here))
     if npc_here:
-        yield "人在：" + " · ".join("『%s』%s" % (v.get("name"), v.get("icon", "")) for v in npc_here)
+        yield T("SYS_LOOK_WHO", list=" · ".join("『%s』%s" % (v.get("name"), v.get("icon", "")) for v in npc_here))
 
 
 # ══════════════════════════════════════════════════════════════
@@ -376,39 +377,41 @@ async def go_to(env, sink, uid, player):
 async def status(env, sink, uid, player):
     p = _p(player)
     nm = name_with_title(p)                     # ★ B3-2：称号跟着名字走进面板
-    yield "【%s】%s · %s · %s 级" % (nm, p.get("race") or "未定", p.get("cls") or "未定", p.get("level"))
-    yield "生命 %s/%s ｜ 法力 %s/%s ｜ 铜板 %s" % (p.get("hp"), p.get("hp_max"),
-                                                    p.get("mo"), p.get("mo_max"), p.get("gold"))
-    yield "经验 %s ｜ 在 %s" % (p.get("exp"), _map_of(p["loc"]).get("name", p["loc"]) if _map_of(p["loc"]) else p["loc"])
+    yield T("SYS_STATUS_HEAD", who=nm, race=p.get("race") or T("SYS_UNSET"),
+            cls=p.get("cls") or T("SYS_UNSET"), level=p.get("level"))
+    yield T("SYS_STATUS_VITALS", hp=p.get("hp"), hp_max=p.get("hp_max"),
+            mo=p.get("mo"), mo_max=p.get("mo_max"), gold=p.get("gold"))
+    yield T("SYS_STATUS_EXP", exp=p.get("exp"),
+            place=_map_of(p["loc"]).get("name", p["loc"]) if _map_of(p["loc"]) else p["loc"])
 
 
 async def origin(env, sink, uid, player):
     p = _p(player)
     if not p.get("race"):
-        yield "你还没决定自己是谁。"
+        yield T("SYS_ORIGIN_NONE")
         return
     rs = _data("races").get("race_" + (p.get("race") or "").lower()) or {}
-    yield "你是%s。" % rs.get("name", p.get("race"))
-    yield "你为什么来：%s" % rs.get("why", "（这一句还没写）")
+    yield T("SYS_ORIGIN_WHO", name=rs.get("name", p.get("race")))
+    yield T("SYS_ORIGIN_WHY", why=rs.get("why") or T("SYS_ORIGIN_WHY_TODO"))
 
 
 async def bag(env, sink, uid, player):
     p = _p(player)
     items = p.get("bag") or {}
     if not items:
-        yield "背包是空的。"
+        yield T("SYS_BAG_EMPTY")
         return
-    yield "【背包】%d 种" % len(items)
+    yield T("SYS_BAG_HEAD", n=len(items))
     for k, v in list(items.items())[:20]:
         it = _data("items").get(k) or {}
         yield "· %s %s ×%s" % (it.get("icon", ""), it.get("name", k), v)
     if len(items) > 20:
-        yield "…（还有 %d 种）" % (len(items) - 20)
+        yield T("SYS_BAG_MORE", n=len(items) - 20)
 
 
 async def money(env, sink, uid, player):
     p = _p(player)
-    yield "你身上有 %s 枚铜板。" % p.get("gold")
+    yield T("SYS_MONEY_POUCH", gold=p.get("gold"))
 
 
 # ══════════════════════════════════════════════════════════════
@@ -419,11 +422,11 @@ async def touch(env, sink, uid, player):
     here = [(k, v) for k, v in _data("pois").items()
             if v.get("map") == p["loc"] and v.get("subarea") == p["node"]]
     if not here:
-        yield "这里没有什么可以上手的。"
+        yield T("SYS_TOUCH_NONE")
         return
     got = []
     for pid, v in here:
-        yield "%s你摸到%s。" % (v.get("icon", ""), v.get("name"))
+        yield T("SYS_TOUCH_GET", icon=v.get("icon", ""), name=v.get("name"))
         rt = v.get("read_text")
         if rt:
             yield "「%s」" % T(rt)
@@ -447,10 +450,10 @@ async def read_thing(env, sink, uid, player):
     here = [(k, v) for k, v in _data("pois").items()
             if v.get("map") == p["loc"] and v.get("subarea") == p["node"] and v.get("read_text")]
     if not here:
-        yield "这里没有能读的东西。"
+        yield T("SYS_READ_NONE")
         return
     k, v = here[0]
-    yield "【%s】" % v.get("name")
+    yield T("SYS_READ_HEAD", name=v.get("name"))
     yield T(v["read_text"])
     if v.get("into_codex") and CX.note_read(p, k):
         if player is not None:
@@ -462,9 +465,9 @@ async def read_thing(env, sink, uid, player):
 async def hint(env, sink, uid, player):
     p = _p(player)
     if p["loc"] == "windmill_town":
-        yield "先『观察』看看镇口那块石头，再去『公会』接一件小活。"
+        yield T("SYS_HINT_TOWN")
     else:
-        yield "往北是骨田和旧哨塔，往东是白桦林，往西是浅滩渡口。『返回』回上一个地方。"
+        yield T("SYS_HINT_WILD")
 
 
 async def help_cmd(env, sink, uid, player):
@@ -473,7 +476,7 @@ async def help_cmd(env, sink, uid, player):
     for k, v in cmds.items():
         if v.get("visible") is False:
             continue
-        cats.setdefault(v.get("category", "其它"), []).append(v.get("usage") or k)
-    yield "【指令表】"
+        cats.setdefault(v.get("category") or T("SYS_HELP_CAT_OTHER"), []).append(v.get("usage") or k)
+    yield T("SYS_HELP_HEAD")
     for c, ws in cats.items():
-        yield "· %s：%s" % (c, " · ".join("『%s』" % w for w in ws))
+        yield T("SYS_HELP_ROW", cat=c, list=" · ".join("『%s』" % w for w in ws))

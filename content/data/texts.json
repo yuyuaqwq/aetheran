@@ -1373,5 +1373,316 @@
     "params": [],
     "category": "称号",
     "desc": "一个称号都没有时"
+  },
+  "SYS_LOOK_WAY": {
+    "value": "往哪走：{list}",
+    "params": [
+      "list"
+    ],
+    "category": "系统",
+    "desc": "观察 · 出口那一行"
+  },
+  "SYS_LOOK_DEAD_END": {
+    "value": "这里是尽头。",
+    "params": [],
+    "category": "系统",
+    "desc": "观察 · 没有出口"
+  },
+  "SYS_LOOK_SEES": {
+    "value": "看得见：{list}",
+    "params": [
+      "list"
+    ],
+    "category": "系统",
+    "desc": "观察 / 去 · 这一处的可交互物"
+  },
+  "SYS_LOOK_WHO": {
+    "value": "人在：{list}",
+    "params": [
+      "list"
+    ],
+    "category": "系统",
+    "desc": "观察 / 去 · 这一处的人"
+  },
+  "SYS_LOOK_HINT": {
+    "value": "「『触摸』可以上手摸，『聆听』可以听，『地图』看全貌。」",
+    "params": [],
+    "category": "系统",
+    "desc": "观察 · 尾注"
+  },
+  "SYS_MAP_HEAD": {
+    "value": "【{name}（{kind}）】",
+    "params": [
+      "name",
+      "kind"
+    ],
+    "category": "系统",
+    "desc": "地图 · 表头"
+  },
+  "SYS_MAP_KIND_TOWN": {
+    "value": "村镇",
+    "params": [],
+    "category": "系统",
+    "desc": "地图 · 表头 · star 拓扑"
+  },
+  "SYS_MAP_KIND_WILD": {
+    "value": "野外",
+    "params": [],
+    "category": "系统",
+    "desc": "地图 · 表头 · chain 拓扑"
+  },
+  "SYS_MAP_HERE": {
+    "value": "（你现在在这儿）",
+    "params": [],
+    "category": "系统",
+    "desc": "地图 · 当前节点那一行"
+  },
+  "SYS_LISTEN_DEFAULT": {
+    "value": "风声。远处有水声。没有别的声音。",
+    "params": [],
+    "category": "系统",
+    "desc": "聆听 · 这张图没有专属槽位时"
+  },
+  "SYS_MOVE_OUT_NORTH": {
+    "value": "你走出北门。风车在背后慢慢转，声音越来越远。",
+    "params": [],
+    "category": "系统",
+    "desc": "北口 · 出门那一句"
+  },
+  "SYS_MOVE_OUT_EAST": {
+    "value": "你往东走。路两边很快全是白桦，树皮上刻着东西。",
+    "params": [],
+    "category": "系统",
+    "desc": "往东 · 出门那一句"
+  },
+  "SYS_MOVE_OUT_WEST": {
+    "value": "你往西走。脚下的土越来越湿，能听见水。",
+    "params": [],
+    "category": "系统",
+    "desc": "往西 · 出门那一句"
+  },
+  "SYS_TOWN_ENTER_HINT": {
+    "value": "「『观察』看细节，『往东』『往西』『北口』出门，『公会』在挂板墙。」",
+    "params": [],
+    "category": "系统",
+    "desc": "进镇 · 尾注"
+  },
+  "SYS_MOVE_BACK_NONE": {
+    "value": "再往回就是你来时的地方了 —— 没什么可回的。",
+    "params": [],
+    "category": "系统",
+    "desc": "返回 · 没有上一处"
+  },
+  "SYS_MOVE_BACK": {
+    "value": "你退回 {name}。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "返回"
+  },
+  "SYS_MOVE_ASK": {
+    "value": "去哪儿？现在能走到：{list}",
+    "params": [
+      "list"
+    ],
+    "category": "系统",
+    "desc": "去 · 没给地方"
+  },
+  "SYS_MOVE_FAR": {
+    "value": "「{name}」从这儿过不去 —— 得先走到附近。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "去 · 目标不是邻居"
+  },
+  "SYS_MOVE_CAN": {
+    "value": "现在能走到：{list}",
+    "params": [
+      "list"
+    ],
+    "category": "系统",
+    "desc": "去 · 报可走的地方"
+  },
+  "SYS_MOVE_NOSUCH": {
+    "value": "这儿没有叫「{name}」的地方。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "去 · 名字对不上"
+  },
+  "SYS_MOVE_TO": {
+    "value": "你走到 {name}。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "去"
+  },
+  "SYS_STATUS_HEAD": {
+    "value": "【{who}】{race} · {cls} · {level} 级",
+    "params": [
+      "who",
+      "race",
+      "cls",
+      "level"
+    ],
+    "category": "系统",
+    "desc": "状态 · 第一行"
+  },
+  "SYS_STATUS_VITALS": {
+    "value": "生命 {hp}/{hp_max} ｜ 法力 {mo}/{mo_max} ｜ 铜板 {gold}",
+    "params": [
+      "hp",
+      "hp_max",
+      "mo",
+      "mo_max",
+      "gold"
+    ],
+    "category": "系统",
+    "desc": "状态 · 第二行"
+  },
+  "SYS_STATUS_EXP": {
+    "value": "经验 {exp} ｜ 在 {place}",
+    "params": [
+      "exp",
+      "place"
+    ],
+    "category": "系统",
+    "desc": "状态 · 第三行"
+  },
+  "SYS_UNSET": {
+    "value": "未定",
+    "params": [],
+    "category": "系统",
+    "desc": "状态 · 族 / 职业还没定"
+  },
+  "SYS_NAME_UNKNOWN": {
+    "value": "无名者",
+    "params": [],
+    "category": "系统",
+    "desc": "称号 · 面板 · 名字还没起"
+  },
+  "SYS_ORIGIN_NONE": {
+    "value": "你还没决定自己是谁。",
+    "params": [],
+    "category": "系统",
+    "desc": "出身 · 还没选族"
+  },
+  "SYS_ORIGIN_WHO": {
+    "value": "你是{name}。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "出身 · 第一行"
+  },
+  "SYS_ORIGIN_WHY": {
+    "value": "你为什么来：{why}",
+    "params": [
+      "why"
+    ],
+    "category": "系统",
+    "desc": "出身 · 第二行"
+  },
+  "SYS_ORIGIN_WHY_TODO": {
+    "value": "（这一句还没写）",
+    "params": [],
+    "category": "系统",
+    "desc": "出身 · 这句还没填"
+  },
+  "SYS_BAG_EMPTY": {
+    "value": "背包是空的。",
+    "params": [],
+    "category": "系统",
+    "desc": "背包 · 空"
+  },
+  "SYS_BAG_HEAD": {
+    "value": "【背包】{n} 种",
+    "params": [
+      "n"
+    ],
+    "category": "系统",
+    "desc": "背包 · 表头"
+  },
+  "SYS_BAG_MORE": {
+    "value": "…（还有 {n} 种）",
+    "params": [
+      "n"
+    ],
+    "category": "系统",
+    "desc": "背包 · 只列前 20 种"
+  },
+  "SYS_MONEY_POUCH": {
+    "value": "你身上有 {gold} 枚铜板。",
+    "params": [
+      "gold"
+    ],
+    "category": "系统",
+    "desc": "钱袋"
+  },
+  "SYS_TOUCH_NONE": {
+    "value": "这里没有什么可以上手的。",
+    "params": [],
+    "category": "系统",
+    "desc": "触摸 · 这处没东西"
+  },
+  "SYS_TOUCH_GET": {
+    "value": "{icon}你摸到{name}。",
+    "params": [
+      "icon",
+      "name"
+    ],
+    "category": "系统",
+    "desc": "触摸 · 摸到一样"
+  },
+  "SYS_READ_NONE": {
+    "value": "这里没有能读的东西。",
+    "params": [],
+    "category": "系统",
+    "desc": "读 · 这处没有可读物"
+  },
+  "SYS_READ_HEAD": {
+    "value": "【{name}】",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "读 · 抬头"
+  },
+  "SYS_HINT_TOWN": {
+    "value": "先『观察』看看镇口那块石头，再去『公会』接一件小活。",
+    "params": [],
+    "category": "系统",
+    "desc": "提示 · 在镇上"
+  },
+  "SYS_HINT_WILD": {
+    "value": "往北是骨田和旧哨塔，往东是白桦林，往西是浅滩渡口。『返回』回上一个地方。",
+    "params": [],
+    "category": "系统",
+    "desc": "提示 · 在野外"
+  },
+  "SYS_HELP_HEAD": {
+    "value": "【指令表】",
+    "params": [],
+    "category": "系统",
+    "desc": "帮助 · 表头"
+  },
+  "SYS_HELP_ROW": {
+    "value": "· {cat}：{list}",
+    "params": [
+      "cat",
+      "list"
+    ],
+    "category": "系统",
+    "desc": "帮助 · 一行"
+  },
+  "SYS_HELP_CAT_OTHER": {
+    "value": "其它",
+    "params": [],
+    "category": "系统",
+    "desc": "帮助 · 指令没写分类时的兜底类名"
   }
 }
