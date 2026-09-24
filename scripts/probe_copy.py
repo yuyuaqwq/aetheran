@@ -13,6 +13,7 @@
   ⑨ 面板分层名（B3-6b-2d）真造一个 actor 逐层核 `src` —— 必须正好是 texts 里那 6 条的字
   ⑩ 去(脚下这一站) 回「到了」不回「过不去」（B3-10 ① —— HERE 那一支真取到）
   ⑪ 呈现口不漏机器键的覆盖面：战斗 / 配方 / 图鉴 / 称号 / 彩蛋 / 时间 也逐行扫（B3-10 ②）
+  ⑫ 四条出口（北口/往东/往西/进镇）站在**目的地**上敲 = 回 HERE、不演出门、不塞历史（B3-11 · K60）
 
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_copy.py [--inventory]
 """
@@ -356,6 +357,11 @@ def main():
         ("称号(有)", CTT.titles_book, "", {"titles": {_tid: {"day": 1}}} if _tid else {}),
         ("彩蛋(一个都没有)", CE.eggs_book, "", {}),
         ("彩蛋(有)", CE.eggs_book, "", {"eggs": {_eid: {"day": 2}}} if _eid else {}),
+        # ★ B3-11：站在目的地上再敲那四条出口（原先会再演一遍出门 · 往历史里塞自己）
+        ("北口(就在骨田)", CA.go_north, "", {"loc": "belt_north", "node": "bn_bone"}),
+        ("往东(就在白桦林)", CA.go_east, "", {"loc": "belt_east", "node": "be_birch"}),
+        ("往西(就在旧渡口)", CA.go_west, "", {"loc": "belt_west", "node": "bw_old_ferry"}),
+        ("进镇(就在镇口)", CA.enter_town, "", {"loc": "windmill_town", "node": "wt_gate_n"}),
     ]
     bad, empty, sample = [], [], []
     leaked = []
@@ -386,6 +392,34 @@ def main():
     chk("★ 去(脚下这一站 %s)：出 HERE 那一句、不出 FAR" % cur,
         bool(here_out) and here_out[0] == here_want and far_txt not in chr(10).join(here_out),
         "%s" % (here_out[:2] if here_out else ["(空)"]))
+
+    # ⑫ B3-11 ★ 四条出口的「脚下这一站」（K60 家族）：站在目的地再敲一次 —— 不许演「又走了一趟」
+    _EXITS = [("北口", "belt_north", "bn_bone", "SYS_MOVE_OUT_NORTH", CA.go_north),
+              ("往东", "belt_east", "be_birch", "SYS_MOVE_OUT_EAST", CA.go_east),
+              ("往西", "belt_west", "bw_old_ferry", "SYS_MOVE_OUT_WEST", CA.go_west),
+              ("进镇", "windmill_town", "wt_gate_n", None, CA.enter_town)]
+    exit_bad = []
+    for label, loc, node, out_slot, fn in _EXITS:
+        pp = _player(loc=loc, node=node, prev=[])
+        out = _drive(fn, pp, "")
+        want_here = tx["SYS_MOVE_HERE"]["value"].replace("{name}", CA._name_of_node(loc, node))
+        why = []
+        if not out or out[0] != want_here:
+            why.append("首行不是 HERE：%s" % (out[:1] or ["(空)"]))
+        if out_slot and tx[out_slot]["value"] in chr(10).join(out):
+            why.append("还在演出门那一屏")
+        if (pp.get("loc"), pp.get("node")) != (loc, node):
+            why.append("位置被挪动了 %s" % ((pp.get("loc"), pp.get("node")),))
+        if pp.get("prev"):
+            why.append("往历史里塞了自己 %s" % (pp.get("prev"),))
+        back = _drive(CA.go_back, pp, "")
+        if not back or back[0] != tx["SYS_MOVE_BACK_NONE"]["value"]:
+            why.append("紧接着的『返回』不是「没什么可回」：%s" % (back[:1] or ["(空)"]))
+        if why:
+            exit_bad.append((label, why))
+    chk("★ 站在目的地敲『北口 / 往东 / 往西 / 进镇』：回 HERE · 不演出门 · 不塞历史（4 条）",
+        not exit_bad, "%s" % exit_bad[:2])
+
 
     print("  · 打样：%s" % " ｜ ".join(sample))
 

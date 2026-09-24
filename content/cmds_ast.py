@@ -199,6 +199,22 @@ def _move(p, loc, node, sink_lines):
     return p
 
 
+def _here_lines(p) -> list:
+    """★ K60：目标 == 脚下这一站 —— 说「到了」，别假装又走了一趟（B3-10 立的 · B3-11 收全）。
+
+    四条出口（北口 / 往东 / 往西 / 进镇）原先**无条件**先往 `prev` 压一条「当前这一站」：
+    站在骨田再敲一次「北口」会 ① 再演一遍出门那一屏 ② 历史里多一条自己（下一次
+    『返回』就成了原地打转） ③ 「去过几回」虚增一趟（称号「骨田的常客」靠它）。
+    判据：probe_copy ⑫（真跑四条 × 站在目的地上敲）。
+    """
+    loc, node = p.get("loc"), p.get("node")
+    out = [T("SYS_MOVE_HERE", name=_name_of_node(loc, node))]
+    nb = [_name_of_node(loc, x) for x in _neighbors(loc, node)]
+    if nb:
+        out.append(T("SYS_MOVE_CAN", list=" · ".join("『%s』" % x for x in nb)))
+    return out
+
+
 def name_with_title(p) -> str:
     """★ B3-2：名字后面跟称号（一个称号都没有就是名字本身）。
 
@@ -305,6 +321,10 @@ async def time_now(env, sink, uid, player):
 
 async def go_north(env, sink, uid, player):
     p = _p(player)
+    if (p["loc"], p["node"]) == ("belt_north", "bn_bone"):        # ★ B3-11：脚下这一站（K60）
+        for line in _here_lines(p):
+            yield line
+        return
     p = _move(p, "belt_north", "bn_bone", sink)
     if player is not None:
         player.update(p)
@@ -315,6 +335,10 @@ async def go_north(env, sink, uid, player):
 
 async def go_east(env, sink, uid, player):
     p = _p(player)
+    if (p["loc"], p["node"]) == ("belt_east", "be_birch"):        # ★ B3-11：脚下这一站（K60）
+        for line in _here_lines(p):
+            yield line
+        return
     p = _move(p, "belt_east", "be_birch", sink)
     if player is not None:
         player.update(p)
@@ -325,6 +349,10 @@ async def go_east(env, sink, uid, player):
 
 async def go_west(env, sink, uid, player):
     p = _p(player)
+    if (p["loc"], p["node"]) == ("belt_west", "bw_old_ferry"):        # ★ B3-11：脚下这一站（K60）
+        for line in _here_lines(p):
+            yield line
+        return
     p = _move(p, "belt_west", "bw_old_ferry", sink)
     if player is not None:
         player.update(p)
@@ -335,6 +363,10 @@ async def go_west(env, sink, uid, player):
 
 async def enter_town(env, sink, uid, player):
     p = _p(player)
+    if (p["loc"], p["node"]) == ("windmill_town", "wt_gate_n"):        # ★ B3-11：脚下这一站（K60）
+        for line in _here_lines(p):
+            yield line
+        return
     p["prev"] = (p.get("prev") or [])[-8:] + [(p.get("loc"), p.get("node"))]
     p["loc"] = "windmill_town"
     p["node"] = "wt_gate_n"
@@ -390,8 +422,8 @@ async def go_to(env, sink, uid, player):
             if want in (n.get("id"), n.get("name")):
                 # ★ B3-10：目标就是脚下这一站 —— 别说「过不去」（玩家会以为路被堵了）
                 if n.get("id") == node:
-                    yield T("SYS_MOVE_HERE", name=n.get("name"))
-                    yield T("SYS_MOVE_CAN", list=" · ".join("『%s』" % _name_of_node(loc, x) for x in nb))
+                    for line in _here_lines(p):      # ★ B3-11：与四条出口共用同一支
+                        yield line
                     return
                 yield T("SYS_MOVE_FAR", name=n.get("name"))
                 yield T("SYS_MOVE_CAN", list=" · ".join("『%s』" % _name_of_node(loc, x) for x in nb))
