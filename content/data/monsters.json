@@ -5,6 +5,18 @@
     "archetype": "群居",
     "role": "普通",
     "lv": 3,
+    "habitat": {
+      "maps": [
+        "belt_east",
+        "belt_north"
+      ],
+      "nodes": [
+        "be_birch",
+        "be_dogs",
+        "bn_bone",
+        "bn_camp"
+      ]
+    },
     "panel": {
       "hp": 52,
       "atk": 8,
@@ -37,6 +49,16 @@
     "archetype": "群居",
     "role": "普通",
     "lv": 4,
+    "habitat": {
+      "maps": [
+        "belt_east",
+        "belt_north"
+      ],
+      "nodes": [
+        "be_dogs",
+        "bn_camp"
+      ]
+    },
     "panel": {
       "hp": 60,
       "atk": 9,
@@ -69,6 +91,15 @@
     "archetype": "厚甲",
     "role": "普通",
     "lv": 6,
+    "habitat": {
+      "maps": [
+        "belt_north"
+      ],
+      "nodes": [
+        "bn_bone",
+        "bn_tower"
+      ]
+    },
     "panel": {
       "hp": 237,
       "atk": 13,
@@ -101,6 +132,15 @@
     "archetype": "快速",
     "role": "普通",
     "lv": 4,
+    "habitat": {
+      "maps": [
+        "belt_east"
+      ],
+      "nodes": [
+        "be_birch",
+        "be_dogs"
+      ]
+    },
     "panel": {
       "hp": 93,
       "atk": 14,
@@ -133,6 +173,17 @@
     "archetype": "杂兵",
     "role": "普通",
     "lv": 6,
+    "habitat": {
+      "maps": [
+        "belt_east",
+        "belt_north"
+      ],
+      "nodes": [
+        "be_dogs",
+        "be_shed",
+        "bn_tower"
+      ]
+    },
     "panel": {
       "hp": 170,
       "atk": 15,
@@ -165,6 +216,15 @@
     "archetype": "消耗",
     "role": "普通",
     "lv": 8,
+    "habitat": {
+      "maps": [
+        "belt_west"
+      ],
+      "nodes": [
+        "bw_shoal",
+        "bw_ferry"
+      ]
+    },
     "panel": {
       "hp": 206,
       "atk": 16,
@@ -197,6 +257,15 @@
     "archetype": "厚甲",
     "role": "普通",
     "lv": 9,
+    "habitat": {
+      "maps": [
+        "belt_west"
+      ],
+      "nodes": [
+        "bw_ferry",
+        "bw_old_ferry"
+      ]
+    },
     "panel": {
       "hp": 314,
       "atk": 16,
@@ -229,6 +298,18 @@
     "archetype": "爆发",
     "role": "精英",
     "lv": 7,
+    "habitat": {
+      "maps": [
+        "belt_north",
+        "old_watchtower"
+      ],
+      "nodes": [
+        "bn_camp",
+        "tower_gate",
+        "tower_hall",
+        "tower_armory"
+      ]
+    },
     "panel": {
       "hp": 395,
       "atk": 25,
@@ -261,6 +342,14 @@
     "archetype": "消耗",
     "role": "精英",
     "lv": 9,
+    "habitat": {
+      "maps": [
+        "belt_east"
+      ],
+      "nodes": [
+        "be_shed"
+      ]
+    },
     "panel": {
       "hp": 674,
       "atk": 17,
@@ -293,6 +382,15 @@
     "archetype": "法系",
     "role": "精英",
     "lv": 11,
+    "habitat": {
+      "maps": [
+        "belt_east"
+      ],
+      "nodes": [
+        "be_dogs",
+        "be_shed"
+      ]
+    },
     "panel": {
       "hp": 627,
       "atk": 21,
@@ -325,6 +423,14 @@
     "archetype": "支援",
     "role": "精英",
     "lv": 12,
+    "habitat": {
+      "maps": [
+        "belt_west"
+      ],
+      "nodes": [
+        "bw_ferry"
+      ]
+    },
     "panel": {
       "hp": 838,
       "atk": 19,
@@ -357,6 +463,14 @@
     "archetype": "爆发",
     "role": "精英",
     "lv": 13,
+    "habitat": {
+      "maps": [
+        "belt_west"
+      ],
+      "nodes": [
+        "bw_old_ferry"
+      ]
+    },
     "panel": {
       "hp": 625,
       "atk": 37,
@@ -389,6 +503,11 @@
     "archetype": "厚甲",
     "role": "头目",
     "lv": 14,
+    "habitat": {
+      "maps": [
+        "old_watchtower"
+      ]
+    },
     "panel": {
       "hp": 1549,
       "atk": 22,
@@ -421,6 +540,14 @@
     "archetype": "快速",
     "role": "头目",
     "lv": 10,
+    "habitat": {
+      "maps": [
+        "belt_east"
+      ],
+      "nodes": [
+        "be_dogs"
+      ]
+    },
     "panel": {
       "hp": 595,
       "atk": 23,
@@ -453,6 +580,14 @@
     "archetype": "厚甲",
     "role": "头目",
     "lv": 15,
+    "habitat": {
+      "maps": [
+        "belt_west"
+      ],
+      "nodes": [
+        "bw_old_ferry"
+      ]
+    },
     "panel": {
       "hp": 1639,
       "atk": 23,
@@ -485,6 +620,14 @@
     "archetype": "法系",
     "role": "层主",
     "lv": 17,
+    "habitat": {
+      "maps": [
+        "old_watchtower"
+      ],
+      "nodes": [
+        "tower_horn_room"
+      ]
+    },
     "panel": {
       "hp": 1336,
       "atk": 28,
@@ -517,6 +660,14 @@
     "archetype": "厚甲",
     "role": "boss",
     "lv": 19,
+    "habitat": {
+      "maps": [
+        "old_watchtower"
+      ],
+      "nodes": [
+        "tower_top"
+      ]
+    },
     "panel": {
       "hp": 10275,
       "atk": 28,
