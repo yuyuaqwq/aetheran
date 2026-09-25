@@ -1,5 +1,11 @@
 # -*- coding: utf-8 -*-
-"""探针（B4-4 · 只读设计）：技能自己声明的两段耗时 —— 现算 vs 设计值，逐条对账。
+"""探针**草案**（B4-4 · 只读设计）：技能自己声明的两段耗时 —— 现算 vs 设计值，逐条对账。
+
+★★ 合入时（2026-09-25 · 主线）改名：`scripts/probe_timing.py` → `scripts/_draft_probe_timing.py`。
+   原因：本探针 ②④ 两组是**故意红着**的（它量的是「引擎还没接」这件事），而全量门禁跑器
+   是 `scripts/probe_*.py` 通配 —— 让它进闸就是「门禁带一条已知红」，违反「探针全绿才算完」。
+   接线那天（引擎 `segment_plan_fn` 有调用方了）把它**改回 `probe_timing.py`** 并纳入全量门禁。
+   跑它：`GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/_draft_probe_timing.py`
 
 背景（为什么这条探针必须先红着）
 ------------------------------------------------------------------
