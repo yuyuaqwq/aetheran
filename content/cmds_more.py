@@ -215,7 +215,7 @@ async def attrs(env, sink, uid, player):
         return
     gear, buffs = PB.gear_and_buffs(p)                 # ★ 与面板 / 战斗同一个取值口
     actor = PB.build_actor(cls, max(1, int(p.get("level") or 1)), ALLOC.of_record(p),
-                           gear, buffs=buffs)
+                           gear, buffs=buffs, uid=uid)  # ★ B3-28 ①：栈 id 带上这个人
     yield T("SYS_ATTR_HEAD", who=name_with_title(p), cls=_cls_label(cls), level=p.get("level"))
     yield T("SYS_ATTR_VITAL", hp=_fmt(actor.get("max_hp", 0)), mo=_fmt(actor.get("max_mp", 0)),
             crit=_fmt(_crit_rate(actor) * 100))

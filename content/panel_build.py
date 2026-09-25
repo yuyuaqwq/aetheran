@@ -6,6 +6,7 @@
 """
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -41,6 +42,39 @@ def rate_of(rating: float) -> float:
     return r / (r + K_RATE)
 
 _REGISTRY: dict = {}          # 栈 id → decl（panel_layers_fn 的供体）
+#: ★ B3-28 ①：栈 id 里**必须带「人」那一维**（`_person_tag`）——
+#:   栈的声明里烤着这一个人的加点 / 装备 / 增益，原先键只有 `职业@等级`
+#:   ⇒ 同进程里同职业同等级的两个玩家共用一格（后造的盖先造的：实测甲开战后面板
+#:   被乙敲一条指令就带走，见 `_notes.md` §B3-28 ① 的重现输出）。
+#:   可复用性照旧：同一个人的同一份档反复构建落在**同一个键**上（那一格反复用）。
+#:   不做淘汰（`pop`）：已经开战的那只 actor 身上带着它的栈 id，淘汰它 = 那一场当场崩
+#:   （引擎 `stats.py` 查不到栈就抛 `panel_layers 无此栈`）。条目数 = 见过的人数 × 职业等级，
+#:   每条几 KB —— 先照实记着，要收再按「战斗结束」回收（本批没做）。
+
+
+def _fingerprint(alloc, equipment, buffs) -> str:
+    """这一档自己那几个数（加点 / 装备 / 增益）的指纹 —— 没有身份时的「人」那一维。"""
+    parts = []
+    for tag, d in (("a", alloc), ("g", equipment), ("b", buffs)):
+        cells = sorted("%s=%r" % (k, v) for k, v in (d or {}).items())
+        parts.append(tag + ":" + "|".join(cells))
+    return hashlib.sha1(";".join(parts).encode("utf-8")).hexdigest()[:12]
+
+
+def _person_tag(uid, alloc, equipment, buffs) -> str:
+    """面板栈键里的**「人」那一维**（B3-28 ①）—— 有身份用身份，没身份用这一档的指纹。
+
+    两档都不许省：省了就退回「同职业同等级共用一格」。为什么要留指纹这一档 ——
+    `hp_cap(档)` / `actor_of_record(档)` 这类调用点手上**只有档、没有 ctx**（生产宿主
+    读回来的档不含 `uid`：`host/store_factory.py::_IDENTITY_KEYS` 把身份列剔掉了；
+    handler 那三个槽位 `group_id/uid/player` 才是拿得到身份的地方）。
+    所以：**能拿到 uid 的调用点一律传进来**（战斗 / 属性页），拿不到的用指纹兜住 ——
+    两种都不撞格，且都不编数。
+    """
+    u = str(uid or "").strip()
+    if u:
+        return "u-" + u
+    return "f-" + _fingerprint(alloc, equipment, buffs)
 
 
 class PanelMissing(Exception):
@@ -126,12 +160,16 @@ def _layers_of(cls_id: str, level: int, alloc: dict | None):
 
 def build_actor(cls_id: str, level: int, alloc: dict | None = None,
                 equipment: dict | None = None, buffs: dict | None = None,
-                *, stack_prefix: str = "aetheran") -> dict:
+                *, stack_prefix: str = "aetheran", uid: str | None = None) -> dict:
     """造一个玩家 actor：自带 panel_stack（栈 id）与战斗侧字段。
 
     `buffs` —— `{面板键: 乘数}`（B2-6 食物增益那类），走**最后**一层 `mul`：
       乘层必须排在加层之后（引擎逐层作用：先加后乘，值才是对的）；
       只乘列出的键（引擎面板栈的 per-key mul），不写 `apply: whole`。
+
+    ★ B3-28 ①：`uid` = **身份**（handler 那三个槽位里的第二个）。拿得到就传 ——
+      栈 id 会带上它（`_person_tag`）；拿不到（只有档的调用点）走这一档的指纹，
+      同样不撞格。**两个不同的人（或两份不同的档）永远不会共用同一格。**
     """
     base_e, grow_e, attr_e = _layers_of(cls_id, level, alloc)
     gear_e = {KEYMAP.get(k, k): v for k, v in (equipment or {}).items()}
@@ -146,7 +184,10 @@ def build_actor(cls_id: str, level: int, alloc: dict | None = None,
         "dodge": rate_of(p.get("eva", 0) + float(gear_e.get("dodge", 0) or 0)),
     }
 
-    sid = "%s.%s@%d" % (stack_prefix, cls_id, level)
+    # ★ B3-28 ①：键 = `前缀.职业@等级`（**可复用的那一维**，同级同职业共用得到它）
+    #   + `#<人那一维>`（身份或这一档的指纹）。原先只有前半截 ⇒ 撞格。
+    sid = "%s.%s@%d#%s" % (stack_prefix, cls_id, level,
+                           _person_tag(uid, alloc, equipment, buffs))
     keys = sorted(set(base_e) | set(grow_e) | set(attr_e) | set(gear_e))
     _REGISTRY[sid] = {
         "version": 1,
@@ -196,22 +237,23 @@ def gear_and_buffs(record) -> tuple:
     return (GB.gear_stats(rec) or None), (GB.food_buff(rec) or None)
 
 
-def actor_of_record(record) -> dict:
+def actor_of_record(record, *, uid: str | None = None) -> dict:
     """档 → 战斗那只 actor（职业 + 等级 + **档上实际那份加点** + 装备 + 增益）——**唯一口**。
 
     ★ P-34：上一批（P-27）把「装备 / 增益」收成了一个口（`gear_and_buffs`），
       这一批把「加点」也收了（`alloc.of_record`）。上游（战斗 / 生命上限 / 属性页 /
       下一批的**装备门槛**）要「这档的面板」一律走这里 —— 别再各自 `rec.get("alloc")`。
+    ★ B3-28 ①：`uid` 透传给 `build_actor`（拿得到就传 —— 栈 id 带上身份；拿不到用指纹）。
     """
     rec = record if isinstance(record, dict) else {}
     cls = str(rec.get("cls") or "").strip()
     cls_rec(cls)                               # 空 / 不在域里 ⇒ 当场抛（fail-closed）
     lv = max(1, int(rec.get("level") or 1))
     gear, buffs = gear_and_buffs(rec)
-    return build_actor(cls, lv, ALLOC.of_record(rec), gear, buffs=buffs)
+    return build_actor(cls, lv, ALLOC.of_record(rec), gear, buffs=buffs, uid=uid)
 
 
-def hp_cap(record, *, strict: bool = True):
+def hp_cap(record, *, strict: bool = True, uid: str | None = None):
     """玩家档 → **生命上限**（宪法键 `hp_max`）。唯一来源：本函数（职业面板）。
 
     两种失败分开处置（fail-closed 纪律：`fail-closed-boundaries` §1）：
@@ -230,4 +272,5 @@ def hp_cap(record, *, strict: bool = True):
     if not cls and not strict:
         return None                            # 还没择业 ⇒ 上限未定（不猜数、也不崩）
     # ★ P-34：档 → 面板只走一个口（职业 + 等级 + **档上实际那份加点** + 装备 + 增益）
-    return int(actor_of_record(rec)["max_hp"])
+    # ★ B3-28 ①：uid 拿得到就传（栈 id 带上身份）；拿不到走这一档的指纹，一样不撞格。
+    return int(actor_of_record(rec, uid=uid)["max_hp"])

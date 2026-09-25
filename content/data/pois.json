@@ -180,7 +180,6 @@
     "map": "belt_north",
     "subarea": "bn_camp",
     "effect": {
-      "loot": "dp_hidden_camp",
       "need": "search"
     }
   },
@@ -191,7 +190,6 @@
     "map": "belt_east",
     "subarea": "be_dogs",
     "effect": {
-      "loot": "dp_hidden_birch",
       "need": "search"
     },
     "condition": {
@@ -205,7 +203,6 @@
     "map": "belt_west",
     "subarea": "bw_shoal",
     "effect": {
-      "loot": "dp_hidden_shoal",
       "need": "search"
     },
     "condition": {

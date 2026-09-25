@@ -59,8 +59,14 @@ def party_scale_of(m: dict, party: int | None) -> dict:
     return {str(k): float(v) for k, v in (tbl.get(str(party)) or {}).items()}
 
 
-def player_actor(player: dict, stack_prefix: str = "aetheran") -> dict:
-    """玩家档 → 战斗 actor（面板走本包的面板栈）。"""
+def player_actor(player: dict, stack_prefix: str = "aetheran", *,
+                 uid: str | None = None) -> dict:
+    """玩家档 → 战斗 actor（面板走本包的面板栈）。
+
+    ★ B3-28 ①：`uid` = 身份，**从 handler 那三个槽位传进来**（生产宿主读回来的档里
+      没有 `uid`：`host/store_factory.py::_IDENTITY_KEYS` 把身份列剔掉了 ⇒ 只靠
+      `player.get("uid")` 会在生产里恒等于同一个值 = 照样撞格）。拿得到就传。
+    """
     # ★ P-27：职业**不兜底**（原先 `player.get("cls") or "cls_knight"` —— 等于替没择业的玩家
     #   挑了个职业，档与面板从这一行起就分家）。没有职业 ⇒ `panel_build` 当场抛 `PanelMissing`
     #   （生命上限只有一个来源：职业面板）。
@@ -74,8 +80,9 @@ def player_actor(player: dict, stack_prefix: str = "aetheran") -> dict:
     # ★ P-34：「这档实际分了多少」只走 `alloc.of_record`（归一化 + fail-closed）——
     #   原先这里写的是 `player.get("alloc")`：档上那一格坏了（认不出的维 / 小数 / 超投）
     #   战斗会当没投过照样开打，而「属性」页 / 生命上限却按别的数算 ⇒ 三处对不上。
-    a = PB.build_actor(cls, lv, ALLOC.of_record(player), gear, buffs=buffs, stack_prefix=stack_prefix)
-    a["uid"] = str(player.get("uid") or "p1")
+    a = PB.build_actor(cls, lv, ALLOC.of_record(player), gear, buffs=buffs,
+                       stack_prefix=stack_prefix, uid=uid)
+    a["uid"] = str(uid or player.get("uid") or "p1")
     a["name"] = player.get("name") or "无名者"
     a["side"] = PLAYER_SIDE
     a["kind"] = "player"
@@ -214,19 +221,20 @@ def _affix_hooks(battle: Battle) -> None:
 
 
 def build(player: dict, monster_ids, monsters: dict, *, party: int | None = None,
-          override=None, affixes=None, hp_mults=None) -> Battle:
+          override=None, affixes=None, hp_mults=None, uid: str | None = None) -> Battle:
     """组一场战斗：玩家 1 人 vs 指定的怪。
 
     `party` = 队伍人数（今天只有单人，所以调用方一律传 1；组队接线那批把真实人数传进来）——
     它只影响「团队内容」那几只怪的面板（`mods.party_scale`），别的怪一格不动。
     `override` = **非内置动作**的回调（引擎 `Battle.action_override` 那一个注入面）——
     B3-23 那几手（打断 / 用物 / 换手）走它；不传 = 与改前逐字相同（引擎不认识任何游戏词）。
+    `uid` = 身份（B3-28 ①），透传 `player_actor` —— 面板栈的键带上它，不撞别人的格。
 
     ★ B3-24（精英词条的落点，全部可选；**不传 = 与接线前逐字相同**）：
       · `affixes` —— 这一场敌人的精英词条 id（`affix.roll` 抽出来的那一组）；
       · `hp_mults` —— 与 `monster_ids` 等长的「每只的生命倍数」（群居的第二只半血）。
     """
-    ps = [player_actor(player)]
+    ps = [player_actor(player, uid=uid)]
     es = []
     for i, mid in enumerate(monster_ids):
         m = monsters.get(mid)
@@ -246,11 +254,13 @@ def build(player: dict, monster_ids, monsters: dict, *, party: int | None = None
 
 
 def run_auto(player: dict, monster_ids, monsters: dict, *, seed: int | None = None,
-             party: int | None = None, affixes=None, hp_mults=None):
+             party: int | None = None, affixes=None, hp_mults=None,
+             uid: str | None = None):
     """★ 第一版主路径：自动打完，返回 (结果, 日志行, 玩家战后血量)。"""
     if seed is not None:
         random.seed(seed)                       # 可复现（探针用）
-    b = build(player, monster_ids, monsters, party=party, affixes=affixes, hp_mults=hp_mults)
+    b = build(player, monster_ids, monsters, party=party, affixes=affixes,
+              hp_mults=hp_mults, uid=uid)
     logs: list = []
     b.auto_run(logs)
     pa = b.sides[PLAYER_SIDE][0]

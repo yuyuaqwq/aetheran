@@ -700,5 +700,71 @@ except Exception as exc:                                                      # 
     chk("★ B3-19 装备门槛那一节跑得起来", False, "%s: %s" % (type(exc).__name__, exc))
 
 print("")
+print("── ⑧ ★ B3-28 ①：面板栈的键带上「人」那一维（同职业同级的两名玩家不撞同一格）")
+#   原先 `panel_build.build_actor` 的栈 id = `aetheran.<职业>@<等级>`，而栈的声明里烤着
+#   **这一个人**的加点 / 装备 / 增益 ⇒ 同进程里同职业同等级的两个玩家共用一格（后造的盖先造的）。
+#   实测（重现输出见工作树 `_notes.md`）：甲开战后面板 264 / 32.62 / 44.8，乙敲一条指令
+#   （`_p()` → `hp_cap()` 那条出档口）之后回头读甲 ⇒ 224 / 22.62 / 35.8 —— 甲被乙带着变了。
+#   本节四条（全部真跑 `CB.player_actor` + 引擎 `actor_stats`，不是拿声明比声明）：
+#     ① 同职业同级两个人 ⇒ **栈 id 不同**（各拿各的那一格）
+#     ② 反证（原 bug 的路径）：乙再构建一次之后回头读甲 ⇒ 甲的键**逐键不变**
+#     ③ 同一人两次构建 ⇒ 栈 id 相同（键可复用）+ 面板逐键一致
+#     ④ 顺序无关 + 拿不到 uid 的调用点（指纹那一档）也不撞格
+try:
+    _EQ8 = st.domain("items") or {}
+    _SLOT8 = "armor_top"
+    _HP8 = sorted(k for k, v in _EQ8.items()
+                  if v.get("slot") == _SLOT8
+                  and any(a.get("stat") == "hp" for a in (v.get("affixes") or [])))
+    chk("★ 用例取自域里真有的件（`%s` 里带 `hp` 词条的那几件：%s）"
+        % (_SLOT8, " · ".join(str(_EQ8[k].get("name")) for k in _HP8[:3])), bool(_HP8), "%s" % _HP8[:3])
+    _a8 = _HP8[0] if _HP8 else ""
+    _rec8a = {"cls": "cls_knight", "level": 10, "hp": 500, "equipped": {_SLOT8: _a8}}
+    _rec8b = {"cls": "cls_knight", "level": 10, "hp": 462, "equipped": {},
+              "food_buff": {"stat": "atk", "pct": 50, "until": 1e18}}     # 乙：吃到食物增益
+
+    _act8a = CB.player_actor(_rec8a, uid="u_jia")
+    _act8b = CB.player_actor(_rec8b, uid="u_yi")
+    _p8a1, _p8b1 = dict(actor_stats(None, _act8a)), dict(actor_stats(None, _act8b))
+    chk("★ ① 同职业同等级的两个玩家 ⇒ 栈 id **不同**（甲 %s ／ 乙 %s）"
+        % (_act8a["panel_stack"], _act8b["panel_stack"]),
+        _act8a["panel_stack"] != _act8b["panel_stack"]
+        and _act8a["panel_stack"].startswith("aetheran.cls_knight@10#")
+        and _act8b["panel_stack"].startswith("aetheran.cls_knight@10#")
+        and "#" in _act8a["panel_stack"],          # ★ 有牙：老键（只有职业@等级）就是撞格的那一个
+        "%s / %s" % (_act8a["panel_stack"], _act8b["panel_stack"]))
+    chk("★ ① 各读各的面板：甲的 `max_hp` = 甲那份档算出来的上限（%s）· 乙 = 乙那份（%s）"
+        % (panel_build.hp_cap(_rec8a), panel_build.hp_cap(_rec8b)),
+        int(_p8a1["max_hp"]) == panel_build.hp_cap(_rec8a)
+        and int(_p8b1["max_hp"]) == panel_build.hp_cap(_rec8b) and _p8a1 != _p8b1,
+        "%s / %s" % (_p8a1.get("max_hp"), _p8b1.get("max_hp")))
+    _act8b2 = CB.player_actor(_rec8b, uid="u_yi")            # ← 生产里「乙又敲了一条指令」
+    _p8a2 = dict(actor_stats(None, _act8a))
+    chk("★ ② 反证（原 bug 的重现路径）：乙再构建一次之后回头读甲 ⇒ 甲的键**逐键不变**",
+        _p8a1 == _p8a2,
+        "%s" % {k: (_p8a1.get(k), _p8a2.get(k))
+                for k in sorted(set(_p8a1) | set(_p8a2)) if _p8a1.get(k) != _p8a2.get(k)})
+    chk("★ ③ 同一人两次构建 ⇒ 栈 id 相同（那一格反复用，不每人重算一格）+ 面板逐键一致",
+        _act8b["panel_stack"] == _act8b2["panel_stack"]
+        and dict(actor_stats(None, _act8b2)) == _p8b1,
+        "%s / %s" % (_act8b["panel_stack"], _act8b2["panel_stack"]))
+    _act8a2 = CB.player_actor(_rec8a, uid="u_jia")
+    chk("★ ④ 顺序无关：先造乙再造甲 ⇒ 甲还是甲那一份",
+        dict(actor_stats(None, _act8a2)) == _p8a1 and _act8a2["panel_stack"] == _act8a["panel_stack"],
+        "%s / %s" % (_act8a2["panel_stack"], _p8a1.get("max_hp")))
+    _f8a = panel_build.build_actor("cls_knight", 10, None, {"hp": 40})   # 不传 uid = 只有档的调用点
+    _f8b = panel_build.build_actor("cls_knight", 10, None, None)
+    chk("★ ④ 拿不到 uid 的调用点走**这一档的指纹**（%s ／ %s）：两份不同的档也不撞同一格"
+        "（带 `hp +40` 的那份正好高 40）"
+        % (_f8a["panel_stack"], _f8b["panel_stack"]),
+        _f8a["panel_stack"] != _f8b["panel_stack"]
+        and dict(actor_stats(None, _f8a)) != dict(actor_stats(None, _f8b))
+        and float(actor_stats(None, _f8a)["max_hp"])
+        == float(actor_stats(None, _f8b)["max_hp"]) + 40,
+        "%s / %s" % (_f8a["panel_stack"], _f8b["panel_stack"]))
+except Exception as exc:                                                      # noqa: BLE001
+    chk("★ B3-28 ① 面板栈按人隔离那一节跑得起来", False, "%s: %s" % (type(exc).__name__, exc))
+
+print("")
 print("===== %s =====" % ("★ P-27 三处一致 + 反证都过 ✅" if not fails else "P-27 有红 ❌ %s" % fails))
 sys.exit(0 if ok else 1)
