@@ -215,8 +215,7 @@ try:
     #   就出「小满 · 瑟兰 · 杜林」，不带档只有「小满 · 杜林」。
     #   修法（三行）：搭话 / 问路两处 `_npcs_here(loc, node, st, p=p)` + 对话 `need.event` 的读端。
     #   判据按**现状**登记 —— 补丁落下去那天这条会翻红，那时把它从 KNOWN_GAP 删掉即可。
-    KNOWN_GAP = {"i_token_stone_shard":
-                 "搭话 / 问路没传档 ⇒ 世界事件判成「商队没到」（cmds_talk 那三行补丁待合）"}
+    KNOWN_GAP = {}          # ★ 2026-09-25 合入时 cmds_talk 那三行补丁已落 ⇒ 一条缺口都不留
     bad_run = []
     for iid, who, at in EVENTS:
         if at[0] != "dialogues":

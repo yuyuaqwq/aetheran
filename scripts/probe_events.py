@@ -448,13 +448,13 @@ chk("★ 第二天（收了）：「异动」说「集日 —— 收了。」且
     and TX["SYS_EV_ROW_NEW"]["value"].format(name="集日", text=TX["SYS_EV_MARKET"]["value"]) not in l8, l8)
 FC.bind_host(clock=lambda: epoch_at(100, 21.0))      # 还原（后面还有用例）
 
-print("⑯ 对话层 `need.event` 的读端：本批**不动** `cmds_talk.py`（协调方留着）⇒ 诚实登记这笔账")
+print("⑯ 对话层 `need.event` 真被点亮（读端 = 事件层的唯一口 `CAL.event_on`）")
 bl = (CAL._d("dialogues") or {}).get("dlg_bella", {}).get("nodes", {}).get("daily", {}).get("texts", [])
 i_before, _ = CT._pick_indexed(bl, {}, st7)
 i_after, _ = CT._pick_indexed(bl, {"flags": {"quests_done": ["q_main_03"]}}, st7)
-chk("★ 那句「今天杜林到了」今天**还出不来**（读端读的是没人写的 `flags.event_<名字>`）——"
-    " 实测两种档都挑到后一条，别当它已生效（补法见 _notes.md 遗留）",
-    i_before == i_after == 1, [i_before, i_after])
+chk("★ 那句「今天杜林到了」只在**商队到了**之后出（没到：挑不到它 · 到了：头一句就是它）"
+    "—— 原先读端读的是没人写的 `flags.event_<名字>`，2026-09-25 合入时补的三行之一",
+    i_before != 0 and i_after == 0, [i_before, i_after])
 chk("★ 但它的门槛名换成了**真事件 id**（数据侧先正过来 —— ⑰ 守着这一条）",
     ((bl[0].get("need") or {}).get("event") in EV), bl[0].get("need"))
 
@@ -477,10 +477,8 @@ chk("★ 数据里 %d 处事件门槛全部是真事件 id（认不出的当场�
     % len(toks), bool(toks) and not bad17, bad17)
 
 print("⑱ ★ 源码守卫：`_npcs_here` 的每个调用点都把档传进去（两处口径的根）")
-#: ★ 已知缺口（本批**不许动** `content/cmds_talk.py` —— 协调方留给别的批）：
-#   那两处调用没传档 ⇒ 主线 3 之后「搭话 / 问路」在北口还看不到瑟兰（与「观察」两处口径）。
-#   补法（三行）写在 `_notes.md` §三 遗留里，合入后一并补；**新出现的缺口一律红**。
-KNOWN_GAP = {("cmds_talk.py", "talk"), ("cmds_talk.py", "ask_way")}
+#: ★ 2026-09-25 合入时那两处调用已补上档（原先是已知缺口，登记在 `_notes.md` §三）⇒ 现在**一处都不许缺**。
+KNOWN_GAP = set()
 srcs = {p.name: p.read_text(encoding="utf-8") for p in (REPO / "content").glob("*.py")}
 calls, no_p, gap = [], [], []
 for name, s in srcs.items():
@@ -499,9 +497,8 @@ for name, s in srcs.items():
         calls.append((name, fn))
         if not (", p)" in tail or "p=p)" in tail):
             (gap if (name, fn) in KNOWN_GAP else no_p).append((name, fn, tail.strip()))
-chk("★ %d 个调用点都传了档（`p` / `p=p`）—— 新缺口一律红" % len(calls), calls and not no_p, no_p)
-chk("★ 已知缺口只剩登记过的那 %d 处（cmds_talk：本批不许动 · 补法在 _notes.md）" % len(KNOWN_GAP),
-    len(gap) == len(KNOWN_GAP), gap)
+chk("★ %d 个调用点都传了档（`p` / `p=p`）—— 一处都不许缺（原来 talk / ask_way 那两处已补）" % len(calls),
+    bool(calls) and not no_p and not gap, no_p or gap)
 
 print()
 print("事件速览（名字 · 尺度 · 窗 · 效果）:")
