@@ -328,7 +328,15 @@
     "usage": "看 <编号>",
     "visible": true,
     "order": 14,
-    "guard_desc": "在公会"
+    "guard_desc": "在公会",
+    "bind": {
+      "handler": "content.cmds_more:board_show",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "quest_accept": {
     "patterns": [
@@ -492,7 +500,15 @@
     "usage": "属性",
     "visible": true,
     "order": 22,
-    "guard_desc": "随时"
+    "guard_desc": "随时",
+    "bind": {
+      "handler": "content.cmds_more:attrs",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "alloc": {
     "patterns": [
@@ -670,7 +686,15 @@
     "usage": "查看 <参数>",
     "visible": true,
     "order": 32,
-    "guard_desc": "背包里有"
+    "guard_desc": "背包里有",
+    "bind": {
+      "handler": "content.cmds_more:item_show",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "item_use": {
     "patterns": [
@@ -703,7 +727,15 @@
     "usage": "丢弃 <参数>",
     "visible": true,
     "order": 34,
-    "guard_desc": "背包里有"
+    "guard_desc": "背包里有",
+    "bind": {
+      "handler": "content.cmds_more:item_drop",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "item_sell": {
     "patterns": [
@@ -715,7 +747,15 @@
     "usage": "卖出 <参数>",
     "visible": true,
     "order": 35,
-    "guard_desc": "在铺子"
+    "guard_desc": "在铺子",
+    "bind": {
+      "handler": "content.cmds_more:item_sell",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "item_buy": {
     "patterns": [
@@ -741,7 +781,15 @@
     "usage": "存放 <参数>",
     "visible": true,
     "order": 37,
-    "guard_desc": "在客栈"
+    "guard_desc": "在客栈",
+    "bind": {
+      "handler": "content.cmds_more:stash",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "bag_sort": {
     "patterns": [
@@ -753,7 +801,15 @@
     "usage": "整理背包",
     "visible": true,
     "order": 38,
-    "guard_desc": "随时"
+    "guard_desc": "随时",
+    "bind": {
+      "handler": "content.cmds_more:bag_sort",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "item_compare": {
     "patterns": [
@@ -1587,7 +1643,15 @@
     "usage": "成就",
     "visible": true,
     "order": 88,
-    "guard_desc": "随时"
+    "guard_desc": "随时",
+    "bind": {
+      "handler": "content.cmds_more:achievements",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "talk": {
     "patterns": [

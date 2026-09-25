@@ -36,11 +36,17 @@ priority 降序、同值按注册序，见引擎 `tests/test_host_priority_route
      塔里 / 塔外两档回的都是真话，不是「还没接上」那一句（槽位 `SYS_CMD_SOON`）
   ⑨ ★ B3-9（真敲）：装备 / 卸下 / 装备对比 / 学习 / 技能 五条接上了 —— 回的都是填了槽位的真话
      （顺序：装备 → 状态 跟着面板走 → 对比（含别名）→ 卸下 → 穿脱回原样 → 学习 → 技能）；
-     且「声明了、可见、还没实现」那一条**只许降**（本批 38 → 33，`UNBOUND_MAX` 钉着）
+     且「声明了、可见、还没实现」那一条**只许降**（B3-6 收口 45 → B3-9 收 33 → **本批 25**，
+     `UNBOUND_MAX` 钉着）
   ⑩ ★ B3-9（直调）：学习 / 技能 的语义 —— 六职业 1 级解锁那一班 · 四道门（没有这条 / 不是本职业 /
      解锁等级没到 / 已经会了）· 落档后**档上那班 = 战斗真放的那班** · 用档上那班真打一场出伤害
   ⑪ ★ B3-9（直调）：`装备对比` 逐字对账 —— 期望值由 `gear.gear_stats`（唯一取值口）+ texts 现算，
      不手写镜像串；三档（有增有减 / 位子空着 / 全一样）各比一遍整段输出
+  ⑫ ★ B3-12（真敲）：这一批新接的 8 条 —— 看 <编号> / 属性 / 查看 / 丢弃 / 卖出 / 整理背包 /
+     存放·取出 / 成就。每一条**真宿主真敲**、整段与「域 + texts 现算的期望」逐字对账，
+     档上副作用逐条核（bag / gold / flags.stash 的增减与摘条目），并扫「没有域 id / 没有
+     取不到文案 / 不再回「还没接上」那一句」；其中「整理背包」钉**键序真重排 + 一件没少**、
+     「存放·取出」钉**方向取自声明（单字别名同向）**、「属性」钉**生命上限 = `hp_cap` 那一个来源**
 
 跑法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_cmds.py
 """
@@ -378,10 +384,11 @@ BOUND_USAGES = [v.get("usage") for k, v in DECL.items()
 UNBOUND = {k: v for k, v in DECL.items()
            if not v.get("bind") and v.get("visible", True) is not False}
 
-#: ★ B3-9：「声明了、可见、包内还没实现」的条数**只许降**（与 probe_copy 的 BUDGET 同一套纪律）——
-#:   B3-6 收口时 45，B3-9（装备与技能那组）接下 装备 / 卸下 / 对比 / 学习 / 技能 5 条 ⇒ **38 → 33**。
-#:   再往上加就是回退（要么是新声明没实现、要么是有人把 bind 摘了）。
-UNBOUND_MAX = 33
+#: ★ 「声明了、可见、包内还没实现」的条数**只许降**（与 probe_copy 的 BUDGET 同一套纪律）——
+#:   B3-6 收口时 45，B3-9（装备与技能那组）接下 装备 / 卸下 / 对比 / 学习 / 技能 5 条 ⇒ **38 → 33**；
+#:   ★ B3-12（这一批）再接下 8 条（看 <编号> / 属性 / 查看 / 丢弃 / 卖出 / 整理背包 / 存放取出 / 成就）
+#:   ⇒ **33 → 25**。再往上加就是回退（要么是新声明没实现、要么是有人把 bind 摘了）。
+UNBOUND_MAX = 25
 
 print("⑤ ★ P-23：「帮助」只列**有处理器**的声明（真敲 · 逐条对账）")
 try:
@@ -613,7 +620,7 @@ try:
     chk("★ 这 5 条一条都不再回「还没接上」那一句",
         not [k for k in GEAR5 if any(soon_text(k) in _ln for _ln in _all9)])
     chk("★ 这 5 条都挂了 bind", not [k for k in GEAR5 if not (DECL.get(k) or {}).get("bind")])
-    chk("★ 「声明了、可见、还没实现」**只许降**：本批 38 → %d 条（上限 %d）"
+    chk("★ 「声明了、可见、还没实现」**只许降**：B3-9 收 33 → 本批 %d 条（上限 %d）"
         % (len(UNBOUND), UNBOUND_MAX), len(UNBOUND) <= UNBOUND_MAX, "%s" % sorted(UNBOUND)[:6])
     _leak9 = [(k, _ln[:38]) for k in GEAR5 for _ln in _all9
               if any(w in _ln for w in (_W1, _W2, "SKILL_", "[MISSING TEXT"))]
@@ -822,6 +829,318 @@ try:
         not _bad11, "%s" % _bad11[:2])
 except Exception as exc:                                              # noqa: BLE001
     chk("★ B3-9 装备对比 那条跑得起来（直调实现体）", False,
+        "%s: %s" % (type(exc).__name__, exc))
+
+print("⑫ ★ B3-12（真宿主）：这一批新接的 8 条真敲 —— 逐字对槽位 · 档上副作用对 · 不漏机器键")
+NEW12 = ("board_show", "attrs", "item_show", "item_drop", "item_sell",
+         "bag_sort", "stash", "achievements")
+_BAD12 = []
+
+
+def _num12(v):
+    """面板数的写法（整数不带小数点 · 小数一位）—— 期望值按这一条现算，不手写镜像串。"""
+    f = float(v)
+    return "%d" % int(f) if f.is_integer() else "%.1f" % f
+
+
+def _decl_usage(key):
+    """声明里那个 `usage` 的第一个词（玩家看见的那个词）—— 期望值从**声明**现读，不手写。"""
+    return str((DECL.get(key) or {}).get("usage") or "").split(" ")[0].strip()
+
+
+def _rows12(actor):
+    return [_r("SYS_ATTR_ROW", label=_r("SYS_STAT_%s" % slot), value=_num12(actor[key]))
+            for key, slot in _CM12.PANEL_ROWS if key in actor]
+
+
+def _crit12(actor):
+    for _L in (PB.stacks().get(str(actor.get("panel_stack") or "")) or {}).get("layers") or []:
+        if _L.get("id") == "crit_rate":
+            return float((_L.get("values") or {}).get("crit") or 0.0)
+    return 0.0
+
+
+try:
+    from content import cmds_more as _CM12                                # noqa: E402
+    from content import loot as _LT12                                    # noqa: E402
+    from content import codex as _CX12                                   # noqa: E402
+    from content import eggs as _EG12                                    # noqa: E402
+    from content import titles as _TT12                                  # noqa: E402
+    from content import cmds_quest as _CQ12                              # noqa: E402
+
+    chk("★ 这一批 %d 条都挂了 bind（%s）" % (len(NEW12), " · ".join(NEW12)),
+        not [k for k in NEW12 if not (DECL.get(k) or {}).get("bind")],
+        "%s" % [k for k in NEW12 if not (DECL.get(k) or {}).get("bind")])
+    chk("★ 「声明了、可见、还没实现」33 → %d 条（%s）" % (len(UNBOUND), " · ".join(sorted(UNBOUND))),
+        len(UNBOUND) == UNBOUND_MAX, "%s" % sorted(UNBOUND))
+
+    _QS12 = _CQ12._quests()
+    _NPCS12 = st.domain("npcs") or {}
+    _POT12, _SCRAP12, _BONE12 = "i_potion_heal", "i_material_iron_scrap", "i_junk_bone"
+    _WPN12 = _W1
+    _SEED12 = {"cls": "cls_knight", "race": "human", "level": 3, "exp": 0, "hp": 100,
+               "gold": 30, "loc": "windmill_town", "node": "wt_inn", "prev": [],
+               "bag": {_POT12: 2, _SCRAP12: 5, _BONE12: 3, _WPN12: 1}, "equipped": {},
+               "codex": {}, "flags": {}}
+    _db12 = os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp", "ast_probe_cmds_more.db")
+    try:
+        os.remove(_db12)
+    except OSError:
+        pass
+    _ad12 = _Ad([], seed=dict(_SEED12))
+    _h12 = Host(_ad12, str(REPO), inject={"db_path": _db12, "clock": time.time})
+    _h12.boot()
+    _said12 = []
+
+    def _say12(text):
+        _ad12.out.clear()
+        _h12.handle({"uid": "u_c", "group_id": "g_c", "text": text})
+        _said12.append((text, list(_ad12.out)))
+        return list(_ad12.out)
+
+    _sv12 = lambda: (_ad12.saved or {})                                  # noqa: E731 —— 档（真敲后读回）
+
+    # ── 看 <编号>：单子全文（未接 / 已接 / 支线编号 / 没有这张）───────────────────
+    def _want_show(order):
+        _q = next(v for v in _QS12.values() if v.get("order") == order)
+        out = [_r("SYS_BSHOW_HEAD", order=order, name=_q["name"], level=_q["min_level"])]
+        _gv = (_NPCS12.get(str(_q.get("giver") or "")) or {}).get("name")
+        if _gv:
+            out.append(_r("SYS_BSHOW_GIVER", giver=_gv))
+        out.append(_r("SYS_BOARD_TODO", objective=_q["objective"]))
+        if _q.get("insight"):
+            out.append(_r("SYS_JOB_INSIGHT", insight=_q["insight"]))
+        out.append(_r("SYS_BSHOW_REWARD", exp=_q["reward_exp"], gold=_q["reward_gold"]))
+        return out
+
+    _g1 = _say12("看 1")
+    _w1 = _want_show(1) + [_r("SYS_BOARD_NEXT", order=1)]
+    if _g1 != _w1:
+        _BAD12.append(("看 1", _g1, _w1))
+    _g13 = _say12("看 13")
+    _w13 = _want_show(13) + [_r("SYS_BOARD_NEXT", order=13)]
+    if _g13 != _w13:
+        _BAD12.append(("看 13（支线编号也认）", _g13, _w13))
+    _g99 = _say12("看 99")
+    if _g99 != [_r("SYS_JOB_NOSUCH", name="99")]:
+        _BAD12.append(("看 99", _g99))
+    _say12("接 1")
+    _g1b = _say12("看 1")
+    _w1b = _want_show(1) + [_r("SYS_BOARD_ACTIVE"), _r("SYS_BOARD_DELIVER", order=1)]
+    if _g1b != _w1b:
+        _BAD12.append(("看 1（已接）", _g1b, _w1b))
+    chk("★ `看 <编号>` 真敲四档：未接 / 支线编号 / 没有这张 / 已接 —— 整段与 quests 域 + texts 现算的期望"
+        "逐字一致（编号就是 `order`，与『接』认的是同一个字段）",
+        not [x for x in _BAD12 if x[0].startswith("看")],
+        "%s" % [x for x in _BAD12 if x[0].startswith("看")][:2])
+
+    # ── 属性：面板现算（与生命上限同一个口）────────────────────────────────
+    _recA = _sv12()
+    _grA, _bfA = PB.gear_and_buffs(_recA)
+    _actA = PB.build_actor(str(_recA.get("cls")), int(_recA.get("level") or 1),
+                           _recA.get("alloc"), _grA, buffs=_bfA)
+    _capA = int(PB.hp_cap(dict(_recA)))
+    _gA = _say12("属性")
+    _wA = [_r("SYS_ATTR_HEAD", who=_r("SYS_NAME_UNKNOWN"), cls=_CL9["cls_knight"]["name"],
+              level=_recA.get("level")),
+           _r("SYS_ATTR_VITAL", hp=_num12(_actA.get("max_hp")), mo=_num12(_actA.get("max_mp")),
+              crit=_num12(_crit12(_actA) * 100))] + _rows12(_actA) + [
+           _r("SYS_ATTR_NOALLOC"), _r("SYS_ATTR_NOGEAR"), _r("SYS_ATTR_NOTE")]
+    if _gA != _wA:
+        _BAD12.append(("属性", _gA, _wA))
+    _want_cap = _r("SYS_ATTR_VITAL", hp=_num12(_capA), mo=_num12(_actA.get("max_mp")),
+                   crit=_num12(_crit12(_actA) * 100))
+    if _want_cap not in _gA:
+        _BAD12.append(("属性 的生命上限 != hp_cap（两个源）", _gA[:2], _want_cap))
+    _labs12 = [_r("SYS_STAT_%s" % s) for _k, s in _CM12.PANEL_ROWS]
+    if not all(any(lab in _ln for lab in _labs12) for _ln in _gA[2:len(_gA) - 3]):
+        _BAD12.append(("属性 的二级属性行认不出标签", _gA[:3]))
+    chk("★ `属性` 真敲：抬头 / 生命上限（= `hp_cap` 那唯一来源）/ 九行二级属性 / 加点 / 装备 —— "
+        "与 `panel_build` 现算的期望逐字一致",
+        not [x for x in _BAD12 if x[0].startswith("属性")],
+        "%s" % [x for x in _BAD12 if x[0].startswith("属性")][:2])
+
+    # ── 查看 <物品>：详情逐字对账（分类 · 词条 · 说明 · 收价）──────────────
+    def _detail12(rec):
+        """抬头那截「分类 · 品阶」（品阶域里没有就不写 —— 与实现体同一条规则）。"""
+        d = str(rec.get("kind") or "")
+        return "%s · %s" % (d, rec["quality"]) if rec.get("quality") else d
+
+    _pot = _IT9[_POT12]
+    _gC = _say12("查看 药水")
+    _wC = [_r("SYS_ITEM_HEAD", name=_pot["name"], icon=_pot.get("icon", ""),
+              detail=_detail12(_pot), n=int(_SEED12["bag"][_POT12])),
+           _r("SYS_ITEM_DESC", desc=_pot["desc"]),
+           _r("SYS_ITEM_HEAL_PCT", pct=int(round(float(_pot["effect"]["hp_pct"]) * 100))),
+           _r("SYS_ITEM_PRICE", gold=int(_pot["price"]))]
+    if _gC != _wC:
+        _BAD12.append(("查看 药水", _gC, _wC))
+    _wpn = _IT9[_WPN12]
+    _gW = _say12("查看 %s" % _wpn["name"])
+    _wW = [_r("SYS_ITEM_HEAD", name=_wpn["name"], icon=_wpn.get("icon", ""),
+              detail=_detail12(_wpn), n=1)] \
+        + [_r("SYS_GEAR_AFFIX_ROW", label=_r("SYS_STAT_%s" % a["stat"].upper()),
+              value="%g" % float(a["v"])) for a in _wpn.get("affixes") or []]
+    if _gW != _wW:
+        _BAD12.append(("查看 武器（词条）", _gW, _wW))
+    _gNo = _say12("查看 不存在的")
+    if _gNo != [_r("SYS_GEAR_IN_BAG", name="不存在的")]:
+        _BAD12.append(("查看 没有的", _gNo))
+    chk("★ `查看 <物品>` 真敲三档：药（分类 · 说明 · 按成回血 · 收价）/ 武器（词条走 `gear` 同一口）/ "
+        "没有这件 —— 逐字对账",
+        not [x for x in _BAD12 if x[0].startswith("查看")],
+        "%s" % [x for x in _BAD12 if x[0].startswith("查看")][:2])
+
+    # ── 丢弃：真掉 + 数量 + 掏空摘条目 + 档上副作用 ────────────────────────
+    _bag0 = dict(_SEED12["bag"])
+    _gD = _say12("丢弃 铁屑 2")
+    _wD = [_r("SYS_DROP_OK", icon=_IT9[_SCRAP12].get("icon", ""), name=_IT9[_SCRAP12]["name"], n=2),
+           _r("SYS_DROP_LEFT", n=3)]
+    if _gD != _wD or _sv12().get("bag") != dict(_bag0, **{_SCRAP12: 3}):
+        _BAD12.append(("丢弃 2", _gD, _sv12().get("bag")))
+    _gD2 = _say12("丢弃 铁屑 99")
+    if _gD2 != [_r("SYS_DROP_OK", icon=_IT9[_SCRAP12].get("icon", ""),
+                   name=_IT9[_SCRAP12]["name"], n=3)] \
+            or _SCRAP12 in (_sv12().get("bag") or {}):
+        _BAD12.append(("丢弃 99（按手里的算 · 摘条目）", _gD2, _sv12().get("bag")))
+    _gD3 = _say12("丢弃 不存在的东西")
+    if _gD3 != [_r("SYS_GEAR_IN_BAG", name="不存在的东西")]:
+        _BAD12.append(("丢弃 没有的", _gD3))
+    chk("★ `丢弃` 真敲三档：按数量掉 / 超过手里的按手里的算（条目掏空即摘）/ 没有这件 —— "
+        "回话逐字对账且**档上 bag 真变**",
+        not [x for x in _BAD12 if x[0].startswith("丢弃")],
+        "%s" % [x for x in _BAD12 if x[0].startswith("丢弃")][:3])
+
+    # ── 卖出：价来自域 · 装备不收 · 野外不卖 ────────────────────────────
+    _gS = _say12("卖出 骨头")
+    _wS = [_r("SYS_SELL_OK", icon=_IT9[_BONE12].get("icon", ""), name=_IT9[_BONE12]["name"],
+              n=1, gold=int(_IT9[_BONE12]["price"]))]
+    if _gS != _wS or int(_sv12().get("gold") or 0) != 30 + int(_IT9[_BONE12]["price"]) \
+            or int((_sv12().get("bag") or {}).get(_BONE12) or 0) != 2:
+        _BAD12.append(("卖出 骨头", _gS, _sv12().get("gold"), _sv12().get("bag")))
+    _gS2 = _say12("卖出 %s" % _wpn["name"])
+    if _gS2 != [_r("SYS_SELL_NOPRICE", name=_wpn["name"])]:
+        _BAD12.append(("卖出 没价的（域里没写 price）", _gS2))
+    _db12b = os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp", "ast_probe_cmds_more_b.db")
+    try:
+        os.remove(_db12b)
+    except OSError:
+        pass
+    _ad12b = _Ad([], seed=dict(_SEED12, loc="belt_north", node="bn_bone"))
+    _h12b = Host(_ad12b, str(REPO), inject={"db_path": _db12b, "clock": time.time})
+    _h12b.boot()
+    _ad12b.out.clear()
+    _h12b.handle({"uid": "u_c", "group_id": "g_c", "text": "卖出 骨头"})
+    _gS3 = list(_ad12b.out)
+    if _gS3 != [_r("SYS_SELL_AWAY")] or (_ad12b.saved or {}).get("bag") != _SEED12["bag"]:
+        _BAD12.append(("野外卖出", _gS3, (_ad12b.saved or {}).get("bag")))
+    chk("★ `卖出` 真敲三档：域里有价 ⇒ 钱与背包同时变 / 域里没价（拿在手上的）⇒ 不收 / "
+        "人在野外 ⇒ 明说铺子在镇上且**不动档**",
+        not [x for x in _BAD12 if x[0].startswith("卖出")],
+        "%s" % [x for x in _BAD12 if x[0].startswith("卖出")][:3])
+
+    # ── 整理背包：真重排（键序 = 机器键分组 + 组内按名）+ 一件不少 ───────────
+    _bagB4 = dict(_sv12().get("bag") or {})
+    _grp4 = {}
+    for _iid in _bagB4:
+        _grp4.setdefault(_LT12.kind_key_of(_iid), []).append(_iid)
+    _ord4 = []
+    for _kk in sorted(_grp4):
+        _ord4 += sorted(_grp4[_kk], key=lambda i: (str(_LT12.rec_of(i).get("name") or ""), i))
+    _g4 = _say12("整理背包")
+    _w4 = [_r("SYS_SORT_HEAD", n=len(_bagB4))]
+    for _kk in sorted(_grp4):
+        _ids = _grp4[_kk]
+        _w4.append(_r("SYS_SORT_ROW", kind=_LT12.rec_of(_ids[0]).get("kind") or _kk, n=len(_ids),
+                      list=" · ".join("%s ×%d" % (_LT12.rec_of(i).get("name") or i, _bagB4[i])
+                                      for i in _ids)))
+    _w4.append(_r("SYS_SORT_TAIL"))
+    _bagA4 = dict(_sv12().get("bag") or {})
+    if _g4 != _w4 or list(_bagA4) != _ord4 or _bagA4 != _bagB4:
+        _BAD12.append(("整理背包", _g4, list(_bagA4), _ord4))
+    chk("★ `整理背包` 真敲：回话逐字对账（分组名从域里透传）· **档上键序真重排**成 "
+        "「机器键分组 + 组内按名」· 数量与集合一件没少",
+        not [x for x in _BAD12 if x[0].startswith("整理")],
+        "%s" % [x for x in _BAD12 if x[0].startswith("整理")][:2])
+
+    # ── 存放 / 取出：方向取自声明 · 档上两个容器都对 ─────────────────────
+    _gI = _say12("存放 药水")
+    if _gI != [_r("SYS_STASH_IN_OK", icon=_pot.get("icon", ""), name=_pot["name"], n=1, have=1)] \
+            or (_sv12().get("flags") or {}).get("stash") != {_POT12: 1} \
+            or int((_sv12().get("bag") or {}).get(_POT12) or 0) != 1:
+        _BAD12.append(("存放 药水", _gI, (_sv12().get("flags") or {}).get("stash"),
+                       _sv12().get("bag")))
+    _gI2 = _say12("存 药水")
+    if _gI2 != [_r("SYS_STASH_IN_OK", icon=_pot.get("icon", ""), name=_pot["name"], n=1, have=2)] \
+            or (_sv12().get("flags") or {}).get("stash") != {_POT12: 2}:
+        _BAD12.append(("存 药水（单字别名同方向）", _gI2, (_sv12().get("flags") or {}).get("stash")))
+    _gO = _say12("取出 药水")
+    if _gO != [_r("SYS_STASH_OUT_OK", icon=_pot.get("icon", ""), name=_pot["name"], n=1, have=1)] \
+            or (_sv12().get("flags") or {}).get("stash") != {_POT12: 1} \
+            or int((_sv12().get("bag") or {}).get(_POT12) or 0) != 1:
+        _BAD12.append(("取出 药水", _gO, (_sv12().get("flags") or {}).get("stash"),
+                       _sv12().get("bag")))
+    _gO2 = _say12("取出 药水")
+    if _gO2 != [_r("SYS_STASH_OUT_OK", icon=_pot.get("icon", ""), name=_pot["name"], n=1, have=2)] \
+            or (_sv12().get("flags") or {}).get("stash") is not None \
+            or int((_sv12().get("bag") or {}).get(_POT12) or 0) != 2:
+        _BAD12.append(("取出 药水 · 掏空箱子摘掉那一格", _gO2,
+                       (_sv12().get("flags") or {}).get("stash"), _sv12().get("bag")))
+    _gE = _say12("取出 骨头")
+    _stash_now = (_sv12().get("flags") or {}).get("stash") or {}
+    _wE = (_r("SYS_STASH_EMPTY") if not _stash_now
+           else _r("SYS_STASH_MISS", name=_IT9[_BONE12]["name"]))
+    if _gE != [_wE]:
+        _BAD12.append(("取出 空箱里没有的", _gE, _wE))
+    _ad12b.out.clear()
+    _h12b.handle({"uid": "u_c", "group_id": "g_c", "text": "存放 骨头"})
+    _gAway = list(_ad12b.out)
+    if _gAway != [_r("SYS_STASH_AWAY")] or (_ad12b.saved or {}).get("bag") != _SEED12["bag"] \
+            or ((_ad12b.saved or {}).get("flags") or {}).get("stash"):
+        _BAD12.append(("不在客栈还想存", _gAway, (_ad12b.saved or {}).get("bag")))
+    chk("★ `存放 / 取出` 真敲六档：存放 · 单字别名（方向取自声明 usage，不靠 pattern 先后）· "
+        "取出两次（掏空箱子即摘掉那一格）· 取没有的 · 不在客栈 ⇒ 明说且**不动档**",
+        not [x for x in _BAD12 if x[0].startswith(("存放", "取出", "存 ", "不在客栈"))],
+        "%s" % [x for x in _BAD12 if x[0].startswith(("存放", "取出", "存 ", "不在客栈"))][:3])
+
+    # ── 成就：档上那几本账现读（不新建容器）────────────────────────────
+    _rec6 = _sv12()
+    _sh6 = _CQ12._shadow(CA9._p(dict(_rec6)))
+    _w6 = [_r("SYS_ACH_HEAD"),
+           _r("SYS_ACH_ROW", name=str(_decl_usage("titles")), n=_TT12.count(_sh6),
+              total=_TT12.total()),
+           _r("SYS_ACH_ROW", name=str(_decl_usage("eggs")), n=_EG12.count(_sh6),
+              total=_EG12.total())]
+    for _bk in _CX12.BOOKS:
+        _n6 = _CX12.count(_sh6, _bk)
+        _t6 = int((_CX12.targets() or {}).get(_bk) or 0)
+        _w6.append(_r("SYS_ACH_ROW", name=_CX12.label(_bk), n=_n6, total=_t6) if _t6 > 0
+                   else _r("SYS_ACH_ROW_OPEN", name=_CX12.label(_bk), n=_n6))
+    _w6 += [_r("SYS_ACH_QUEST", n=len(_CQ12._done(_sh6))), _r("SYS_ACH_TAIL")]
+    _g6 = _say12("成就")
+    _before6 = dict(_rec6)
+    if _g6 != _w6 or _sv12() != _before6:
+        _BAD12.append(("成就", _g6, _w6))
+    chk("★ `成就` 真敲：称号 / 彩蛋 / 四本谱 / 交付 逐字对账（记满条数取自 `codex.targets`，"
+        "不设记满的那本换一条行）且**看一眼成就 ≠ 往档里塞空容器**",
+        not [x for x in _BAD12 if x[0] == "成就"],
+        "%s" % [x for x in _BAD12 if x[0] == "成就"][:2])
+
+    # ── 收口三扫：不是 soon 句 · 不漏机器键 · 不缺文案 ────────────────────
+    _all12 = [ln for _t, _o in _said12 for ln in _o] + _gS3 + _gAway
+    chk("★ 这 8 条一条都不再回「还没接上」那一句",
+        not [k for k in NEW12 for ln in _all12 if soon_text(k) in ln],
+        "%s" % [k for k in NEW12 for ln in _all12 if soon_text(k) in ln][:3])
+    _KEYS12 = [k for d in ("items", "monsters", "pois", "classes", "races", "quests",
+                           "gathering", "drop_pools", "recipes", "npcs", "skills", "eggs",
+                           "titles", "dialogues")
+               for k in (st.domain(d) or {})]
+    _leak12 = [ln[:38] for ln in _all12
+               if any(kk in ln for kk in _KEYS12) or "[MISSING TEXT" in ln]
+    chk("★ 这 8 条的回话里没有域 id、也没有取不到文案（%d 行逐行扫）" % len(_all12),
+        not _leak12, "%s" % _leak12[:3])
+except Exception as exc:                                              # noqa: BLE001
+    chk("★ B3-12 那 8 条真敲跑得起来（真宿主契约）", False,
         "%s: %s" % (type(exc).__name__, exc))
 
 print("")

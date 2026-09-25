@@ -393,6 +393,7 @@ def main():
     from content import cmds_tower as CTW                                 # noqa: E402
     from content import cmds_gear as CGR                                  # noqa: E402
     from content import cmds_skill as CSK                                 # noqa: E402
+    from content import cmds_more as CMO                                  # noqa: E402
 
     town = _node_names(st, "windmill_town")
     belt = _node_names(st, "belt_north")
@@ -412,6 +413,11 @@ def main():
     _w2 = next((k for k in sorted(k for k, v in _its.items() if v.get("slot") == "weapon")
                 if _its[k].get("name") != _its.get(_wpn, {}).get("name")), _wpn)
     _plain = next((k for k in sorted(_its) if not _its[k].get("slot")), "")
+    # ★ B3-12 的 fixture（都从域里挑，不手写 id）：域里带价的（卖得掉）· 域里没写价的（拿在手上的）
+    _pric = next((k for k in sorted(_its) if isinstance(_its[k].get("price"), (int, float))
+                  and not isinstance(_its[k].get("price"), bool) and _its[k]["price"] > 0), "")
+    _nopric = next((k for k in sorted(_its)
+                    if not isinstance(_its[k].get("price"), (int, float))), "")
     _knt_sk = sorted((int(v.get("lv") or 1), k, v) for k, v in (st.domain("skills") or {}).items()
                      if v.get("owner_class") == "cls_knight")
     _knt_name = _knt_sk[0][2].get("name") if _knt_sk else ""
@@ -595,6 +601,44 @@ def main():
         ("学习(不是本职业)", CSK.skill_learn, "学习 冰棱", {"cls": "cls_knight", "level": 1}),
         ("学习(没这条)", CSK.skill_learn, "学习 没有这条技能", {"cls": "cls_knight"}),
         ("学习(还没择业)", CSK.skill_learn, "学习 横剑", {}),
+        # ★ B3-12（这一批新接的 8 条）：每一支都真跑一遍 —— ⑥ 的「不缺文案 / 不漏机器键」
+        #   与 ⑬ 的「默认档不被就地改」从此**自动**罩到它们身上
+        ("看(单子)", CMO.board_show, "看 1", {"level": 3}),
+        ("看(支线编号)", CMO.board_show, "看 13", {"level": 3}),
+        ("看(已接)", CMO.board_show, "看 1", {"level": 3, "flags": {"quests_active": ["q_main_01"]}}),
+        ("看(没有这张)", CMO.board_show, "看 999", {"level": 3}),
+        ("属性(还没择业)", CMO.attrs, "", {}),
+        ("属性(骑士)", CMO.attrs, "", {"cls": "cls_knight", "level": 3, "race": "elf"}),
+        ("属性(加过点)", CMO.attrs, "", {"cls": "cls_knight", "level": 10, "race": "elf",
+                                        "alloc": {"STR": 18, "VIT": 13}}),
+        ("查看(背包里的武器)", CMO.item_show, "查看 %s" % _its.get(_wpn, {}).get("name", ""),
+         {"bag": {_wpn: 1}}),
+        ("查看(带价的成品)", CMO.item_show, "查看 %s" % _its.get(_pric, {}).get("name", ""),
+         {"bag": {_pric: 2}} if _pric else {}),
+        ("查看(没有这件)", CMO.item_show, "查看 不存在的东西", {}),
+        ("丢弃(丢一件)", CMO.item_drop, "丢弃 %s" % _its.get(_wpn, {}).get("name", ""),
+         {"bag": {_wpn: 2}}),
+        ("丢弃(超过手里的)", CMO.item_drop, "丢弃 %s 9" % _its.get(_wpn, {}).get("name", ""),
+         {"bag": {_wpn: 2}}),
+        ("丢弃(没有这件)", CMO.item_drop, "丢弃 不存在的东西", {}),
+        ("卖出(有价的)", CMO.item_sell, "卖出 %s" % (_its.get(_pric, {}).get("name", "") or "药水"),
+         {"loc": "windmill_town", "bag": {_pric: 2}} if _pric else {}),
+        ("卖出(域里没价)", CMO.item_sell, "卖出 %s" % _its.get(_nopric, {}).get("name", ""),
+         {"loc": "windmill_town", "bag": {_nopric: 1}}),
+        ("卖出(人在野外)", CMO.item_sell, "卖出 %s" % (_its.get(_pric, {}).get("name", "") or "药水"),
+         {"loc": "belt_north", "node": "bn_bone", "bag": {_pric: 1}} if _pric else {}),
+        ("整理背包(空)", CMO.bag_sort, "", {"bag": {}}),
+        ("整理背包(满)", CMO.bag_sort, "", _rich()),
+        ("存放(不在客栈)", CMO.stash, "存放 %s" % _its.get(_wpn, {}).get("name", ""),
+         {"loc": "belt_north", "node": "bn_bone", "bag": {_wpn: 1}}),
+        ("存放(在客栈)", CMO.stash, "存放 %s" % _its.get(_wpn, {}).get("name", ""),
+         {"loc": "windmill_town", "node": "wt_inn", "bag": {_wpn: 2}}),
+        ("取出(箱里有的)", CMO.stash, "取出 %s" % _its.get(_wpn, {}).get("name", ""),
+         {"loc": "windmill_town", "node": "wt_inn", "bag": {},
+          "flags": {"stash": {_wpn: 1}}}),
+        ("取出(空箱)", CMO.stash, "取出 不存在的", {"loc": "windmill_town", "node": "wt_inn"}),
+        ("成就(空档)", CMO.achievements, "", {}),
+        ("成就(有账)", CMO.achievements, "", _rich()),
     ]
     bad, empty, sample = [], [], []
     leaked = []

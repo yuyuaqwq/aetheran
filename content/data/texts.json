@@ -3461,5 +3461,354 @@
     "params": [],
     "category": "系统",
     "desc": "词条名 · res_shadow（01_属性字典 §二·五）"
+  },
+  "SYS_BSHOW_HEAD": {
+    "value": "【单子 {order}】{name}（{level} 级以上）",
+    "params": [
+      "order",
+      "name",
+      "level"
+    ],
+    "category": "系统",
+    "desc": "B3-12 单子全文 · 抬头"
+  },
+  "SYS_BSHOW_GIVER": {
+    "value": "委托人：{giver}",
+    "params": [
+      "giver"
+    ],
+    "category": "系统",
+    "desc": "B3-12 单子全文 · 委托人"
+  },
+  "SYS_BSHOW_REWARD": {
+    "value": "报酬：经验 {exp} ｜ 铜板 {gold}",
+    "params": [
+      "exp",
+      "gold"
+    ],
+    "category": "系统",
+    "desc": "B3-12 单子全文 · 报酬"
+  },
+  "SYS_ATTR_HEAD": {
+    "value": "【属性】{who} · {cls} · {level} 级",
+    "params": [
+      "who",
+      "cls",
+      "level"
+    ],
+    "category": "系统",
+    "desc": "B3-12 属性 · 抬头"
+  },
+  "SYS_ATTR_VITAL": {
+    "value": "生命上限 {hp} ｜ 法力 {mo} ｜ 暴击率 {crit}%",
+    "params": [
+      "hp",
+      "mo",
+      "crit"
+    ],
+    "category": "系统",
+    "desc": "B3-12 属性 · 三格"
+  },
+  "SYS_ATTR_ROW": {
+    "value": "· {label} {value}",
+    "params": [
+      "label",
+      "value"
+    ],
+    "category": "系统",
+    "desc": "B3-12 属性 · 二级属性一行"
+  },
+  "SYS_ATTR_ALLOC": {
+    "value": "加过点：{list}（共 {n} 点）",
+    "params": [
+      "list",
+      "n"
+    ],
+    "category": "系统",
+    "desc": "B3-12 属性 · 加过哪些点"
+  },
+  "SYS_ATTR_NOALLOC": {
+    "value": "还没加过点 —— 现在按职业基础算。",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-12 属性 · 一点没加"
+  },
+  "SYS_ATTR_GEAR": {
+    "value": "身上：{list}",
+    "params": [
+      "list"
+    ],
+    "category": "系统",
+    "desc": "B3-12 属性 · 身上那几件"
+  },
+  "SYS_ATTR_NOGEAR": {
+    "value": "身上没穿东西。",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-12 属性 · 空身"
+  },
+  "SYS_ATTR_NOCLS": {
+    "value": "你还没定下职业 —— 属性跟着职业走。",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-12 属性 · 还没择业"
+  },
+  "SYS_ATTR_NOTE": {
+    "value": "（这一页是现算的：职业基础 + 等级成长 + 加点 + 装备。）",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-12 属性 · 尾注"
+  },
+  "SYS_STAT_STR": {
+    "value": "力量",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-12 五维名 · 物理攻击与生命（宪法 §2.1 STR）"
+  },
+  "SYS_STAT_AGI": {
+    "value": "敏捷",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-12 五维名 · 命中闪避与速度（宪法 §2.1 AGI）"
+  },
+  "SYS_STAT_INT": {
+    "value": "智力",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-12 五维名 · 法术攻击与法力（宪法 §2.1 INT）"
+  },
+  "SYS_STAT_VIT": {
+    "value": "体质",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-12 五维名 · 生命与防御（宪法 §2.1 VIT）"
+  },
+  "SYS_STAT_WIL": {
+    "value": "意志",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-12 五维名 · 抗性与治疗强度（宪法 §2.1 WIL）"
+  },
+  "SYS_ITEM_HEAD": {
+    "value": "【{name}】{icon} {detail} ×{n}",
+    "params": [
+      "name",
+      "icon",
+      "detail",
+      "n"
+    ],
+    "category": "系统",
+    "desc": "B3-12 物品详情 · 抬头"
+  },
+  "SYS_ITEM_DESC": {
+    "value": "{desc}",
+    "params": [
+      "desc"
+    ],
+    "category": "系统",
+    "desc": "B3-12 物品详情 · 说明"
+  },
+  "SYS_ITEM_LORE": {
+    "value": "{lore}",
+    "params": [
+      "lore"
+    ],
+    "category": "系统",
+    "desc": "B3-12 物品详情 · 来历那一句"
+  },
+  "SYS_ITEM_FOOD": {
+    "value": "吃下去：{buff}（{minutes} 分钟）。",
+    "params": [
+      "buff",
+      "minutes"
+    ],
+    "category": "系统",
+    "desc": "B3-12 物品详情 · 菜"
+  },
+  "SYS_ITEM_HEAL": {
+    "value": "用下去回生命 {hp} 点。",
+    "params": [
+      "hp"
+    ],
+    "category": "系统",
+    "desc": "B3-12 物品详情 · 药的固定回血"
+  },
+  "SYS_ITEM_HEAL_PCT": {
+    "value": "用下去回生命上限的 {pct}%。",
+    "params": [
+      "pct"
+    ],
+    "category": "系统",
+    "desc": "B3-12 物品详情 · 药的按成回血"
+  },
+  "SYS_ITEM_PRICE": {
+    "value": "铺子收价 {gold} 铜板。",
+    "params": [
+      "gold"
+    ],
+    "category": "系统",
+    "desc": "B3-12 物品详情 · 域里的基础价"
+  },
+  "SYS_DROP_OK": {
+    "value": "🗑️ 丢掉了 {icon}{name} ×{n}。",
+    "params": [
+      "icon",
+      "name",
+      "n"
+    ],
+    "category": "系统",
+    "desc": "B3-12 丢弃 · 成了"
+  },
+  "SYS_DROP_LEFT": {
+    "value": "（包里还剩 {n} 个。）",
+    "params": [
+      "n"
+    ],
+    "category": "系统",
+    "desc": "B3-12 丢弃 · 还剩几件"
+  },
+  "SYS_SELL_OK": {
+    "value": "💰 卖掉了 {icon}{name} ×{n} —— 到手 {gold} 铜板。",
+    "params": [
+      "icon",
+      "name",
+      "n",
+      "gold"
+    ],
+    "category": "系统",
+    "desc": "B3-12 卖出 · 成了"
+  },
+  "SYS_SELL_NOPRICE": {
+    "value": "「{name}」铺子不收 —— 这东西没价。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "B3-12 卖出 · 域里没写价"
+  },
+  "SYS_SELL_AWAY": {
+    "value": "铺子都在镇上 —— 回镇上才卖得掉。",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-12 卖出 · 人在野外"
+  },
+  "SYS_SORT_HEAD": {
+    "value": "【整理】{n} 种，按类归好了",
+    "params": [
+      "n"
+    ],
+    "category": "系统",
+    "desc": "B3-12 整理 · 抬头"
+  },
+  "SYS_SORT_ROW": {
+    "value": "· {kind}（{n} 种）：{list}",
+    "params": [
+      "kind",
+      "n",
+      "list"
+    ],
+    "category": "系统",
+    "desc": "B3-12 整理 · 一类一行"
+  },
+  "SYS_SORT_TAIL": {
+    "value": "（『背包』以后照这个顺序列。）",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-12 整理 · 尾注"
+  },
+  "SYS_STASH_AWAY": {
+    "value": "客栈后院有个旧木箱 —— 存东西得回那儿去。",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-12 箱子 · 不在客栈"
+  },
+  "SYS_STASH_ASK": {
+    "value": "存哪一件 / 取哪一件？",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-12 箱子 · 没点名"
+  },
+  "SYS_STASH_NONE": {
+    "value": "你身上没有「{name}」。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "B3-12 箱子 · 包里没有"
+  },
+  "SYS_STASH_MISS": {
+    "value": "箱子里没有「{name}」。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "B3-12 箱子 · 箱里没有"
+  },
+  "SYS_STASH_EMPTY": {
+    "value": "箱子还是空的。",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-12 箱子 · 空箱"
+  },
+  "SYS_STASH_IN_OK": {
+    "value": "📦 放进箱子：{icon}{name} ×{n}（箱子里 {have} 个）",
+    "params": [
+      "icon",
+      "name",
+      "n",
+      "have"
+    ],
+    "category": "系统",
+    "desc": "B3-12 箱子 · 存放"
+  },
+  "SYS_STASH_OUT_OK": {
+    "value": "📦 从箱子里取出：{icon}{name} ×{n}（包里 {have} 个）",
+    "params": [
+      "icon",
+      "name",
+      "n",
+      "have"
+    ],
+    "category": "系统",
+    "desc": "B3-12 箱子 · 取出"
+  },
+  "SYS_ACH_HEAD": {
+    "value": "【成就】今天能记的都在这儿",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-12 成就 · 抬头"
+  },
+  "SYS_ACH_ROW": {
+    "value": "· {name} {n}/{total}",
+    "params": [
+      "name",
+      "n",
+      "total"
+    ],
+    "category": "系统",
+    "desc": "B3-12 成就 · 一册一行"
+  },
+  "SYS_ACH_QUEST": {
+    "value": "· 交付 {n} 条",
+    "params": [
+      "n"
+    ],
+    "category": "系统",
+    "desc": "B3-12 成就 · 交掉几单"
+  },
+  "SYS_ACH_TAIL": {
+    "value": "（想细看就打『称号』『图鉴』『彩蛋』。）",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-12 成就 · 尾注"
+  },
+  "SYS_ACH_ROW_OPEN": {
+    "value": "· {name} {n} 条",
+    "params": [
+      "name",
+      "n"
+    ],
+    "category": "系统",
+    "desc": "B3-12 成就 · 不设「记满」的那本（旧物谱）"
   }
 }
