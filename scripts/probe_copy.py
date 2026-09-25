@@ -66,7 +66,8 @@ SEALED = ("cmds_ast.py", "cmds_talk.py", "cmds_quest.py", "cmds_gather.py", "pan
 
 #: 快照上限（B3-6b 收口时的实测值；**只降不升**，不在表里的文件必须 0）
 BUDGET = {                      # B3-6b 收口时实测（124 条）；下一批往下压，只能降
-    "cmds_battle.py": 11,       # ← 6b-2d-keys-2：14 → 11（掉钱分档 3 处中文 role 枚举改走 ASCII `role_key`）
+    "cmds_battle.py": 8,        # ← 6b-2d-keys-2：14 → 11（掉钱分档 3 处中文 role 枚举改走 ASCII `role_key`）
+                                #    ★ B3-23：11 → 8（遇敌 / 没遇敌 / 防御那条桩句 三处搬进 texts 槽位）
     "loot.py": 3,               # ← 6b-2d-b 11 → 6（装备 5 处）· 6b-2d-keys-2 6 → 3（兜底 / 池 / 未鉴定）
     "cmds_recipe.py": 2,        # ← 6b-2d-b 9 → 3（强化白名单 6 处）· keys-2 3 → 2（「烹饪」）
     "combat.py": 1,             # ← 6b-2d-keys-2：5 → 1（怪 role 兜底与两支筛选 4 处；余「无名者」）
@@ -533,6 +534,46 @@ def main():
           "bag": {}, "codex": {}, "flags": {}}),
         ("防御", CBL.defend, "", {}),
         ("逃跑", CBL.flee, "", {}),
+        # ★ B3-23：战斗那六手（打断 / 后撤 / 放技能 / 战斗中用物 / 集火 / 换武器）+ 防御接成真动作
+        #   —— 主要支路各真跑一遍：没遇敌 / 有职业 / 野外 / 认不出 / 没带 / 换得掉 / 没得换，
+        #   于是 ⑥ 的「不缺文案」与「不漏机器键」**自动**罩到它们身上
+        ("打断(还没择业)", CBL.interrupt, "", {}),
+        ("打断(刺客·野外)", CBL.interrupt, "",
+         {"cls": "cls_assassin", "level": 5, "loc": "belt_north", "node": "bn_bone",
+          "bag": {}, "codex": {}, "flags": {}}),
+        ("打断(村镇·没遇敌)", CBL.interrupt, "",
+         {"cls": "cls_assassin", "level": 5, "loc": "windmill_town", "node": "wt_gate_n"}),
+        ("后撤(野外)", CBL.retreat, "",
+         {"cls": "cls_assassin", "level": 5, "loc": "belt_north", "node": "bn_bone"}),
+        ("后撤(村镇·没遇敌)", CBL.retreat, "",
+         {"cls": "cls_assassin", "level": 5, "loc": "windmill_town", "node": "wt_gate_n"}),
+        ("放技能(还没择业)", CBL.skill_cast, "技能 挥击", {}),
+        ("放技能(认不出)", CBL.skill_cast, "技能 没有这条技能",
+         {"cls": "cls_assassin", "level": 5}),
+        ("放技能(不是本职业)", CBL.skill_cast, "技能 冰棱",
+         {"cls": "cls_assassin", "level": 5}),
+        ("放技能(本门的断势)", CBL.skill_cast, "技能 断势",
+         {"cls": "cls_assassin", "level": 5, "loc": "belt_north", "node": "bn_bone"}),
+        ("战斗中用物(没带)", CBL.battle_item, "使用 伤药",
+         {"cls": "cls_assassin", "level": 5}),
+        ("战斗中用物(带了·野外)", CBL.battle_item, "使用 伤药",
+         {"cls": "cls_assassin", "level": 5, "hp": 20, "loc": "belt_north", "node": "bn_bone",
+          "bag": {"i_potion_minor": 2}, "equipped": {}, "codex": {}, "flags": {}}),
+        ("集火(认得出·单人)", CBL.focus_fire, "集火 田鼠", {"cls": "cls_assassin", "level": 5}),
+        ("集火(没这个名字)", CBL.focus_fire, "集火 谁都不认识的名字", {"cls": "cls_assassin"}),
+        ("换武器(背一件·列出来)", CBL.swap_weapon, "换武器",
+         {"cls": "cls_assassin", "level": 5, "bag": {"i_weapon_assassin_venom_common": 1}}),
+        ("换武器(换得掉·镇里)", CBL.swap_weapon, "换武器",
+         {"cls": "cls_assassin", "level": 5, "loc": "windmill_town", "node": "wt_gate_n",
+          "bag": {"i_weapon_assassin_venom_common": 1}}),
+        ("换武器(换得掉·野外)", CBL.swap_weapon, "换武器",
+         {"cls": "cls_assassin", "level": 5, "loc": "belt_north", "node": "bn_bone",
+          "bag": {"i_weapon_assassin_venom_common": 1}}),
+        ("换武器(门槛不够)", CBL.swap_weapon, "换武器",
+         {"cls": "cls_assassin", "level": 5, "bag": {"i_weapon_assassin_venom_rare": 1}}),
+        ("换武器(没得换)", CBL.swap_weapon, "换武器", {"cls": "cls_assassin"}),
+        ("防御(真动作·野外)", CBL.defend, "",
+         {"cls": "cls_assassin", "level": 5, "loc": "belt_north", "node": "bn_bone"}),
         ("战斗日志(没打过)", CBL.battle_log, "", {}),
         ("战斗日志(有)", CBL.battle_log, "",
          {"flags": {"last_battle": {"enemy": "灰狼", "result": "victory",

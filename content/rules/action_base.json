@@ -5,14 +5,18 @@
     "skill": 80,
     "defend": 40,
     "item": 50,
-    "move": 30
+    "move": 30,
+    "interrupt": 30,
+    "swap": 50
   },
   "recover": {
     "attack": 40,
     "skill": 50,
     "defend": 30,
     "item": 40,
-    "move": 20
+    "move": 20,
+    "interrupt": 30,
+    "swap": 40
   },
   "default": {
     "cast": 80,

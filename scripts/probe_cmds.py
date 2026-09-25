@@ -383,8 +383,12 @@ chk("★ 裸 `放弃` 不许命中 skill_cast（改前回「放技能 ／ 技能
 chk("★ 裸 `放弃` 不许动档（quest_abandon 空参会取 act[0]，静默丢第一条委托）",
     ((saved.get("flags") or {}).get("quests_active") or []) == ["q_main_01"],
     (saved.get("flags") or {}).get("quests_active"))
-chk("★ `技能 挥击` 仍归 skill_cast（主词与双字别名没被改坏）",
-    _first("技能 挥击") == soon_text("skill_cast"), _first("技能 挥击"))
+chk("★ `技能 挥击` 仍归 skill_cast（主词与双字别名没被改坏）—— ★ B3-23 接上实现体之后"
+    "这条改成更硬的写法：回的是实现体那句真话（无职业档 = 「%s」），不再是 soon 兜底句"
+    % (TX.get("SYS_SKILL_NOCLS") or {}).get("value", ""),
+    _first("技能 挥击") == (TX.get("SYS_SKILL_NOCLS") or {}).get("value", "")
+    and _first("技能 挥击") != soon_text("skill_cast"),
+    _first("技能 挥击"))
 
 #: 可见 + 有 bind（「帮助」应当正好列这些）
 BOUND_USAGES = [v.get("usage") for k, v in DECL.items()
@@ -399,7 +403,11 @@ UNBOUND = {k: v for k, v in DECL.items()
 #:   ⇒ **33 → 25**；★ B3-15（P-34）接下 `alloc`（加点）⇒ **25 → 24**；
 #:   ★ B3-16b（同一波）再接下 9 条（教堂 / 客栈 / 商队 / 旧货 / 登记 / 评级 / 改名 /
 #:   排行 / 公告）⇒ **24 → 15**。再往上加就是回退（要么是新声明没实现、要么是有人把 bind 摘了）。
-UNBOUND_MAX = 15
+#:   ★ B3-23（战斗那六条）接下 打断 / 后撤 / 放技能 / 战斗中用物 / 集火 / 换武器 六条 ⇒ **15 → 10**。
+#:     注意 `battle_item` 是 `visible: false`（它的触发词与 item_use 逐字相同、路由归 item_use，
+#:     见 ③）⇒ 它本来就不在这一格里；这一批**能数进这一格的是 5 条**，第 6 条（battle_item）
+#:     在同一批里真接了实现体、走 ⑭ 那条真调判据。
+UNBOUND_MAX = 10
 
 print("⑤ ★ P-23：「帮助」只列**有处理器**的声明（真敲 · 逐条对账）")
 try:
@@ -1599,6 +1607,280 @@ try:
                 if _W13 in ln or "[MISSING TEXT" in ln][:2])
 except Exception as exc:                                              # noqa: BLE001
     chk("★ B3-19 那四档真敲跑得起来（真宿主契约）", False,
+        "%s: %s" % (type(exc).__name__, exc))
+
+# ══════════════════════════════════════════════════════════════
+# ★ B3-23：战斗那六条（打断 / 后撤 / 放技能 / 战斗中用物 / 集火 / 换武器）
+# --------------------------------------------------------------
+# 口径（真源 `06_第一阶段垂直切片/02_战斗机制 §〇·五` 伪即时 CTB · `04_指令总表 §五` 战斗表）：
+#   一条战斗指令 = **一场遭遇里的「你这一手」** —— 遇敌那一下先由快的对方行动，然后你这一手
+#   做你说的事，接着这一场自动打完、照旧落账（钱/经验/掉落/死亡/`flags.last_battle`）。
+# 判据分三层：① 真宿主真敲（逐字对槽位 + 档上副作用）② 直调那几条（`battle_item` 的路由被
+#   item_use 挡着，见 ③；受控战斗状态下的「断成 / 压后」两种情形也只有直调才钉得住）
+#   ③ 现算（期望值走与实现同一个口：`battle_acts.hand_ticks` / `rules()` / 域里的名字）。
+# ══════════════════════════════════════════════════════════════
+from content import battle_acts as BA23                                   # noqa: E402
+from content import cmds_battle as CBAT23                                 # noqa: E402
+from content import combat as CBO23                                       # noqa: E402
+import ext_combat.battle.schedule as _S23                                 # noqa: E402
+
+BATTLE6 = ("interrupt", "retreat", "skill_cast", "battle_item", "focus_fire", "swap_weapon")
+
+print("⑭ ★ B3-23：战斗那六条真敲 —— 逐字对槽位 · 档上副作用逐条核（真宿主契约）")
+try:
+    _MON23 = st.domain("monsters") or {}
+    _MS23, _MF23 = "ms_field_mouse", "ms_birch_crow"        # 田鼠（3 级 · 慢）· 林鸦（4 级 · 快）
+    _POT23, _WPN23 = "i_potion_minor", "i_weapon_assassin_venom_common"
+    _BASE23 = {"cls": "cls_assassin", "race": "human", "level": 5, "exp": 0, "gold": 0, "hp": 40,
+               "loc": "belt_north", "node": "bn_bone", "prev": [], "bag": {_POT23: 3},
+               "equipped": {}, "codex": {}, "flags": {}}
+    chk("★ 六条都挂了 bind（%s）" % " · ".join(BATTLE6),
+        not [k for k in BATTLE6 if not (DECL.get(k) or {}).get("bind")],
+        "%s" % [k for k in BATTLE6 if not (DECL.get(k) or {}).get("bind")])
+
+    def _say23(seed, text, pin=_MS23):
+        """真宿主真敲一条：**遭遇钉死**在 `pin` 上（战斗内部抽怪 ⇒ 不钉住不可复现）。
+
+        `pin=None` = 这一带挑不出怪（演「没遇敌」那一档）。
+        """
+        _db23 = os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp",
+                             "ast_probe_cmds_b23.db")
+        try:
+            os.remove(_db23)
+        except OSError:
+            pass
+        _real = CBO23.pick_encounter
+        CBO23.pick_encounter = (lambda *a, **k: [pin]) if pin else (lambda *a, **k: [])
+        try:
+            _ad23 = _Ad([], seed=dict(seed))
+            _h23 = Host(_ad23, str(REPO), inject={"db_path": _db23, "clock": time.time})
+            _h23.boot()
+            _ad23.out.clear()
+            _h23.handle({"uid": "u_c", "group_id": "g_c", "text": text})
+            return list(_ad23.out), (_ad23.saved or {})
+        finally:
+            CBO23.pick_encounter = _real
+
+    def _direct23(fn, seed, text="", pin=_MS23):
+        """直调实现体（真宿主那一屏之外的那几条 —— 与 probe_combat 的 `_drive` 同形）。"""
+        out = []
+
+        async def _go():
+            _real = CBO23.pick_encounter
+            CBO23.pick_encounter = (lambda *a, **k: [pin]) if pin else (lambda *a, **k: [])
+            try:
+                async for _ln in fn(_E9(text), None, "u_c", seed):
+                    out.append(str(_ln))
+            finally:
+                CBO23.pick_encounter = _real
+
+        asyncio.run(_go())
+        return out
+
+    _B23 = []
+    _MEET23 = _r("COMBAT_MEET", name=_MON23[_MS23]["name"])
+    _INT_NAME = (BA23.interrupt_action_of(_BASE23) or {}).get("name", "")
+
+    # ── 一、打断：本门的动作名 + 真做出来（断成 / 压后 两种情形直调钉住）──────────
+    _o_int, _s_int = _say23(dict(_BASE23), "打断")
+    _PUSH23 = (TX.get("COMBAT_INT_PUSH") or {}).get("value", "").split("{ticks}")[0]
+    if _o_int[:2] != [_MEET23, _r("COMBAT_INT_HEAD", skill=_INT_NAME)] \
+            or not (_r("COMBAT_INT_BREAK") in _o_int
+                    or any(ln.startswith(_PUSH23) for ln in _o_int)):
+        _B23.append(("打断 真敲", _o_int[:3]))
+    if not (_s_int.get("flags") or {}).get("last_battle"):
+        _B23.append(("打断 真敲没写 last_battle", _s_int.get("flags")))
+    # 受控两档（直调回调本体）：对方**在出招窗口里** ⇒ 那一手作废；没在窗口里 ⇒ 只压后
+    _rec23 = dict(_BASE23)
+    _b23a = CBO23.build(dict(_BASE23), [_MS23], _MON23)
+    _foe23 = _b23a.sides[CBO23.ENEMY_SIDE][0]
+    _pl23 = _b23a.focus()
+    _b23a.human_act("attack", None, _foe23)              # 让它起手（待发槽里那一手）
+    _was_charging = isinstance(_foe23.get("charging"), dict)
+    _ticks23 = BA23.hand_ticks(_b23a, _pl23, BA23.CAT["interrupt"])
+    _ct0 = float(_foe23.get("ct") or 0)
+    _logs23a = BA23.Hand("interrupt", p=_rec23).override(_b23a, "interrupt", _pl23, None, None)[0]
+    if not _was_charging or _foe23.get("charging") is not None \
+            or _logs23a != [_r("COMBAT_INT_BREAK")] \
+            or abs(float(_foe23.get("ct") or 0) - (_ct0 + _ticks23)) > 1e-6:
+        _B23.append(("打断 断成那一档", _was_charging, _foe23.get("charging"),
+                     abs(float(_foe23.get("ct") or 0) - (_ct0 + _ticks23))))
+    _b23b = CBO23.build(dict(_BASE23), [_MS23], _MON23)
+    _foe23b = _b23b.sides[CBO23.ENEMY_SIDE][0]
+    _pl23b = _b23b.focus()
+    _ct0b = float(_foe23b.get("ct") or 0)
+    _ticks23b = BA23.hand_ticks(_b23b, _pl23b, BA23.CAT["interrupt"])
+    _logs23b = BA23.Hand("interrupt", p=_rec23).override(_b23b, "interrupt", _pl23b, None, None)[0]
+    if _foe23b.get("charging") is not None \
+            or _logs23b != [_r("COMBAT_INT_PUSH", ticks=int(_ticks23b))] \
+            or abs(float(_foe23b.get("ct") or 0) - (_ct0b + _ticks23b)) > 1e-6:
+        _B23.append(("打断 压后那一档", _logs23b,
+                     abs(float(_foe23b.get("ct") or 0) - (_ct0b + _ticks23b))))
+    chk("★ `打断` 真敲（本门动作名 = 「%s」）+ 直调两档：**出招窗口里的那一手真作废**（引擎 "
+        "interrupt 动词）· 没在窗口里就**把到点时刻推后 %d 刻**（= 你这一手的耗时，现算）"
+        % (_INT_NAME, int(_ticks23)), not [x for x in _B23 if x[0].startswith("打断")],
+        "%s" % [x for x in _B23 if x[0].startswith("打断")][:2])
+
+    # ── 二、后撤：「能跑掉」= 对方这一拍**没押着手**（没在出招）—— 与实现同一个判据现算 ──
+    def _can_flee23(pin):
+        """这一档跑不跑得掉 —— 与 `cmds_battle.retreat` 同一个口现算（不手打期望值）。"""
+        _b = CBO23.build(dict(_BASE23), [pin], _MON23)
+        _S23.advance(_b, [])
+        _now = float(getattr(_b, "_now", 0) or 0)
+        return not any(_S23.pending_left(_a, _now) > 0
+                       for _a in (_b.sides.get(CBO23.ENEMY_SIDE) or []) if _a.get("hp", 0) > 0)
+
+    _exp_slow, _exp_fast = _can_flee23(_MS23), _can_flee23(_MF23)
+    #   ★ 第三个 pin = 塔顶 Boss（spd 136 > 玩家）：它**先动** ⇒ 到你决策点时它正押着一手
+    #     ⇒ 走「退不开」那一档（两档都真出现，判据才叫把分支盖住）
+    _MB23 = "ms_boss_oath_sentry"
+    _saw23 = set()
+    for _pin, _exp in ((_MS23, _exp_slow), (_MF23, _exp_fast), (_MB23, _can_flee23(_MB23))):
+        _o, _s = _say23(dict(_BASE23), "后撤", pin=_pin)
+        _fled = (_s.get("flags") or {}).get("last_battle", {}).get("result") == "fled"
+        _saw23.add(_fled)
+        if _exp and not (_r("COMBAT_RETREAT_OK") in _o and _fled):
+            _B23.append(("后撤 该跑得掉却打了", _pin, _o[:3]))
+        if (not _exp) and not any(ln.startswith((TX.get("COMBAT_RETREAT_BLOCK") or {}).get(
+                "value", "").split("{name}")[0]) for ln in _o):
+            _B23.append(("后撤 该退不开却跑了", _pin, _o[:3]))
+        if _fled and ((_s.get("bag") or {}).get(_POT23) != 3 or int(_s.get("exp") or 0)
+                      or int(_s.get("gold") or 0)):
+            _B23.append(("后撤 跑掉了却拿了收益", _pin, _s))
+        if not _fled and _s.get("flags", {}).get("last_battle", {}).get("result") == "fled":
+            _B23.append(("后撤 没跑掉却记成 fled", _pin))
+    chk("★ `后撤`：**能跑掉才跑得掉**（三个 pin 各自现算：田鼠 %s / 林鸦 %s / 塔顶 Boss %s）"
+        "—— 退掉了那一档记成 `fled`、**没有掉落没有经验**；退不开那一档白花一手、这一场照打"
+        % ("跑得掉" if _exp_slow else "退不开", "跑得掉" if _exp_fast else "退不开",
+           "跑得掉" if _can_flee23(_MB23) else "退不开"),
+        not [x for x in _B23 if x[0].startswith("后撤")] and len(_saw23) == 2,
+        "" if (not [x for x in _B23 if x[0].startswith("后撤")] and len(_saw23) == 2)
+        else "%s" % ([x for x in _B23 if x[0].startswith("后撤")][:2]
+                     or ["两档没都出现：%s" % _saw23]))
+
+    # ── 三、放技能：四道门 + 真放出来 ────────────────────────────────────────────
+    _o_sk_bad, _s_sk_bad = _say23(dict(_BASE23), "技能 没有这条技能")
+    _o_sk_nocls, _s_sk_nocls = _say23({"level": 3, "bag": {}, "flags": {}}, "技能 挥击")
+    _o_sk_ok, _s_sk_ok = _say23(dict(_BASE23), "技能 %s" % _INT_NAME)
+    if _o_sk_bad != [_r("COMBAT_SKILL_BAD", name="没有这条技能")]:
+        _B23.append(("放技能 认不出", _o_sk_bad))
+    if _o_sk_nocls != [_r("SYS_SKILL_NOCLS")]:
+        _B23.append(("放技能 没择业", _o_sk_nocls))
+    if _o_sk_ok[:2] != [_MEET23, _r("COMBAT_SKILL_HEAD", name=_INT_NAME)] \
+            or not (_s_sk_ok.get("flags") or {}).get("last_battle") or len(_o_sk_ok) < 6:
+        _B23.append(("放技能 真放", _o_sk_ok[:3]))
+    chk("★ `技能 <名>`：认不出 / 没择业 各回各自那句（逐字）· 本门「%s」真放出来"
+        "（这一场真打完、写 last_battle）" % _INT_NAME,
+        not [x for x in _B23 if x[0].startswith("放技能")],
+        "%s" % [x for x in _B23 if x[0].startswith("放技能")][:2])
+
+    # ── 四、战斗中用物：一场每件只算一次（带得多 ≠ 用得多）──────────────────────
+    _p_item = dict(_BASE23, hp=20)
+    _o_item = _direct23(CBAT23.battle_item, _p_item, "使用 伤药")
+    _used_left = (_p_item.get("bag") or {}).get(_POT23)
+    _o_none = _direct23(CBAT23.battle_item, dict(_BASE23, bag={}), "使用 伤药")
+    if _o_item[:2] != [_MEET23, _r("COMBAT_ITEM_HEAD", name="伤药")] \
+            or _used_left != 2 \
+            or not (_r("COMBAT_ITEM_CAP", name="伤药") in _o_item) \
+            or len([ln for ln in _o_item if "伤药" in ln and "喝下" in ln]) != 1:
+        _B23.append(("用物 上限那一档", _o_item[:3], _used_left,
+                     [ln for ln in _o_item if "喝下" in ln]))
+    if _o_none != [_r("COMBAT_ITEM_BAD", name="伤药")]:
+        _B23.append(("用物 没带", _o_none))
+    chk("★ `使用 <药>`（战斗口径 · 直调）：这一手真喝（%s）· **一场只算一次**（背包 3 → %s，"
+        "后面的手出「%s」并回落成普攻）· 没带就一句实话（不开打）"
+        % ((TX.get("SYS_USE_HEAL") or {}).get("value", "")[:6], _used_left,
+           (TX.get("COMBAT_ITEM_CAP") or {}).get("value", "")[:10]),
+        not [x for x in _B23 if x[0].startswith("用物")],
+        "%s" % [x for x in _B23 if x[0].startswith("用物")][:2])
+
+    # ── 五、集火：单人明确回话（不动档、不开战斗）────────────────────────────────
+    _o_focus1, _s_focus1 = _say23(dict(_BASE23), "集火 %s" % _MON23[_MS23]["name"])
+    _o_focus2, _s_focus2 = _say23(dict(_BASE23), "集火 谁都不认识的名字")
+    if _o_focus1 != [_r("COMBAT_FOCUS_NAMED", name=_MON23[_MS23]["name"])] \
+            or _o_focus2 != [_r("COMBAT_FOCUS_SOLO")] \
+            or _s_focus1 != dict(_BASE23) or _s_focus2 != dict(_BASE23):
+        _B23.append(("集火", _o_focus1, _o_focus2))
+    chk("★ `集火 <目标>`：域里认得出来的那只 ⇒ 一句明确回话（不假装锁上了谁）· 认不出 ⇒ 另一句 ·"
+        "**两档都不动档、都不开战斗**", not [x for x in _B23 if x[0].startswith("集火")],
+        "%s" % [x for x in _B23 if x[0].startswith("集火")][:2])
+
+    # ── 六、换武器：真换上 + 吃一手（野外）/ 只换手（镇里）──────────────────────
+    #    ★ 声明里这条没有参数（`^换武器$`）⇒ 换哪一件由数据说话（背包里 id 序第一件、
+    #      且不是手上那件）—— 判据照这个现算，不手打期望值
+    _wpn_name = (_IT9.get(_WPN23) or {}).get("name", _WPN23)
+    _o_town, _s_town = _say23(dict(_BASE23, loc="windmill_town", node="wt_gate_n",
+                                   bag={_WPN23: 1}), "换武器", pin=None)
+    _o_wild, _s_wild = _say23(dict(_BASE23, bag={_WPN23: 1}), "换武器")
+    _o_none2, _s_none2 = _say23(dict(_BASE23), "换武器")
+    _o_ask, _s_ask = _say23(dict(_BASE23), "换武器", pin=None)
+    if _o_town[:1] != [_r("SYS_GEAR_EQUIP_OK", icon=(_IT9.get(_WPN23) or {}).get("icon", ""),
+                          name=_wpn_name, kind=(_IT9.get(_WPN23) or {}).get("kind", ""))] \
+            or (_s_town.get("equipped") or {}).get("weapon") != _WPN23 \
+            or (_s_town.get("bag") or {}):
+        _B23.append(("换武器 镇里", _o_town[:2], _s_town.get("equipped")))
+    if (_s_wild.get("equipped") or {}).get("weapon") != _WPN23 \
+            or not (_s_wild.get("flags") or {}).get("last_battle") \
+            or _o_wild[:1] != [_MEET23] \
+            or not any(ln.startswith((TX.get("COMBAT_SWAP_OK") or {}).get("value", "")
+                                     .split("{icon}")[0] or "\0") for ln in _o_wild):
+        _B23.append(("换武器 野外·吃一手", _o_wild[:3], _s_wild.get("equipped")))
+    # 带两件 ⇒ 换上 id 序第一件、另一件只提示（不静默吞掉）
+    _wpn2 = sorted(k for k, v in (_IT9 or {}).items()
+                   if isinstance(v, dict) and v.get("slot") == "weapon" and k < _WPN23)[:1]
+    if _wpn2:
+        _o_two, _s_two = _say23(dict(_BASE23, bag={_WPN23: 1, _wpn2[0]: 1}), "换武器")
+        if (_s_two.get("equipped") or {}).get("weapon") != _wpn2[0] \
+                or _r("COMBAT_SWAP_ASK", list="『%s』" % _wpn_name) not in _o_two:
+            _B23.append(("换武器 带两件", _o_two[:3], _s_two.get("equipped")))
+    if _o_none2 != [_r("COMBAT_SWAP_NONE")] or _s_none2.get("equipped"):
+        _B23.append(("换武器 没得换", _o_none2))
+    if _o_ask != [_r("COMBAT_SWAP_NONE")] or _s_ask.get("equipped"):
+        _B23.append(("换武器 背包里没武器", _o_ask))
+    chk("★ `换武器` 真敲：没得打那儿只换手（%s · 回现成的装备那一句）· 野外**换上了 + 这一手"
+        "花在换手上**（这一场照打、写 last_battle）· 带两件时换第一件并把另一件列出来 · "
+        "没得换一句实话" % _wpn_name,
+        not [x for x in _B23 if x[0].startswith("换武器")],
+        "%s" % [x for x in _B23 if x[0].startswith("换武器")][:2])
+
+    # ── 七、没遇敌那一档 + 老路没被撞坏（`攻击` 对照）+ 文案面扫一遍 ──────────────
+    _o_nofoe, _s_nofoe = _say23(dict(_BASE23), "打断", pin=None)
+    if _o_nofoe != [_r("COMBAT_NEED_FOE")] or _s_nofoe != dict(_BASE23):
+        _B23.append(("没遇敌那一档", _o_nofoe))
+    _o_atk, _s_atk = _say23(dict(_BASE23), "攻击")
+    if not any("打完" in ln or (TX.get("SYS_DEATH_WILD") or {}).get("value", "")[:4] in ln
+               for ln in _o_atk) or not (_s_atk.get("flags") or {}).get("last_battle"):
+        _B23.append(("攻击 对照（老路）", _o_atk[:2]))
+    chk("★ 没遇敌 ⇒ 一句「%s」（**档一个字不动**）· `攻击` 老路仍照旧（打完 / 写 last_battle）"
+        % (TX.get("COMBAT_NEED_FOE") or {}).get("value", "")[:12],
+        not [x for x in _B23 if x[0] in ("没遇敌那一档", "攻击 对照（老路）")],
+        "%s" % [x for x in _B23 if x[0] in ("没遇敌那一档", "攻击 对照（老路）")][:2])
+
+    _ALL23 = (_o_int + _o_sk_bad + _o_sk_nocls + _o_sk_ok + _o_item + _o_none
+              + _o_focus1 + _o_focus2 + _o_ask + _o_town + _o_wild + _o_none2
+              + _o_nofoe + _o_atk)
+    _leak23 = [ln[:44] for ln in _ALL23
+               if "[MISSING TEXT" in ln or _POT23 in ln or _WPN23 in ln
+               or _MS23 in ln or _MF23 in ln or "ms_skill" in ln]
+    chk("★ 六条 + 对照那一批回话（%d 行）里没有取不到文案 / 没有物品·怪·怪的技能 id"
+        % len(_ALL23), not _leak23, "%s" % _leak23[:3])
+
+    # ── 八、声明面（本批新加的那两份 rules）现解析对账 ──────────────────────────
+    with open(os.path.join(str(REPO), "content", "rules", "battle_cmds.json"),
+              encoding="utf-8") as _f23:
+        _RULES23 = json.load(_f23)
+    with open(os.path.join(str(REPO), "content", "rules", "action_base.json"),
+              encoding="utf-8") as _f23b:
+        _AB23 = json.load(_f23b)
+    chk("★ 上限只有一个口：声明表 `item_uses_per_battle` = %s ↔ 实现真读到的 %s（不手打）"
+        % (_RULES23.get("item_uses_per_battle"), BA23.rules().get("item_uses_per_battle")),
+        BA23.rules().get("item_uses_per_battle") == _RULES23.get("item_uses_per_battle"))
+    chk("★ 本批新加的两个行动类别都在声明表里（interrupt / swap 各两段耗时）：%s"
+        % ", ".join("%s=%s/%s" % (c, _AB23["cast"].get(c), _AB23["recover"].get(c))
+                    for c in ("interrupt", "swap")),
+        all(c in _AB23["cast"] and c in _AB23["recover"] for c in ("interrupt", "swap")))
+except Exception as exc:                                                  # noqa: BLE001
+    chk("★ B3-23 战斗那六条跑得起来（真宿主契约）", False,
         "%s: %s" % (type(exc).__name__, exc))
 
 print("")

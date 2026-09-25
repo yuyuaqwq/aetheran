@@ -156,11 +156,14 @@ def monster_actor(mid: str, m: dict, *, party: int | None = None) -> dict:
     return a
 
 
-def build(player: dict, monster_ids, monsters: dict, *, party: int | None = None) -> Battle:
+def build(player: dict, monster_ids, monsters: dict, *, party: int | None = None,
+          override=None) -> Battle:
     """组一场战斗：玩家 1 人 vs 指定的怪。
 
     `party` = 队伍人数（今天只有单人，所以调用方一律传 1；组队接线那批把真实人数传进来）——
     它只影响「团队内容」那几只怪的面板（`mods.party_scale`），别的怪一格不动。
+    `override` = **非内置动作**的回调（引擎 `Battle.action_override` 那一个注入面）——
+    B3-23 那几手（打断 / 用物 / 换手）走它；不传 = 与改前逐字相同（引擎不认识任何游戏词）。
     """
     ps = [player_actor(player)]
     es = []
@@ -170,7 +173,7 @@ def build(player: dict, monster_ids, monsters: dict, *, party: int | None = None
             continue
         a = monster_actor(mid, m, party=party)
         es.append(a)
-    return Battle("monster", sides={PLAYER_SIDE: ps, ENEMY_SIDE: es})
+    return Battle("monster", sides={PLAYER_SIDE: ps, ENEMY_SIDE: es}, action_override=override)
 
 
 def run_auto(player: dict, monster_ids, monsters: dict, *, seed: int | None = None,

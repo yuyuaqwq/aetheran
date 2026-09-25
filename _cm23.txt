@@ -1,0 +1,40 @@
+feat(战斗): B3-23 —— 战斗中那六条真接上（打断 / 后撤 / 放技能 / 战斗中用物 / 集火 / 换武器）
+
+口径：一条战斗指令 = **一场遭遇里的「你这一手」**（伪即时 CTB，绝对时刻制）——
+遇敌那一下先由快的对方行动（`schedule.advance` 推到你的决策点），你这一手做你说的事，
+接着这一场自动打完、照旧落账（钱/经验/掉落/死亡/`flags.last_battle` 与 `攻击` 共用同一段收尾）。
+
+六条各自怎么落（都有真宿主真敲判据 · 见 `scripts/probe_cmds.py` ⑭）：
+· 打断   清掉对方**出招窗口**里那一手（引擎 `effects.act_interrupt` 动词）+ 把它的到点时刻
+         **推后你这一手的耗时**（现算：刺客 52 刻）——「把对方的行动推到更晚的时刻」。
+         动作名取自 skills 域（`mech == "interrupt"`）⇒ 今天只有刺客「断势」有名字，其余五门走通用句。
+· 后撤   条件成立才退得掉：对方这一拍**没在出招** ⇒ `fled`（这一场不打、**没有掉落没有经验**）；
+         **正押着一手** ⇒ 退不开（白花一手、照打）—— 三个 pin（田鼠/林鸦/塔顶 Boss）两档都真出现。
+· 放技能 四道门（没职业 / 认不出 / 不是本职业 / 没学过 / 等级没到）各回各自那句，过了交给引擎那条技能路。
+· 用物   一场遭遇每件最多 `item_uses_per_battle`（rules/battle_cmds.json = 1）——带 20 瓶也只能喝 1 瓶，
+         用满那一手**回落成普攻**并出一行说明（实测背包 3 → 2，第二手起出 CAP 行）。
+· 集火   组队概念 ⇒ 单人给明确回话（点名那只认得出来就说认得出来，**不假装锁上了谁**）；不动档、不开战。
+· 换武器 真换上（照 B3-19 门槛；本条声明无参数 ⇒ 背包 id 序第一件，多件时列出来）+ **这一手花在换手上**；
+         没得打那儿只换手（回现成的装备那两句）。
+顺手：`防御` 那条桩句接成真动作（引擎内置 defend）；`攻击` 那条老路一个字没改（对照判据钉着）。
+
+门禁：28 探针全绿 + e2e 走通（无 Traceback）· 引擎仓零改动。
+probe_cmds：⑭ 新增 11 条判据 + UNBOUND_MAX **15 → 10**（只降）· `技能 挥击` 那条改硬（回实现体真话）。
+probe_copy：BUDGET `cmds_battle.py` **11 → 8** · 真跑用例 +20 条 · 新文件 `battle_acts.py` 内联中文 0。
+撤改验证两条：`item_uses_per_battle: 1 → 5` ⇒ 用物判据红；摘掉 `focus_fire` 的 bind ⇒ 「只许降」判据红。
+
+改动文件（显式）：
+  content/battle_acts.py（新 · 内容侧机制动作，走引擎 action_override 契约）
+  content/cmds_battle.py · content/combat.py（build 多一个 override 注入面）· 防御接真
+  content/data/commands.json（六条各挂 bind；patterns/order/visible 全没动）
+  content/data/texts.json（+20 槽位 · 与 _notes.md §一 那张表逐字一致 ⇒ 真源补齐后重跑零 diff）
+  content/rules/action_base.json（+interrupt 30/30 · +swap 50/40）· content/rules/battle_cmds.json（新）
+  scripts/probe_cmds.py · scripts/probe_copy.py · scripts/_b53_slots.py（落槽，幂等）· scripts/_b53_bind.py（挂 bind，幂等）
+  _notes.md（本批一节：20 条真源待补行 + 8 条待补/待裁决 + 4 条真查出来的）
+
+真源待补（详表见 _notes.md §一/§二）：20 条槽位行（五列，键不带反引号）·
+五门打断动作名 · 后撤「能跑掉」的条件 · 用物次数上限 · 两条新行动类别耗时 ·
+19 条怪技没有中文名 · 集火要等组队 · 逃跑没失败率。
+
+★ 边界：真源 `03_风车镇_指令与回复 §二` 那**四段式战斗回复**（一场战斗跨多条指令）要持久的战斗中
+状态 = 轮流制那一批；本批是「一条指令 = 一场遭遇」，六条各自真生效、可判据，不占那条道。
