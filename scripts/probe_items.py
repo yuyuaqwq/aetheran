@@ -185,6 +185,65 @@ chk("★ 词条呈现口径：不带 note 的数值词条 %d 个键都有 `SYS_S
     "带 note 的 %d 个键原样出 note"
     % (len(_num9), " · ".join(sorted(_num9)), len(_note9)), not _bad9, " · ".join(_bad9[:5]))
 
+# ⑩ ★ B3-19：**装备属性门槛**（`req`）—— 每件都算得出（或显式无门槛），值一律从 `alloc_of` 那个口现算
+#   口径唯一落点 = `scripts/rebuild_item_reqs.py`（家族 → 属性 · 品质倍数 · 门槛级来源）。
+#   本节的三个方向：
+#     ① 每件装备：要么带 `req`，要么**显式无门槛** —— 认不出的家族生成器会抛（fail-closed），
+#        这里把「域里有一件谁都没管」钉出来（数量对账）
+#     ② 域里那个 `v` **不是抄的**：探针自己用 `rebuild_monsters.alloc_of(门槛级, 参考职业)[属性]`
+#        × 品质倍数 现算一遍（不手写镜像串 ⇒ 谁手改域里那个数就翻红）
+#     ③ 门槛级 = 那一档来源的怪的最低等级（域里的 `role_key` 现推）
+import math as _math10                                                       # noqa: E402
+try:
+    import rebuild_item_reqs as RIR                                          # noqa: E402
+    import rebuild_monsters as RBM10                                         # noqa: E402
+except Exception as _exc:                                                    # noqa: BLE001
+    print("  ✗ scripts/rebuild_item_reqs.py / rebuild_monsters.py 读不到（门槛那两条口径的源头）：%s"
+          % _exc)
+    sys.exit(1)
+_CL10 = {k: v for k, v in (st.domain("classes") or {}).items() if not str(k).startswith("_")}
+_MON10 = st.domain("monsters") or {}
+_LV10 = {q: RIR.req_level_of(q, _MON10) for q in ("精制", "稀有", "遗物")}
+_bad10, _n10 = [], 0
+for _k10, _v10 in sorted(equip.items()):
+    _got10 = _v10.get("req")
+    _want10 = RIR.req_of(_k10, _v10, _CL10, _MON10)          # ① 算得出？认不出的家族这里就抛了
+    if _want10 != _got10:                                    # 域里那一格是不是生成器会写的那一格
+        _bad10.append((_k10, "域里那一格与生成器算的不同", _got10, _want10))
+        continue
+    if not _want10:                                          # 显式无门槛（普通 / 头盔 / 稳靴 / 饰品 / 套装）
+        continue
+    _n10 += 1
+    _a10, _q10 = _want10["attr"], _v10["quality"]
+    _cid10 = RIR.ref_class_for_item(_CL10, _k10, _a10)        # 武器的「谁」= 它自己那个职业
+    _ref10 = float(RBM10.alloc_of(_LV10[_q10], _cid10)[_a10])
+    _exp10 = max(1, int(_math10.floor(RIR.QUALITY_MULT[_q10] * _ref10 + 0.5)))
+    if _want10["v"] != _exp10 or _want10["level"] != _LV10[_q10]:
+        _bad10.append((_k10, "值/门槛级对不上", _want10, {"v": _exp10, "level": _LV10[_q10]}))
+_free10 = [k for k, v in equip.items() if not v.get("req")]
+chk("★ 装备 %d 件：%d 件有门槛（%s）· %d 件显式无门槛（普通品阶 + 头盔/稳靴/饰品/套装 —— 见 `_notes.md`）"
+    % (len(equip), _n10, " · ".join("%s %d" % (q, len([1 for k, v in equip.items()
+                                                      if v.get("req") and v["quality"] == q]))
+                                    for q in ("精制", "稀有", "遗物")), len(_free10)),
+    not _bad10 and _n10 > 0 and bool(_free10), "%s" % _bad10[:3])
+_badk10 = [k for k, v in it.items() if not v.get("slot") and v.get("req")]
+chk("★ 非装备（没 slot 的 %d 件）一件都不许带 `req`" % (len(it) - len(equip)), not _badk10,
+    "%s" % _badk10[:3])
+chk("★ 门槛级 = 那一档来源的怪的最低等级（域里现推）：%s"
+    % " · ".join("%s=%s（%s 档）" % (q, _LV10[q], "/".join(RIR.QUALITY_ROLE[q]))
+                 for q in ("精制", "稀有", "遗物")),
+    all(_LV10[q] == min(int(m.get("lv")) for m in _MON10.values()
+                        if m.get("role_key") in RIR.QUALITY_ROLE[q])
+        for q in ("精制", "稀有", "遗物")))
+_BADFAM10 = []
+for _k10, _v10 in equip.items():
+    _fam10 = RIR.family_of(_k10)
+    if _fam10 not in RIR.FAMILY_ATTR and not _fam10.startswith(("weapon_", "set_")) \
+            and _fam10 not in RIR.FAMILY_FREE:
+        _BADFAM10.append((_k10, _fam10))
+chk("★ 每个家族都登记过（有门槛的 %d 个 / 显式无门槛的 %d 个 + 套装）—— 不许有「谁都没管」的家族"
+    % (len(RIR.FAMILY_ATTR), len(RIR.FAMILY_FREE)), not _BADFAM10, "%s" % _BADFAM10[:4])
+
 print()
 by_kind = {}
 for k, v in it.items():

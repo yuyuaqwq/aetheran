@@ -501,6 +501,196 @@ chk("★ P-34 100 级真敲：加 1 点 ⇒ 还剩 %d 点（%d − 1）· 想加
                         usage=str((CA._data("commands").get("alloc") or {}).get("usage") or ""))]
     and _AL34.of_record(_l100) == {"STR": 1},
     "%s / %s / %s" % (_o100, _o100b, _AL34.of_record(_l100)))
+print("── ⑦ ★ B3-19：装备**属性门槛** —— 值 = 品质倍数 × `alloc_of` 那个口 · 双向穿戴矩阵 · 六锚点")
+#   真源：主线 2026-09-25 裁决（「装备应该也是要依赖加点才能穿的吧」）——
+#   门槛挂在「家族 × 品质」上，值 = 倍数 × 该门槛级按建议加点铺满时主属性的值。
+#   本节判四件事：
+#     ① 域里每个 `v` 都由探针**现算**（倍率 × `rebuild_monsters.alloc_of`）—— 手改域里那个数就翻红
+#     ② 双向：铺满该属性 ⇒ 门槛级到了就穿得上；把点全丢到别的属性 ⇒ 一件都穿不上
+#     ③ 六锚点（1/20/40/60/80/100）：门槛/建议加点 = 倍率，**与等级无关** ⇒
+#        既不会「高级永远穿不上」，也不会「高级门槛形同虚设」（对**同阶**装备而言）
+#     ④ 真跑两个方向（直调 `cmds_gear.equip`）—— 不够那一句逐字来自 texts + 档**一个字没动**
+try:
+    import math as _m7                                                        # noqa: E402
+    sys.path.insert(0, os.path.join(PKG, "scripts"))
+    import rebuild_monsters as _RBM7                                          # noqa: E402
+    import rebuild_item_reqs as _RIR7                                         # noqa: E402
+    from content import cmds_gear as _CG7                                     # noqa: E402
+
+    _CLS7 = {k: v for k, v in (st.domain("classes") or {}).items()
+             if not str(k).startswith("_")}
+    _MON7 = st.domain("monsters") or {}
+    _EQ7 = {k: v for k, v in (st.domain("items") or {}).items() if v.get("slot")}
+    _LV7 = {q: _RIR7.req_level_of(q, _MON7) for q in ("精制", "稀有", "遗物")}
+    _TOT7 = lambda L: 8 + 3 * (L - 1)          # 建号 8 点 + 每级 3 点（07_装备体系_v2 §一）
+    _PL7 = (1, 6, 10, 20)                      # 判据给的四档（主线口径）
+    _PAIR7 = ((1, "普通"), (6, "精制"), (10, "稀有"), (20, "遗物"))
+
+    # ① 逐件重算
+    _bad7a, _n7a = [], 0
+    for _k7, _v7 in sorted(_EQ7.items()):
+        _r7 = _v7.get("req")
+        if not _r7:
+            continue
+        _n7a += 1
+        _cid7 = _RIR7.ref_class_for_item(_CLS7, _k7, _r7["attr"])
+        _ref7 = float(_RBM7.alloc_of(_r7["level"], _cid7)[_r7["attr"]])
+        _exp7 = max(1, int(_m7.floor(_RIR7.QUALITY_MULT[_v7["quality"]] * _ref7 + 0.5)))
+        if _exp7 != _r7["v"]:
+            _bad7a.append((_k7, _r7["v"], _exp7))
+    chk("★ ① 逐件重算（%d 件）：`v` = 四舍五入(倍率 × `alloc_of`(门槛级, 参考职业)[属性])"
+        % _n7a, not _bad7a, "%s" % _bad7a[:3])
+
+    # ①之二 家族 × 品质 → （门槛级, 值）
+    _TBL7: dict = {}
+    for _k7, _v7 in sorted(_EQ7.items()):
+        _r7 = _v7.get("req")
+        if not _r7:
+            continue
+        _TBL7.setdefault((_RIR7.family_of(_k7), _r7["attr"], _v7["quality"]), set()).add(
+            (_r7["level"], _r7["v"]))
+    print("     家族 × 品质 →（门槛级 · 值）：")
+    for (_f7, _a7, _q7), _s7 in sorted(_TBL7.items()):
+        _lv7_, _vv7 = sorted(_s7)[0]
+        print("       %-24s %-4s %-3s ≥ %-3s（门槛级 %s）" % (_f7, _q7, _a7, _vv7, _lv7_))
+
+    # ② 双向穿戴矩阵：六职业 × 四档等级 × 四档品质
+    def _rep7(cid, q):
+        """该职业在该品质下能用的**代表件**：自己那两把武器 + 通用防具那五个有门槛的家族。"""
+        out = []
+        for _k, _v in sorted(_EQ7.items()):
+            if _v.get("quality") != q:
+                continue
+            _fam = _RIR7.family_of(_k)
+            if _fam.startswith("weapon_"):
+                if _fam.split("_")[1] != cid[4:]:
+                    continue
+            elif _fam not in _RIR7.FAMILY_ATTR:
+                continue
+            out.append(_k)
+        return out
+
+    _bad7b = []
+    print("     双向穿戴矩阵（铺满该件要的那一维 / 把点全丢到别处）：")
+    for _cid7 in sorted(_CLS7):
+        for _L7 in _PL7:
+            _cells7 = []
+            for _q7 in ("普通", "精制", "稀有", "遗物"):
+                _its7 = _rep7(_cid7, _q7)
+                _needs7 = [(_k, _EQ7[_k]["req"]) for _k in _its7 if _EQ7[_k].get("req")]
+                if not _its7:
+                    _cells7.append("%s:（没有这一档）" % _q7)
+                    continue
+                if not _needs7:
+                    _cells7.append("%s:无门槛" % _q7)
+                    continue
+                _lvneeded7 = max(_r["level"] for _k, _r in _needs7)
+                _most7 = max(_r["v"] for _k, _r in _needs7)
+                if _lvneeded7 > _L7:                      # 装备还没到手（门槛级没到）
+                    _cells7.append("%s:未到门槛级（L%s）" % (_q7, _lvneeded7))
+                    continue
+                if _TOT7(_L7) < _most7:                   # ★ 门槛级到了却铺满也穿不上 = 真红
+                    _bad7b.append(("铺满也穿不上", _cid7, _L7, _q7, _most7, _TOT7(_L7)))
+                if min(_r["v"] for _k, _r in _needs7) < 1:  # 反方向要有牙：v ≥ 1 ⇒ 0 点必穿不上
+                    _bad7b.append(("门槛值 < 1（0 点也穿得上）", _cid7, _L7, _q7))
+                _cells7.append("%s:可（≥%s）" % (_q7, _most7))
+            print("       %-14s L%-3s %s" % (_cid7, _L7, " ｜ ".join(_cells7)))
+    chk("★ ② 正方向：凡「门槛级 ≤ 该等级」的格子，把点数**铺满**那一维 ⇒ 都穿得上",
+        not [x for x in _bad7b if x[0] == "铺满也穿不上"], "%s" % _bad7b[:3])
+    chk("★ ② 反方向：凡有门槛的件，`v ≥ 1` ⇒ 把点**全丢到别的属性**（0 点）一件都穿不上",
+        not [x for x in _bad7b if x[0].startswith("门槛值 < 1")], "%s" % _bad7b[:3])
+    _pair7 = []
+    for _L7, _q7 in _PAIR7:
+        for _cid7 in sorted(_CLS7):
+            _its7 = _rep7(_cid7, _q7)
+            if not _its7:
+                _pair7.append((_cid7, _L7, _q7, "这一档一件都没有（覆盖有洞）"))
+                continue
+            _nd7 = [_EQ7[k]["req"]["v"] for k in _its7 if _EQ7[k].get("req")]
+            if _nd7 and _TOT7(_L7) < max(_nd7):      # 普通那一档没有 req ⇒ 无门槛，天然穿得上
+                _pair7.append((_cid7, _L7, _q7, "铺满也穿不上"))
+    chk("★ ② 配对档（L1/普通 · L6/精制 · L10/稀有 · L20/遗物 · 六职业 × %d 格）= 铺满都穿得上且覆盖非空"
+        % len(_PAIR7), not _pair7, "%s" % _pair7[:3])
+
+    # ③ 六锚点：门槛/建议加点 = 倍率（与等级无关）—— 两个方向的自检
+    print("     六锚点（门槛若按该锚点当门槛级 · 精制/稀有/遗物）：")
+    _bad7c = []
+    for _L7 in (1, 20, 40, 60, 80, 100):
+        _cells7 = []
+        for _a7 in ("STR", "AGI", "VIT", "INT", "WIL"):
+            _cid7 = _RIR7.ref_class_of(_CLS7, _a7)
+            _sug7 = float(_RBM7.alloc_of(_L7, _cid7)[_a7])
+            _vs7 = [_RIR7.req_value(_a7, _q7, _L7, _CLS7, _cid7) for _q7 in ("精制", "稀有", "遗物")]
+            for _q7, _v7v in zip(("精制", "稀有", "遗物"), _vs7):
+                if abs(_v7v / _sug7 - _RIR7.QUALITY_MULT[_q7]) > 0.5 / _sug7 + 1e-9:
+                    _bad7c.append((_L7, _a7, _q7, _v7v, _sug7))
+            if not (0.6 <= min(_vs7) / _sug7 <= 1.15):      # 够得着（≤1.05）也不虚设（≥0.7）
+                _bad7c.append((_L7, _a7, "比例出界", min(_vs7) / _sug7))
+            _cells7.append("%s:%s" % (_a7, "/".join("%d" % x for x in _vs7)))
+        print("       L%-4s %s（建议加点 = %s）"
+              % (_L7, " ".join(_cells7),
+                 "/".join("%d" % _RBM7.alloc_of(_L7, _RIR7.ref_class_of(_CLS7, _a7))[_a7]
+                          for _a7 in ("STR", "VIT", "INT"))))
+    chk("★ ③ 六锚点：门槛/建议加点**恒 = 倍率**（0.70 / 0.90 / 1.05 · 与等级无关）+ 比例落在 [0.6, 1.15]"
+        "（不会永远穿不上 · 也不会形同虚设）", not _bad7c, "%s" % _bad7c[:3])
+
+    # ④ 真跑两个方向（直调实现体）：不够那一句 + 档一个字没动 / 够了那一句 + 真穿上
+    class _E7(object):
+        def __init__(self, text=""):
+            self.text = text
+
+        def save(self):
+            pass
+
+    def _dr7(fn, p, text=""):
+        _out7 = []
+
+        async def _go7():
+            async for _l7 in fn(_E7(text), None, "u_req7", p):
+                _out7.append(str(_l7))
+
+        asyncio.run(_go7())
+        return _out7
+
+    _cat7 = next((k for k in sorted(_EQ7)
+                  if _EQ7[k].get("req") and k.endswith("_refined")), "")
+    if not _cat7:
+        _cat7 = next((k for k in sorted(_EQ7) if _EQ7[k].get("req")), "")
+    _rq7 = _EQ7[_cat7]["req"]
+    _cw7 = _RIR7.ref_class_for_item(_CLS7, _cat7, _rq7["attr"])
+    _start7 = {"cls": _cw7, "level": _rq7["level"], "hp": 100, "bag": {_cat7: 1},
+               "equipped": {}, "codex": {}, "flags": {}}
+    _lack7 = dict(_start7, alloc={})
+    _enuf7 = dict(_start7, alloc={_rq7["attr"]: int(_rq7["v"])})
+    _weak7 = "装备 %s" % _EQ7[_cat7].get("name", _cat7)
+    _out_lack7 = _dr7(_CG7.equip, _lack7, _weak7)
+    _out_enuf7 = _dr7(_CG7.equip, _enuf7, _weak7)
+    _want_lack7 = CA.T("SYS_GEAR_REQ", name=_EQ7[_cat7].get("name", _cat7),
+                       attr=CA.T("SYS_STAT_%s" % _rq7["attr"]), need=int(_rq7["v"]),
+                       have=0, gap=int(_rq7["v"]))
+    chk("★ ④ 真跑 `装备`（%s · 要 %s %s）：不够 ⇒ 逐字「%s」· 档上一个字没动（bag / equipped / hp_max）"
+        % (_cat7, _rq7["attr"], _rq7["v"], _want_lack7),
+        _out_lack7 == [_want_lack7]
+        and _lack7.get("bag") == {_cat7: 1} and _lack7.get("equipped") == {}
+        and "hp_max" not in _lack7,
+        "%s / %s" % (_out_lack7[:1], {k: _lack7.get(k) for k in ("bag", "equipped")}))
+    chk("★ ④ 真跑 `装备` 另一个方向：加点够了 ⇒ 穿上那一句 + 真进 `equipped`"
+        % (),
+        _out_enuf7[:1] == [CA.T("SYS_GEAR_EQUIP_OK", icon=_EQ7[_cat7].get("icon", ""),
+                                name=_EQ7[_cat7].get("name", _cat7),
+                                kind=_EQ7[_cat7].get("kind", ""))]
+        and _enuf7.get("equipped") == {_EQ7[_cat7]["slot"]: _cat7},
+        "%s / %s" % (_out_enuf7[:1], _enuf7.get("equipped")))
+    # 旧档：那件已经穿在身上、点数又不够 ⇒ 照「已经穿在身上了」说（门槛不在这一格报）
+    _old7 = {"cls": _cw7, "level": _rq7["level"], "hp": 100, "bag": {}, "alloc": {},
+             "equipped": {_EQ7[_cat7]["slot"]: _cat7}, "codex": {}, "flags": {}}
+    _out_old7 = _dr7(_CG7.equip, _old7, "装备 %s" % _EQ7[_cat7].get("name", _cat7))
+    chk("★ ④ 旧档（身上那件、点数为 0）：`装备` 同一件照「已经穿在身上了」说 —— 不报门槛、不强制脱",
+        _out_old7 == [CA.T("SYS_GEAR_WORN", name=_EQ7[_cat7].get("name", _cat7))]
+        and _old7.get("equipped") == {_EQ7[_cat7]["slot"]: _cat7},
+        "%s" % _out_old7[:1])
+except Exception as exc:                                                      # noqa: BLE001
+    chk("★ B3-19 装备门槛那一节跑得起来", False, "%s: %s" % (type(exc).__name__, exc))
 
 print("")
 print("===== %s =====" % ("★ P-27 三处一致 + 反证都过 ✅" if not fails else "P-27 有红 ❌ %s" % fails))

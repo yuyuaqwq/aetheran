@@ -23,6 +23,12 @@ helmet / boots / accessory —— 词表在 `schemas/items.schema.json` 的 `slo
 
 ★ 文案一律走 texts（`SYS_GEAR_*` / `SYS_CMP_*` / `SYS_STAT_*`）—— 本文件不内联中文。
   「换下来的那件收进背包」与「穿上 / 卸下」分开两句：换装时玩家要看得见**哪一件**下去了。
+
+★ B3-19（2026-09-25）：**穿上要看加点**（鱼鱼：「装备应该也是要依赖加点才能穿的吧」）——
+  `items.req` = `{attr, v, level}`（家族 × 品质 × 建议加点曲线算出来的最小值，见
+  `scripts/rebuild_item_reqs.py`）；不够 ⇒ `SYS_GEAR_REQ` 那一行（还差几点），**不改档**。
+  口径 = fail-closed，不做「能穿但减半」；`req` 缺字段 / 值坏了 ⇒ 当场抛（不当无门槛放过去）。
+  只有「穿」这一条路判门槛：**已穿上的旧档不报错**（`卸下` / `对比` 也不受影响）。
 """
 from __future__ import annotations
 
@@ -73,6 +79,53 @@ def affix_lines(rec) -> list:
         elif v is not None:
             out.append(T("SYS_GEAR_AFFIX_ROW", label=stat_label(a.get("stat")), value=_fmt(v)))
     return out
+
+
+# ══════════════════════════════════════════════════════════════
+# 门槛（B3-19）：装备要依赖加点才穿得上 —— 不够就穿不上（fail-closed）
+# ══════════════════════════════════════════════════════════════
+def req_of(iid) -> dict | None:
+    """这件装备的属性门槛（域里的 `req` 那一格）；**没有那一格 = 无门槛**。
+
+    ★ 门槛值不在这一层算 —— `scripts/rebuild_item_reqs.py` 从「家族 × 品质 × 建议加点曲线」
+      算好落进域里（数值不许手打，判据 `probe_panel` ⑦ / `probe_items` ⑩ 逐件重算对账）。
+      这一层只判「够不够」。
+    ★ 有那一格但坏了（缺 `attr` / `v` 不是正整数）⇒ **当场抛**，不许当无门槛放过去
+      （fail-closed：坏数据静默变宽松 = 门槛失效，那正是这一批要根除的病）。
+    """
+    r = _item(iid).get("req")
+    if not r:
+        return None
+    attr, v = str(r.get("attr") or ""), r.get("v")
+    if not attr or not isinstance(v, int) or isinstance(v, bool) or int(v) < 1:
+        raise ValueError("物品 %s 的 req 坏了：%r —— 门槛判不了（fail-closed，不当无门槛）"
+                         % (iid, r))
+    return {"attr": attr, "v": int(v), "level": int(r.get("level") or 0)}
+
+
+def attr_points(p, attr) -> int:
+    """档上该五维属性**加了多少点** —— 唯一口径 = `alloc` 那一格。
+
+    ★ 建号那 8 点的**起始五维**真源里还没有（`05_玩法数值口径 §二` 同款问题：
+      「五维起始值」没有出处）⇒ 这里不编一个起点，只算玩家自己加的
+      （`cmds_more.attrs` 那一页说的也是「加过哪些点」）。见 `_notes.md` 的待补项。
+    """
+    return int((p.get("alloc") or {}).get(str(attr)) or 0)
+
+
+def unmet_req(p, iid) -> dict | None:
+    """没够的门槛：`{name, attr, need, have, gap}`；够了 / 无门槛 ⇒ None。
+
+    `attr` 那一格是**中文名**（走 `SYS_STAT_*` 槽位，代码不内联中文）。
+    """
+    req = req_of(iid)
+    if not req:
+        return None
+    have = attr_points(p, req["attr"])
+    if have >= req["v"]:
+        return None
+    return {"name": _item(iid).get("name", iid), "attr": stat_label(req["attr"]),
+            "need": req["v"], "have": have, "gap": req["v"] - have}
 
 
 def stats_of(p, iid) -> dict:
@@ -178,12 +231,22 @@ async def equip(env, sink, uid, player):
     """`装备 <装备>` —— 背包里的能穿的东西进 `equipped[slot]`；同一位子已有 ⇒ **换下**。
 
     换下的那件回背包（先说换上了哪件、再说换下了哪件）—— 六格各一件，不叠穿。
+
+    ★ B3-19：先过**属性门槛**（`items.req`：家族 × 品质 × 建议加点曲线）——
+      不够 ⇒ 一句「还差几点」，**档上一个字都不动**（fail-closed）。
+      已经穿在身上的旧档不受影响：门槛只在**穿**这一条路上判，所以旧档不会因为
+      这条新规矩突然「身上那件不合规」（只是脱下来之后要够门槛才穿得回去）。
     """
     p = _p(player)
     want = _arg(env)
     iid, rec = _in_bag(p, want, need_slot=True)
     if not iid:
         yield _not_there(p, want)
+        return
+
+    short = unmet_req(p, iid)
+    if short:
+        yield T("SYS_GEAR_REQ", **short)
         return
 
     slot = str(rec.get("slot"))
