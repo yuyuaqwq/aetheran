@@ -10,6 +10,8 @@
   使用 / 吃 <东西>  药水回血 · 菜给增益（增益在战斗面板里生效）
 
 数值全部从 `recipes` 域来（域由 `scripts/rebuild_recipes.py` 从源文档解析生成）。
+药水回多少写在 **items 域的 `effect`** 里（数值不在代码里）：`{"hp": 30}` = 固定多少 ·
+`{"hp_pct": 0.3}` = 上限的几成；`heal` 是同一个口的老写法 —— 由生成器从 desc「回 N 点生命」解析。
 文案全部从 `texts` 域来 —— 本文件只传槽位。
 """
 from __future__ import annotations
@@ -263,6 +265,35 @@ def _stat_label(iid: str, stat: str) -> str:
     return str((( _recipes().get(rid) or {}).get("buff") or {}).get("stat_name") or stat)
 
 
+#: 药水的效果词表 —— **数值一律来自数据**（items 域那条记录的 `effect`），代码只认键名：
+#:   {"hp": 30}       固定回多少
+#:   {"hp_pct": 0.3}  上限的几成（药水的 desc 里没有数字可解析 ⇒ 效果就声明在数据里）
+#: 认不出效果的（键不认识 / 压根没写）一律回「不是这么用的」—— fail-closed，不静默按 0 算。
+
+
+def _heal_gain(p, rec: dict):
+    """这条东西用下去回多少血（认不出效果给 None）。
+
+    上限只走**档上的** `hp_max`（P-27：面板那一份还没定，先保守用这份 —— 与 `cmds_gather.rest` 同口径）。
+    `heal` 是**生成器**的口（`scripts/rebuild_recipes.py ⑦` 从 desc「回 N 点生命」解析，禁手打）——
+    这里把它归一到同一套算法，所以「伤药」与「药水」走的是同一条路。
+    """
+    eff = rec.get("effect")
+    if eff is None and rec.get("heal"):
+        eff = {"hp": rec.get("heal")}
+    if not isinstance(eff, dict):
+        return None
+    gain, hit = 0, False
+    if "hp" in eff:
+        hit, gain = True, gain + int(eff.get("hp") or 0)
+    if "hp_pct" in eff:
+        mx = int(p.get("hp_max") or 100)
+        hit, gain = True, gain + int(round(mx * float(eff.get("hp_pct") or 0)))
+    if not hit:
+        return None
+    return max(0, gain)
+
+
 async def item_use(env, sink, uid, player):
     p = _p(player)
     want = _arg(env)
@@ -294,15 +325,17 @@ async def item_use(env, sink, uid, player):
                 buff="%s +%d%%" % (_stat_label(iid, str(food.get("stat"))), int(food.get("pct") or 0)),
                 minutes=int(food.get("seconds") or 0) // 60)
         return
-    heal = int(rec.get("heal") or 0)
-    if heal:
+    gain = _heal_gain(p, rec)
+    if gain is not None:
         mx = int(p.get("hp_max") or 100)
-        hp = min(mx, int(p.get("hp") or mx) + heal)
+        hp0 = int(p.get("hp") or mx)
+        hp = min(mx, hp0 + gain)                 # ★ 回血封顶：不许超过上限
         p["hp"] = hp
-        _take(p, iid, 1)
+        _take(p, iid, 1)                         # ★ 用了就消耗（减到 0 由 _take 摘掉条目）
         if player is not None:
             player.update(p)
         _save(env)
-        yield T("SYS_USE_HEAL", name=rec.get("name", iid), heal=heal, hp=hp, hp_max=mx)
+        # ★ 报的是**真回了多少**（被上限截掉的那部分不算）—— 否则「+40（100/100）」是句假话
+        yield T("SYS_USE_HEAL", name=rec.get("name", iid), heal=max(0, hp - hp0), hp=hp, hp_max=mx)
         return
     yield T("SYS_USE_NOT", name=rec.get("name", iid))
