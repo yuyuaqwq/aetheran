@@ -65,10 +65,12 @@ def _map_scene(loc):
 
 
 # ── 玩家档（形状：location/level/race/class/name/hp…）──────────────
+#: ★ P-27：档上**不写** `hp` / `hp_max` —— 生命上限只有一个来源（职业面板），
+#:   由 `_p()` 出档时按面板派生（原先这里与 `apply.initial_save` 各写死 100 ⇒ 两个源）。
 DEFAULT_PLAYER = {
     "name": "", "race": "", "cls": "", "level": 1, "exp": 0,
     "loc": "windmill_town", "node": "wt_gate_n", "prev": [],
-    "hp": 100, "hp_max": 100, "mo": 0, "mo_max": 0,
+    "mo": 0, "mo_max": 0,
     "gold": 30, "bag": {}, "equipped": {}, "flags": {}, "codex": {},
 }
 
@@ -145,6 +147,11 @@ def _p(player):
       `setdefault` + 原地写）就把默认档改脏：进程内跨玩家串档、探针之间也串。
       ⇒ 出档一律走 `_fresh()`（默认档那一边、引擎给的档那一边，两边都不当草稿纸）。
       判据：probe_copy ⑬（真跑完一遍之后默认档四个容器必须原样 + 半截老档采集不串给下一个人）。
+
+    ★ P-27：**生命上限只有一个来源 = 职业面板**（`panel_build.hp_cap`）—— 出档口现算一遍写
+      进这份档：档上那格 `hp_max` 是**派生值**（不是真源，也不许再写死 100）。档上没有职业
+      （建号第二步「选职业」还没走完）⇒ 上限**未定**：这一格干脆不写，读它的人走 `hp_cap()`
+      （缺了当场喊，不许猜数）。判据：probe_panel 的「三处一致」那一节。
     """
     p = dict(DEFAULT_PLAYER)
     if isinstance(player, dict):
@@ -152,7 +159,44 @@ def _p(player):
     p = _fresh(p)
     if not isinstance(p.get("prev"), list):
         p["prev"] = []
+    from . import panel_build as _PB                       # 本地 import：避免包装载期成环
+    cap = _PB.hp_cap(p, strict=False)                      # 无职业 ⇒ None（未定）
+    if cap is None:
+        p.pop("hp_max", None)                              # ★ 别把旧档上写死的 100 当上限留着
+        p.pop("hp", None)
+    else:
+        p["hp_max"] = cap
+        p["hp"] = max(1, min(int(p.get("hp") or cap), cap))   # 现血跟着同一个上限（满血起手）
     return p
+
+
+def hp_cap(p) -> int:
+    """档上的生命上限（**唯一来源 = 职业面板**；`_p` 出档时已按它派生）。
+
+    ★ 缺了（档上没有职业 ⇒ 没有面板 ⇒ `_p` 没写这一格）或者职业不在 `classes` 域里
+      ⇒ 当场抛 `PanelMissing`（点名）—— 要数字的地方（回血 / 战斗）宁可报错，也不出假数。
+    """
+    from . import panel_build as _PB
+    return _PB.hp_cap(p)
+
+
+def hp_cap_or_line(p):
+    """档上的生命上限；**档上还没有职业**时回 `(None, 一行点名的 fail-closed 行)`。
+
+    ★ P-27 两档分开（fail-closed 纪律：`fail-closed-boundaries` §1）：
+
+      · 档上没有职业（建号第二步「选职业」还没走完）= **还没声明** ⇒ 这里**不猜数**：
+        调用方别做那件事（回血 / 打架），把那一行说给玩家听（借现成槽位：
+        `SYS_POI_EFFECT_TODO` + `SYS_PANEL_PROF_BASE` —— ★ 待补的槽位名记这儿：
+        `SYS_HP_UNSET`，下一轮连同真源口径表一起补）。
+      · 档上的职业**不在 classes 域里** = **声明错了** ⇒ 照样抛（本函数不吞这一档）。
+    """
+    from . import panel_build as _PB
+    cap = _PB.hp_cap(p, strict=False)
+    if cap is not None:
+        return cap, None
+    return None, T("SYS_POI_EFFECT_TODO", name=p.get("name") or T("SYS_NAME_UNKNOWN"),
+                   keys=T("SYS_PANEL_PROF_BASE"))
 
 
 def _race_rec(race):
@@ -573,8 +617,16 @@ async def status(env, sink, uid, player):
     nm = name_with_title(p)                     # ★ B3-2：称号跟着名字走进面板
     yield T("SYS_STATUS_HEAD", who=nm, race=_race_label(p.get("race")),
             cls=_cls_label(p.get("cls")), level=p.get("level"))
-    yield T("SYS_STATUS_VITALS", hp=p.get("hp"), hp_max=p.get("hp_max"),
-            mo=p.get("mo"), mo_max=p.get("mo_max"), gold=p.get("gold"))
+    # ★ P-27：上限只有一个来源（职业面板）。档上没有职业 ⇒ 上限**未定** —— 照实说，
+    #   不拿 100 垫（原先写死 100 ⇒ 面板 116 的骑士 `状态` 显示 100/100）。
+    from . import panel_build as _PB                       # 本地 import：避免包装载期成环
+    cap = _PB.hp_cap(p, strict=False)
+    if cap is None:
+        yield T("SYS_STATUS_VITALS", hp=T("SYS_UNSET"), hp_max=T("SYS_UNSET"),
+                mo=p.get("mo"), mo_max=p.get("mo_max"), gold=p.get("gold"))
+    else:
+        yield T("SYS_STATUS_VITALS", hp=p.get("hp"), hp_max=cap,
+                mo=p.get("mo"), mo_max=p.get("mo_max"), gold=p.get("gold"))
     yield T("SYS_STATUS_EXP", exp=p.get("exp"),
             place=_map_of(p["loc"]).get("name", p["loc"]) if _map_of(p["loc"]) else p["loc"])
 
@@ -644,16 +696,16 @@ def _poi_buff_spec(eff):
     return (key, pct) if pct > 0 else None
 
 
-def _poi_heal_gain(p, eff):
+def _poi_heal_gain(p, eff, mx):
     """`effect` 里「回多少」的那两个词（与 items 域同一套：`hp` 固定 · `hp_pct` 上限的几成）。
 
     返回 `(有没有写, 回多少)` —— 没写 = `(False, 0)`：**不猜**，由上头的安全默认那一档接管。
+    `mx` = 生命上限（★ P-27：由调用方从唯一来源取好 —— 本函数不自己去翻档）。
     """
     hit, gain = False, 0
     if "hp" in eff:
         hit, gain = True, gain + int(eff.get("hp") or 0)
     if "hp_pct" in eff:
-        mx = int(p.get("hp_max") or 100)
         hit, gain = True, gain + int(round(mx * float(eff.get("hp_pct") or 0)))
     return hit, max(0, gain)
 
@@ -716,24 +768,29 @@ async def poi_effect_lines(env, sink, uid, p, pid, rec, verb, player=None):
         yield T("SYS_POI_BUFF", name=name,
                 buff="%s +%d%%" % (eff.get("stat_name") or key, pct), minutes=secs // 60)
     else:
-        wrote, gain = _poi_heal_gain(p, eff)
+        # ★ P-27：上限只有一个来源（职业面板）。档上还没有职业 ⇒ **不出假数**：出一行点名的
+        #   fail-closed 行（借槽位，见 `hp_cap_or_line`），这一支整段不做。
+        mx, _line = hp_cap_or_line(p)
+        wrote, gain = _poi_heal_gain(p, eff, mx or 0)
         if eff.get("buff") or wrote:
-            mx = int(p.get("hp_max") or 100)
-            bad = []
-            if eff.get("buff") and not wrote:
-                # ★ 只写了名字、没写数值（今天的神龛就是这一档）—— **不猜属性也不猜数**：
-                #   按安全默认「回生命上限的 POI_BLESS_HEAL_PCT」落地（与歇脚同一个数）。
-                #   真写了数值但认不出的那几个子键点名（fail-closed：别让它看着像生效了）。
-                gain = max(1, int(mx * POI_BLESS_HEAL_PCT))
-                bad = [k for k in ("stat", "stat_name", "pct") if k in eff]
-            hp0 = int(p.get("hp") or mx)
-            hp = min(mx, hp0 + gain)              # ★ 封顶：不许超过上限（与药水同一口径）
-            p["hp"] = hp
-            dirty = True
             consumed.update(("buff", "duration", "hp", "hp_pct"))
-            if bad:
-                yield T("SYS_POI_BUFF_BAD", name=name, keys=" · ".join(bad))
-            yield T("SYS_POI_BLESS", name=name, add=max(0, hp - hp0), hp=hp, max=mx)
+            if _line:
+                yield _line
+            else:
+                bad = []
+                if eff.get("buff") and not wrote:
+                    # ★ 只写了名字、没写数值（今天的神龛就是这一档）—— **不猜属性也不猜数**：
+                    #   按安全默认「回生命上限的 POI_BLESS_HEAL_PCT」落地（与歇脚同一个数）。
+                    #   真写了数值但认不出的那几个子键点名（fail-closed：别让它看着像生效了）。
+                    gain = max(1, int(mx * POI_BLESS_HEAL_PCT))
+                    bad = [k for k in ("stat", "stat_name", "pct") if k in eff]
+                hp0 = int(p.get("hp") or mx)
+                hp = min(mx, hp0 + gain)          # ★ 封顶：不许超过上限（与药水同一口径）
+                p["hp"] = hp
+                dirty = True
+                if bad:
+                    yield T("SYS_POI_BUFF_BAD", name=name, keys=" · ".join(bad))
+                yield T("SYS_POI_BLESS", name=name, add=max(0, hp - hp0), hp=hp, max=mx)
 
     if eff.get("talk"):
         dlg = _data("dialogues").get(str(eff.get("talk"))) or {}

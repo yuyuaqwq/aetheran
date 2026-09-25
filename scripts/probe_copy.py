@@ -16,6 +16,9 @@
   ⑫ 四条出口（北口/往东/往西/进镇）站在**目的地**上敲 = 回 HERE、不演出门、不塞历史（B3-11 · K60）
   ⑬ 默认档不许被就地改（B3-12 · K57）：真跑完一遍后 bag/equipped/flags/codex 必须原样；
      半截老档（缺这几个键）采集一趟，不许把东西写进默认档、也不许串给下一个人
+  ⑭ ★ P-27：还没择业的档（无职业）= 没有面板 ⇒ `状态` 的生命上限照实说「未定」，
+     要数字的地方（打架 / 歇脚）出一行点名行、不许显示那两个写死的 100
+     （三处一致 + 反证那几条在 probe_panel 里）
 
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_copy.py [--inventory]
 """
@@ -318,8 +321,14 @@ def main():
         ("挖掘(有)", CG.dig, "", {"loc": "belt_north", "node": "bn_bone"}),
         ("垂钓(有)", CG.fish, "", {"loc": "belt_west", "node": "bw_old_ferry"}),
         ("搜查(有)", CG.search, "", {"loc": "belt_east", "node": "be_birch"}),
-        ("歇脚(不累)", CG.rest, "", {"hp": 100, "hp_max": 100}),
-        ("歇脚(歇下了)", CG.rest, "", {"hp": 40, "hp_max": 100}),
+        # ★ P-27：上限只有面板一个来源 ⇒ 这几条要**定过职业**（没职业的档上限「未定」，
+        #   回血 / 用药 / 战斗那些要数字的地方当场 fail-closed —— 见 probe_panel 那一节）。
+        ("歇脚(不累)", CG.rest, "", {"cls": "cls_knight", "hp": 999}),
+        ("歇脚(歇下了)", CG.rest, "", {"cls": "cls_knight", "hp": 40}),
+        # ★ P-27：还没择业的档 —— 要数字的地方（打架 / 歇脚）**不出假数**，出一行点名行
+        ("歇脚(还没择业)", CG.rest, "", {"loc": "windmill_town", "node": "wt_gate_n"}),
+        ("攻击(还没择业)", CBL.attack, "",
+         {"loc": "belt_north", "node": "bn_bone", "bag": {}, "codex": {}, "flags": {}}),
         ("拾取", CG.pick_up, "", {}),
         # ★ B3-10 ①：去「脚下这一站」（原先错走 SYS_MOVE_FAR 那一支）
         ("去(就在这儿)", CA.go_to, "去 %s" % cur, {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
@@ -327,7 +336,7 @@ def main():
         ("时间", CA.time_now, "", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
         ("背包(满)", CA.bag, "", _rich()),
         ("攻击(野外)", CBL.attack, "",
-         {"loc": "belt_north", "node": "bn_bone", "level": 3, "hp": 80, "hp_max": 100,
+         {"loc": "belt_north", "node": "bn_bone", "cls": "cls_knight", "level": 3, "hp": 80,
           "bag": {}, "codex": {}, "flags": {}}),
         ("防御", CBL.defend, "", {}),
         ("逃跑", CBL.flee, "", {}),
@@ -346,8 +355,9 @@ def main():
         ("强化(料不够)", CR.enhance, "强化 %s" % _its.get(_wpn, {}).get("name", "剑"),
          {"bag": {_wpn: 1}} if _wpn else {}),
         ("使用(没给东西)", CR.item_use, "使用", {}),
-        ("使用(药水)", CR.item_use, "使用 药水", {"bag": {"i_potion_heal": 1}}),
-        ("使用(伤药)", CR.item_use, "使用 伤药", {"bag": {"i_potion_minor": 1}, "hp": 10, "hp_max": 100}),
+        ("使用(药水)", CR.item_use, "使用 药水", {"cls": "cls_knight", "bag": {"i_potion_heal": 1}}),
+        ("使用(伤药)", CR.item_use, "使用 伤药",
+         {"cls": "cls_knight", "bag": {"i_potion_minor": 1}, "hp": 10}),
         ("图鉴(空)", CC.codex, "", {}),
         ("图鉴(满)", CC.codex, "", _rich()),
         ("材料谱(空)", CC.codex_material, "", {}),
@@ -409,6 +419,30 @@ def main():
         and _pB.get("bag") in ({}, None)
         and any("空的" in ln for ln in _bagB),
         "默认=%s 下一个人的包=%s %s" % (CA.DEFAULT_PLAYER.get("bag"), _pB.get("bag"), _bagB[:1]))
+
+    # ⑭ ★ P-27：上限只有一个来源（职业面板）—— 还没择业的档照实说「未定」，
+    #   不许再出那两个写死的 100（面板 116 的骑士原先显示 100/100）。
+    _noCls = _drive(CA.status, _player(loc="windmill_town", node="wt_gate_n", race="human",
+                                       hp=100, hp_max=100))   # 老档那两格写死的 100 还在
+    chk("★ P-27 还没择业的档 `状态`：生命上限出「未定」（不拿写死的 100 垫）",
+        any(("生命" in ln and "未定" in ln) for ln in _noCls) and "100/100" not in "\n".join(_noCls),
+        "%s" % _noCls[:2])
+    _noClsAtk = _drive(CBL.attack, _player(loc="belt_north", node="bn_bone", bag={}, flags={}),
+                       "")
+    chk("★ P-27 还没择业的档 `攻击`：不开那一场、出一行点名行（职业基础 · 不猜数）",
+        bool(_noClsAtk) and any("职业基础" in ln for ln in _noClsAtk)
+        and not any("遭遇" in ln for ln in _noClsAtk), "%s" % _noClsAtk[:2])
+    # ★ P-27：POI 回血那一支（神龛 · `effect.buff` 只写了名字 ⇒ 走「上限的 20%」安全默认）
+    _shr = next((k for k, v in (st.domain("pois") or {}).items()
+                 if isinstance(v.get("effect"), dict) and v["effect"].get("buff")), "")
+    if _shr:
+        _pv = (st.domain("pois") or {})[_shr]
+        _shCls = _drive(CA.touch, _player(cls="cls_knight", loc=_pv.get("map"), node=_pv.get("subarea")))
+        _shNo = _drive(CA.touch, _player(loc=_pv.get("map"), node=_pv.get("subarea")))
+        chk("★ P-27 POI 回血走同一个口（%s）：有职业 ⇒ 真回血 · 没职业 ⇒ 点名行不回血" % _shr,
+            any("生命 +" in ln for ln in _shCls) and any("职业基础" in ln for ln in _shNo)
+            and not any("生命 +" in ln for ln in _shNo),
+            "%s / %s" % (_shCls[-1:], _shNo[-1:]))
 
     # ⑩ B3-10 ①：`去 <脚下这一站>` —— 回的是「到了」，不是「过不去」
     here_out = _drive(CA.go_to, _player(loc="windmill_town", node="wt_gate_n"), "去 %s" % cur)

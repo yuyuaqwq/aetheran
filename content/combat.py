@@ -16,7 +16,6 @@ from ext_combat import Battle
 from ext_combat.battle.actors import make_actor
 
 from . import panel_build as PB
-from . import gear as GB
 
 PLAYER_SIDE = "player"
 ENEMY_SIDE = "enemy"
@@ -24,13 +23,17 @@ ENEMY_SIDE = "enemy"
 
 def player_actor(player: dict, stack_prefix: str = "aetheran") -> dict:
     """玩家档 → 战斗 actor（面板走本包的面板栈）。"""
-    cls = player.get("cls") or "cls_knight"
+    # ★ P-27：职业**不兜底**（原先 `player.get("cls") or "cls_knight"` —— 等于替没择业的玩家
+    #   挑了个职业，档与面板从这一行起就分家）。没有职业 ⇒ `panel_build` 当场抛 `PanelMissing`
+    #   （生命上限只有一个来源：职业面板）。
+    cls = str(player.get("cls") or "")
     lv = int(player.get("level", 1) or 1)
-    # ★ 装备与强化走唯一取值口（B2-6）：`gear_stats` 会按强化等级放大主词条；
-    #   食物增益走最后一层 mul（时效过了自动失效 —— 时钟是宿主注入的那根）。
-    gear = GB.gear_stats(player) or (player.get("equip_stats") or {})
-    a = PB.build_actor(cls, lv, player.get("alloc"), gear,
-                       buffs=GB.food_buff(player) or None, stack_prefix=stack_prefix)
+    # ★ 装备与强化走唯一取值口（B2-6，`panel_build.gear_and_buffs` → `gear` 那两个口）：
+    #   `gear_stats` 会按强化等级放大主词条；食物增益走最后一层 mul（时效过了自动失效 ——
+    #   时钟是宿主注入的那根）。★ P-27：与「档上的上限」（`panel_build.hp_cap`）吃**同一份**
+    #   取值口 ⇒ 面板 / 档 / 战斗 actor 三处同一个数。
+    gear, buffs = PB.gear_and_buffs(player)
+    a = PB.build_actor(cls, lv, player.get("alloc"), gear, buffs=buffs, stack_prefix=stack_prefix)
     a["uid"] = str(player.get("uid") or "p1")
     a["name"] = player.get("name") or "无名者"
     a["side"] = PLAYER_SIDE
@@ -38,7 +41,12 @@ def player_actor(player: dict, stack_prefix: str = "aetheran") -> dict:
     a["human_controlled"] = True
     a["level"] = lv
     # ★ 实时血量必给（引擎读 a["hp"]，缺了会拿 max_hp 当当前值）
-    mx = int(a.get("max_hp") or 1)
+    #   ★ P-27：钳制用的上限就是**面板算出来的那一个**（`a["max_hp"]`）—— 现血来自同一份档
+    #     （`cmds_ast._p` 已按同一个上限钳过）⇒ 不再「档上写死 100 压住面板 116」那种两个源混用。
+    if not isinstance(a.get("max_hp"), (int, float)) or isinstance(a.get("max_hp"), bool):
+        raise PB.PanelMissing("面板没给出生命上限（max_hp · 职业数据少了 hp？）：%r"
+                              % (a.get("class_name"),))
+    mx = int(a["max_hp"])
     hp = int(player.get("hp") or mx)
     a["hp"] = max(1, min(hp, mx))
     a.setdefault("mp", 0)

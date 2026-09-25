@@ -139,10 +139,13 @@ def initial_save(uid: str, ctx: dict | None = None) -> dict:
 
     ★ 起始位置 = 风车镇北口（玩家第一眼看到的就是那块刻字的石头）。
     ★ 30 枚铜板是一个人在镇上活三天的钱（住店 8 / 一顿饭 2）；给多了镇子就没意义了。
+    ★ P-27：**不写 `hp` / `hp_max`** —— 生命上限只有一个来源（职业面板），由 `cmds_ast._p`
+      出档时按面板派生（原先这里与 `cmds_ast.DEFAULT_PLAYER` 各写死 100 ⇒ 两个源，
+      而且没有任何升级 / 换装钩子刷它）。
     """
     return {
         "name": "", "race": "", "cls": "", "level": 1, "exp": 0,
         "loc": "windmill_town", "node": "wt_gate_n", "prev": [],
-        "hp": 100, "hp_max": 100, "mo": 0, "mo_max": 0,
+        "mo": 0, "mo_max": 0,
         "gold": 30, "bag": {}, "equipped": {}, "flags": {}, "codex": {},
     }

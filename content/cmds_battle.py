@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from .cmds_ast import (
     _data, _p, _save, _map_of, _name_of_node, T, CHAPEL, exp_need,
-    exp_of_kill, add_exp)
+    exp_of_kill, add_exp, hp_cap, hp_cap_or_line)
 from .cmds_talk import _arg
 from .cmds_codex import new_lines
 from . import codex as CX
@@ -41,10 +41,12 @@ def _wake_in_chapel(p):
 
     「当前等级经验」= 该级升级所需经验（与升级判定同一个口 `exp_need`）；扣到 0 为止。
     返回掉掉的经验（给回话/探针用）。★ 醒来不是「走到」白烛堂 ⇒ 不记 `note_step`。
+    ★ P-27：「血回满」的那个上限只有**一个来源**（职业面板，`cmds_ast.hp_cap`）——
+      原先读档上写死的 100（面板 116 的骑士醒来只有 100）。
     """
     p["loc"], p["node"] = CHAPEL
     p["prev"] = []
-    p["hp"] = int(p.get("hp_max") or 100)
+    p["hp"] = hp_cap(p)
     had = int(p.get("exp") or 0)
     lost = min(had, int(exp_need(int(p.get("level", 1) or 1)) * 0.1))
     p["exp"] = had - lost
@@ -68,6 +70,13 @@ def _fmt(logs, limit=12):
 async def attack(env, sink, uid, player):
     """★ 第一版：遇敌 → 自动打完（把「攻击」当「打一场」）。"""
     p = _p(player)
+    # ★ P-27：打一场要靠面板（上限 / 属性 / 技能都从它来）。档上还没有职业（建号第二步没走完）
+    #   ⇒ **不出假数**：出一行点名的 fail-closed 行，这一场不开（`combat.player_actor` 那条路
+    #   同样是 fail-closed —— 职业不兜底）。
+    _mx, _line = hp_cap_or_line(p)
+    if _line:
+        yield _line
+        return
     ms = _data("monsters")
     pick = _encounter(p, uid)
     if not pick:

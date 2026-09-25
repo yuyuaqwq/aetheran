@@ -199,7 +199,7 @@ def mk(lv_now=0, target=None, gold=None):
     fee = int((enh.get("rc_enh_%02d" % tgt) or {}).get("gold") or 0)
     p = {"name": "测试者", "cls": "cls_knight", "level": 1, "exp": 0,
          "loc": "windmill_town", "node": "wt_gate_n", "prev": [],
-         "hp": 100, "hp_max": 100, "gold": (fee if gold is None else gold),
+         "gold": (fee if gold is None else gold),
          "bag": {WEAPON: 1, IRON: n, BONE: n}, "equipped": {"weapon": WEAPON},
          "flags": {}, "codex": {}}
     if lv_now:
