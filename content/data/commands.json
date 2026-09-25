@@ -917,7 +917,15 @@
     "usage": "打断",
     "visible": true,
     "order": 42,
-    "guard_desc": "战斗中"
+    "guard_desc": "战斗中",
+    "bind": {
+      "handler": "content.cmds_battle:interrupt",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "defend": {
     "patterns": [
@@ -950,7 +958,15 @@
     "usage": "后撤",
     "visible": true,
     "order": 44,
-    "guard_desc": "战斗中"
+    "guard_desc": "战斗中",
+    "bind": {
+      "handler": "content.cmds_battle:retreat",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "skill_cast": {
     "patterns": [
@@ -963,7 +979,15 @@
     "usage": "技能 <参数>",
     "visible": true,
     "order": 45,
-    "guard_desc": "战斗中"
+    "guard_desc": "战斗中",
+    "bind": {
+      "handler": "content.cmds_battle:skill_cast",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "battle_item": {
     "patterns": [
@@ -976,7 +1000,15 @@
     "usage": "使用 <参数>",
     "visible": false,
     "order": 46,
-    "guard_desc": "战斗中"
+    "guard_desc": "战斗中",
+    "bind": {
+      "handler": "content.cmds_battle:battle_item",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "flee": {
     "patterns": [
@@ -1009,7 +1041,15 @@
     "usage": "集火 <参数>",
     "visible": true,
     "order": 48,
-    "guard_desc": "多人战斗"
+    "guard_desc": "多人战斗",
+    "bind": {
+      "handler": "content.cmds_battle:focus_fire",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "swap_weapon": {
     "patterns": [
@@ -1020,7 +1060,15 @@
     "usage": "换武器",
     "visible": true,
     "order": 49,
-    "guard_desc": "战斗中"
+    "guard_desc": "战斗中",
+    "bind": {
+      "handler": "content.cmds_battle:swap_weapon",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "auto_battle": {
     "patterns": [
