@@ -2310,5 +2310,68 @@
     ],
     "category": "系统",
     "desc": "旧物谱 · 端详 · 手上没有这一件"
+  },
+  "SYS_TRADE_HEAD": {
+    "value": "【副业】手艺人自己的活 —— 不在玛莎那块板上。",
+    "params": [],
+    "category": "系统",
+    "desc": "副业 · 抬头（B3-3 生活职业任务）"
+  },
+  "SYS_TRADE_ROW": {
+    "value": "{trade} {n} 条 —— {what}",
+    "params": [
+      "trade",
+      "n",
+      "what"
+    ],
+    "category": "系统",
+    "desc": "副业 · 一个副业一行（带「这条线是干什么的」）"
+  },
+  "SYS_TRADE_HOW": {
+    "value": "「『副业 采集』看那一条线上有什么 · 『接 <编号>』接活 · 『我的委托』看进度」",
+    "params": [],
+    "category": "系统",
+    "desc": "副业 · 尾注"
+  },
+  "SYS_TRADE_LIST_HEAD": {
+    "value": "【{trade}】{n} 条",
+    "params": [
+      "trade",
+      "n"
+    ],
+    "category": "系统",
+    "desc": "副业 · 某一个副业的抬头"
+  },
+  "SYS_TRADE_ONE": {
+    "value": "{order} {name}{mark} —— {objective}",
+    "params": [
+      "order",
+      "name",
+      "mark",
+      "objective"
+    ],
+    "category": "系统",
+    "desc": "副业 · 那条线上的每一条"
+  },
+  "SYS_TRADE_NOSUCH": {
+    "value": "没有「{name}」这条副业。有的是：{list}",
+    "params": [
+      "name",
+      "list"
+    ],
+    "category": "系统",
+    "desc": "副业 · 名字对不上"
+  },
+  "SYS_TRADE_MARK_DONE": {
+    "value": "（已交）",
+    "params": [],
+    "category": "系统",
+    "desc": "副业 · 标记 · 已交"
+  },
+  "SYS_TRADE_MARK_CAN": {
+    "value": "（可接）",
+    "params": [],
+    "category": "系统",
+    "desc": "副业 · 标记 · 可接"
   }
 }

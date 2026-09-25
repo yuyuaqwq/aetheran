@@ -28,6 +28,20 @@
               挂在移动那几处（cmds_ast，别改）
    打过什么 → `books.monster[<怪>].kills` —— codex.note_kill 挂在打怪那一下（cmds_battle，别改）
    手上有啥 → `bag[<物品>]` —— loot.add_to_bag（采集 / 掉落 / 烹饪 / 买，别改）
+
+★ B3-3 生活职业任务（解 P-14 的甲案 · 设计真源 `28_生活职业任务_设计_v1.md`）
+------------------------------------------------------------------------
+不建新域：quests 域多一个**分类维度** `trade`（"采集" | "垂钓" | "烹饪" | "强化"），
+8 条与现有支线重合的**就地合并**（只加字段、不复制文案），另 8 条新的补进同一个域
+（`kind: 生活` · `chain: trade`）—— 玩家侧两个入口（『悬赏』找玛莎 / 『副业』找手艺人）吃同一份数据。
+
+  · 四个副业的**名字与顺序**是数据（`quests._meta.trades`，生成器从 28 §三 + 21 §二 解析）
+    —— 本模块只读它、只传槽位，不认任何中文副业名（加第五个副业 = 改数据）
+  · `_quests()` 是**取条目**的唯一一口：`_meta` 那类私有键不是条目（与 recipes / codex 同口径）
+  · 生活任务**一律写 `require`**（上面那三型）—— 不然会落到 `flags.side_*` 那条死路径上
+    （那个键仓库里没有任何地方写）。今天现有的 12 条老支线仍在死路径上（P-25 §② 未收口，见报告）
+  · 落法（重跑）：`python scripts/rebuild_prof_quests.py`（从真源解析 · 数值不手打）
+  · 判据：`scripts/probe_quests.py` ⑪（trade 四值 · 16 条与 21 §二 逐条对账 · 条件真能验 · 副业指令真跑）
 """
 from __future__ import annotations
 
@@ -53,6 +67,66 @@ def _set(p, key, val):
     f = dict(p.get("flags") or {})
     f[key] = val
     p["flags"] = f
+
+
+# ── 副业（B3-3 · 解 P-14「选甲」）：四个副业的声明在 quests 域的 `_meta.trades` ──────
+def _quests():
+    """quests 域里的**条目**（`_meta` 那类私有键不算条目 —— 与 recipes / codex 等域同口径）。"""
+    return {k: v for k, v in _data("quests").items() if not str(k).startswith("_")}
+
+
+def _trade_meta():
+    """四个副业的声明（顺序 / 名字 / 「这条线是干什么的」）—— 全在数据里，代码不造中文。
+
+    ★ 代码只认「有哪些副业」这件事本身：顺序与名字从 `_meta.trades` 读（生成器从
+      `28 §三` + `21 §二` 解析落域）—— 加第五个副业是改数据，不是改代码。
+    """
+    return list((_data("quests").get("_meta") or {}).get("trades") or [])
+
+
+def _trade_rows():
+    """按副业分好的任务（每组按 `order` 排）—— 分组键就是条目自己的 `trade`（不给 = 不是副业任务）。"""
+    out = {}
+    for k, v in _quests().items():
+        t = v.get("trade")
+        if t:
+            out.setdefault(t, []).append((k, v))
+    for t in out:
+        out[t].sort(key=lambda kv: kv[1].get("order") or 0)
+    return out
+
+
+async def trade(env, sink, uid, player):
+    """`副业 [名字]` —— 按副业列任务（与『悬赏』并列的第二个入口：悬赏是玛莎的公会委托，副业是手艺人自己的活）。
+
+    无参：四个副业各自任务数 + 一句「这条线是干什么的」（那句从数据来）
+    带参：那一个副业下的每一条（可接 / 进行中 / 已交三种标记）
+    """
+    p = _p(player)
+    meta = _trade_meta()
+    want = _arg(env)
+    act, done = _mine(p), _done(p)
+    rows = _trade_rows()
+    if not want:
+        yield T("SYS_TRADE_HEAD")
+        for t in meta:
+            yield "  " + T("SYS_TRADE_ROW", trade=t.get("trade"),
+                           n=len(rows.get(t.get("trade")) or []), what=t.get("what") or "")
+        yield T("SYS_TRADE_HOW")
+        return
+    hit = next((t for t in meta if want == t.get("trade")), None)
+    if hit is None:
+        yield T("SYS_TRADE_NOSUCH", name=want,
+                list=" · ".join("「%s」" % t.get("trade") for t in meta))
+        return
+    one = rows.get(hit["trade"]) or []
+    yield T("SYS_TRADE_LIST_HEAD", trade=hit["trade"], n=len(one))
+    for k, x in one:
+        mark = T("SYS_BOARD_ACTIVE") if k in act else \
+            (T("SYS_TRADE_MARK_DONE") if k in done else T("SYS_TRADE_MARK_CAN"))
+        yield "  " + T("SYS_TRADE_ONE", order=x.get("order"), name=x.get("name"),
+                       mark=mark, objective=x.get("objective"))
+    yield T("SYS_TRADE_HOW")
 
 
 # ── 前置条件（P-25）：两个形状见文件抬头 ① ② ────────────────────────
@@ -171,7 +245,7 @@ async def guild(env, sink, uid, player):
 
 async def board(env, sink, uid, player):
     p = _p(player)
-    qs = _data("quests")
+    qs = _quests()
     done = _done(p)
     active = _mine(p)
     main = sorted([v for v in qs.values() if v["chain"] == "main"], key=lambda v: v["order"])
@@ -208,7 +282,7 @@ async def board(env, sink, uid, player):
 async def quest_accept(env, sink, uid, player):
     p = _p(player)
     want = _arg(env)
-    qs = _data("quests")
+    qs = _quests()
     if not want:
         yield T("SYS_JOB_ASK")
         return
@@ -250,7 +324,7 @@ async def quest_accept(env, sink, uid, player):
 async def quest_deliver(env, sink, uid, player):
     p = _p(player)
     want = _arg(env)
-    qs = _data("quests")
+    qs = _quests()
     act = _mine(p)
     if not act:
         yield T("SYS_JOB_NONE")
@@ -318,7 +392,7 @@ async def quest_abandon(env, sink, uid, player):
         yield T("SYS_JOB_NO_ACTIVE")
         return
     want = _arg(env)
-    qs = _data("quests")
+    qs = _quests()
     k = act[0] if not want else next((a for a in act if qs.get(a, {}).get("name") == want
                                       or qs.get(a, {}).get("order") == (int(want) if want.isdigit() else -1)), None)
     if not k:
@@ -333,7 +407,7 @@ async def quest_abandon(env, sink, uid, player):
 
 async def quest_mine(env, sink, uid, player):
     p = _p(player)
-    qs = _data("quests")
+    qs = _quests()
     act, done = _mine(p), _done(p)
     if not act:
         yield T("SYS_MINE_NONE")

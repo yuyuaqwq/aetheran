@@ -377,6 +377,27 @@
       ]
     }
   },
+  "trade": {
+    "patterns": [
+      "^副业\\s*(.*)$",
+      "^手艺\\s*(.*)$",
+      "^生活\\s*(.*)$"
+    ],
+    "category": "公会与委托",
+    "desc": "按副业列任务（生活职业任务）",
+    "usage": "副业 [采集/垂钓/烹饪/强化]",
+    "visible": true,
+    "order": 21,
+    "guard_desc": "随时",
+    "bind": {
+      "handler": "content.cmds_quest:trade",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
+  },
   "rank": {
     "patterns": [
       "^评级$",

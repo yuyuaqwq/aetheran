@@ -1,4 +1,33 @@
 {
+  "_meta": {
+    "note": "四个副业的声明 —— 由 scripts/rebuild_prof_quests.py 从 28 §三 / 21 §二 解析生成；别手改本文件",
+    "source": [
+      "06_第一阶段垂直切片/28_生活职业任务_设计_v1.md §三 §四",
+      "06_第一阶段垂直切片/21_长期目标层_v1.md §二"
+    ],
+    "trades": [
+      {
+        "trade": "采集",
+        "order": 1,
+        "what": "娜娜的药草线"
+      },
+      {
+        "trade": "垂钓",
+        "order": 2,
+        "what": "老陶与贝拉的鱼线"
+      },
+      {
+        "trade": "烹饪",
+        "order": 3,
+        "what": "客栈线"
+      },
+      {
+        "trade": "强化",
+        "order": 4,
+        "what": "柯尔的铁线"
+      }
+    ]
+  },
   "q_main_01": {
     "name": "镇口的石头",
     "kind": "主线",
@@ -256,6 +285,7 @@
     "order": 13,
     "giver": "npc_cole",
     "map": "windmill_town",
+    "trade": "强化",
     "min_level": 1,
     "need": null,
     "objective": "把一件装备强化到 +3",
@@ -276,6 +306,7 @@
     "order": 14,
     "giver": "npc_cole",
     "map": "windmill_town",
+    "trade": "强化",
     "min_level": 1,
     "need": null,
     "objective": "找一块旧铁 → 带给他",
@@ -301,6 +332,7 @@
     "order": 15,
     "giver": "npc_nana",
     "map": "windmill_town",
+    "trade": "采集",
     "min_level": 1,
     "need": null,
     "objective": "采齐三种指定药草各 3 份",
@@ -338,6 +370,7 @@
     "order": 16,
     "giver": "npc_nana",
     "map": "windmill_town",
+    "trade": "采集",
     "min_level": 1,
     "need": null,
     "objective": "雨天去采稀有的菌",
@@ -363,6 +396,7 @@
     "order": 17,
     "giver": "npc_bella",
     "map": "windmill_town",
+    "trade": "烹饪",
     "min_level": 1,
     "need": null,
     "objective": "做三道菜给贝拉尝",
@@ -383,6 +417,7 @@
     "order": 18,
     "giver": "npc_bella",
     "map": "windmill_town",
+    "trade": "烹饪",
     "min_level": 1,
     "need": null,
     "objective": "用稀有食材做一次",
@@ -423,6 +458,7 @@
     "order": 20,
     "giver": "npc_ed",
     "map": "windmill_town",
+    "trade": "烹饪",
     "min_level": 1,
     "need": null,
     "objective": "把饭送到北墙根",
@@ -638,6 +674,7 @@
     "order": 30,
     "giver": "npc_durin",
     "map": "windmill_town",
+    "trade": "烹饪",
     "min_level": 1,
     "need": null,
     "objective": "按他的口味做一道菜",
@@ -649,6 +686,250 @@
     "teach": "",
     "insight": "",
     "hook": "价目单（跑商玩法入口）",
+    "unlock": []
+  },
+  "q_trade_01": {
+    "name": "深一点的",
+    "kind": "生活",
+    "chain": "trade",
+    "order": 31,
+    "giver": "npc_nana",
+    "map": "windmill_town",
+    "trade": "采集",
+    "min_level": 1,
+    "need": null,
+    "objective": "去三条带最深处各采一次",
+    "require": [
+      {
+        "kind": "visit",
+        "map": "belt_north",
+        "node": "bn_tower"
+      },
+      {
+        "kind": "visit",
+        "map": "belt_east",
+        "node": "be_shed"
+      },
+      {
+        "kind": "visit",
+        "map": "belt_west",
+        "node": "bw_old_ferry"
+      }
+    ],
+    "reward_exp": 100,
+    "reward_gold": 30,
+    "story": "「深一点的」——接活时该说什么（待写）",
+    "progress_text": "（进行中：去三条带最深处各采一次）",
+    "deliver_text": "好一点的采集工具（一次多采 1 个）",
+    "teach": "",
+    "insight": "",
+    "hook": "好一点的采集工具（一次多采 1 个）",
+    "unlock": []
+  },
+  "q_trade_02": {
+    "name": "石头缝里的",
+    "kind": "生活",
+    "chain": "trade",
+    "order": 32,
+    "giver": "npc_nana",
+    "map": "windmill_town",
+    "trade": "采集",
+    "min_level": 1,
+    "need": null,
+    "objective": "在旧哨塔附近采到指定矿",
+    "require": [
+      {
+        "kind": "visit",
+        "map": "belt_north",
+        "node": "bn_tower"
+      },
+      {
+        "kind": "item",
+        "item": "i_material_iron_scrap",
+        "n": 1
+      }
+    ],
+    "reward_exp": 100,
+    "reward_gold": 30,
+    "story": "「石头缝里的」——接活时该说什么（待写）",
+    "progress_text": "（进行中：在旧哨塔附近采到指定矿）",
+    "deliver_text": "娜娜讲一段她自己的事",
+    "teach": "",
+    "insight": "",
+    "hook": "娜娜讲一段她自己的事",
+    "unlock": []
+  },
+  "q_trade_03": {
+    "name": "老陶的鱼篓",
+    "kind": "生活",
+    "chain": "trade",
+    "order": 33,
+    "giver": "npc_laotao",
+    "map": "windmill_town",
+    "trade": "垂钓",
+    "min_level": 1,
+    "need": null,
+    "objective": "钓齐三种常见鱼",
+    "require": [
+      {
+        "kind": "item",
+        "item": "i_fish_common",
+        "n": 3
+      }
+    ],
+    "reward_exp": 100,
+    "reward_gold": 30,
+    "story": "「老陶的鱼篓」——接活时该说什么（待写）",
+    "progress_text": "（进行中：钓齐三种常见鱼）",
+    "deliver_text": "钓竿升级（稀有鱼概率 +）",
+    "teach": "",
+    "insight": "",
+    "hook": "钓竿升级（稀有鱼概率 +）",
+    "unlock": []
+  },
+  "q_trade_04": {
+    "name": "夜里的那条",
+    "kind": "生活",
+    "chain": "trade",
+    "order": 34,
+    "giver": "npc_laotao",
+    "map": "windmill_town",
+    "trade": "垂钓",
+    "min_level": 1,
+    "need": null,
+    "objective": "夜里钓上稀有鱼",
+    "require": [
+      {
+        "kind": "item",
+        "item": "i_fish_rare",
+        "n": 1
+      }
+    ],
+    "reward_exp": 100,
+    "reward_gold": 30,
+    "story": "「夜里的那条」——接活时该说什么（待写）",
+    "progress_text": "（进行中：夜里钓上稀有鱼）",
+    "deliver_text": "称号「夜里下网的」",
+    "teach": "",
+    "insight": "",
+    "hook": "称号「夜里下网的」",
+    "unlock": []
+  },
+  "q_trade_05": {
+    "name": "贝拉要的",
+    "kind": "生活",
+    "chain": "trade",
+    "order": 35,
+    "giver": "npc_bella",
+    "map": "windmill_town",
+    "trade": "垂钓",
+    "min_level": 1,
+    "need": null,
+    "objective": "特定鱼换一道菜谱",
+    "require": [
+      {
+        "kind": "item",
+        "item": "i_fish_rare",
+        "n": 1
+      }
+    ],
+    "reward_exp": 100,
+    "reward_gold": 30,
+    "story": "「贝拉要的」——接活时该说什么（待写）",
+    "progress_text": "（进行中：特定鱼换一道菜谱）",
+    "deliver_text": "菜谱「客栈的招牌」",
+    "teach": "",
+    "insight": "",
+    "hook": "菜谱「客栈的招牌」",
+    "unlock": []
+  },
+  "q_trade_06": {
+    "name": "水下的东西",
+    "kind": "生活",
+    "chain": "trade",
+    "order": 36,
+    "giver": "npc_bella",
+    "map": "windmill_town",
+    "trade": "垂钓",
+    "min_level": 1,
+    "need": null,
+    "objective": "在浅滩钓到一个不是鱼的东西",
+    "require": [
+      {
+        "kind": "item",
+        "item": "i_junk_boot",
+        "n": 1
+      }
+    ],
+    "reward_exp": 100,
+    "reward_gold": 30,
+    "story": "「水下的东西」——接活时该说什么（待写）",
+    "progress_text": "（进行中：在浅滩钓到一个不是鱼的东西）",
+    "deliver_text": "开出隐藏线「水下的石阶」的一角",
+    "teach": "",
+    "insight": "",
+    "hook": "开出隐藏线「水下的石阶」的一角",
+    "unlock": []
+  },
+  "q_trade_07": {
+    "name": "断了的东西",
+    "kind": "生活",
+    "chain": "trade",
+    "order": 37,
+    "giver": "npc_cole",
+    "map": "windmill_town",
+    "trade": "强化",
+    "min_level": 1,
+    "need": null,
+    "objective": "修好一件「有故事」的旧装备",
+    "require": [
+      {
+        "kind": "item",
+        "item": "unid_common",
+        "n": 1
+      }
+    ],
+    "reward_exp": 100,
+    "reward_gold": 30,
+    "story": "「断了的东西」——接活时该说什么（待写）",
+    "progress_text": "（进行中：修好一件「有故事」的旧装备）",
+    "deliver_text": "柯尔讲这东西的来处（接旧物谱）",
+    "teach": "",
+    "insight": "",
+    "hook": "柯尔讲这东西的来处（接旧物谱）",
+    "unlock": []
+  },
+  "q_trade_08": {
+    "name": "铁从哪来",
+    "kind": "生活",
+    "chain": "trade",
+    "order": 38,
+    "giver": "npc_cole",
+    "map": "windmill_town",
+    "trade": "强化",
+    "min_level": 1,
+    "need": null,
+    "objective": "带一块骨田挖出的旧铁给他",
+    "require": [
+      {
+        "kind": "item",
+        "item": "i_material_old_iron",
+        "n": 1
+      },
+      {
+        "kind": "visit",
+        "map": "belt_north",
+        "node": "bn_bone"
+      }
+    ],
+    "reward_exp": 100,
+    "reward_gold": 30,
+    "story": "「铁从哪来」——接活时该说什么（待写）",
+    "progress_text": "（进行中：带一块骨田挖出的旧铁给他）",
+    "deliver_text": "柯尔会愣一下（连接彩蛋 6）",
+    "teach": "",
+    "insight": "",
+    "hook": "柯尔会愣一下（连接彩蛋 6）",
     "unlock": []
   },
   "q_bounty_normal": {

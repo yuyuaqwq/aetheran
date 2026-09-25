@@ -1,9 +1,13 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "阿斯特兰 · 任务与委托（quests 域）",
-  "description": "12 主线（认知推进链）+ 18 支线 + 悬赏档。字段契约见 08_第1批_字段级设计_v1.md。",
+  "description": "12 主线（认知推进链）+ 18 支线 + 3 悬赏档 + 8 生活职业任务（B3-3，链 `trade`，按 `trade` 字段分四个副业）。字段契约见 08_第1批_字段级设计_v1.md；`trade` 与 `_meta.trades` 见 06_第一阶段垂直切片/28_生活职业任务_设计_v1.md。",
   "type": "object",
   "patternProperties": {
+    "^_": {
+      "type": "object",
+      "description": "私有键（`_meta` 那类）—— 与编辑器/装载器同口径：不是条目"
+    },
     "^q_[a-z0-9_]+$": {
       "type": "object",
       "required": [
@@ -30,7 +34,21 @@
           ]
         },
         "chain": {
-          "type": "string"
+          "enum": [
+            "main",
+            "side",
+            "bounty",
+            "trade"
+          ]
+        },
+        "trade": {
+          "enum": [
+            "采集",
+            "垂钓",
+            "烹饪",
+            "强化"
+          ],
+          "$comment": "这条任务属于哪个副业（四个取值 = `_meta.trades` 的名字列，两处由 probe_quests ⑪ 对账）；只用于入口分类与『副业』指令的筛选，不参与条件判定"
         },
         "order": {
           "type": "integer"
@@ -53,6 +71,28 @@
         },
         "objective": {
           "type": "string"
+        },
+        "require": {
+          "type": [
+            "object",
+            "array"
+          ],
+          "$comment": "机器可读前置（P-25 · 只有需要前置的条目才写）：{kind: visit|kill|item, ...} 一条或一串；认不出的 kind 一律算没满足（fail-closed）。中文 objective 不解析 —— 条件真源是这里。",
+          "items": {
+            "type": "object",
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "enum": [
+                  "visit",
+                  "kill",
+                  "item"
+                ]
+              }
+            }
+          }
         },
         "reward_exp": {
           "type": "integer",
