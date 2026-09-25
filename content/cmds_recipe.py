@@ -42,13 +42,19 @@ def _quest_name(qid: str) -> str:
     return (_data("quests").get(qid) or {}).get("name") or qid
 
 
-def _item_of_name(name: str, kinds=None):
-    """按名字（或名字的一部分）找一件东西 —— 背包里的优先。"""
+def _item_of_name(name: str, equip_only: bool = False):
+    """按名字（或名字的一部分）找一件东西 —— 背包里的优先。
+
+    ★ B3-6b-2d-b：`equip_only` 走域里现成的 ASCII `slot`（原先按 `kind` 的**中文枚举**
+      白名单筛 —— 「中文枚举当机器键」K48 / P-20）。`items.schema.json` 里 `slot` 只给装备
+      六格（weapon / armor_top / armor_bottom / helmet / boots / accessory），材料·食物·道具·
+      信物·垃圾·线索那 25 条一律没有 ⇒ 两种写法今天**同集合**（`probe_items` ①之二 钉着）。
+    """
     hit = None
     for iid, rec in _data("items").items():
         if str(iid).startswith("_"):
             continue
-        if kinds and rec.get("kind") not in kinds:
+        if equip_only and not rec.get("slot"):
             continue
         nm = str(rec.get("name") or "")
         if name == nm or (len(name) >= 2 and name in nm):
@@ -194,16 +200,14 @@ async def smith(env, sink, uid, player):
 # ══════════════════════════════════════════════════════════════
 # 四、强化
 # ══════════════════════════════════════════════════════════════
-EQUIP_KINDS = ("武器", "上甲", "下甲", "头盔", "靴子", "饰品")
-
-
 async def enhance(env, sink, uid, player):
     p = _p(player)
     want = _arg(env)
     if not want:
         yield T("SYS_ENHANCE_SHOP")
         return
-    hit = _item_of_name(want, kinds=EQUIP_KINDS)
+    # ★ B3-6b-2d-b：白名单 = 「有 ASCII `slot` 的那些」（原先按 items 的**中文** kind 六类筛）
+    hit = _item_of_name(want, equip_only=True)
     if not hit or _have(p, hit[0]) <= 0:
         yield T("SYS_ENHANCE_NOITEM", input=want)
         return

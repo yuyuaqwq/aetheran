@@ -293,6 +293,28 @@ for tgt in (6, 10):
     chk("★ +%d 失败口径：材料吃了、钱不扣、等级不掉（05 原文「失败只吃材料、不掉级」）" % tgt,
         not bad_rule, "%s" % (bad_rule[:3] or "无"))
 
+# ⑫ ★ B3-6b-2d-b：强化白名单 = 「有 ASCII `slot` 的那些」（原按 items 的**中文** kind 六类筛）
+#   ① 逐件对账：`equip_only` 收下的 = 「带 slot 的」（同名多品阶只命中排序在前的那个 ⇒ 记「收下了」）
+#   ② 真跑一件**非装备**（料/钱都给够）⇒ 必须拒掉、档上不动
+_ok_names, _not_names = [], []
+for _iid, _rec in sorted(IT.items()):
+    _got = CR._item_of_name(str(_rec.get("name") or ""), equip_only=True)
+    if _rec.get("slot"):
+        if _got:
+            _ok_names.append(_iid)
+    elif _got:
+        _not_names.append(_iid)
+chk("★ `equip_only` 收下的 = 「带 slot 的那些」（%d 件 · 非装备一件都没收下：%s）"
+    % (len(_ok_names), _not_names or "无"), not _not_names)
+_plain = next(k for k, v in sorted(IT.items()) if not v.get("slot"))
+_pname = IT[_plain].get("name") or _plain
+_p2 = {"name": "试", "cls": "cls_knight", "level": 1, "exp": 0, "gold": 9999,
+       "bag": {_plain: 1}, "flags": {}, "codex": {}}
+_l2 = run_ag(CR.enhance(E("强化 %s" % _pname), None, "u_cmp2", _p2))
+chk("★ 非装备真跑「强化 %s（%s）」：拒掉（不出强化结果、档上不动）" % (_pname, _plain),
+    bool(_l2) and not (_p2.get("enhance") or {}) and any(_pname in ln for ln in _l2),
+    "%s / enhance=%s" % (_l2[:1], _p2.get("enhance")))
+
 print()
 print("结果：%s" % ("全绿 ✓" if not fails else "有红 ✗（%d）" % len(fails)))
 sys.exit(1 if fails else 0)

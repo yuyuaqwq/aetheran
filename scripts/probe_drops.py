@@ -128,6 +128,29 @@ _no = sorted(n for n in _view
              if "rec_of(" not in io.open(os.path.join(REPO, "content", n), encoding="utf-8").read())
 (ok if not _no else bad)("★ 呈现口都走 loot.rec_of（没走的：%s）" % (_no or "无"))
 
+# ⑬ ★ B3-6b-2d-b：动态项 `*<格>_random` 按 ASCII `slot` 挑（原按 `kind` 的中文枚举挑）——
+#   ① 挑出来的每一件都真带 `slot`、且落在该格对应的那几格
+#   ② 两格不串味（armor 那一格永远挑不出武器）
+#   ③ 认不出的格 ⇒ None（不猜、不兜底）
+_ARMOR_SLOTS = ("armor_top", "armor_bottom", "helmet", "boots")
+_cand = {k for k, v in IT.items() if v.get("slot") in _ARMOR_SLOTS}
+_wcand = {k for k, v in IT.items() if v.get("slot") == "weapon"}
+_picked, _wpicked = set(), set()
+for _s in range(1, 201):
+    _picked.add(LT._resolve("*armor_random", {}, 5, random.Random(_s), IT))
+    _wpicked.add(LT._resolve("*weapon_random", {}, 5, random.Random(_s), IT))
+(ok if (_picked <= _cand and len(_picked) >= 4) else bad)(
+    "★ `*armor_random` 200 种子挑出的 %d 件全在「四格」那一批里（候选 %d 件 · 四格都挑到过）"
+    % (len(_picked), len(_cand)))
+(ok if (_wpicked <= _wcand and not (_picked & _wpicked)) else bad)(
+    "★ `*weapon_random` 同上（%d 件）· 两格**零交集**（按 slot 挑不串味）"
+    % len(_wpicked))
+(ok if LT._resolve("*grid_nope", {}, 1, random.Random(1), IT) is None else bad)(
+    "★ 认不出的格 ⇒ None（不猜、不兜底）")
+_ge = [x["id"] for x in LT.roll_pool("dp_elite_gear", level=5, rnd=random.Random(7))]
+(ok if all(IT[i].get("slot") for i in _ge if i in IT) else bad)(
+    "★ dp_elite_gear 真抽一遍：动态项解出来的都是真装备（件件带 slot · %s）" % _ge)
+
 print()
 print("结果：%s" % ("全绿 ✓" if not fails else "有红 ✗"))
 sys.exit(1 if fails else 0)

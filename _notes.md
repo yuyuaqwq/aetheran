@@ -1,3 +1,191 @@
+# B3-6b-2d-b 第一刀 · 「中文枚举当机器键」收成 ASCII 键（分支 `b3-6b-2d-keys` · 工作树 `C:/Users/yuyu/ast-wt/b362d`）
+
+> 一句话：**装备那半的机器键从 items 的中文 `kind` 换成域里现成的 ASCII `slot`（97 件装备、
+> 0 数据改动）；技能那半的机器键从 skills 的中文 `kind`（「主动」）换成 ASCII `owner_class`
+> ＋ 域里那一份 kind 值。** 改前 31 处「拿中文枚举当机器键」→ 改后 17 处（余下 17 处全属
+> 第二刀：非装备 kind / `monsters.role` / `recipes.kind` / drop_pools kind）。行为**逐字相同**：
+> 1791 行对照输出零差异 · 27 个探针全绿 · 真宿主 e2e 走通装备/技能那条线。
+>
+> ★ 本批 **0 文案新增**（没有新 texts 槽位 ⇒ 真源 `17_文案收口口径_v1.md` 一个字没动）。
+> ★ 本批 **0 数据改动**（`content/data/*.json` 一个字没动 —— 依据见 §二：两个 ASCII 维度
+> `slot` / `owner_class` 域里本来就有）。
+
+---
+
+## 一、量准：「拿中文枚举当机器键」今天在哪（改前 31 处）
+
+**口径**（K48 / K51 / P-20）：黑名单 = **域里现成的枚举字段取值**（只收这几族，含汉字的那些）：
+`items.kind` `items.quality` · `monsters.role` · `recipes.kind` · `skills.kind` ·
+`gathering.kind/verb` · `drop_pools` 的 `kind` 与条目 `kind`。
+违规 = `content/*.py` 里出现与黑名单**逐字相同**的字符串字面量（docstring / 异常消息不算）。
+
+**复现命令**（黑名单 53 个取值；同一把尺子已进 `probe_copy` ⑮，正式跑法见 §三）：
+
+```bash
+PY=/c/Users/yuyu/AppData/Local/Programs/Python/Python312/python.exe
+GWEN_ENGINE=C:/Users/yuyu/framework-engine "$PY" scripts/probe_copy.py     # ← 看「中文枚举当机器键」那一行
+```
+
+改前逐点清单（文件:行 · 中文串 · 谁在比）：
+
+| 文件:行 | 中文串 | 谁在比 | 本批？ |
+|---|---|---|---|
+| `content/loot.py:83` | 上甲 / 下甲 / 头盔 / 靴子 | `_resolve()` 挑 `*armor_random` 的候选（落域里 4 个 kind） | ✅ 改走 `slot` |
+| `content/loot.py:85` | 武器 | 同上，挑 `*weapon_random` | ✅ 改走 `slot` |
+| `content/loot.py:35` | 材料 | `K_MATERIAL`：条目 kind 的兜底值 | ⏳ 第二刀 |
+| `content/loot.py:109` | 池 | `roll_pool()` 判嵌套池（drop_pools 条目 kind） | ⏳ 第二刀 |
+| `content/loot.py:133` | 未鉴定 | `open_unid()` 判这一条是不是未鉴定池 | ⏳ 第二刀 |
+| `content/cmds_recipe.py:197`（+`:51` 消费） | 武器 / 上甲 / 下甲 / 头盔 / 靴子 / 饰品 | `EQUIP_KINDS`：`强化` 的白名单（`_item_of_name(kinds=…)`） | ✅ 改走 `slot` |
+| `content/cmds_recipe.py:110` | 烹饪 | `_cookable()` 按 recipes 的 kind 挑配方 | ⏳ 第二刀 |
+| `content/codex.py:35`（4 个）/`:37`（2 个） | 材料 / 垃圾 / 线索 / 食物 / 信物 / 未鉴定 | `KIND_BOOK` / `PICK_BOOK`：进哪本谱 | ⏳ 第二刀 |
+| `content/combat.py:81` / `:127`（3 个） | 普通 / 精英 / 头目 | 怪 actor 的 `role` 兜底 + `pick_encounter` 的候选闸 | ⏳ 第二刀 |
+| `content/cmds_battle.py:117`（3 个） | 精英 / 头目 / 层主 | 掉钱公式按 `monsters.role` 分档 | ⏳ 第二刀 |
+| `content/skills_lookup.py:91` | 主动 | `basic_skill_of()` 过滤候选（本职业普攻） | ✅ 改走 `owner_class` |
+| `content/skills_lookup.py:81` | 主动 | `monster_skill()` 合成的怪技 dict 的 `kind` 值 | ✅ 改从域取 |
+| `content/apply.py:101` | 主动 | `basic_fallback`（兜底普攻）的 `kind` 值 | ✅ 改从域取 |
+
+（`content/apply.py:101` 的另一个字面量「挥击」**不是**枚举值 ⇒ 不在本表；它是「兜底普攻叫什么」的
+文案，属第二刀 —— 见 §五 · S5。）
+
+---
+
+## 二、落法（ASCII 键从哪来 · 为什么不新建字段）
+
+| 事 | 落法 | 依据 |
+|---|---|---|
+| 装备「是什么」 | items 的 **`slot`**（六格 · 域里现成的 ASCII） | `schemas/items.schema.json` 的 `slot.enum` = weapon / armor_top / armor_bottom / helmet / boots / accessory；**97 件装备全带、25 件非装备全不带** ⇒ 「走 slot」与「走 kind 六类白名单」**同集合**（`probe_items` ①之二 逐条钉着：kind→slot 是单射 + kind 把装备/非装备分得干净） |
+| 动态掉落的「哪一格」 | `loot._GRID_SLOTS`：`*armor_random` / `*weapon_random` 的**格名本来就是 ASCII**，映射到 `slot` 集合 | 格名写在 drop_pools 的 `out` 上（`*armor_random`）；映射值全部来自域 |
+| 「谁能用 / 属于哪个职业」 | skills 的 **`owner_class`**（`cls_knight` 这类 ASCII） | `basic_skill_of()` 只按 `owner_class == cls` 挑；等价性 = 域里「有 owner_class」的 30 条 kind **同值**（`probe_skills` ⑦ ① 钉着） |
+| 技能类别**值**（引擎 `do_skill` 会比） | `skills_lookup.active_kind()`：**从 skills 域现取**（今天 = 域里那 30 条共用的值） | 代码里不再写死中文枚举；fail-closed：域里取不到就抛，**绝不回空串** |
+| 中文名 → 机器键的**入参解析** | 一律保留（`_item_of_name` / `_norm_class` / `去 <地方>` 同族） | 那是「玩家/调用方给的是名字」，不是「拿枚举当键」；机器键本身（`slot` / `owner_class` / `class_name`）全是 ASCII |
+
+**为什么不新建字段**：甲案的判据就是「已经有 ASCII 维度的一律不新建」（P-20 原话：
+装备还是双射 上甲↔armor_top 10 · 下甲↔armor_bottom 9 · 头盔↔helmet 9 · 靴子↔boots 8 ·
+武器↔weapon 49 · 饰品↔accessory 12；非装备 25 条没有 slot）⇒ 本批 **schema / 数据零改动**。
+真需要新字段的（非装备 kind / role / recipes.kind / drop_pools kind / skills 词表）**整批留给第二刀**。
+
+---
+
+## 三、判据（只加强 · 数字钉住只许减）
+
+```text
+① probe_copy ⑮（新）★ 静态守卫：黑名单 = 域里现成的枚举字段取值（53 个），扫 content/*.py 的字面量
+     · 总数「≤ 快照」（ENUM_KEYS，**只降不升**）：31 → 17
+     · 加一条「已收口的取值清单」（ENUM_DONE = 武器/上甲/下甲/头盔/靴子/饰品/主动）——哪个文件都不许再出现
+       （清单只许变长，不许变短）
+② probe_copy ③ 快照上限（BUDGET）同步下调：loot 11→6 · cmds_recipe 9→3 · apply 2→1
+③ probe_copy ② SEALED +1：skills_lookup.py 进「必须 0」那一栏（本批收口）
+④ probe_items  ①之二 ★ 真数据判据：kind→slot 单射（域自己就是那张映射表）· kind 把装备/非装备
+     分得干净（两种筛法**同集合**）· 六格全盖到 · 97 件全带 slot / 25 件一件都没带
+     顺带 fail-closed：KINDS/QUALITIES 不再抄副本，schema 读不到就退（原先那份手写回退名单删了）
+⑤ probe_drops  ⑬ ★ 真跑判据：`*armor_random`/`*weapon_random` 各 200 个种子挑出的**每一件都带 slot**
+     且落在对应那几格 · 两格**零交集** · 认不出的格 ⇒ None（不猜）· dp_elite_gear 真抽一遍件件带 slot
+⑥ probe_recipes ⑫ ★ 真跑判据：`equip_only` 收下的 = 「带 slot 的」（97 件 · 非装备一件都没收下）
+     ＋ 真敲一次「强化 半页纸（材料）」⇒ 拒掉、档上不动
+⑦ probe_skills ⑦ ★ 真数据判据：域里「有 owner_class」的 30 条 kind 同值 ⇒ 用 owner_class 筛 == 用 kind 筛
+     ＋ `active_kind()` 取自域、且**不许是空串**（空串会让引擎把攻击技判成治疗）＋ 六职业普攻各在自己那班
+```
+
+**「旧签名」那条提示**：本批把 `cmds_recipe._item_of_name` 的关键字参数从 `kinds=`（中文白名单）
+换成 `equip_only=`（走 slot）—— 仓内唯一调用点在 `enhance()`，已同步；探针里没有别处调用。
+
+---
+
+## 四、行为逐字相同（真跑对照 · 不是看代码）
+
+驱动脚本（不进仓 · 放 `%LOCALAPPDATA%\Temp`）：`ast_cmp_b3_6b_2d_b.py`
+——固定种子/固定假钟/遭遇钉死，抓 8 段共 **1791 行**：每个掉落池 ×12 种子 · 两个未鉴定池 ×24 种子 ·
+`强化` 四类东西 ×（料够/料不够）· 六职业 `basic_skill_of` + 中文职业名 + `monster_skill` +
+`skill_info` 四条 · `basic_fallback` · `_default_skills` · `run_auto` ×4 种子 ×2 怪（全日志）·
+四个指令口（攻击/强化×3/状态）· `_item_of_name(equip_only)` 逐件 122 条。
+
+```text
+跑法（本批实测）：git stash push -- content/…（4 个文件）→ 跑 → git stash pop → 再跑 → diff
+结果：before 1791 行 / after 1791 行 · diff **0 行**（唯一被忽略的一行是上面那条「旧签名」提示）
+```
+
+真宿主 e2e（`scripts/e2e_drive.py`，起手档 = 骑士 3 级 + 骨田）：
+
+```text
+» 状态                【冒烟】未定 · 骑士 · 3 级 / 生命 80/140 ｜ 铜板 500
+» 强化 拾荒人的重剑    🔨 拾荒人的重剑 → +1（加成 +0.4%…）          ← 装备：真进白名单
+» 强化 效果向饰品      🔨 效果向饰品 → +1（…）                      ← 饰品同理（slot=accessory）
+» 强化 铁屑            背包里没有叫「铁屑」的装备。打『背包』看看。    ← 材料：仍被拒
+» 强化 半页纸          背包里没有叫「半页纸」的装备。                 ← 线索：仍被拒
+» 使用 药水            你喝下药水。生命 +42（122/140）
+» 攻击                ⚠️ 遭遇：田鼠 → … → ✔ 打完了 / 拾取：🌿 苦叶 ×2   ← 掉落动态项走 slot
+» 技能 横剑            🚧「技能 <参数>」还没接上 💡 敲「帮助」看现在能用什么（P-23 兜底，未实现）
+» 装备对比 拾荒人的重剑 🚧「对比 <参数>」还没接上（同上）
+```
+
+---
+
+## 五、第二刀清单（下一批照这个干 · 本批**故意没碰**）
+
+> 判据：凡是没有 ASCII 维度、要**新增字段**的，一律留给第二刀（P-20 甲案原话：
+> 「再给没维度的域补键（monsters.role → `role_key` · recipes.kind → `kind_key` · items 非装备 kind → `kind_key`）」）。
+> 数字 = 本批实测（黑名单那把尺子）。
+
+| # | 事 | 处数 | 落法建议（照 `quests.chain` / `gathering.verb` 那两次） |
+|---|---|---|---|
+| S1 | **items 非装备 25 条**（材料 9 · 食物 8 · 道具 2 · 信物 3 · 垃圾 2 · 线索 1）补 ASCII `kind_key` | 6 处（`codex.py` 谱归属 6 个字面量 + `loot.py:35` 那个兜底值「材料」） | schema 里 `kind_key` 紧跟 `kind`（`items.schema.json`）；映射在域里（**别在代码里写中文对照表**）；落法走 `scripts/rebuild_*.py` 或带 `--dry` 的迁移脚本（幂等 · 中文→ASCII 映射表写进域） |
+| S2 | **`monsters.role` → `role_key`**（普通/精英/头目/层主/支援 · 17 条） | 7 处（`combat.py` 4 · `cmds_battle.py` 3） | `monsters.schema.json` + 生成器 `rebuild_monsters.py`（它本来就从文档解析 role 那几栏） |
+| S3 | **`recipes.kind` → `kind_key`**（烹饪 8 / 强化 10） | 1 处（`cmds_recipe.py:110`）+ 探针侧 `probe_recipes.py:51/52` | `recipes.schema.json` + `rebuild_recipes.py` |
+| S4 | **`drop_pools` 的 kind**（顶层「未鉴定」×2 + 条目 kind：池/装备/材料/道具/垃圾/信物/线索） | 2 处（`loot.py:109` 池 · `loot.py:133` 未鉴定） | `drop_pools.schema.json` 补 `kind_key`；`loot.kind_of()` 已经归到一口（B3-6b-2c），这次把**值**也换成 ASCII |
+| S5 | **skills 的 kind 词表**（30 条全是「主动」）+ 兜底技「挥击」入域 | 0 处（本批已把代码里那 3 个「主动」字面量清掉） | ★ **先裁决再动**：引擎那三处比的是 `kind == _kind("heal")` / `_kind("buff")`（`ext_combat/battle/actions.py:110/112`），而 `_kind()` 走**内容侧 `kinds` 词表**（`game_config.kind_of`）——**本包没声明** ⇒ `_kind()` 恒回 `""`。两个坑：① `kind` 写成空串会被判成**治疗**（`"" == ""`）② `actions.py:545` 的 `seg_type` 于是恒落 `magi`。要动就得连 `kinds` 词表一起按甲案补（**会改战斗语义** ⇒ 单独立项 + 鱼鱼点头），别顺手做。 |
+| S6 | 探针 / 生成器侧的同一族写法（同一把尺子量到 **117 处** = 生成器 48 + 探针 69） | 117 处 | 生成器（`rebuild_codex/equip_events/gathering/monsters/prof_quests/recipes` 共 48 处）**必须**引中文（它们解析的是策划案原文）⇒ 不适用；探针侧 69 处建议随 S1–S4 一起改（它们断言的是数据的枚举值），其中 `probe_items.py` 本批已 20 → 2（只剩两处 `quality == "遗物"`，等 S1 的 `kind_key` 一起收） |
+
+★ 收完 S1–S4 后，`probe_copy` 的 `ENUM_KEYS` 可以整体清空 → 把 §三 ① 那条改成「必须 0」，
+`loot.py` / `cmds_recipe.py` / `codex.py` / `combat.py` / `cmds_battle.py` 一起进 `SEALED`。
+
+---
+
+## 六、顺带核出来的真事（下一批/主线看这里）
+
+1. **六职业的「普攻」今天取到的是 0 倍率的辅助技**（`basic_skill_of` 取 power 最低的那条 ⇒
+   骑士=盾墙 · 刺客/游侠=后撤 · 修女=净罪 · 狂战=横劈 · 法师=垂星）。**本批不动**（行为逐字相同是判据），
+   但**它是活的**：`ext_combat.resolve_basic_skill` 要求技能的 `exprs`/`formula`，而本包 30 条技能
+   **一条都没有** ⇒ 取到的那条被引擎丢掉、真打的是 `basic_fallback`（挥击）。要让技能真进战斗，
+   得先有 `exprs`/`formula`（属技能域那一整摊，别顺手做）。
+2. **`_norm_class` 保留（没改成 ASCII-only）**：它比的是 `classes.<id>.name`（中文名）——那是
+   **入参解析**（中文职业名 → 机器键），与 `_item_of_name` / `去 <地方>` 同族；机器键本身
+   （`panel_build.build_actor` 写的 `class_name`、skills 的 `owner_class`）**全是 ASCII**
+   （`content/panel_build.py:146`）。删了它 = 静默不再收中文职业名（**判据减弱**，本批不干）。
+3. **本批 0 数据改动 / 0 文案新增**：`content/data/*.json` 与真源 `17_文案收口口径_v1.md` 都没动；
+   `schemas/*.json` 也没动（没新字段）。「中文 → ASCII」的那张映射表**就是域本身**
+   （`probe_items` ①之二 从数据里把它算出来核一遍）—— 不是代码里的一张表。
+4. `game.json` 的域数 / `commands.json` 的声明数本批没变（99 声明 / 99 处理器，e2e 装配行）。
+
+---
+
+## 七、改了哪些文件（显式清单 · 提交用）
+
+```text
+content/loot.py            _GRID_SLOTS（格→slot）· _resolve 走 slot（原 kind 中文枚举）
+content/cmds_recipe.py     _item_of_name(equip_only=…) · 撤 EQUIP_KINDS（强化白名单走 slot）
+content/skills_lookup.py   basic_skill_of 只按 owner_class 挑 · 新 active_kind()（类别值从域取）·
+                           _norm_class 补口径注释（保留的理由写清）
+content/apply.py           basic_fallback 的 kind 改从 skills 域取（_active_kind）
+scripts/probe_copy.py      ⑮ 新静态守卫 + ENUM_KEYS/ENUM_DONE · BUDGET 下调 · SEALED +skills_lookup ·
+                           fixture 挑武器改走 slot
+scripts/probe_items.py     装备 = 「带 slot 的那些」· kind/quality/slot 三份都从 schema 读（撤手写回退）
+                           · ①之二 单射/同集合/六格全盖到
+scripts/probe_drops.py     ⑬ 动态项按 slot 挑的真跑判据（200 种子 · 两格零交集 · 认不出的格 ⇒ None）
+scripts/probe_recipes.py   ⑫ equip_only 逐件对账 + 非装备真跑被拒
+scripts/probe_skills.py    ⑦ owner_class 等价性 + active_kind 取自域 + 六职业普攻
+_notes.md                  本文（含第二刀清单）
+```
+
+（真源仓 `aetheran-plan` 一个字没动 · 引擎仓 `framework-engine` 一个字没动 ·
+台账/口径文档按派活规矩由主线统一落。）
+
+---
+
+
+---
+
+# 附录 · 上一批（P-27 生命上限收口）的 `_notes.md` 原文（保留备查）
+
 # P-27 生命上限收口（分支 `p27-hp-source` · 工作树 `C:/Users/yuyu/ast-wt/p27-hp`）
 
 > 一句话：**「生命上限」现在只有**一个**来源 = 职业面板（`content/panel_build.py`）**，
