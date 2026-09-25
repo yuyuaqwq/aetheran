@@ -1741,3 +1741,197 @@ e2e_drive：塔内层主（骑士 17 · 号角室）胜 · 塔顶 Boss（狂战�
 4. `_affix_hooks` 的 `once` 守卫是必需的：引擎每一动都会调一次钩子（不守就是 12→16→21→…→60）。
 5. 只从 `status=="on"` 抽词条 = 本批的 fail-closed 主线：**宁可这只怪今天不出精英，也不发一条
    只有名字没有效果的词条**（`拾荒人` 就是这条的结果）。
+
+---
+
+# B3-27 · 技能机制落地（`b3-27-skill-mech`）
+
+> 分支 `b3-27-skill-mech`（基 `3ee9148`）· 引擎 `framework-engine` **零改动**（git status 空）·
+> 真源 `aetheran-plan` **一行没碰**（要补的行在 §一）。
+
+## §〇 一句话
+
+`skills` 域 30 条技能里写了 `mech` 的那 **14 条**，原先只有「断势」一条**偶然**活着
+（机制名恰好等于引擎动词名）。本批把引擎那两张表（名词→动词 `EFFECT_ACTIONS` ·
+状态语义 `EFFECT_RULES`）建起来，落到 **12 条机制**上：
+
+    on 9（真生效）· partial 1（主体生效 + 半截登记）· pending 2（一点没接，写清缺哪一环）
+    ⇒ 14 条技能里 **10 条真生效**（含 1 条半截）· **4 条 pending**（后撤 ×2 · 引燃/垂星）
+
+三处「引擎够不着」的地方改走**内容侧那一条手**（`act_cast` 触发器 + 内容动词；`register_action`
+是引擎给内容侧的扩展面，不是改引擎）：盾墙 / 净罪（引擎 `effects_from_skill` 的 `if mech and mval`
+那道门挡着 —— 它们没写 `mech_val`）· 安神曲（**治疗路根本不读 mech**）。
+
+## §一 要补进真源 / 待裁决的行（本批没动真源，按纪律登记）
+
+**① 文案槽位 14 条**（归属 `00_总纲/17_文案收口口径_v1.md` 那张槽位表 —— 合入时由主线搬）：
+
+| 键 | 文案 | 参数 |
+|---|---|---|
+| COMBAT_MECH_SEVER | 它那一手被你截断 —— 【{name}】身上露出破绽：{turns} 刻里挨的每一下都多受 {pct}%，谁都吃得着。 | name,turns,pct |
+| COMBAT_MECH_SELF_CUT | 你劈出这一下，自己先见了血（−{n}）。 | n |
+| COMBAT_MECH_SUNDER | 【{name}】的甲被劈开 —— 防御 −{pct}%，{turns} 刻。 | name,turns,pct |
+| COMBAT_MECH_TAUNT | 你吼了一声 —— 这几刻（{turns} 刻）它只会冲你来。 | turns |
+| COMBAT_MECH_STANDFAST | 你不退。{turns} 刻内，落上来的东西都轻 {pct}%。 | turns,pct |
+| COMBAT_MECH_AEGIS | 你先把话垫在前面 —— {turns} 刻内，落上来的东西轻 {pct}%。 | turns,pct |
+| COMBAT_MECH_MATINS | 光落下来 —— {turns} 刻内，打上来的东西到不了身上。 | turns |
+| COMBAT_MECH_OATHWALL | 你把盾立起来 —— 到你下一次行动之前（约 {turns} 刻），落上来的东西轻 {pct}%。 | turns,pct |
+| COMBAT_MECH_ABSOLVE | 你把它身上那根线解开了。 | — |
+| COMBAT_MECH_ABSOLVE_NONE | 它身上没有能解的东西。 | — |
+| COMBAT_MECH_LULLABY | 你把这口气吹进去 —— {turns} 刻再生，每刻回 {per} 点。 | turns,per |
+| COMBAT_MECH_QUICKSTEP | 你抢了半拍 —— 下一次出手提前 {ticks} 刻（{left} 刻后就到你）。 | ticks,left |
+| COMBAT_MECH_MITIGATE | 🛡️ 这一下被卸掉了 {pct}%。 | pct |
+| COMBAT_MECH_IMMUNE | ✨ 这一下到不了身上。 | — |
+
+**② 机制常数**（现在只在 `content/rules/skill_mech.json` 的 `_src` 上逐条注明出处；
+`skills` 域今天只有一个 `mech_val`，装不下第二条数 ⇒ 这一栏该不该进域，请拍板）：
+
+| 机制 | 数 | 真源 |
+|---|---|---|
+| interrupt | 破绽 200 刻（取 mech_val）· 承伤 ×1.35 | 06_刺客_v2.md §二 |
+| def_break | 护甲 −30%（取 mech_val）· **300 刻** | 02_狂战士_v2.md §一/§三 |
+| taunt | **100 刻**（×3 取 mech_val） | 01_骑士_v2.md §三 |
+| shield_ally | **200 刻**（30% 取 mech_val） | 05_修女_v2.md §一 |
+| protect | **免伤 40%**（盾墙没给 mech_val） | 01_骑士_v2.md §三 |
+| hot | 每刻 = F8 治疗量 ÷ 4 | 05_修女_v2.md §三（18.75 = 75.0 ÷ 4 复算得上） |
+| unstoppable / immune_window / advance_ct | 只有时长（都取 mech_val） | 01_ §五 · 05_ §五③ · 03_游侠 §三 |
+
+**③ 三条口径缺口（pending 的 why 就写在这儿）**
+
+- `mark_burst`（引燃 / 垂星）：**印记四条全缺** —— ① 域里星屑/焰痕/冰棱三条**没有 `res_gain`**
+  （今天写 `res_gain` 的只有骑士盾墙那条 `{RES_OATH: 12}`）② 引燃/垂星 的
+  `res_cost: {RES_MARK: 99}` 是**占位写法**，而引擎 `_skill_usable` 对 res_cost 的判据是
+  「**有该条目就必须足额**」⇒ 一旦印记真有条目（层数 1–6），两条大招会**被自己的资源门锁死**
+  （这是埋着的坑，不是本批引进的；引擎里「清空」的正规写法是 `info["consume_all"]`）
+  ③ 真源 04_ §三 给了算式（每层 ×0.35 / ×0.8 · 需 ≥3 层 · 清空）但没给「谁攒、上限几层」的落地口径。
+- `retreat`（后撤 ×2）：真源 03_游侠 §一 的三档距离（3/2/1）与 06_刺客 §一「撤到边上等」都要
+  **场上位置**；本作战斗是伪即时 CTB（无站位轴）⇒ 落不了。与 `content/data/monster_affixes.json`
+  的 `af_pursuit`（追猎·贴脸）**同一个结论**（那边当时也卡在这儿）。
+- `cleanse`（净罪）的「+15% 减伤」：真源只写了 15%，**没写持续多久**（安神曲 300 刻、庇护 200 刻
+  都给了）⇒ 不编时长。落点是现成的（承伤乘区，与庇护同一条通道），补一行即可。
+  另：晨祷的「免疫窗 **+ 治疗**」里那半截治疗，真源也没给量（§五③ 只算免疫那 100 刻值多少）。
+
+**④ 待裁决（真源自己就挂着问号的两条）**：抢拍「提前 30 刻」（域里 note）vs「提前到目标之前」
+（03_游侠 §三）—— 03_ §七② 本来就在问鱼鱼；本批按**域里那一个数**落。
+
+## §二 机制表（唯一真源 = `content/rules/skill_mech.json` · 出口 = `content/mech.py`）
+
+| 机制 | 技能 | 路 | 状态 | 落成什么 |
+|---|---|---|---|---|
+| interrupt | 断势 | engine（命中时） | on | 清对方出招窗口（引擎 `interrupt` 动词）+ 目标挂 `break_mark`（承伤 ×1.35 · mech_val 刻 · 只刷新不叠加） |
+| def_break | 破势 | engine（命中时） | on | 目标 `def` ×0.70 · 300 刻（面板快照态）+ 自伤 8% max_hp |
+| taunt | 挑战咆哮 | engine（增益结算） | on | 自己挂 `taunt_mark` 100 刻 + `Battle.target_picker` 强制选他（mval 3 随态存下） |
+| unstoppable | 不退 | engine（增益结算） | **partial** | 300 刻减伤 30%（承伤乘区）；霸体 / 受击转守誓 两半 pending |
+| advance_ct | 抢拍 | engine（增益结算） | on | 落地时把自己 `ct` 提前 mech_val 刻（落地时 ct 已推过 ⇒ 减的是**下一次**行动） |
+| shield_ally | 庇护 | engine（增益结算） | on | 自己挂 `aegis_veil` 200 刻（承伤 ×0.7） |
+| immune_window | 晨祷 | engine（增益结算） | on | 自己挂 `litany_ward` mech_val 刻（承伤乘区压到 0 ⇒ 引擎地板 1 点/次） |
+| protect | 盾墙 | cast（act_cast） | on | `oathwall` 免伤 40%，**到期 = 自己下一动的到点时刻**（现算，不编刻数） |
+| cleanse | 净罪 | cast（act_cast） | on | 解掉**一个**控制（控制的判据 = 引擎的 `mode`，不认态名） |
+| hot | 安神曲 | cast（act_cast） | on | `regen` mech_val 刻，每刻 = F8 治疗量 ÷ 4（周期声明随条目走，引擎时间轴真跳） |
+| retreat | 后撤 ×2 | — | pending | 见 §一③ |
+| mark_burst | 引燃 / 垂星 | — | pending | 见 §一③ |
+
+**两条路互斥**（表里声明、探针钉着）：`route=cast` 的机制**不并进** `EFFECT_ACTIONS` ——
+并进去就是同一件事两处落地（引擎那条名词路也会走一遍）。**12 个机制名也不许进 `EFFECT_RULES`**：
+引擎 `_mech_to_effect` 会拿 `state_def(mech)` 判「叠层资源」，命中了就把机制语义换成 `apply op=add`
+（静默劫持）—— 探针第 ③ 条钉这一条。
+
+## §三 fail-closed 四条（都在装配期，不留运行期 —— 引擎的 handler 异常是**吞掉**的）
+
+1. **表形状**：route ∈ {engine, cast, 空} · status ∈ {on, partial, pending} · partial/pending 必须写 `why` ·
+   engine 路必须有 `actions` · cast 路必须有 `verb`；**route=cast 的集合必须与代码登记的实现逐名相等**。
+2. **动词面**：表里引用的动词名必须都注册了（`EF.missing_actions` 为空）—— 声明了没实现 = 静默跳过。
+3. **跨域**：域里每条技能的 `mech`/`mech2` 都得在表里，不认得的**当场抛并点名技能**（`check_domain`，
+   `install_engine` 里调）。
+4. **状态语义只有一处**：同一个状态 key 不许被两条机制同时声明（`rules_module` 里抛）。
+
+## §四 判据（`scripts/probe_mech.py`，15 节 · 全绿）
+
+形状档 ①②③ · 不装配反证 ④（**两条路各自的装配点**：engine 路清表 · cast 路拿掉玩家触发器 ⇒
+机制一个都不写；挂回来同一个调用真出那两行）· 逐机制真跑 ⑤–⑬（每条**两路并行**：
+端到端真出手出那一条槽位行 + 定向真调动词逐值复算）· fail-closed 四种坏声明各抛一次 ⑭ ·
+引擎仓零改动 ⑮。
+
+★ 为什么每条都要「端到端 + 定向」两路：端到端那条路会继续把时间推下去，「到下一次行动前」这类
+状态可能**恰好在这一刻到期**（盾墙就是：它的到期时刻就是自己下一动的到点时刻）⇒ 只看终态会把
+「真生效过」判成「没生效」。定向那一路不推时，逐点对得上。
+
+## §五 覆盖与「有意的语义差异」（诚实清单）
+
+| 项 | 落法 | 为什么不是别的 |
+|---|---|---|
+| 破势的**自伤保底留 1 血** | `min(8% max_hp, hp−1)` | 真源只说「血不够时这一手不可用」（狂斩 12% 那处写了，破势待裁决）；引擎没有「按条件判某条技能此刻能不能放」的注入面（`_skill_usable` 只认冷却与资源声明）⇒ 先兜住下限，别让玩家被自己打死。要真门另立引擎提案 |
+| 晨祷的免疫窗 = **每次最多 1 点** | 承伤乘区 0.0 | 引擎乘区地板是 `dmg = max(1, int(dmg × mult))`（`landing.deal_damage`）⇒ 0 乘区在引擎里就是 1 点。要绝对 0 得改引擎地板，或给盾容器一个「无限盾」写法 |
+| 再生每刻按 `int(max_hp × heal_pct)` | 条目自带 period（`dir=heal`） | 引擎那条支只认**比例**（`heal_pct`）⇒ 每刻少 1 点以内的取整误差（5 刻实测逐字相等） |
+| 两条同类减伤同时开 = **只算最强那条** | 状态规则表里的 `join_key: reduce_taken` | 真源没写两条同类减伤并存怎么算；表里这条是**显式设计决定**（探针钉着：不退 + 庇护 = ×0.7，不是 ×0.49） |
+| 盾墙的 40% 用「承伤乘区」而不是引擎的 `defending`（那个是 50%） | 乘区 0.6 | 真源写的是 40%，引擎的防御姿态是 50% —— 两者不是一个数，不混用 |
+| 净罪只解**一个**控制 | 自己那一条（不调引擎 `cleanse` 动词） | 引擎那个动词清**全部**匹配项；域里 note 写的是「解掉一个控制效果」—— 一个 vs 全部是两种口径 |
+
+## §六 改动文件清单（显式）
+
+```
+新增  content/mech.py                    机制层唯一出口（表读取/校验 · 两条路 · 9 个内容动词 · 选目标注入点）
+新增  content/rules/skill_mech.json      机制表（12 条 · 真源引用逐条在 _src 上）
+新增  scripts/probe_mech.py              判据（15 节）
+改    content/apply.py                   install_engine 尾部：load_game_rules(rules_module()) + check_domain()
+改    content/combat.py                  ① player_actor 挂两个触发器 ② build 传 target_picker
+改    content/data/texts.json            626 条（+14 条 COMBAT_MECH_*）
+改    _notes.md                          本节
+```
+
+## §七 可复现命令
+
+```bash
+export GWEN_ENGINE=C:/Users/yuyu/framework-engine AST_PLAN=C:/Users/yuyu/aetheran-plan
+PY=C:/Users/yuyu/AppData/Local/Programs/Python/Python312/python.exe
+$PY scripts/probe_mech.py                    # 本批那一域（15 节）
+for f in scripts/probe_*.py; do $PY $f || echo "FAIL $f"; done   # 全量 30
+$PY scripts/e2e_drive.py                     # 真宿主冒烟
+```
+
+## §八 门禁实跑
+
+（见 §十 的实跑输出；全量 30 探针全绿 + 引擎仓 git status 空）
+
+## §九 复核要点（给下一位）
+
+1. **加一条机制**：只动 `content/rules/skill_mech.json`（+ 需要新动词时在 `content/mech.py` 加一个
+   `@register_action`）。加完 `probe_mech` 的 ①② 会自动跟着核（域↔表对账是**现算**的）。
+2. **数别抄第二遍**：时长优先写 `"turns": "mech_val"`；只写一次的常数放状态规则表（`reduce_taken` /
+   `panel` / `debuff_scale`），动词从表里读，别在动词里再写一遍。
+3. **别把机制名放进 `EFFECT_RULES`**（第 ③ 条判据会红）：那是引擎的「叠层资源」岔路口。
+4. **两条路别混**：给某条机制换路 = 表里改 `route` + 在 `mech.py` 的 `_CAST_VERBS` 里加/删实现，
+   两处对不上**装配期就抛**（别留着让它静默）。
+5. **判据分两路是刻意的**：端到端看「这条链真通」，定向看「数值逐点对」。只保留端到端会把
+   「恰好到期」的状态判成没生效（盾墙那次）。
+
+## §十 顺带发现的（不在本批范围，另立条目）
+
+1. **技能自己的 `cast` / `recover` 引擎根本没用**：`pending_begin` 与 `_after_act` 拿到的都是**类别**
+   （`"skill"`）⇒ 30 条技能全是 80 + 50 刻（按 spd 缩放）。域里的 引燃 200 刻 / 垂星 240 刻 /
+   冰棱 40 刻**一个都没生效**，而真源的核心玩法（04_ §六「引燃的 200 刻比刺客 0–160 刻的打断窗口长」）
+   正建立在它上面。要修得让内容侧的 `action_base_fn` 能拿到技能 dict（引擎侧改动）⇒ 属引擎提案。
+   同一条还解释了一个现象：抢拍之所以「提前 30 刻」有意义，是因为所有技能耗时一样、没有长短手之分。
+2. **玩家 actor 没有战斗可变容器**：`combat.player_actor` 走 `PB.build_actor`（不是 `make_actor`）⇒
+   `effects` / `shields` / `cooldown` / `defending` / `charging` 这几个键**都没播种**（引擎各处
+   `.get(...) or {}` 容错，所以没炸）。两处 actor 形状不一致，属引擎侧的缝。
+3. **断势的打断窗口今天很窄**：怪物放的也是「技能」类别（80 刻前摇）⇒ 窗口存在但短；
+   怪物 AI 本身**不会打断玩家**（只会 普攻/技能/防御）⇒ 「霸体」那半截今天没有实战触发点
+   （`unstoppable` 的 pending 就是这么记的）。
+
+## §十一 过程记账：本工作树当时有**第二个写者**（请主线核一下）
+
+本批在本工作树里与另一个写者撞过车（不是猜测，有两条硬证据）：
+
+1. 写文件时工具回了警告：`... was modified by sibling subagent '20260925_160214_0bf1ab'` /
+   `'sa-2-22c6447f' at 16:24:06 — after this agent's last read at 16:23:08`（`skill_mech.json` 与
+   `scripts/probe_mech.py` 各一次）。
+2. 有一次真跑报错里打出来的 `skill_mech.json` 是**另一套设计**（顶层键 `mech`（单数）+ `halves` +
+   `route_judge` + `attach`，动词名 `aeth_interrupt` / `aeth_bulwark` / `aeth_litany` / `aeth_purge` /
+   `aeth_cast_mech` / `aeth_taken_mult`），与本分支落地的这一套（顶层 `mechs` + `aeth_sever` /
+   `aeth_mitigate` / `aeth_on_cast`）**不兼容** —— 后者是引擎 `_validate` 会当场抛的那种不兼容。
+
+⇒ 落地的这一套是**自洽的**（`content/mech.py` ↔ `skill_mech.json` ↔ `scripts/probe_mech.py` 三件套
+逐节对得上、探针全绿）；另一套的产物已被覆盖。**合入前请确认这条分支的主人是谁**（车道锁当时由
+`main-merge-wave8` 持着，双方都没拿锁 ⇒ 双写条件成立）。若另一套要继续，我这份的三件套需要
+整批撤回（`git clean` 那两个新文件 + `git checkout` 三个改动的文件），别半半拼。

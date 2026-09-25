@@ -4391,5 +4391,120 @@
     ],
     "category": "战斗",
     "desc": "集火 · 单人（点名那只在 monsters 域里认得出来）"
+  },
+  "COMBAT_MECH_SEVER": {
+    "value": "它那一手被你截断 —— 【{name}】身上露出破绽：{turns} 刻里挨的每一下都多受 {pct}%，谁都吃得着。",
+    "params": [
+      "name",
+      "turns",
+      "pct"
+    ],
+    "category": "战斗",
+    "desc": "机制 · 断势（破绽：承伤 ×1.35 / 200 刻，全队共享）"
+  },
+  "COMBAT_MECH_SELF_CUT": {
+    "value": "你劈出这一下，自己先见了血（−{n}）。",
+    "params": [
+      "n"
+    ],
+    "category": "战斗",
+    "desc": "机制 · 破势的「付」（自伤 8% max_hp）"
+  },
+  "COMBAT_MECH_SUNDER": {
+    "value": "【{name}】的甲被劈开 —— 防御 −{pct}%，{turns} 刻。",
+    "params": [
+      "name",
+      "turns",
+      "pct"
+    ],
+    "category": "战斗",
+    "desc": "机制 · 破势（目标 def ×0.70 · 300 刻）"
+  },
+  "COMBAT_MECH_TAUNT": {
+    "value": "你吼了一声 —— 这几刻（{turns} 刻）它只会冲你来。",
+    "params": [
+      "turns"
+    ],
+    "category": "战斗",
+    "desc": "机制 · 挑战咆哮（嘲讽态 100 刻）"
+  },
+  "COMBAT_MECH_STANDFAST": {
+    "value": "你不退。{turns} 刻内，落上来的东西都轻 {pct}%。",
+    "params": [
+      "turns",
+      "pct"
+    ],
+    "category": "战斗",
+    "desc": "机制 · 不退（免伤 30% / 300 刻）"
+  },
+  "COMBAT_MECH_AEGIS": {
+    "value": "你先把话垫在前面 —— {turns} 刻内，落上来的东西轻 {pct}%。",
+    "params": [
+      "turns",
+      "pct"
+    ],
+    "category": "战斗",
+    "desc": "机制 · 庇护（减伤 30% / 200 刻）"
+  },
+  "COMBAT_MECH_MATINS": {
+    "value": "光落下来 —— {turns} 刻内，打上来的东西到不了身上。",
+    "params": [
+      "turns"
+    ],
+    "category": "战斗",
+    "desc": "机制 · 晨祷（免疫窗 100 刻）"
+  },
+  "COMBAT_MECH_OATHWALL": {
+    "value": "你把盾立起来 —— 到你下一次行动之前（约 {turns} 刻），落上来的东西轻 {pct}%。",
+    "params": [
+      "turns",
+      "pct"
+    ],
+    "category": "战斗",
+    "desc": "机制 · 盾墙（免伤 40%，到下一次行动前）"
+  },
+  "COMBAT_MECH_ABSOLVE": {
+    "value": "你把它身上那根线解开了。",
+    "params": [],
+    "category": "战斗",
+    "desc": "机制 · 净罪（解掉一个控制）"
+  },
+  "COMBAT_MECH_ABSOLVE_NONE": {
+    "value": "它身上没有能解的东西。",
+    "params": [],
+    "category": "战斗",
+    "desc": "机制 · 净罪（没控可解 —— 口令式，不静默）"
+  },
+  "COMBAT_MECH_LULLABY": {
+    "value": "你把这口气吹进去 —— {turns} 刻再生，每刻回 {per} 点。",
+    "params": [
+      "turns",
+      "per"
+    ],
+    "category": "战斗",
+    "desc": "机制 · 安神曲（再生：每刻 = 这一发治疗量的 1/4）"
+  },
+  "COMBAT_MECH_QUICKSTEP": {
+    "value": "你抢了半拍 —— 下一次出手提前 {ticks} 刻（{left} 刻后就到你）。",
+    "params": [
+      "ticks",
+      "left"
+    ],
+    "category": "战斗",
+    "desc": "机制 · 抢拍（提前 30 刻）"
+  },
+  "COMBAT_MECH_MITIGATE": {
+    "value": "🛡️ 这一下被卸掉了 {pct}%。",
+    "params": [
+      "pct"
+    ],
+    "category": "战斗",
+    "desc": "机制 · 减免态生效（不退 / 庇护 / 盾墙 —— 承伤乘区）"
+  },
+  "COMBAT_MECH_IMMUNE": {
+    "value": "✨ 这一下到不了身上。",
+    "params": [],
+    "category": "战斗",
+    "desc": "机制 · 免疫窗生效（晨祷 —— 承伤乘区压到地板）"
   }
 }
