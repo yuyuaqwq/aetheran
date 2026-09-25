@@ -187,17 +187,15 @@ def hp_cap_or_line(p):
     ★ P-27 两档分开（fail-closed 纪律：`fail-closed-boundaries` §1）：
 
       · 档上没有职业（建号第二步「选职业」还没走完）= **还没声明** ⇒ 这里**不猜数**：
-        调用方别做那件事（回血 / 打架），把那一行说给玩家听（借现成槽位：
-        `SYS_POI_EFFECT_TODO` + `SYS_PANEL_PROF_BASE` —— ★ 待补的槽位名记这儿：
-        `SYS_HP_UNSET`，下一轮连同真源口径表一起补）。
+        调用方别做那件事（回血 / 打架），把那一行说给玩家听（自己的槽位 `SYS_HP_UNSET`；
+        原先借「效果待接」那两句，2026-09-25 合入时已换回）。
       · 档上的职业**不在 classes 域里** = **声明错了** ⇒ 照样抛（本函数不吞这一档）。
     """
     from . import panel_build as _PB
     cap = _PB.hp_cap(p, strict=False)
     if cap is not None:
         return cap, None
-    return None, T("SYS_POI_EFFECT_TODO", name=p.get("name") or T("SYS_NAME_UNKNOWN"),
-                   keys=T("SYS_PANEL_PROF_BASE"))
+    return None, T("SYS_HP_UNSET", name=p.get("name") or T("SYS_NAME_UNKNOWN"))
 
 
 def _race_rec(race):
