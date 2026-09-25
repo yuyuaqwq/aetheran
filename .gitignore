@@ -1,2 +1,5 @@
 __pycache__/
 *.pyc
+
+# 车道锁（lane_lock.py 现建现删的运行时文件，不是源码）
+scripts/_lane/*.lock
