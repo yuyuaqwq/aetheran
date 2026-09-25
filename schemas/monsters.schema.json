@@ -116,6 +116,26 @@
             "atk_mult": {
               "type": "number"
             },
+            "party_scale": {
+              "type": "object",
+              "description": "★ B3-17：**按队伍人数缩放面板**的表（键 = 队伍人数，值 = 面板倍数，键名照域里 panel 那一套）—— 真源 `12_…_v1.md` §一④／`17_组队与策略配合_v1.md` §五／`22_旧哨塔_逐间设计_v1.md` §三④「组队时按人数缩放（P1 单人也能过）」。只有**团队内容**（Boss）有这一格；文档没给数的人数**不写**（查不到 ⇒ 走设计值，fail-closed 见 `content/combat.party_scale_of`）。生成器唯一来源 = `scripts/rebuild_monsters.PARTY_SCALE`。",
+              "patternProperties": {
+                "^[1-9][0-9]*$": {
+                  "type": "object",
+                  "minProperties": 1,
+                  "properties": {
+                    "hp": {
+                      "type": "number"
+                    },
+                    "atk": {
+                      "type": "number"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
             "mech": {
               "type": "string"
             },

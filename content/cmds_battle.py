@@ -105,7 +105,10 @@ async def attack(env, sink, uid, player):
     for line in encounter_lines(ms[pick[0]], p):
         yield line
     seen = CX.note_kill(p, pick[0])            # ★ 打过一次就进谱（输了也算「见过」）
-    res, logs, hp_after = CB.run_auto(p, pick, ms)
+    # ★ B3-17 单人口径：今天的『攻击』只有单人这一条路（组队命令还没接线）⇒ 人数 = 1；
+    #   它只对「团队内容」那几只怪生效（Boss 单人 hp ÷2 —— 真源 `12_怪物面板…` §一④ /
+    #   `17_组队与策略配合_v1` §五 / `22_旧哨塔_逐间设计_v1` §三④）。组队接线那批把真实人数传进来。
+    res, logs, hp_after = CB.run_auto(p, pick, ms, party=1)
     for line in _fmt(logs):
         yield line
     yield "━" * 12

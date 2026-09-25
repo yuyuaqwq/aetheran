@@ -192,6 +192,184 @@ chk("★ 数值→率那把尺两处同值（rebuild_monsters.K_RATE=%s == panel
     % (RB.K_RATE, _PB.K_RATE), RB.K_RATE == _PB.K_RATE)
 chk("★ 暴击期望系数与 `_budget.py` 同值（1 + 率 × 0.5）", RB.CRIT_EXP == 0.5)
 
+# ══════════════════════════════════════════════════════════════════════════════
+# ★ B3-17：真源 `12_怪物面板与精英词条池_v1.md` **逐只对账**（探针自己解析文档 —— 不手抄镜像表）
+#   上一批（B3-14）把 `per_hit` 的口径换过一次（现值 = 六职业**中位实际通道**伤害），
+#   真源那张表是**换之前那一版**的快照 —— 所以「对不上」的那一列必须能**两侧各自复算**，
+#   否则分不清「口径变更」与「手打偏了」。这一节的判据就是照这个分法立的。
+# ══════════════════════════════════════════════════════════════════════════════
+import re as _re2                                                       # noqa: E402
+
+PLAN = os.environ.get("AST_PLAN", "C:/Users/yuyu/aetheran-plan")
+DOC_DIR = os.path.join(PLAN, "06_第一阶段垂直切片")
+DOC12 = os.path.join(DOC_DIR, "12_怪物面板与精英词条池_v1.md")
+DOC14 = os.path.join(DOC_DIR, "14_怪物原型_v1.md")
+DOC22 = os.path.join(DOC_DIR, "22_旧哨塔_逐间设计_v1.md")
+D12 = _io.open(DOC12, encoding="utf-8").read()
+D14 = _io.open(DOC14, encoding="utf-8").read()
+D22 = _io.open(DOC22, encoding="utf-8").read()
+BY_NAME = {v["name"]: v for v in mo.values()}
+
+
+def _table(sec: str, need=10):
+    """把一小节里的 markdown 表切出来（跳过分隔行与表头）—— 一律**现解析**。"""
+    out = []
+    for ln in sec.splitlines():
+        if not ln.startswith("|"):
+            continue
+        cells = [c.strip() for c in ln.strip("|").split("|")]
+        if len(cells) < need:
+            continue
+        if all(set(c) <= set("-: ") for c in cells):
+            continue
+        out.append(cells)
+    return out[1:]                     # 第一行是表头
+
+
+print()
+print("── ★ B3-17 ⑫ 真源 §一 那张面板表 ↔ 域（逐只 · 逐列）")
+_R1 = _table(D12.split("## 一、")[1].split("## 二、")[0])
+_COLS = (("atk", "atk"), ("def", "def"), ("spd", "spd"), ("hit", "hit"), ("eva", "eva"), ("crit", "crit"))
+chk("★ §一 表 17 行 · 名字与域两边相等（不多不少）",
+    len(_R1) == 17 and {r[0] for r in _R1} == set(BY_NAME), "%d 行" % len(_R1))
+_bad_a, _bad_hp_v1, _bad_hp_now = [], [], []
+for _r in _R1:
+    _name, _tier, _lv = _r[0], _r[1], int(_r[2])
+    _v = BY_NAME.get(_name)
+    if not _v:
+        _bad_a.append("%s 不在域里" % _name)
+        continue
+    _arch = _v["archetype"]
+    if _v["lv"] != _lv or _v["role"] != _tier:
+        _bad_a.append("%s 档/级 域=%s/%s 档=%s/%s" % (_name, _v["role"], _v["lv"], _tier, _lv))
+    for _i, (_dk, _pk) in enumerate(_COLS, 4):          # hp 在第 3 列（下标 3），其余从下标 4 起
+        if int(_r[_i]) != int(_v["panel"][_pk]):
+            _bad_a.append("%s.%s 域=%s 档=%s" % (_name, _pk, _v["panel"][_pk], _r[_i]))
+    if int(_r[3]) != RB.panel_of_v1(_lv, _tier, _arch)["hp"]:
+        _bad_hp_v1.append("%s 档=%s 旧口径算=%s" % (_name, _r[3], RB.panel_of_v1(_lv, _tier, _arch)["hp"]))
+    if int(_v["panel"]["hp"]) != RB.panel_of(_lv, _tier, _arch)["hp"]:
+        _bad_hp_now.append(_name)
+chk("★ 除 hp 外的列（atk/def/spd/hit/eva/crit + 档 + 级）**逐只一致**（%d 行 × 8 格）" % len(_R1),
+    not _bad_a, " · ".join(_bad_a[:4]))
+chk("★ §一 的 hp 列**逐只 == 上一版口径复算**（`RB.panel_of_v1`）⇒ 它是那一版的快照，**不是手打偏的**",
+    not _bad_hp_v1, " · ".join(_bad_hp_v1[:3]))
+chk("★ 域的 hp**逐只 == 现口径复算**（`RB.panel_of`）⇒ 差异的两侧各自可复算（= 一次口径变更）",
+    not _bad_hp_now, "%s" % _bad_hp_now[:3])
+_n_diff = sum(1 for _r in _R1 if int(_r[3]) != int(BY_NAME[_r[0]]["panel"]["hp"]))
+print("     · hp 列对不上的有 %d/%d 只（那一列的差 = B3-14 那次 per_hit 口径修正，逐只可复算）"
+      % (_n_diff, len(_R1)))
+
+print()
+print("── ★ B3-17 ⑬ 真源 §二 那张词条池表 ↔ 域（逐只）")
+_R2 = _table(D12.split("## 二、")[1].split("## 三、")[0], need=3)
+chk("★ §二 表 17 行 · 名字与域两边相等（不多不少）",
+    len(_R2) == 17 and {r[0] for r in _R2} == set(BY_NAME), "%d 行" % len(_R2))
+_bad_pool = []
+for _r in _R2:
+    _v = BY_NAME.get(_r[0])
+    if not _v:
+        _bad_pool.append("%s 不在域里" % _r[0])
+        continue
+    _cell = _r[2]
+    _dom = list(_v.get("elite_pool") or [])
+    if _cell.startswith("（"):                    # Boss 那一格写的是说明，不是池子
+        if _dom:
+            _bad_pool.append("%s 档那格是说明、域里却有 %s" % (_r[0], _dom))
+        continue
+    _n = len([x for x in _re2.split(r"[·、]", _cell) if x.strip()])
+    if _n != len(_dom) or _n != 3:
+        _bad_pool.append("%s 档 %d 条 / 域 %d 条" % (_r[0], _n, len(_dom)))
+chk("★ 每只怪的词条池**条数**与文档一致（3 条）· Boss 那一格是说明 ⇒ 域里必须空",
+    not _bad_pool, " · ".join(_bad_pool[:4]))
+print("     · ★ 19 个 `af_*` id **全仓库没有定义表**（09_ §七 点名要建 `elite` 域 / `monster_mods` 表，"
+      "09_ §三 只写了 16 条词条口径、而 §二 用了 19 个名字）⇒ 建表要补 4 条效果与 PE，属**待拍板**，"
+      "本批只登记（见 _notes.md §四·1）")
+
+print()
+print("── ★ B3-17 ⑭ Boss 阶段卡 ↔ 真源（`22_ §二·12` 的四阶段 + `14_ §四` 那行）")
+_blk22 = D22.split("### 三层 · 12 · 塔顶")[1].split("### ")[0]
+_ph22 = " ".join(_re2.findall(r"^\s*(?:Boss|→).*$", _blk22, _re2.M)) or \
+        " ".join(ln.strip() for ln in _blk22.splitlines() if ln.strip().startswith(("Boss", "→")))
+_line14 = next((ln.strip() for ln in D14.splitlines() if ln.strip().startswith("站桩：")), "")
+# 22 那一行是「Boss 旧誓哨兵（四阶段卡）：站桩 → 列阵（…）→ 散架（…）→ 回塔（…）」
+#   ⇒ 按「→」切成 4 段；**第一段**的名字在「：」之后，其余段的名字在「（」之前
+#     （★ skill §十 的坑①：小标题/括注那一截不是名字，先切掉再用）。
+_seg22 = _ph22.split("→") if _ph22.count("→") >= 3 else []
+_names22 = ([_seg22[0].split("：")[-1].strip()] +
+            [_re2.split(r"（", x.strip())[0].strip() for x in _seg22[1:]]) if _seg22 else []
+#: 每段自己的那段字（数只在**这一段**里找 —— 跨段搜会把 列阵 的 def+60 当成 散架 的）
+_txt22 = {_names22[i]: _seg22[i] for i in range(len(_names22))} if _seg22 else {}
+_names14 = [x.split("：")[0].strip() for x in _line14.split("→")] if _line14 else []
+_phases = (boss[0]["mods"].get("phases") or []) if boss else []
+chk("★ 两处文档给的阶段名序列一致且 == 域里那 4 阶（%s）"
+    % " → ".join(p.get("name", "") for p in _phases),
+    _names22 == _names14 == [p.get("name") for p in _phases] == ["站桩", "列阵", "散架", "回塔"],
+    "22=%s / 14=%s" % (_names22, _names14))
+
+
+def _num(text, pat, cast=float):
+    m = _re2.search(pat, text)
+    return cast(m.group(1)) if m else None
+
+
+_want = (("列阵", "atk_mult", r"列阵（atk×([\d.]+)"), ("列阵", "def_add", r"def\+(\d+)"),
+         ("列阵", "turns", r"def\+\d+ · (\d+) 次"), ("散架", "atk_mult", r"散架（atk×([\d.]+)"),
+         ("散架", "def_add", r"def([−+-])(\d+)"), ("散架", "dmg_taken_mult", r"受伤×([\d.]+)"),
+         ("散架", "act_rate_mult", r"频率×([\d.]+)"), ("散架", "turns", r"频率×[\d.]+ · (\d+) 次"))
+_by_ph = {p.get("name"): p for p in _phases}
+_bad_ph = []
+for _pn, _k, _pat in _want:
+    _txt = _txt22.get(_pn, "")
+    if _k == "def_add" and _pn == "散架":          # 减号（全角 U+2212 / 半角）要连符号一起认
+        _m = _re2.search(_pat, _txt)
+        _doc = -(float(_m.group(2))) if _m else None
+    else:
+        _doc = _num(_txt, _pat)
+    _dom = _by_ph.get(_pn, {}).get(_k)
+    if _doc is None:
+        _bad_ph.append("22 里没解析出 %s.%s（pattern=%s）" % (_pn, _k, _pat))
+    elif abs(float(_dom if _dom is not None else -999) - float(_doc)) > 1e-6:
+        _bad_ph.append("%s.%s 域=%s 档=%s" % (_pn, _k, _dom, _doc))
+    if _pn == "散架" and _k in ("dmg_taken_mult", "turns"):
+        _d14 = _num(_line14, r"受伤×([\d.]+)") if _k == "dmg_taken_mult" else \
+            _num(_line14, r"受伤×[\d.]+ · (\d+) 次行动")
+        if _d14 is not None and abs(float(_dom or -999) - float(_d14)) > 1e-6:
+            _bad_ph.append("散架.%s 14 号那份=%s 域=%s" % (_k, _d14, _dom))
+chk("★ 阶段卡的数**逐项**对得上（列阵 atk×1.3 / def+60 / 8 次 · 散架 atk×0.8 / def−120 / "
+    "受伤×1.4 / 频率×0.5 / 5 次）—— 22_ §二·12 与 14_ §四 两处都核", not _bad_ph,
+    " · ".join(_bad_ph[:4]))
+_hp_doc14 = _num(D14, r"旧誓哨兵（Lv19）：hp (\d+)", int)
+_ar = RB.ARCH[boss[0]["archetype"]] if boss else {}
+_rel = [k for k, m in (("hp", _ar.get("hp")), ("atk", _ar.get("atk")),
+                       ("def", _ar.get("dfn")), ("spd", _ar.get("spd"))) if m and abs(m - 1.0) > 1e-9]
+print("     · ★ 已经登记的**真源两处打架**（不当判据 · 只登记）：14_ §四 写 Boss「不用原型偏移」"
+      "（hp 7340 · atk 32.6 · def 62.5 · spd 102 = 域那一套 ÷原型偏移 %s），而 12_ §一 表那行的数"
+      "是**带原型偏移**的（域今天也是带偏移的）⇒ 见 _notes.md §四·2"
+      % ("/".join("%s×%s" % (k, _ar[k]) for k in ("hp", "atk", "dfn", "spd")) if _rel else "无"))
+chk("★ `14_ §四` 那个 hp 与 `12_ §一④` 正文那句 hp 是**同一个数**（两处互相印证，只是都跟表打架）",
+    _hp_doc14 is not None and ("hp %s" % _hp_doc14) in D12.split("## 二、")[0],
+    "14 说 %s" % _hp_doc14)
+
+print()
+print("── ★ B3-17 ⑮ 单人档（`mods.party_scale`）：生成器那张表 == 域 == 只有团队内容带")
+_ps = {k: (v.get("mods") or {}).get("party_scale") for k, v in mo.items()}
+_have = {k: v for k, v in _ps.items() if v}
+chk("★ 带 `party_scale` 的只有生成器点名的那几只（%s）"
+    % " · ".join(mo[k]["name"] for k in sorted(_have)),
+    sorted(_have) == sorted(RB.PARTY_SCALE_ON), "%s" % sorted(_have))
+chk("★ 域里的单人档 == 生成器唯一来源那张表（%s）"
+    % " · ".join("%s 人 → %s" % (n, "+".join("%s×%s" % kv for kv in sorted(v.items())))
+                 for n, v in sorted(RB.PARTY_SCALE.items())),
+    all(_have.get(k) == {n: dict(v) for n, v in RB.PARTY_SCALE.items()} for k in RB.PARTY_SCALE_ON)
+    and len(_have) == len(RB.PARTY_SCALE_ON), "%s" % _have)
+_doc_half = "按 ÷2 看" in D12 and "Boss 血按 ÷2 看" in _io.open(
+    os.path.join(DOC_DIR, "17_组队与策略配合_v1.md"), encoding="utf-8").read()
+chk("★ 那个 ÷2 是文档给的数（12_ §一④「单人挑战时按 ÷2 看」· 17_ §五「Boss 血按 ÷2 看」）"
+    "⇒ 表里 = 0.5（不手打、不猜）",
+    _doc_half and all(abs(float(RB.PARTY_SCALE["1"]["hp"]) - 0.5) < 1e-9 for _ in (0,)), "hp×0.5")
+chk("★ 文档**没给数**的人数（2 / 3 人）表里不写 ⇒ 查不到就按设计值走（fail-closed 在 `combat.party_scale_of`）",
+    set(RB.PARTY_SCALE) == {"1"}, "%s" % sorted(RB.PARTY_SCALE))
+
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
 sys.exit(0 if ok else 1)
