@@ -1,28 +1,52 @@
 # -*- coding: utf-8 -*-
-"""面板接线探针：骑士 10 级面板能不能由「数据 + 引擎形状」算出来。
+"""面板接线探针：骑士 10 级面板能不能由「数据 + 引擎形状」算出来；★ P-27 生命上限三处一致。
 
 判据：与 03_职业与技能/06_六职业对照_v2.md 的骑士 10 级面板逐项对得上。
 
 ★ 2026-09-25 期望值更新（v1 打样 → v2 对照）：v2 重做时骑士上调为
   max_hp 438→462 · def 54.4→69.6（让「骑士 = 六职业最肉」这条取向成立）·
   atk 62.4→62.2（成长系数微调）。**数据没动，是探针的期望值过时**（面板探针此前一直没跑）。
+
+★ P-27（2026-09-25）：**生命上限只有一个来源 = 职业面板**（`content/panel_build.py`）——
+  这一节把「面板 / 档 / 战斗里那只 actor」三处钉在同一个数上（骑士 1 级 = 116），
+  而且**都不是写死的常数**：
+
+```
+① 真造 actor（`combat.player_actor`）+ 真读档（`content/persistence` 落库再读回来）
+   ⇒ 三处同一个数（L1 116 · L2 128 · L10 224；六职业 1 级 90–140）
+② 加一次点 / 换一件带「生命上限」词条的装备 ⇒ 三处**一起**跟着涨（装备那份不再是死的）
+③ 反证（fail-closed 有牙）：
+   · 档上没有职业（建号第二步还没走完）⇒ 三处一起抛 `PanelMissing`（点名），
+     不许拿 100 或别人的职业垫上；`状态` 那一面照实说「未定」（见 probe_copy ⑭）
+   · 档上的职业不在 classes 域里（声明错了）⇒ 点名抛（列出域里有的）
+④ 静态守卫：`content/*.py` 里不许再出现**写死的上限**（`"hp_max": 100` / `… or 100`）
+   —— 原先两处写死 100（`apply.py` · `cmds_ast.py`）就是这么来的。
+```
+
+用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_panel.py
 """
 import os
-import time
+import re
 import sys
+import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PKG = os.path.dirname(HERE)
 ENGINE = os.environ.get("GWEN_ENGINE", "C:/Users/yuyu/framework-engine")
 sys.path.insert(0, ENGINE)
 sys.path.insert(0, os.path.join(ENGINE, "extends"))
+sys.path.insert(0, PKG)                                    # ★ P-27：要 import content 那几口
 
 from saintess_engine.package import load_stack          # noqa: E402
 
-st = load_stack(PKG, exts=[os.path.join(ENGINE, "extends")], inject={"db_path": os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp", "ast_probe.db"), "clock": time.time})
+TMP = os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp")
+st = load_stack(PKG, exts=[os.path.join(ENGINE, "extends")], inject={"db_path": os.path.join(TMP, "ast_probe.db"), "clock": time.time})
 st.install()
 
 from content import panel_build                          # noqa: E402
+from content import combat as CB                          # noqa: E402
+from content import cmds_ast as CA                        # noqa: E402
+from content import persistence as PS                     # noqa: E402
 from saintess_engine import config                       # noqa: E402
 
 print("panel_layers_fn 已挂:", config.get_hook("panel_layers_fn") is not None)
@@ -48,4 +72,115 @@ print("  crit（数值 24 → 率 %.4f）:" % (24 / (24 + 500)), panel.get("crit
 print("  面板全部键:", sorted(panel))
 print("")
 print("===== %s =====" % ("面板由数据+引擎形状算出，与打样一致 ✅" if ok else "有项对不上 ❌"))
+
+# ══════════════════════════════════════════════════════════════
+# ★ P-27：生命上限 —— 三处一致（面板 / 档 / 战斗里那只 actor）
+# ══════════════════════════════════════════════════════════════
+fails = []
+
+
+def chk(label, cond, extra=""):
+    global ok
+    ok = ok and bool(cond)
+    if not cond:
+        fails.append(label)
+    print("  %s %s%s" % ("✓" if cond else "✗", label, ("  —— %s" % extra) if extra else ""))
+
+
+DB = os.path.join(TMP, "ast_probe_panel_hp.db")
+if os.path.exists(DB):
+    os.remove(DB)
+PS.bind(db_path=DB)                                       # 真存档半边（宿主那五个口之一）
+PS.init_db()
+_ITS = st.domain("items") or {}
+_HP_ITEM = next((k for k in sorted(_ITS)
+                 if any(a.get("stat") == "hp" for a in (_ITS[k].get("affixes") or []))), "")
+
+
+def three(cls, level, tag="", **over):
+    """(面板, 档, 战斗 actor) 三个数 —— 档是**真存进库再读回来**的那一份。"""
+    uid = "u_hp_%s_%d%s" % (cls or "none", level, ("_" + tag) if tag else "")
+    rec = {"cls": cls, "level": level}
+    rec.update(over)
+    _stored = CA._p(dict(rec))                             # 出档口派生之后那一份
+    _stored.pop("uid", None)                               # uid 是行键，不进字段（update_player 的形参）
+    PS.update_player("g_hp", uid, **_stored)               # 落档
+    back = PS.get_player("g_hp", uid)                      # ← 真从库里读回来
+    rec = back                                             # 后面那句面板/actor 都吃库里那一份
+    gear, buffs = panel_build.gear_and_buffs(rec)
+    cap_panel = int(panel_build.build_actor(rec["cls"], level, rec.get("alloc"),
+                                            gear, buffs=buffs)["max_hp"])
+    return cap_panel, int(back["hp_max"]), int(CB.player_actor(back)["max_hp"])
+
+
+print("")
+print("── ★ P-27 三处一致：面板 / 档（真读档）/ 战斗里那只 actor")
+print("  %-8s %-8s %-8s %-8s %s" % ("档", "面板", "档上", "actor", "判定"))
+for cls, lv, want_cap in (("cls_knight", 1, 116), ("cls_knight", 2, 128),
+                          ("cls_knight", 10, 224)):
+    a1, a2, a3 = three(cls, lv)
+    good = (a1 == a2 == a3 == want_cap)
+    chk("%s L%s 三处同一个数 = %s" % (cls, lv, want_cap), good, "%s / %s / %s" % (a1, a2, a3))
+
+print("")
+print("── 六职业 1 级（面板 / 档 / actor 三处一致；90–140 那一档）")
+_row = []
+for cls in sorted((st.domain("classes") or {})):
+    if str(cls).startswith("_"):
+        continue
+    a1, a2, a3 = three(cls, 1)
+    _row.append((cls, a1, a2, a3))
+    chk("%s 三处一致（%s）" % (cls, a1), a1 == a2 == a3, "%s / %s / %s" % (a1, a2, a3))
+print("  1 级上限：%s" % " · ".join("%s=%s" % (r[0], r[1]) for r in _row))
+
+print("")
+print("── ② 加点 / 换装：三处**一起**动（不是写死的常数）")
+_a1, _a2, _a3 = three("cls_knight", 1, tag="alloc", alloc={"VIT": 3})
+_b1, _b2, _b3 = three("cls_knight", 1)
+chk("加点 VIT×3 ⇒ 三处一致且高于裸档（%s > %s）" % (_a1, _b1),
+    _a1 == _a2 == _a3 and _a1 > _b1, "%s / %s / %s" % (_a1, _a2, _a3))
+if _HP_ITEM:
+    _g1, _g2, _g3 = three("cls_knight", 1, tag="gear", equipped={"weapon": _HP_ITEM})
+    chk("换一件带生命上限词条的装（%s）⇒ 三处一起涨（%s > %s）" % (_HP_ITEM, _g1, _b1),
+        _g1 == _g2 == _g3 and _g1 > _b1, "%s / %s / %s" % (_g1, _g2, _g3))
+else:
+    chk("items 域里有带 hp 词条的装备（找不到 ⇒ 这条测不了）", False, _HP_ITEM)
+
+print("")
+print("── ③ 反证（fail-closed 有牙）")
+_capless = CA._p({"cls": "", "hp": 100, "hp_max": 100})    # 老档那两格写死的 100
+chk("还没有职业的档：上限「未定」（`_p` 不写那一格，旧的 100 也不留）",
+    "hp_max" not in _capless and "hp" not in _capless, "%s" % sorted(_capless))
+for label, fn in (("PB.hp_cap 无职业", lambda: panel_build.hp_cap({"cls": ""})),
+                  ("战斗 actor 无职业", lambda: CB.player_actor({"cls": "", "level": 1})),
+                  ("cmds_ast.hp_cap 无职业", lambda: CA.hp_cap(_capless))):
+    try:
+        fn()
+        chk("%s ⇒ 抛 PanelMissing" % label, False, "没抛（错）")
+    except panel_build.PanelMissing as e:
+        chk("%s ⇒ 抛 PanelMissing（点名：%s）" % (label, str(e)[:34]), True)
+try:
+    panel_build.hp_cap({"cls": "cls_berserk"})
+    chk("档上的职业不在 classes 域里 ⇒ 抛 PanelMissing", False, "没抛（错）")
+except panel_build.PanelMissing as e:
+    chk("档上的职业不在域里 ⇒ 抛 PanelMissing（%s）" % str(e)[:34], True)
+chk("无职业 strict=False ⇒ None（呈现面那一档）",
+    panel_build.hp_cap({"cls": ""}, strict=False) is None)
+
+print("")
+print("── ④ 静态守卫：content/*.py 里不许再出现写死的生命上限")
+_HARD = (re.compile(r'["\'](?:hp_max|max_hp)["\']\s*:\s*\d'),
+         re.compile(r'["\'](?:hp_max|max_hp)["\'][^\n]{0,20}?\bor\s+\d'))
+_hits = []
+for name in sorted(os.listdir(os.path.join(PKG, "content"))):
+    if not name.endswith(".py"):
+        continue
+    src = open(os.path.join(PKG, "content", name), encoding="utf-8").read()
+    for _i, line in enumerate(src.splitlines(), 1):
+        if any(p.search(line) for p in _HARD):
+            _hits.append("%s:%d %s" % (name, _i, line.strip()[:48]))
+chk("写死的上限 0 处（原先 apply.py / cmds_ast.py 各一处）", not _hits, str(_hits))
+
+print("")
+print("===== %s =====" % ("★ P-27 三处一致 + 反证都过 ✅" if not fails else "P-27 有红 ❌ %s" % fails))
 sys.exit(0 if ok else 1)

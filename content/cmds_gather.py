@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import random
 
-from .cmds_ast import _data, _p, _save, _map_of, _name_of_node, T
+from .cmds_ast import _data, _p, _save, _map_of, _name_of_node, T, hp_cap_or_line
 from .cmds_codex import new_lines
 from . import calendar as CAL
 from . import codex as CX
@@ -175,7 +175,12 @@ async def search(env, sink, uid, player):
 
 async def rest(env, sink, uid, player):
     p = _p(player)
-    mx = int(p.get("hp_max") or 100)
+    # ★ P-27：上限只有一个来源 = 职业面板。档上还没有职业（建号第二步没走完）⇒ **不出假数**：
+    #   出一行点名的 fail-closed 行，歇脚这一支整段不做。
+    mx, _line = hp_cap_or_line(p)
+    if _line:
+        yield _line
+        return
     hp = int(p.get("hp") or mx)
     if hp >= mx:
         yield T("SYS_REST_FULL")

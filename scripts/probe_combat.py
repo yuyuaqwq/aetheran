@@ -107,7 +107,7 @@ def _lose_once(p):
 
 
 _DIE = dict(CA.DEFAULT_PLAYER)
-_DIE.update({"cls": "cls_knight", "level": 3, "hp": 1, "hp_max": 100, "exp": 200,
+_DIE.update({"cls": "cls_knight", "level": 3, "hp": 1, "exp": 200,
              "bag": {"i_potion_heal": 2}, "loc": "belt_north", "node": "bn_bone",
              "uid": "u_die"})
 _lines_die = _lose_once(_DIE)
@@ -140,7 +140,7 @@ _rnd.seed(20260925)                        # 遭遇战内部走全局随机 ⇒ 
 _MID = "ms_field_mouse"
 _MON_LV = int(MON[_MID].get("lv", 1) or 1)
 _GAIN = dict(CA.DEFAULT_PLAYER)
-_GAIN.update({"cls": "cls_knight", "level": 10, "hp": 400, "hp_max": 400,
+_GAIN.update({"cls": "cls_knight", "level": 10, "hp": 400,
               "gold": 0, "exp": 0, "loc": "belt_north", "node": "bn_bone",
               "bag": {}, "uid": "u_exp"})
 _real_pick = CBmod.pick_encounter

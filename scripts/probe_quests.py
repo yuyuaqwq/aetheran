@@ -31,6 +31,7 @@ ENGINE = os.environ.get("GWEN_ENGINE", "C:/Users/yuyu/framework-engine")
 PLAN = os.environ.get("AST_PLAN", "C:/Users/yuyu/aetheran-plan")
 sys.path.insert(0, ENGINE)
 sys.path.insert(0, os.path.join(REPO, "scripts"))
+sys.path.insert(0, REPO)          # ★ P-27 顺手：经验曲线要走包内那个唯一的口（禁止手打）
 
 from saintess_engine.package import load_stack          # noqa: E402
 
@@ -96,8 +97,9 @@ no_hook = [k for k, v in main if not v.get("hook")]
     "★ 每条主线都有认知推进与钩子（缺 insight %s / hook %s）" % (no_ins or "无", no_hook or "无"))
 
 # ⑧ ★ 奖励可复算（经验 = 等级² × 40 × 系数，钱 = 等级 × 系数）
-def exp_need(lv):
-    return int(lv * lv * 40)
+#   ★ P-27 顺手：这条曲线**不再手打** —— 走包内唯一那个口 `cmds_ast.exp_need`
+#     （升级判定 `add_exp` 与死亡惩罚 `_wake_in_chapel` 都走它；曲线一改这里自动跟着变）。
+from content.cmds_ast import exp_need                    # noqa: E402
 recalc = []
 for k, v in QE.items():
     if v["kind"] == "主线":

@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import random
 
-from .cmds_ast import _data, _p, _save, T
+from .cmds_ast import _data, _p, _save, T, hp_cap_or_line
 from .cmds_talk import _arg
 from .cmds_codex import new_lines
 from . import codex as CX
@@ -271,10 +271,12 @@ def _stat_label(iid: str, stat: str) -> str:
 #: 认不出效果的（键不认识 / 压根没写）一律回「不是这么用的」—— fail-closed，不静默按 0 算。
 
 
-def _heal_gain(p, rec: dict):
+def _heal_gain(p, rec: dict, mx: int):
     """这条东西用下去回多少血（认不出效果给 None）。
 
-    上限只走**档上的** `hp_max`（P-27：面板那一份还没定，先保守用这份 —— 与 `cmds_gather.rest` 同口径）。
+    ★ P-27 收口：上限只走**唯一的那个来源**（职业面板，`cmds_ast.hp_cap`）—— 原先这里读的是
+    档上那个写死 100 的值（与面板两个源 ⇒ 喝药封顶在 100）。与 `cmds_gather.rest` 同口径。
+    `mx` 由调用方从那个口取好（档上还没职业时给 0 ⇒ 本函数只认 `hp` 那一路）。
     `heal` 是**生成器**的口（`scripts/rebuild_recipes.py ⑦` 从 desc「回 N 点生命」解析，禁手打）——
     这里把它归一到同一套算法，所以「伤药」与「药水」走的是同一条路。
     """
@@ -287,7 +289,6 @@ def _heal_gain(p, rec: dict):
     if "hp" in eff:
         hit, gain = True, gain + int(eff.get("hp") or 0)
     if "hp_pct" in eff:
-        mx = int(p.get("hp_max") or 100)
         hit, gain = True, gain + int(round(mx * float(eff.get("hp_pct") or 0)))
     if not hit:
         return None
@@ -325,9 +326,14 @@ async def item_use(env, sink, uid, player):
                 buff="%s +%d%%" % (_stat_label(iid, str(food.get("stat"))), int(food.get("pct") or 0)),
                 minutes=int(food.get("seconds") or 0) // 60)
         return
-    gain = _heal_gain(p, rec)
+    # ★ P-27：上限只有一个来源 = 职业面板。档上还没有职业 ⇒ **不出假数**：出一行点名的
+    #   fail-closed 行（`hp_cap_or_line`），这一支不做（药水也不消耗）。
+    mx, _line = hp_cap_or_line(p)
+    gain = _heal_gain(p, rec, mx or 0)
     if gain is not None:
-        mx = int(p.get("hp_max") or 100)
+        if _line:
+            yield _line
+            return
         hp0 = int(p.get("hp") or mx)
         hp = min(mx, hp0 + gain)                 # ★ 回血封顶：不许超过上限
         p["hp"] = hp
