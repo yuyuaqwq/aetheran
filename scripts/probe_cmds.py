@@ -255,9 +255,13 @@ DOC = (
 
 
 print("探针：指令路由（第 23 个 · B3-14 触发词撞车 · P-23 只列有处理器的指令）")
+#: ★ 探针的时钟**钉死**：早先这里写的是 `time.time` ⇒ 换个时刻跑，天气/日期相关的遭遇就会变，
+#:   门禁跟着绿红跳（同一天上午绿、下午红）。口径与 `probe_weather` 一致：`clock` 注入一个常量。
+_FIXED = 1790308800          # 2026-09-25 12:00 +08:00
+
 st = load_stack(str(REPO), inject={
     "db_path": os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp", "ast_probe_cmds.db"),
-    "clock": time.time})
+    "clock": lambda: _FIXED})
 st.install()
 DECL = st.command_declarations()
 REG = CommandRegistry(name="probe_cmds").load(DECL)
@@ -332,7 +336,7 @@ lines, saved = {}, {}
 try:
     _ad = _Ad(STEPS, seed={"level": 1, "gold": 30, "hp": 100, "bag": {}, "equipped": {}, "codex": {},
                            "flags": {"quests_active": ["q_main_01"]}})
-    _host = Host(_ad, str(REPO), inject={"db_path": _db, "clock": time.time})
+    _host = Host(_ad, str(REPO), inject={"db_path": _db, "clock": lambda: _FIXED})
     _host.boot()
     for _t in STEPS:
         _ad.out.clear()
@@ -509,7 +513,7 @@ try:
     _seed = {"level": 3, "gold": 30, "hp": 100, "bag": {}, "equipped": {}, "codex": {},
              "flags": {}, "prev": [], "race": "human"}
     _ad2 = _Ad([], seed=_seed)
-    _host2 = Host(_ad2, str(REPO), inject={"db_path": _db2, "clock": time.time})
+    _host2 = Host(_ad2, str(REPO), inject={"db_path": _db2, "clock": lambda: _FIXED})
     _host2.boot()
     _soon_bad, _soon_miss = [], []
     for _k, _where in _DUNGEON:
@@ -606,7 +610,7 @@ try:
     except OSError:
         pass
     _ad9 = _Ad([], seed=dict(_SEED9))
-    _host9 = Host(_ad9, str(REPO), inject={"db_path": _db9, "clock": time.time})
+    _host9 = Host(_ad9, str(REPO), inject={"db_path": _db9, "clock": lambda: _FIXED})
     _host9.boot()
 
     def _say9(text):
@@ -677,7 +681,7 @@ try:
     _ad9b = _Ad([], seed={"cls": "cls_knight", "race": "human", "level": 3, "hp": 100,
                           "alloc": dict(_ALLOC9), "bag": {_W1: 1},
                           "equipped": {}, "codex": {}, "flags": {}})
-    _host9b = Host(_ad9b, str(REPO), inject={"db_path": _db9b, "clock": time.time})
+    _host9b = Host(_ad9b, str(REPO), inject={"db_path": _db9b, "clock": lambda: _FIXED})
     _host9b.boot()
 
     def _say9b(text):
@@ -971,7 +975,7 @@ try:
     except OSError:
         pass
     _ad12 = _Ad([], seed=dict(_SEED12))
-    _h12 = Host(_ad12, str(REPO), inject={"db_path": _db12, "clock": time.time})
+    _h12 = Host(_ad12, str(REPO), inject={"db_path": _db12, "clock": lambda: _FIXED})
     _h12.boot()
     _said12 = []
 
@@ -1121,7 +1125,7 @@ try:
     except OSError:
         pass
     _ad12b = _Ad([], seed=dict(_SEED12, loc="belt_north", node="bn_bone"))
-    _h12b = Host(_ad12b, str(REPO), inject={"db_path": _db12b, "clock": time.time})
+    _h12b = Host(_ad12b, str(REPO), inject={"db_path": _db12b, "clock": lambda: _FIXED})
     _h12b.boot()
     _ad12b.out.clear()
     _h12b.handle({"uid": "u_c", "group_id": "g_c", "text": "卖出 骨头"})
@@ -1283,7 +1287,7 @@ try:
         os.remove(_db13)
     except OSError:
         pass
-    _h13 = Host(_bad13, str(REPO), inject={"db_path": _db13, "clock": time.time})
+    _h13 = Host(_bad13, str(REPO), inject={"db_path": _db13, "clock": lambda: _FIXED})
     _h13.boot()
     _bad13.out.clear()
     _h13.handle({"uid": "u_c", "group_id": "g_c", "text": "加点"})
@@ -1360,7 +1364,7 @@ try:
     except OSError:
         pass
     _ad16 = _Ad([], seed=dict(_SEED16))
-    _h16 = Host(_ad16, str(REPO), inject={"db_path": _db16, "clock": time.time})
+    _h16 = Host(_ad16, str(REPO), inject={"db_path": _db16, "clock": lambda: _FIXED})
     _h16.boot()
     _said16 = []
     _BAD16 = []
@@ -1609,7 +1613,7 @@ try:
         except OSError:
             pass
         _ad13 = _Ad([], seed=dict(seed))
-        _h13 = Host(_ad13, str(REPO), inject={"db_path": _db13, "clock": time.time})
+        _h13 = Host(_ad13, str(REPO), inject={"db_path": _db13, "clock": lambda: _FIXED})
         _h13.boot()
         _ad13.out.clear()
         _h13.handle({"uid": "u_c", "group_id": "g_c", "text": text})
@@ -1698,7 +1702,7 @@ try:
         CBO23.pick_encounter = (lambda *a, **k: [pin]) if pin else (lambda *a, **k: [])
         try:
             _ad23 = _Ad([], seed=dict(seed))
-            _h23 = Host(_ad23, str(REPO), inject={"db_path": _db23, "clock": time.time})
+            _h23 = Host(_ad23, str(REPO), inject={"db_path": _db23, "clock": lambda: _FIXED})
             _h23.boot()
             _ad23.out.clear()
             _h23.handle({"uid": "u_c", "group_id": "g_c", "text": text})
