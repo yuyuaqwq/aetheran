@@ -379,6 +379,30 @@ chk("★ 菜品增益 = 最贵那样食材的品阶（普通 %d / 精制 %d / �
 chk("★ 菜品卖价 = 食材市价合计 × %s 四舍五入（按 items 市价复算 · 8 道菜）" % _sell_mult,
     not _bad_sell, "%s" % (_bad_sell or "无"))
 
+# ⑪ ★ B4-8：`使用` 的两句话不许混用 —— 「手上没有这件」 vs 「有、但认不出效果」
+def _txt(key, **kw):
+    return str((TX.get(key) or {}).get("value") or "").format(**kw)
+
+
+_p0 = {"cls": "cls_knight", "level": 1, "bag": {}, "gold": 100}
+_line_miss = run_ag(CR.item_use(E("使用 药水"), None, "u_use0", _p0))
+_want_miss = _txt("SYS_GEAR_IN_BAG", name="药水")
+chk("★ 手上没有「药水」⇒ 说「%s」（与 查看 / 丢弃 / 装备 同一个口）—— 原先两句共用"
+    "「不是这么用的」，等于告诉玩家他手里有一瓶" % _want_miss,
+    _line_miss == [_want_miss] and not _p0["bag"],
+    "%s" % (_line_miss[:1],))
+
+_mat = next((k for k, v in sorted(IT.items())
+             if not str(k).startswith("_") and v.get("kind") == "材料"
+             and not v.get("effect") and not v.get("heal") and not v.get("food")), "")
+_p1 = {"cls": "cls_knight", "level": 1, "bag": {_mat: 1}, "gold": 100}
+_line_bad = run_ag(CR.item_use(E("使用 %s" % IT[_mat]["name"]), None, "u_use1", _p1))
+_want_bad = _txt("SYS_USE_NOT", name=IT[_mat]["name"])
+chk("★ 手里真有「%s」但认不出效果 ⇒ 才是「%s」· 东西不消耗（fail-closed）"
+    % (IT[_mat]["name"], _want_bad),
+    _line_bad == [_want_bad] and _p1["bag"] == {_mat: 1},
+    "%s / %s" % (_line_bad[:1], _p1["bag"]))
+
 print()
 print("结果：%s" % ("全绿 ✓" if not fails else "有红 ✗（%d）" % len(fails)))
 sys.exit(1 if fails else 0)

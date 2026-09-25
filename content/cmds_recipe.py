@@ -314,7 +314,10 @@ async def item_use(env, sink, uid, player):
             hit = (iid, rec)
             break
     if not hit or _have(p, hit[0]) <= 0:
-        yield T("SYS_USE_NOT", name=want)
+        # ★ B4-8：**手上没有这件**与「有、但认不出效果」是两件事 —— 原先两句共用
+        #   `SYS_USE_NOT`（「药水不是这么用的」），玩家手里压根没有药水时听到这句，
+        #   等于被糊了一句假话。缺件走 `查看` / `丢弃` / `装备` 同一个口（口径表里那一行）。
+        yield T("SYS_GEAR_IN_BAG", name=want)
         return
     iid, rec = hit
     food = rec.get("food") or {}

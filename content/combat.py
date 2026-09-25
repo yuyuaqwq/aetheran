@@ -113,7 +113,11 @@ def player_actor(player: dict, stack_prefix: str = "aetheran", *,
     mx = int(a["max_hp"])
     hp = int(player.get("hp") or mx)
     a["hp"] = max(1, min(hp, mx))
-    a.setdefault("mp", 0)
+    # ★ B4-8：**现蓝**与现血走同一条路（读档）—— 上限那一格由面板给出（`build_actor`），
+    #   现蓝那一格归档（`_p` 已按同一个上限钳过）。原先这里 `setdefault("mp", 0)` =
+    #   「档上写什么不管、永远 0 起手」⇒ 档与 actor 两处口径（今天两边的值是同一个 0，
+    #   但那是碰巧 —— 谁往档上写一次现蓝，战斗里读到的就还是 0）。
+    a["mp"] = max(0, int(player.get("mo") or 0))
     a.setdefault("max_mp", int(a.get("max_mp") or 0))
     # ★ 技能表必给（缺了引擎会挑默认技 —— 实测挑成了「圣光治愈」，双方打不死）
     a["skills"] = list(player.get("skills") or _default_skills(cls, lv))

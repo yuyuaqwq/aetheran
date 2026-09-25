@@ -22,6 +22,13 @@ KEYMAP = {
     "hp": "max_hp", "mo": "max_mp", "atk": "atk", "matk": "matk", "def": "def",
     "res": "mdef", "spd": "spd", "hit": "hit", "eva": "dodge", "block": "block",
     "heal_pow": "heal_pow", "critdmg": "crit_dmg",
+    # ★ B4-8：`mo_max` 也归 `max_mp` —— 两边的**宪法名不一样**：classes 域那一栏叫 `mo`
+    #   （base / growth / conv 一路都是它），items 域那一栏叫 `mo_max`（`01_属性字典 §2.2`
+    #   的标准键 + `11_装备特色词条池 §六` 的数值词条表）。
+    #   原先这一格漏了 ⇒ 装备词条 `mo_max`（法师那支「星屑的指杖」+9）落在一个**引擎不认的
+    #   键 `mo_max`** 上：`对比` 里明明写着「法力 +9」，面板 / 档 / 战斗三处一个数都不动
+    #   （与 P-27 修掉的那条同族：装备的**生命**上限原先也是死的）。
+    "mo_max": "max_mp",
 }
 INT_KEYS = ("max_hp", "max_mp")
 
@@ -274,3 +281,22 @@ def hp_cap(record, *, strict: bool = True, uid: str | None = None):
     # ★ P-34：档 → 面板只走一个口（职业 + 等级 + **档上实际那份加点** + 装备 + 增益）
     # ★ B3-28 ①：uid 拿得到就传（栈 id 带上身份）；拿不到走这一档的指纹，一样不撞格。
     return int(actor_of_record(rec, uid=uid)["max_hp"])
+
+
+def mp_cap(record, *, strict: bool = True, uid: str | None = None):
+    """玩家档 → **法力上限**（引擎键 `max_mp`）。唯一来源：本函数（职业面板）。
+
+    B4-8：与 `hp_cap` **同一把尺**（P-27 定的那条：上限只有一个来源 = 职业面板）。
+      原先 `状态` 那一行读的是档上的 `mo_max`，而那一格**全仓零写端**
+      （`apply.initial_save` 与 `cmds_ast.DEFAULT_PLAYER` 都写死 0）⇒ 骑士的面板明明有
+      50 点法力，玩家在 `状态` 上看到的却是「法力 0/0」，同一句话在 `属性` 那一页
+      （走面板）又显示「法力 50」—— 同一件事两处口径。
+
+    两种失败分开处置（与 `hp_cap` 逐条同形）：档上 `cls` **空** ⇒ `strict=False` 回 `None`
+      （呈现面照实说「未定」，不猜数）；`cls` 有值但不在 classes 域里 ⇒ 一律抛（点名）。
+    """
+    rec = record if isinstance(record, dict) else {}
+    cls = str(rec.get("cls") or "").strip()
+    if not cls and not strict:
+        return None                            # 还没择业 ⇒ 上限未定（不猜数、也不崩）
+    return int(actor_of_record(rec, uid=uid)["max_mp"])

@@ -625,6 +625,8 @@ def main():
         ("使用(药水)", CR.item_use, "使用 药水", {"cls": "cls_knight", "bag": {"i_potion_heal": 1}}),
         ("使用(伤药)", CR.item_use, "使用 伤药",
          {"cls": "cls_knight", "bag": {"i_potion_minor": 1}, "hp": 10}),
+        # ★ B4-8：手上没有这件 —— 走「背包里没有」那一句（原先混用「不是这么用的」）
+        ("使用(手上没有)", CR.item_use, "使用 药水", {}),
         ("图鉴(空)", CC.codex, "", {}),
         ("图鉴(满)", CC.codex, "", _rich()),
         ("材料谱(空)", CC.codex_material, "", {}),

@@ -178,10 +178,11 @@ def initial_save(uid: str, ctx: dict | None = None) -> dict:
     ★ P-27：**不写 `hp` / `hp_max`** —— 生命上限只有一个来源（职业面板），由 `cmds_ast._p`
       出档时按面板派生（原先这里与 `cmds_ast.DEFAULT_PLAYER` 各写死 100 ⇒ 两个源，
       而且没有任何升级 / 换装钩子刷它）。
+    ★ B4-8：`mo` / `mo_max` 同理撤掉 —— 法力上限同样只由面板派生（`panel_build.mp_cap`）；
+      原先两处各写死 0 ⇒ 骑士面板 50 点法力，`状态` 却恒显示「法力 0/0」。
     """
     return {
         "name": "", "race": "", "cls": "", "level": 1, "exp": 0,
         "loc": "windmill_town", "node": "wt_gate_n", "prev": [],
-        "mo": 0, "mo_max": 0,
         "gold": 30, "bag": {}, "equipped": {}, "flags": {}, "codex": {},
     }

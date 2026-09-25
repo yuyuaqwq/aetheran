@@ -70,10 +70,11 @@ def _map_scene(loc):
 # ── 玩家档（形状：location/level/race/class/name/hp…）──────────────
 #: ★ P-27：档上**不写** `hp` / `hp_max` —— 生命上限只有一个来源（职业面板），
 #:   由 `_p()` 出档时按面板派生（原先这里与 `apply.initial_save` 各写死 100 ⇒ 两个源）。
+#: ★ B4-8：`mo` / `mo_max` 同理撤掉（原先两处写死 0 ⇒ `状态` 恒「法力 0/0」而面板是 50）——
+#:   两个上限都只认面板那一个来源。
 DEFAULT_PLAYER = {
     "name": "", "race": "", "cls": "", "level": 1, "exp": 0,
     "loc": "windmill_town", "node": "wt_gate_n", "prev": [],
-    "mo": 0, "mo_max": 0,
     "gold": 30, "bag": {}, "equipped": {}, "flags": {}, "codex": {},
 }
 
@@ -170,6 +171,17 @@ def _p(player):
     else:
         p["hp_max"] = cap
         p["hp"] = max(1, min(int(p.get("hp") or cap), cap))   # 现血跟着同一个上限（满血起手）
+    # ★ B4-8：**法力上限**同样只有面板一个来源（`mp_cap`，与生命那把尺同一把）——
+    #   档上 `mo_max` 这一格原先零写端（两个初始档都写死 0）⇒ `状态` 恒显示「法力 0/0」，
+    #   而面板里骑士是 50 ⇒ 同一件事两处口径。现蓝读档（缺省 0）—— 与战斗 actor 的起手
+    #   （`combat.player_actor` 的 `setdefault("mp", 0)`）对得上，不发明「开战满蓝」这种
+    #   真源没写的规矩（法力要不要真做 = 台账 §3 新记的那笔）。
+    mcap = _PB.mp_cap(p, strict=False)
+    if mcap is None:
+        p.pop("mo_max", None)                              # 无职业 ⇒ 这一格也不留（照实说未定）
+    else:
+        p["mo_max"] = mcap
+        p["mo"] = max(0, min(int(p.get("mo") or 0), mcap))
     return p
 
 
@@ -842,12 +854,14 @@ async def status(env, sink, uid, player):
     #   不拿 100 垫（原先写死 100 ⇒ 面板 116 的骑士 `状态` 显示 100/100）。
     from . import panel_build as _PB                       # 本地 import：避免包装载期成环
     cap = _PB.hp_cap(p, strict=False)
+    mcap = _PB.mp_cap(p, strict=False)                     # ★ B4-8：与生命同一把尺（面板）
     if cap is None:
+        # 还没择业 ⇒ 两格的**上限**都是未定（法力上限同样由职业决定：骑士 50 / 狂战士 0）
         yield T("SYS_STATUS_VITALS", hp=T("SYS_UNSET"), hp_max=T("SYS_UNSET"),
-                mo=p.get("mo"), mo_max=p.get("mo_max"), gold=p.get("gold"))
+                mo=T("SYS_UNSET"), mo_max=T("SYS_UNSET"), gold=p.get("gold"))
     else:
         yield T("SYS_STATUS_VITALS", hp=p.get("hp"), hp_max=cap,
-                mo=p.get("mo"), mo_max=p.get("mo_max"), gold=p.get("gold"))
+                mo=p.get("mo"), mo_max=mcap, gold=p.get("gold"))
     yield T("SYS_STATUS_EXP", exp=p.get("exp"),
             place=_map_of(p["loc"]).get("name", p["loc"]) if _map_of(p["loc"]) else p["loc"])
 

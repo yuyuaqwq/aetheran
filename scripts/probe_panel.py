@@ -98,8 +98,12 @@ _HP_ITEM = next((k for k in sorted(_ITS)
                  if any(a.get("stat") == "hp" for a in (_ITS[k].get("affixes") or []))), "")
 
 
-def three(cls, level, tag="", **over):
-    """(面板, 档, 战斗 actor) 三个数 —— 档是**真存进库再读回来**的那一份。"""
+def three(cls, level, tag="", key="max_hp", field="hp_max", **over):
+    """(面板, 档, 战斗 actor) 三个数 —— 档是**真存进库再读回来**的那一份。
+
+    `key` / `field` 默认是生命那一对（P-27）；传 `max_mp` / `mo_max` 就是法力那把尺
+    （B4-8：两条上限走同一条路、同一份档、同一个出档口）。
+    """
     uid = "u_hp_%s_%d%s" % (cls or "none", level, ("_" + tag) if tag else "")
     rec = {"cls": cls, "level": level}
     rec.update(over)
@@ -110,8 +114,8 @@ def three(cls, level, tag="", **over):
     rec = back                                             # 后面那句面板/actor 都吃库里那一份
     gear, buffs = panel_build.gear_and_buffs(rec)
     cap_panel = int(panel_build.build_actor(rec["cls"], level, rec.get("alloc"),
-                                            gear, buffs=buffs)["max_hp"])
-    return cap_panel, int(back["hp_max"]), int(CB.player_actor(back)["max_hp"])
+                                            gear, buffs=buffs)[key])
+    return cap_panel, int(back[field]), int(CB.player_actor(back)[key])
 
 
 print("")
@@ -171,7 +175,9 @@ chk("无职业 strict=False ⇒ None（呈现面那一档）",
 print("")
 print("── ④ 静态守卫：content/*.py 里不许再出现写死的生命上限")
 _HARD = (re.compile(r'["\'](?:hp_max|max_hp)["\']\s*:\s*\d'),
-         re.compile(r'["\'](?:hp_max|max_hp)["\'][^\n]{0,20}?\bor\s+\d'))
+         re.compile(r'["\'](?:hp_max|max_hp)["\'][^\n]{0,20}?\bor\s+\d'),
+         # ★ B4-8：档上那一格同样不许写死（两个初始档原先各写死 `mo_max: 0` ⇒ `状态` 恒 0/0）
+         re.compile(r'["\']mo_max["\']\s*:\s*\d'))
 _hits = []
 for name in sorted(os.listdir(os.path.join(PKG, "content"))):
     if not name.endswith(".py"):
@@ -180,7 +186,8 @@ for name in sorted(os.listdir(os.path.join(PKG, "content"))):
     for _i, line in enumerate(src.splitlines(), 1):
         if any(p.search(line) for p in _HARD):
             _hits.append("%s:%d %s" % (name, _i, line.strip()[:48]))
-chk("写死的上限 0 处（原先 apply.py / cmds_ast.py 各一处）", not _hits, str(_hits))
+chk("★ 写死的上限 0 处（生命：原先 `apply.py` / `cmds_ast.py` 各写死 100 ｜ "
+    "法力：同样那两处各写死 `mo_max: 0`）", not _hits, str(_hits))
 
 print("")
 print("── ⑤ ★ B3-9：`装备` / `卸下` 真改 equipped ⇒ 面板 / 档 / 战斗 actor 三处一起动；"
@@ -765,6 +772,82 @@ try:
 except Exception as exc:                                                      # noqa: BLE001
     chk("★ B3-28 ① 面板栈按人隔离那一节跑得起来", False, "%s: %s" % (type(exc).__name__, exc))
 
+
 print("")
-print("===== %s =====" % ("★ P-27 三处一致 + 反证都过 ✅" if not fails else "P-27 有红 ❌ %s" % fails))
+print("── ⑨ ★ B4-8：**法力上限**与生命同一把尺（面板 / 档 / actor 三处一致）")
+#   病根（真机玩出来）：`状态` 那一行读的是档上的 `mo_max`，而那一格**零写端**
+#   （两个初始档都写死 0）⇒ 骑士面板明明 50 点法力，玩家看见的是「法力 0/0」；
+#   同一件事在 `属性` 那一页（走面板）又是「法力 50」—— 两处口径。
+#   判据：① 六职业 1 级三处同一个数（期望值**从 classes 域现算**，不手打）
+#        ② 换一件带 `mo_max` 词条的装 ⇒ 三处**一起**涨（不是写死的常数）
+#        ③ 反证：无职业 ⇒ `strict=False` 回 None / `strict=True` 抛 · `_p` 不留那一格
+#        ④ 静态守卫（上一节 ④：档上那一格不许再写死）
+_MP_ITEM = next((k for k in sorted(_ITS)
+                 if any(a.get("stat") == "mo_max" for a in (_ITS[k].get("affixes") or []))), "")
+_mp_base = {}
+for _cid in sorted((st.domain("classes") or {})):
+    if str(_cid).startswith("_"):
+        continue
+    _a1, _a2, _a3 = three(str(_cid), 1, tag="mp", key="max_mp", field="mo_max")
+    _want_mp = int((st.domain("classes")[_cid] or {}).get("base", {}).get("mo") or 0)
+    _mp_base[str(_cid)] = _a1
+    chk("%s 1 级法力上限三处一致 = %s（= classes 域 base.mo）" % (_cid, _want_mp),
+        _a1 == _a2 == _a3 == _want_mp, "%s / %s / %s" % (_a1, _a2, _a3))
+print("  1 级法力上限：%s" % " · ".join("%s=%s" % (k, v) for k, v in sorted(_mp_base.items())))
+if _MP_ITEM:
+    _mi = _ITS[_MP_ITEM]
+    _mv = int(next(a.get("v") for a in (_mi.get("affixes") or []) if a.get("stat") == "mo_max"))
+    #: 域里带 `mo_max` 词条的只有法师那支杖 ⇒ 拿法师那一档试（装备门槛归『装备』指令判，
+    #: 面板本身不认门槛 —— 这条判的是「面板 / 档 / actor 三处是不是同一份算出来的」）
+    _mcls = "cls_mage"
+    _b1, _b2, _b3 = three(_mcls, 1, tag="mpbare", key="max_mp", field="mo_max")
+    _q1, _q2, _q3 = three(_mcls, 1, tag="mpgear", key="max_mp", field="mo_max",
+                          equipped={str(_mi.get("slot")): _MP_ITEM})
+    chk("★ 换一件带法力上限词条的装（%s · +%s）⇒ 三处一起涨（%s → %s）"
+        % (_mi.get("name"), _mv, _b1, _b1 + _mv),
+        _q1 == _q2 == _q3 == _b1 + _mv, "%s / %s / %s" % (_q1, _q2, _q3))
+else:
+    chk("items 域里有带 mo_max 词条的装备（找不到 ⇒ 这条测不了）", False, _MP_ITEM)
+chk("★ 反证：`mp_cap` 无职业 `strict=False` ⇒ None（呈现面那一档）",
+    panel_build.mp_cap({"cls": ""}, strict=False) is None)
+try:
+    panel_build.mp_cap({"cls": ""})
+    chk("★ 反证：`mp_cap` 无职业 `strict=True` ⇒ 抛 PanelMissing", False, "没抛（错）")
+except panel_build.PanelMissing as _e:
+    chk("★ 反证：`mp_cap` 无职业 `strict=True` ⇒ 抛 PanelMissing（点名：%s）"
+        % str(_e)[:26], True)
+#: ★ B4-8（K61 那种「覆盖面要跟判据一起加」）：这不是「一条词条坏了」，是**一族**——
+#:   items 域用到的**宪法数值键**必须条条落得到引擎的面板键上；`mo_max` 原先漏在映射表外，
+#:   于是「法师杖的法力 +9」这类词条在呈现面上有、在面板里没有。这里按**域里真用到的键**
+#:   全扫一遍（不是只钉那一件），映射表再漏一个当场红。
+_PANEL_KEYS = {"max_hp", "max_mp", "atk", "matk", "def", "mdef", "spd", "hit",
+               "dodge", "block", "heal_pow", "crit", "crit_dmg"}
+_CONST_KEYS = {"hp", "hp_max", "mo", "mo_max", "atk", "matk", "def", "res", "spd",
+               "hit", "eva", "crit", "critdmg", "block", "heal_pow"}
+_used_stats = sorted({str(a.get("stat")) for k, v in _ITS.items() if not str(k).startswith("_")
+                      for a in (v.get("affixes") or [])})
+_orphan = [s for s in _used_stats if s in _CONST_KEYS
+           and panel_build.KEYMAP.get(s, s) not in _PANEL_KEYS]
+chk("★ items 域用到的 %d 个宪法数值键**条条落得到面板键上**（映射表再漏一个就红）"
+    % len([s for s in _used_stats if s in _CONST_KEYS]),
+    not _orphan, "落空的：%s" % _orphan)
+
+#: 现蓝那一条：档与 actor 同一个数（与现血同形）· 档上写超了按面板上限钳
+_mp_act = CB.player_actor({"cls": "cls_knight", "level": 1, "mo": 7})
+chk("★ 现蓝也读档（档上 7 ⇒ actor 的 `mp` = 7）· 上限仍是面板那一个（%s）"
+    % _mp_act.get("max_mp"),
+    int(_mp_act.get("mp") or 0) == 7 and int(_mp_act.get("max_mp") or 0) == 50,
+    "%s / %s" % (_mp_act.get("mp"), _mp_act.get("max_mp")))
+_mp_over = CA._p({"cls": "cls_knight", "level": 1, "mo": 9999})
+chk("★ 档上现蓝写超了 ⇒ 出档口按面板上限钳（9999 → %s）" % _mp_over.get("mo"),
+    int(_mp_over.get("mo") or 0) == int(_mp_over.get("mo_max") or -1) == 50,
+    "%s / %s" % (_mp_over.get("mo"), _mp_over.get("mo_max")))
+
+_mp_less = CA._p({"cls": "", "mo": 0, "mo_max": 0})            # 老档那两格写死的 0
+chk("★ 还没有职业的档：法力上限那一格也不留（照实说「未定」，旧的 0 不当上限）",
+    "mo_max" not in _mp_less, "%s" % sorted(_mp_less))
+
+print("")
+print("===== %s =====" % ("★ P-27 / B4-8 两个上限三处一致 + 反证都过 ✅" if not fails
+                          else "有红 ❌ %s" % fails))
 sys.exit(0 if ok else 1)

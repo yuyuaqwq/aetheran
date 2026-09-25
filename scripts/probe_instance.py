@@ -203,6 +203,13 @@ def solo_transcript():
 #   来历 = 本批基线 **3ee9148** 那棵树上跑 `python scripts/probe_instance.py --dump`
 #   （同一段脚本、同一套夹具、同一个种子）打出来的**逐字回话 + 档上那几格**。
 #   `--dump` 在改前那棵树上也跑得动（那支不 import `content.instance`）。
+#
+#   ★ B4-8 刷新过一次（就一次）：`状态` 那一行的**法力上限**改成走面板唯一口
+#     （`panel_build.mp_cap`，原先读档上那格零写端的 `mo_max`）⇒ 逐字对账里
+#     唯一变的一行是「…法力 0/0…」→「…法力 0/50…」（新旧两份 `--dump` 逐行 diff 过，
+#     其余 4 条指令 · 85 行 · 档上那几格**一字未动**）。这一条判据的意思是
+#     「单人那条路没被**动过**」，不是「一个字都不许改」—— 有意的口径变更要在这里跟账，
+#     并另加判据钉住新口径（见 `probe_panel` ⑨ / `probe_recipes` ⑪）。
 # ══════════════════════════════════════════════════════════════
 BASELINE_PATH = os.path.join(str(REPO), "scripts", "_baseline_instance_solo.json")
 
