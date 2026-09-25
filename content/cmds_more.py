@@ -56,7 +56,10 @@ STASH_NODE = "wt_inn"
 #: ⚠ 引擎键与槽位名不是一一对应：抗性那一格引擎叫 `mdef`、槽位是 `SYS_STAT_RES`（见 `panel_build.KEYMAP`）。
 PANEL_ROWS = (
     ("atk", "ATK"), ("matk", "MATK"), ("def", "DEF"), ("mdef", "RES"),
-    ("spd", "SPD"), ("hit", "HIT"), ("dodge", "EVA"), ("block", "BLOCK"),
+    ("spd", "SPD"), ("hit", "HIT"),
+    # ★ B4-21：闪避读**宪法数值** `eva`（`01_属性字典 §2.2` 的 rating），不是栈里那一格
+    #   `dodge`（那是**率**，B3-14 率化之后就落不到 actor 上 ⇒ 这一行变成死行、从没出过）。
+    ("eva", "EVA"), ("block", "BLOCK"),
     ("heal_pow", "HEAL_POW"),
 )
 
@@ -95,17 +98,15 @@ def _panel_rows(actor: dict) -> list:
 
 
 def _crit_rate(actor: dict) -> float:
-    """暴击**率** —— 从面板栈那条 `crit_rate` 层现读（F3 的换算在 `panel_build.build_actor`）。
+    """暴击**率** —— 走 `panel_build.rate_of_actor` 那一口现读（F3 的换算在 `build_actor`）。
 
     ★ 为什么不读 `actor["crit"]`：`crit` 是**非线性率**，内容侧按 F3 算好后用 `set` 层一次性写入
       （见 `panel_build` 那段注释）—— `actor` 里那一格只是各层相加的中间值，不是率。引擎读的是
       栈里那一层 ⇒ 这里也读它（同一个真源，不另算一遍）。
+    ★ B4-21：这一页原先**自己钻栈**、按 `"crit_rate"` 找层 —— 那个 id 栈里没有（`"rate"` 才是）
+      ⇒ 取不到就 `return 0.0` ⇒ 永远印「暴击率 0%」。现在层 id 只归 `panel_build` 登记。
     """
-    decl = PB.stacks().get(str(actor.get("panel_stack") or "")) or {}
-    for layer in decl.get("layers") or []:
-        if layer.get("id") == "crit_rate":
-            return float((layer.get("values") or {}).get("crit") or 0.0)
-    return 0.0
+    return PB.rate_of_actor(actor, "crit")
 
 
 # ══════════════════════════════════════════════════════════════

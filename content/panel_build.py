@@ -40,6 +40,13 @@ INT_KEYS = ("max_hp", "max_mp")
 #:   ⇒ **六职业恒定 40% 闪避**（数值差异全被 cap 吃掉）；怪物那边 `dodge` 干脆没接线。
 RATE_KEYS = ("crit", "eva")
 
+#: ★ B4-21：面板栈里那条「率」层的 id —— **只在本文件登记一件事**。
+#:   病根：`cmds_more._crit_rate` 原先自己钻栈、按 `"crit_rate"` 找层（那是 texts 槽位名
+#:   `SYS_PANEL_CRIT_RATE` 的半截），而栈里那一层的 id 是 `rate` ⇒ 找不到就 `return 0.0`
+#:   ⇒ `属性` 那一页永远印「暴击率 0%」（六职业 / 任何等级 / 任何装备都一样）。
+#:   谁要那两个率，走 `rate_of_actor()` 这一口 —— 别再自己扫层。
+RATE_LAYER_ID = "rate"
+
 
 def rate_of(rating: float) -> float:
     """数值 → 率（宪法 F3 形状 `r/(r+K_rate)`）。**玩家与怪共用这一把尺**。"""
@@ -186,10 +193,11 @@ def build_actor(cls_id: str, level: int, alloc: dict | None = None,
     #   （装备词条里 `crit` / `eva` 是真有的：items 域 17 件带 crit、5 件带 eva）。
     #   原先只率化 crit 且**没带装备**（gear 的 crit 写在 add 层、随后被 set 层盖掉 ⇒ 白穿）；
     #   eva 干脆没率化 ⇒ 引擎按率读 10/20、cap 到 0.40 ⇒ 六职业恒定 40% 闪避。
-    rate_vals = {
-        "crit": rate_of(p.get("crit", 0) + float(gear_e.get("crit", 0) or 0)),
-        "dodge": rate_of(p.get("eva", 0) + float(gear_e.get("dodge", 0) or 0)),
-    }
+    #   ★ B4-21：两个**宪法数值**先算出来（rating）—— 栈里给引擎的是**率**，
+    #     而玩家要看见的是数值（`01_属性字典 §〇①`「面板上只放数值，不放率」）。
+    crit_rating = p.get("crit", 0) + float(gear_e.get("crit", 0) or 0)
+    eva_rating = p.get("eva", 0) + float(gear_e.get("dodge", 0) or 0)
+    rate_vals = {"crit": rate_of(crit_rating), "dodge": rate_of(eva_rating)}
 
     # ★ B3-28 ①：键 = `前缀.职业@等级`（**可复用的那一维**，同级同职业共用得到它）
     #   + `#<人那一维>`（身份或这一档的指纹）。原先只有前半截 ⇒ 撞格。
@@ -209,7 +217,7 @@ def build_actor(cls_id: str, level: int, alloc: dict | None = None,
             {"id": "gear", "src": T("SYS_PANEL_GEAR"), "group": "gear", "mode": "add",
              "keys": keys, "values": {k: gear_e.get(k, 0) for k in keys}},
             # crit / eva 是非线性率（F3），三层相加无意义 ⇒ 内容侧算好后用 set 层一次性写入
-            {"id": "rate", "src": T("SYS_PANEL_CRIT_RATE"), "group": "rate", "mode": "set",
+            {"id": RATE_LAYER_ID, "src": T("SYS_PANEL_CRIT_RATE"), "group": "rate", "mode": "set",
              "keys": ["crit", "dodge"], "values": dict(rate_vals)},
         ] + ([{"id": "food", "src": T("SYS_PANEL_FOOD"), "group": "buff", "mode": "mul",
                "keys": sorted(buffs), "values": dict(buffs)}] if buffs else []),
@@ -223,12 +231,38 @@ def build_actor(cls_id: str, level: int, alloc: dict | None = None,
         "panel_refs": {},
         "panel_flags": {},
     })
+    # ★ B4-21：再放一格**宪法数值** —— `eva`（`01_属性字典 §2.2` 的 rating）。
+    #   栈里那一格 `dodge` 是**率**（引擎按率读）⇒ `属性` 页原先按 `dodge` 取「闪避」那一行，
+    #   B3-14 把 eva 率化（从三层里摘掉）之后那一行就**再也没出过**（`PANEL_ROWS` 里写着 EVA，
+    #   取不到 —— 死行）。这里把数值放回来，页面读 `eva`。
+    actor["eva"] = eva_rating
     return actor
 
 
 def stacks() -> dict:
     """panel_layers_fn 的供体：栈 id → decl。"""
     return _REGISTRY
+
+
+def rate_layer(actor) -> dict:
+    """这个 actor 身上那条「率」层（`crit` / `dodge` 的唯一写入点）—— 按 id 找，找不到回空。
+
+    ★ 层 id 只在本文件登记（`RATE_LAYER_ID`）：别处要率就调 `rate_of_actor()`。
+    """
+    decl = _REGISTRY.get(str((actor or {}).get("panel_stack") or "")) or {}
+    for layer in decl.get("layers") or []:
+        if layer.get("id") == RATE_LAYER_ID:
+            return layer
+    return {}
+
+
+def rate_of_actor(actor, key: str) -> float:
+    """actor 身上那两个**非线性率**的现值（`crit` / `dodge`）—— 引擎打起来读的就是它。
+
+    ★ 这是「率」的**唯一读数口**（呈现面也一样）：`属性` 页原先自己扫层、认错了 id ⇒
+      永远 0%（B4-21）。要**数值**（rating）用 actor 上那两格（`eva` / 装备词条）。
+    """
+    return float((rate_layer(actor).get("values") or {}).get(str(key)) or 0.0)
 
 
 # ══════════════════════════════════════════════════════════════

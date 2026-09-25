@@ -60,6 +60,10 @@ priority 降序、同值按注册序，见引擎 `tests/test_host_priority_route
      一律**指路**（站名从 `maps` 现取）· 站到了放行；覆盖面两条：handler 必须**真调**
      `town_gate`（ast 扫真调用）· 镇子 id 的字面量只许一处
 
+  ⑳ ★ B4-21（真敲 + 真源现算）：`属性` 那一页的两个**非线性**的数 —— 「暴击率」那一格 =
+     宪法 F3 现算（六职业各不相同、都不是 0、换 crit 装跟着涨）· 二级属性里「闪避」那一行
+     真在且 = 宪法数值现算（换 eva 装跟着涨）；静态守卫：`cmds_more` 不再自己钻面板栈
+
 跑法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_cmds.py
 """
 from __future__ import annotations
@@ -959,11 +963,41 @@ def _rows12(actor):
             for key, slot in _CM12.PANEL_ROWS if key in actor]
 
 
-def _crit12(actor):
-    for _L in (PB.stacks().get(str(actor.get("panel_stack") or "")) or {}).get("layers") or []:
-        if _L.get("id") == "crit_rate":
-            return float((_L.get("values") or {}).get("crit") or 0.0)
-    return 0.0
+#: ★ B4-21：那两个「非线性」的数（暴击率 / 闪避那一行）**不许拿实现体抄一遍** ——
+#:   期望值从真源现算：数值 = classes 域那条（base + growth×(级-1) + conv×加点）+ 装备那一份
+#:   （`gear.gear_stats` 给的宪法键名）；率 = 宪法 F3 `r / (r + K_rate)`，K 取
+#:   `content/rules/formula_table.json` 的 `$const`（那一份才是引擎打起来真用的常量）。
+_CONST21 = json.loads((REPO / "content" / "rules" / "formula_table.json")
+                      .read_text(encoding="utf-8"))["$const"]
+
+
+def _rating21(cls_id, field, level, alloc, gear=None):
+    """宪法数值现算（rating）：职业那条 base / growth / conv + 装备那一份。"""
+    _c = _CL9[cls_id]
+    _r = float(_c["base"].get(field) or 0) + float(_c["growth"].get(field) or 0) * (int(level) - 1)
+    for _st, _n in (alloc or {}).items():
+        _r += float((_c["conv"].get(_st) or {}).get(field) or 0) * float(_n)
+    for _k, _v in (gear or {}).items():
+        if _k == field:
+            _r += float(_v)
+    return _r
+
+
+def _rate21(rating):
+    """数值 → 率（宪法 F3）—— 常量取真源表，不读实现体那个模块常量。"""
+    _r = float(rating or 0)
+    return 0.0 if _r <= 0 else _r / (_r + float(_CONST21["K_rate"]))
+
+
+def _crit_pct21(cls_id, level, alloc, gear=None):
+    """`属性` 页「暴击率」那一格该印的数（百分比，一格小数 —— 宪法 §一）。"""
+    return _num12(_rate21(_rating21(cls_id, "crit", level, alloc, gear)) * 100)
+
+
+def _eva_row21(cls_id, level, alloc, gear=None):
+    """`属性` 页二级属性里「闪避」那一行该印的整行（数值，不是率）。"""
+    return _r("SYS_ATTR_ROW", label=_r("SYS_STAT_EVA"),
+              value=_num12(_rating21(cls_id, "eva", level, alloc, gear)))
 
 
 try:
@@ -1064,7 +1098,8 @@ try:
     _wA = [_r("SYS_ATTR_HEAD", who=_r("SYS_NAME_UNKNOWN"), cls=_CL9["cls_knight"]["name"],
               level=_recA.get("level")),
            _r("SYS_ATTR_VITAL", hp=_num12(_actA.get("max_hp")), mo=_num12(_actA.get("max_mp")),
-              crit=_num12(_crit12(_actA) * 100))] + _rows12(_actA) + [
+              crit=_crit_pct21(str(_recA.get("cls")), int(_recA.get("level") or 1),
+                                _AL13.of_record(_recA), _grA))] + _rows12(_actA) + [
            _r("SYS_ATTR_NOALLOC"),
            # ★ P-34：没投的点那一行（余额 > 0 才出）—— 甲案下这是"点数在手里"的提示
            _r("SYS_ATTR_LEFT", left=_AL13.left_of_record(_recA), usage=_decl_usage("alloc")),
@@ -1072,7 +1107,8 @@ try:
     if _gA != _wA:
         _BAD12.append(("属性", _gA, _wA))
     _want_cap = _r("SYS_ATTR_VITAL", hp=_num12(_capA), mo=_num12(_actA.get("max_mp")),
-                   crit=_num12(_crit12(_actA) * 100))
+                   crit=_crit_pct21(str(_recA.get("cls")), int(_recA.get("level") or 1),
+                                    _AL13.of_record(_recA), _grA))
     if _want_cap not in _gA:
         _BAD12.append(("属性 的生命上限 != hp_cap（两个源）", _gA[:2], _want_cap))
     _labs12 = [_r("SYS_STAT_%s" % s) for _k, s in _CM12.PANEL_ROWS]
@@ -1081,10 +1117,98 @@ try:
     _n12 = len(_rows12(_actA))
     if not all(any(lab in _ln for lab in _labs12) for _ln in _gA[2:2 + _n12]):
         _BAD12.append(("属性 的二级属性行认不出标签", _gA[:3]))
-    chk("★ `属性` 真敲：抬头 / 生命上限（= `hp_cap` 那唯一来源）/ 九行二级属性 / 加点 **+ 没投的点** / "
+    chk("★ `属性` 真敲：抬头 / 生命上限（= `hp_cap` 那唯一来源）/ 十行二级属性 / 加点 **+ 没投的点** / "
         "装备 —— 与 `panel_build` 现算的期望逐字一致",
         not [x for x in _BAD12 if x[0].startswith("属性")],
         "%s" % [x for x in _BAD12 if x[0].startswith("属性")][:2])
+
+    #: ── ★ B4-21：`属性` 那一页的两个「非线性」的数（端到端玩出来的两处 · 同一页）──────
+    #:   ① 「暴击率」那一格**恒 0%**：页面自己钻面板栈、按 `"crit_rate"` 找层（那是 texts 槽位名
+    #:      `SYS_PANEL_CRIT_RATE` 的半截），栈里那条层 id 是 `rate` ⇒ 取不到就 `return 0.0`
+    #:      ⇒ 六职业 / 任何等级 / 任何装备都印 0%（而引擎打起来读的就是那一层，真值 3% 上下）。
+    #:   ② 二级属性里的「闪避」那一行**从没出过**：`PANEL_ROWS` 点名 `("dodge","EVA")`，可 B3-14
+    #:      把 eva 率化（从三层里摘掉）之后 actor 上再没有这一格 ⇒ 死行（宪法 §〇①：
+    #:      面板上要放的是**数值**「闪避 +12」，不是率）。
+    #:   预期值一律 **真源现算**（classes 域 + 装备那一份 + F3 + `$const.K_rate`）。
+    _B21: list = []
+    _recB = _sv12()
+    _alB = _AL13.of_record(_recB)
+    _grB, _bfB = PB.gear_and_buffs(_recB)
+    _eqB = dict(_recB.get("equipped") or {})
+    _lvB = int(_recB.get("level") or 1)
+    _clsB = str(_recB.get("cls") or "")
+
+    _gp = _say12("属性")
+    if _crit_pct21(_clsB, _lvB, _alB, _grB) + "%" not in "".join(_gp):
+        _B21.append(("①-1 暴击率那一格 != 真源现算（%s）" % _crit_pct21(_clsB, _lvB, _alB, _grB),
+                     [ln for ln in _gp if "暴击" in ln]))
+    if _eva_row21(_clsB, _lvB, _alB, _grB) not in _gp:
+        _B21.append(("①-2 闪避那一行不在页面上 / 值不对", _eva_row21(_clsB, _lvB, _alB, _grB),
+                     [ln for ln in _gp if "闪避" in ln]))
+
+    #: ② 六职业（真敲六趟）：那一格**各不相同、都不是 0**（原先六职业一律 0.0）
+    _six21 = {}
+    for _cid in sorted(_CL9):
+        _ad12.saved["cls"] = _cid
+        _ad12.saved["level"] = 1
+        _six21[_cid] = next((ln.split("暴击率 ")[1].split("%")[0]
+                             for ln in _say12("属性") if "暴击率" in ln), "")
+    _ad12.saved["cls"] = _clsB
+    _ad12.saved["level"] = _lvB
+    _want21 = {c: _crit_pct21(c, 1, {}) for c in sorted(_CL9)}
+    _bad21 = [(c, _six21.get(c), _want21.get(c)) for c in sorted(_CL9) if _six21.get(c) != _want21[c]]
+    chk("★ ② 六职业各真敲一趟 `属性`：那一格 = 宪法 F3 现算（%s）—— 谁认错层 / 再回常数 0 就红"
+        % " · ".join("%s %s%%" % (c.split("_")[-1], _want21[c]) for c in sorted(_CL9)),
+        not _bad21, "%s" % _bad21[:3])
+
+    #: ③ 装备那一份（真穿真敲，穿完还原）：crit 词条 ⇒ 暴击率涨 · eva 词条 ⇒ 闪避那一行涨
+    def _first21(field):
+        for _k in sorted(_IT9):
+            if str(_k).startswith("_"):
+                continue
+            if any(a.get("stat") == field for a in (_IT9[_k].get("affixes") or [])):
+                return _k
+        return ""
+
+    _badG21 = []
+    for _field, _tag in (("crit", "暴击率"), ("eva", "闪避")):
+        _iid = _first21(_field)
+        if not _iid:
+            _badG21.append(("items 域里没有带 %s 词条的装（这条测不了）" % _field, _field))
+            continue
+        _slot = str(_IT9[_iid].get("slot") or "")
+        _gear21 = GB.gear_stats({"equipped": {_slot: _iid}, "enhance": {}})
+        _ad12.saved["equipped"] = {_slot: _iid}
+        _g21 = _say12("属性")
+        _ad12.saved["equipped"] = dict(_eqB)
+        if _tag == "暴击率":
+            _w21 = _crit_pct21(_clsB, _lvB, _alB, _gear21) + "%"
+            if _w21 not in "".join(_g21):
+                _badG21.append(("穿 %s（crit+%s）⇒ 暴击率那一格 != 真源现算" % (_iid, _gear21.get("crit")),
+                                _w21, [ln for ln in _g21 if "暴击" in ln]))
+        else:
+            _w21 = _eva_row21(_clsB, _lvB, _alB, _gear21)
+            if _w21 not in _g21:
+                _badG21.append(("穿 %s（eva+%s）⇒ 闪避那一行 != 真源现算" % (_iid, _gear21.get("eva")),
+                                _w21, [ln for ln in _g21 if "闪避" in ln]))
+    chk("★ ③ 换一件带词条的装（真穿真敲）：crit ⇒ 暴击率那一格跟着走 · eva ⇒ 闪避那一行跟着走"
+        "（两处都按真源现算逐字比）", not _badG21, "%s" % _badG21[:2])
+
+    #: ④ 静态守卫：页面**不许自己钻面板栈**（率只有一个读数口 `panel_build.rate_of_actor`
+    #:    —— 这一条正是本批那个 bug 的形状：自己扫层 + 认错 id + 静默回 0）
+    import ast as _ast21
+    _cm21 = (REPO / "content" / "cmds_more.py").read_text(encoding="utf-8")
+    _tree21 = _ast21.parse(_cm21)
+    _stk21 = sorted({n.id for n in _ast21.walk(_tree21)
+                     if isinstance(n, _ast21.Name) and n.id == "stacks"}
+                    | {n.attr for n in _ast21.walk(_tree21)
+                       if isinstance(n, _ast21.Attribute) and n.attr == "stacks"})
+    chk("★ ④ 静态守卫：`cmds_more` 不再自己钻面板栈（要率走 `panel_build.rate_of_actor`）"
+        "—— 谁再自己扫层（本批那个 bug 的形状）当场红", not _stk21, "%s" % _stk21)
+
+    chk("★ B4-21 `属性` 那一页的两个非线性数（真敲 + 真源现算）：暴击率那一格 = 宪法 F3 现算"
+        "（六职业各不相同 · 都不是 0 · 换 crit 装跟着涨）· 二级属性里「闪避」那一行真在且 = 真源"
+        "现算（换 eva 装跟着涨）", not _B21, "%s" % _B21[:2])
 
     # ── 查看 <物品>：详情逐字对账（分类 · 词条 · 说明 · 收价）──────────────
     def _detail12(rec):
