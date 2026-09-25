@@ -14,9 +14,14 @@
 ① quests 域的 `require` —— **只有需要前置的条目才写**（没写的老条目行为逐字节不变）：
      {"kind": "visit", "map": <图 id>, "node": <节点 id>}    去过这一站（node 省了 = 这张图哪儿都算）
      {"kind": "kill",  "monster": <怪 id>, "n": <只数>}      图鉴里那只怪已经打掉过 n 只
+     {"kind": "kill",  "role": <role_key>, "n": <只数>}      ★ B3-11：那一**档**的怪合计打掉过 n 只
+                                                            （role_key ∈ monsters 的 normal/elite/
+                                                             chief …；认不出的档 = 计数 0 = 没满足）
      {"kind": "item",  "item": <物品 id>, "n": <份数>}       背包里有 n 份
    写一条 dict，或写一串 dict（**全部**满足才算做了）；认不出的 kind 一律算没满足（fail-closed，
    不静默放行）。中文的 `objective` **不解析** —— 条件的真源是 `require`。
+   ★ `role` 与 `monster` 二选一（都写只看 `monster`）；档名只在**呈现**那一行从 monsters 域透传，
+     代码不认中文档名。
 
 ② 玩家档 `flags.quests`（格子原来就有，不新建容器）：
      flags.quests = {<quest_id>: {"step": <已满足的条件条数>, "done": true, "at": <游戏日>}}
@@ -70,6 +75,22 @@ B3-6c 只做了主线 12 条；剩下 29 条（支线 18 · 生活 8 · 悬赏 3
   · 悬赏那三条的「交时行文」= 归位前域里的 `deliver_text` **逐字保留**（玩家看到的字一个没动）
   · 判据：`scripts/probe_quests.py` ㉓㉔㉕㉖（29 条真取到槽位 · 与三份文档逐条对账 ·
     87 条非占位 · 三类各真跑一遍接/交）
+
+★ B3-11 悬赏三档的数值与交付条件 · 支线「还石头」的交付条件
+--------------------------------------------------------
+解两个活口：① 悬赏 `reward_exp` 是手打的旧数（125 / 640 / 3920），与 `05 §一`「经验 = 同级
+升级需求的 1/8」对不上；② `_obj_ok` 对没写 `require` 的条目去看 `flags.side_<名字>`，而那个键
+**仓库里没有任何地方写** ⇒ 今天 12 条支线 + 3 条悬赏都交不掉（P-25 §②）。
+
+  · 数值与条件**一律从真源现算**：`python scripts/rebuild_quest_gates.py`（幂等 · `--dry` 先看）
+      - 经验 = `exp_need(该档 min_level) × N/D`（N/D 从 05 §一 与 24 §二 两处解析，必须一致）
+      - 悬赏条件 = 「那一档的怪任意一只打掉过」（`kill` + `role`）—— 24 §二 写「打掉**指定的**
+        普通怪」，「指定的」= 悬赏板每天轮换挑一只，而**轮换那一步数据面上还没有** ⇒ 先落「档内任意
+        一只」（比死路径强、比「指定的那一只」宽；轮换落地时把 `role` 换成 `monster` 即可）
+      - 支线「还石头」条件 = `15_彩蛋域口径_v1 §二` 那句「`q_side_13「还石头」的交待就是彩蛋 2`」
+        的条件（`hold` → `item` · `where` → `visit`；`read` 那一步是彩蛋自己的，任务不取）
+  · 判据：`scripts/probe_quests.py` ㉗（悬赏三档经验/钱逐条对账）· ㉘（18 条支线的交付真跑矩阵：
+    交得掉的**真交一次**，交不掉的钉住名单 + 逐条原因）
 """
 from __future__ import annotations
 
@@ -246,12 +267,43 @@ def _req_ok(p, r):
     if kind == "visit":
         return _been(p, str(r.get("map") or ""), str(r.get("node") or ""))
     if kind == "kill":
-        mid = str(r.get("monster") or "")
-        return bool(mid) and CX.kills_of(_shadow(p), mid) >= _n_of(r)
+        # ★ B3-11：`kill` 两种写法 —— 点名一只（`monster`）或点**某一档**（`role`，见 `_role_ids`）。
+        #   两个都不写 ⇒ 没满足（fail-closed）；认不出的 role ⇒ 那一档取不到怪 ⇒ 计数 0 ⇒ 没满足。
+        return bool(str(r.get("monster") or "") or str(r.get("role") or "")) \
+            and _kill_have(p, r) >= _n_of(r)
     if kind == "item":
         iid = str(r.get("item") or "")
         return bool(iid) and _bag_n(p, iid) >= _n_of(r)
     return False
+
+
+def _role_ids(role):
+    """机器键（`monsters.role_key`）→ 这一档的怪 id 表。认不出的档回**空表**（fail-closed）。
+
+    ★ 为什么按 `role_key` 而不是中文档名：`cmds_battle` / `combat` 那两处分档也一律比 ASCII
+      `role_key`（中文只用于呈现）—— 条件判定与战斗分档走同一根轴。中文是数据，不是代码。
+    """
+    if not role:
+        return []
+    return [k for k, m in _data("monsters").items()
+            if not str(k).startswith("_") and m.get("role_key") == role]
+
+
+def _role_name(role):
+    """这一档的**中文档名**（从 monsters 域透传，代码不造中文；认不出的档回空串）。"""
+    for m in _data("monsters").values():
+        if m.get("role_key") == role:
+            return str(m.get("role") or "")
+    return ""
+
+
+def _kill_have(p, r):
+    """条件「打掉过几只」的**已达成数**（就是档上那本怪物谱的击杀账 —— 只读，不写）。"""
+    mid = str(r.get("monster") or "")
+    s = _shadow(p)
+    if mid:
+        return CX.kills_of(s, mid)
+    return sum(CX.kills_of(s, k) for k in _role_ids(str(r.get("role") or "")))
 
 
 def _mon_name(mid):
@@ -270,9 +322,10 @@ def _req_lines(p, r):
         name = _name_of_node(loc, node) if node else ((_map_of(loc) or {}).get("name") or loc)
         return [T("SYS_JOB_REQ_VISIT", place=name)]
     if kind == "kill":
+        # ★ B3-11：点名的那一只给怪名；点档的给**档名**（「普通 / 精英 / 头目」—— monsters 域里透传）
         mid = str(r.get("monster") or "")
-        return [T("SYS_JOB_REQ_KILL", monster=_mon_name(mid), n=_n_of(r),
-                  have=CX.kills_of(_shadow(p), mid))]
+        name = _mon_name(mid) if mid else _role_name(str(r.get("role") or ""))
+        return [T("SYS_JOB_REQ_KILL", monster=name, n=_n_of(r), have=_kill_have(p, r))]
     if kind == "item":
         iid = str(r.get("item") or "")
         return [T("SYS_JOB_REQ_ITEM", item=_item_name(iid), n=_n_of(r), have=_bag_n(p, iid))]

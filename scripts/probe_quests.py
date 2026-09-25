@@ -39,6 +39,16 @@ B3-8 加的那一组（支线 18 / 生活 8 / 悬赏 3 三段行文归位 · 同
   ㉕ ★ 87 条槽位非占位（「待填 / 待写 / 〔 / （待 / 进行中」）· 无阿拉伯数字 · 无机器键 · 互不重复
   ㉖ ★ 支线 / 生活 / 悬赏 各抽一条真跑：接 / 交(没做完) / 交 —— 三拍的字逐字在屏上、奖励入档
 
+B3-11 加的那一组（悬赏三档的数值口径 · 支线的交付真跑矩阵 · P-25 §② 的能修那部分）：
+  ㉗ ★ 悬赏三档（普通 / 精英 / 头目）的**经验与钱逐条对账**（探针自己解析真源）：
+      经验 = 该档 `min_level` 的升级需求 × N/D（N/D 从 `05 §一` 与 `24 §二` 两处解析，两处必须
+      写着且一致；升级需求走包内唯一口 `cmds_ast.exp_need` —— 不手打）· 钱落在 `24 §二` ＝
+      `05 §一` 的报酬区间里（区间中点那件事只印出来给人看）
+  ㉘ ★ 18 条支线的**交付真跑矩阵**：交得掉的**真接一次、真交一次**（造满足 `require` 的档）；
+      交不掉的**钉住名单 + 逐条原因**，且每个都用「万事俱备的档（满级 + 全图全节点 + 所有物品 +
+      所有怪各 99 只）」**复现**一遍 —— 那样都交不掉 ⇒ 它看的不是条件，而是 `flags.side_<名字>`
+      那个没人写的键（P-25 §② 的根因）。名单一变（修好一条 / 新死一条）当场红。
+
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_quests.py
 """
 from __future__ import annotations
@@ -328,12 +338,10 @@ for qid in sorted(new_ids, key=lambda x: QE[x]["order"]):
 
 # ⑮-b（备注 · 不判红）★ P-25 §② 的活口：**没写 require 的支线今天交不掉**
 #      （`_obj_ok` 对没写 require 的支线去看 `flags.side_<名字>` —— 那个键仓库里没有任何地方写）
+#      ★ B3-11：逐条真跑 + 逐条原因在 ㉘（这里只报个数，别在这儿下结论）
 dead = sorted(k for k, v in QE.items() if v["kind"] == "支线" and not v.get("require"))
-notes.append("P-25 §②（未收口 · 不在本批范围）：今天仍有 %d 条支线**交不掉** —— %s；"
-             "其中 %d 条属本批 16 条（%s）—— 「强化到 +3」「做三道菜」这两个动作没有条件形状（只有 "
-             "visit/kill/item 三型），要新形状得单独一批 + 鱼鱼点头"
-             % (len(dead), dead, len([k for k in dead if k in trade_q]),
-                [k for k in dead if k in trade_q]))
+notes.append("P-25 §②（未收口）：今天仍有 %d 条支线**交不掉** —— %s（逐条真跑与原因见 ㉘）"
+             % (len(dead), dead))
 
 # ⑯ ★ 三条带最深处各有采集点（「去三条带最深处各采一次」这个动作真做得了）
 deep = RP._deepest_nodes(MAPS)
@@ -766,7 +774,10 @@ _drive3, _drive3_lines = [], []
 _DRIVE = (("支线", "q_side_02", "item", {"bag": {"i_material_old_iron": 1}}),
           ("生活", "q_trade_02", "visit+item",
            {"foot": {"nodes": {"belt_north:bn_tower": 1}}, "bag": {"i_material_iron_scrap": 1}}),
-          ("悬赏", "q_bounty_normal", "legacy-flag", {"flags": {"side_悬赏·普通": True}}))
+          # ★ B3-11：悬赏的「做到」从**旧 flag**（`flags.side_悬赏·普通` —— 那个键没人写）改成
+          #   **真的打掉过一只普通档的怪**（`books.monster` 那本谱的击杀账，codex.note_kill 写的）
+          ("悬赏", "q_bounty_normal", "kill@role",
+           {"books": {"monster": {"ms_field_mouse": {"day": 1, "kills": 1}}}}))
 for _kind, _k, _shape, _fix in _DRIVE:
     _x = QE[_k]
     _n = int(_x["order"])
@@ -795,6 +806,227 @@ for _kind, _k, _shape, _fix in _DRIVE:
     "★ 支线 / 生活 / 悬赏 各抽一条真跑：接 / 交(没做完) / 交 三拍的字逐字在屏上、奖励入档"
     "（坏 %s）" % (_drive3 or "无"))
 for _ln in _drive3_lines:
+    print("      %s" % _ln)
+
+# ══════════════════════════════════════════════════════════════
+# ㉗–㉘ B3-11 悬赏三档的**数值口径** · 支线的**交付真跑矩阵**
+#      源：`05_玩法数值口径_v1.md §一` + `24_任务线_v1.md §二 悬赏板`（报酬区间 + 「经验 = 同级需求
+#         的 N/D」）· `00_第一阶段内容总纲_v1.md §七`（升级曲线 —— 真源，包内唯一口 `exp_need`）
+#          · `15_彩蛋域口径_v1.md §二`（支线交付条件的另一处真源）
+#      ★ 照 ⑬/⑳/㉔ 的老规矩：**探针自己解析文档**（不与生成器共用镜像表 —— 共用会把两处的错
+#        一起掩盖）；文档一改，判据跟着变。
+# ══════════════════════════════════════════════════════════════
+#: 悬赏经验占比：05 §一 与 24 §二 各写一遍（「同级需求的 N/D」/「同级升级需求的 N/D」）—— 必须一致
+_BOUNTY_EXP = _re.compile(r"经验\s*=\s*同级(?:升级)?需求的\s*(\d+)\s*/\s*(\d+)")
+_d05 = _io.open(DOC05, encoding="utf-8", newline="").read() if os.path.exists(DOC05) else ""
+_e05 = _BOUNTY_EXP.search(_d05)
+_e24 = _BOUNTY_EXP.search(bounty_blk)
+_bn_bad, _bn_lines, _num, _den = [], [], 0, 0
+if not _e05 or not _e24:
+    _bn_bad.append("经验占比解析不出（05 §一 %s · 24 §二 %s）" % (bool(_e05), bool(_e24)))
+elif _e05.groups() != _e24.groups():
+    _bn_bad.append("★ 两处真源打架：05 §一 %s/%s vs 24 §二 %s/%s"
+                   % (_e05.group(1), _e05.group(2), _e24.group(1), _e24.group(2)))
+else:
+    _num, _den = int(_e05.group(1)), int(_e05.group(2))
+
+# ── ㉗ ★ 悬赏三档：经验 = 该档等级的升级需求 × N/D（逐条算）· 钱落在文档区间里（逐条核）
+for _k, _x in sorted(bounty_q.items(), key=lambda kv: kv[1]["order"]):
+    _tier = _x["name"].split("·")[-1]
+    _need_ = exp_need(_x["min_level"])
+    _want = (_need_ * _num // _den) if _den else -1
+    _lo, _hi = (_rng or {}).get(_tier, (0, -1))
+    _rng_ok = _lo <= int(_x["reward_gold"]) <= _hi
+    if _x["reward_exp"] != _want:
+        _bn_bad.append("%s 经验 %s ≠ 需求 %d × %d/%d = %d（手打的数？）"
+                       % (_k, _x["reward_exp"], _need_, _num, _den, _want))
+    if not _rng_ok:
+        _bn_bad.append("%s 报酬 %s 跑出文档区间 %s" % (_k, _x["reward_gold"], (_lo, _hi)))
+    _bn_lines.append("赏 %-7s 编号 %-4d 等级 %-3d 升级需求 %-5d × %d/%d = %-4d（域 %-4d ✓）"
+                     "｜ 报酬 %-4d ∈ [%d,%d]（区间中点 %d）"
+                     % (_x["name"], _x["order"], _x["min_level"], _need_, _num, _den, _want,
+                        _x["reward_exp"], int(_x["reward_gold"]), _lo, _hi, (_lo + _hi) // 2))
+(ok if not _bn_bad else bad)(
+    "★ 悬赏三档的经验/钱与真源逐条对账（经验 = 同级升级需求 × %d/%d，走包内唯一口 `exp_need`；"
+    "钱落在 24 §二 ＝ 05 §一 的区间里；坏 %s）" % (_num, _den, _bn_bad or "无"))
+for _ln in _bn_lines:
+    print("      %s" % _ln)
+
+# ── ㉘ ★ 18 条支线的交付**真跑矩阵**：能交的当场真交一次；不能交的钉住名单 + 逐条原因
+#   ★ 「交得掉」的判法：造一个**满足它 require** 的档 → 接 → 交，屏上出现「交了」且 `flags.quests_done`
+#     记上。★ 「交不掉」的判法：再造一个**万事俱备**的档（满级 + 全图全节点 + 所有物品 + 所有怪各 99
+#     只 —— 凡是 visit/item/kill 三型表达得出来的，这个档都满足）→ 仍然被拦 ⇒ 证明它看的不是条件，
+#     而是 `flags.side_<名字>` 那个**没人写**的键（P-25 §② 的根因，可复现）。
+_SHAPE_OF = {"visit": "「去过某处」", "item": "「手上有某物」",
+             "kill": "「打过某只怪 / 某一档的怪」"}
+#: ★ 今天交不掉的支线**钉住名单**（B3-11 现状）—— 名单一变当场红：
+#:   少一条（有人把它修好了）要**故意**从这儿删掉，多一条（新死的）立刻红。
+_DEAD_SIDE = {
+    "q_side_01": "「把一件装备强化到 +3」—— 要「某件装备的强化等级 ≥ n」这种形状"
+                 "（档上 `enhance` 有账，条件语言里没有；加形状得单独立项）",
+    "q_side_05": "「做三道菜给贝拉尝」—— 要「做出过某道菜」这种形状，且文档没点明是哪三道"
+                 "（点明哪三道才好落 `item`）",
+    "q_side_06": "「用稀有食材做一次」—— 要「用某类食材做过一次」这种形状"
+                 "（`item` 只查「手上有」，查不了「下过锅」）",
+    "q_side_07": "「送灯油 → 陪他配一次」—— 两截都缺形状：灯油这个物品**域里不存在**；"
+                 "「送出去」要「交出物品」这种形状（`item` 只查持有）",
+    "q_side_09": "「听他讲完（三次）」—— 要「听过某人的几句话」这种形状"
+                 "（档上 `heard` 已有句数账，条件语言里没有）",
+    "q_side_10": "「陪一个 NPC 走一段（送信）」—— 信这个物品域里不存在，且**目的地文档没写**"
+                 "（没目的地落不了 `visit`）",
+    "q_side_11": "「查他酒钱从哪来」—— 要「线索 / 隐藏线 flag」这种形状（隐藏线「号角」口径未落）",
+    "q_side_12": "「（间接）找到那个名字」—— 同上（隐藏线「名字」口径未落）",
+    "q_side_16": "「听他讲完三段（每段缺一块）」—— 要「听过某人的几句话」这种形状（同 q_side_09）",
+    "q_side_17": "「帮她问三个人（限时：商队窗口）」—— 要「搭话过谁 / 搭话过几个人」这种形状"
+                 "（且「限时窗口」本身还没落地）",
+    "q_side_18": "「按他的口味做一道菜」—— 要「做出过某道菜」这种形状（同 q_side_05，且没点明哪道）",
+}
+
+
+def _role_ids_of(role):
+    return [k for k, m in MON.items() if not str(k).startswith("_") and m.get("role_key") == role]
+
+
+def _kills_rec(r, n):
+    """条件 → 档上那本怪物谱该长什么样（点名那只 / 点那一档里的一只）。"""
+    mid = str(r.get("monster") or "")
+    if not mid:
+        ids = _role_ids_of(str(r.get("role") or ""))
+        mid = ids[0] if ids else ""
+    return ({mid: {"day": 1, "kills": n}} if mid else {})
+
+
+def _sat_player(x, qid):
+    """造一个**满足这条 require** 的档（三型各按形状造）。"""
+    p, foot, bag, mon = _player(level=max(1, int(x["min_level"]))), {}, {}, {}
+    for r in CQ._require_of(x):
+        if r.get("kind") == "visit":
+            foot["%s:%s" % (r.get("map"), r.get("node"))] = 1
+        elif r.get("kind") == "item":
+            bag[str(r.get("item"))] = max(1, int(r.get("n") or 1))
+        elif r.get("kind") == "kill":
+            mon.update(_kills_rec(r, max(1, int(r.get("n") or 1))))
+    if foot:
+        p["foot"] = {"nodes": foot}
+    if bag:
+        p["bag"] = bag
+    if mon:
+        p["books"] = {"monster": mon}
+    p["flags"] = {"quests_active": [qid]}
+    return p
+
+
+_SATIATED = {}
+
+
+def _satiated(qid):
+    """万事俱备的档（同一份骨架只造一次；`_p()` 会把四个可变容器拷一层，改不到它）。"""
+    if not _SATIATED:
+        nodes = {"%s:%s" % (m, nd["id"]): 1 for m, mv in MAPS.items()
+                 for nd in (mv.get("nodes") or [])}
+        bag = {k: 99 for k in ITEMS if not str(k).startswith("_")}
+        bag.update({k: 99 for k in DP if not str(k).startswith("_")})
+        _SATIATED["v"] = {"foot": {"nodes": nodes}, "bag": bag,
+                          "books": {"monster": {k: {"day": 1, "kills": 99} for k in MON
+                                                if not str(k).startswith("_")}}}
+    p = _player(level=99)
+    p.update(json.loads(json.dumps(_SATIATED["v"])))
+    p["flags"] = {"quests_active": [qid]}
+    return p
+
+
+_m_bad, _m_lines, _can, _cant = [], [], [], []
+for _k, _x in sorted(side_q.items(), key=lambda kv: kv[1]["order"]):
+    _n, _lv = int(_x["order"]), int(_x["min_level"])
+    _accp = _player(level=_lv)
+    _acc = _drive(CQ.quest_accept, _accp, "接 %d" % _n)
+    if _k not in ((_accp.get("flags") or {}).get("quests_active") or []):
+        _m_bad.append((_k, "接都接不下", _acc[:2]))
+        continue
+    _p = _sat_player(_x, _k)
+    _pay = _drive(CQ.quest_deliver, _p, "交 %d" % _n)
+    _deliv = any(ln.startswith("交了") for ln in _pay) \
+        and _k in ((_p.get("flags") or {}).get("quests_done") or [])
+    if _deliv:
+        _can.append(_k)
+        _m_lines.append("交得掉 %-8s 编号 %-3d 条件 %s → 屏上「%s」· 经验 +%d 铜板 +%d"
+                        % (_x["name"], _n,
+                           " ＋ ".join(_SHAPE_OF.get(r.get("kind"), r.get("kind"))
+                                      for r in CQ._require_of(_x)),
+                           (_pay[0][:22] if _pay else "?"), _x["reward_exp"], _x["reward_gold"]))
+        continue
+    _cant.append(_k)
+    _q = _satiated(_k)
+    _pay2 = _drive(CQ.quest_deliver, _q, "交 %d" % _n)
+    if any(ln.startswith("交了") for ln in _pay2):
+        _m_bad.append((_k, "万事俱备的档竟然交掉了（那就不该在交不掉名单里）", _pay2[:2]))
+    if _k not in _DEAD_SIDE:
+        _m_bad.append((_k, "新死的一条（钉住名单里没有它）", _x["objective"]))
+    _m_lines.append("交不掉 %-8s 编号 %-3d「%s」→ 万事俱备的档照样拦着：「%s」｜ 缺的形状：%s"
+                    % (_x["name"], _n, _x["objective"], (_pay2[0][:18] if _pay2 else "?"),
+                       _DEAD_SIDE.get(_k, "★ 不在钉住名单里（要补一条）")))
+if set(_cant) != set(_DEAD_SIDE):
+    _m_bad.append(("名单", "交不掉的集合 %s ≠ 钉住名单 %s" % (sorted(_cant), sorted(_DEAD_SIDE)), ""))
+(ok if not _m_bad and len(_can) + len(_cant) == 18 else bad)(
+    "★ 18 条支线交付真跑矩阵：**交得掉 %d 条**（各真接一次、真交一次、奖励入档）· "
+    "**交不掉 %d 条**（万事俱备的档仍被拦 ⇒ 看的是没人写的 `flags.side_<名字>`；名单钉住，"
+    "一变就红；坏 %s）" % (len(_can), len(_cant), _m_bad or "无"))
+for _ln in _m_lines:
+    print("      %s" % _ln)
+
+# ── ㉙ ★ 支线条件的**另一处真源**：`15_彩蛋域口径_v1 §二` 那句「<任务>「<名字>」的交待就是彩蛋 <n>」
+#   那条彩蛋的条件（`hold` → 手上有 · `where` → 去过）就是那个任务的交付条件（`read` 是彩蛋自己的
+#   那一步，任务不取）。★ 探针**自己解析**这份文档 —— 与生成器各写各的解析（共用镜像表会把两处的
+#   错一起掩盖）；一句都找不着也判红（文档换说法要有人重新裁决，不许静默少一条条件）。
+_DOC15 = os.path.join(PLAN, "00_总纲", "15_彩蛋域口径_v1.md")
+_ROW15 = _re.compile(r"^\|\s*\d+\s*\|\s*(egg_[a-z_]+)\s*\|\s*([^|]+?)\s*\|\s*([^|]*?)\s*\|\s*$")
+_IS_TOLD = _re.compile(r"(q_[a-z0-9_]+)\s*「([^」]+)」\s*的交待就是彩蛋\s*(\d+)")
+_told, _told_bad, _told_lines = 0, [], []
+for _ln in (_io.open(_DOC15, encoding="utf-8", newline="").read().split("\n")
+            if os.path.exists(_DOC15) else []):
+    _r = _ROW15.match(_ln)
+    if not _r:
+        continue
+    _j = _IS_TOLD.search(_r.group(3))
+    if not _j:
+        continue
+    _qid, _qname, _egg_no = _j.group(1), _j.group(2), int(_j.group(3))
+    _told += 1
+    _want = []
+    for _cl in _r.group(2).split("&"):
+        _cl = _cl.strip()
+        if "=" not in _cl:
+            continue
+        _ck, _cv = [p.strip() for p in _cl.split("=", 1)]
+        if _ck == "read":
+            continue
+        if _ck == "hold":
+            _want.append({"kind": "item", "item": _cv, "n": 1})
+        elif _ck == "where":
+            _m, _, _nd = _cv.partition(":")
+            _want.append({"kind": "visit", "map": _m, "node": _nd})
+        elif _ck == "kill":
+            _want.append({"kind": "kill", "monster": _cv, "n": 1})
+        else:
+            _told_bad.append("%s 的子句键「%s」没有条件形状（15 §二 第 %s 条彩蛋）"
+                             % (_qid, _ck, _egg_no))
+    _x = QE.get(_qid)
+    if not _x:
+        _told_bad.append("15 §二 点名了 %s，但域里没有这条任务" % _qid)
+    elif _x["name"] != _qname:
+        _told_bad.append("15 §二 说的「%s」与域里 %s 的名字「%s」对不上"
+                         % (_qname, _qid, _x["name"]))
+    elif CQ._require_of(_x) != _want:
+        _told_bad.append("%s 的 require %s ≠ 15 §二 彩蛋 %d 的条件 %s"
+                         % (_qid, json.dumps(_x.get("require"), ensure_ascii=False), _egg_no,
+                            json.dumps(_want, ensure_ascii=False)))
+    else:
+        _told_lines.append("%s「%s」→ 条件取自 15 §二 彩蛋 %d：%s"
+                           % (_qid, _qname, _egg_no, json.dumps(_want, ensure_ascii=False)))
+(ok if _told and not _told_bad else bad)(
+    "★ 支线条件与 15 §二「交待就是彩蛋」那句逐条对账（%d 条；坏 %s）"
+    % (_told, _told_bad or "无"))
+for _ln in _told_lines:
     print("      %s" % _ln)
 
 for n in notes:

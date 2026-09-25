@@ -495,6 +495,18 @@
     "min_level": 1,
     "need": null,
     "objective": "把石头还给该还的地方",
+    "require": [
+      {
+        "kind": "item",
+        "item": "i_token_stone_shard",
+        "n": 1
+      },
+      {
+        "kind": "visit",
+        "map": "belt_north",
+        "node": "bn_bone"
+      }
+    ],
     "reward_exp": 100,
     "reward_gold": 30,
     "teach": "",
@@ -828,7 +840,14 @@
     "min_level": 1,
     "need": null,
     "objective": "打掉指定的普通怪",
-    "reward_exp": 125,
+    "require": [
+      {
+        "kind": "kill",
+        "role": "normal",
+        "n": 1
+      }
+    ],
+    "reward_exp": 5,
     "reward_gold": 30,
     "teach": "",
     "insight": "",
@@ -846,7 +865,14 @@
     "min_level": 5,
     "need": null,
     "objective": "打掉指定的精英怪",
-    "reward_exp": 640,
+    "require": [
+      {
+        "kind": "kill",
+        "role": "elite",
+        "n": 1
+      }
+    ],
+    "reward_exp": 125,
     "reward_gold": 90,
     "teach": "",
     "insight": "",
@@ -864,7 +890,14 @@
     "min_level": 10,
     "need": null,
     "objective": "打掉指定的头目",
-    "reward_exp": 3920,
+    "require": [
+      {
+        "kind": "kill",
+        "role": "chief",
+        "n": 1
+      }
+    ],
+    "reward_exp": 500,
     "reward_gold": 250,
     "teach": "",
     "insight": "",
