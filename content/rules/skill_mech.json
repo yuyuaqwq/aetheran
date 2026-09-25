@@ -1,0 +1,318 @@
+{
+  "_src": {
+    "真源": "aetheran-plan/03_职业与技能/01_骑士_v2.md（§三 挨打段 · §五 不退段）· 02_狂战士_v2.md（§一 账本 · §三 三个换法）· 03_游侠_v2.md §三 抢拍 · 04_法师_v2.md §三 印记的账 · 05_修女_v2.md（§一 状态机 · §三 三种救法 · §五 代入例）· 06_刺客_v2.md（§一 窗口表 · §二 破绽标记）· 02_数值宪法/02_战斗机制.md §二（A2 霸体 · A3 行动序 · E3 破绽 · C1 印记）",
+    "这张表是什么": "「技能 mech 名 → 引擎动词 / 注入面」的唯一机器可读副本（B3-27）。出口只有一个：`content/mech.py`（登记表 → `rules_module()` 算 EFFECT_ACTIONS / EFFECT_RULES；`load_game_rules` 挂进引擎；`check_domain()` 做跨域对账）。14 条 mech 名里今天真活的：**10 条机制 / 10 条技能**；`partial` 1 条（不退 —— 自身那半活了、霸体与全队那半没落）；`pending` 2 条（后撤 ×2 技能 · 引燃+垂星）—— 逐条 why 在下面。",
+    "数值来源（不许手打）": [
+      "① skills 域有的（`mech_val`）⇒ 表里写 `\"turns\": \"mech_val\"` / 代码现算，**绝不把那个数抄一遍**",
+      "② 域里没有、真源白纸黑字有的 ⇒ 落 `{\"value\": …, \"src\": …}`（逐条注明出处 + 见本工作树 _notes.md 的真源待补行）",
+      "③ 域里没有、真源也没给的 ⇒ **不编**：机制标 `pending`，`why` 写明缺哪一环"
+    ],
+    "status": "on = 今天真生效（有可复算判据）· partial = 有半截真生效、另半截 pending（why 写清是哪半截）· pending = 一条都没接（why 写清缺哪一环，**与接线前一字不差**：不认得的机制由 `check_domain` 在装配期抛，绝不静默兜底成别的行为）",
+    "route": "engine = 引擎现成的通用路（技能 mech → 名词 → EFFECT_ACTIONS → 动词，`effects_from_skill` 那条）；cast = 引擎那条路够不着（治疗支不消费 mech / mech_val 被 int() 截成 0 / 没给 mech_val）⇒ 走 actor.triggers 的 act_cast（`aeth_on_cast`）。**两条路互斥**：route=cast 的机制不并进 EFFECT_ACTIONS（并进去 = 同一件事两处落地）。",
+    "route_judge": "route=engine 有一条加载期判据（探针钉着）：声明这类机制的技能必须给得出**非 0 的整数 mech_val** —— 否则引擎 `effects_from_skill` 的 `if mech and mval` 门是关的（表写了、跑起来什么也不发生）。今天 5 条栽在这上面 ⇒ 它们走 cast 或 pending。",
+    "join_key": "部分机制用 `join_key` 声明「与谁同轴」（例：`shield_ally` 的 30% 与 `unstoppable` 的 30% 同轴 ⇒ 同时开只算一次）。这只是**合并声明**，不是第二条路。"
+  },
+  "mechs": {
+    "interrupt": {
+      "status": "on",
+      "route": "engine",
+      "actions": [
+        {
+          "action": "aeth_sever"
+        }
+      ],
+      "state": "break_mark",
+      "turns": "mech_val",
+      "rules": {
+        "break_mark": {
+          "_src": "06_刺客_v2.md §二「挂法 断势命中 ⇒ 目标挂『破绽』200 刻 · 效果 承伤 ×1.35（全队共享）· 叠加 不叠加，只刷新时长」⇒ debuff_scale.dmg_taken = 0.35（= 1.35 − 1）",
+          "cap": 1,
+          "debuff_scale": {
+            "dmg_taken": 0.35
+          }
+        }
+      },
+      "judge": "断势命中 ⇒ 目标 effects.break_mark 到期 = 命中时刻 + mech_val(200)；此后打它的每一段伤害 ×1.35（landing 的 debuff_scale 乘区，逐值复算）；同刻它若在出招窗口里，那一手被清掉（引擎 interrupt 动词）。",
+      "src": "06_刺客_v2.md §一/§二 · 02_数值宪法/02_战斗机制.md §二 E3"
+    },
+    "def_break": {
+      "status": "on",
+      "route": "engine",
+      "actions": [
+        {
+          "action": "aeth_sunder"
+        }
+      ],
+      "state": "sunder",
+      "turns": {
+        "value": 300,
+        "src": "02_狂战士_v2.md §一「自伤 8% + 防御 −30%（300 刻）」· §三「收得稳（8% 血 + 300 刻破防）」（mech_val=30 是**百分比**、时长是另一个数 ⇒ 时长只能落常量）"
+      },
+      "self_dmg_pct": {
+        "value": 0.08,
+        "src": "skills 域 SKILL_BSK_sunder.note「自伤 8% max_hp」· 02_狂战士_v2.md §一「自伤 8%」"
+      },
+      "rules": {
+        "sunder": {
+          "_src": "02_狂战士_v2.md §一「防御 −30%」（面板乘区 op=mul · stat=def —— 与破绽的承伤乘区不同轴）· 00_重做总纲_v2.md:73「狂战士『破势』= 降目标 def（破甲）—— 对高防目标更有效，机制与乘区都不同」",
+          "cap": 1,
+          "panel": {
+            "stat": "def",
+            "op": "mul",
+            "mult": 0.7
+          }
+        }
+      },
+      "judge": "① 施放者自己先掉 max_hp 的 8%（现算复算）；② 目标的 `actor_stats()['def']` 变成 int(def × 0.7)（**伤害公式里的 def**，与破绽的承伤乘区不同轴 —— 两者同时存在时连乘，判据分别钉住）；③ 300 刻后 def 回到原值。",
+      "src": "02_狂战士_v2.md §一/§三"
+    },
+    "taunt": {
+      "status": "on",
+      "route": "engine",
+      "actions": [
+        {
+          "action": "aeth_taunt"
+        }
+      ],
+      "state": "taunt_mark",
+      "turns": {
+        "value": 100,
+        "src": "01_骑士_v2.md §三「挑战咆哮 范围内敌人仇恨 ×3、100 刻内优先打他」（100 刻域里没有 ⇒ 落常量；×3 取 mech_val）"
+      },
+      "rules": {},
+      "judge": "带 taunt_mark 的那一侧有两个人时，敌方自动行动打的是 taunt 值（mech_val）最高的那一个；没挂标记 ⇒ `taunt_picker` 回 None ⇒ 引擎走默认目标解析（与接线前逐字相同）。",
+      "src": "01_骑士_v2.md §三",
+      "halves": [
+        {
+          "name": "优先打他 + 仇恨 ×3（取 mech_val=3：多个嘲讽并存时择大者）",
+          "status": "on"
+        },
+        {
+          "name": "单人战斗里可观测",
+          "status": "pending",
+          "why": "今天一场只有一个玩家 actor（combat.build 只放一个）⇒ 「优先打他」与默认目标（敌对第一个）是同一个人，实战里看不出差别。判据用**两个玩家 actor** 的战斗构造出来（引擎 add_actor 现成）；等组队那批接上第二个队友，这条判断才有实战意义。"
+        }
+      ]
+    },
+    "unstoppable": {
+      "status": "partial",
+      "route": "engine",
+      "actions": [
+        {
+          "action": "aeth_standfast"
+        }
+      ],
+      "state": "iron_oath",
+      "turns": "mech_val",
+      "rules": {
+        "iron_oath": {
+          "_src": "01_骑士_v2.md §五②「全队 300 刻免伤 30%」（单人下 = 自身那一半）· join_key=reduce_taken：与 庇护 同轴 ⇒ 同时开只算一次",
+          "cap": 1,
+          "reduce_taken": 0.3,
+          "join_key": "reduce_taken"
+        }
+      },
+      "why": "两半没落：① **霸体本身**（真源 A2「断不掉」= 引擎待发槽的 `unstoppable` 开关）今天**没有消费者** —— 怪物 AI（引擎 ai.py）只会 attack/skill/defend，没有 interrupt，断人的只有玩家自己的「打断」指令与「断势」⇒ 装了也没有东西会来断你（形状与消费端都缺一个，属怪物控制/打断那批）；② **全队**那一档 —— 本包战斗只有单人（combat.build 只放一个玩家 actor），单人下 全队 ≡ 自身。今天落的是「自身 300 刻减伤 30%」这一半。",
+      "judge": "不退之后 effects.iron_oath 到期 = 现在 + mech_val(300)、规则里的 reduce_taken=0.3；这段里打这个 actor 的伤害 ×0.7（taken_calc 乘区，逐值复算；与庇护同开时只算一次）。",
+      "src": "01_骑士_v2.md §五 · 02_数值宪法/02_战斗机制.md §二 A2"
+    },
+    "advance_ct": {
+      "status": "on",
+      "route": "engine",
+      "actions": [
+        {
+          "action": "aeth_advance_ct"
+        }
+      ],
+      "state": "",
+      "turns": "mech_val",
+      "rules": {},
+      "judge": "施放后 caster['ct'] 比「同一场同一手不施放」少 mech_val(30) 刻（同种子逐值可对），且不小于当刻。",
+      "src": "03_游侠_v2.md §三 · 02_数值宪法/02_战斗机制.md §二 A3",
+      "halves": [
+        {
+          "name": "自己的下一次行动提前 mech_val(30) 刻",
+          "status": "on"
+        },
+        {
+          "name": "「提前到目标之前」那一档（比双方到点时刻再插队）",
+          "status": "pending",
+          "why": "域里 note 只写「把自己的下一次行动提前 30 刻」⇒ 按它落。真源 03_游侠_v2.md §三 的原话是「提前到目标之前」、§七② 还在待裁决（改行动序 vs 插一次额外行动）⇒ 要「插到目标之前」得先比较双方 ct 再插队，那是另一条口径，等真源拍板。"
+        }
+      ]
+    },
+    "shield_ally": {
+      "status": "on",
+      "route": "engine",
+      "actions": [
+        {
+          "action": "aeth_aegis"
+        }
+      ],
+      "state": "aegis_veil",
+      "turns": {
+        "value": 200,
+        "src": "05_修女_v2.md §一「庇护（200 刻 30% 减伤）」· §三「庇护 治预判的：看得出对方要打大招了，提前减伤 30%」（30% 取 mech_val=30；200 刻域里没有 ⇒ 落常量）"
+      },
+      "rules": {
+        "aegis_veil": {
+          "_src": "05_修女_v2.md §一「庇护（200 刻 30% 减伤）」· §五②「庇护 30% 减伤叠在骑士身上」⇒ reduce_taken = 0.3（= 域里 mech_val 30 ÷ 100）",
+          "cap": 1,
+          "reduce_taken": 0.3,
+          "join_key": "reduce_taken"
+        }
+      },
+      "judge": "施放后 effects.aegis_veil 到期 = 现在 + 200；这段里打它的伤害 ×0.7（taken_calc 乘区，逐值复算）。",
+      "src": "05_修女_v2.md §一/§三/§五②",
+      "halves": [
+        {
+          "name": "自身（单人 = 自己）200 刻减伤 30%",
+          "status": "on"
+        },
+        {
+          "name": "给队友那一档（庇护是给队友的）",
+          "status": "pending",
+          "why": "无队伍 —— 单人下收件人 = 自己（等组队那批把第二个玩家 actor 放进来，同一手就自动作用到队友身上）。"
+        },
+        {
+          "name": "机制名与真源语义对不上（待裁决）",
+          "status": "pending",
+          "why": "域里 mech 名是 `shield_ally`（盾），真源 05_§一 写的是「200 刻 30% 减伤」（不是盾值）—— 本包按**真源**落成减伤（不走引擎 shield 容器）。建议域里改名 `reduce_ally`（一行），否则下一个读表的人会被名字骗。"
+        }
+      ]
+    },
+    "immune_window": {
+      "status": "on",
+      "route": "engine",
+      "actions": [
+        {
+          "action": "aeth_matins"
+        }
+      ],
+      "state": "litany_ward",
+      "turns": "mech_val",
+      "rules": {
+        "litany_ward": {
+          "_src": "05_修女_v2.md §一「晨祷（免疫窗 + 治疗）」· §二「上限 3 层；每 300 刻自然回 1 层」· §五③「每次免疫 100 刻 ⇒ 那 100 刻免疫值多少？按敌方每次行动 250 点 AoE 算，≈ 1000 点队伍伤害」⇒ 免疫窗 = 这段时间**承伤 0**（immune）",
+          "cap": 1,
+          "immune": true
+        }
+      },
+      "judge": "窗口里打这个 actor 的伤害 = 0（taken_calc 把乘区折成 0），litany_ward 到期 = 现在 + mech_val(100)；窗口一过同一发伤害照旧落地。",
+      "src": "05_修女_v2.md §一/§二/§五③",
+      "halves": [
+        {
+          "name": "自身（单人 = 自己）mech_val(100) 刻免疫窗（这段承伤 0）",
+          "status": "on"
+        },
+        {
+          "name": "全队那一档",
+          "status": "pending",
+          "why": "同 不退：本包战斗只有单人，没有「全队」形状。"
+        },
+        {
+          "name": "「+ 治疗」那一半",
+          "status": "pending",
+          "why": "真源 05_§一 只写「晨祷（免疫窗 + 治疗）」，治疗量没给（§五③ 只算免疫那 100 刻值多少）⇒ 不编数；等真源补一行治疗量口径。"
+        }
+      ]
+    },
+    "hot": {
+      "status": "on",
+      "route": "cast",
+      "verb": "aeth_on_cast",
+      "state": "regen",
+      "turns": "mech_val",
+      "hot_ratio": {
+        "value": 0.25,
+        "src": "skills 域 SKILL_PRS_lullaby.note「一次挂 300 刻再生（每刻 heal 的 1/4）」· 05_修女_v2.md §三「10 级治疗量 = heal_pow 50.0 × 1.5 = 75.0，再生每刻 ≈ 18.8」（18.75 = 75.0 ÷ 4 —— 两边同一个算式）"
+      },
+      "rules": {},
+      "judge": "施放后 effects.regen 的 period.dir=heal、expire = 现在 + mech_val(300)、每刻回血 = round(F8 治疗量 × 0.25)（F8 走引擎同一条治疗链现算）；推进 N 刻后 hp 涨 ≈ N × 每刻回血（逐值复算）。",
+      "src": "05_修女_v2.md §一/§三/§五①",
+      "halves": [
+        {
+          "name": "挂 mech_val(300) 刻再生（每刻回血 = F8 治疗量 ÷ 4）",
+          "status": "on"
+        },
+        {
+          "name": "队友那一档",
+          "status": "pending",
+          "why": "无队伍（单人 = 自己）。"
+        }
+      ]
+    },
+    "protect": {
+      "status": "on",
+      "route": "cast",
+      "verb": "aeth_on_cast",
+      "state": "oathwall",
+      "rules": {
+        "oathwall": {
+          "_src": "01_骑士_v2.md §三「盾墙 本段免伤 40%（到下一次行动前）」· §三 数值理由「他 10 级减免 18.8%，再叠 40% ⇒ 实收 0.812 × 0.6 = 48.7%」（时长 = 自己下一动的到点时刻，现算不编）",
+          "cap": 1,
+          "reduce_taken": 0.4
+        }
+      },
+      "judge": "施放后 effects.oathwall 到期 = 自己**下一次行动的到点时刻**（`ct − 现在`，引擎自己推的那个数）、reduce_taken=0.4；到点前往自己身上落的伤害 ×0.6（taken_calc 乘区，逐值复算）。",
+      "src": "01_骑士_v2.md §三",
+      "halves": [
+        {
+          "name": "自身免伤 40%（到下一次行动前）",
+          "status": "on"
+        },
+        {
+          "name": "替紧邻队友接下 1 次指向性技能（掩护）",
+          "status": "pending",
+          "why": "需要队友。引擎那半截形状是现成的（landing 的 `guard_uid` + `Battle.redirect_hook` 挡刀：注释原话「target 身上的 guard_uid 指向保护者，由他替 target 承受这次伤害」）—— 等组队那批把第二个玩家 actor 放进来、往队友身上写 guard_uid。"
+        }
+      ]
+    },
+    "cleanse": {
+      "status": "on",
+      "route": "cast",
+      "verb": "aeth_on_cast",
+      "state": "",
+      "rules": {},
+      "judge": "施放后目标身上**一条控制**（条目带引擎的 `mode`）被摘掉；没有控的 ⇒ 出「没有可解的」那一句（不假装解了什么）。",
+      "src": "05_修女_v2.md §一/§三",
+      "halves": [
+        {
+          "name": "解除（摘掉一条控制条目 —— 控制的判据 = 引擎的 mode，不认态名）",
+          "status": "on"
+        },
+        {
+          "name": "解除后 15% 减伤",
+          "status": "pending",
+          "why": "05_修女_v2.md §一 只写「净罪（解除 + 15% 减伤）」，**没给时长** ⇒ 不编数（一条状态给不出时长就是给不了）；等真源补一行时长口径。"
+        },
+        {
+          "name": "今天没有可解的来源",
+          "status": "pending",
+          "why": "本包 30 条技能一条控制都没有（怪物也不放控制）⇒ 净罪今天解不到真东西；判据用**注入的控制条目**（引擎 act_apply 带显式 mode）验这一手接线。等怪物控制技那批转 on，它才有实战来源。"
+        },
+        {
+          "name": "自己的再生会不会被自己清掉（待裁决）",
+          "status": "pending",
+          "why": "这一手只摘带 `mode` 的控制条目（不碰 period 态）⇒ 今天不会误清自己的再生；但「净化该不该连 DOT 一起解、HoT 要不要豁免」在引擎那条 `cleanse` 动词上还是老判据（有 period 且 dir≠gain 就算减益）—— 等真源定口径。"
+        }
+      ]
+    },
+    "retreat": {
+      "status": "pending",
+      "route": "",
+      "why": "真源 03_游侠_v2.md §一 的三档距离表（距离 3 / 2 / 1）与 06_刺客_v2.md §一「撤到边上等」都要**场上位置**：贴脸 ⇒ 准星清零、远程技失效、只能后撤。而本作战斗是伪即时 CTB（02_战斗机制 §〇·五），引擎里没有站位轴（`rank`/`reach` 只参与 AOE 选目标，不构成「谁贴着谁」的状态）⇒ 「拉开距离」这一档落不了（属新形状，引擎不许改）。今天能表达的替代物只有「把对方的到点时刻推后」—— 那是「打断」那一手在做的事，不是后撤。⇒ 登记待办：真源侧先补一行「距离怎么算」。",
+      "why_short": "本作战斗是 CTB 无站位轴 —— 没有「距离」这一格可退",
+      "judge": "（无 —— pending：与接线前一字不差，什么也不发生；这一条登记在 pending 清单里，探针钉着它「仍然是 pending」而不是假生效）",
+      "src": "03_游侠_v2.md §一 · 06_刺客_v2.md §一 · 06_第一阶段垂直切片/04_指令总表 §五"
+    },
+    "mark_burst": {
+      "status": "pending",
+      "route": "",
+      "why": "真源 04_法师_v2.md §三：印记（C1）来源 = 星屑 +1 / 焰痕 +2 / 冰棱 +1（上限 6），兑现 = 引燃（每层 ×0.35 matk）· 垂星（需 ≥3 层 · 每层 ×0.8 + 眩晕 100 刻）。今天卡在两处：① **攒不出来** —— skills 域里星屑/焰痕/冰棱三条都没有 `res_gain` 声明（只有骑士盾墙写了 `res_gain: {RES_OATH: 12}`）⇒ 印记层数永远是 0；② **花不出去** —— 引燃/垂星两条写着 `res_cost: {RES_MARK: 99}`（占位值），而引擎 `_skill_usable` 对 res_cost 的判据是「有该条目就必须足额」⇒ 只要印记条目存在（层数 1–6），两条大招一律被判「资源不足」放不出来。⇒ 要接线得真源/域先定：印记谁攒、上限几层、花法是 `consume_all` 还是按层。数值算式本身域里是齐的（mech_val 0.35 / 0.8）—— 缺的不是数，是**口径**；本包不替它定（编一个 99 或一个上限就是造数）。",
+      "why_short": "印记（RES_MARK）今天既攒不出来、也花不出去 —— 两层都缺",
+      "judge": "（无 —— pending：与接线前一字不差，什么也不发生；登记在 pending 清单里）",
+      "src": "04_法师_v2.md §三/§六 · 02_数值宪法/02_战斗机制.md §二 C1"
+    }
+  }
+}

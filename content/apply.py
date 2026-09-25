@@ -113,6 +113,17 @@ def install_engine():
                         "cast": {"base": 60}, "recover": {"base": 0}, "range": 1, "mp": 0,
                         "_basic": True},
     )
+    # ★ B3-27：机制那两张表 —— 「技能 mech 名词 → 引擎动词」（EFFECT_ACTIONS）与
+    #   「状态语义」（EFFECT_RULES）。声明表**不能走 mount**（走的是 `load_game_rules`）。
+    #   同一张真源：`content/rules/skill_mech.json`；出口只有一个：`content/mech.py`。
+    #   不挂这两张表 ⇒ 名词查空表、`mech_val` 那道门照旧关着 ⇒ 与接线前**一字不差**
+    #   （探针有反证那一条）。
+    from ext_combat.battle import game_config as _GC
+    from . import mech as _MECH
+    _GC.load_game_rules(_MECH.rules_module())
+    # ★ 跨域对账（装配期 fail-closed）：域里每条技能声明的机制都得在表里 ——
+    #   不认得的当场抛并点名是哪条技能（绝不静默空放）。
+    _MECH.check_domain()
     _MOUNTED = True
 
 

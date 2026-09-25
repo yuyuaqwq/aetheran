@@ -19,6 +19,7 @@ from ext_combat.battle.actors import make_actor
 from . import panel_build as PB
 from . import alloc as ALLOC          # ★ P-34：档上那份加点只走它（`of_record`）
 from . import affix as AFFIX          # ★ B3-24：精英词条（面板乘 / 先手 / 开场盾 / 血量阈值）
+from . import mech as MECH            # ★ B3-27：技能机制层（触发器 + 选目标注入点）
 
 PLAYER_SIDE = "player"
 ENEMY_SIDE = "enemy"
@@ -107,6 +108,10 @@ def player_actor(player: dict, stack_prefix: str = "aetheran") -> dict:
     a.setdefault("max_mp", int(a.get("max_mp") or 0))
     # ★ 技能表必给（缺了引擎会挑默认技 —— 实测挑成了「圣光治愈」，双方打不死）
     a["skills"] = list(player.get("skills") or _default_skills(cls))
+    # ★ B3-27：机制层的两个注入点（引擎给内容侧的位）—— 出手瞬间（act_cast）与承伤乘区
+    #   （taken_calc）。只有「这一条技能真带 route=cast 的 mech / 身上真有减免态」时才动手，
+    #   其余一律一个字段都不写 ⇒ 不挂 = 与接线前逐字相同。
+    a["triggers"] = MECH.player_triggers()
     return a
 
 
@@ -264,7 +269,10 @@ def build(player: dict, monster_ids, monsters: dict, *, party: int | None = None
         hm = (list(hp_mults)[i] if hp_mults and i < len(hp_mults) else None)
         a = monster_actor(mid, m, party=party, affixes=affixes, hp_mult=hm)
         es.append(a)
-    b = Battle("monster", sides={PLAYER_SIDE: ps, ENEMY_SIDE: es}, action_override=override)
+    b = Battle("monster", sides={PLAYER_SIDE: ps, ENEMY_SIDE: es}, action_override=override,
+               # ★ B3-27：选目标注入点（引擎给内容侧的位）—— 挑战咆哮那一条要用它。
+               #   没挂嘲讽态 ⇒ 回 None ⇒ 引擎走原来的目标解析（与接线前逐字相同）。
+               target_picker=MECH.taunt_picker)
     # ★ B3-24 两条词条通道要**在 Battle 造好之后**落（引擎构造期会给全体播种初始 ct）：
     ct = AFFIX.opening_ct(affixes)
     if ct is not None:
