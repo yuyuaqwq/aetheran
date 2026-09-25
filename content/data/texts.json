@@ -3292,7 +3292,7 @@
     "desc": "技能 · 一条"
   },
   "SYS_SKILL_NOTE": {
-    "value": "    ↳ {note}",
+    "value": "↳ {note}",
     "params": [
       "note"
     ],
