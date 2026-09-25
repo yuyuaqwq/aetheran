@@ -34,11 +34,19 @@ priority 降序、同值按注册序，见引擎 `tests/test_host_priority_route
     可读物时按名字挑（点错名照「这儿没有能读的东西」说，**不随便塞一样**给玩家）
   ⑧ ★ B3-6（真敲）：副本那 5 条（进塔 / 下一层 / 副本地图 / 调查 / 撤退）都接上了 ——
      塔里 / 塔外两档回的都是真话，不是「还没接上」那一句（槽位 `SYS_CMD_SOON`）
+  ⑨ ★ B3-9（真敲）：装备 / 卸下 / 装备对比 / 学习 / 技能 五条接上了 —— 回的都是填了槽位的真话
+     （顺序：装备 → 状态 跟着面板走 → 对比（含别名）→ 卸下 → 穿脱回原样 → 学习 → 技能）；
+     且「声明了、可见、还没实现」那一条**只许降**（本批 38 → 33，`UNBOUND_MAX` 钉着）
+  ⑩ ★ B3-9（直调）：学习 / 技能 的语义 —— 六职业 1 级解锁那一班 · 四道门（没有这条 / 不是本职业 /
+     解锁等级没到 / 已经会了）· 落档后**档上那班 = 战斗真放的那班** · 用档上那班真打一场出伤害
+  ⑪ ★ B3-9（直调）：`装备对比` 逐字对账 —— 期望值由 `gear.gear_stats`（唯一取值口）+ texts 现算，
+     不手写镜像串；三档（有增有减 / 位子空着 / 全一样）各比一遍整段输出
 
 跑法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_cmds.py
 """
 from __future__ import annotations
 
+import asyncio
 import os
 import re
 import sys
@@ -344,8 +352,12 @@ def hit_sample(key):
     return ""
 
 
-chk("★ `装备对比 拾荒人的重剑` 回的是 item_compare（改前回 equip）",
-    _first("装备对比 拾荒人的重剑") == soon_text("item_compare"), _first("装备对比 拾荒人的重剑"))
+chk("★ `装备对比 拾荒人的重剑` 归 item_compare（改前被 equip 吃掉）—— ★ B3-9 接上实现体之后"
+    "这条改成更硬的写法：回的是实现体那句人话，**不再是 soon 兜底句**",
+    _first("装备对比 拾荒人的重剑")
+    == (TX.get("SYS_GEAR_IN_BAG") or {}).get("value", "").replace("{name}", "拾荒人的重剑")
+    and _first("装备对比 拾荒人的重剑") != soon_text("item_compare"),
+    _first("装备对比 拾荒人的重剑"))
 chk("★ `脱离` 回的是 flee（改前回 unequip）",
     bool(_first("脱离")) and "【unequip】" not in _first("脱离"), _first("脱离"))
 chk("★ `买药` 回的是 herbalist（改前回 item_buy）",
@@ -365,6 +377,11 @@ BOUND_USAGES = [v.get("usage") for k, v in DECL.items()
 #: 可见 + 没 bind（P-23 要钉住的那一批）
 UNBOUND = {k: v for k, v in DECL.items()
            if not v.get("bind") and v.get("visible", True) is not False}
+
+#: ★ B3-9：「声明了、可见、包内还没实现」的条数**只许降**（与 probe_copy 的 BUDGET 同一套纪律）——
+#:   B3-6 收口时 45，B3-9（装备与技能那组）接下 装备 / 卸下 / 对比 / 学习 / 技能 5 条 ⇒ **38 → 33**。
+#:   再往上加就是回退（要么是新声明没实现、要么是有人把 bind 摘了）。
+UNBOUND_MAX = 33
 
 print("⑤ ★ P-23：「帮助」只列**有处理器**的声明（真敲 · 逐条对账）")
 try:
@@ -482,6 +499,330 @@ try:
         "反推不出：%s · 回的还是那句：%s" % (_soon_miss[:3], _soon_bad[:3]))
 except Exception as exc:                                                   # noqa: BLE001
     chk("★ B3-6 副本 5 条跑得起来（真宿主契约）", False, "%s: %s" % (type(exc).__name__, exc))
+
+# ══════════════════════════════════════════════════════════════
+# ★ B3-9：装备与技能那组（装备 / 卸下 / 装备对比 / 学习 / 技能）
+# ══════════════════════════════════════════════════════════════
+from content import cmds_ast as CA9                                     # noqa: E402
+from content import gear as GB                                          # noqa: E402
+from content import panel_build as PB                                   # noqa: E402
+
+#: 本批接下处理器的那 5 条
+GEAR5 = ("equip", "unequip", "item_compare", "skills", "skill_learn")
+
+
+def _r(key, **kw):
+    """按 texts 现渲染一条槽位（期望值探针自己算，不手写镜像串 —— 与 §十 同一做法）。"""
+    s = (TX.get(key) or {}).get("value", "")
+    for k, v in kw.items():
+        s = s.replace("{%s}" % k, str(v))
+    return s
+
+
+class _E9(object):
+    """直调实现体：只要 env.save() + env.text（与别处同形）。"""
+
+    def __init__(self, text=""):
+        self.text = text
+
+    def save(self):
+        pass
+
+
+def _drive9(fn, p, text=""):
+    out = []
+
+    async def _go():
+        async for _ln in fn(_E9(text), None, "u_b3_9", p):
+            out.append(str(_ln))
+
+    asyncio.run(_go())
+    return out
+
+
+print("⑨ ★ B3-9（真宿主）：装备 / 卸下 / 对比 / 学习 / 技能 五条真敲 —— 回的都是真话")
+_IT9 = st.domain("items") or {}
+_SK9 = st.domain("skills") or {}
+_CL9 = {k: v for k, v in (st.domain("classes") or {}).items() if not str(k).startswith("_")}
+#: 两把**名字不同**的同格武器（对比才有增有减；名字相同的两条同名双源 —— probe_equip_events ① 那族）
+_W1, _W2 = "i_weapon_knight_wall_refined", "i_weapon_knight_oath_refined"
+chk("★ 两条真装备都在物品表里（%s / %s）" % (_W1, _W2), _W1 in _IT9 and _W2 in _IT9)
+try:
+    _W1N, _W2N = _IT9[_W1]["name"], _IT9[_W2]["name"]
+    _KNT9 = sorted((int(v.get("lv") or 1), k, v) for k, v in _SK9.items()
+                   if v.get("owner_class") == "cls_knight")
+    _KNT9N = [v.get("name") for _l, _k, v in _KNT9]
+    _KNT9LAB = _CL9["cls_knight"]["name"]
+    _SEED9 = {"cls": "cls_knight", "race": "human", "level": 3, "hp": 100, "gold": 30,
+              "bag": {_W1: 1, _W2: 1}, "equipped": {}, "codex": {}, "flags": {},
+              "loc": "belt_north", "node": "bn_bone"}
+    _cap0_9 = int(PB.hp_cap(CA9._p(dict(_SEED9))))
+    _dhp9 = int(GB.gear_stats({"equipped": {"_one": _W1}, "enhance": {}}).get("hp", 0))
+    _db9 = os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp", "ast_probe_cmds_gear.db")
+    try:
+        os.remove(_db9)
+    except OSError:
+        pass
+    _ad9 = _Ad([], seed=dict(_SEED9))
+    _host9 = Host(_ad9, str(REPO), inject={"db_path": _db9, "clock": time.time})
+    _host9.boot()
+
+    def _say9(text):
+        _ad9.out.clear()
+        _host9.handle({"uid": "u_c", "group_id": "g_c", "text": text})
+        return list(_ad9.out)
+
+    _bad9 = []
+    _wear9 = _say9("装备 %s" % _W1N)
+    if not _wear9 or _wear9[0] != _r("SYS_GEAR_EQUIP_OK", icon=_IT9[_W1].get("icon", ""),
+                                     name=_W1N, kind=_IT9[_W1].get("kind", "")):
+        _bad9.append(("装备", _wear9[:1]))
+    _sv9 = _ad9.saved or {}
+    if int(_sv9.get("hp_max") or 0) != _cap0_9 + _dhp9 \
+            or _sv9.get("equipped") != {_IT9[_W1]["slot"]: _W1}:
+        _bad9.append(("装备 没改档上的 equipped / 面板派生的上限", _sv9.get("hp_max"),
+                      _sv9.get("equipped")))
+    _st9 = _say9("状态")
+    _vv9 = _r("SYS_STATUS_VITALS", hp=_sv9.get("hp"), hp_max=_sv9.get("hp_max"),
+              mo=_sv9.get("mo"), mo_max=_sv9.get("mo_max"), gold=_sv9.get("gold"))
+    if _vv9 not in _st9:
+        _bad9.append(("状态 没跟着面板走", _st9[1:2], _vv9))
+    _cmp9 = _say9("对比 %s" % _W2N)
+    if not _cmp9 or _cmp9[0] != _r("SYS_CMP_HEAD", name=_W2N, quality=_IT9[_W2].get("quality", ""),
+                                   kind=_IT9[_W2].get("kind", ""), cur=_W1N):
+        _bad9.append(("对比", _cmp9[:1]))
+    if _say9("装备对比 %s" % _W2N) != _cmp9:
+        _bad9.append(("「装备对比」与「对比」两条写法回的不是同一段",))
+    _off9 = _say9("卸下 %s" % _W1N)
+    if not _off9 or _off9[0] != _r("SYS_GEAR_UNEQUIP_OK", icon=_IT9[_W1].get("icon", ""),
+                                   name=_W1N, kind=_IT9[_W1].get("kind", "")):
+        _bad9.append(("卸下", _off9[:1]))
+    _learn9 = _say9("学习 %s" % _KNT9N[0])
+    if not _learn9 or _learn9[0] != _r("SYS_SKILL_ALREADY", name=_KNT9N[0]):
+        _bad9.append(("学习", _learn9[:1]))
+    _list9 = _say9("技能")
+    if not _list9 or _list9[0] != _r("SYS_SKILL_HEAD", cls=_KNT9LAB,
+                                     known=len(_KNT9N), locked=0):
+        _bad9.append(("技能 抬头", _list9[:1]))
+    _miss9 = [n for n in _KNT9N if not any(n in _ln for _ln in _list9)]
+    if _miss9:
+        _bad9.append(("技能 少了这几条", _miss9))
+    chk("★ 真敲：装备 → 状态 → 对比 → 卸下 → 学习 → 技能，回的都是填了槽位的真话",
+        not _bad9, "%s" % _bad9[:3])
+    _all9 = _wear9 + _st9 + _cmp9 + _off9 + _learn9 + _list9
+    chk("★ 这 5 条一条都不再回「还没接上」那一句",
+        not [k for k in GEAR5 if any(soon_text(k) in _ln for _ln in _all9)])
+    chk("★ 这 5 条都挂了 bind", not [k for k in GEAR5 if not (DECL.get(k) or {}).get("bind")])
+    chk("★ 「声明了、可见、还没实现」**只许降**：本批 38 → %d 条（上限 %d）"
+        % (len(UNBOUND), UNBOUND_MAX), len(UNBOUND) <= UNBOUND_MAX, "%s" % sorted(UNBOUND)[:6])
+    _leak9 = [(k, _ln[:38]) for k in GEAR5 for _ln in _all9
+              if any(w in _ln for w in (_W1, _W2, "SKILL_", "[MISSING TEXT"))]
+    chk("★ 回话里没有物品 / 技能 id，也没有取不到文案", not _leak9, "%s" % _leak9[:3])
+    _sv9b = _ad9.saved or {}
+    chk("★ 穿一件再脱一件 ⇒ 档上逐字回原样（背包 / 身上）",
+        _sv9b.get("bag") == _SEED9["bag"] and _sv9b.get("equipped") == _SEED9["equipped"],
+        "%s / %s" % (_sv9b.get("bag"), _sv9b.get("equipped")))
+    # ★ 两条真分开（④ 那条老判据钉不住的东西）：同一件东西、同一个档 ——
+    #   `装备对比` 出对比抬头（位子空着）· `装备` 出穿上那一句；改前两条都归 equip。
+    _db9b = os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp", "ast_probe_cmds_cmp.db")
+    try:
+        os.remove(_db9b)
+    except OSError:
+        pass
+    _ad9b = _Ad([], seed={"cls": "cls_knight", "race": "human", "level": 1, "hp": 100,
+                          "bag": {_W1: 1}, "equipped": {}, "codex": {}, "flags": {}})
+    _host9b = Host(_ad9b, str(REPO), inject={"db_path": _db9b, "clock": time.time})
+    _host9b.boot()
+
+    def _say9b(text):
+        _ad9b.out.clear()
+        _host9b.handle({"uid": "u_c", "group_id": "g_c", "text": text})
+        return list(_ad9b.out)
+
+    _cmpB = _say9b("装备对比 %s" % _W1N)
+    _eqB = _say9b("装备 %s" % _W1N)
+    chk("★ 同一件东西两条真分开：`装备对比` 回对比抬头（位子空着）· `装备` 回穿上那一句",
+        _cmpB[:1] == [_r("SYS_CMP_HEAD", name=_W1N, quality=_IT9[_W1].get("quality", ""),
+                         kind=_IT9[_W1].get("kind", ""), cur=_r("SYS_GEAR_SLOT_EMPTY"))]
+        and _eqB[:1] == [_r("SYS_GEAR_EQUIP_OK", icon=_IT9[_W1].get("icon", ""), name=_W1N,
+                            kind=_IT9[_W1].get("kind", ""))],
+        "%s / %s" % (_cmpB[:1], _eqB[:1]))
+except Exception as exc:                                               # noqa: BLE001 —— 起不来就是红
+    chk("★ B3-9 五条真敲跑得起来（真宿主契约）", False, "%s: %s" % (type(exc).__name__, exc))
+
+
+print("⑩ ★ B3-9（直调）：学习 / 技能 的语义 —— 解锁那一班 · 四道门 · 落档 · 真打一场")
+try:
+    from content import cmds_ast as CA9                                # noqa: E402
+    from content import cmds_skill as CSK                              # noqa: E402
+    from content import cmds_battle as CBAT9                           # noqa: E402
+    from content import combat as CB9                                  # noqa: E402
+
+    _SK10 = CA9._data("skills")        # ★ 走实现体真读的那一份（临时造一条也注入这里）
+    _CL10 = st.domain("classes") or {}
+    _rows10 = {c: CSK._of_class(c, 1) for c in sorted(_CL10) if not str(c).startswith("_")}
+    _tot10 = sum(len(a) for a, _l in _rows10.values())
+    _owned10 = [1 for v in _SK10.values() if v.get("owner_class")]
+    chk("★ 六职业 1 级解锁的技能：%s（合 %d 条 = 域里挂 owner_class 的全部）"
+        % (" · ".join("%s %d" % (_CL10[c]["name"], len(a)) for c, (a, _l) in sorted(_rows10.items())),
+           _tot10), _tot10 == len(_owned10), "%d vs %d" % (_tot10, len(_owned10)))
+    _hi10 = sorted((k, v.get("lv")) for k, v in _SK10.items() if int(v.get("lv") or 1) > 1)
+    chk("★ 今天没有「解锁等级 > 1」的技能（%d 条全 lv=1）—— 11–20 级那 12 条补进来之后"
+        "这一条会翻红，那时按新数据改它" % len(_SK10), not _hi10, "%s" % _hi10[:4])
+
+    _knt10 = {"cls": "cls_knight", "level": 3, "race": "human", "hp": 100,
+              "bag": {}, "equipped": {}, "flags": {}, "codex": {}}
+    _name10 = [v.get("name") for _l, _k, v in sorted(
+        (int(v.get("lv") or 1), k, v) for k, v in _SK10.items()
+        if v.get("owner_class") == "cls_knight")]
+    _lst10 = _drive9(CSK.skills, dict(_knt10))
+    _head10 = _r("SYS_SKILL_HEAD", cls=_CL10["cls_knight"]["name"], known=len(_name10), locked=0)
+    chk("★ 骑士档 `技能`：抬头「%s」· %d 条一条不落"
+        % (_head10, len(_name10)),
+        bool(_lst10) and _lst10[0] == _head10
+        and not [n for n in _name10 if not any(n in _ln for _ln in _lst10)],
+        "%s" % _lst10[:1])
+    _idleak10 = [_ln[:34] for _ln in _lst10 if any(k in _ln for k in _SK10)]
+    chk("★ `技能` 只出名字，不漏技能 id（%d 行逐行扫）" % len(_lst10), not _idleak10,
+        "%s" % _idleak10[:2])
+
+    # 落档那一条：档上只记了一条 ⇒ 学第二条 ⇒ **整班一起记上**（否则「学了新的丢掉默认那一班」）
+    _one10 = dict(_knt10, skills=["SKILL_KNT_slash"])
+    _learn10 = _drive9(CSK.skill_learn, _one10, "学习 %s" % _name10[1])
+    _ids10 = list(_one10.get("skills") or [])
+    _names10 = sorted(_SK10[i].get("name") for i in _ids10 if i in _SK10)
+    chk("★ `学习 %s` 落档：档上那班 = 本职业此刻解锁的全部（%s）"
+        % (_name10[1], " · ".join(sorted(_name10))),
+        bool(_learn10) and _learn10[0] == _r("SYS_SKILL_LEARN", name=_name10[1], n=len(_name10))
+        and _names10 == sorted(_name10), "%s / %s" % (_learn10[:1], _names10))
+    chk("★ 档上那班 = 战斗真放的那班（actor[\"skills\"] 与档上一个字不差）",
+        list(CB9.player_actor(_one10).get("skills") or []) == _ids10,
+        "%s" % (CB9.player_actor(_one10).get("skills"),))
+    chk("★ 再学同一条 ⇒ 「%s」（幂等，不动档）" % _r("SYS_SKILL_ALREADY", name=_name10[1]),
+        _drive9(CSK.skill_learn, _one10, "学习 %s" % _name10[1])
+        == [_r("SYS_SKILL_ALREADY", name=_name10[1])])
+
+    _mage10 = next((v.get("name"), v.get("owner_class")) for v in _SK10.values()
+                   if v.get("owner_class") == "cls_mage")
+    chk("★ 门② 不是本职业的（%s）⇒ 点名是谁的" % _mage10[0],
+        _drive9(CSK.skill_learn, dict(_knt10), "学习 %s" % _mage10[0])
+        == [_r("SYS_SKILL_NOTMINE", name=_mage10[0], owner=_CL10[_mage10[1]]["name"])])
+    chk("★ 门① 域里没有这条 ⇒ 明说没有",
+        _drive9(CSK.skill_learn, dict(_knt10), "学习 没有这条技能")
+        == [_r("SYS_SKILL_NONE", name="没有这条技能")])
+    _nocls10 = _drive9(CSK.skills, {})
+    _noclsL10 = _drive9(CSK.skill_learn, {}, "学习 横剑")
+    chk("★ 档上还没职业：`技能` 与 `学习` 都点名（不猜职业）",
+        _nocls10 == [_r("SYS_SKILL_NOCLS")] and _noclsL10 == [_r("SYS_SKILL_NOCLS")],
+        "%s / %s" % (_nocls10[:1], _noclsL10[:1]))
+
+    # 门③ 解锁等级没到 —— **只在内存里**造一条 lv=99 的（不动域里的文件）
+    _fake10 = "SKILL_PROBE_high_level"
+    _SK10[_fake10] = {"name": "探针高等级技", "kind": _name10 and (
+        next(v.get("kind") for v in _SK10.values() if v.get("kind"))), "lv": 99,
+        "owner_class": "cls_knight", "mp": 0, "cd": 0, "power": 1.0}
+    try:
+        _hi_learn = _drive9(CSK.skill_learn, dict(_knt10), "学习 %s" % _SK10[_fake10]["name"])
+    finally:
+        _SK10.pop(_fake10, None)
+    chk("★ 门③ 解锁等级没到（内存里造一条 lv=99）⇒ 「%s」"
+        % _r("SYS_SKILL_TOO_LOW", name="探针高等级技", lv=99, gap=96),
+        _hi_learn == [_r("SYS_SKILL_TOO_LOW", name="探针高等级技", lv=99, gap=96)],
+        "%s" % _hi_learn[:1])
+
+    # 真打一场：走的就是档上那班技能 ⇒ 出真伤害（不是空放）
+    _fight10 = dict(_one10)
+    _fight10.update({"level": 3, "hp": 300, "loc": "belt_north", "node": "bn_bone",
+                     "bag": {}, "codex": {}, "flags": {}})
+    _lw10 = _drive9(CBAT9.attack, _fight10)
+    _dmg10 = [_ln for _ln in _lw10 if "伤害" in _ln]
+    chk("★ 真打一场（档上那班技能）：出 %d 行伤害 ⇒ 技能放得出来、不是空放" % len(_dmg10),
+        bool(_dmg10), "%s" % _lw10[:3])
+except Exception as exc:                                              # noqa: BLE001
+    chk("★ B3-9 学习 / 技能 那条跑得起来（直调实现体）", False,
+        "%s: %s" % (type(exc).__name__, exc))
+
+
+print("⑪ ★ B3-9（直调）：`装备对比` 逐字对账 —— 期望值现算（gear_stats + texts），四档各比一遍")
+
+
+def _cmp_want(cur_id, new_id):
+    """对比该出哪些行 —— **从唯一取值口现算**（`gear.gear_stats` + texts），不手写镜像串。
+
+    ★ 列哪几行按实现体的同一条规则现算：**不带 note 的数值词条**才算数值行（面板属性那一类），
+      带 note 的走规则行 —— 所以带 note 的键（`res_element` / `dmg_half_chance` …）不该
+      出现 `SYS_STAT_*` 标签需求（补一句：它们本来也没有标签槽位）。
+    """
+    new11 = GB.gear_stats({"equipped": {"_one": new_id}, "enhance": {}})
+    cur11 = GB.gear_stats({"equipped": {"_one": cur_id}, "enhance": {}}) if cur_id else {}
+    _pk = set()
+    for _rr in (new_id, cur_id):
+        for _a in ((_IT9[_rr].get("affixes") or []) if _rr else []):
+            if not _a.get("note") and isinstance(_a.get("v"), (int, float)) \
+                    and not isinstance(_a.get("v"), bool):
+                _pk.add(_a["stat"])
+    out = [_r("SYS_CMP_HEAD", name=_IT9[new_id]["name"], quality=_IT9[new_id].get("quality", ""),
+              kind=_IT9[new_id].get("kind", ""),
+              cur=(_IT9[cur_id]["name"] if cur_id else _r("SYS_GEAR_SLOT_EMPTY")))]
+    if not cur_id:
+        out.append(_r("SYS_CMP_EMPTY", kind=_IT9[new_id].get("kind", "")))
+        for a in _IT9[new_id].get("affixes") or []:
+            if a.get("note"):
+                out.append(_r("SYS_GEAR_AFFIX_NOTE", note=str(a["note"])))
+            else:
+                out.append(_r("SYS_GEAR_AFFIX_ROW", label=_r("SYS_STAT_%s" % a["stat"].upper()),
+                              value="%g" % float(a["v"])))
+        return out
+    up = down = same = 0
+    for stat in sorted(_pk):
+        a, b = float(cur11.get(stat, 0.0)), float(new11.get(stat, 0.0))
+        if abs(a - b) < 1e-9:
+            same += 1
+            out.append(_r("SYS_CMP_ROW_SAME", label=_r("SYS_STAT_%s" % stat.upper()),
+                          value="%g" % a))
+            continue
+        d = b - a
+        up += 1 if d > 0 else 0
+        down += 1 if d < 0 else 0
+        out.append(_r("SYS_CMP_ROW", label=_r("SYS_STAT_%s" % stat.upper()), old="%g" % a,
+                      new="%g" % b, sign=("+" if d > 0 else "-"), delta="%g" % abs(d)))
+    for slotk, rr in (("SYS_CMP_NOTE_NEW", _IT9[new_id]), ("SYS_CMP_NOTE_CUR", _IT9[cur_id])):
+        for a in rr.get("affixes") or []:
+            if a.get("note"):
+                out.append(_r(slotk, note=str(a["note"])))
+    out.append(_r("SYS_CMP_VERDICT", up=up, down=down, same=same))
+    return out
+
+
+try:
+    from content import cmds_gear as CG11                              # noqa: E402
+
+    _CASES11 = [("有增有减（同格两把不同的武器）", _W1, _W2),
+                ("位子空着", "", "i_armor_bottom_light_common"),
+                ("全一样（同格两件同数值）", "i_armor_bottom_light_common",
+                 "i_armor_bottom_weighted_common"),
+                # ★ 带 note 的数值词条（`dmg_half_chance 10`）不进数值行、也不许要标签 ——
+                #   这一条真跑过：改前它会出一行 `[MISSING TEXT: SYS_STAT_DMG_HALF_CHANCE]`
+                ("带 note 的数值词条只出「改规则」那一行",
+                 "i_armor_top_heavy_refined", "i_armor_top_heavy_rare")]
+    _bad11 = []
+    for _lab11, _cur11, _new11 in _CASES11:
+        if _new11 not in _IT9:
+            _bad11.append((_lab11, "夹具不在物品表里：%s" % _new11))
+            continue
+        _p11 = {"cls": "cls_knight", "level": 3, "hp": 100, "bag": {_new11: 1},
+                "equipped": ({_IT9[_new11]["slot"]: _cur11} if _cur11 else {}),
+                "flags": {}, "codex": {}}
+        _got11 = _drive9(CG11.item_compare, _p11, "对比 %s" % _IT9[_new11]["name"])
+        _want11 = _cmp_want(_cur11, _new11)
+        if _got11 != _want11 or any("[MISSING TEXT" in _ln for _ln in _got11):
+            _bad11.append((_lab11, _got11[:5], _want11[:5]))
+    chk("★ 四档（有增有减 / 位子空着 / 全一样 / 带 note 的不进数值行）逐字对账："
+        "整段输出 = `gear_stats` + texts 现算的期望，且一行 `[MISSING TEXT` 都没有",
+        not _bad11, "%s" % _bad11[:2])
+except Exception as exc:                                              # noqa: BLE001
+    chk("★ B3-9 装备对比 那条跑得起来（直调实现体）", False,
+        "%s: %s" % (type(exc).__name__, exc))
 
 print("")
 print("结果：全绿 ✓" if ok else "结果：有红 ✗")

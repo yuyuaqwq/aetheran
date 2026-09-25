@@ -25,6 +25,7 @@
 
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_panel.py
 """
+import asyncio
 import os
 import re
 import sys
@@ -180,6 +181,89 @@ for name in sorted(os.listdir(os.path.join(PKG, "content"))):
         if any(p.search(line) for p in _HARD):
             _hits.append("%s:%d %s" % (name, _i, line.strip()[:48]))
 chk("写死的上限 0 处（原先 apply.py / cmds_ast.py 各一处）", not _hits, str(_hits))
+
+print("")
+print("── ⑤ ★ B3-9：`装备` / `卸下` 真改 equipped ⇒ 面板 / 档 / 战斗 actor 三处一起动；"
+      "脱了逐字回原样（幂等）")
+try:
+    from content import cmds_gear as CG                              # noqa: E402
+    from content import gear as GBM                                  # noqa: E402
+
+    class _E9(object):
+        """直调实现体：只要 env.save() + env.text（与别处同形）。"""
+
+        def __init__(self, text=""):
+            self.text = text
+
+        def save(self):
+            pass
+
+    def _dr9(fn, p, text=""):
+        out9 = []
+
+        async def _go():
+            async for _l in fn(_E9(text), None, "u_gear", p):
+                out9.append(str(_l))
+
+        asyncio.run(_go())
+        return out9
+
+    if not _HP_ITEM:
+        chk("items 域里有带 hp 词条的装备（找不到 ⇒ 这条测不了）", False, _HP_ITEM)
+    else:
+        _it9 = _ITS[_HP_ITEM]
+        _slot9 = _it9["slot"]
+        _dhp9 = int(GBM.gear_stats({"equipped": {"_one": _HP_ITEM}, "enhance": {}}).get("hp", 0))
+        _start9 = {"cls": "cls_knight", "level": 1, "hp": 100, "gold": 0,
+                   "bag": {_HP_ITEM: 1}, "equipped": {}, "codex": {}, "flags": {}}
+
+        def _store9(uid, rec):
+            _r9 = CA._p(dict(rec))                     # 出档口派生之后那一份
+            _r9.pop("uid", None)                       # uid 是行键，不进字段
+            PS.update_player("g_gear", uid, **_r9)     # 落档
+            return PS.get_player("g_gear", uid)        # ← 真从库里读回来
+
+        _b0 = _store9("u_gear_0", _start9)
+        _cap0g = int(_b0["hp_max"])
+        _live = dict(_b0)
+        _out_w = _dr9(CG.equip, _live, "装备 %s" % _it9["name"])
+        _cap1g = int(_live.get("hp_max") or 0)
+        _pan1 = int(panel_build.hp_cap(_live))
+        _act1 = int(CB.player_actor(_live)["max_hp"])
+        chk("★ 穿一件带 hp 词条的装（%s · +%s）：面板 / 档 / actor 三处一起涨（%s → %s）"
+            % (_it9["name"], _dhp9, _cap0g, _cap0g + _dhp9),
+            _cap1g == _pan1 == _act1 == _cap0g + _dhp9
+            and _live.get("equipped") == {_slot9: _HP_ITEM} and not (_live.get("bag") or {}),
+            "%s / %s / %s" % (_cap1g, _pan1, _act1))
+
+        _b1 = _store9("u_gear_1", _live)
+        chk("★ 穿上之后真落库再读回来：档上那格就是同一个数（%s）· 身上那格也对"
+            % _b1.get("hp_max"),
+            int(_b1["hp_max"]) == _cap0g + _dhp9 and _b1.get("equipped") == {_slot9: _HP_ITEM},
+            "%s / %s" % (_b1.get("hp_max"), _b1.get("equipped")))
+
+        _live2 = dict(_b1)
+        _out_o = _dr9(CG.unequip, _live2, "卸下 %s" % _it9["name"])
+        chk("★ 卸下：上限回到 %s · 背包 / 身上逐字回原样 · 现血不动" % _cap0g,
+            int(_live2["hp_max"]) == _cap0g and _live2.get("bag") == _start9["bag"]
+            and _live2.get("equipped") == _start9["equipped"]
+            and int(_live2["hp"]) == int(_b0["hp"]),
+            "%s / %s / %s" % (_live2.get("hp_max"), _live2.get("bag"), _live2.get("equipped")))
+
+        _live3 = dict(_b0)
+        _out_w2 = _dr9(CG.equip, _live3, "装备 %s" % _it9["name"])
+        _out_o2 = _dr9(CG.unequip, _live3, "卸下 %s" % _it9["name"])
+        _keys9 = ("cls", "level", "hp", "hp_max", "mo", "mo_max", "gold", "bag", "equipped")
+        chk("★ 幂等：同一个起手档再跑一遍 —— 穿 / 脱两段**逐字相同**、档上那几格也一模一样",
+            _out_w == _out_w2 and _out_o == _out_o2
+            and all(_live3.get(k) == _live2.get(k) for k in _keys9),
+            "%s vs %s" % (_out_w[:1], _out_w2[:1]))
+        chk("★ 穿上那一句里报了「生命上限 %s → %s」" % (_cap0g, _cap0g + _dhp9),
+            any(("生命上限 %s → %s" % (_cap0g, _cap0g + _dhp9)) in x for x in _out_w),
+            "%s" % _out_w[:3])
+except Exception as exc:                                            # noqa: BLE001
+    chk("★ B3-9 装备进面板那条跑得起来（直调实现体 + 真存档）", False,
+        "%s: %s" % (type(exc).__name__, exc))
 
 print("")
 print("===== %s =====" % ("★ P-27 三处一致 + 反证都过 ✅" if not fails else "P-27 有红 ❌ %s" % fails))

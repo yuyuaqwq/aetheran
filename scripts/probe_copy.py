@@ -25,6 +25,9 @@
      另钉一份「已收口的取值」清单（ENUM_DONE，只许变长）。
   ⑯ ★ B3-6b-2d-keys-2：代码里比的 ASCII 机器键**都在域里真出现过**
      （role_key / kind_key / pool / unidentified / cook —— 与 ⑦ chain / ⑧ verb 同款）。
+  ⑰ ★ B3-9（装备与技能那组）：新接的 5 条（装备 / 卸下 / 装备对比 / 学习 / 技能）也进用例表 ——
+     主要支路各跑一遍（穿 / 换下同格 / 已经穿着 / 不是能穿的 / 身上没有 / 位子空着 /
+     还没择业），于是 ⑥ 的「不缺文案」与「不漏机器键」两条**自动**罩到它们身上。
 
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_copy.py [--inventory]
 """
@@ -388,6 +391,8 @@ def main():
     from content import cmds_title as CTT                                 # noqa: E402
     from content import cmds_egg as CE                                    # noqa: E402
     from content import cmds_tower as CTW                                 # noqa: E402
+    from content import cmds_gear as CGR                                  # noqa: E402
+    from content import cmds_skill as CSK                                 # noqa: E402
 
     town = _node_names(st, "windmill_town")
     belt = _node_names(st, "belt_north")
@@ -402,6 +407,14 @@ def main():
     # ★ B3-6b-2d-b：挑一件武器做 fixture 走 ASCII `slot`（原先按 kind 的中文枚举挑）
     _wpn = sorted(k for k, v in _its.items() if v.get("slot") == "weapon")
     _wpn = (_wpn or [""])[0]
+    # ★ B3-9（装备与技能那组）的 fixture：同格**另一把不同名**的武器（对比才有增有减）·
+    #   一件非装备（「不是能穿的」那一支）· 骑士班最靠前的那条技能（学习 / 技能）
+    _w2 = next((k for k in sorted(k for k, v in _its.items() if v.get("slot") == "weapon")
+                if _its[k].get("name") != _its.get(_wpn, {}).get("name")), _wpn)
+    _plain = next((k for k in sorted(_its) if not _its[k].get("slot")), "")
+    _knt_sk = sorted((int(v.get("lv") or 1), k, v) for k, v in (st.domain("skills") or {}).items()
+                     if v.get("owner_class") == "cls_knight")
+    _knt_name = _knt_sk[0][2].get("name") if _knt_sk else ""
     _tid = next((k for k in sorted(st.domain("titles") or {}) if not str(k).startswith("_")), "")
     _eid = next((k for k in sorted(st.domain("eggs") or {}) if not str(k).startswith("_")), "")
     # ★ B3-5：今天那个游戏日（「异动」标「新开的 / 收了」要看维护门那一格是不是今天的）
@@ -550,6 +563,38 @@ def main():
         ("撤退(塔里)", CTW.tower_leave, "", {"loc": "old_watchtower", "node": "tower_top"}),
         ("撤退(塔外)", CTW.tower_leave, "", {"loc": "belt_north", "node": "bn_bone"}),
         ("副本地图(塔外)", CTW.tower_map, "", {"loc": "belt_north", "node": "bn_bone"}),
+        # ★ B3-9（装备与技能那组）：新接的 5 条 —— 每一支都真跑一遍（含「认不出 / 不是能穿的 /
+        #   身上没有 / 位子空着 / 还不是本职业 / 还没择业」这些支路），逐行扫机器键与缺文案
+        ("装备(穿上一件)", CGR.equip, "装备 %s" % _its.get(_wpn, {}).get("name", ""),
+         {"cls": "cls_knight", "bag": {_wpn: 1}}),
+        ("装备(同一位子换下)", CGR.equip, "装备 %s" % _its.get(_w2, {}).get("name", ""),
+         {"cls": "cls_knight", "bag": {_w2: 1}, "equipped": {"weapon": _wpn}}),
+        ("装备(已经穿在身上)", CGR.equip, "装备 %s" % _its.get(_wpn, {}).get("name", ""),
+         {"cls": "cls_knight", "equipped": {"weapon": _wpn}}),
+        ("装备(不是能穿的)", CGR.equip, "装备 %s" % _its.get(_plain, {}).get("name", ""),
+         {"bag": {_plain: 1}}),
+        ("装备(背包里没有)", CGR.equip, "装备 不存在的东西", {"cls": "cls_knight"}),
+        ("卸下(身上那件)", CGR.unequip, "卸下 %s" % _its.get(_wpn, {}).get("name", ""),
+         {"cls": "cls_knight", "equipped": {"weapon": _wpn}}),
+        ("卸下(没点名·列身上)", CGR.unequip, "卸下",
+         {"cls": "cls_knight", "equipped": {"weapon": _wpn}}),
+        ("卸下(空身)", CGR.unequip, "卸下", {"cls": "cls_knight"}),
+        ("卸下(身上没这件)", CGR.unequip, "卸下 不存在的甲",
+         {"cls": "cls_knight", "equipped": {"weapon": _wpn}}),
+        ("对比(换不换)", CGR.item_compare, "对比 %s" % _its.get(_w2, {}).get("name", ""),
+         {"cls": "cls_knight", "bag": {_w2: 1}, "equipped": {"weapon": _wpn}}),
+        ("对比(位子空着)", CGR.item_compare, "对比 %s" % _its.get(_w2, {}).get("name", ""),
+         {"cls": "cls_knight", "bag": {_w2: 1}}),
+        ("对比(背包里没有)", CGR.item_compare, "对比 不存在的东西", {}),
+        ("技能(骑士)", CSK.skills, "", {"cls": "cls_knight", "level": 1}),
+        ("技能(还没择业)", CSK.skills, "", {}),
+        ("学习(本职业·已在册)", CSK.skill_learn, "学习 %s" % _knt_name,
+         {"cls": "cls_knight", "level": 1}),
+        ("学习(学一条新的·落档)", CSK.skill_learn, "学习 %s" % _knt_name,
+         {"cls": "cls_knight", "level": 1, "skills": ["SKILL_KNT_slash"]}),
+        ("学习(不是本职业)", CSK.skill_learn, "学习 冰棱", {"cls": "cls_knight", "level": 1}),
+        ("学习(没这条)", CSK.skill_learn, "学习 没有这条技能", {"cls": "cls_knight"}),
+        ("学习(还没择业)", CSK.skill_learn, "学习 横剑", {}),
     ]
     bad, empty, sample = [], [], []
     leaked = []

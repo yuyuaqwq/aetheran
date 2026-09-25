@@ -515,7 +515,15 @@
     "usage": "技能",
     "visible": true,
     "order": 24,
-    "guard_desc": "随时"
+    "guard_desc": "随时",
+    "bind": {
+      "handler": "content.cmds_skill:skills",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "skill_learn": {
     "patterns": [
@@ -527,7 +535,15 @@
     "usage": "学习 <参数>",
     "visible": true,
     "order": 25,
-    "guard_desc": "等级与点数够"
+    "guard_desc": "等级与点数够",
+    "bind": {
+      "handler": "content.cmds_skill:skill_learn",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "equip": {
     "patterns": [
@@ -540,7 +556,15 @@
     "usage": "装备 <参数>",
     "visible": true,
     "order": 26,
-    "guard_desc": "背包里有"
+    "guard_desc": "背包里有",
+    "bind": {
+      "handler": "content.cmds_gear:equip",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "unequip": {
     "patterns": [
@@ -553,7 +577,15 @@
     "usage": "卸下 <参数>",
     "visible": true,
     "order": 27,
-    "guard_desc": "已装备"
+    "guard_desc": "已装备",
+    "bind": {
+      "handler": "content.cmds_gear:unequip",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "titles": {
     "patterns": [
@@ -734,7 +766,15 @@
     "visible": true,
     "order": 39,
     "guard_desc": "背包里有",
-    "priority": 50
+    "priority": 50,
+    "bind": {
+      "handler": "content.cmds_gear:item_compare",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "money": {
     "patterns": [

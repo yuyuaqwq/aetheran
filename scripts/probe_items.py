@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-"""探针：items 域 —— kind/quality/slot/**kind_key** 合法 · ★ 词条 stat 守命名规范 · 遗物必有「来处」。
+"""探针：items 域 —— kind/quality/slot/**kind_key** 合法 · ★ 词条 stat 守命名规范 · 遗物必有「来处」·
+★ B3-9：每条词条在呈现口都说得成人话（数值类有 texts 标签 · 效果类带 note）。
 
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_items.py
 """
@@ -160,6 +161,29 @@ lores = [v["lore"] for v in it.values() if v.get("lore")]
 chk("「来处」互不相同", len(set(lores)) == len(lores), "%d 条" % len(lores))
 short = [k for k, v in it.items() if v.get("lore") and len(v["lore"]) < 8]
 chk("「来处」都不是敷衍（≥8 字）", not short, " · ".join(short[:4]))
+
+# ⑨ ★ B3-9：装备词条的**呈现口径**（穿 / 卸 / 对比 三条共用 `cmds_gear` 那两支）——
+#   对照只比**不带 note 的数值词条**（面板属性那一类）⇒ 这些键必须能在 texts 里取到中文名
+#   （`SYS_STAT_<键>`）；带 note 的是规则，原样出 `note`（域里那句人话），不进数值行。
+#   少了标签 = 呈现口要么漏机器键、要么出 `[MISSING TEXT: …]`（B3-7 / B3-9 同族那条线）。
+_tx9 = st.domain("texts") or {}
+_num9, _note9, _bad9 = set(), set(), []
+for _k9, _v9 in equip.items():
+    for _a9 in _v9.get("affixes") or []:
+        _s9 = str(_a9.get("stat") or "")
+        _numeric9 = isinstance(_a9.get("v"), (int, float)) and not isinstance(_a9.get("v"), bool)
+        if _a9.get("note"):
+            _note9.add(_s9)                     # 规则类：原样出 note（数值差不进对照）
+            continue
+        if not _numeric9:
+            _bad9.append("%s.%s 既无数值也无 note（说不成人话）" % (_k9, _s9))
+            continue
+        _num9.add(_s9)
+        if ("SYS_STAT_%s" % _s9.upper().replace("-", "_")) not in _tx9:
+            _bad9.append("%s.%s 缺 texts 标签" % (_k9, _s9))
+chk("★ 词条呈现口径：不带 note 的数值词条 %d 个键都有 `SYS_STAT_*` 标签（%s）· "
+    "带 note 的 %d 个键原样出 note"
+    % (len(_num9), " · ".join(sorted(_num9)), len(_note9)), not _bad9, " · ".join(_bad9[:5]))
 
 print()
 by_kind = {}

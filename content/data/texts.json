@@ -3097,5 +3097,369 @@
     ],
     "category": "系统",
     "desc": "撤退 · 出塔"
+  },
+  "SYS_GEAR_IN_BAG": {
+    "value": "背包里没有『{name}』。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "装备 · 背包里没有这件"
+  },
+  "SYS_GEAR_NOT_WEARABLE": {
+    "value": "『{name}』不是能穿的 —— 只能拿在手上。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "装备 · 这件不是装备"
+  },
+  "SYS_GEAR_WORN": {
+    "value": "『{name}』已经穿在身上了。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "装备 · 已经穿上了"
+  },
+  "SYS_GEAR_EQUIP_OK": {
+    "value": "你穿上了{icon}{name}（{kind}）。",
+    "params": [
+      "icon",
+      "kind",
+      "name"
+    ],
+    "category": "系统",
+    "desc": "装备 · 穿上"
+  },
+  "SYS_GEAR_SWAP_OUT": {
+    "value": "换下的『{name}』收回了背包。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "装备 · 同一位子换下"
+  },
+  "SYS_GEAR_UNEQUIP_OK": {
+    "value": "你卸下了{icon}{name}（{kind}）—— 收进背包。",
+    "params": [
+      "icon",
+      "kind",
+      "name"
+    ],
+    "category": "系统",
+    "desc": "卸下 · 脱"
+  },
+  "SYS_GEAR_NOT_WORN": {
+    "value": "你身上没有『{name}』。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "卸下 · 身上没这件"
+  },
+  "SYS_GEAR_NAKED": {
+    "value": "你身上什么都没穿。",
+    "params": [],
+    "category": "系统",
+    "desc": "卸下 · 空身"
+  },
+  "SYS_GEAR_WEARING": {
+    "value": "身上穿着：{list}",
+    "params": [
+      "list"
+    ],
+    "category": "系统",
+    "desc": "卸下 · 没点名时列出身上那几件"
+  },
+  "SYS_GEAR_SLOT_EMPTY": {
+    "value": "（这个位子空着）",
+    "params": [],
+    "category": "系统",
+    "desc": "对比 · 现在这件为空"
+  },
+  "SYS_GEAR_AFFIX_ROW": {
+    "value": "· {label} +{value}",
+    "params": [
+      "label",
+      "value"
+    ],
+    "category": "系统",
+    "desc": "装备/对比 · 词条数值行"
+  },
+  "SYS_GEAR_AFFIX_NOTE": {
+    "value": "· {note}",
+    "params": [
+      "note"
+    ],
+    "category": "系统",
+    "desc": "装备/对比 · 效果类词条（域里那句人话）"
+  },
+  "SYS_GEAR_HP_CAP": {
+    "value": "生命上限 {old} → {new}",
+    "params": [
+      "new",
+      "old"
+    ],
+    "category": "系统",
+    "desc": "装备/卸下 · 面板派生的上限跟着变（P-27）"
+  },
+  "SYS_CMP_HEAD": {
+    "value": "【对比】{name}（{quality} · {kind}） ｜ 现在这件：{cur}",
+    "params": [
+      "cur",
+      "kind",
+      "name",
+      "quality"
+    ],
+    "category": "系统",
+    "desc": "对比 · 抬头"
+  },
+  "SYS_CMP_EMPTY": {
+    "value": "{kind}这一格还空着 —— 穿上就是净赚。",
+    "params": [
+      "kind"
+    ],
+    "category": "系统",
+    "desc": "对比 · 位子空着"
+  },
+  "SYS_CMP_ROW": {
+    "value": "· {label}：{old} → {new}（{sign}{delta}）",
+    "params": [
+      "delta",
+      "label",
+      "new",
+      "old",
+      "sign"
+    ],
+    "category": "系统",
+    "desc": "对比 · 逐词条差值"
+  },
+  "SYS_CMP_ROW_SAME": {
+    "value": "· {label}：{value}（一样）",
+    "params": [
+      "label",
+      "value"
+    ],
+    "category": "系统",
+    "desc": "对比 · 这一项没变"
+  },
+  "SYS_CMP_NOTE_NEW": {
+    "value": "· 手里这件改规则：{note}",
+    "params": [
+      "note"
+    ],
+    "category": "系统",
+    "desc": "对比 · 手里那件的效果类词条"
+  },
+  "SYS_CMP_NOTE_CUR": {
+    "value": "· 现在这件改规则：{note}",
+    "params": [
+      "note"
+    ],
+    "category": "系统",
+    "desc": "对比 · 身上那件的效果类词条"
+  },
+  "SYS_CMP_VERDICT": {
+    "value": "（更好 {up} 项 · 更差 {down} 项 · 一样 {same} 项）",
+    "params": [
+      "down",
+      "same",
+      "up"
+    ],
+    "category": "系统",
+    "desc": "对比 · 收尾计数（不合成总分 —— 词条无权重）"
+  },
+  "SYS_SKILL_HEAD": {
+    "value": "【技能】{cls} · 已会 {known} 条 ｜ 还没到等级 {locked} 条",
+    "params": [
+      "cls",
+      "known",
+      "locked"
+    ],
+    "category": "系统",
+    "desc": "技能 · 抬头"
+  },
+  "SYS_SKILL_ROW": {
+    "value": "· {name}（{kind}） ｜ 耗法 {mp} ｜ 冷却 {cd} 刻",
+    "params": [
+      "cd",
+      "kind",
+      "mp",
+      "name"
+    ],
+    "category": "系统",
+    "desc": "技能 · 一条"
+  },
+  "SYS_SKILL_NOTE": {
+    "value": "    ↳ {note}",
+    "params": [
+      "note"
+    ],
+    "category": "系统",
+    "desc": "技能 · 域里那句 note"
+  },
+  "SYS_SKILL_LOCKED": {
+    "value": "· {name} —— 到 {lv} 级才能学",
+    "params": [
+      "lv",
+      "name"
+    ],
+    "category": "系统",
+    "desc": "技能 · 解锁等级还没到（skills.lv）"
+  },
+  "SYS_SKILL_TAIL": {
+    "value": "（打架时敲『技能 <名>』放一条。）",
+    "params": [],
+    "category": "系统",
+    "desc": "技能 · 收尾"
+  },
+  "SYS_SKILL_NOCLS": {
+    "value": "你还没定下职业 —— 技能跟着职业走。",
+    "params": [],
+    "category": "系统",
+    "desc": "技能/学习 · 档上没有职业"
+  },
+  "SYS_SKILL_NONE": {
+    "value": "没有『{name}』这条技能。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "学习 · 域里没这条"
+  },
+  "SYS_SKILL_NOTMINE": {
+    "value": "『{name}』是{owner}的技能 —— 你学不了。",
+    "params": [
+      "name",
+      "owner"
+    ],
+    "category": "系统",
+    "desc": "学习 · 不是本职业的"
+  },
+  "SYS_SKILL_TOO_LOW": {
+    "value": "『{name}』要 {lv} 级 —— 你还差 {gap} 级。",
+    "params": [
+      "gap",
+      "lv",
+      "name"
+    ],
+    "category": "系统",
+    "desc": "学习 · 解锁等级没到"
+  },
+  "SYS_SKILL_ALREADY": {
+    "value": "『{name}』已经写在册上了。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "学习 · 已经会了"
+  },
+  "SYS_SKILL_LEARN": {
+    "value": "你把『{name}』记上了技能表 —— 本职业此刻解锁的 {n} 条都在册。",
+    "params": [
+      "n",
+      "name"
+    ],
+    "category": "系统",
+    "desc": "学习 · 落档（整班一起记，免得丢默认那一班）"
+  },
+  "SYS_SKILL_STALE": {
+    "value": "（技能表里有 {n} 条现在认不出了 —— 数据换过。）",
+    "params": [
+      "n"
+    ],
+    "category": "系统",
+    "desc": "技能 · 老档上的 id 已经不在域里"
+  },
+  "SYS_STAT_ATK": {
+    "value": "攻击",
+    "params": [],
+    "category": "系统",
+    "desc": "词条名 · atk（01_属性字典 §2.2）"
+  },
+  "SYS_STAT_HP": {
+    "value": "生命",
+    "params": [],
+    "category": "系统",
+    "desc": "词条名 · hp → max_hp（01_属性字典 §2.2）"
+  },
+  "SYS_STAT_DEF": {
+    "value": "防御",
+    "params": [],
+    "category": "系统",
+    "desc": "词条名 · def（01_属性字典 §2.2）"
+  },
+  "SYS_STAT_SPD": {
+    "value": "速度",
+    "params": [],
+    "category": "系统",
+    "desc": "词条名 · spd（01_属性字典 §2.2）"
+  },
+  "SYS_STAT_CRIT": {
+    "value": "暴击",
+    "params": [],
+    "category": "系统",
+    "desc": "词条名 · crit（01_属性字典 §2.2）"
+  },
+  "SYS_STAT_MATK": {
+    "value": "法术攻击",
+    "params": [],
+    "category": "系统",
+    "desc": "词条名 · matk（01_属性字典 §2.2）"
+  },
+  "SYS_STAT_RES": {
+    "value": "抗性",
+    "params": [],
+    "category": "系统",
+    "desc": "词条名 · res（01_属性字典 §2.2）"
+  },
+  "SYS_STAT_HIT": {
+    "value": "命中",
+    "params": [],
+    "category": "系统",
+    "desc": "词条名 · hit（01_属性字典 §2.2）"
+  },
+  "SYS_STAT_EVA": {
+    "value": "闪避",
+    "params": [],
+    "category": "系统",
+    "desc": "词条名 · eva（01_属性字典 §2.2）"
+  },
+  "SYS_STAT_MO_MAX": {
+    "value": "法力",
+    "params": [],
+    "category": "系统",
+    "desc": "词条名 · mo_max（01_属性字典 §2.2）"
+  },
+  "SYS_STAT_HEAL_POW": {
+    "value": "治疗强度",
+    "params": [],
+    "category": "系统",
+    "desc": "词条名 · heal_pow（01_属性字典 §2.2）"
+  },
+  "SYS_STAT_BLOCK": {
+    "value": "格挡",
+    "params": [],
+    "category": "系统",
+    "desc": "词条名 · block（01_属性字典 §2.2）"
+  },
+  "SYS_STAT_RES_FIRE": {
+    "value": "火抗",
+    "params": [],
+    "category": "系统",
+    "desc": "词条名 · res_fire（01_属性字典 §二·五）"
+  },
+  "SYS_STAT_RES_ICE": {
+    "value": "冰抗",
+    "params": [],
+    "category": "系统",
+    "desc": "词条名 · res_ice（01_属性字典 §二·五）"
+  },
+  "SYS_STAT_RES_SHADOW": {
+    "value": "暗抗",
+    "params": [],
+    "category": "系统",
+    "desc": "词条名 · res_shadow（01_属性字典 §二·五）"
   }
 }
