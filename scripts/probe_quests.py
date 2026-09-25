@@ -49,6 +49,17 @@ B3-11 加的那一组（悬赏三档的数值口径 · 支线的交付真跑矩�
       所有怪各 99 只）」**复现**一遍 —— 那样都交不掉 ⇒ 它看的不是条件，而是 `flags.side_<名字>`
       那个没人写的键（P-25 §② 的根因）。名单一变（修好一条 / 新死一条）当场红。
 
+B3-13 加的那一组（支线另外 6 条的条件 · 悬赏「指定的」落地成每日轮换）：
+  ㉚ ★ 新四型（`enhance` / `cook`（含 `quality`）/ `talk` / `ask`）逐条对账：探针**自己**从
+      `24 §二` 的「步骤」列 + `21 §二` 解析出该有什么条件（含数词），与域里的 `require` 比；
+      再核「账真存在」（写入口那几处真跑出来的账）·「量够达成」（强化上限 / 可做的菜 / 有对话树的人）
+      ·「途径存在」（`cook.quality` 那一品阶的食材真有出产渠道）；最后**每条真做一次再真交一次**
+      （强化 ×3 / 下锅 ×3 / 跟老陶搭话 ×3 / 跟三个人搭话 / 用稀有食材下锅 ×1）。
+  ㉛ ★ 悬赏「指定的」：24 §二 那两句（`打掉**指定的**普通 / 精英 / 头目怪` +「每天轮换挑一只」）
+      都在 ⇒ 三档条件都必须带 `daily`；轮换**可复现**（同一日同档两次同结果 · 跨日必换 ·
+      探针自己按「该档按 id 排序取第 (游戏日-1)%n+1 只」算一遍与实现比）；**宽口径已被拦住**
+      （打掉同档的**另一只**不顶用 —— 这是判据加强的那一半）；认不出的档 ⇒ 没满足（fail-closed）。
+
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_quests.py
 """
 from __future__ import annotations
@@ -305,6 +316,18 @@ for k, v in trade_q.items():
         elif kind == "kill":
             if str(r.get("monster")) not in MON:
                 cond_bad.append((k, "kill", r.get("monster")))
+        elif kind == "enhance":                    # ★ B3-13 四型：这里只核**结构性**那一点，
+            if int(r.get("n") or 0) < 1:           #   逐条核（形状对文档 / 可达性 / 真做真交）在 ㉚
+                cond_bad.append((k, "enhance-没给级数", r.get("n")))
+        elif kind == "cook":
+            if int(r.get("n") or 0) < 1:
+                cond_bad.append((k, "cook-没给次数", r.get("n")))
+        elif kind == "talk":
+            if not (NPCS.get(str(r.get("npc"))) or {}).get("dialogue"):
+                cond_bad.append((k, "talk-这个人没挂对话树", r.get("npc")))
+        elif kind == "ask":
+            if int(r.get("n") or 0) < 1:
+                cond_bad.append((k, "ask-没给人数", r.get("n")))
         else:
             cond_bad.append((k, "认不出的 kind（fail-closed 会把这条任务卡死）", kind))
 new_no_req = sorted(k for k in no_req if k in new_ids)
@@ -769,15 +792,73 @@ _dup87 = [s for s in set(keys29)
     "★ 29 条 × 3 = 87 条槽位齐备 · 都不是占位（还是占位 %s）· 无阿拉伯数字（%s）· 无机器键（%s）· "
     "互不重复（%s）" % (_place87 or "无", _digit87 or "无", _keyleak87 or "无", _dup87 or "无"))
 
+def _role_ids_of(role):
+    return [k for k, m in MON.items() if not str(k).startswith("_") and m.get("role_key") == role]
+
+
+def _pick_of(role, day):
+    """★ B3-13 轮换的**规格**（探针自己实现一遍）：该档的怪按 id 排序，取第 `(游戏日-1)%n+1` 只。
+
+    与 `cmds_quest._daily_pick` **各写一遍**（共用一份等于把两处的错一起掩盖 —— 照 ⑬/⑳ 的老规矩）。
+    """
+    ids = sorted(_role_ids_of(role))
+    return ids[(int(day) - 1) % len(ids)] if ids else ""
+
+
+def _cook_recs(quality="", known_only=False):
+    """能顶这个 `cook` 条件的配方（探针自己挑：`kind_key == cook` + 用了那一品阶的食材）。
+
+    ★ `known_only`：只要**不用先交别条任务**就会做的那些（`learn` 没写 / 不挂委托）。
+      为什么必须有这一档：配方「一锅炖」的 `learn` 就是 **q_side_06 自己**（交掉才学会）——
+      拿它去顶 q_side_06 的条件就是**循环**；这一档把「只能靠本条自己锁着的配方」当场标出来。
+    """
+    out = []
+    for rid, rec in RC.items():
+        if str(rid).startswith("_") or rec.get("kind_key") != "cook":
+            continue
+        if known_only:
+            learn = rec.get("learn")
+            if isinstance(learn, dict) and learn.get("quest"):
+                continue
+        if quality:
+            hit = False
+            for e in (rec.get("inputs") or []):
+                iid = str(e.get("id") or "")
+                if str((ITEMS.get(iid) or {}).get("quality") or "") == quality:
+                    hit = True
+            if not hit:
+                continue
+        out.append(rid)
+    return sorted(out)
+
+
+def _talked_rec(r):
+    """`talk` / `ask` 两种条件 → 档上 `flags.talked` 该长什么样（探针自己按 npc 域推）。"""
+    k = r.get("kind")
+    n = max(1, int(r.get("n") or 1))
+    if k == "talk":
+        dlg = str((NPCS.get(str(r.get("npc"))) or {}).get("dialogue") or "")
+        return ({dlg: n} if dlg else {})
+    if k == "ask":
+        ds = sorted((v.get("dialogue") or "") for v in NPCS.values() if v.get("dialogue"))
+        return {d: 1 for d in ds[:n]}
+    return {}
+
+
 # ㉖ ★ 三类各真跑一遍：接 / 交(没做完) / 交 —— 槽位里的字必须**逐字**出现在屏上
 _drive3, _drive3_lines = [], []
+#: ★ B3-13：悬赏那一条的条件带 `daily`（当天点名的那一只）⇒ 探针按**规格自己算出**那一天的那只
+#:   （共用实现的函数等于把两处的错一起掩盖；这里另写一遍 `_pick_of`）
+_B_DAY = 3
 _DRIVE = (("支线", "q_side_02", "item", {"bag": {"i_material_old_iron": 1}}),
           ("生活", "q_trade_02", "visit+item",
            {"foot": {"nodes": {"belt_north:bn_tower": 1}}, "bag": {"i_material_iron_scrap": 1}}),
           # ★ B3-11：悬赏的「做到」从**旧 flag**（`flags.side_悬赏·普通` —— 那个键没人写）改成
           #   **真的打掉过一只普通档的怪**（`books.monster` 那本谱的击杀账，codex.note_kill 写的）
-          ("悬赏", "q_bounty_normal", "kill@role",
-           {"books": {"monster": {"ms_field_mouse": {"day": 1, "kills": 1}}}}))
+          # ★ B3-13：再收窄成**那天点名的那一只**（见 `_pick_of`）
+          ("悬赏", "q_bounty_normal", "kill@role+daily",
+           {"books": {"monster": {_pick_of("normal", _B_DAY): {"day": _B_DAY, "kills": 1}}},
+            "day": _B_DAY}))
 for _kind, _k, _shape, _fix in _DRIVE:
     _x = QE[_k]
     _n = int(_x["order"])
@@ -858,61 +939,66 @@ for _ln in _bn_lines:
 #     只 —— 凡是 visit/item/kill 三型表达得出来的，这个档都满足）→ 仍然被拦 ⇒ 证明它看的不是条件，
 #     而是 `flags.side_<名字>` 那个**没人写**的键（P-25 §② 的根因，可复现）。
 _SHAPE_OF = {"visit": "「去过某处」", "item": "「手上有某物」",
-             "kill": "「打过某只怪 / 某一档的怪」"}
-#: ★ 今天交不掉的支线**钉住名单**（B3-11 现状）—— 名单一变当场红：
+             "kill": "「打过某只怪 / 某一档的怪」",
+             # ★ B3-13 四型（账都在现有档上 —— 形状名只是给人看的那一栏）
+             "enhance": "「有一件装备强化到某一级」", "cook": "「下过锅 N 次」",
+             "talk": "「跟某人搭过 N 次话」", "ask": "「搭过话的人有 N 个」"}
+#: ★ 今天交不掉的支线**钉住名单**（B3-13 现状 —— 从 11 条压到 5 条）—— 名单一变当场红：
 #:   少一条（有人把它修好了）要**故意**从这儿删掉，多一条（新死的）立刻红。
 _DEAD_SIDE = {
-    "q_side_01": "「把一件装备强化到 +3」—— 要「某件装备的强化等级 ≥ n」这种形状"
-                 "（档上 `enhance` 有账，条件语言里没有；加形状得单独立项）",
-    "q_side_05": "「做三道菜给贝拉尝」—— 要「做出过某道菜」这种形状，且文档没点明是哪三道"
-                 "（点明哪三道才好落 `item`）",
-    "q_side_06": "「用稀有食材做一次」—— 要「用某类食材做过一次」这种形状"
-                 "（`item` 只查「手上有」，查不了「下过锅」）",
-    "q_side_07": "「送灯油 → 陪他配一次」—— 两截都缺形状：灯油这个物品**域里不存在**；"
-                 "「送出去」要「交出物品」这种形状（`item` 只查持有）",
-    "q_side_09": "「听他讲完（三次）」—— 要「听过某人的几句话」这种形状"
-                 "（档上 `heard` 已有句数账，条件语言里没有）",
+    "q_side_07": "「送灯油 → 陪他配一次」—— 两截都缺：灯油这个物品**域里不存在**（items 全域没有此物），"
+                 "「送出去」也还没有形状（`item` 只查持有）⇒ 先补内容（灯油那件东西）再谈条件",
     "q_side_10": "「陪一个 NPC 走一段（送信）」—— 信这个物品域里不存在，且**目的地文档没写**"
-                 "（没目的地落不了 `visit`）",
+                 "（没目的地落不了 `visit`；「陪一段」本身也没有形状）",
     "q_side_11": "「查他酒钱从哪来」—— 要「线索 / 隐藏线 flag」这种形状（隐藏线「号角」口径未落）",
     "q_side_12": "「（间接）找到那个名字」—— 同上（隐藏线「名字」口径未落）",
-    "q_side_16": "「听他讲完三段（每段缺一块）」—— 要「听过某人的几句话」这种形状（同 q_side_09）",
-    "q_side_17": "「帮她问三个人（限时：商队窗口）」—— 要「搭话过谁 / 搭话过几个人」这种形状"
-                 "（且「限时窗口」本身还没落地）",
-    "q_side_18": "「按他的口味做一道菜」—— 要「做出过某道菜」这种形状（同 q_side_05，且没点明哪道）",
+    "q_side_18": "「按他的口味做一道菜」——「一道菜」这半截能查（`cook`），但**「他的口味」是哪一品阶 / "
+                 "哪一道，文档一个字没写** ⇒ 落成「做过任意一道菜」等于没查「他的口味」（等裁决，"
+                 "见工作树 `_notes.md`）",
 }
 
 
-def _role_ids_of(role):
-    return [k for k, m in MON.items() if not str(k).startswith("_") and m.get("role_key") == role]
-
-
-def _kills_rec(r, n):
-    """条件 → 档上那本怪物谱该长什么样（点名那只 / 点那一档里的一只）。"""
+def _kills_rec(r, n, day=1):
+    """条件 → 档上那本怪物谱该长什么样（点名那只 / 点那一档里今天的**那一只**）。"""
     mid = str(r.get("monster") or "")
     if not mid:
-        ids = _role_ids_of(str(r.get("role") or ""))
-        mid = ids[0] if ids else ""
-    return ({mid: {"day": 1, "kills": n}} if mid else {})
+        role = str(r.get("role") or "")
+        ids = _role_ids_of(role)
+        mid = _pick_of(role, day) if r.get("daily") else (ids[0] if ids else "")
+    return ({mid: {"day": day, "kills": n}} if mid else {})
 
 
-def _sat_player(x, qid):
-    """造一个**满足这条 require** 的档（三型各按形状造）。"""
-    p, foot, bag, mon = _player(level=max(1, int(x["min_level"]))), {}, {}, {}
+def _sat_player(x, qid, day=1):
+    """造一个**满足这条 require** 的档（每一型各按自己的账造 —— 不猜）。"""
+    p = _player(level=max(1, int(x["min_level"])))
+    foot, bag, mon, enh, talked, cooked = {}, {}, {}, {}, {}, {}
     for r in CQ._require_of(x):
-        if r.get("kind") == "visit":
+        k = r.get("kind")
+        if k == "visit":
             foot["%s:%s" % (r.get("map"), r.get("node"))] = 1
-        elif r.get("kind") == "item":
+        elif k == "item":
             bag[str(r.get("item"))] = max(1, int(r.get("n") or 1))
-        elif r.get("kind") == "kill":
-            mon.update(_kills_rec(r, max(1, int(r.get("n") or 1))))
+        elif k == "kill":
+            mon.update(_kills_rec(r, max(1, int(r.get("n") or 1)), day))
+        elif k == "enhance":
+            n = max(1, int(r.get("n") or 1))
+            enh["_probe_gear"] = {"lv": n, "bonus": 0.0}
+        elif k == "cook":
+            n = max(1, int(r.get("n") or 1))
+            recs = _cook_recs(str(r.get("quality") or ""), known_only=True)
+            cooked[recs[0] if recs else "_probe_dish"] = n
+        elif k in ("talk", "ask"):
+            talked.update(_talked_rec(r))
     if foot:
         p["foot"] = {"nodes": foot}
     if bag:
         p["bag"] = bag
     if mon:
         p["books"] = {"monster": mon}
-    p["flags"] = {"quests_active": [qid]}
+    if enh:
+        p["enhance"] = enh
+    p["day"] = int(day)                       # ★ B3-13：轮换看这一格（同一日同档同结果）
+    p["flags"] = {"quests_active": [qid], "talked": talked, "cooked": cooked}
     return p
 
 
@@ -1028,6 +1114,304 @@ for _ln in (_io.open(_DOC15, encoding="utf-8", newline="").read().split("\n")
     % (_told, _told_bad or "无"))
 for _ln in _told_lines:
     print("      %s" % _ln)
+
+# ══════════════════════════════════════════════════════════════
+# ㉚–㉛ B3-13：支线新四型（enhance / cook / talk / ask）· 悬赏「指定的」的每日轮换
+#      源：`24_任务线_v1.md §二`（支线表的「步骤」列 · 悬赏板那两句）· `21_长期目标层_v1.md §二`
+#      ★ 照 ⑬/⑳/㉔/㉙ 的老规矩：探针**自己**解析文档、自己算轮换（不与实现/生成器共用一份）。
+# ══════════════════════════════════════════════════════════════
+import content.cmds_recipe as CR                                          # noqa: E402
+import content.cmds_talk as CT                                            # noqa: E402
+
+EV = st.domain("events")
+_NUM2 = r"[一二两三四五六七八九十\d]"
+_CN2 = {"一": 1, "二": 2, "两": 2, "三": 3, "四": 4, "五": 5,
+        "六": 6, "七": 7, "八": 8, "九": 9, "十": 10}
+#: 这 6 条该是什么型（条件**形状**由哪一句推 —— 与生成器各写各的）
+_EXP_KIND = {"q_side_01": "enhance", "q_side_05": "cook", "q_side_06": "cook+quality",
+             "q_side_09": "talk", "q_side_16": "talk", "q_side_17": "ask"}
+
+
+def _cn(tok):
+    t = str(tok or "").strip()
+    return int(t) if t.isdigit() else _CN2.get(t, -1)
+
+
+def _exp_side(steps, who):
+    """«24 §二» 那一行的「步骤」+「谁给」→ 该有的 `require`（探针自己推一遍；推不出回 None）。"""
+    m = _re.search(r"强化到\s*\+?(\d+)", steps)
+    if m:
+        return [{"kind": "enhance", "n": int(m.group(1))}]
+    m = _re.search(r"用(\S+?)食材做(" + _NUM2 + r"*)[次回]", steps)
+    if m:
+        return [{"kind": "cook", "quality": m.group(1), "n": _cn(m.group(2) or "一")}]
+    m = _re.search(r"做(" + _NUM2 + r"+)道菜", steps)
+    if m:
+        return [{"kind": "cook", "n": _cn(m.group(1))}]
+    m = _re.search(r"听[他她]讲完[（(](" + _NUM2 + r"+)次[）)]", steps) \
+        or _re.search(r"听[他她]讲完(" + _NUM2 + r"+)段", steps)
+    if m:
+        ids = [k for k, v in NPCS.items() if v.get("name") == who]
+        return ([{"kind": "talk", "npc": ids[0], "n": _cn(m.group(1))}] if len(ids) == 1 else None)
+    m = _re.search(r"帮[他她]问(" + _NUM2 + r"+)个人", steps)
+    if m:
+        return [{"kind": "ask", "n": _cn(m.group(1))}]
+    return None
+
+
+def _mon_name(mid):
+    return str((MON.get(mid) or {}).get("name") or mid)
+
+
+def _flags_for_event(eid):
+    """让那个事件成立的最小档（★ 只读 events 域的 `period` —— 探针自己推，不猜）。"""
+    per = ((EV.get(str(eid)) or {}).get("period") or {}) if eid else {}
+    if per.get("from_main"):
+        return {"quests_done": [str(per["from_main"])]}
+    if per.get("until_main"):
+        return {"quests_done": []}
+    return {}
+
+
+def _stand(npc_id, extra_flags=None):
+    """这个人**此刻**在哪个节点（现看 `_npcs_here` —— 集日会把人吸到板子那边）。"""
+    for _loc, _mv in MAPS.items():
+        for _nd in (_mv.get("nodes") or []):
+            _pp = _player(level=9, flags=dict(extra_flags or {}))
+            _pp.update({"loc": _loc, "node": _nd["id"]})
+            try:
+                if any(k == npc_id for k, _v in CA._npcs_here(_loc, _nd["id"], None, _pp)):
+                    return _loc, _nd["id"]
+            except Exception:                                             # noqa: BLE001
+                continue
+    return None
+
+
+def _event_of(npc_id):
+    return ((NPCS.get(npc_id) or {}).get("condition") or {}).get("event") or ""
+
+
+#: 真做的四件（每条 = (真做什么, 造档并真跑, 一句打样)）—— 动作全走**真指令的实现体**
+_GEAR = next(((k, v) for k, v in ITEMS.items()
+              if not str(k).startswith("_") and v.get("slot")), (None, None))
+
+
+def _act_enhance(x):
+    """真做：真的把一件装备强化到 +n（走 `cmds_recipe.enhance`，不是往档里写数）。"""
+    iid, rec = _GEAR
+    if not iid:
+        return None, [], "items 域里没有能强化的装备"
+    p = _player(level=1, gold=9999,
+                bag={iid: 1, "i_material_iron_scrap": 9, "i_material_hard_bone": 9})
+    out = []
+    for _ in range(int(CQ._require_of(x)[0]["n"])):
+        out += _drive(CR.enhance, p, "强化 %s" % rec.get("name"))
+    lv = int(((p.get("enhance") or {}).get(iid) or {}).get("lv") or 0)
+    return p, out, "强化到 +%d（%s）" % (lv, rec.get("name"))
+
+
+def _act_cook(x):
+    """真做：真的下锅（走 `cmds_recipe.cook`；食材按配方给够 —— 账由锅自己记）。"""
+    r0 = CQ._require_of(x)[0]
+    n = int(r0.get("n") or 1)
+    recs = _cook_recs(str(r0.get("quality") or ""), known_only=True)
+    if not recs:
+        return None, [], "没有能顶这个条件的配方"
+    rid = recs[0]
+    rg = RC[rid]
+    bag = {}
+    for e in (rg.get("inputs") or []):
+        bag[str(e.get("id"))] = int(e.get("n") or 1) * n
+    p = _player(level=1, bag=bag)
+    out = []
+    for _ in range(n):
+        out += _drive(CR.cook, p, "烹饪 %s" % rg.get("name"))
+    return p, out, "下锅 %d 次（%s）" % (CQ._cook_have(p, r0), rg.get("name"))
+
+
+def _act_talk(x):
+    """真做：站到他那儿真的搭 N 次话（走 `cmds_talk.talk`）。"""
+    r0 = CQ._require_of(x)[0]
+    n = int(r0.get("n") or 1)
+    npc = str(r0.get("npc") or "")
+    who = str((NPCS.get(npc) or {}).get("name") or npc)
+    fl = _flags_for_event(_event_of(npc))
+    spot = _stand(npc, fl)
+    if not spot:
+        return None, [], "找不到「%s」此刻在场的节点" % who
+    p = _player(level=9)
+    p.update({"loc": spot[0], "node": spot[1]})
+    if fl:
+        p["flags"] = dict(fl)
+    out = []
+    for _ in range(n):
+        out += _drive(CT.talk, p, "搭话 %s" % who)
+    return p, out, "跟「%s」搭话 %d 次（他在 %s）" % (who, CQ._talk_have(p, npc), spot[1])
+
+
+def _act_ask(x):
+    """真做：真的跟 N 个**不同的人**搭话（走同一个 `talk` 实现体 —— 账按对话树记）。"""
+    n = int(CQ._require_of(x)[0].get("n") or 1)
+    p = _player(level=9)
+    out, hit = [], []
+    for npc, v in sorted(NPCS.items(), key=lambda kv: kv[0]):
+        if len(hit) >= n or not v.get("dialogue"):
+            continue
+        fl = _flags_for_event(_event_of(npc))
+        spot = _stand(npc, fl)
+        if not spot:
+            continue
+        p.update({"loc": spot[0], "node": spot[1]})
+        p["flags"] = dict(p.get("flags") or {}, **fl) if isinstance(p.get("flags"), dict) else dict(fl)
+        out += _drive(CT.talk, p, "搭话 %s" % v.get("name"))
+        hit.append(str(v.get("name")))
+    return p, out, "搭话过 %d 个人（%s）" % (CQ._asked_have(p), "/".join(hit))
+
+
+_ACT = {"enhance": _act_enhance, "cook": _act_cook, "talk": _act_talk, "ask": _act_ask}
+_nk_bad, _nk_lines = [], []
+_enh_cap = int(((RC.get("_meta") or {}).get("enhance") or {}).get("cap") or 0)
+_people = len([k for k, v in NPCS.items() if v.get("dialogue")])
+
+for _qid in sorted(_EXP_KIND, key=lambda q: QE[q]["order"]):
+    _x = QE[_qid]
+    _row = side_rows.get(_x["name"])
+    if not _row:
+        _nk_bad.append("%s 不在 24 §二 支线表里" % _qid)
+        continue
+    _want = _exp_side(_row[3], _row[2])
+    if _want != CQ._require_of(_x):
+        _nk_bad.append("%s 条件 %s ≠ 文档「%s」推出来的 %s"
+                       % (_qid, json.dumps(_x.get("require"), ensure_ascii=False), _row[3],
+                          json.dumps(_want, ensure_ascii=False)))
+        continue
+    _r0 = _want[0]
+    if _EXP_KIND[_qid] != _r0["kind"] and _EXP_KIND[_qid] != "%s+quality" % _r0["kind"]:
+        _nk_bad.append("%s 的型变了：%s" % (_qid, _r0["kind"]))
+    # ── 可达性（量够不够 / 途径有没有）—— 探针自己重算
+    if _r0["kind"] == "enhance" and int(_r0["n"]) > _enh_cap:
+        _nk_bad.append("%s 要 +%d，强化上限只有 +%d（到不了）" % (_qid, _r0["n"], _enh_cap))
+    if _r0["kind"] == "cook":
+        _recs = _cook_recs(str(_r0.get("quality") or ""), known_only=True)
+        _all_recs = _cook_recs(str(_r0.get("quality") or ""))
+        if not _recs:
+            _nk_bad.append("%s 的 `cook` 条件**不用先交别条任务**就顶不上（能顶的只有 %s —— "
+                           "先交别条才学会的配方不算数）" % (_qid, _all_recs or "一个都没有"))
+        elif _r0.get("quality"):
+            _q_items = [k for k, v in ITEMS.items()
+                        if not str(k).startswith("_") and str(v.get("quality")) == _r0["quality"]]
+            if not _q_items:
+                _nk_bad.append("%s 要「%s」品阶的食材，items 域里没有这一档"
+                               % (_qid, _r0["quality"]))
+            elif not [k for k in _q_items if k in produced]:
+                _nk_bad.append("%s 要「%s」品阶的食材，但那几样**没有任何出产渠道**：%s"
+                               % (_qid, _r0["quality"], _q_items))
+    if _r0["kind"] == "talk":
+        _npc = str(_r0.get("npc") or "")
+        if _npc not in NPCS or not (NPCS.get(_npc) or {}).get("dialogue"):
+            _nk_bad.append("%s 要跟「%s」搭话，但 npcs 域里取不到他 / 他没挂对话树" % (_qid, _npc))
+    if _r0["kind"] == "ask":
+        if _people < int(_r0["n"]):
+            _nk_bad.append("%s 要问 %d 个人，镇上有对话树的只有 %d 位" % (_qid, _r0["n"], _people))
+    # ── ★ 真做一次 → 真交一次（动作全走真指令，不是把账写进档）
+    _p, _out, _how = _ACT[_r0["kind"]](_x)
+    if _p is None:
+        _nk_bad.append("%s 的真做走不通：%s" % (_qid, _how))
+        continue
+    _acc = _drive(CQ.quest_accept, _p, "接 %d" % _x["order"])
+    _pay = _drive(CQ.quest_deliver, _p, "交 %d" % _x["order"])
+    _deliv = any(ln.startswith("交了") for ln in _pay) \
+        and _qid in ((_p.get("flags") or {}).get("quests_done") or [])
+    if not _deliv:
+        _nk_bad.append("%s 真做了（%s）却交不掉：%s" % (_qid, _how, _pay[:3]))
+    if any(MISSING in ln for ln in _out + _acc + _pay):
+        _nk_bad.append("%s 有取不到文案的行" % _qid)
+    _nk_lines.append("%s %-6s（编号 %-3d）条件 %s → 真做：%s → 真交：%s"
+                     % ({"enhance": "强化", "cook": "烹饪", "talk": "搭话",
+                         "ask": "问人"}[_r0["kind"]], _x["name"], _x["order"],
+                        json.dumps(_want, ensure_ascii=False), _how,
+                        (next((ln for ln in _pay if ln.startswith("交了")), "?") + " · 经验 +%d 铜板 +%d"
+                         % (_x["reward_exp"], _x["reward_gold"]))))
+(ok if len(_EXP_KIND) == 6 and not _nk_bad else bad)(
+    "★ 支线新四型 6 条：与 24 §二「步骤」列逐条对账（含数词）· 量够达成 / 途径存在 · "
+    "**真做一次再真交一次**（动作走真指令：强化 / 下锅 / 搭话 / 问人；坏 %s）" % (_nk_bad or "无"))
+for _ln in _nk_lines:
+    print("      %s" % _ln)
+
+# ── ㉛ ★ 悬赏「指定的」= 每天轮换挑一只（可复现 · 跨日必换 · **宽口径已被拦住** · fail-closed）
+_rot_bad, _rot_lines = [], []
+_CERTAIN = _re.search(r"打掉\s*\**\s*指定的", bounty_blk or "")
+_ROTATE = _re.search(r"每天轮换挑一只", bounty_blk or "")
+if not (_CERTAIN and _ROTATE):
+    _rot_bad.append("24 §二 悬赏板里「指定的」/「每天轮换挑一只」解析不出（%s / %s）"
+                    % (bool(_CERTAIN), bool(_ROTATE)))
+_bt = sorted(bounty_q.items(), key=lambda kv: kv[1]["order"])
+_roles = []
+for _k, _x in _bt:
+    _r0 = (CQ._require_of(_x) or [{}])[0]
+    if _r0.get("kind") != "kill" or not _r0.get("daily") or not _r0.get("role"):
+        _rot_bad.append("%s 的条件不是「点档 + daily」：%s"
+                        % (_k, json.dumps(_x.get("require"), ensure_ascii=False)))
+        continue
+    _roles.append(str(_r0["role"]))
+for _role in sorted(set(_roles)):
+    _pool = sorted(_role_ids_of(_role))
+    if len(_pool) < 2:
+        _rot_bad.append("档「%s」只有 %d 只怪 —— 「轮换」观察不到（池要 > 1）" % (_role, len(_pool)))
+        continue
+    for _d in range(1, 3 * len(_pool) + 2):
+        _spec = _pool[(_d - 1) % len(_pool)]
+        _a = CQ._daily_pick(_role, {"day": _d})
+        _b = CQ._daily_pick(_role, {"day": _d})                       # 同一日再来一次
+        _n1 = CQ._daily_pick(_role, {"day": _d + 1})                  # 跨日
+        if _a != _spec or _b != _spec:
+            _rot_bad.append("档 %s 第 %d 日：实现 %s/%s ≠ 规格 %s" % (_role, _d, _a, _b, _spec))
+        if _n1 == _a:
+            _rot_bad.append("档 %s 第 %d 日与第 %d 日挑了同一只（没轮换）" % (_role, _d, _d + 1))
+    _rot_lines.append("档 %-7s 池 %2d 只 · 第 1..%d 日的点名：%s → 第 %d 日回到 %s（循环 ✓ · "
+                      "同一日两次同结果 ✓ · 跨日必换 ✓）"
+                      % (_role, len(_pool), len(_pool),
+                         "/".join(_mon_name(m) for m in _pool), len(_pool) + 1, _mon_name(_pool[0])))
+# fail-closed：认不出的档
+if CQ._daily_pick("no_such_role", {"day": 2}) != "" \
+        or CQ._req_ok({"day": 2}, {"kind": "kill", "role": "no_such_role", "daily": True}) \
+        or CQ._req_ok({"day": 2}, {"kind": "kill", "daily": True}):
+    _rot_bad.append("认不出的档 / 没写档：没 fail-closed（应当一律没满足）")
+# ★ 判据加强的那一半：只认**当天点名的那一只** —— 同档的另一只不算
+_ROT_D = 3
+_bx = QE.get("q_bounty_normal") or {}
+_bpick = _pick_of("normal", _ROT_D)
+_bother = next((k for k in sorted(_role_ids_of("normal")) if k != _bpick), "")
+_p_hit = _player(level=1, day=_ROT_D, books={"monster": {_bpick: {"day": _ROT_D, "kills": 1}}},
+                 flags={"quests_active": ["q_bounty_normal"]})
+_p_oth = _player(level=1, day=_ROT_D, books={"monster": {_bother: {"day": _ROT_D, "kills": 9}}},
+                 flags={"quests_active": ["q_bounty_normal"]})
+_p_non = _player(level=1, day=_ROT_D, flags={"quests_active": ["q_bounty_normal"]})
+if not CQ._obj_ok(_bx, _p_hit):
+    _rot_bad.append("打了第 %d 日点名的那一只（%s）却交不掉" % (_ROT_D, _mon_name(_bpick)))
+if CQ._obj_ok(_bx, _p_oth):
+    _rot_bad.append("★ 宽口径没被拦住：打了同档的**另一只**（%s）也交得掉" % _mon_name(_bother))
+if CQ._obj_ok(_bx, _p_non):
+    _rot_bad.append("一只都没打也交得掉")
+# 真跑：没做到 → 拦住且那一行**点名今天那只**；做到了 → 交掉
+_lack = _drive(CQ.quest_deliver, _player(level=1, day=_ROT_D,
+                                         flags={"quests_active": ["q_bounty_normal"]}), "交 101")
+_lack_line = next((ln for ln in _lack if "还差" in ln), "")
+if _mon_name(_bpick) not in _lack_line:
+    _rot_bad.append("「还差」那一行没点名第 %d 日的那只（%s）：%s" % (_ROT_D, _mon_name(_bpick), _lack))
+_pay2 = _drive(CQ.quest_deliver, _player(level=1, day=_ROT_D,
+                                         books={"monster": {_bpick: {"day": _ROT_D, "kills": 1}}},
+                                         flags={"quests_active": ["q_bounty_normal"]}), "交 101")
+if not any(ln.startswith("交了") for ln in _pay2):
+    _rot_bad.append("打了点名的那只却交不掉：%s" % _pay2[:3])
+(ok if not _rot_bad and len(_roles) == 3 else bad)(
+    "★ 悬赏「指定的」= 每天轮换挑一只（可复现 · 跨日必换 · 探针自己算规格一致 · "
+    "**打同档另一只不算** · 认不出的档 fail-closed · 真跑拦得住也交得掉；坏 %s）" % (_rot_bad or "无"))
+for _ln in _rot_lines:
+    print("      %s" % _ln)
+print("      真跑：没做到 →「%s」｜打了「%s」→「%s」"
+      % (_lack_line[:40], _mon_name(_bpick),
+         next((ln for ln in _pay2 if ln.startswith("交了")), "?")))
 
 for n in notes:
     print("  · " + n)

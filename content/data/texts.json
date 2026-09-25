@@ -2524,6 +2524,53 @@
     "category": "系统",
     "desc": "交活 · 前置条件写得不认得（fail-closed）"
   },
+  "SYS_JOB_REQ_ENHANCE": {
+    "value": "还差：得有一件装备强化到 +{n}（你目前最高 +{have}）。",
+    "params": [
+      "n",
+      "have"
+    ],
+    "category": "系统",
+    "desc": "交活 · 前置没做（没有一件装备强化到那一级）"
+  },
+  "SYS_JOB_REQ_COOK": {
+    "value": "还差：得下锅做够 {n} 道菜（你做过 {have} 道）。",
+    "params": [
+      "n",
+      "have"
+    ],
+    "category": "系统",
+    "desc": "交活 · 前置没做（菜没做够）"
+  },
+  "SYS_JOB_REQ_COOK_GRADE": {
+    "value": "还差：得用{grade}食材做够 {n} 道菜（你做过 {have} 道）。",
+    "params": [
+      "grade",
+      "n",
+      "have"
+    ],
+    "category": "系统",
+    "desc": "交活 · 前置没做（没用那一品阶的食材做过）"
+  },
+  "SYS_JOB_REQ_TALK": {
+    "value": "还差：得听「{who}」讲够 {n} 回（你听过 {have} 回）。",
+    "params": [
+      "who",
+      "n",
+      "have"
+    ],
+    "category": "系统",
+    "desc": "交活 · 前置没做（那个人的话没听够）"
+  },
+  "SYS_JOB_REQ_ASK": {
+    "value": "还差：得问够 {n} 个人（你问过 {have} 个）。",
+    "params": [
+      "n",
+      "have"
+    ],
+    "category": "系统",
+    "desc": "交活 · 前置没做（问过的人不够）"
+  },
   "SYS_JOB_DELIVERED": {
     "value": "交了：{name}",
     "params": [

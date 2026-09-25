@@ -18,6 +18,10 @@
                                                             （role_key ∈ monsters 的 normal/elite/
                                                              chief …；认不出的档 = 计数 0 = 没满足）
      {"kind": "item",  "item": <物品 id>, "n": <份数>}       背包里有 n 份
+     ★ B3-13 又加了四种（账都在现有档上，见本文件抬头 B3-13 一节）：
+     {"kind": "enhance", "n": <级>} · {"kind": "cook", "n": <次>}（可带 `quality` 品阶）·
+     {"kind": "talk", "npc": <npc id>, "n": <次>} · {"kind": "ask", "n": <人>}；
+     而 `{"kind": "kill", "role": …, "daily": true}` = 悬赏那条**当天点名**的那一只。
    写一条 dict，或写一串 dict（**全部**满足才算做了）；认不出的 kind 一律算没满足（fail-closed，
    不静默放行）。中文的 `objective` **不解析** —— 条件的真源是 `require`。
    ★ `role` 与 `monster` 二选一（都写只看 `monster`）；档名只在**呈现**那一行从 monsters 域透传，
@@ -91,6 +95,34 @@ B3-6c 只做了主线 12 条；剩下 29 条（支线 18 · 生活 8 · 悬赏 3
         的条件（`hold` → `item` · `where` → `visit`；`read` 那一步是彩蛋自己的，任务不取）
   · 判据：`scripts/probe_quests.py` ㉗（悬赏三档经验/钱逐条对账）· ㉘（18 条支线的交付真跑矩阵：
     交得掉的**真交一次**，交不掉的钉住名单 + 逐条原因）
+
+★ B3-13 支线的另外 6 条条件 · 悬赏「指定的」落地（每日轮换）
+-----------------------------------------------------------
+P-25 §② 剩下的 11 条支线里，**能按真源文档补上正当条件的 6 条**这一批补齐；悬赏那条
+「打掉**指定的**普通 / 精英 / 头目怪」也从 b41 的宽口径（该档任意一只打掉过）收成
+**当日点名的那一只**（轮换 = 游戏日 + 档位，可复现）。
+
+条件形状（真源 = `06_第一阶段垂直切片/24_任务线_v1.md §二` 的「步骤」列 ·
+`21_长期目标层_v1.md §二` 同条；**每条的依据**写在生成器 `scripts/rebuild_quest_gates.py`
+的规则表里，数（+3 / 三次 / 三道菜 / 三个人）都从那份文档现取）：
+
+  {"kind": "enhance", "n": <级>}                  档上**有一件**装备的强化等级 ≥ n
+                                                  （账 = `p.enhance[<装备>]` 的 `lv`，写入口 cmds_recipe.enhance）
+  {"kind": "cook", "n": <次>}                     下过锅 ≥ n 次（账 = `flags.cooked[<配方>]`，写入口 cmds_recipe.cook）
+  {"kind": "cook", "quality": <品阶>, "n": <次>}  只数**用了那一品阶食材**的配方（品阶现取自 items 域的
+                                                  `quality` —— 数据比数据，代码不认中文；「用稀有食材做一次」那条）
+  {"kind": "talk", "npc": <npc id>, "n": <次>}    跟这个人搭过 ≥ n 次话（账 = `flags.talked[<对话树>]`，
+                                                  写入口 cmds_talk；npc → 对话树走 `npcs.dialogue`）
+  {"kind": "ask", "n": <人>}                      搭过话的**人** ≥ n 个（同一本账；只数域里真有对话树的那些键）
+  {"kind": "kill", "role": <role_key>, "n": <只>, "daily": true}
+                                                  ★ 今天点名的那一只（见 `_daily_pick`）：该档的怪按 id 排序后取
+                                                  第 `(游戏日-1) % 档内只数 + 1` 只 —— 同一日同档必是同结果，
+                                                  跨日必换（档内只数 > 1）；游戏日读档上那一格（`codex.today`）
+
+  ★ fail-closed：认不出的 kind / 认不出的档（取不到怪）/ 取不到对话树的 npc ⇒ 一律**没满足**。
+  ★ 老条目（没写 `require`）的行为逐字节不变；`flags.side_<名字>` 那条死路径仍只服务它们
+    —— 今天还剩 5 条（灯油 / 信 / 隐藏线 flag / 「他的口味」没点明哪一道 / 目的地没写），
+    逐条理由与「要补的什么」在工作树 `_notes.md`。
 """
 from __future__ import annotations
 
@@ -269,11 +301,20 @@ def _req_ok(p, r):
     if kind == "kill":
         # ★ B3-11：`kill` 两种写法 —— 点名一只（`monster`）或点**某一档**（`role`，见 `_role_ids`）。
         #   两个都不写 ⇒ 没满足（fail-closed）；认不出的 role ⇒ 那一档取不到怪 ⇒ 计数 0 ⇒ 没满足。
+        # ★ B3-13：点档 + `daily` ⇒ 只算**今天点名的那一只**（`_kill_have` 里那一条）。
         return bool(str(r.get("monster") or "") or str(r.get("role") or "")) \
             and _kill_have(p, r) >= _n_of(r)
     if kind == "item":
         iid = str(r.get("item") or "")
         return bool(iid) and _bag_n(p, iid) >= _n_of(r)
+    if kind == "enhance":                       # ★ B3-13：有一件装备强化到 ≥ n
+        return _enhance_have(p) >= _n_of(r)
+    if kind == "cook":                          # ★ B3-13：下过锅 ≥ n 次（可只数某一品阶的食材）
+        return _cook_have(p, r) >= _n_of(r)
+    if kind == "talk":                          # ★ B3-13：跟这个人搭过 ≥ n 次话
+        return bool(str(r.get("npc") or "")) and _talk_have(p, r.get("npc")) >= _n_of(r)
+    if kind == "ask":                           # ★ B3-13：搭过话的**人** ≥ n 个
+        return _asked_have(p) >= _n_of(r)
     return False
 
 
@@ -297,12 +338,31 @@ def _role_name(role):
     return ""
 
 
+def _daily_pick(role, p):
+    """★ B3-13：今天这一档**点名**的那一只（「悬赏板每天轮换挑一只」的数据面）。
+
+    轮换 = 该档的怪按 **id 排序**（稳定序 —— 与域里的书写顺序无关）之后，按**游戏日**
+    取第 `(游戏日 - 1) % 档内只数 + 1` 只：
+      · 同一日、同一档 ⇒ 必是同结果（两个进程两份档也一样 —— 只读档上那一格 `day`）
+      · 跨日 ⇒ 必换（档内只数 > 1；「轮换」的原意就是这个）
+      · 游戏日读不到（老档没那一格）= 0 ⇒ 退到档内最后一只：**仍然是确定值，不是随机**
+      · 认不出的档 / 空档 ⇒ 空串（调用方一律当「没满足」算 —— fail-closed）
+    """
+    ids = sorted(_role_ids(str(role or "")))
+    if not ids:
+        return ""
+    return ids[(int(CX.today(p)) - 1) % len(ids)]
+
+
 def _kill_have(p, r):
     """条件「打掉过几只」的**已达成数**（就是档上那本怪物谱的击杀账 —— 只读，不写）。"""
     mid = str(r.get("monster") or "")
     s = _shadow(p)
     if mid:
         return CX.kills_of(s, mid)
+    if r.get("daily"):                       # ★ B3-13：点档 + 每日轮换 ⇒ 只数今天点名的那一只
+        tgt = _daily_pick(str(r.get("role") or ""), p)
+        return CX.kills_of(s, tgt) if tgt else 0
     return sum(CX.kills_of(s, k) for k in _role_ids(str(r.get("role") or "")))
 
 
@@ -314,6 +374,90 @@ def _item_name(iid):
     return LT.rec_of(iid).get("name") or iid
 
 
+# ── ★ B3-13：四本**已经在档上**的账（本模块只回头查，一个都不写）────────────
+#   · `p.enhance[<装备>]`     强化等级  —— cmds_recipe.enhance 写
+#   · `flags.cooked[<配方>]`  下过几次锅 —— cmds_recipe.cook 写
+#   · `flags.talked[<对话树>]` 搭过几次话 —— cmds_talk 写
+#   · (没有第四本：`ask` 数的是 talked 那本账上有几个**不同的人**)
+def _npc_name(npc):
+    """NPC id → 中文名（从 npcs 域透传；认不出回空串 —— 呈现口由调用方把关）。"""
+    return str((_data("npcs").get(str(npc or "")) or {}).get("name") or "")
+
+
+def _dlg_of(npc):
+    """NPC id → 它那棵对话树 id（唯一出处 = `npcs.dialogue`；认不出回空串）。"""
+    return str((_data("npcs").get(str(npc or "")) or {}).get("dialogue") or "")
+
+
+def _talked(p):
+    """档上「搭过几次话」那本账（对话树 id → 次数）；不是 dict = 空账。"""
+    t = (p.get("flags") or {}).get("talked")
+    return t if isinstance(t, dict) else {}
+
+
+def _talk_have(p, npc):
+    """跟这个人搭过几次话（取不到对话树 ⇒ 0 —— 认不出的 npc 一律当没满足）。"""
+    d = _dlg_of(npc)
+    if not d:
+        return 0
+    try:
+        return int(_talked(p).get(d) or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _asked_have(p):
+    """搭过话的**人**有几个 —— 只数域里真有对话树的键（脏键不算一个人）。"""
+    ds = _data("dialogues")
+    return len([k for k in _talked(p) if k in ds])
+
+
+def _enhance_have(p):
+    """档上**最高**的一件强化等级（`p.enhance[<装备>] = {"lv": …}`；认不出的一律跳过）。"""
+    e = p.get("enhance")
+    if not isinstance(e, dict):
+        return 0
+    best = 0
+    for v in e.values():
+        try:
+            best = max(best, int((v if isinstance(v, dict) else {}).get("lv") or 0))
+        except (TypeError, ValueError):
+            continue
+    return best
+
+
+def _quality_ids(quality):
+    """items 域里这个**品阶**的东西（只比数据 —— 代码不认中文品阶名）。"""
+    q = str(quality or "")
+    return set(k for k, v in _data("items").items()
+               if not str(k).startswith("_") and str((v or {}).get("quality") or "") == q)
+
+
+def _cook_have(p, r):
+    """「下过锅几次」的已达成数（账 = `flags.cooked[<配方>]`，写入口 cmds_recipe.cook）。
+
+    带 `quality` 子键时**只数用了那一品阶食材的配方**（食材品阶现从 items 域取 —— 数据比数据；
+    品阶名一个字都没写进代码）。认不出的品阶 ⇒ 一道都数不到 ⇒ 没满足（fail-closed）。
+    """
+    cooked = (p.get("flags") or {}).get("cooked")
+    cooked = cooked if isinstance(cooked, dict) else {}
+    q = str(r.get("quality") or "")
+    ok_ids = _quality_ids(q) if q else None
+    have = 0
+    for rid, rec in _data("recipes").items():
+        if str(rid).startswith("_") or (rec or {}).get("kind_key") != "cook":
+            continue
+        if ok_ids is not None:
+            ins = [str((e or {}).get("id") or "") for e in (rec.get("inputs") or [])]
+            if not ok_ids.intersection(ins):
+                continue
+        try:
+            have += int(cooked.get(rid) or 0)
+        except (TypeError, ValueError):
+            continue
+    return have
+
+
 def _req_lines(p, r):
     """没满足的那一条 → 说人话的那一行。★ 只给名字不给机器键（id 不许出现在回话里）。"""
     kind = r.get("kind")
@@ -323,12 +467,34 @@ def _req_lines(p, r):
         return [T("SYS_JOB_REQ_VISIT", place=name)]
     if kind == "kill":
         # ★ B3-11：点名的那一只给怪名；点档的给**档名**（「普通 / 精英 / 头目」—— monsters 域里透传）
+        # ★ B3-13：点档 + `daily` ⇒ 报**今天点名的那一只**的怪名（玩家由此知道要打哪一只）
         mid = str(r.get("monster") or "")
-        name = _mon_name(mid) if mid else _role_name(str(r.get("role") or ""))
+        if mid:
+            name = _mon_name(mid)
+        elif r.get("daily"):
+            name = _mon_name(_daily_pick(str(r.get("role") or ""), p))
+        else:
+            name = _role_name(str(r.get("role") or ""))
+        if not name:                       # 档 / 怪认不出 ⇒ 不糊一句空名字（fail-closed 的那一行）
+            return [T("SYS_JOB_REQ_UNKNOWN")]
         return [T("SYS_JOB_REQ_KILL", monster=name, n=_n_of(r), have=_kill_have(p, r))]
     if kind == "item":
         iid = str(r.get("item") or "")
         return [T("SYS_JOB_REQ_ITEM", item=_item_name(iid), n=_n_of(r), have=_bag_n(p, iid))]
+    if kind == "enhance":                  # ★ B3-13
+        return [T("SYS_JOB_REQ_ENHANCE", n=_n_of(r), have=_enhance_have(p))]
+    if kind == "cook":                     # ★ B3-13（带品阶的走品阶那条槽位）
+        if r.get("quality"):
+            return [T("SYS_JOB_REQ_COOK_GRADE", grade=r.get("quality"), n=_n_of(r),
+                      have=_cook_have(p, r))]
+        return [T("SYS_JOB_REQ_COOK", n=_n_of(r), have=_cook_have(p, r))]
+    if kind == "talk":                     # ★ B3-13
+        who = _npc_name(r.get("npc"))
+        if not who:
+            return [T("SYS_JOB_REQ_UNKNOWN")]
+        return [T("SYS_JOB_REQ_TALK", who=who, n=_n_of(r), have=_talk_have(p, r.get("npc")))]
+    if kind == "ask":                      # ★ B3-13
+        return [T("SYS_JOB_REQ_ASK", n=_n_of(r), have=_asked_have(p))]
     return [T("SYS_JOB_REQ_UNKNOWN")]
 
 
