@@ -816,7 +816,15 @@
     "usage": "购买 <参数>",
     "visible": true,
     "order": 36,
-    "guard_desc": "在铺子且钱够"
+    "guard_desc": "在铺子且钱够",
+    "bind": {
+      "handler": "content.cmds_more:item_buy",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "stash": {
     "patterns": [
@@ -1330,7 +1338,15 @@
     "visible": true,
     "order": 62,
     "guard_desc": "在镇上",
-    "priority": 50
+    "priority": 50,
+    "bind": {
+      "handler": "content.cmds_places:herbalist",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "chapel": {
     "patterns": [

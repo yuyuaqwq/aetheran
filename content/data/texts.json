@@ -5051,5 +5051,73 @@
     "params": [],
     "category": "系统",
     "desc": "B4-13 放弃 · 没给编号"
+  },
+  "SYS_SHOP_HEAD": {
+    "value": "【药铺】{name}",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "B4-15 药铺 · 站名从 maps 现取（苦叶摊）"
+  },
+  "SYS_SHOP_ROW": {
+    "value": "· {icon} {name} —— {gold} 铜板",
+    "params": [
+      "icon",
+      "name",
+      "gold"
+    ],
+    "category": "系统",
+    "desc": "B4-15 药铺 · 一行一件（价 = 基础价 × 品阶系数）"
+  },
+  "SYS_SHOP_TAIL": {
+    "value": "你身上 {gold} 铜板 —— 要买打『购买 <东西>』，要卖打『卖出 <东西>』。",
+    "params": [
+      "gold"
+    ],
+    "category": "系统",
+    "desc": "B4-15 药铺 · 钱袋与两个动词"
+  },
+  "SYS_SHOP_BUY_OK": {
+    "value": "💰 买到 {icon}{name} ×{n} —— 花了 {gold} 铜板（还剩 {left}）。",
+    "params": [
+      "icon",
+      "name",
+      "n",
+      "gold",
+      "left"
+    ],
+    "category": "系统",
+    "desc": "B4-15 购买 · 成了"
+  },
+  "SYS_SHOP_POOR": {
+    "value": "铜板不够 —— 还差 {lack} 个。",
+    "params": [
+      "lack"
+    ],
+    "category": "系统",
+    "desc": "B4-15 购买 · 钱不够（只回这一句，档一字不动）"
+  },
+  "SYS_SHOP_NOGOOD": {
+    "value": "柜上没有「{name}」。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "B4-15 购买 · 柜上没有（与「背包里没有」是两句话）"
+  },
+  "SYS_SHOP_ASK": {
+    "value": "买哪一件？打『购买 <东西>』。",
+    "params": [],
+    "category": "系统",
+    "desc": "B4-15 购买 · 没点名（**只读**：不动档）"
+  },
+  "SYS_SHOP_AWAY": {
+    "value": "药铺在{name} —— 打『去 {name}』走一趟。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "B4-15 购买 · 在镇上但没走到那一站（站名从 maps 现取）"
   }
 }

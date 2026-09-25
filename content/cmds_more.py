@@ -45,6 +45,7 @@ from . import gear as GB
 from . import loot as LT
 from . import panel_build as PB
 from . import titles as TT
+from . import shop as SH
 
 #: 声明表的唯一读口 = `content/argv.py`（取参 / 给玩家看的那几个词都在声明里，代码不另抄一份）
 
@@ -311,6 +312,47 @@ async def item_sell(env, sink, uid, player):
     _save(env)
     yield T("SYS_SELL_OK", icon=rec.get("icon") or "", name=rec.get("name") or iid,
             n=n, gold=gold)
+
+
+async def item_buy(env, sink, uid, player):
+    """`购买 <物品> [数量]` —— 在药铺柜上买（B4-15）。
+
+    守卫（声明 `guard_desc` =「在铺子且钱够」）分两半：
+      · 地点走唯一执行面 `town_gate` —— 那一站从 `content/shop.py::station()` 现取
+        （npcs 域里带 `herb` 的那个人所在节点；叫不准就拦，不猜）
+      · 钱在下面按**现算价**判 —— 不够只回一句，**档一个字不动**（不扣钱、不给货）
+    ★ 价与货架全从 `content/shop.py` 来（基础价 × 品阶系数 —— 真源 05 §六 / 00 §六）：
+      本文件不写价、不写 id、不写节点名。
+    ★ 「柜上没有」与「背包里没有」是两句不同的话（K69 同族）—— 买走的是**柜上**那件，
+      与包里有没有同名东西无关。
+    """
+    p = _p(player)
+    line = town_gate(p, SH.station(), away="SYS_SHOP_AWAY")
+    if line:
+        yield line
+        return
+    name, n = _split_n(AV.arg_of(env, "item_buy"))
+    if not name:                                   # ★ B4-10：没带东西就照实说
+        yield T("SYS_SHOP_ASK")
+        return
+    iid, rec, gold = SH.find(name)
+    if not iid:
+        yield T("SYS_SHOP_NOGOOD", name=name)
+        return
+    total = int(gold) * int(n)
+    have = int(p.get("gold") or 0)
+    if total > have:
+        yield T("SYS_SHOP_POOR", lack=total - have)
+        return
+    p["gold"] = have - total
+    bag = dict(p.get("bag") or {})
+    bag[iid] = int(bag.get(iid) or 0) + int(n)
+    p["bag"] = bag
+    if player is not None:
+        player.update(p)
+    _save(env)
+    yield T("SYS_SHOP_BUY_OK", icon=rec.get("icon") or "", name=rec.get("name") or iid,
+            n=int(n), gold=total, left=int(p["gold"]))
 
 
 async def bag_sort(env, sink, uid, player):

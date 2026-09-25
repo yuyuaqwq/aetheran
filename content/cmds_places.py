@@ -31,6 +31,7 @@ from .cmds_ast import _data, _p, _save, T, _npcs_here, _name_of_node, hp_cap_or_
 from .town import _func_node, town_gate
 from .cmds_more import STASH_NODE
 from . import calendar as CAL
+from . import shop as SH
 
 #: ★ B4-12：镇子 id 收在基座 `cmds_ast`（`TOWN`）；「属于哪一站」（`_func_node`）与
 #:   「在镇上 / 在公会」那一族守卫（`town_gate`）收在 `content/town.py` ——
@@ -163,6 +164,30 @@ async def caravan(env, sink, uid, player):
     if outsiders:
         yield T("SYS_CARAVAN_WHO", list=" · ".join(outsiders))
         yield T("SYS_CARAVAN_HOW")
+
+
+async def herbalist(env, sink, uid, player):
+    """`药铺` —— 柜上有什么、怎么买（B4-15）。
+
+    守卫（声明 `guard_desc` =「在镇上」）走唯一执行面 `town_gate`（**不核那一站** ——
+    与旧货 / 商队同族）：在镇上哪一处都问得着价；真正买（『购买』）那一边才核站（口径 §三）。
+    货架与价一律从 `content/shop.py` 来（域里的 `kind_key` + 基础价 × 品阶系数）——
+    本文件不写价、不写 id。★ 这一页是**只读**的：敲『药铺』一个字都不落档。
+    """
+    p = _p(player)
+    line = town_gate(p)
+    if line:
+        yield line
+        return
+    yield T("SYS_SHOP_HEAD", name=SH.station_name())
+    rows = _roster(SH.station(), p)
+    if rows:
+        yield T("SYS_LOOK_WHO", list=_roster_line(rows))
+    for g in SH.goods():
+        rec = g["rec"]
+        yield T("SYS_SHOP_ROW", icon=rec.get("icon") or "", name=rec.get("name") or g["id"],
+                gold=g["gold"])
+    yield T("SYS_SHOP_TAIL", gold=int(p.get("gold") or 0))
 
 
 async def junk_shop(env, sink, uid, player):

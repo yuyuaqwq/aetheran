@@ -387,8 +387,11 @@ chk("★ `装备对比 拾荒人的重剑` 归 item_compare（改前被 equip �
     _first("装备对比 拾荒人的重剑"))
 chk("★ `脱离` 回的是 flee（改前回 unequip）",
     bool(_first("脱离")) and "【unequip】" not in _first("脱离"), _first("脱离"))
-chk("★ `买药` 回的是 herbalist（改前回 item_buy）",
-    _first("买药") == soon_text("herbalist"), _first("买药"))
+from content import shop as _SH15                                     # noqa: E402
+chk("★ `买药` 归 herbalist（改前被 item_buy 吃掉）—— ★ B4-15 把 `药铺` 接上实现体之后，"
+    "这条改成更硬的写法：回的是**药铺面板**那一行（站名从 maps 现取），不再是 soon 兜底句",
+    _first("买药") == (TX.get("SYS_SHOP_HEAD") or {}).get("value", "").replace("{name}", _SH15.station_name())
+    and _first("买药") != soon_text("herbalist"), _first("买药"))
 chk("★ 裸 `放弃` 不许命中 skill_cast（改前回「放技能 ／ 技能 <参数>」）",
     bool(lines.get("放弃")) and not any(x.startswith("【skill_cast】") for x in (lines.get("放弃") or [])),
     lines.get("放弃"))
@@ -422,7 +425,9 @@ UNBOUND = {k: v for k, v in DECL.items()
 #:   ★ B3-25（组队那一条）接下 `party`（队伍/组队）与 `party_leave`（离队）⇒ **10 → 8**。
 #:     同一批里 `party_invite`（本批从 invisible 开成可见）与**新加的** `party_accept`（同意）
 #:     一落就带 bind ⇒ 两条都不进这一格（它们走 probe_party 的真敲判据）。
-UNBOUND_MAX = 8
+#:   ★ B4-15（药铺那一条）接下 `herbalist`（药铺）与 `item_buy`（购买）⇒ **8 → 6**。
+#:     余下 6 条：rank_up（换证）· climb（攀爬）· sneak（潜行）· feedback · settings · battle_pref。
+UNBOUND_MAX = 6
 
 print("⑤ ★ P-23：「帮助」只列**有处理器**的声明（真敲 · 逐条对账）")
 try:
