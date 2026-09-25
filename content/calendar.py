@@ -5,6 +5,8 @@
   · 游戏日长度 = `calendar._clock.real_seconds_per_game_day`（源：05_玩法数值口径 §七）
   · 时辰窗界 = `calendar.hr_*` 的 from/to 小时；中文名 = **texts 域**的 `HOUR_*` / `WEATHER_*`
   · 天气 = 纯函数 `游戏日 → 天气`（按 `weather.w_*.weight` 抽；稳定哈希 ⇒ 全服一致、跨进程可复现）
+  · 世界事件（B3-5）= `events` 域的三尺度判定（世界 / 限时 / 每日）—— `event_on` / `events_now`；
+    它们也是「现在」的判断，所以与时辰/天气同一个口（别处不许自己算 —— K65 家族）
 
 ★ 三条纪律：
   ① 本模块是包内「现在什么时辰 / 今天什么天气」的唯一出口 —— 别处不许自己算
@@ -107,19 +109,43 @@ def hour_at(hod: float) -> str:
 
 
 def weather_of(day: int) -> str:
-    """游戏日 → 天气 id。稳定哈希 + 权重（同一天全服一致，跨进程可复现）。"""
-    ws = weathers()
-    if not ws:
+    """游戏日 → 天气 id。稳定哈希 + 权重（同一天全服一致，跨进程可复现）。
+
+    ★ 权重走 `weather_weights(day)` —— 表里的 weight 再叠开场事件的 `weather_mul`
+      （初雪那 3 天里「初雪」的窗变宽；没有事件时与表逐字相同）。
+    """
+    w = weather_weights(day)
+    if not w:
         raise ValueError("weather 域是空的")
-    total = sum(int(v["weight"]) for v in ws.values())
+    total = sum(w.values())
     h = hashlib.md5(("aetheran:weather:" + day_key(day)).encode("utf-8")).hexdigest()
     r = int(h[:8], 16) % total
     acc = 0
-    for wid in sorted(ws):                       # 顺序固定（id 升序）⇒ 可复现
-        acc += int(ws[wid]["weight"])
+    for wid in sorted(w):                        # 顺序固定（id 升序）⇒ 可复现
+        acc += int(w[wid])
         if r < acc:
             return wid
-    return sorted(ws)[-1]
+    return sorted(w)[-1]
+
+
+def weather_weights(day: int) -> dict:
+    """这一天各天气的权重（表里的 weight × 开场事件的 `weather_mul`）—— 只归一处。
+
+    ★ 天气是**全服一天一张**（不跟人走）⇒ 世界级事件（看主线）不参与加权；
+      只有按游戏日算的窗（限时 / 每日）能影响天气。没有这类事件时 = 表里的数原样。
+    """
+    out = {wid: int(v["weight"]) for wid, v in weathers().items()}
+    st = {"game_day": int(day)}
+    for eid, rec in sorted(events().items()):
+        per = rec.get("period") or {}
+        if "from_main" in per or "until_main" in per:
+            continue
+        if not _on(eid, rec, st, None):
+            continue
+        for wid, mul in ((rec.get("effects") or {}).get("weather_mul") or {}).items():
+            if wid in out:
+                out[wid] = int(out[wid]) * int(mul)
+    return out
 
 
 def state(epoch=None) -> dict:
@@ -180,3 +206,180 @@ def allows(token, st: dict | None = None) -> bool:
         if kind == "weather" and eid == st["weather"]:
             return True
     return False
+
+
+# ══════════════════════════════════════════════════════════════
+# 世界事件（B3-5 · 三尺度：世界 / 限时 / 每日）—— ★ 判定唯一口
+# ------------------------------------------------------------
+# 口径（`06_第一阶段垂直切片/29_世界事件_设计_v1.md` §二）：
+#   世界级 = 跟着主线进度走的**开关**（一次翻转）· 限时 = 到点自己开合的**周期** · 每日 = 每天重来。
+#   三者都只是「当前是否成立」的一个布尔 —— **谁都不存历史**。
+# ★ 两件纪律：
+#   ① 判定只走这一处（`event_on` / `events_now`），别处不许自己算（K65 家族：两处口径）
+#   ② 事件名 / 节点 / npc / 天气 / 委托 **只当 id 比**：认不出的名字给 False，
+#      探针（`probe_events`）把脏名字拦在提交前 —— 不许静默当「不成立」
+# 历史那一格（「上次刷新时开着哪些窗」）由维护门落档，见 `content/timed_events.py`。
+# ══════════════════════════════════════════════════════════════
+
+#: 尺度排序（呈现口按它排：world → timed → daily）—— ★ 用 ASCII 键，不拿中文枚举当机器键（P-20）
+_SCALE_ORDER = {"world": 0, "timed": 1, "daily": 2}
+
+
+def events() -> dict:
+    """事件表（`_` 前缀 = 私有键，不是条目）。"""
+    return _entries("events")
+
+
+def event(name) -> dict:
+    """事件 id → 那条记录（认不出给空表 —— 判据在 `event_on`）。"""
+    return events().get(str(name)) or {}
+
+
+def _flags(p) -> dict:
+    return (p or {}).get("flags") or {}
+
+
+def main_done(p, qid) -> bool:
+    """主线过了没有 —— 两个键都是「交活那一下」写的（`cmds_quest._set quests_done` + `_mark_done`）。"""
+    qid = str(qid)
+    f = _flags(p)
+    if qid in (f.get("quests_done") or []):
+        return True
+    return bool(((f.get("quests") or {}).get(qid) or {}).get("done"))
+
+
+def _on(eid, rec, st, p) -> bool:
+    """一条事件此刻成不成立（period 认不出 = 抛 —— 表错了，别静默当不成立）。"""
+    per = rec.get("period") or {}
+    if "from_main" in per:
+        return main_done(p, per["from_main"])
+    if "until_main" in per:
+        return not main_done(p, per["until_main"])
+    if per.get("daily"):
+        return True
+    d = int(st["game_day"])
+    if per.get("every_days"):
+        return d % int(per["every_days"]) < int(per.get("last_days") or 1)
+    if per.get("from_day"):
+        a = int(per["from_day"])
+        return a <= d < a + int(per.get("last_days") or 1)
+    raise ValueError("events 域 %r 的 period 认不出（表错了，探针会拦）" % eid)
+
+
+def window_key(name, st: dict | None = None, p=None) -> str:
+    """事件这一「窗」的键（周期键）—— 键怎么拼在本模块，值只当不透明串（与 `ext_life.periodic` 同口径）。
+
+    · 世界级 = `<事件id>:m:<主线id>:<0|1>`（主线一翻转就是新的一格 ⇒ 「商队到了」那一下算新开）
+    · 限时 = `<事件id>:w:<窗头那个游戏日>:<持续几日的槽>`（同一天永远同一个键 ⇒ 幂等的根）
+    · 每日 = `<事件id>:d:<游戏日>`（每天重来）
+
+    ★ 键**以事件 id 开头**（`id_of_key` 反查得回 id）—— 维护门那一格只存键，
+      呈现口要按旧键说「收了」就得认得出是哪条。
+    """
+    rec = events().get(str(name)) or {}
+    if not rec:
+        raise KeyError("events 域里没有 %r —— 键要先有事件" % name)
+    per = rec.get("period") or {}
+    if "from_main" in per or "until_main" in per:
+        qid = per.get("from_main") or per.get("until_main")
+        return "%s:m:%s:%d" % (name, qid, 1 if main_done(p, qid) else 0)
+    d = int((st or state())["game_day"])
+    if per.get("daily"):
+        return "%s:d:%s" % (name, day_key(d))
+    if per.get("every_days"):
+        every = int(per["every_days"])
+        return "%s:w:%s:%d" % (name, day_key(d - (d % every)), int(per.get("last_days") or 1))
+    if per.get("from_day"):
+        return "%s:w:%s:%d" % (name, day_key(int(per["from_day"])), int(per.get("last_days") or 1))
+    raise ValueError("events 域 %r 的 period 认不出（表错了，探针会拦）" % name)
+
+
+def id_of_key(key) -> str:
+    """窗键 → 事件 id（键以 id 开头，见 `window_key`）；认不出给空串。"""
+    eid = str(key or "").split(":", 1)[0]
+    return eid if eid in events() else ""
+
+
+def event_on(name, st: dict | None = None, p=None) -> bool:
+    """这个事件此刻成不成立 —— ★ 唯一口（`_npcs_here` / 对话 need / 效果栏都走它）。
+
+    认不出的名字 = False（fail-closed：不静默当成立）；`p` 不传 = 按新档算主线进度
+    （包内调用方**都要把档传进来** —— 世界级看主线，不传档就会把商队那两位藏起来）。
+    """
+    eid = str(name)
+    rec = events().get(eid)
+    if not rec:
+        return False
+    return _on(eid, rec, st or state(), p)
+
+
+def events_now(st: dict | None = None, p=None) -> list:
+    """此刻成立的事件（世界 → 限时 → 每日，同尺度按文档行号）—— 每条多带 `id` 与 `window`。"""
+    st = st or state()
+    out = []
+    for eid, rec in events().items():
+        if _on(eid, rec, st, p):
+            out.append(dict(rec, id=eid, window=window_key(eid, st, p)))
+    out.sort(key=lambda r: (_SCALE_ORDER.get(r.get("scale_key"), 9), int(r.get("no") or 99), r["id"]))
+    return out
+
+
+def on_keys(st: dict | None = None, p=None) -> list:
+    """此刻成立的那些**窗键**（升序）—— 维护门落档与「异动」标「新开的」共用这一口。"""
+    return sorted(r["window"] for r in events_now(st, p))
+
+
+def where_hit(rec, loc) -> bool:
+    """这条事件在不在这一图生效（`where` 不给 = 全图）。"""
+    w = rec.get("where") or []
+    return (not w) or (loc in w)
+
+
+def last_refresh(p) -> dict:
+    """上次刷新时开着哪些窗（宿主维护门落的档 · `content/timed_events.py` 写）—— 呈现口用它标「新开/收了」。"""
+    return dict(_flags(p).get("ev") or {})
+
+
+def crowd_roster(st: dict | None = None, p=None) -> dict:
+    """现在被事件「吸走」的 NPC：`{npc_id: 节点 id}`（集日那两位的临时在场）。
+
+    ★ 消费端 = `cmds_ast._npcs_here`：被吸走的不在基位算在场，只在 `crowd.node` 那一站算在场；
+      文档依据 = 29 §四③「多出 2–3 位 NPC 的**临时在场**」。
+    """
+    st = st or state()
+    out = {}
+    for rec in events_now(st, p):
+        c = (rec.get("effects") or {}).get("crowd") or {}
+        if not c.get("node"):
+            continue
+        for n in c.get("npcs") or []:
+            out[str(n)] = str(c["node"])
+    return out
+
+
+def crowd_text_at(node, st: dict | None = None, p=None) -> str:
+    """这一站聚人那一下的文案槽位（没有 = 空串）。"""
+    for rec in events_now(st, p):
+        c = (rec.get("effects") or {}).get("crowd") or {}
+        if c.get("node") == node and c.get("text"):
+            return str(c["text"])
+    return ""
+
+
+def _mul_effect(key, st, p) -> dict:
+    """效果栏里「加权重」那一类键 → `{目标: 倍数}`。
+
+    同一个目标被多条事件点名 ⇒ **依次相乘**（按事件 id 序，可复现）：两件都翻倍 = ×4。
+    """
+    out = {}
+    for eid, rec in sorted(events().items()):
+        if not _on(eid, rec, st, p):
+            continue
+        for tgt, mul in ((rec.get("effects") or {}).get(key) or {}).items():
+            out[str(tgt)] = out.get(str(tgt), 1) * int(mul)
+    return out
+
+
+def encounter_mul(st: dict | None = None, p=None) -> dict:
+    """遇敌候选加权（怪 id → 倍数）—— 消费端 `combat.pick_encounter`（空 = 零变化）。"""
+    return _mul_effect("encounter_mul", st or state(), p)

@@ -249,6 +249,8 @@ def main():
     _wpn = (_wpn or [""])[0]
     _tid = next((k for k in sorted(st.domain("titles") or {}) if not str(k).startswith("_")), "")
     _eid = next((k for k in sorted(st.domain("eggs") or {}) if not str(k).startswith("_")), "")
+    # ★ B3-5：今天那个游戏日（「异动」标「新开的 / 收了」要看维护门那一格是不是今天的）
+    _ev_today = int(CA.CAL.state()["game_day"])
 
     def _rich(**kw):
         """一口袋全物品 + 等级/族/职业都定过的档（背包 / 图鉴 / 配方 那几条要用）。"""
@@ -321,6 +323,12 @@ def main():
         ("歇脚(不累)", CG.rest, "", {"hp": 100, "hp_max": 100}),
         ("歇脚(歇下了)", CG.rest, "", {"hp": 40, "hp_max": 100}),
         ("拾取", CG.pick_up, "", {}),
+        # ★ B3-5：世界事件（异动）—— 三尺度那个呈现口
+        ("异动(没刷新过)", CA.event_now, "", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
+        ("异动(刷新过·有收了的)", CA.event_now, "",
+         {"loc": "windmill_town", "node": "wt_gate_n", "race": "human",
+          "flags": {"ev": {"day": _ev_today, "on": [], "prev_day": _ev_today - 1,
+                           "prev_on": ["ev_first_snow:w:g00000020:3"]}}}),
         # ★ B3-10 ①：去「脚下这一站」（原先错走 SYS_MOVE_FAR 那一支）
         ("去(就在这儿)", CA.go_to, "去 %s" % cur, {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
         # ★ B3-10 ②：K56 族的另一半 —— 这些呈现口原先没被逐行扫过

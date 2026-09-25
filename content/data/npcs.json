@@ -385,7 +385,7 @@
       "appraise"
     ],
     "condition": {
-      "event": "caravan"
+      "event": "ev_caravan_arrived"
     },
     "dialogue": "dlg_seran"
   },
@@ -422,9 +422,7 @@
       "appraise",
       "trade"
     ],
-    "condition": {
-      "event": "caravan"
-    },
+    "condition": null,
     "dialogue": "dlg_durin"
   },
   "npc_lian": {
@@ -493,7 +491,9 @@
       "train",
       "hint"
     ],
-    "condition": null,
+    "condition": {
+      "event": "ev_caravan_arrived"
+    },
     "dialogue": "dlg_grey"
   }
 }

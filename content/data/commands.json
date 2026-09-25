@@ -225,6 +225,27 @@
     },
     "guard_desc": "随时"
   },
+  "event_now": {
+    "patterns": [
+      "^异动$",
+      "^今天$",
+      "^动静$"
+    ],
+    "category": "移动与世界",
+    "desc": "今天世界怎么了（三尺度：世界 / 限时 / 每日）",
+    "usage": "异动",
+    "visible": true,
+    "order": 100,
+    "guard_desc": "随时",
+    "bind": {
+      "handler": "content.cmds_ast:event_now",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
+  },
   "guild": {
     "patterns": [
       "^公会$",

@@ -101,13 +101,18 @@ def run_auto(player: dict, monster_ids, monsters: dict, *, seed: int | None = No
     return b.result, [str(x) for x in logs], int(pa.get("hp", 0))
 
 
-def pick_encounter(monsters: dict, loc: str, node: str, level: int, *, seed: int | None = None):
+def pick_encounter(monsters: dict, loc: str, node: str, level: int, *, seed: int | None = None,
+                   mul: dict | None = None):
     """从怪里挑一只「这一带、这个等级」的（第一版：按等级最近 + 可复现随机）。
 
     ★ P-30：地点**真的参与挑选**了 —— 每条怪在 monsters 域里挂着 `habitat`：
       `maps` = 会出现的图（必给，空 = 哪儿都不出）；`nodes` = 再收窄到这几个节点
       （可选 / 空 = 该图任意节点）。先按图筛（给了 nodes 再按节点筛），再按等级最近挑。
       **候选为空就返回 `[]`，不兜底**：村镇是安全区，指令那边会回「这一带暂时没有遇到什么」。
+
+    ★ B3-5：`mul` = 现在开场事件给的遇敌加权（`{怪 id: 倍数}`，来源 `calendar.encounter_mul`）。
+      **没给 = 零变化**（还是 `choice` 那一支，同一个种子挑出同一只 —— 判据钉着这一条）；
+      给了就按权重挑（倍数为 0 的候选天然挑不中）。
     """
     cand = []
     for k, m in monsters.items():
@@ -125,4 +130,9 @@ def pick_encounter(monsters: dict, loc: str, node: str, level: int, *, seed: int
     cand.sort(key=lambda k: abs(int(monsters[k].get("lv", 1)) - level))
     top = cand[:3]
     rnd = random.Random(seed)
-    return [rnd.choice(top)]
+    if not mul:
+        return [rnd.choice(top)]                      # ★ 没给 = 与改前逐字相同
+    weights = [max(0, int(mul.get(k, 1) or 0)) for k in top]
+    if sum(weights) <= 0:
+        return [rnd.choice(top)]
+    return [rnd.choices(top, weights=weights, k=1)[0]]

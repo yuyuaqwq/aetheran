@@ -17,6 +17,7 @@ from . import codex as CX            # 图鉴四谱的唯一记录口（B2-7）
 from . import eggs as EG              # 彩蛋（B3-1）：条件在 eggs 域，判定走引擎声明算子
 from . import titles as TT            # 称号（B3-2）：显示跟着名字走 · 判定在 titles 域
 from . import scene as SC           # 场景槽位解析（B3-6a）：节点级近景 → 退地图级第一眼
+from . import timed_events as TE     # 限时事件那一格（B3-5）：宿主维护门落档 · 这里只读
 
 _DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 _CACHE: dict = {}
@@ -242,22 +243,57 @@ def _cls_label(cls):
     return (d.get(c) or d.get("cls_" + c.lower()) or {}).get("name") or c
 
 
-def _npcs_here(loc, node, st=None):
-    """这个节点此刻的活人 —— ★ 出场条件（时辰/天气）现看。
+def _npcs_here(loc, node, st=None, p=None):
+    """这个节点此刻的活人 —— ★ 出场条件（时辰 / 天气 / 事件）现看。
 
-    条件是「与」：写了 time 与 weather 就两个都要满足；`event` 类条件留给事件层（B3-5），
-    这里**不判**（判了会让商队那两位永远不出现 —— 而那属于事件层的事）。
+    条件是「与」：写了 time 与 weather 就两个都要满足；`event` 走 `CAL.event_on`
+    （★ B3-5：事件层的**唯一口** —— 世界级看主线进度、限时看游戏日窗；认不出的名字给 False）。
+
+    ★ 临时在场（29 §四③「多出 2–3 位 NPC 的临时在场」）：事件给的 `crowd` 名单**覆盖**基位 ——
+      被吸走的那些不在原处算在场，只在 crowd 那一站算在场（集日把两位吸到板子那边）。
+
+    ★ `p`：判世界级事件要档（主线过没过）—— **包内调用方都要传**（不传 = 按新档算，
+      商队那两位就永远不出现；那是 K65 家族的第二处口径）。
     """
     if st is None:
         st = CAL.state()
+    moved = CAL.crowd_roster(st, p)
     out = []
     for k, v in _data("npcs").items():
-        if v.get("map") != loc or v.get("subarea") != node:
+        spot = moved.get(k)
+        if spot is not None:
+            if spot != node:
+                continue                      # 被事件吸去别处了 ⇒ 基位不算在场
+        elif v.get("map") != loc or v.get("subarea") != node:
             continue
         cond = v.get("condition") or {}
+        if cond.get("event") and not CAL.event_on(cond["event"], st, p):
+            continue
         if not (CAL.allows(cond.get("time"), st) and CAL.allows(cond.get("weather"), st)):
             continue
         out.append((k, v))
+    return out
+
+
+def event_lines(p, loc, node, entered=False) -> list:
+    """这一站 / 这一图此刻该出的**世界事件**那几行（B3-5）。
+
+    · 场地那条（`effects.crowd` 的 `node` == 脚下这一站）：随时看得到 —— 那站聚人那一下
+    · 事件表征那条（`where` 命中这一图）：**踏进来那一下**才说（进林一句描述 / 进镇一句），
+      与 `_map_scene` 同一时机 —— 省得「观察」每次都重念一遍
+
+    口径（29 §四、§五）：世界级（看主线）、限时（看游戏日窗）都走 `CAL.events_now` 一个口。
+    """
+    st = CAL.state()
+    out = []
+    for rec in CAL.events_now(st, p):
+        if not CAL.where_hit(rec, loc):
+            continue
+        c = (rec.get("effects") or {}).get("crowd") or {}
+        if c.get("node") == node and c.get("text"):
+            out.append(T(c["text"]))
+        elif entered and rec.get("text"):
+            out.append(T(rec["text"]))
     return out
 
 
@@ -390,9 +426,11 @@ async def look(env, sink, uid, player):
                 if v.get("map") == loc and v.get("subarea") == node]
     if poi_here:
         yield T("SYS_LOOK_SEES", list=" · ".join("『%s』%s" % (v.get("name"), v.get("icon", "")) for v in poi_here))
-    npc_here = [v for _k, v in _npcs_here(loc, node)]
+    npc_here = [v for _k, v in _npcs_here(loc, node, p=p)]
     if npc_here:
         yield T("SYS_LOOK_WHO", list=" · ".join("『%s』%s" % (v.get("name"), v.get("icon", "")) for v in npc_here))
+    for line in event_lines(p, loc, node):      # ★ B3-5：这一站聚人那一下（集日）
+        yield line
     yield T("SYS_LOOK_HINT")
     for line in egg_lines(p, player, env):      # ★ B3-1：看四周那一下可能把两件事连起来
         yield line
@@ -435,6 +473,40 @@ async def time_now(env, sink, uid, player):
     yield T(CAL.desc_slot(st["hour"]))
 
 
+async def event_now(env, sink, uid, player):
+    """★ B3-5：新指令「异动」（别名「今天」「动静」）—— 看今天世界怎么了。
+
+    口径（29 §六「指令不变，内容长」）：
+      · 三尺度（世界 / 限时 / 每日）**现算** —— 走 `CAL.events_now` 一个口，不存历史
+      · 「今天新开的 / 收了」拿宿主维护门落的那一格比（`timed_events.snapshot`）：
+        那一格 = 「上次刷新时开着哪些窗」。★ 只在那格**是今天刷的**时才标 —— 没刷新过就不瞎标。
+    """
+    p = _p(player)
+    st = CAL.tick(p)                       # 与「时间」同一口径：把「今天」记到档上
+    if player is not None:
+        player.update(p)
+    _save(env)
+    yield T("SYS_EV_HEAD")
+    on = CAL.events_now(st, p)
+    if not on:
+        yield T("SYS_EV_NONE")
+        return
+    seen = TE.snapshot(p)
+    fresh = bool(seen) and int(seen.get("day") if seen.get("day") is not None else -1) \
+        == int(st["game_day"])
+    prev_on = [str(x) for x in (seen.get("prev_on") or [])] if fresh else []
+    now_keys = {r["window"] for r in on}
+    for rec in on:
+        slot = "SYS_EV_ROW_NEW" if (fresh and rec["window"] not in prev_on) else "SYS_EV_ROW"
+        yield T(slot, name=rec["name"], text=T(rec["text"]))
+    for key in prev_on:                    # 上一格开着、这一格收了的（限时「关一段」那一面）
+        if key in now_keys:
+            continue
+        rec = CAL.event(CAL.id_of_key(key))
+        if rec:
+            yield T("SYS_EV_GONE", name=rec["name"])
+
+
 async def go_north(env, sink, uid, player):
     p = _p(player)
     if (p["loc"], p["node"]) == ("belt_north", "bn_bone"):        # ★ B3-11：脚下这一站（K60）
@@ -447,6 +519,8 @@ async def go_north(env, sink, uid, player):
     _save(env)
     yield T("SYS_MOVE_OUT_NORTH")
     yield _map_scene("belt_north")            # ★ B3-6a：地一屏从 texts 来（原先内联在代码里）
+    for line in event_lines(p, "belt_north", "bn_bone", entered=True):    # ★ B3-5：一句进林描述
+        yield line
 
 
 async def go_east(env, sink, uid, player):
@@ -461,6 +535,8 @@ async def go_east(env, sink, uid, player):
     _save(env)
     yield T("SYS_MOVE_OUT_EAST")
     yield _map_scene("belt_east")             # ★ B3-6a：同上
+    for line in event_lines(p, "belt_east", "be_birch", entered=True):    # ★ B3-5：同上
+        yield line
 
 
 async def go_west(env, sink, uid, player):
@@ -475,6 +551,8 @@ async def go_west(env, sink, uid, player):
     _save(env)
     yield T("SYS_MOVE_OUT_WEST")
     yield _map_scene("belt_west")             # ★ B3-6a：同上
+    for line in event_lines(p, "belt_west", "bw_old_ferry", entered=True):    # ★ B3-5：同上
+        yield line
 
 
 async def enter_town(env, sink, uid, player):
@@ -493,6 +571,8 @@ async def enter_town(env, sink, uid, player):
     _save(env)
     yield _map_scene("windmill_town")         # ★ B3-6a：进镇那一屏从 texts 来（原内联）
     yield T("SYS_TOWN_ENTER_HINT")
+    for line in event_lines(p, "windmill_town", "wt_gate_n", entered=True):   # ★ B3-5：进镇那一下
+        yield line
 
 
 async def go_back(env, sink, uid, player):
@@ -558,11 +638,15 @@ async def go_to(env, sink, uid, player):
     poi_here = [v for v in _data("pois").values() if v.get("map") == loc and v.get("subarea") == hit]
     # ★ B3-15：走唯一一口 —— 出场条件（时辰 / 天气）现看。改前这一条自己扫域、不判条件，
     #   白天的「去 北墙根」照样把只在该在昏/夜的哈根列出来（与「观察」「问路」两处口径不一致）。
-    npc_here = [v for _k, v in _npcs_here(loc, hit)]
+    npc_here = [v for _k, v in _npcs_here(loc, hit, p=p)]
     if poi_here:
         yield T("SYS_LOOK_SEES", list=" · ".join("『%s』%s" % (v.get("name"), v.get("icon", "")) for v in poi_here))
     if npc_here:
         yield T("SYS_LOOK_WHO", list=" · ".join("『%s』%s" % (v.get("name"), v.get("icon", "")) for v in npc_here))
+    # ★ B3-5：镇内/带内走一步只出「这一站」那一条（聚人）；跨图那一下（进镇 / 往东 / 往西 / 北口）
+    #   才出事件的表征句 —— 不然在镇上走两步就把「商队到了」念两遍（一句话的时机要克制）
+    for line in event_lines(p, loc, hit):
+        yield line
 
 
 # ══════════════════════════════════════════════════════════════
