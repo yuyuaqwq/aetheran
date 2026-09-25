@@ -2029,6 +2029,50 @@ except Exception as exc:                                                  # noqa
     chk("★ B4-10 取参那个口跑得起来（真宿主契约）", False,
         "%s: %s" % (type(exc).__name__, exc))
 
+
+# ══════════════════════════════════════════════════════════════
+# ★ B4-11：`cmds_ast` 里那几处手切也收进同一个口（建号两条 / 去 / 加点 / 读）
+# ══════════════════════════════════════════════════════════════
+print("⑯ ★ B4-11：`cmds_ast` 的手切收进 `content/argv.py` —— 连写 == 带空白（真宿主真敲）")
+try:
+    _BASE16 = {"cls": "cls_knight", "race": "human", "name": "试炼者", "level": 3,
+               "exp": 0, "gold": 0, "hp": 116, "loc": "windmill_town", "node": "wt_gate_n",
+               "prev": [], "bag": {"i_material_iron_scrap": 2}, "equipped": {},
+               "codex": {}, "flags": {}}
+    _POI16 = "镇口的石头"
+    _C16 = (("我是", "我是%s", {"cls": "cls_knight", "level": 1, "loc": "windmill_town",
+                                "node": "wt_gate_n", "bag": {}, "equipped": {},
+                                "codex": {}, "flags": {}}, "人类"),
+            ("选职业", "选职业%s", _BASE16, "骑士"),
+            ("去", "去%s", _BASE16, "北墙根"),
+            ("加点", "加点%s", _BASE16, "智力 2"),
+            ("读", "读%s", _BASE16, _POI16))
+    _B16 = []
+    for _w16, _form, _sd16, _arg16 in _C16:
+        _a_o16, _a_s16 = _say15(_sd16, "%s %s" % (_w16, _arg16))
+        _b_o16, _b_s16 = _say15(_sd16, _form % _arg16)
+        if not _a_o16 or _b_o16 != _a_o16 or _b_s16 != _a_s16:
+            _B16.append((_w16, _arg16, _b_o16[:2], _a_o16[:2]))
+    chk("★ 五条（我是 / 选职业 / 去 / 加点 / 读）别名与参**连写** == 主词 + 空白："
+        "回话与**档上副作用**逐字相同（原先连写被当成「没带参」⇒ 静默丢掉玩家写的词）",
+        not _B16, "%s" % _B16[:2])
+
+    # ── 覆盖面（静态）：剥指令词那种手切只许在 `content/argv.py` 里（一个口）
+    _p16 = REPO / "content"
+    _files16 = sorted(_p16.glob("*.py"))
+    _hand16 = {}
+    for _f16 in _files16:
+        _txt16 = _f16.read_text(encoding="utf-8")
+        if "split(None, 1)" in _txt16:
+            _hand16[_f16.name] = _txt16.count("split(None, 1)")
+    chk("★ 覆盖面：剥指令词的 `split(None, 1)` 只许在 `content/argv.py` 里（%d 个 content/*.py 全扫）"
+        "—— 谁在别处再手切一次，这里当场红（K71 ②）"
+        % len(_files16),
+        list(_hand16) == ["argv.py"], "%s" % _hand16)
+except Exception as exc:                                                  # noqa: BLE001
+    chk("★ B4-11 那五条跑得起来（真宿主契约）", False,
+        "%s: %s" % (type(exc).__name__, exc))
+
 print("")
 print("结果：全绿 ✓" if ok else "结果：有红 ✗")
 sys.exit(0 if ok else 1)

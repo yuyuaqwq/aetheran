@@ -16,24 +16,32 @@
   （原先会把「备」当名字，回一句带空引号的错话）。
 
 本文件的代码里一个中文都没有（中文只出现在**声明**这份数据里 —— probe_copy ②）。
+
+★ 为什么单开一个模块：取参要服务包里**每一个**实现体（含 `cmds_ast` 自己），而 `cmds_ast` 又是最底下一层
+  ⇒ 本模块**零依赖**（自己读 `content/data/commands.json`，不 import 任何 content 模块；
+  与 `content/scene.py` 同一个理由）。
 """
 from __future__ import annotations
 
-from .cmds_ast import _data
+import json
+import os
 
 __all__ = ["decl", "lit_prefix", "hit_prefix", "arg_of"]
 
 #: 正则里的元字符（`lit_prefix` 扫到它就停 —— 前缀是「连着写的那几个字」）
 _META = chr(92) + "[](){}.*+?|$^"          # 反斜杠不进源码（避转义）
 
-_DECL_CACHE: dict = {}
+#: 声明真源（与 `cmds_ast._data` 读的是同一份文件）与一次性缓存
+_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+_ALL: dict = {}
 
 
 def decl(key: str) -> dict:
     """一条声明（`commands` 域里的那一条）—— 取参 / 呈现都读它，不另抄。"""
-    if key not in _DECL_CACHE:
-        _DECL_CACHE[key] = (_data("commands") or {}).get(key) or {}
-    return _DECL_CACHE[key]
+    if not _ALL:
+        with open(os.path.join(_DIR, "commands.json"), encoding="utf-8") as f:
+            _ALL.update(json.load(f))
+    return _ALL.get(key) or {}
 
 
 def lit_prefix(pat: str) -> str:

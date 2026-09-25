@@ -19,7 +19,8 @@ from . import alloc as AL             # ★ P-34：加点算术的唯一出口�
 from . import titles as TT            # 称号（B3-2）：显示跟着名字走 · 判定在 titles 域
 from . import scene as SC           # 场景槽位解析（B3-6a）：节点级近景 → 退地图级第一眼
 from . import timed_events as TE     # 限时事件那一格（B3-5）：宿主维护门落档 · 这里只读
-from . import affix as AFFIX         # ★ B3-24：精英词条（观察那行预告 = 遭遇的同一个种子）
+from . import affix as AFFIX
+from . import argv as AV          # ★ B4-11：取参的唯一口（零依赖 ⇒ 本模块也能 import）         # ★ B3-24：精英词条（观察那行预告 = 遭遇的同一个种子）
 
 _DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 _CACHE: dict = {}
@@ -238,9 +239,7 @@ async def be_race(env, sink, uid, player):
     已经定过的：不再改（免得玩家手滑换族）；要重来是另一件事（没做）。
     """
     p = _p(player)
-    raw = (getattr(env, "text", "") or "").strip()
-    parts = raw.split(None, 1)
-    want = parts[1].strip() if len(parts) > 1 else ""
+    want = AV.arg_of(env)        # ★ B4-11：跟着自己的声明剥参（连写也算）
     all6 = _race_all()
 
     if p.get("race"):
@@ -375,9 +374,7 @@ async def be_class(env, sink, uid, player):
     真源 18 §五）—— 与 `be_race` 同一条纪律：手滑换门会毁档。
     """
     p = _p(player)
-    raw = (getattr(env, "text", "") or "").strip()
-    parts = raw.split(None, 1)
-    want = parts[1].strip() if len(parts) > 1 else ""
+    want = AV.arg_of(env)        # ★ B4-11：跟着自己的声明剥参（连写也算）
     all6 = _cls_all()
     cur = str(p.get("cls") or "").strip()
 
@@ -789,9 +786,7 @@ async def go_to(env, sink, uid, player):
     规则：目标必须是**当前节点的邻居**（不是任意节点）—— 跨图要先出门。
     """
     p = _p(player)
-    raw = (getattr(env, "text", "") or "").strip()
-    parts = raw.split(None, 1)
-    want = parts[1].strip() if len(parts) > 1 else ""
+    want = AV.arg_of(env)        # ★ B4-11：跟着自己的声明剥参（连写也算）
     loc, node = p["loc"], p["node"]
     nb = _neighbors(loc, node)
     if not want:
@@ -940,13 +935,10 @@ def _stat_list() -> str:
 
 
 def _alloc_arg(env) -> str:
-    """`加点 力量 3` → `力量 3` —— 剥掉这条声明自己的触发词（不手写镜像表）。"""
-    raw = (getattr(env, "text", "") or "").strip()
-    verb = _alloc_verb()
-    if verb and raw.startswith(verb):
-        return raw[len(verb):].strip()
-    parts = raw.split(None, 1)
-    return parts[1].strip() if len(parts) > 1 else ""
+    """`加点 力量 3` → `力量 3` —— 走**取参那个口**（★ B4-11：原先只认主词
+    `加点`，别名 / 连写都会被剔成空串；现在跟自己的声明走）。
+    """
+    return AV.arg_of(env)
 
 
 async def alloc_points(env, sink, uid, player):
@@ -1359,9 +1351,7 @@ async def read_thing(env, sink, uid, player):
     fail-closed：不随便塞一样给玩家（同一处有两个可读物时最容易出这种错）。
     """
     p = _p(player)
-    raw = (getattr(env, "text", "") or "").strip()
-    parts = raw.split(None, 1)
-    want = parts[1].strip() if len(parts) > 1 else ""
+    want = AV.arg_of(env)        # ★ B4-11：跟着自己的声明剥参（连写也算）
     # ★ P-31：与「触摸」同一个口（门槛现看）—— 门槛判得出不成立的：正文一个字都不给，只点名
     here = [(pid, v, st_, ln_) for pid, v, st_, ln_ in _pois_here(p["loc"], p["node"], p)
             if v.get("read_text")]
