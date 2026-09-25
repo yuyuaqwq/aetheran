@@ -344,6 +344,7 @@ def main():
     from content import cmds_codex as CC                                  # noqa: E402
     from content import cmds_title as CTT                                 # noqa: E402
     from content import cmds_egg as CE                                    # noqa: E402
+    from content import cmds_tower as CTW                                 # noqa: E402
 
     town = _node_names(st, "windmill_town")
     belt = _node_names(st, "belt_north")
@@ -491,6 +492,21 @@ def main():
         ("往东(就在白桦林)", CA.go_east, "", {"loc": "belt_east", "node": "be_birch"}),
         ("往西(就在旧渡口)", CA.go_west, "", {"loc": "belt_west", "node": "bw_old_ferry"}),
         ("进镇(就在镇口)", CA.enter_town, "", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
+        # ★ B3-6：副本（旧哨塔）五条 —— 塔内 / 塔外 / 空档三档都扫一遍（K56 覆盖面）
+        ("进塔(在塔门口)", CTW.tower_enter, "", {"loc": "belt_north", "node": "bn_tower"}),
+        ("进塔(不在塔门口)", CTW.tower_enter, "", {"loc": "belt_north", "node": "bn_bone"}),
+        ("进塔(已经在塔里)", CTW.tower_enter, "", {"loc": "old_watchtower", "node": "tower_gate"}),
+        ("下一层(没走到尽头)", CTW.tower_next, "", {"loc": "old_watchtower", "node": "tower_hall"}),
+        ("下一层(站到尽头)", CTW.tower_next, "", {"loc": "old_watchtower", "node": "tower_stair1"}),
+        ("下一层(塔顶)", CTW.tower_next, "", {"loc": "old_watchtower", "node": "tower_top"}),
+        ("副本地图(塔里)", CTW.tower_map, "", {"loc": "old_watchtower", "node": "tower_water_room"}),
+        ("调查(有可读物)", CTW.tower_investigate, "",
+         {"loc": "old_watchtower", "node": "tower_water_room"}),
+        ("调查(没有可读物)", CTW.tower_investigate, "",
+         {"loc": "old_watchtower", "node": "tower_hall"}),
+        ("撤退(塔里)", CTW.tower_leave, "", {"loc": "old_watchtower", "node": "tower_top"}),
+        ("撤退(塔外)", CTW.tower_leave, "", {"loc": "belt_north", "node": "bn_bone"}),
+        ("副本地图(塔外)", CTW.tower_map, "", {"loc": "belt_north", "node": "bn_bone"}),
     ]
     bad, empty, sample = [], [], []
     leaked = []

@@ -31,7 +31,9 @@ priority 降序、同值按注册序，见引擎 `tests/test_host_priority_route
   ⑥ ★ P-23（真敲 43 条）：这些声明**回的是人话**（槽位 `SYS_CMD_SOON`）—— 不许再把
      **内部 key** 与「包内 content/commands.py 里没有它的 handler」漏给玩家
   ⑦ ★ P-23（真敲）：「读」这条**有处理器却没声明**的接上了 —— 抬头与正文都对；同一处两个
-     可读物时按名字挑（点错名照「这儿没有能读的东西」说，**不随便塞一样**给玩家）
+    可读物时按名字挑（点错名照「这儿没有能读的东西」说，**不随便塞一样**给玩家）
+  ⑧ ★ B3-6（真敲）：副本那 5 条（进塔 / 下一层 / 副本地图 / 调查 / 撤退）都接上了 ——
+     塔里 / 塔外两档回的都是真话，不是「还没接上」那一句（槽位 `SYS_CMD_SOON`）
 
 跑法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_cmds.py
 """
@@ -440,8 +442,46 @@ try:
     _host.handle({"uid": "u_c", "group_id": "g_c", "text": "读 这儿没有的东西"})
     _none = (TX.get("SYS_READ_NONE") or {}).get("value", "")
     chk("★ 点错名不塞东西：回的是「%s」" % _none, list(_ad.out) == [_none], list(_ad.out))
-except Exception as exc:                                                   # noqa: BLE001
+except Exception as exc:                                               # noqa: BLE001
     chk("★ P-23 3/3「读」那条接上了（真宿主契约）", False, "%s: %s" % (type(exc).__name__, exc))
+
+print("⑧ ★ B3-6：副本那 5 条接上了（真敲 · 塔里 / 塔外两档）")
+try:
+    _DUNGEON = (("tower_enter", {"loc": "belt_north", "node": "bn_tower"}),
+                ("tower_next", {"loc": "old_watchtower", "node": "tower_stair1"}),
+                ("tower_map", {"loc": "old_watchtower", "node": "tower_gate"}),
+                ("tower_investigate", {"loc": "old_watchtower", "node": "tower_water_room"}),
+                ("tower_leave", {"loc": "old_watchtower", "node": "tower_top"}))
+    _unbound = [k for k, _w in _DUNGEON if not (DECL.get(k) or {}).get("bind")]
+    chk("★ 副本 5 条都挂了 bind（%s）" % " · ".join(k for k, _w in _DUNGEON), not _unbound,
+        "%s" % _unbound)
+    _db2 = os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp", "ast_probe_cmds_tower.db")
+    try:
+        os.remove(_db2)
+    except OSError:
+        pass
+    _seed = {"level": 3, "gold": 30, "hp": 100, "bag": {}, "equipped": {}, "codex": {},
+             "flags": {}, "prev": [], "race": "human"}
+    _ad2 = _Ad([], seed=_seed)
+    _host2 = Host(_ad2, str(REPO), inject={"db_path": _db2, "clock": time.time})
+    _host2.boot()
+    _soon_bad, _soon_miss = [], []
+    for _k, _where in _DUNGEON:
+        _sample = hit_sample(_k)
+        if not _sample:
+            _soon_miss.append(_k)
+            continue
+        _ad2.saved = dict(_seed, **_where)          # 站到那一档（塔里 / 塔门口）
+        _ad2.out.clear()
+        _host2.handle({"uid": "u_c", "group_id": "g_c", "text": _sample})
+        _got = list(_ad2.out)
+        if not _got or _got == [soon_text(_k)]:
+            _soon_bad.append((_k, _sample, (_got or [""])[0][:40]))
+    chk("★ 真敲这 5 条：回的是真话（不是「%s」那一句）"
+        % soon_text("tower_map").split("「")[0][:8], not _soon_bad and not _soon_miss,
+        "反推不出：%s · 回的还是那句：%s" % (_soon_miss[:3], _soon_bad[:3]))
+except Exception as exc:                                                   # noqa: BLE001
+    chk("★ B3-6 副本 5 条跑得起来（真宿主契约）", False, "%s: %s" % (type(exc).__name__, exc))
 
 print("")
 print("结果：全绿 ✓" if ok else "结果：有红 ✗")

@@ -899,10 +899,10 @@
     "desc": "★ 已写正文"
   },
   "SCENE_OLD_WATCHTOWER": {
-    "value": "塔门是铁的，很厚。\n门轴在里侧 —— 有人从里面把门闩上了。\n门上有印子，很深，像是用什么东西一遍一遍砸出来的。砸的位置一直在同一个地方。\n门缝里透出来一点光。不是天光。",
+    "value": "进了门，灰只在门槛那一线断掉 —— 里头干净得不像没人来。门厅空着，正对着一道楼梯贴墙往上旋，看不见顶。塔顶没有墙，风从北边来，顺着楼梯下来，绕你一圈又上去。水声也在上头，一阵一阵的，不像漏雨。",
     "params": [],
     "category": "场景",
-    "desc": "★ 已写正文"
+    "desc": "旧哨塔 · 进门之后那一眼（宽）· P-19 改写"
   },
   "SYS_RECIPE_HEAD": {
     "value": "【配方】会做 {known} 道 · 还没学会 {locked} 道（凑到料就能做）",
@@ -2457,5 +2457,123 @@
     ],
     "category": "系统",
     "desc": "P-27 · 档上还没有职业时的生命上限（生命 / 回血 / 战斗四处共用这一行点名）"
+  },
+  "READ_TOWER_GATE_MARKS": {
+    "value": "三道刻痕，刻在门闩上。三道都新 —— 不像旧痕。闩是从里侧扣上的：刻它的人，当时站在里面。",
+    "params": [],
+    "category": "可读物",
+    "desc": "22 §二·1 塔门（门闩在里面 · 门闩上三道刻痕，三道都新）"
+  },
+  "READ_TOWER_ARMORY_NAMES": {
+    "value": "架子上每一格都有一个名字。名字不是一个人刻的 —— 刻法一路在变。刻给谁看，没说。",
+    "params": [],
+    "category": "可读物",
+    "desc": "22 §二·3 武器架室（架子每一格上都刻着名字 —— 名字是给谁的？）"
+  },
+  "READ_TOWER_STELE_NAMES": {
+    "value": "名字一排排往下刻。有三个，你在白桦林那棵树皮上见过 —— 重了。",
+    "params": [],
+    "category": "可读物",
+    "desc": "22 §二·10 号角室（读碑上的名单 → 与白桦树上的名字有 3 个重名）"
+  },
+  "READ_TOWER_TOP_WORDS": {
+    "value": "石头地上刻着一行字 —— 「它在执行一条没人撤销的命令」。",
+    "params": [],
+    "category": "可读物",
+    "desc": "22 §二·12 塔顶（它在执行一条没人撤销的命令）"
+  },
+  "READ_TOWER_NORTH_RIFT": {
+    "value": "往北看，天边有一道裂口。想起那半页纸上写的：北边有一条会走的裂缝。",
+    "params": [],
+    "category": "可读物",
+    "desc": "22 §二·12 塔顶（观察北边 → 第一次看见那道裂口）· 22 §二·7 那页纸"
+  },
+  "SYS_TOWER_ENTER": {
+    "value": "你推开塔门，走了进去。",
+    "params": [],
+    "category": "系统",
+    "desc": "副本 · 进塔那一句"
+  },
+  "SYS_TOWER_HINT": {
+    "value": "「『去 <房间>』往里走 · 『副本地图』看这一层 · 『调查』查这一间 · 『撤退』出塔」",
+    "params": [],
+    "category": "系统",
+    "desc": "副本 · 进塔尾注（照 03 §一 进镇那一屏的写法）"
+  },
+  "SYS_TOWER_NOT_IN": {
+    "value": "塔门在「{name}」—— 塔里的事得先进塔。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "副本 · 五条指令（人不在塔里时）"
+  },
+  "SYS_TOWER_NEXT_FAR": {
+    "value": "还没走到本层尽头 —— 最后一间是「{room}」。",
+    "params": [
+      "room"
+    ],
+    "category": "系统",
+    "desc": "下一层 · 没站对本层最后一间"
+  },
+  "SYS_TOWER_TOP_NONE": {
+    "value": "上头没有了 —— 塔顶就是最高的地方。要出去就『撤退』。",
+    "params": [],
+    "category": "系统",
+    "desc": "下一层 · 已经在塔顶"
+  },
+  "SYS_TOWER_UP": {
+    "value": "楼梯到头，往上一层 —— {floor}，脚下是「{room}」。",
+    "params": [
+      "floor",
+      "room"
+    ],
+    "category": "系统",
+    "desc": "下一层 · 上去了"
+  },
+  "SYS_TOWER_MAP_HEAD": {
+    "value": "【{name} · {floor}】（第 {n}/{all} 层）",
+    "params": [
+      "name",
+      "floor",
+      "n",
+      "all"
+    ],
+    "category": "系统",
+    "desc": "副本地图 · 抬头"
+  },
+  "SYS_TOWER_MAP_SEEN": {
+    "value": "（走过）",
+    "params": [],
+    "category": "系统",
+    "desc": "副本地图 · 走过的那几间"
+  },
+  "SYS_TOWER_MAP_TAIL": {
+    "value": "这一层还有 {left} 间没走过。",
+    "params": [
+      "left"
+    ],
+    "category": "系统",
+    "desc": "副本地图 · 尾注"
+  },
+  "SYS_TOWER_MAP_TAIL_DONE": {
+    "value": "这一层走完了 —— 到头那一间能『下一层』。",
+    "params": [],
+    "category": "系统",
+    "desc": "副本地图 · 尾注（这一层全走过）"
+  },
+  "SYS_TOWER_INV_NONE": {
+    "value": "这一间没什么可查的。",
+    "params": [],
+    "category": "系统",
+    "desc": "调查 · 这间没有可读物"
+  },
+  "SYS_TOWER_LEAVE": {
+    "value": "你退出塔门 —— 回到「{name}」。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "撤退 · 出塔"
   }
 }

@@ -52,6 +52,48 @@
               }
             }
           }
+        },
+        "floors": {
+          "type": "array",
+          "minItems": 1,
+          "description": "分层（副本用）：每层一条 —— 名字 + 这一层的节点 id（按走进去的顺序）",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "rooms"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "rooms": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "entrance": {
+          "type": "object",
+          "description": "进这张图的那一格（跨图）：{map, node} —— 地图级 roles.entry 说的是图里那间，这个说的是从哪儿进来",
+          "required": [
+            "map",
+            "node"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "map": {
+              "type": "string"
+            },
+            "node": {
+              "type": "string"
+            }
+          }
         }
       }
     }

@@ -1321,6 +1321,14 @@
     "usage": "进塔",
     "visible": true,
     "order": 73,
+    "bind": {
+      "handler": "content.cmds_tower:tower_enter",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    },
     "guard_desc": "在入口"
   },
   "tower_next": {
@@ -1332,6 +1340,14 @@
     "usage": "下一层",
     "visible": true,
     "order": 74,
+    "bind": {
+      "handler": "content.cmds_tower:tower_next",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    },
     "guard_desc": "副本内"
   },
   "tower_map": {
@@ -1343,6 +1359,14 @@
     "usage": "副本地图",
     "visible": true,
     "order": 75,
+    "bind": {
+      "handler": "content.cmds_tower:tower_map",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    },
     "guard_desc": "副本内"
   },
   "tower_investigate": {
@@ -1354,6 +1378,14 @@
     "usage": "调查",
     "visible": true,
     "order": 76,
+    "bind": {
+      "handler": "content.cmds_tower:tower_investigate",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    },
     "guard_desc": "副本内"
   },
   "tower_leave": {
@@ -1366,6 +1398,14 @@
     "usage": "撤退",
     "visible": true,
     "order": 77,
+    "bind": {
+      "handler": "content.cmds_tower:tower_leave",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    },
     "guard_desc": "副本内"
   },
   "party": {

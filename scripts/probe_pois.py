@@ -45,9 +45,15 @@ if not (po and tx and mp):
 bad = [k for k, v in po.items() if v.get("kind") not in KINDS]
 chk("kind 都在六类里", not bad, " · ".join(bad))
 
-# ② 12 类可读物齐不齐
+# ② 可读物齐不齐 —— ★ B3-6 起两档分开（判据只加强，别改判据迁就改动）：
+#    条数 = 18（塔内 9 项按 22 号文档补齐：12 + 6）；其中**进谱的仍是 12 条** ——
+#    12 是 `10_地图探索元素库 §一A` 的 12 类，称号「认得三种字的人」与图鉴两处都**现算**这一格
+#    （多一条进谱的，`rebuild_titles` / `rebuild_codex` 当场抛）。
 reads = [k for k, v in po.items() if v.get("kind") == "可读物"]
-chk("可读物 12 类", len(reads) == 12, "%d 条" % len(reads))
+codexed = [k for k in reads if po[k].get("into_codex")]
+chk("★ 可读物 18 条（B3-6：塔内 9 项落地）· 其中进谱 12 条（12 类那个数）",
+    len(reads) == 18 and len(codexed) == 12,
+    "%d 条（进谱 %d）" % (len(reads), len(codexed)))
 
 # ③ ★ 跨域：poi 的 map 必须真在 maps 域里
 bad3 = [k for k, v in po.items() if v.get("map") not in mp]
