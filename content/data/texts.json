@@ -2697,10 +2697,12 @@
     "desc": "我的委托 · 已交表头"
   },
   "SYS_MINE_RANK": {
-    "value": "【评级】见习（交 5 条升铜 · 15 条 + 打掉 1 个头目升银）",
-    "params": [],
+    "value": "【评级】{tier}",
+    "params": [
+      "tier"
+    ],
     "category": "系统",
-    "desc": "我的委托 · 评级"
+    "desc": "B4-16 评级 · 当前档（档名走 RANK_<ID> 槽位 · 阶梯表见 17 号表末节）"
   },
   "SYS_GATHER_VERB_HERB": {
     "value": "采",
@@ -5119,5 +5121,51 @@
     ],
     "category": "系统",
     "desc": "B4-15 购买 · 在镇上但没走到那一站（站名从 maps 现取）"
+  },
+  "RANK_APPRENTICE": {
+    "value": "见习",
+    "params": [],
+    "category": "系统",
+    "desc": "B4-16 评级 · 第一档（id `apprentice` · 门槛 0/0）"
+  },
+  "RANK_BRONZE": {
+    "value": "铜",
+    "params": [],
+    "category": "系统",
+    "desc": "B4-16 评级 · 第二档（id `bronze` · 门槛从真源现算）"
+  },
+  "RANK_SILVER": {
+    "value": "银",
+    "params": [],
+    "category": "系统",
+    "desc": "B4-16 评级 · 第三档（id `silver` · 第一阶段到这儿为止）"
+  },
+  "SYS_RANK_NEED": {
+    "value": "下一档 {tier}：交 {done} 条 ＋ 打掉 {chief} 个头目（你现在 {have} 条 · {killed} 只）",
+    "params": [
+      "tier",
+      "done",
+      "chief",
+      "have",
+      "killed"
+    ],
+    "category": "系统",
+    "desc": "B4-16 评级 / 换证 · 下一档要什么（门槛数从 ranks 口径表现取）"
+  },
+  "SYS_RANK_UP": {
+    "value": "换证了：{tier}。牌子换了一块新的，边上的毛刺还是没磨掉。",
+    "params": [
+      "tier"
+    ],
+    "category": "系统",
+    "desc": "B4-16 换证 · 成了"
+  },
+  "SYS_RANK_TOP": {
+    "value": "评级到头了 —— 第一阶段到「{tier}」为止。",
+    "params": [
+      "tier"
+    ],
+    "category": "系统",
+    "desc": "B4-16 评级 / 换证 · 已经是最后一档"
   }
 }

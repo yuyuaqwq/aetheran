@@ -426,8 +426,9 @@ UNBOUND = {k: v for k, v in DECL.items()
 #:     同一批里 `party_invite`（本批从 invisible 开成可见）与**新加的** `party_accept`（同意）
 #:     一落就带 bind ⇒ 两条都不进这一格（它们走 probe_party 的真敲判据）。
 #:   ★ B4-15（药铺那一条）接下 `herbalist`（药铺）与 `item_buy`（购买）⇒ **8 → 6**。
-#:     余下 6 条：rank_up（换证）· climb（攀爬）· sneak（潜行）· feedback · settings · battle_pref。
-UNBOUND_MAX = 6
+#:   ★ B4-16（公会评级那一条）接下 `rank_up`（升级证 / 换证）⇒ **6 → 5**。
+#:     余下 5 条：climb（攀爬）· sneak（潜行）· feedback · settings · battle_pref。
+UNBOUND_MAX = 5
 
 print("⑤ ★ P-23：「帮助」只列**有处理器**的声明（真敲 · 逐条对账）")
 try:
@@ -1531,15 +1532,29 @@ try:
     _cmp16("登记（已经有证）", _say16("登记"), [_r("SYS_REG_HAS")])
     #: 「刚办证」那一档的已交条数**现读**（前面几档动过 `flags.quests_done` —— 期望值跟着档走）
     _cnt16 = len(((_sv16().get("flags") or {}).get("quests_done") or []))
+    #: ★ B4-16：评级那一屏的档名与门槛都**从口径表现取**（探针自己读 rules/ranks.json，
+    #:   不写死「见习 / 交 5 条」—— 真源一改这一条跟着走）
+    with open(os.path.join(str(REPO), "content", "rules", "ranks.json"), encoding="utf-8") as _f:
+        _RK16 = json.load(_f)
+    _RT16 = _RK16["tiers"]
+    _RN16 = [TX[_RK16["label_tpl"] % str(t["id"]).upper()]["value"] for t in _RT16]
+
+    def _need16(i, have, killed):
+        t = _RT16[i]
+        return _r("SYS_RANK_NEED", tier=_RN16[i], done=t["need_done"], chief=t["need_chief"],
+                  have=have, killed=killed)
+
     _cmp16("评级（刚办证）", _say16("评级"),
-           [_r("SYS_MINE_RANK"), _r("SYS_MINE_DONE", n=_cnt16), _r("SYS_RANK_CHIEF", n=0)])
+           [_r("SYS_MINE_RANK", tier=_RN16[0]), _r("SYS_MINE_DONE", n=_cnt16),
+            _r("SYS_RANK_CHIEF", n=0), _need16(1, _cnt16, 0)])
     _ad16.saved["flags"] = dict(_sv16().get("flags") or {},
                                quests_done=["q_main_01", "q_main_02", "q_main_03"])
     _chief16 = next((m for m, v in (st.domain("monsters") or {}).items()
                      if v.get("role_key") == "chief" and m in CX16.book("monster")), "")
     _ad16.saved["books"] = {"monster": {_chief16: {"day": 1, "kills": 2}}}
     _cmp16("评级（有进度）", _say16("评级"),
-           [_r("SYS_MINE_RANK"), _r("SYS_MINE_DONE", n=3), _r("SYS_RANK_CHIEF", n=1)])
+           [_r("SYS_MINE_RANK", tier=_RN16[0]), _r("SYS_MINE_DONE", n=3),
+            _r("SYS_RANK_CHIEF", n=1), _need16(1, 3, 1)])
     chk("★ `登记 / 改名 / 评级` 真敲：改名的名字与 `flags.renamed` 落档 · 证只在**办下来**那一下写 "
         "`flags.card` · 评级逐字对槽位（已交条数取自 `flags.quests_done`、头目数按域里 "
         "`role_key == chief` 数）· 没带名字时登记不替玩家编一个",
@@ -2298,7 +2313,7 @@ try:
     _SEED19 = {"cls": "cls_knight", "race": "human", "name": "试炼者", "level": 3, "exp": 0,
                "gold": 0, "hp": 116, "loc": "windmill_town", "node": "wt_gate_n",
                "prev": [], "bag": {}, "equipped": {}, "codex": {}, "flags": {}}
-    _rank19 = _r("SYS_MINE_RANK")
+    _rank19 = _r("SYS_MINE_RANK", tier=TX["RANK_APPRENTICE"]["value"])
 
     # ── ① 无证档：`我的委托` 不印那半句 · `评级` 回「你还没有证」
     _o19a, _s19a = _say15(_SEED19, "我的委托")

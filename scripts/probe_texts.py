@@ -19,7 +19,9 @@ sys.path.insert(0, ENGINE)
 from saintess_engine.package import load_stack                       # noqa: E402
 
 ok = True
-KEY_RE = re.compile(r"^(SCENE|READ|NPC|COMBAT|QUEST|ITEM|SYS|TITLE|WORLD|HOUR|WEATHER|UNID|TALK)_[A-Z0-9_]+$")
+#: ★ B4-16 起 `RANK_*` 也在这一族里（公会评级那几张档名 —— 与 `scripts/rebuild_syscopy.py`
+#:   的 KEY_RE 逐字同形：两处必须一起改，否则一个认一个不认）
+KEY_RE = re.compile(r"^(SCENE|READ|NPC|COMBAT|QUEST|ITEM|SYS|TITLE|WORLD|HOUR|WEATHER|UNID|TALK|RANK)_[A-Z0-9_]+$")
 PH = re.compile(r"\{(\w+)\}")
 
 

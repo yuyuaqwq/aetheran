@@ -7,6 +7,7 @@
 |---|---|---|
 | `登记` | 公会那一站（`npcs.funcs` 里的 `board`）· 档上有没有名字 | `flags.card = <游戏日>` |
 | `评级` | 上面那一格 + `flags.quests_done`（已交条数）+ 图鉴怪物谱里 `role_key == "chief"` 的战绩 | 只读 |
+| `换证` | 与 `评级` **同一本账**（已交条数 + 头目数）· 门槛走 `content/rules/ranks.json` | `flags.rank` |
 | `改名` | 档上 `name` + `flags.renamed`（只改一次） | `name` / `flags.renamed` |
 | `排行` | 本群存档（`content/persistence.all_players(group_id)` —— 包自己的存档半边） | 只读 |
 | `公告` | `game.json`（名字 / 版本）+ `commands` 域的声明数 | 只读 |
@@ -20,9 +21,10 @@
     在真档上调它等于「看一眼评级 / 旧货铺」就往玩家档里塞空容器（K57 那族）
   · 落档只经 `player.update(p)` + `_save(env)`；出档一律 `_p()`（默认档不当草稿纸）
 
-★ 为什么不接 `升级证`（换证）：阶梯（交 5 条升铜 / 15 条 + 1 个头目升银）今天只活在
-  一句文案里，机器可读的那份（档位名 / 门槛 / 换证条件）**一个域都没有** ——
-  造它是新形状，记进 `_notes.md` 当遗留；`评级` 只说**现状与已交条数**，不替它许愿。
+★ B4-16：`换证`（`升级证`）**已接上** —— 原先卡在「阶梯只有一句文案、没有机器可读的那份」，
+  这一批把那份造出来了：档序与门槛在 `content/rules/ranks.json`（`scripts/rebuild_ranks.py`
+  从真源 `05_玩法数值口径 §一` 那一行现解析），档名在 texts 域（`RANK_<ID>` 槽位）。
+  `评级` 与 `换证` 读的是**同一本账**（`_progress`）与**同一份口径**（`content/ranks.py`）。
 """
 from __future__ import annotations
 
@@ -33,6 +35,7 @@ from .cmds_ast import _data, _p, _save, T
 from .town import _func_node, town_gate
 from . import argv as AV
 from . import calendar as CAL
+from . import ranks as RK
 
 #: 榜上最多列几条（一屏内 —— 呈现口径，不是数值；与 `cmds_quest.board` 的 `[:3]` 同族）
 TOP = 10
@@ -88,24 +91,18 @@ async def register(env, sink, uid, player):
     yield T("SYS_REG_DONE")
 
 
-async def rank(env, sink, uid, player):
-    """`评级` —— 见习 / 铜 / 银 的现状与进度（守卫：已登记）。
+def _progress(p) -> dict:
+    """公会那本账（`评级` 与 `换证` **同一本**）：`{"done": 已交条数, "chief": 打掉的头目数}`。
 
-    ★ 阶梯那半句走**现成槽位** `SYS_MINE_RANK`（真源 `17_文案收口口径 §四` 就是它，
-      `我的委托` 也读同一格 —— 不另抄一份口径）。
-    ★ 进度两条都现算：交了几条 = `flags.quests_done` 的条数（与『交活』同一本账）；
+    ★ 两条都**现算**，不新建容器：交了几条 = `flags.quests_done`（与『交活』同一本账）；
       头目数 = 图鉴怪物谱里那些 `role_key == "chief"` 的战绩（机器键取自 `monsters` 域）。
+    ★ 走**影子档**（`cmds_quest._shadow`）：codex 的读口会把缺的格子补齐 ——
+      在真档上调它，等于「看一眼进度」就往玩家档里塞空容器（K57 那族）。
     """
-    p = _p(player)
-    if not has_card(p):
-        yield T("SYS_RANK_NOCARD")
-        return
     from .cmds_quest import _done, _shadow
     from . import codex as CX
 
     s = _shadow(p)
-    yield T("SYS_MINE_RANK")
-    yield T("SYS_MINE_DONE", n=len(_done(s)))
     ms = _data("monsters") or {}
     n = 0
     for mid in CX.book("monster"):
@@ -113,7 +110,62 @@ async def rank(env, sink, uid, player):
             continue
         if str((ms.get(mid) or {}).get("role_key") or "") == "chief":
             n += 1
-    yield T("SYS_RANK_CHIEF", n=n)
+    return {"done": len(_done(s)), "chief": n}
+
+
+async def rank(env, sink, uid, player):
+    """`评级` —— 现在哪一档 + 已交条数 + 头目数 + 下一档要什么（守卫：已登记）。
+
+    ★ 档名与门槛都现取：档名走 `content/ranks.py::label`（槽位 `RANK_<ID>` · texts 域），
+      门槛走 `content/rules/ranks.json`（真源 05 §一 现解析）—— 本文件里一个数都不写。
+    ★ `SYS_MINE_RANK` 那一行与 `我的委托` 里那一行**同一个槽位**（B4-14 起同一个门）。
+    ★ 到顶（第一阶段最后一档）就不再许愿，照实说「到这儿为止」。
+    """
+    p = _p(player)
+    if not has_card(p):
+        yield T("SYS_RANK_NOCARD")
+        return
+    tid = RK.current(p)
+    st = _progress(p)
+    yield T("SYS_MINE_RANK", tier=RK.label(tid))
+    yield T("SYS_MINE_DONE", n=st["done"])
+    yield T("SYS_RANK_CHIEF", n=st["chief"])
+    nxt = RK.next_of(tid)
+    if not nxt:
+        yield T("SYS_RANK_TOP", tier=RK.label(tid))
+        return
+    yield T("SYS_RANK_NEED", tier=RK.label(nxt["id"]), done=nxt["need_done"],
+            chief=nxt["need_chief"], have=st["done"], killed=st["chief"])
+
+
+async def rank_up(env, sink, uid, player):
+    """`换证`（别名 `升级证`）—— 评级达标就把档往上挪一格（声明里的守卫：评级达标）。
+
+    ★ **没有「在公会」那道门**：真源 `04_指令总表` 给这一条的守卫就是「评级达标」，
+      `评级` 也没有地点门 ⇒ 声明 ≡ 实现，别自作主张加一道（K72：守卫只许有一处）。
+    ★ 门槛与档序都现取（`content/ranks.py`）—— 本文件里不写档名、不写门槛数；
+      不到门槛回的是**同一句**「下一档要什么 + 你现在多少」（与 `评级` 同一槽位）。
+    ★ 落档只经 `RK.set_rank`（那一格 flags 的唯一写口）+ `player.update(p)` + `_save(env)`。
+    """
+    p = _p(player)
+    if not has_card(p):
+        yield T("SYS_RANK_NOCARD")
+        return
+    tid = RK.current(p)
+    nxt = RK.next_of(tid)
+    if not nxt:
+        yield T("SYS_RANK_TOP", tier=RK.label(tid))
+        return
+    st = _progress(p)
+    if not RK.meets(st, nxt):
+        yield T("SYS_RANK_NEED", tier=RK.label(nxt["id"]), done=nxt["need_done"],
+                chief=nxt["need_chief"], have=st["done"], killed=st["chief"])
+        return
+    RK.set_rank(p, nxt["id"])
+    if player is not None:
+        player.update(p)
+    _save(env)
+    yield T("SYS_RANK_UP", tier=RK.label(nxt["id"]))
 
 
 async def rename(env, sink, uid, player):

@@ -26,7 +26,9 @@ PLAN = os.environ.get("AST_PLAN", "C:/Users/yuyu/aetheran-plan")
 DOC = os.path.join(PLAN, "00_总纲", "17_文案收口口径_v1.md")
 TEXTS = os.path.join(REPO, "content", "data", "texts.json")
 
-KEY_RE = re.compile(r"^(SCENE|READ|NPC|COMBAT|QUEST|ITEM|SYS|TITLE|WORLD|HOUR|WEATHER|UNID|TALK)_[A-Z0-9_]+$")
+#: ★ B4-16 起 `RANK_*` 也在这一族里（公会评级那几张档名 —— 键 = `RANK_<ASCII ID>`，
+#:   拼法唯一在 `content/ranks.py::label_key`；档名本体是文案，所以它归 texts 域）。
+KEY_RE = re.compile(r"^(SCENE|READ|NPC|COMBAT|QUEST|ITEM|SYS|TITLE|WORLD|HOUR|WEATHER|UNID|TALK|RANK)_[A-Z0-9_]+$")
 PH = re.compile(r"\{(\w+)\}")
 ROW_RE = re.compile(r"^\|\s*([A-Z][A-Z0-9_]*)\s*\|")
 

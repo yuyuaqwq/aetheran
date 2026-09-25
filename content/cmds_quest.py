@@ -146,6 +146,7 @@ from .cmds_talk import _arg
 from .cmds_ast import _npcs_here
 from . import codex as CX            # 打怪记录（books.monster.kills）的**唯一**读口
 from . import loot as LT             # 东西的名字（呈现口不许漏机器键 —— 名字从这里取）
+from . import ranks as RK            # 评级那一档（档名/门槛的唯一读口 —— B4-16）
 
 
 def _mine(p):
@@ -745,4 +746,5 @@ async def quest_mine(env, sink, uid, player):
     #   原先在这一条里照样印「【评级】见习」，与同一刻『评级』回的「你还没有证」直接打架。
     from .cmds_self import has_card
     if has_card(p):
-        yield T("SYS_MINE_RANK")
+        # ★ B4-16：这一行与『评级』里那一行**同一槽位**（`SYS_MINE_RANK`）—— 档名现取
+        yield T("SYS_MINE_RANK", tier=RK.label(RK.current(p)))

@@ -488,7 +488,15 @@
     "usage": "升级证",
     "visible": true,
     "order": 20,
-    "guard_desc": "评级达标"
+    "guard_desc": "评级达标",
+    "bind": {
+      "handler": "content.cmds_self:rank_up",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "status": {
     "patterns": [

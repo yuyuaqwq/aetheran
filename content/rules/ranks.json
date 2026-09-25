@@ -1,0 +1,30 @@
+{
+  "_note": "公会评级阶梯 —— **唯一真源**：档序与门槛由 `scripts/rebuild_ranks.py` 从真源文档现解析；档名是文案，住在 `texts` 域（键 = `RANK_<ID>`，见 `content/ranks.py`）。代码里不写档名、不写门槛数。",
+  "_src": {
+    "真源": "aetheran-plan/06_第一阶段垂直切片/05_玩法数值口径_v1.md §一（评级那一行） · 04_指令总表.md §公会与委托（`升级证`/`换证` · 守卫 评级达标） · 03_风车镇_指令与回复.md §一（`登记` 办见习证）",
+    "口径": "aetheran-plan/00_总纲/17_文案收口口径_v1.md 末节（公会评级阶梯）",
+    "生成": "scripts/rebuild_ranks.py（档序与门槛从 05 §一 现解析，本文件不手打）",
+    "第一阶段开到": "金"
+  },
+  "label_tpl": "RANK_%s",
+  "tiers": [
+    {
+      "id": "apprentice",
+      "order": 1,
+      "need_done": 0,
+      "need_chief": 0
+    },
+    {
+      "id": "bronze",
+      "order": 2,
+      "need_done": 5,
+      "need_chief": 0
+    },
+    {
+      "id": "silver",
+      "order": 3,
+      "need_done": 15,
+      "need_chief": 1
+    }
+  ]
+}
