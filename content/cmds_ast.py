@@ -799,10 +799,21 @@ async def touch(env, sink, uid, player):
 
 
 async def read_thing(env, sink, uid, player):
-    """按编号读一样东西（第一阶段先给第一条）。"""
+    """按编号读一样东西（第一阶段先给第一条）。
+
+    ★ P-23：这条声明此前只在代码里（`commands.json` 没声明）⇒ 玩家只能靠「触摸」读物。
+    现在接上了；点名的写法（`读 墙上的划痕`）按名字挑，点错名照「这儿没有能读的东西」说 ——
+    fail-closed：不随便塞一样给玩家（同一处有两个可读物时最容易出这种错）。
+    """
     p = _p(player)
+    raw = (getattr(env, "text", "") or "").strip()
+    parts = raw.split(None, 1)
+    want = parts[1].strip() if len(parts) > 1 else ""
     here = [(k, v) for k, v in _data("pois").items()
             if v.get("map") == p["loc"] and v.get("subarea") == p["node"] and v.get("read_text")]
+    if want:
+        here = [(k, v) for k, v in here
+                if want == (v.get("name") or "") or want in (v.get("name") or "")]
     if not here:
         yield T("SYS_READ_NONE")
         return
@@ -828,12 +839,35 @@ async def hint(env, sink, uid, player):
 
 
 async def help_cmd(env, sink, uid, player):
+    """指令表 —— **只列有处理器的声明**（P-23）。
+
+    ★ 为什么按 `bind` 判：`commands.json` 是声明真源，`bind` 就是「包内真有实现体」那一栏
+      （`content/commands.py::load_declared_bindings` 只登记带 bind 的）。原先按 `visible`
+      全列 ⇒ 94 条里有 43 条是**敲了没反应**的（玩家照着表敲，回一句「未提供处理器」）。
+    """
     cmds = _data("commands")
     cats = {}
     for k, v in cmds.items():
         if v.get("visible") is False:
             continue
+        if not v.get("bind"):
+            continue
         cats.setdefault(v.get("category") or T("SYS_HELP_CAT_OTHER"), []).append(v.get("usage") or k)
     yield T("SYS_HELP_HEAD")
     for c, ws in cats.items():
         yield T("SYS_HELP_ROW", cat=c, list=" · ".join("『%s』" % w for w in ws))
+
+
+def declared_soon(env):
+    """声明了、包内还没实现的指令 —— **只说人话**（P-23）。
+
+    ★ 引擎的降级回显（`saintess_engine/host/runtime.py::declared_echo`）把**内部 key**
+      与「包内 content/commands.py 里没有它的 handler」一起丢给玩家 —— 引擎零改动，
+      所以包侧自己接住这些声明（`content/commands.py::load_declared_soon`）：玩家看到的
+      只剩一个槽位（`SYS_CMD_SOON`），一眼知道「这条还没接上」。
+    """
+    spec = (getattr(env, "state", None) or {}).get("spec")
+    name = (getattr(spec, "usage", "") or "").strip()
+    if not name:
+        name = (getattr(env, "text", "") or "").strip()
+    return [T("SYS_CMD_SOON", name=name)]

@@ -184,6 +184,26 @@
     },
     "guard_desc": "随时"
   },
+  "read": {
+    "patterns": [
+      "^读(?:\\s*(.+))?$",
+      "^阅读(?:\\s*(.+))?$"
+    ],
+    "category": "移动与世界",
+    "desc": "读一读这儿能读的东西",
+    "usage": "读",
+    "visible": true,
+    "order": 8,
+    "bind": {
+      "handler": "content.cmds_ast:read_thing",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    },
+    "guard_desc": "有可读物时"
+  },
   "ask_way": {
     "patterns": [
       "^问路$",
