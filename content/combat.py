@@ -78,11 +78,8 @@ def monster_actor(mid: str, m: dict) -> dict:
     panel.setdefault("max_mp", 0)
     a = make_actor(uid=mid, name=m.get("name", mid), side=ENEMY_SIDE, kind="monster",
                    level=int(m.get("lv", 1) or 1), **panel)
-    # ★ B3-6b-2d-keys-2（P-20 甲案第二刀）：`role` 是**内容侧词汇**（策划案原文的档位名，引擎里那份
-    #   `role` 限定规则是逐字比对的）⇒ 照旧从域里透传；**机器判定**一律走 ASCII `role_key`。
-    #   缺了档位名 ⇒ 拿机器键顶上（两个都不在 ⇒ 空串，两条路在引擎那边都是「不是 boss」）。
-    a["role"] = m.get("role") or m.get("role_key") or ""
-    a["is_boss"] = (m.get("role_key") == "boss")   # 原先比 `a["role"] == "boss"`（那一档的值恰好是 ASCII）
+    a["role"] = m.get("role") or "普通"
+    a["is_boss"] = (a["role"] == "boss")
     if m.get("skills"):
         a["skills"] = list(m["skills"])
     return a
@@ -121,17 +118,20 @@ def pick_encounter(monsters: dict, loc: str, node: str, level: int, *, seed: int
       （可选 / 空 = 该图任意节点）。先按图筛（给了 nodes 再按节点筛），再按等级最近挑。
       **候选为空就返回 `[]`，不兜底**：村镇是安全区，指令那边会回「这一带暂时没有遇到什么」。
 
+    ★ B3-7：**档位不再当门**（原先只放 普通/精英/头目 ⇒ 号角室的层主房与塔顶那两间**一只都
+      挑不出来**：敲『攻击』只回「这一带暂时没有遇到什么」）。现在**唯一的门是 `habitat`**
+      —— 地点说得上话的怪就能碰上（层主 / Boss 也是怪）。这么改有三条好处：
+        · 档位这一栏不再是代码里的机器键（P-20 第二刀的方向：取值全从域里来）；
+        · 野外不会多出怪 —— 层主与 Boss 的 `habitat` 只写着旧哨塔那两张节点，图/节点对不上的
+          一律不是候选（`probe_monsters` ⑨⑩ 钉着这一条）；
+        · 要收窄哪个档位，让它自己的 `habitat` 说话（数据层决定，不在这里加白名单）。
+
     ★ B3-5：`mul` = 现在开场事件给的遇敌加权（`{怪 id: 倍数}`，来源 `calendar.encounter_mul`）。
       **没给 = 零变化**（还是 `choice` 那一支，同一个种子挑出同一只 —— 判据钉着这一条）；
       给了就按权重挑（倍数为 0 的候选天然挑不中）。
-
-    ★ B3-6b-2d-keys-2：候选闸比的是 ASCII `role_key`（原先比中文枚举「普通 / 精英 / 头目」）——
-      层主 / 世界 Boss 照旧**不进**随机遇敌（它们是副本与塔顶的固定战）。**换键前后同一批怪**。
     """
     cand = []
     for k, m in monsters.items():
-        if m.get("role_key") not in ("normal", "elite", "chief"):
-            continue
         hb = m.get("habitat") or {}
         if loc not in (hb.get("maps") or []):
             continue                                  # ★ 不属于这张图的怪，一律不出现

@@ -14,6 +14,7 @@
   ⑨ ★ 六条指令都接在 content.cmds_codex 上，且实现体真的存在
   ⑩ 图鉴用到的文案槽位都在 texts 域
   ⑪ ★ P-8 行为：自己看（端详）—— 看过 ≠ 认出来 · 不可逆 · 手上没有不给看 · 物证句来自实物域
+  ⑫ ★ B3-7 旧物谱入口：新那条（`unid_tower`）真拿得到（有出产）· 塔内那 5 条新可读物不进谱（12 类不动）
 
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_codex.py
 """
@@ -324,6 +325,32 @@ CM.sync_bag(p5)
 seen5 = _run("端详 一块看不出用途的旧东西", p5)
 chk("★ 未鉴定那两件（物证挂池表）也看得出", len(seen5) > 1 and seen5[1].endswith(EV_POOL)
     and ((p5["books"].get("relic") or {}).get("unid_common") or {}).get("studied") is True, seen5)
+
+# ⑫ ★ B3-7：旧物谱入口那一条（`unid_tower` —— 旧哨塔门厅那件不认得的）
+#    ① 「捡的」那几条**都在某个域的出产里**（谱里不许有拿不到的条目）—— 这一批新加的那条靠塔内的可搜物；
+#    ② 塔内那 5 条新可读物（正文槽位 READ_TOWER_*）一条都不进谱 —— 12 类那个数不动
+#       （要改口径 = 真源 `14_图鉴四谱口径_v1 §relic` 加行 + `10_地图探索元素库 §一A` 那 12 类一起动，
+#        建议行写在**工作树 `_notes.md` §二**，本批代码里一行都没加）；
+#    ③ 端详那条线接得上：物证句就是池表上那一句（与 probe_codex ⑪ 同一个口，这条核新那一件）。
+_produced = set()
+for _g in GA.values():
+    for _e in (_g.get("pool") or []):
+        _produced.add(str(_e.get("out")))
+for _p in DP.values():
+    for _e in (_p.get("entries") or []) + (_p.get("pool") or []):
+        _produced.add(str(_e.get("out")))
+for _r in RC.values():
+    if _r.get("out"):
+        _produced.add(str(_r["out"]))
+_no_src = [k for k in pick_ids if k not in _produced]
+chk("★ 旧物谱里「捡的」每一条都在某个域的出产里（%d 条 · 缺出产的：%s）" % (len(pick_ids), _no_src or "无"),
+    not _no_src, " · ".join(pick_ids))
+_tw = sorted(k for k, v in PO.items() if str(v.get("read_text") or "").startswith("READ_TOWER_"))
+chk("★ 塔内那 5 条新可读物一条都不进旧物谱（%d 条 · 12 类那个数不动）" % len(_tw),
+    len(_tw) == 5 and not [k for k in _tw if k in BOOK["relic"] or PO[k].get("into_codex")], _tw)
+chk("★ 新那条（unid_tower）的物证句 = 池表上那一句（端详那条线接得上）",
+    bool(CM.evidence("unid_tower")) and CM.evidence("unid_tower") == (DP.get("unid_tower") or {}).get("hint"),
+    "%s" % CM.evidence("unid_tower"))
 
 print()
 print("按谱：%s" % " · ".join("%s %d" % (LABEL[b], len(BOOK[b])) for b in BOOKS))

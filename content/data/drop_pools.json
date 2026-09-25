@@ -6,7 +6,6 @@
       {
         "out": "i_material_iron_chip",
         "kind": "材料",
-        "kind_key": "material",
         "w": 40,
         "n": [
           1,
@@ -16,7 +15,6 @@
       {
         "out": "i_material_herb_common",
         "kind": "材料",
-        "kind_key": "material",
         "w": 30,
         "n": [
           1,
@@ -26,7 +24,6 @@
       {
         "out": "i_potion_minor",
         "kind": "道具",
-        "kind_key": "tool",
         "w": 20,
         "n": [
           1,
@@ -36,13 +33,11 @@
       {
         "out": "unid_common",
         "kind": "未鉴定",
-        "kind_key": "unidentified",
         "w": 10
       },
       {
         "out": "i_material_hard_bone",
         "kind": "材料",
-        "kind_key": "material",
         "w": 18,
         "n": [
           1,
@@ -58,7 +53,6 @@
       {
         "out": "i_material_old_iron",
         "kind": "材料",
-        "kind_key": "material",
         "w": 35,
         "n": [
           1,
@@ -68,7 +62,6 @@
       {
         "out": "i_potion_minor",
         "kind": "道具",
-        "kind_key": "tool",
         "w": 25,
         "n": [
           1,
@@ -78,19 +71,16 @@
       {
         "out": "unid_common",
         "kind": "未鉴定",
-        "kind_key": "unidentified",
         "w": 25
       },
       {
         "out": "dp_elite_gear",
         "kind": "池",
-        "kind_key": "pool",
         "w": 15
       },
       {
         "out": "i_material_hard_bone",
         "kind": "材料",
-        "kind_key": "material",
         "w": 20,
         "n": [
           1,
@@ -107,7 +97,6 @@
       {
         "out": "*armor_random",
         "kind": "装备",
-        "kind_key": "gear",
         "w": 60,
         "quality": [
           "普通",
@@ -117,7 +106,6 @@
       {
         "out": "*weapon_random",
         "kind": "装备",
-        "kind_key": "gear",
         "w": 30,
         "quality": [
           "精制"
@@ -126,7 +114,6 @@
       {
         "out": "unid_rare",
         "kind": "未鉴定",
-        "kind_key": "unidentified",
         "w": 10
       }
     ]
@@ -139,7 +126,6 @@
       {
         "out": "i_horn_half",
         "kind": "信物",
-        "kind_key": "keepsake",
         "w": 100,
         "story": "半截号角 —— 主线 8 的交付物"
       }
@@ -152,19 +138,16 @@
       {
         "out": "i_set_sentry_gauntlet",
         "kind": "装备",
-        "kind_key": "gear",
         "w": 8
       },
       {
         "out": "unid_rare",
         "kind": "未鉴定",
-        "kind_key": "unidentified",
         "w": 27
       },
       {
         "out": "i_material_old_iron",
         "kind": "材料",
-        "kind_key": "material",
         "w": 35,
         "n": [
           1,
@@ -174,7 +157,6 @@
       {
         "out": "i_potion_minor",
         "kind": "道具",
-        "kind_key": "tool",
         "w": 30,
         "n": [
           1,
@@ -190,19 +172,16 @@
       {
         "out": "i_set_scavenger_blade",
         "kind": "装备",
-        "kind_key": "gear",
         "w": 8
       },
       {
         "out": "unid_rare",
         "kind": "未鉴定",
-        "kind_key": "unidentified",
         "w": 32
       },
       {
         "out": "i_material_old_iron",
         "kind": "材料",
-        "kind_key": "material",
         "w": 30,
         "n": [
           1,
@@ -212,7 +191,6 @@
       {
         "out": "i_junk_bone",
         "kind": "垃圾",
-        "kind_key": "junk",
         "w": 30,
         "n": [
           1,
@@ -235,19 +213,16 @@
       {
         "out": "i_material_iron_chip",
         "kind": "材料",
-        "kind_key": "material",
         "w": 45
       },
       {
         "out": "i_material_herb_common",
         "kind": "材料",
-        "kind_key": "material",
         "w": 20
       },
       {
         "out": "*armor_random",
         "kind": "装备",
-        "kind_key": "gear",
         "w": 20,
         "quality": [
           "普通"
@@ -256,12 +231,10 @@
       {
         "out": "i_junk_bone",
         "kind": "垃圾",
-        "kind_key": "junk",
         "w": 15
       }
     ],
-    "kind": "未鉴定",
-    "kind_key": "unidentified"
+    "kind": "未鉴定"
   },
   "unid_rare": {
     "name": "一块刻着字的石片",
@@ -282,7 +255,6 @@
       {
         "out": "*armor_random",
         "kind": "装备",
-        "kind_key": "gear",
         "w": 30,
         "quality": [
           "稀有",
@@ -292,37 +264,67 @@
       {
         "out": "i_material_old_iron",
         "kind": "材料",
-        "kind_key": "material",
         "w": 45
       },
       {
         "out": "i_junk_bone",
         "kind": "垃圾",
-        "kind_key": "junk",
         "w": 15
       },
       {
         "out": "i_token_stone_shard",
         "kind": "信物",
-        "kind_key": "keepsake",
         "w": 7,
         "story": "刻字的石片 —— 与「白桦上的名字」同源，瑟兰认得"
       },
       {
         "out": "i_clue_page",
         "kind": "线索",
-        "kind_key": "clue",
         "w": 3,
         "story": "一段话：哈根那句「不该拿走的东西」的碎片"
       },
       {
         "out": "i_set_northwall_shard",
         "kind": "装备",
-        "kind_key": "gear",
         "w": 8
       }
     ],
-    "kind": "未鉴定",
-    "kind_key": "unidentified"
+    "kind": "未鉴定"
+  },
+  "unid_tower": {
+    "name": "一块看不出用途的旧东西",
+    "icon": "❓",
+    "tier": "普通",
+    "from": [
+      "副本搜查（旧哨塔）"
+    ],
+    "hint": "凉的。灰被抹掉过一道，露出底下亮的那一层 —— 有人最近翻过它。",
+    "seen_after": "unid_tower",
+    "pool": [
+      {
+        "out": "i_material_old_iron",
+        "kind": "材料",
+        "w": 45
+      },
+      {
+        "out": "*armor_random",
+        "kind": "装备",
+        "w": 30,
+        "quality": [
+          "普通"
+        ]
+      },
+      {
+        "out": "i_junk_bone",
+        "kind": "垃圾",
+        "w": 15
+      },
+      {
+        "out": "i_material_iron_chip",
+        "kind": "材料",
+        "w": 10
+      }
+    ],
+    "kind": "未鉴定"
   }
 }
