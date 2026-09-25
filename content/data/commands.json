@@ -39,7 +39,7 @@
         "player"
       ]
     },
-    "guard_desc": "在镇上"
+    "guard_desc": "随时"
   },
   "go_east": {
     "patterns": [
@@ -59,7 +59,7 @@
         "player"
       ]
     },
-    "guard_desc": "在镇上"
+    "guard_desc": "随时"
   },
   "go_west": {
     "patterns": [
@@ -79,7 +79,7 @@
         "player"
       ]
     },
-    "guard_desc": "在镇上"
+    "guard_desc": "随时"
   },
   "go_back": {
     "patterns": [
@@ -356,7 +356,7 @@
     "usage": "接 <参数>",
     "visible": true,
     "order": 15,
-    "guard_desc": "已登记且未接",
+    "guard_desc": "等级够 · 未接",
     "bind": {
       "handler": "content.cmds_quest:quest_accept",
       "call": "run",

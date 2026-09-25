@@ -33,6 +33,7 @@
 from __future__ import annotations
 
 from .cmds_ast import _data, _p, _save, T, name_with_title, _cls_label
+from .town import _func_node, town_gate
 from . import argv as AV
 from .cmds_quest import _done, _mine, _quests, _shadow, _unmet
 from .cmds_recipe import _have, _take
@@ -124,10 +125,15 @@ async def board_show(env, sink, uid, player):
     ★ 编号 = `quests` 域那条的 `order`（主线 1–12 · 支线 13–30 · 生活 31–38 · 悬赏 101–103），
       与『接 <编号>』认的是同一个字段 —— 不另建一套编号。
     ★ 「还差什么」走 P-25 的同一口（`cmds_quest._unmet`）：条件判定的真源只有一处。
-    ★ 不设地点守卫：『悬赏』（同一条线上的入口）今天也不看脚下 —— 两处口径保持一致
-      （真源 `03 §一` 写的是「在公会」，那一栏是**声明里的 guard_desc**，包内没有守卫执行面）。
+    ★ 守卫（声明里的 `guard_desc` = 在公会）走**唯一执行面** `cmds_ast.town_gate`（B4-12）：
+      这里原先写着「不设地点守卫 …… 包内没有守卫执行面」—— 那句话是错的（客栈 / 教堂 / 登记
+      一直都在判脚下）⇒ 同一条 `guard_desc` 两种实现的根就在这句里，已收口。
     """
     p = _p(player)
+    line = town_gate(p, _func_node("board"))
+    if line:
+        yield line
+        return
     want, _n = _split_n(AV.arg_of(env, "board_show"))
     qs = _quests()
     hit = None
@@ -288,8 +294,9 @@ async def item_sell(env, sink, uid, player):
     if not isinstance(price, (int, float)) or isinstance(price, bool) or price <= 0:
         yield T("SYS_SELL_NOPRICE", name=rec.get("name") or iid)
         return
-    if str(p.get("loc") or "") != "windmill_town":
-        yield T("SYS_SELL_AWAY")
+    line = town_gate(p, notown="SYS_SELL_AWAY")     # ★ B4-12：守卫走唯一执行面（用这一族自己的话）
+    if line:
+        yield line
         return
     n = min(int(n), have)
     gold = int(price) * n
@@ -376,8 +383,9 @@ async def stash(env, sink, uid, player):
     """
     p = _p(player)
     raw = (getattr(env, "text", "") or "").strip()
-    if str(p.get("node") or "") != STASH_NODE:
-        yield T("SYS_STASH_AWAY")
+    line = town_gate(p, STASH_NODE, notown="SYS_STASH_AWAY", away="SYS_STASH_AWAY")
+    if line:
+        yield line
         return
     hit = AV.hit_prefix("stash", raw)
     into = bool(hit) and hit in _usage("stash")

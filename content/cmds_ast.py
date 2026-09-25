@@ -73,14 +73,18 @@ def _map_scene(loc):
 #:   由 `_p()` 出档时按面板派生（原先这里与 `apply.initial_save` 各写死 100 ⇒ 两个源）。
 #: ★ B4-8：`mo` / `mo_max` 同理撤掉（原先两处写死 0 ⇒ `状态` 恒「法力 0/0」而面板是 50）——
 #:   两个上限都只认面板那一个来源。
+#: ★ B4-12：镇子那张图的 id —— **唯一一份字面量**（本包的守卫 / 起点 / 出口都走它；
+#:   宿主那半边 `apply.py` 的初始档自己写了一份，见 `probe_cmds ⑰` 的覆盖面那一支）
+TOWN = "windmill_town"
+
 DEFAULT_PLAYER = {
     "name": "", "race": "", "cls": "", "level": 1, "exp": 0,
-    "loc": "windmill_town", "node": "wt_gate_n", "prev": [],
+    "loc": TOWN, "node": "wt_gate_n", "prev": [],
     "gold": 30, "bag": {}, "equipped": {}, "flags": {}, "codex": {},
 }
 
 #: ★ 复活点（`00_总纲/03_主要玩法 §4.9`「回白烛堂」）—— 风车镇的节点 id（探针核它是真节点）
-CHAPEL = ("windmill_town", "wt_chapel")
+CHAPEL = (TOWN, "wt_chapel")
 
 
 def exp_need(level):
@@ -512,6 +516,7 @@ def _name_of_node(loc, node):
     return (n or {}).get("name") or node
 
 
+
 def _move(p, loc, node, sink_lines):
     p["prev"] = (p.get("prev") or [])[-8:] + [(p.get("loc"), p.get("node"))]
     p["loc"] = loc
@@ -743,21 +748,21 @@ async def go_west(env, sink, uid, player):
 
 async def enter_town(env, sink, uid, player):
     p = _p(player)
-    if (p["loc"], p["node"]) == ("windmill_town", "wt_gate_n"):        # ★ B3-11：脚下这一站（K60）
+    if (p["loc"], p["node"]) == (TOWN, "wt_gate_n"):             # ★ B3-11：脚下这一站（K60）
         for line in _here_lines(p):
             yield line
         return
     p["prev"] = (p.get("prev") or [])[-8:] + [(p.get("loc"), p.get("node"))]
-    p["loc"] = "windmill_town"
+    p["loc"] = TOWN
     p["node"] = "wt_gate_n"
-    CX.note_visit(p, "windmill_town", "wt_gate_n")
-    CX.note_step(p, "windmill_town", "wt_gate_n")
+    CX.note_visit(p, TOWN, "wt_gate_n")
+    CX.note_step(p, TOWN, "wt_gate_n")
     if player is not None:
         player.update(p)
     _save(env)
-    yield _map_scene("windmill_town")         # ★ B3-6a：进镇那一屏从 texts 来（原内联）
+    yield _map_scene(TOWN)                                      # ★ B3-6a：进镇那一屏从 texts 来（原内联）
     yield T("SYS_TOWN_ENTER_HINT")
-    for line in event_lines(p, "windmill_town", "wt_gate_n", entered=True):   # ★ B3-5：进镇那一下
+    for line in event_lines(p, TOWN, "wt_gate_n", entered=True):  # ★ B3-5：进镇那一下
         yield line
 
 
@@ -1383,7 +1388,7 @@ async def read_thing(env, sink, uid, player):
 
 async def hint(env, sink, uid, player):
     p = _p(player)
-    if p["loc"] == "windmill_town":
+    if p["loc"] == TOWN:
         yield T("SYS_HINT_TOWN")
     else:
         yield T("SYS_HINT_WILD")

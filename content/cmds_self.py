@@ -30,8 +30,8 @@ import json
 import os
 
 from .cmds_ast import _data, _p, _save, T
+from .town import _func_node, town_gate
 from . import argv as AV
-from .cmds_places import TOWN, _at, _func_node, _node_name
 from . import calendar as CAL
 
 #: 榜上最多列几条（一屏内 —— 呈现口径，不是数值；与 `cmds_quest.board` 的 `[:3]` 同族）
@@ -60,12 +60,9 @@ async def register(env, sink, uid, player):
     ★ 那一站 = 镇上带 `board` 职能的那位所在处（数据里就是挂板墙 / 玛莎）—— 不写死节点 id。
     """
     p = _p(player)
-    if p.get("loc") != TOWN:
-        yield T("SYS_PLACE_NOTOWN")
-        return
-    node = _func_node("board")
-    if not node or not _at(node, p):
-        yield T("SYS_PLACE_AWAY", name=_node_name(node))
+    line = town_gate(p, _func_node("board"))      # ★ B4-12：守卫走唯一执行面
+    if line:
+        yield line
         return
     if _flags(p).get("card"):
         yield T("SYS_REG_HAS")

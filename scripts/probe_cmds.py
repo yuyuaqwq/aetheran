@@ -55,6 +55,10 @@ priority 降序、同值按注册序，见引擎 `tests/test_host_priority_route
      `name` + `flags.renamed` 落档、只许改一次）· 排行钉「榜 = 本群存档（`all_players`）+
      自己那一行一定在」· 公告钉「包名/版本取自 `game.json`、已接条数现点声明表」；
      并扫「没有域 id / 没有取不到文案 / 不再回「还没接上」那一句」
+  ⑰ ★ B4-12（真敲三档 + 静态）：**地点守卫一个口** —— `guard_desc` 写着「在镇上 / 在公会 /
+     在铺子 / 在客栈」那一族：野外一条都不许放行（各自只回自己那一句）· 镇上没走到那一站
+     一律**指路**（站名从 `maps` 现取）· 站到了放行；覆盖面两条：handler 必须**真调**
+     `town_gate`（ast 扫真调用）· 镇子 id 的字面量只许一处
 
 跑法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_cmds.py
 """
@@ -992,6 +996,12 @@ try:
     _sv12 = lambda: (_ad12.saved or {})                                  # noqa: E731 —— 档（真敲后读回）
 
     # ── 看 <编号>：单子全文（未接 / 已接 / 支线编号 / 没有这张）───────────────────
+    #   ★ B4-12：『看 <编号>』的守卫 = 在公会（挂板墙）—— 这一批起**真判脚下** ⇒ 先站到那一站
+    #   （站名从 `npcs.funcs` 的 `board` 现取，不写死节点 id）。本块钉的仍然是「单子全文
+    #   与 quests 域 + texts 现算一致」这一条，只是把起手档站到合法的那一站。
+    from content import town as TW12                                    # noqa: E402
+    _BOARD12 = TW12._func_node("board")
+    _ad12.saved["node"] = _BOARD12
     def _want_show(order):
         _q = next(v for v in _QS12.values() if v.get("order") == order)
         out = [_r("SYS_BSHOW_HEAD", order=order, name=_q["name"], level=_q["min_level"])]
@@ -1029,6 +1039,8 @@ try:
         "逐字一致（编号就是 `order`，与『接』认的是同一个字段）",
         not [x for x in _BAD12 if x[0].startswith("看")],
         "%s" % [x for x in _BAD12 if x[0].startswith("看")][:2])
+
+    _ad12.saved["node"] = _SEED12["node"]        # ★ B4-12：回客栈（后面『存放 / 取出』要用）
 
     # ── 属性：面板现算（与生命上限同一个口）────────────────────────────────
     _recA = _sv12()
@@ -2072,6 +2084,154 @@ try:
 except Exception as exc:                                                  # noqa: BLE001
     chk("★ B4-11 那五条跑得起来（真宿主契约）", False,
         "%s: %s" % (type(exc).__name__, exc))
+
+# ══════════════════════════════════════════════════════════════
+# ★ B4-12：地点守卫**一个口**（`guard_desc` 写着「在镇上 / 在公会 / 在铺子 / 在客栈」那一族）
+# --------------------------------------------------------------
+# 真 bug（端到端玩出来的）：同一条 `guard_desc` 原先有**两种实现** —— 客栈 / 教堂 / 旧货 / 登记 /
+# 商队判脚下，而 **公会 / 悬赏 / 看 <编号> / 铁匠铺 一句都不判**：人站在骨田照样把挂板墙看个遍、
+# 把活接了，而同一个位置『登记』回的是「这几处都在镇上」。现在全部走 `cmds_ast.town_gate`。
+# 判据三层：
+#   ① 真宿主三档（野外 / 镇上没走到那一站 / 站到了）逐条真敲、整段逐字对账
+#   ② 覆盖面（静态）：凡 `guard_desc` 点名地点的那几条，handler 必须调 `town_gate`（ast 扫真调用）
+#   ③ 镇子 id 的字面量只许在 `cmds_ast.py`（TOWN 那一行）与 `apply.py`（宿主那半边初始档）
+# ══════════════════════════════════════════════════════════════
+print("⑰ ★ B4-12：地点守卫一个口 —— 三档真敲（野外 / 镇上错站 / 站到了）+ 覆盖面")
+try:
+    import ast as _ast17
+    from content import cmds_ast as CA17                               # noqa: E402
+    from content import cmds_places as CPL17                           # noqa: E402
+    from content import town as TW17                                   # noqa: E402
+
+    _WILD17 = ("belt_north", "bn_bone")
+    _GATE17 = ("windmill_town", "wt_gate_n")
+    _IRON17 = "i_material_iron_scrap"
+    _IRONN17 = str((st.domain("items") or {}).get(_IRON17, {}).get("name") or "")
+
+    def _nn17(node):
+        return str(CA17._name_of_node(TW17.TOWN, node))
+
+    _BRD17 = TW17._func_node("board")          # 挂板墙（玛莎）
+    _FRG17 = TW17._func_node("smith")          # 半截铁砧（柯尔）
+    _HRS17 = TW17._func_node("heal")           # 白烛堂（艾德）
+    _INN17 = CPL17.STASH_NODE                  # 转叶客栈（箱子那一站）
+    chk("★ 四个站点现算得出来（挂板墙 %s / 铁匠铺 %s / 教堂 %s / 客栈 %s）—— 数据驱动，不写死节点 id"
+        % (_BRD17, _FRG17, _HRS17, _INN17),
+        all((_BRD17, _FRG17, _HRS17, _INN17)) and len({_BRD17, _FRG17, _HRS17, _INN17}) == 4)
+
+    _db17 = os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp", "ast_probe_cmds_b412.db")
+    try:
+        os.remove(_db17)
+    except OSError:
+        pass
+    _SEED17 = {"cls": "cls_knight", "race": "human", "name": "试炼者", "level": 3, "exp": 0,
+               "gold": 50, "hp": 116, "prev": [], "bag": {_IRON17: 2}, "equipped": {},
+               "codex": {}, "flags": {}}
+    _ad17 = _Ad([], seed=dict(_SEED17))
+    _h17 = Host(_ad17, str(REPO), inject={"db_path": _db17, "clock": lambda: _FIXED})
+    _h17.boot()
+
+    def _say17(text):
+        _ad17.out.clear()
+        _h17.handle({"uid": "u_c", "group_id": "g_c", "text": text})
+        return list(_ad17.out)
+
+    def _stand17(loc, node):
+        _ad17.saved["loc"] = loc
+        _ad17.saved["node"] = node
+
+    #    label         敲的          那一站(None = 不核站)  不在镇上那一句        站到了首行
+    _CASES17 = (
+        ("公会", "公会", _BRD17, "SYS_PLACE_NOTOWN", "SYS_GUILD_HEAD"),
+        ("悬赏", "悬赏", _BRD17, "SYS_PLACE_NOTOWN", "SYS_BOARD_HEAD"),
+        ("看 <编号>", "看 1", _BRD17, "SYS_PLACE_NOTOWN", None),
+        ("铁匠铺", "铁匠铺", _FRG17, "SYS_PLACE_NOTOWN", "SYS_ENHANCE_SHOP"),
+        ("登记", "登记", _BRD17, "SYS_PLACE_NOTOWN", None),
+        ("客栈", "客栈", _INN17, "SYS_PLACE_NOTOWN", "SYS_PLACE_HEAD"),
+        ("教堂", "教堂", _HRS17, "SYS_PLACE_NOTOWN", "SYS_PLACE_HEAD"),
+        ("旧货", "旧货", None, "SYS_PLACE_NOTOWN", "SYS_JUNK_HEAD"),
+        ("商队", "商队", None, "SYS_PLACE_NOTOWN", "SYS_CARAVAN_HEAD"),
+        ("卖出", "卖出 %s" % _IRONN17, None, "SYS_SELL_AWAY", None),
+        ("存放", "存放 %s" % _IRONN17, _INN17, "SYS_STASH_AWAY", None),
+    )
+
+    _badA17, _badB17, _badC17 = [], [], []
+    for _lab, _txt, _sta, _nt, _head in _CASES17:
+        # ── 一、野外：这一族**一条都不许放行**，且回话只有那一句（不许顺手出面板）
+        _stand17(*_WILD17)
+        _ad17.saved["bag"] = {_IRON17: 2}
+        _got = _say17(_txt)
+        if _got != [_r(_nt)]:
+            _badA17.append((_lab, _got[:2], [_r(_nt)]))
+        if _sta is not None:
+            # ── 二、在镇上、没走到那一站 ⇒ 指路（站名从 maps 现取）
+            _stand17(*_GATE17)
+            _ad17.saved["bag"] = {_IRON17: 2}
+            _away_slot = "SYS_STASH_AWAY" if _nt == "SYS_STASH_AWAY" else "SYS_PLACE_AWAY"
+            _got = _say17(_txt)
+            if _got != [_r(_away_slot, name=_nn17(_sta))]:
+                _badB17.append((_lab, _got[:2], [_r(_away_slot, name=_nn17(_sta))]))
+        # ── 三、站到了 ⇒ 不许再回那两句（放行，且头一行是它自己的那一句）
+        _stand17(TW17.TOWN, _sta if _sta is not None else "wt_gate_n")
+        _ad17.saved["bag"] = {_IRON17: 2}
+        _got = _say17(_txt)
+        _blocked = (_r("SYS_PLACE_NOTOWN"), _r(_nt), _r("SYS_STASH_AWAY"),
+                    _r("SYS_PLACE_AWAY", name=_nn17(_sta)) if _sta else "")
+        if not _got or _got[0] in _blocked:
+            _badC17.append((_lab, _got[:2], "放行（首行不是被拦的那几句）"))
+        _want17 = _r(_head, name=_nn17(_sta)) if _head == "SYS_PLACE_HEAD" else (_r(_head) if _head else "")
+        if not _got or _got[0] in _blocked:
+            _badC17.append((_lab, _got[:2], "放行（首行不是被拦的那几句）"))
+        elif _want17 and _got[0] != _want17:
+            _badC17.append((_lab, _got[:1], _want17))
+
+    chk("★ 野外（骨田）：这一族 **%d 条**一条都不放行 —— 各自只回自己那一句（面板一句都不许漏）"
+        % len(_CASES17), not _badA17, "%s" % _badA17[:3])
+    chk("★ 镇上但没走到那一站（北口）：公会 / 悬赏 / 看 / 铁匠铺 / 登记 / 客栈 / 教堂 / 存放 "
+        "⇒ 一律**指路**（站名从 `maps` 现取）", not _badB17, "%s" % _badB17[:3])
+    chk("★ 站到了 ⇒ 放行（首行是它自己那一句，不再是那两句拦话）", not _badC17, "%s" % _badC17[:3])
+
+    # ── 覆盖面（静态）①：凡 `guard_desc` 点名地点的声明，handler 必须**真调** `town_gate`
+    _CALL17 = {}
+    for _f in sorted((REPO / "content").glob("*.py")):
+        _tree = _ast17.parse(_f.read_text(encoding="utf-8"))
+        for _n in _ast17.walk(_tree):
+            if isinstance(_n, (_ast17.FunctionDef, _ast17.AsyncFunctionDef)):
+                if any(isinstance(x, _ast17.Call) and getattr(x.func, "id", "") == "town_gate"
+                       for x in _ast17.walk(_n)):
+                    _CALL17.setdefault(_f.name, set()).add(_n.name)
+    _LOCWORDS17 = ("在镇上", "在公会", "在铺子", "在客栈")
+    _miss17, _n17, _skip17 = [], 0, []
+    for _k, _d in sorted(DECL.items()):
+        if not any(w in str(_d.get("guard_desc") or "") for w in _LOCWORDS17):
+            continue
+        _hs = str((_d.get("bind") or {}).get("handler") or "")
+        if not _hs:                       # 还没接处理器的（⑨ 的 UNBOUND 名单管着）—— 守卫无处可落
+            _skip17.append(_k)
+            continue
+        _n17 += 1
+        _mod, _fn = _hs.split(":")
+        if _fn not in _CALL17.get(_mod.split(".")[-1] + ".py", set()):
+            _miss17.append((_k, _hs))
+    chk("★ 覆盖面①：凡 `guard_desc` 点名地点、且**已接处理器**的那 %d 条，handler 都**真调**"
+        " `town_gate`（ast 扫真调用，不扫注释/文档串）—— 谁再自己写一遍 `p[\"loc\"] != TOWN`，"
+        "这里当场红（还没接处理器的那 %d 条不在内：%s）"
+        % (_n17, len(_skip17), " · ".join(_skip17)),
+        not _miss17, "%s" % _miss17[:4])
+
+    # ── 覆盖面（静态）②：镇子 id 的字面量只许在基座模块与宿主那半边的初始档
+    _lit17 = {}
+    for _f in sorted((REPO / "content").glob("*.py")):
+        _t17 = _f.read_text(encoding="utf-8")
+        if "\"windmill_town\"" in _t17:
+            _lit17[_f.name] = _t17.count("\"windmill_town\"")
+    chk("★ 覆盖面②：镇子 id 的字面量只许在 `cmds_ast.py`（`TOWN` 那一行）与 `apply.py`"
+        "（宿主那半边初始档）—— 谁再抄一份，这里红", _lit17 == {"cmds_ast.py": 1, "apply.py": 1},
+        "%s" % _lit17)
+except Exception as exc:                                                  # noqa: BLE001
+    chk("★ B4-12 地点守卫那一族跑得起来（真宿主契约）", False,
+        "%s: %s" % (type(exc).__name__, exc))
+
 
 print("")
 print("结果：全绿 ✓" if ok else "结果：有红 ✗")

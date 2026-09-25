@@ -19,6 +19,7 @@ from __future__ import annotations
 import random
 
 from .cmds_ast import _data, _p, _save, T, hp_cap_or_line
+from .town import _func_node, town_gate
 from .cmds_talk import _arg
 from .cmds_codex import new_lines
 from . import codex as CX
@@ -188,6 +189,16 @@ async def cook(env, sink, uid, player):
 # 三、铁匠铺（柯尔的报价单）
 # ══════════════════════════════════════════════════════════════
 async def smith(env, sink, uid, player):
+    """`铁匠铺` —— 柯尔的炉子（声明里的 `guard_desc` = 在镇上 · 那一站 = 半截铁砧）。
+
+    ★ B4-12：原先这一条不判脚下 ⇒ 人站在骨田也能把强化价目表看个遍（镇上其它几处都判）。
+      守卫走唯一执行面 `cmds_ast.town_gate`，那一站从 `npcs.funcs` 的 `smith` 现取（不写死节点 id）。
+    """
+    p = _p(player)
+    line = town_gate(p, _func_node("smith"))
+    if line:
+        yield line
+        return
     meta = _meta()
     cap = int(meta.get("cap") or 0)
     yield T("SYS_ENHANCE_SHOP")

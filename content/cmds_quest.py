@@ -141,6 +141,7 @@ P-25 §② 剩下的 11 条支线里，**能按真源文档补上正当条件的
 from __future__ import annotations
 
 from .cmds_ast import _data, _p, _save, _map_of, _name_of_node, T, add_exp
+from .town import _func_node, town_gate
 from .cmds_talk import _arg
 from .cmds_ast import _npcs_here
 from . import codex as CX            # 打怪记录（books.monster.kills）的**唯一**读口
@@ -532,15 +533,29 @@ def _mark_done(p, k, step):
 
 
 async def guild(env, sink, uid, player):
+    """`公会` —— 柜台（声明里的 `guard_desc` = 在镇上 · 那一站 = 挂板墙）。
+
+    ★ B4-12：原先这一条**一个地点都不判**（`here` 还是算完不用的死变量）—— 人站在骨田照样
+      把公会看个遍，而同一个位置『登记』回的是「这几处都在镇上」。守卫现在与镇上其它几处
+      共用 `cmds_ast.town_gate` 那一个执行面。
+    """
     p = _p(player)
-    here = _npcs_here(p["loc"], p["node"], p=p)
+    line = town_gate(p, _func_node("board"))
+    if line:
+        yield line
+        return
     yield T("SYS_GUILD_HEAD")
     yield T("SYS_GUILD_DESK")
     yield T("SYS_GUILD_HOW")
 
 
 async def board(env, sink, uid, player):
+    """`悬赏` —— 挂板墙上的单子（声明里的 `guard_desc` = 在公会）。★ B4-12：补上守卫。"""
     p = _p(player)
+    line = town_gate(p, _func_node("board"))
+    if line:
+        yield line
+        return
     qs = _quests()
     done = _done(p)
     active = _mine(p)

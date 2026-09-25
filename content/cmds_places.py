@@ -27,34 +27,14 @@
 """
 from __future__ import annotations
 
-from .cmds_ast import _data, _p, _save, T, _npcs_here, _name_of_node, hp_cap_or_line
+from .cmds_ast import _data, _p, _save, T, _npcs_here, _name_of_node, hp_cap_or_line, TOWN
+from .town import _func_node, town_gate
 from .cmds_more import STASH_NODE
 from . import calendar as CAL
 
-#: 镇子那张图的 id（`maps` 域里的一格 —— 机器键，不是中文名）
-TOWN = "windmill_town"
-
-
-def _func_spots(func: str, loc: str = TOWN) -> dict:
-    """这张图上带某个职能的人，按所在节点分组 → `{节点: [(人 id, 记录), …]}`。
-
-    职能键 = `npcs.funcs` 里那几个 ASCII 词（heal / inn / board / shop…）—— 域里现成的一栏，
-    不另建一张「哪个指令对哪个人」的表。
-    """
-    out: dict = {}
-    for k, v in (_data("npcs") or {}).items():
-        if not isinstance(v, dict) or v.get("map") != loc:
-            continue
-        if func not in (v.get("funcs") or []):
-            continue
-        out.setdefault(str(v.get("subarea") or ""), []).append((k, v))
-    return out
-
-
-def _func_node(func: str, loc: str = TOWN) -> str:
-    """带这个职能的人所在的那一站 —— **叫不准就给空串**（没有 / 分在两处都不猜）。"""
-    spots = _func_spots(func, loc)
-    return next(iter(spots)) if len(spots) == 1 else ""
+#: ★ B4-12：镇子 id 收在基座 `cmds_ast`（`TOWN`）；「属于哪一站」（`_func_node`）与
+#:   「在镇上 / 在公会」那一族守卫（`town_gate`）收在 `content/town.py` ——
+#:   五个模块共用一份，本文件不再各写一遍（原先那两份搬过去了，import 即用）。
 
 
 def _node_name(node: str) -> str:
@@ -68,10 +48,6 @@ def _roster(node: str, p) -> list:
 
 def _roster_line(rows: list) -> str:
     return " · ".join("『%s』%s" % (v.get("name"), v.get("icon", "")) for v in rows)
-
-
-def _at(node: str, p) -> bool:
-    return (p.get("loc"), p.get("node")) == (TOWN, node)
 
 
 def _heal_to_cap(p, env, player):
@@ -96,17 +72,15 @@ def _heal_to_cap(p, env, player):
 async def chapel(env, sink, uid, player):
     """`教堂` —— 治疗 · 问事。
 
-    守卫（声明里的 `guard_desc` = 在镇上）：不在镇上就明说；在镇上但没走到那一站就
-    **指路**（那一站的名字从 `maps` 来）；站到了才治疗（回满，与「回白烛堂」同一个语义）。
+    守卫（`guard_desc` = 在镇上）走**唯一执行面** `cmds_ast.town_gate`（B4-12）：不在镇上就明说；
+    在镇上但没走到那一站就**指路**（那一站的名字从 `maps` 来）；站到了才治疗（回满，与「回白烛堂」同一个语义）。
     「问事」= 把在场的人递过去（『搭话 <名字>』）—— 说什么由 dialogues 域决定，本文件不替它说。
     """
     p = _p(player)
-    if p.get("loc") != TOWN:
-        yield T("SYS_PLACE_NOTOWN")
-        return
     node = _func_node("heal")
-    if not node or not _at(node, p):
-        yield T("SYS_PLACE_AWAY", name=_node_name(node))
+    line = town_gate(p, node)
+    if line:
+        yield line
         return
     rows = _roster(node, p)
     who = next((str((v.get("name") or "")) for v in rows
@@ -133,12 +107,10 @@ async def inn(env, sink, uid, player):
       同一个节点不写第二份 id。站到了才住店（睡一觉 = 回到上限），并把箱子那两句递过去。
     """
     p = _p(player)
-    if p.get("loc") != TOWN:
-        yield T("SYS_PLACE_NOTOWN")
-        return
     node = STASH_NODE
-    if not _at(node, p):
-        yield T("SYS_PLACE_AWAY", name=_node_name(node))
+    line = town_gate(p, node)
+    if line:
+        yield line
         return
     rows = _roster(node, p)
     yield T("SYS_PLACE_HEAD", name=_node_name(node))
@@ -167,8 +139,9 @@ async def caravan(env, sink, uid, player):
         （走 `_npcs_here` 一口：时辰 / 天气 / 事件三档一起看）—— 没到场就不列
     """
     p = _p(player)
-    if p.get("loc") != TOWN:
-        yield T("SYS_PLACE_NOTOWN")
+    line = town_gate(p)
+    if line:
+        yield line
         return
     yield T("SYS_CARAVAN_HEAD")
     st = CAL.state()
@@ -201,8 +174,9 @@ async def junk_shop(env, sink, uid, player):
       在真档上调它等于「看一眼旧货铺」就往玩家档里塞空容器（K57 那族）。
     """
     p = _p(player)
-    if p.get("loc") != TOWN:
-        yield T("SYS_PLACE_NOTOWN")
+    line = town_gate(p)
+    if line:
+        yield line
         return
     from . import codex as CX
     from . import loot as LT
