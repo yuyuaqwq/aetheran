@@ -98,11 +98,20 @@ def install_engine():
         skill_lookup=_skills_mod(),
         monster_skill_fn=_monster_skill,
         basic_skill_fn=_basic_skill,
-        basic_fallback={"name": "挥击", "kind": "主动", "power": 1.0, "cd": 0,
+        # ★ 兜底普攻的**类别值**不写死中文枚举（B3-6b-2d-b）—— 从 skills 域现取
+        #   （`active_kind()`，fail-closed）。空串会被引擎判成「治疗」（`actions.py:110`）。
+        #   `name`（挥击）是「这条兜底技叫什么」的文案，属第二刀（该技要进 skills 域 + texts 槽位）。
+        basic_fallback={"name": "挥击", "kind": _active_kind(), "power": 1.0, "cd": 0,
                         "cast": {"base": 60}, "recover": {"base": 0}, "range": 1, "mp": 0,
                         "_basic": True},
     )
     _MOUNTED = True
+
+
+def _active_kind():
+    """技能类别值 —— 从 skills 域现取（代码不写死中文枚举：B3-6b-2d-b）。"""
+    from . import skills_lookup
+    return skills_lookup.active_kind()
 
 
 def _skills_mod():

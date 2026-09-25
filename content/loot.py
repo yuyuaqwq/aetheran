@@ -34,6 +34,15 @@ def items() -> dict:
 
 K_MATERIAL = "材料"          # 物品 kind 的兜底（条目没写、物品表也没有时）
 
+#: 动态项 `*<格>_random` 里的**格**（ASCII，写在 drop_pools 的 out 上）→ 域里现成的 ASCII
+#: `slot`（六格见 `schemas/items.schema.json` 的 `slot.enum`）。
+#: ★ B3-6b-2d-b：装备的机器键一律走 `slot` —— `kind` 是**中文枚举**，不当筛选键（K48 / P-20：
+#:   一字之差就静默挑不出东西）。格表在代码里，取值全部来自域。
+_GRID_SLOTS = {
+    "armor": ("armor_top", "armor_bottom", "helmet", "boots"),
+    "weapon": ("weapon",),
+}
+
 
 def rec_of(oid: str) -> dict:
     """一件东西的显示记录 —— **唯一一口**：物品表 → 池表（未鉴定的 marker 挂在池上）。
@@ -72,18 +81,20 @@ def _pick(entries, rnd: random.Random):
 
 
 def _resolve(out: str, entry: dict, level: int, rnd: random.Random, items_tbl: dict):
-    """把 `*armor_random` 这种动态项解析成具体物品 id。"""
+    """把 `*armor_random` 这种动态项解析成具体物品 id。
+
+    ★ B3-6b-2d-b：按域里现成的 ASCII `slot` 挑（原先按 `kind` 的**中文枚举**挑 ——
+      「中文枚举当机器键」，一字之差就静默一件都挑不出，K48 / P-20）。格 → 槽位集合见
+      `_GRID_SLOTS`（格名本来就是 ASCII，写在 drop_pools 的 out 上）。
+    """
     if not out.startswith("*"):
         return out
     want = out[1:]
+    slots = next((s for grid, s in _GRID_SLOTS.items() if want.startswith(grid)), None)
+    if slots is None:
+        return None
     qual = entry.get("quality")
-    cand = []
-    for k, v in items_tbl.items():
-        kind = v.get("kind", "")
-        if want.startswith("armor") and kind in ("上甲", "下甲", "头盔", "靴子"):
-            cand.append(k)
-        elif want.startswith("weapon") and kind == "武器":
-            cand.append(k)
+    cand = [k for k, v in items_tbl.items() if v.get("slot") in slots]
     if qual:
         f = [k for k in cand if items_tbl[k].get("quality") in qual]
         if f:

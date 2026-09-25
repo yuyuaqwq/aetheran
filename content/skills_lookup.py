@@ -39,7 +39,12 @@ def monsters() -> dict:
 
 
 def _norm_class(class_name: str | None) -> str | None:
-    """职业名或 id 都收（`骑士` 或 `cls_knight`）。"""
+    """职业名或 id 都收（`骑士` 或 `cls_knight`）。
+
+    ★ B3-6b-2d-b 复核：这是**入参解析**（中文名 → 机器键），不是「拿中文枚举当机器键」——
+      与 `cmds_recipe._item_of_name` / `去 <地方>` 同一族（玩家/调用方给的是名字）。
+      机器键本身（`owner_class` / actor 的 `class_name`）一律是 ASCII `cls_*`。
+    """
     if not class_name:
         return None
     cs = classes()
@@ -49,6 +54,25 @@ def _norm_class(class_name: str | None) -> str | None:
         if v.get("name") == class_name:
             return k
     return class_name
+
+
+def active_kind() -> str:
+    """「主动技」这个类别**值** —— 唯一来源 = skills 域（域里 30 条记录共用同一个值）。
+
+    ★ B3-6b-2d-b：这个值既是给人看的词、又是**引擎 `do_skill` 分派**（治疗 / 增益 / 攻击）
+      要比对的机器键 ⇒ 代码里不许写死这一份中文枚举（K48 / P-20），只认域里那一份。
+    ★ fail-closed：域里一条带 `kind` 的技能都没有 ⇒ **抛**。绝不回空串 ——
+      引擎那三处比的是 `kind == _kind("heal")`，而本包没声明 kind 词表（`_kind()` 回 ""），
+      空串会让攻击技落进治疗那一支（`ext_combat/battle/actions.py:110`）。
+    """
+    sk = skills()
+    for k in sorted(sk):
+        if str(k).startswith("_"):
+            continue
+        v = sk[k]
+        if isinstance(v, dict) and v.get("kind"):
+            return str(v["kind"])
+    raise KeyError("skills 域里没有带 kind 的技能 —— 拿不到「主动技」那个值")
 
 
 def skill_info(class_name: str, skill_name: str):
@@ -78,17 +102,23 @@ def monster_skill(key: str):
     for mid, m in monsters().items():
         for sid in (m.get("skills") or []):
             if sid == key:
-                return {"name": key, "kind": "主动", "power": 1.0, "cd": 0,
+                return {"name": key, "kind": active_kind(), "power": 1.0, "cd": 0,
                         "owner_monster": mid, "_basic": False}
     return None
 
 
 def basic_skill_of(class_name: str):
-    """职业普攻：本职业 tier=1 且 power 最低的那条（没带技能时引擎的第一选择）。"""
+    """职业普攻：本职业 power 最低的那条（没带技能时引擎的第一选择）。
+
+    ★ B3-6b-2d-b：候选只按域里现成的 ASCII `owner_class` 挑（原先还叠了一道
+      `kind == "主动"` 的**中文枚举**筛选 —— 「中文枚举当机器键」）。
+      等价性由 `scripts/probe_skills.py ⑦` 钉着：域里「有 owner_class」的技能 kind 同值。
+    """
     sk = skills()
     cls = _norm_class(class_name)
-    mine = [(v.get("power", 1.0), k, v) for k, v in sk.items()
-            if v.get("owner_class") == cls and v.get("kind") == "主动"]
+    if not cls:
+        return None
+    mine = [(v.get("power", 1.0), k, v) for k, v in sk.items() if v.get("owner_class") == cls]
     if not mine:
         return None
     mine.sort()
