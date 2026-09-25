@@ -192,6 +192,49 @@ chk("★ 数值→率那把尺两处同值（rebuild_monsters.K_RATE=%s == panel
     % (RB.K_RATE, _PB.K_RATE), RB.K_RATE == _PB.K_RATE)
 chk("★ 暴击期望系数与 `_budget.py` 同值（1 + 率 × 0.5）", RB.CRIT_EXP == 0.5)
 
+# ⑫ ★ B3-18：**常数三头对账** —— 反解用的 K_def/K_rate 必须来自公式表 `$const`
+#   （引擎真读的那一份），而 panel_build 那份副本也必须同值。任何一头漂了 ⇒ 三把尺。
+import io as _io2                                                         # noqa: E402
+import json as _json2                                                     # noqa: E402
+_C = _json2.loads(_io2.open(str(REPO / "content" / "rules" / "formula_table.json"),
+                            encoding="utf-8").read())["$const"]
+chk("★ 反解常数 = 公式表 $const（K_def=%s / K_rate=%s）· 与 panel_build 那份副本同值"
+    % (_C["K_def"], _C["K_rate"]),
+    RB.K_DEF == int(_C["K_def"]) and RB.K_RATE == int(_C["K_rate"])
+    and RB.K_DEF == _PB.K_DEF and RB.K_RATE == _PB.K_RATE)
+
+# ⑬ ★ B3-18：**档位单调（全原型空间）** —— 「普通 < 精英 < 头目 < 层主 < boss」在
+#   hp/atk/def/spd 逐项成立，且**跨原型**（8 原型 × 5 档 × 6 锚点 × 4 项全格）：
+#   任意原型的高一档 > 任意原型的低一档。比「同族看得到档位差」硬得多 ——
+#   原表的病灶正是「同族能看出、跨族同级倒挂」（lv9 石滩螃蟹 def 29 > 精英伐木工 def 20）。
+_mono_bad = RB.check_monotone(verbose=False)
+chk("★ 档位单调（8 原型 × 5 档 × %d 锚点 × hp/atk/def/spd 全格）：任意原型的高一档 > 任意原型的低一档"
+    % len(RB.ANCHORS), not _mono_bad, " · ".join(_mono_bad[:3]))
+
+# ⑭ ★ B3-18：**交换余量**（打得过的预算）—— n_them/n_me 是「它杀我要几下 / 我要打它几下」之比。
+#   实机扫描（`_sweep_tier.py` 的层主扫描）测得「单刷能赢」的边界 ≈ 1.0–1.2；这条钉 ≥ 1.05
+#   （够用来拦住「atk 升上去、hp 不降 ⇒ 层主必败」那种阶梯），**精细验收归 probe_combat ④**
+#   （真跑 36 局：自己那一级 ≥83% 胜 · 低 4 级 0 胜）。Boss 反过来必须 < 0.8（4 人队内容）。
+_g = {t: RB.TIERS[t]["n_them"] / RB.TIERS[t]["n_me"] for t in RB.TIER_ORDER}
+_solo = [t for t in RB.TIER_ORDER if t != "boss"]
+chk("★ 四个单刷档的交换余量 ≥ 1.05（%s）" % " · ".join("%s %.2f" % (t, _g[t]) for t in _solo),
+    all(_g[t] >= 1.05 for t in _solo))
+chk("★ Boss 的交换余量 < 0.8（%.2f —— 单人必倒地，4 人队才打得完）" % _g["boss"], _g["boss"] < 0.8)
+
+# ⑮ ★ B3-18：**单源** —— 档位/原型两张表只在 `content/rules/monster_tiers.json` 里，
+#   代码不许再抄第二份（`ARCH`/`TIERS` 必须是那个文件的对象本身，不是重建的副本）。
+_tj = _json2.loads(_io2.open(str(REPO / "content" / "rules" / "monster_tiers.json"),
+                             encoding="utf-8").read())
+chk("★ 档位/原型表唯一来源 = content/rules/monster_tiers.json（%d 档 × %d 原型）"
+    % (len(_tj["tiers"]), len(_tj["arch"])),
+    RB.TIERS == _tj["tiers"] and RB.ARCH == _tj["arch"]
+    and set(RB.TIERS) == set(RB.TIER_ORDER) and set(RB.ARCH) == set(ARCHS))
+
+print()
+print("  · 档位 × 原型的 δ（保序压幅）：%s"
+      % " · ".join("%s %.3f" % (k, v) for k, v in sorted(RB.delta_of().items())))
+print("  · 交换余量 g = n_them/n_me：%s" % " · ".join("%s %.2f" % (t, _g[t]) for t in RB.TIER_ORDER))
+
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
 sys.exit(0 if ok else 1)
