@@ -20,12 +20,13 @@
   python scripts/rebuild_quest_gates.py           # 落
   ★ 连跑两次数据不变（幂等）；解析不出 / 两处真源打架 / 钱跑出区间 —— 一律当场抛（不静默）
 
-★ 悬赏交付条件的口径（本批新立 · 待鱼鱼拍板见工作树 `_notes.md`）：
-  24 §二 写「打掉指定的普通怪 / 精英怪 / 头目」—— 「指定的」= 悬赏板每天轮换挑一只，
-  而**轮换（每日挑怪）这一步在数据面上还没有** ⇒ 本批先落成「**那一档的怪，任意一只打掉过**」：
-  `{"kind": "kill", "role": <role_key>, "n": 1}`（role_key 从 monsters 域透传，代码不认中文）。
-  这比原来的「`flags.side_悬赏·普通` 那条没人写的死路径」强（真查档上的击杀账），
-  但仍比「指定的那一只」宽 —— 轮换落地时把 role 换成 monster 即可（一行数据）。
+★ 悬赏交付条件的口径（B3-11 立 · **B3-13 收口成「指定的」**）：
+  24 §二 写「打掉**指定的**普通 / 精英 / 头目怪」，并在同一条里点明「**指定的** = 悬赏板每天
+  轮换挑一只」⇒ 条件落成 `{"kind": "kill", "role": <role_key>, "n": 1, "daily": true}`：
+  该档的怪按 id 排序后，按**游戏日**取第 `(游戏日-1) % 档内只数 + 1` 只（`cmds_quest._daily_pick`）——
+  ★ 同一日同档必是同结果、跨日必换（档内只数 > 1）；轮换是**算出来的**，不是写死哪一只。
+  （b41 落的是「那一档任意一只打掉过」那个宽口径，本批收窄；依据仍是 24 §二 那两句话 ——
+   两句少一句就当场抛，口径变要有人重新裁决。）
 """
 from __future__ import annotations
 
@@ -194,7 +195,146 @@ def parse_egg_gates():
     return out
 
 
-# ── 二、算 ──────────────────────────────────────────────────────
+# ── 一-b、支线那 6 条的**形状语法**（B3-13）──────────────────────────
+#   真源 = `24_任务线_v1.md §二` 的「步骤」列（`21_长期目标层_v1.md §二` 是同条的第二稿，两稿
+#   逐字同句）；每条的**数**（+3 / 三次 / 三段 / 三道菜 / 三个人）从那一列**现取**，不是手打的。
+#   ★ 一条正则都不中 ⇒ 当场抛（文档换了写法要有人重新裁决 —— 不许静默少一条条件）。
+_CN_DIGIT = {"一": 1, "二": 2, "两": 2, "三": 3, "四": 4, "五": 5,
+             "六": 6, "七": 7, "八": 8, "九": 9, "十": 10}
+_NUM = r"[一二两三四五六七八九十\d]"
+
+#: 强化的级数：`把一件装备强化到 +3`
+_PAT_ENHANCE = re.compile(r"把一件装备强化到\s*\+?\s*(\d+)")
+#: 菜的道数：`做三道菜给贝拉尝`
+_PAT_COOK_N = re.compile(r"做(" + _NUM + r"+)道菜")
+#: 用某一品阶的食材做一次：`用稀有食材做一次`（品阶名从这一句里现取）
+_PAT_COOK_Q = re.compile(r"用(\S+?)食材做(" + _NUM + r"*)[次回]")
+#: 听某人讲 N 次 / N 段：`听他讲完（三次）` · `听他讲完三段（每段缺一块）`
+_PAT_TALK_CI = re.compile(r"听[他她]讲完[（(](" + _NUM + r"+)次[）)]")
+_PAT_TALK_DUAN = re.compile(r"听[他她]讲完(" + _NUM + r"+)段")
+#: 问 N 个人：`帮她问三个人（限时：商队窗口）`
+_PAT_ASK = re.compile(r"帮[他她]问(" + _NUM + r"+)个人")
+
+#: ★ 支线条件规则表（**只有这一张**；键 = 任务 id）—— 每条的依据（文档那一句）写在 why 里
+_SIDE_RULES = {
+    # 支 1 柯尔的学徒 ·「把一件装备强化到 +3」⇒ 档上有一件装备的强化等级 ≥ 3
+    #   （账 = `p.enhance[<装备>].lv`，写入口 `cmds_recipe.enhance`）
+    "q_side_01": {"kind": "enhance", "pats": [_PAT_ENHANCE],
+                  "why": "24 §二 支1「把一件装备强化到 +3」（21 §二 强化栏同条）"},
+    # 支 5 客栈的招牌 ·「做三道菜给贝拉尝」⇒ 下过锅 ≥ 3 次（账 = `flags.cooked[<配方>]`）
+    "q_side_05": {"kind": "cook", "pats": [_PAT_COOK_N],
+                  "why": "24 §二 支5「做三道菜给贝拉尝」（21 §二 同条）"},
+    # 支 6 下一顿 ·「用稀有食材做一次」⇒ 做过**用了那一品阶食材**的菜 ≥ 1 次
+    #   （品阶名现取自这一句；判定时与 items 域的 quality 比 —— 代码不写中文品阶名）
+    "q_side_06": {"kind": "cook_quality", "pats": [_PAT_COOK_Q],
+                  "why": "24 §二 支6「用稀有食材做一次」（21 §二 同条）"},
+    # 支 9 老陶的旧路 ·「听他讲完（三次）」⇒ 跟他搭过 ≥ 3 次话（账 = `flags.talked[<对话树>]`）
+    "q_side_09": {"kind": "talk", "pats": [_PAT_TALK_CI, _PAT_TALK_DUAN],
+                  "why": "24 §二 支9「听他讲完（三次）」"},
+    # 支 16 断剑团的旧事 ·「听他讲完三段（每段缺一块）」⇒ 同上（段数从文档取）
+    "q_side_16": {"kind": "talk", "pats": [_PAT_TALK_DUAN, _PAT_TALK_CI],
+                  "why": "24 §二 支16「听他讲完三段（每段缺一块）」"},
+    # 支 17 她在找的塔 ·「帮她问三个人（限时：商队窗口）」⇒ 搭过话的人 ≥ 3 个
+    #   ★ 只落「问三个人」那半截：「限时：商队窗口」那半截（商队窗口）还没落地 ——
+    #     口径缺口登记在工作树 `_notes.md`，宽的那一点不在这里偷偷当成满足。
+    "q_side_17": {"kind": "ask", "pats": [_PAT_ASK],
+                  "why": "24 §二 支17「帮她问三个人」"},
+}
+
+#: 支线表的一行：`| 1 | 柯尔的学徒 | 柯尔 | 把一件装备强化到 +3 | 强化费打折 |`
+_ROW_SIDE = re.compile(r"^\|\s*(\d+)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|"
+                       r"\s*([^|]+?)\s*\|\s*$")
+
+
+def parse_side_rows():
+    """24 §二 → {序号: {"name","who","steps","reward"}}（只取悬赏板之前的那张支线表）。"""
+    lines = _read(os.path.join(SLICE, "24_任务线_v1.md")).split("\n")
+    on, stop, out = False, None, {}
+    for i, ln in enumerate(lines):
+        if ln.startswith("## 二、"):
+            on = True
+            continue
+        if on and ln.startswith("## 三、"):
+            stop = i
+            break
+    if not on or stop is None:
+        raise SystemExit("24 §二 那一段解析不出（`## 二、` / `## 三、` 有一个不在）")
+    for ln in lines[:stop]:
+        if not on:
+            continue
+        m = _ROW_SIDE.match(ln)
+        if not m or ln.startswith("| #"):
+            continue
+        if "---" in ln or "悬赏板" in ln:
+            continue
+        out[int(m.group(1))] = {"name": m.group(2), "who": m.group(3),
+                                "steps": m.group(4), "reward": m.group(5)}
+    if not out:
+        raise SystemExit("24 §二 的支线表一行都没解析出来")
+    return out
+
+
+def _num(token):
+    """数词（一…十 / 阿拉伯数字）→ int；认不出当场抛。"""
+    t = str(token or "").strip()
+    if t.isdigit():
+        return int(t)
+    if t in _CN_DIGIT:
+        return _CN_DIGIT[t]
+    raise SystemExit("数词「%s」认不出（只认 一…十 与阿拉伯数字）" % t)
+
+
+def _npc_of(npcs, who):
+    """「谁给」那一栏的中文名 → npc id（域里必须正好一条；对不上当场抛）。"""
+    hit = [k for k, v in npcs.items() if v.get("name") == who]
+    if len(hit) != 1:
+        raise SystemExit("24 §二 里「%s」在 npcs 域匹配到 %d 条" % (who, len(hit)))
+    return hit[0]
+
+
+def side_require(qid, rule, steps, who, npcs):
+    """按规则从「步骤」列现取数 → `require`（正则一条都不中 ⇒ 当场抛）。"""
+    for pat in rule["pats"]:
+        m = pat.search(steps)
+        if not m:
+            continue
+        kind = rule["kind"]
+        if kind == "enhance":
+            return [{"kind": "enhance", "n": _num(m.group(1))}]
+        if kind == "cook":
+            return [{"kind": "cook", "n": _num(m.group(1))}]
+        if kind == "cook_quality":
+            return [{"kind": "cook", "quality": m.group(1), "n": _num(m.group(2) or "一")}]
+        if kind == "talk":
+            npc = _npc_of(npcs, who)
+            if not str((npcs.get(npc) or {}).get("dialogue") or ""):
+                raise SystemExit("%s 要的是「跟%s搭话」的条件，但 npcs 域里 %s 没挂对话树"
+                                 % (qid, who, npc))
+            return [{"kind": "talk", "npc": npc, "n": _num(m.group(1))}]
+        if kind == "ask":
+            return [{"kind": "ask", "n": _num(m.group(1))}]
+        raise SystemExit("%s 的规则 kind「%s」没有对应的条件造法" % (qid, kind))
+    raise SystemExit("%s：步骤列「%s」一条规则都不中（文档换写法了？先裁决再落）" % (qid, steps))
+
+
+#: 悬赏「指定的」那两句（轮换口径的**依据**，两处都写着才算数）
+_DAILY_CERTAIN = re.compile(r"打掉\s*\**\s*指定的")
+_DAILY_ROTATE = re.compile(r"每天轮换挑一只")
+
+
+def parse_bounty_daily():
+    """24 §二 悬赏板 → 悬赏条件要不要带 `daily`（★ B3-13：轮换落地）。
+
+    依据（现解析，两处都写着才算数）：`打掉**指定的**普通 / 精英 / 头目怪` ＋
+    「**指定的** = 悬赏板每天轮换挑一只」。少一句 ⇒ 当场抛（轮换口径变了要有人重新裁决）。
+    """
+    blk = _bounty_block()
+    if not (_DAILY_CERTAIN.search(blk) and _DAILY_ROTATE.search(blk)):
+        raise SystemExit("24 §二 悬赏板里「指定的」/「每天轮换挑一只」有一处不在 —— "
+                         "轮换口径变了：先裁决再落数据")
+    return True
+
+
 def to_require(clauses):
     """子句 → `require` 条件（fail-closed：认不出的子句键当场抛）。"""
     reqs = []
@@ -277,16 +417,24 @@ def apply_to_text(text, planned):
 def main(dry=False):
     monsters = {k: v for k, v in json.load(io.open(MFILE, encoding="utf-8")).items()
                 if not str(k).startswith("_")}
+    npcs = {k: v for k, v in json.load(io.open(os.path.join(REPO, "content", "data", "npcs.json"),
+                                               encoding="utf-8")).items()
+            if not str(k).startswith("_")}
     old_text = _read(QFILE)                                   # ★ newline="" ⇒ 原样（全 LF）
     dom = json.loads(old_text)
     num, den = parse_exp_ratio()
     rng = parse_ranges()
     tiers = parse_tiers(monsters)
     egg_gates = parse_egg_gates()
+    daily = parse_bounty_daily()                              # ★ B3-13：悬赏「指定的」= 每天轮换
+    side_rows = parse_side_rows()                             # ★ B3-13：支线表的「步骤」列
+    by_name = {r["name"]: r for r in side_rows.values()}
 
     planned = {}
     print("真源：经验 = 同级升级需求的 %d/%d（05 §一 ＝ 24 §二）· 报酬区间 %s" % (num, den, rng))
     print("五档表（00 §三 → role_key）：%s" % tiers)
+    print("悬赏「指定的」= 每天轮换挑一只：%s（24 §二 那两句都在）" % daily)
+    print("24 §二 支线表：%d 行" % len(side_rows))
 
     # ① 悬赏三档：经验 = exp_need(该档 min_level) × N/D（整数；除不尽当场抛，不许四舍五入糊过去）
     for k, v in sorted(dom.items(), key=lambda kv: kv[1].get("order") or 0):
@@ -304,11 +452,14 @@ def main(dry=False):
             raise SystemExit("%s 的报酬 %s 跑出文档区间 %s（钱也得跟账）"
                              % (k, v["reward_gold"], (lo, hi)))
         req = [{"kind": "kill", "role": tiers[tier], "n": 1}]
+        if daily:                                             # ★ B3-13：只算**当天点名的那一只**
+            req[0]["daily"] = True
         cur = v.get("require")
         if cur != req or v.get("reward_exp") != exp:
             planned[k] = {"require": req, "reward_exp": exp,
                           "why": "min_level %d 需求 %d × %d/%d = %d（原 %s）"
-                                 % (v["min_level"], need_, num, den, exp, v.get("reward_exp"))}
+                                 "%s" % (v["min_level"], need_, num, den, exp, v.get("reward_exp"),
+                                         " · 条件带 daily（每天轮换挑一只）" if daily else "")}
 
     # ② 15 §二「<任务>「<名字>」的交待就是彩蛋 <n>」⇒ 那个任务的交付条件
     for qid, (qname, clauses) in sorted(egg_gates.items()):
@@ -322,6 +473,24 @@ def main(dry=False):
             planned.setdefault(qid, {})["require"] = req
             planned[qid]["why"] = "15 §二「%s「%s」的交待」那一条 ⇒ %s" % (
                 qid, qname, json.dumps(req, ensure_ascii=False))
+
+    # ③ ★ B3-13：支线那 6 条 —— 按「形状语法」从 24 §二 的「步骤」列现取（数从文档来）
+    for qid, rule in sorted(_SIDE_RULES.items()):
+        if qid not in dom:
+            raise SystemExit("规则表点了 %s，但域里没有这条任务" % qid)
+        v = dom[qid]
+        row = by_name.get(str(v.get("name") or ""))
+        if not row:
+            raise SystemExit("%s「%s」不在 24 §二 的支线表里" % (qid, v.get("name")))
+        # ★ 条件是从那一格文本推出来的 ⇒ 那一格必须**就是**玩家看到的那句 objective
+        #   （对不上 = 两处口径，先裁决；不拿别的措辞去凑条件）
+        if row["steps"].replace(" ", "") != str(v.get("objective") or "").replace(" ", ""):
+            raise SystemExit("%s：24 §二 步骤「%s」≠ 域 objective「%s」（两处口径，先裁决）"
+                             % (qid, row["steps"], v.get("objective")))
+        req = side_require(qid, rule, row["steps"], row["who"], npcs)
+        if v.get("require") != req:
+            planned.setdefault(qid, {})["require"] = req
+            planned[qid]["why"] = "%s ⇒ %s" % (rule["why"], json.dumps(req, ensure_ascii=False))
 
     if not planned:
         print("★ 无需改动（域里已经是真源算出来的那一族）—— 幂等 ✓")

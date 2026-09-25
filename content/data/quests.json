@@ -253,6 +253,12 @@
     "min_level": 1,
     "need": null,
     "objective": "把一件装备强化到 +3",
+    "require": [
+      {
+        "kind": "enhance",
+        "n": 3
+      }
+    ],
     "reward_exp": 100,
     "reward_gold": 30,
     "teach": "",
@@ -352,6 +358,12 @@
     "min_level": 1,
     "need": null,
     "objective": "做三道菜给贝拉尝",
+    "require": [
+      {
+        "kind": "cook",
+        "n": 3
+      }
+    ],
     "reward_exp": 100,
     "reward_gold": 30,
     "teach": "",
@@ -370,6 +382,13 @@
     "min_level": 1,
     "need": null,
     "objective": "用稀有食材做一次",
+    "require": [
+      {
+        "kind": "cook",
+        "quality": "稀有",
+        "n": 1
+      }
+    ],
     "reward_exp": 100,
     "reward_gold": 30,
     "teach": "",
@@ -427,6 +446,13 @@
     "min_level": 1,
     "need": null,
     "objective": "听他讲完（三次）",
+    "require": [
+      {
+        "kind": "talk",
+        "npc": "npc_laotao",
+        "n": 3
+      }
+    ],
     "reward_exp": 100,
     "reward_gold": 30,
     "teach": "",
@@ -568,6 +594,13 @@
     "min_level": 1,
     "need": null,
     "objective": "听他讲完三段（每段缺一块）",
+    "require": [
+      {
+        "kind": "talk",
+        "npc": "npc_grey",
+        "n": 3
+      }
+    ],
     "reward_exp": 100,
     "reward_gold": 30,
     "teach": "",
@@ -585,6 +618,12 @@
     "min_level": 1,
     "need": null,
     "objective": "帮她问三个人（限时：商队窗口）",
+    "require": [
+      {
+        "kind": "ask",
+        "n": 3
+      }
+    ],
     "reward_exp": 100,
     "reward_gold": 30,
     "teach": "",
@@ -844,7 +883,8 @@
       {
         "kind": "kill",
         "role": "normal",
-        "n": 1
+        "n": 1,
+        "daily": true
       }
     ],
     "reward_exp": 5,
@@ -869,7 +909,8 @@
       {
         "kind": "kill",
         "role": "elite",
-        "n": 1
+        "n": 1,
+        "daily": true
       }
     ],
     "reward_exp": 125,
@@ -894,7 +935,8 @@
       {
         "kind": "kill",
         "role": "chief",
-        "n": 1
+        "n": 1,
+        "daily": true
       }
     ],
     "reward_exp": 500,
