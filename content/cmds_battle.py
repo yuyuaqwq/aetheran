@@ -180,6 +180,8 @@ async def _settle(env, p, uid, pick, ms, res, logs, hp_after, seen, player, affi
 
     ★ B3-24：战斗日志里那格怪名用**精英显示名**（带 `† … †`）；没词条时 = 原样名。
     """
+    # ★ B3-24：这一场记进日志时用的怪名（精英带 `† … †`；没词条 = 原样名）
+    _ename = AFFIX.display_name(str(ms[pick[0]].get("name", pick[0])), list(affixes))
     yield "━" * 12
     if res == "victory":
         yield "✔ 打完了。"
