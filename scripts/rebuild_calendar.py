@@ -9,8 +9,10 @@
   ③ 时辰窗界        参考实现 games/orlandia/content/time_weather.py::PERIODS（晨 5-8 / 昼 8-18 / 昏 18-20 / 夜 20-5）
   ④ 天气权重        同上 today_weather 文档串（晴50/雨15/雾10/雪15；多云·暴雨不在本作四类 ⇒ 记进 _rules.skipped）
   ⑤ 雾 → 精英       06_第一阶段垂直切片/10_地图探索元素库_v1.md D33
+  ⑥ 天气保底        content/rules/calendar.json 的 rain_max_gap_days（新增口径 · 台账 ⏸ P-5；
+                    真源待补行见本分支 `_notes.md` §一 —— 真源给了 N 之后只换读处）
 
-★ 本文件只负责「文档 → 表」；表里的中文一律是**槽位名**（文案真源 = texts 域）。
+★ 本文件只负责「文档 / 口径表 → 表」；表里的中文一律是**槽位名**（文案真源 = texts 域）。
 """
 from __future__ import annotations
 
@@ -28,6 +30,9 @@ DOC05 = os.path.join(PLAN, "06_第一阶段垂直切片", "05_玩法数值口径
 DOC10 = os.path.join(PLAN, "06_第一阶段垂直切片", "10_地图探索元素库_v1.md")
 DOC19 = os.path.join(PLAN, "06_第一阶段垂直切片", "19_世界热闹度与可发现物_v1.md")
 REF = os.path.join(ENGINE, "games", "orlandia", "content", "time_weather.py")
+#: ★ 口径补数（本包自己那份「真源没有的几格」）—— 与 content/rules/ 别的表同形：唯一真源，代码现读。
+#:   今天这一格里只有一样：天气保底 `rain_max_gap_days`（新增口径 · 台账 ⏸ P-5）。
+RULES = os.path.join(PKG, "content", "rules", "calendar.json")
 
 #: 文档里的四类名（顺序 = 19 文档表中顺序）→ 我们的 id / 槽位（id 与槽位是本包命名，不是数值）
 HOUR_IDS = [("hr_dawn", "HOUR_DAWN"), ("hr_day", "HOUR_DAY"),
@@ -153,6 +158,17 @@ if fog:
 affects = [k for k, v in (("encounter", "遇敌率"), ("gather", "采集"), ("element", "元素伤害"))
            if v in w_effects]
 
+# ── ⑥ 天气保底：连续 N 个游戏日内至少一场雨 ───────────────────
+#: ★ 数值不手打：N 来自本包口径表 `content/rules/calendar.json`（那里面写着真源依据、为什么是 3、
+#:   以及「真源给了 N 之后只换读处」）。判据：`scripts/probe_weather.py` ⑨。
+with io.open(RULES, encoding="utf-8") as _f:
+    cal_rules = json.load(_f)
+gap = cal_rules.get("rain_max_gap_days")
+if isinstance(gap, bool) or not isinstance(gap, int) or gap < 1:
+    die("content/rules/calendar.json 的 rain_max_gap_days 不是 ≥1 的整数：%r" % (gap,))
+src_gap = ("content/rules/calendar.json::rain_max_gap_days = %d（新增口径 · 台账 ⏸ P-5"
+           "「N 天内必有一场雨」；真源待补行见本分支 _notes.md §一）" % gap)
+
 # ── 写表 ─────────────────────────────────────────────────────
 calendar = {"_clock": {"zone": "Asia/Shanghai", "real_seconds_per_game_day": sec_per_day,
                        "source": src_day,
@@ -168,6 +184,11 @@ for (hid, slot), name in zip(HOUR_IDS, h_names):
 
 weather = {"_rules": {"cycle": "game_day", "pick": "weighted_stable_hash",
                       "weights_source": src_weights,
+                      "rain_max_gap_days": gap,
+                      "guarantee": "连续 %d 个游戏日内至少一场雨（往前 %d 天一场雨都没有 ⇒ 今天定成雨；"
+                                   "★ 只加雨、不删别的天气、不动 weight、不存历史 —— 消费端 "
+                                   "content/calendar.weather_of）" % (gap, gap - 1),
+                      "guarantee_source": src_gap,
                       "skipped": skipped,
                       "affects": affects,
                       "seasons": "P1 未开（05_系统总表与阶段开放：季节自 P2 起）",
@@ -180,6 +201,8 @@ for (wid, slot), name in zip(WEATHER_IDS, w_names):
                     "source": "%s（名：%s）· 权重 %s" % (src_names, name, src_weights)}
 if not weights:
     die("天气权重一条都没解析到")
+
+print("天气保底：连续 %d 个游戏日内至少一场雨（源：content/rules/calendar.json）" % gap)
 
 outs = [(os.path.join(PKG, "content", "data", "calendar.json"), calendar),
         (os.path.join(PKG, "content", "data", "weather.json"), weather)]
