@@ -144,7 +144,7 @@ for k, v in QE.items():
             if u not in MAPS:
                 bad_unlock.append((k, u))
         elif u.startswith("boss_"):
-            if not any(m.get("role") == "boss" for m in MON.values()):
+            if not any(m.get("role_key") == "boss" for m in MON.values()):     # ★ 机器键（keys-2）
                 bad_unlock.append((k, u))
 (ok if not bad_unlock else bad)("解锁指向真实存在（坏 %s）" % (bad_unlock or "无"))
 

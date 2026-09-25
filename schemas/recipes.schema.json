@@ -12,6 +12,7 @@
       "required": [
         "name",
         "kind",
+        "kind_key",
         "icon",
         "inputs",
         "out",
@@ -25,6 +26,12 @@
           "enum": [
             "烹饪"
           ]
+        },
+        "kind_key": {
+          "enum": [
+            "cook"
+          ],
+          "$comment": "★ B3-6b-2d-keys-2：`kind` 的 **ASCII 机器键** —— 代码只认它（`cmds_recipe._cookable` 原先比的是中文「烹饪」；K48 / K51 / P-20 甲案第二刀）。取值与 `_meta.cook` 同名。映射表唯一来源 = `scripts/rebuild_recipes.py`（与本 enum 两头对账，见 probe_recipes ⑬）。"
         },
         "icon": {
           "type": "string"
@@ -103,6 +110,7 @@
       "required": [
         "name",
         "kind",
+        "kind_key",
         "level",
         "inputs",
         "gold",
@@ -116,6 +124,12 @@
           "enum": [
             "强化"
           ]
+        },
+        "kind_key": {
+          "enum": [
+            "enhance"
+          ],
+          "$comment": "★ B3-6b-2d-keys-2：`kind` 的 **ASCII 机器键**（取值与 `_meta.enhance` 同名）。映射表唯一来源 = `scripts/rebuild_recipes.py`；本包代码今天没拿它当筛选键（强化那一支走 `_meta`），登记它是为了「items / recipes 的机器键在全域上齐全」。"
         },
         "level": {
           "type": "integer"

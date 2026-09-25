@@ -16,6 +16,7 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ENGINE = os.environ.get("GWEN_ENGINE", "C:/Users/yuyu/framework-engine")
 PLAN = os.environ.get("AETHERAN_PLAN", "C:/Users/yuyu/aetheran-plan")
 sys.path.insert(0, REPO)
+sys.path.insert(0, os.path.join(REPO, "scripts"))       # 生成器那张表（KIND_KEY）的唯一来源
 sys.path.insert(0, ENGINE)
 
 from saintess_engine.package import load_stack                       # noqa: E402
@@ -48,8 +49,8 @@ RC = st.domain("recipes")
 IT = st.domain("items")
 Q = st.domain("quests")
 TX = st.domain("texts")
-cooks = {k: v for k, v in RC.items() if v.get("kind") == "烹饪"}
-enh = {k: v for k, v in RC.items() if v.get("kind") == "强化"}
+cooks = {k: v for k, v in RC.items() if v.get("kind_key") == "cook"}
+enh = {k: v for k, v in RC.items() if v.get("kind_key") == "enhance"}
 meta = RC.get("_meta") or {}
 eme = meta.get("enhance") or {}
 cme = meta.get("cook") or {}
@@ -59,6 +60,33 @@ print("探针：recipes 域（烹饪 / 强化）")
 # ① 域与规模
 chk("recipes 域读得到", bool(cooks) and bool(enh),
     "烹饪 %d 条 · 强化 %d 档 · _meta %s" % (len(cooks), len(enh), bool(meta)))
+
+# ①之二 ★ B3-6b-2d-keys-2：配方 `kind_key`（ASCII 机器键 · P-20 甲案第二刀）—— **三头对账**：
+#   schema enum（两个 pattern 各一个值） ↔ 生成器那张表（`rebuild_recipes.KIND_KEY`） ↔ 域里 18 条
+import json as _json                                                 # noqa: E402
+import rebuild_recipes as _RBR                                       # noqa: E402
+_SCH = _json.load(io.open(os.path.join(REPO, "schemas", "recipes.schema.json"), encoding="utf-8"))
+_PP = _SCH["patternProperties"]
+_ENUM = set(_PP["^rc_cook_[a-z0-9_]+$"]["properties"]["kind_key"]["enum"]) | \
+        set(_PP["^rc_enh_[0-9]+$"]["properties"]["kind_key"]["enum"])
+_bad_rk = [k for k, v in RC.items() if not str(k).startswith("_") and v.get("kind_key") not in _ENUM]
+chk("★ 每条配方都带 `kind_key` 且值都在 schema 的 enum 里（%s）" % "/".join(sorted(_ENUM)),
+    not _bad_rk, "缺/非法：%s" % _bad_rk)
+chk("★ 生成器映射表 == schema enum（%s）"
+    % " · ".join("%s→%s" % kv for kv in sorted(_RBR.KIND_KEY.items())),
+    set(_RBR.KIND_KEY.values()) == _ENUM,
+    "表=%s / enum=%s" % (sorted(set(_RBR.KIND_KEY.values()) - _ENUM),
+                         sorted(_ENUM - set(_RBR.KIND_KEY.values()))))
+_k2k2: dict = {}
+for _k, _v in RC.items():
+    if not str(_k).startswith("_"):
+        _k2k2.setdefault(_v["kind"], set()).add(_v.get("kind_key"))
+chk("★ 中文 kind → ASCII kind_key 是**单射**且与生成器表逐条一致（域自己就是那张映射表）",
+    all(len(_s) == 1 and _RBR.KIND_KEY[_k] == sorted(_s)[0] for _k, _s in _k2k2.items()),
+    "%s" % {a: sorted(b) for a, b in _k2k2.items() if len(b) != 1})
+_ck = {k for k, v in RC.items() if v.get("kind_key") == "cook"}
+chk("★ 服务端 `_cookable()`（代码按 kind_key 挑）与域里 cook 那 %d 条**同一个集合**" % len(_ck),
+    set(CR._cookable()) == _ck, "%s" % sorted(set(CR._cookable()) ^ _ck))
 
 # ② 烹饪：形状（食材 2–3 样 · 三种增益 · 时长 15 分钟 · 出产是真物品）
 lo, hi = cme.get("ingredients") or [0, 0]

@@ -37,6 +37,7 @@
   "rc_cook_jun_tang": {
     "name": "菌汤",
     "kind": "烹饪",
+    "kind_key": "cook",
     "icon": "🍜",
     "inputs": [
       {
@@ -65,6 +66,7 @@
   "rc_cook_kao_shiban": {
     "name": "烤石斑",
     "kind": "烹饪",
+    "kind_key": "cook",
     "icon": "🍢",
     "inputs": [
       {
@@ -91,6 +93,7 @@
   "rc_cook_koye_tang": {
     "name": "苦叶汤",
     "kind": "烹饪",
+    "kind_key": "cook",
     "icon": "🍵",
     "inputs": [
       {
@@ -117,6 +120,7 @@
   "rc_cook_xian_yu_gan": {
     "name": "咸鱼干",
     "kind": "烹饪",
+    "kind_key": "cook",
     "icon": "🐟",
     "inputs": [
       {
@@ -143,6 +147,7 @@
   "rc_cook_yeming_zhou": {
     "name": "夜明粥",
     "kind": "烹饪",
+    "kind_key": "cook",
     "icon": "🥣",
     "inputs": [
       {
@@ -169,6 +174,7 @@
   "rc_cook_yi_guo_dun": {
     "name": "一锅炖",
     "kind": "烹饪",
+    "kind_key": "cook",
     "icon": "🥘",
     "inputs": [
       {
@@ -201,6 +207,7 @@
   "rc_cook_yu_ye": {
     "name": "雨夜的一碗",
     "kind": "烹饪",
+    "kind_key": "cook",
     "icon": "🍲",
     "inputs": [
       {
@@ -227,6 +234,7 @@
   "rc_cook_zhaopai": {
     "name": "客栈的招牌",
     "kind": "烹饪",
+    "kind_key": "cook",
     "icon": "🍛",
     "inputs": [
       {
@@ -257,6 +265,7 @@
   "rc_enh_01": {
     "name": "强化 +1",
     "kind": "强化",
+    "kind_key": "enhance",
     "level": 1,
     "inputs": [
       {
@@ -276,6 +285,7 @@
   "rc_enh_02": {
     "name": "强化 +2",
     "kind": "强化",
+    "kind_key": "enhance",
     "level": 2,
     "inputs": [
       {
@@ -295,6 +305,7 @@
   "rc_enh_03": {
     "name": "强化 +3",
     "kind": "强化",
+    "kind_key": "enhance",
     "level": 3,
     "inputs": [
       {
@@ -314,6 +325,7 @@
   "rc_enh_04": {
     "name": "强化 +4",
     "kind": "强化",
+    "kind_key": "enhance",
     "level": 4,
     "inputs": [
       {
@@ -333,6 +345,7 @@
   "rc_enh_05": {
     "name": "强化 +5",
     "kind": "强化",
+    "kind_key": "enhance",
     "level": 5,
     "inputs": [
       {
@@ -352,6 +365,7 @@
   "rc_enh_06": {
     "name": "强化 +6",
     "kind": "强化",
+    "kind_key": "enhance",
     "level": 6,
     "inputs": [
       {
@@ -371,6 +385,7 @@
   "rc_enh_07": {
     "name": "强化 +7",
     "kind": "强化",
+    "kind_key": "enhance",
     "level": 7,
     "inputs": [
       {
@@ -390,6 +405,7 @@
   "rc_enh_08": {
     "name": "强化 +8",
     "kind": "强化",
+    "kind_key": "enhance",
     "level": 8,
     "inputs": [
       {
@@ -409,6 +425,7 @@
   "rc_enh_09": {
     "name": "强化 +9",
     "kind": "强化",
+    "kind_key": "enhance",
     "level": 9,
     "inputs": [
       {
@@ -428,6 +445,7 @@
   "rc_enh_10": {
     "name": "强化 +10",
     "kind": "强化",
+    "kind_key": "enhance",
     "level": 10,
     "inputs": [
       {

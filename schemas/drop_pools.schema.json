@@ -30,6 +30,19 @@
         "kind": {
           "type": "string"
         },
+        "kind_key": {
+          "enum": [
+            "pool",
+            "gear",
+            "material",
+            "tool",
+            "junk",
+            "keepsake",
+            "clue",
+            "unidentified"
+          ],
+          "$comment": "★ B3-6b-2d-keys-2：`kind` 的 **ASCII 机器键**（顶层那个「未鉴定」= unidentified；条目那一层的 kind_key 见 entries/pool 的 items 同名单）。代码只认它（嵌套池 / 未鉴定 / 兜底；K48 / K51 / P-20 甲案第二刀）。条目里那 5 个键（material / tool / junk / keepsake / clue）与 items 的 `kind_key` **同值**（一个词表两处用，probe_drops ⑭ 对账）。映射表唯一来源 = `scripts/rebuild_kind_keys.py`。"
+        },
         "rolls": {
           "type": "integer",
           "minimum": 0
@@ -59,10 +72,44 @@
           }
         },
         "entries": {
-          "type": "array"
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "kind_key": {
+                "enum": [
+                  "pool",
+                  "gear",
+                  "material",
+                  "tool",
+                  "junk",
+                  "keepsake",
+                  "clue",
+                  "unidentified"
+                ]
+              }
+            }
+          }
         },
         "pool": {
-          "type": "array"
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "kind_key": {
+                "enum": [
+                  "pool",
+                  "gear",
+                  "material",
+                  "tool",
+                  "junk",
+                  "keepsake",
+                  "clue",
+                  "unidentified"
+                ]
+              }
+            }
+          }
         }
       },
       "additionalProperties": true

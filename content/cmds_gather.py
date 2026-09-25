@@ -14,7 +14,7 @@
        （槽位 SYS_GATHER_BARE）
     ③ 一天只给一遍的点（挖掘那类）不走 ②：唯一一遍照常全池抽
 ★ 抽取仍是 `loot.roll_pool` 那套权重（Σw + uniform(0,tot) + 累加命中）—— 这里只是把 `rnd`
-  换成上面那个确定性 Random；`kind` / 名字 / 进包一律走 loot 那几口。
+  换成上面那个确定性 Random；机器键（`kind_key`）/ 名字 / 进包一律走 loot 那几口。
 """
 from __future__ import annotations
 
@@ -124,8 +124,8 @@ async def _do_gather(env, sink, uid, player, verb: str, word: str):
                     n = rnd.randint(int(rng[0]), int(rng[1]))
                 if nth > 1:
                     n = min(n, 1)        # ★ 翻过一遍了 ⇒ 只给零星（第 2 遍起一次最多 1 个）
-                # kind 归一（未鉴定那类走池自己的 marker）—— 唯一的一口在 loot.kind_of
-                got.append({"id": oid, "n": n, "kind": LT.kind_of(oid, e.get("kind"))})
+                # 机器键归一（未鉴定那类走池自己的 marker）—— 唯一的一口在 loot.kind_key_of
+                got.append({"id": oid, "n": n, "kind_key": LT.kind_key_of(oid, e.get("kind_key"))})
                 break
     _bump_used(p, gid)
     if got:

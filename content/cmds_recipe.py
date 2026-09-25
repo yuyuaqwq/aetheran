@@ -113,7 +113,8 @@ def _buff_label(rec: dict) -> str:
 
 
 def _cookable() -> dict:
-    return {k: v for k, v in _recipes().items() if v.get("kind") == "烹饪"}
+    """能下锅的菜 —— ★ B3-6b-2d-keys-2：按 ASCII `kind_key` 挑（原先比中文枚举「烹饪」）。"""
+    return {k: v for k, v in _recipes().items() if v.get("kind_key") == "cook"}
 
 
 # ══════════════════════════════════════════════════════════════

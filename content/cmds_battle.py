@@ -111,10 +111,12 @@ async def attack(env, sink, uid, player):
     yield "━" * 12
     if res == "victory":
         yield "✔ 打完了。"
-        # 掉钱（第一版：按怪等级给，普通 3×lv / 精英 8×lv）
+        # 掉钱（第一版：按怪等级给，普通 3×lv / 精英 8×lv / 头目·层主·Boss 20×lv）
+        # ★ B3-6b-2d-keys-2：分档比 ASCII `role_key`（原先比中文枚举「精英 / 头目 / 层主 / boss」）
         m = ms[pick[0]]
         lv = int(m.get("lv", 1))
-        gold = lv * (8 if m.get("role") == "精英" else (20 if m.get("role") in ("头目", "层主", "boss") else 3))
+        rk = m.get("role_key")
+        gold = lv * (8 if rk == "elite" else (20 if rk in ("chief", "warden", "boss") else 3))
         p["gold"] = int(p.get("gold", 0)) + gold
         p["hp"] = hp_after
         # ★ B3-13：打怪给经验（原先只有交活给 —— 「接活→出门→打怪→交活」这条循环里，

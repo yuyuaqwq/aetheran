@@ -10,6 +10,7 @@
         "name",
         "archetype",
         "role",
+        "role_key",
         "lv",
         "panel",
         "mods"
@@ -41,6 +42,16 @@
             "层主",
             "boss"
           ]
+        },
+        "role_key": {
+          "enum": [
+            "normal",
+            "elite",
+            "chief",
+            "warden",
+            "boss"
+          ],
+          "$comment": "★ B3-6b-2d-keys-2：`role` 的 **ASCII 机器键** —— 代码只认它（挑遇敌 / 掉钱分档 / 是不是 BOSS；K48 / K51 / P-20 甲案第二刀）。取值口径：普通=normal · 精英=elite · 头目=chief（区域头目）· 层主=warden（副本层主）· boss（世界 Boss）。★ 头目 / 层主**不是** boss（引擎 `ext_combat` 比的是 `role == \"boss\"`，今天只有世界 Boss 命中）。映射表唯一来源 = `scripts/rebuild_monsters.py`（与本 enum 两头对账，见 probe_monsters ⑧）；中文 `role` 是策划案原文的档位名，保留。"
         },
         "lv": {
           "type": "integer"

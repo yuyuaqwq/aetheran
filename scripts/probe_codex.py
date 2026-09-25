@@ -69,10 +69,10 @@ short = {b: (len(BOOK[b]), TARGET[b]) for b in TARGET if len(BOOK[b]) < TARGET[b
 chk("条数都过记满线", not short, short or "全过")
 
 # ② 跨域对账
-bad_mat = [k for k in BOOK["material"] if k not in IT or (IT[k].get("kind") or "") not in ("材料", "垃圾", "线索")]
-chk("★ 材料谱条目都在 items 域且是材料/垃圾/线索", not bad_mat, bad_mat[:4])
-bad_fla = [k for k in BOOK["flavor"] if k not in IT or IT[k].get("kind") != "食物"]
-chk("★ 风味谱条目都在 items 域且是食物", not bad_fla, bad_fla[:4])
+bad_mat = [k for k in BOOK["material"] if k not in IT or (IT[k].get("kind_key") or "") not in ("material", "junk", "clue")]
+chk("★ 材料谱条目都在 items 域且机器键是 material/junk/clue", not bad_mat, bad_mat[:4])
+bad_fla = [k for k in BOOK["flavor"] if k not in IT or IT[k].get("kind_key") != "food"]
+chk("★ 风味谱条目都在 items 域且机器键是 food", not bad_fla, bad_fla[:4])
 bad_mon = [k for k in BOOK["monster"] if k not in MR]
 chk("★ 怪物谱条目都在 monsters 域", not bad_mon, bad_mon[:4])
 read_ids = [k for k, v in BOOK["relic"].items() if v.get("from") == "read"]
@@ -135,8 +135,45 @@ pick_rid = sorted(pick_ids)[0]
 new1 = CM.note_items(p, [mat_rid, mat_rid, fla_rid])
 chk("★ 到手进谱（同一件不记两遍）",
     len(new1) == 2 and CM.count(p, "material") == 1 and CM.count(p, "flavor") == 1, new1)
-chk("★ 装备那类不进谱（谱只收材料/食物/信物）",
-    CM.note_items(p, [sorted(k for k in IT if IT[k].get("kind") == "武器")[0]]) == [])
+chk("★ 装备那类不进谱（谱只收材料/食物/信物 · 装备 = 带 `slot` 的那些）",
+    CM.note_items(p, [sorted(k for k in IT if IT[k].get("slot"))[0]]) == [])
+
+# ⑨ ★ B3-6b-2d-keys-2：图鉴归属的机器键（P-20 甲案第二刀）—— 代码表 ↔ 域 ↔ **逐件真跑**
+#   ① 代码那两张表（KIND_BOOK / PICK_BOOK）只许有 ASCII 键、且键都在域里真出现过、两表不许撞键
+#   ② 逐件真跑 `note_item`：归属 == 表算出来的（122 件物品 + 2 个未鉴定池 + 1 个认不出的 id）
+#   ③ 换键前后是**同一批书**：装备那半（带 slot 的）一件都不进谱
+_BOOK_OF = {}
+_dupk = sorted(set(CM.KIND_BOOK) & set(CM.PICK_BOOK))
+_BOOK_OF.update(CM.KIND_BOOK)
+_BOOK_OF.update(CM.PICK_BOOK)
+chk("★ 代码那两张表只有 ASCII 键、且两表不撞键（%d 个键）" % len(_BOOK_OF),
+    all(str(k).isascii() for k in _BOOK_OF) and not _dupk, "撞键：%s" % _dupk)
+_POOLK = {v.get("kind_key") for v in DP.values()} | {
+    e.get("kind_key") for v in DP.values()
+    for e in (list(v.get("entries") or []) + list(v.get("pool") or []))}
+_HAS = {v.get("kind_key") for v in IT.values()} | _POOLK
+chk("★ 表里的键都在域里真出现过（items / drop_pools 的 `kind_key`）",
+    set(_BOOK_OF) <= _HAS, "域里没有的：%s" % sorted(set(_BOOK_OF) - _HAS))
+_attr_bad = []
+for _iid, _v in IT.items():
+    _want = _BOOK_OF.get(_v.get("kind_key"))
+    _got = CM.note_item({}, _iid)
+    if _got != _want:
+        _attr_bad.append((_iid, _v.get("kind_key"), _want, _got))
+for _pid, _p in DP.items():
+    if str(_pid).startswith("unid_"):
+        _want = _BOOK_OF.get(_p.get("kind_key"))
+        _got = CM.note_item({}, _pid)
+        if _got != _want:
+            _attr_bad.append((_pid, _p.get("kind_key"), _want, _got))
+chk("★ 真跑 %d 件 + %d 个未鉴定池：归属 == 表算出来的（换键前后同一批书）"
+    % (len(IT), len([k for k in DP if str(k).startswith("unid_")])),
+    not _attr_bad, "%s" % (_attr_bad[:4] or "无"))
+chk("★ 认不出的 id 不进任何谱（fail-closed，不猜一本）",
+    CM.note_item({}, "i_nope_nothing_at_all") is None)
+chk("★ 装备那半（带 slot 的 %d 件）一件都不进谱"
+    % len([k for k, v in IT.items() if v.get("slot")]),
+    not [k for k, v in IT.items() if v.get("slot") and _BOOK_OF.get(v.get("kind_key"))])
 
 CM.note_kill(p, mon_rid)
 CM.note_kill(p, mon_rid)

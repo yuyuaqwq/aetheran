@@ -302,8 +302,10 @@ MS = CAL._d("monsters")
 BEST, TOP = None, []
 for mk_, mv in MAPS.items():
     for n in mv.get("nodes") or []:
+        # ★ B3-6b-2d-keys-2：候选闸照**代码那份 ASCII `role_key`** 重算（原先用中文 kind）
         cand = [k for k, m in MS.items()
-                if m.get("role") in ("普通", "精英", "头目") and mk_ in ((m.get("habitat") or {}).get("maps") or [])]
+                if m.get("role_key") in ("normal", "elite", "chief")
+                and mk_ in ((m.get("habitat") or {}).get("maps") or [])]
         if len(cand) >= 3 and (BEST is None or len(cand) > len(BEST[2])):
             BEST = (mk_, n["id"], cand)
 if BEST:

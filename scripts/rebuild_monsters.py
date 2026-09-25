@@ -15,6 +15,13 @@ CLS = json.loads(io.open(os.path.join(REPO, "content/data/classes.json"), encodi
 TIERS = {"普通": dict(hp_n=4.0, spd=92, res=0.50), "精英": dict(hp_n=12.0, spd=104, res=0.55),
          "头目": dict(hp_n=14.0, spd=98, res=0.60), "层主": dict(hp_n=18.0, spd=96, res=0.60),
          "boss": dict(hp_n=72.0, spd=102, res=1.00)}
+#: ★ B3-6b-2d-keys-2：档位（中文）→ ASCII **机器键** `role_key`（P-20 甲案第二刀）。
+#:   为什么：代码原先拿中文枚举当机器键（战斗里挑遇敌 / 掉钱分档 / 是不是 BOSS）—— K48 / K51。
+#:   取值口径：普通=normal · 精英=elite · 头目=chief（区域头目）· 层主=warden（副本层主）· boss（世界 Boss）。
+#:   ★ `boss` 与引擎那份 ASCII 词表同值（`ext_combat` 比的是 `role == "boss"`）—— 头目 / 层主
+#:     **不是** `boss`（它们今天不算 BOSS：`is_boss` 只对 `ms_boss_oath_sentry` 为真，换键后逐字相同）。
+#:   本表是它的唯一来源：`probe_monsters` ⑧ 对着它 + schema enum + 域里 17 条三头对账。
+ROLE_KEY = {"普通": "normal", "精英": "elite", "头目": "chief", "层主": "warden", "boss": "boss"}
 ARCH = {
     "杂兵": dict(hp=1.00, atk=1.00, dfn=1.00, res=1.00, spd=1.00),
     "快速": dict(hp=0.70, atk=1.10, dfn=0.80, res=0.90, spd=1.30),
@@ -80,11 +87,26 @@ def main():
             print("  ! 找不到：%s" % name); continue
         mos[key]["panel"] = panel_of(lv, tier, arch)
         mos[key]["archetype"] = arch
-        mos[key]["role"] = tier
-        mos[key]["lv"] = lv
+        # ★ B3-6b-2d-keys-2：`role`（中文档位名 · 策划案原话）与 `role_key`（ASCII 机器键）成对写，
+        #   机器键紧挨 `role`（读数据的人一眼看见两格）。tier 不在表里 ⇒ KeyError 当场炸（不猜）。
+        role_key = ROLE_KEY[tier]
+        rec = {}
+        for k, v in mos[key].items():
+            if k == "role_key":                       # 老数据里已有一格：下面统一写，别写两遍
+                continue
+            if k == "role":
+                rec["role"] = tier
+                rec["role_key"] = role_key
+                continue
+            rec[k] = v
+        if "role" not in rec:                         # 记录里压根没有 role（不该发生）⇒ 补一对
+            rec["role"], rec["role_key"] = tier, role_key
+        rec["lv"] = lv
+        mos[key] = rec
         fixed += 1
     io.open(p, "w", encoding="utf-8", newline="\n").write(json.dumps(mos, ensure_ascii=False, indent=2) + "\n")
-    print("重算 %d 只怪的 panel（取整口径）" % fixed)
+    print("重算 %d 只怪的 panel（取整口径）· 补 role_key（%s）"
+          % (fixed, " / ".join("%s→%s" % kv for kv in ROLE_KEY.items())))
     for k in ("ms_field_mouse", "ms_bone_wanderer", "ms_stone_crab", "ms_boss_oath_sentry"):
         v = mos[k]; pp = v["panel"]
         print("  %-22s %-4s lv%-3s hp=%-6s atk=%-4s def=%-4s spd=%-4s" % (

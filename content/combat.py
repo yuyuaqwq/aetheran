@@ -78,8 +78,11 @@ def monster_actor(mid: str, m: dict) -> dict:
     panel.setdefault("max_mp", 0)
     a = make_actor(uid=mid, name=m.get("name", mid), side=ENEMY_SIDE, kind="monster",
                    level=int(m.get("lv", 1) or 1), **panel)
-    a["role"] = m.get("role") or "普通"
-    a["is_boss"] = (a["role"] == "boss")
+    # ★ B3-6b-2d-keys-2（P-20 甲案第二刀）：`role` 是**内容侧词汇**（策划案原文的档位名，引擎里那份
+    #   `role` 限定规则是逐字比对的）⇒ 照旧从域里透传；**机器判定**一律走 ASCII `role_key`。
+    #   缺了档位名 ⇒ 拿机器键顶上（两个都不在 ⇒ 空串，两条路在引擎那边都是「不是 boss」）。
+    a["role"] = m.get("role") or m.get("role_key") or ""
+    a["is_boss"] = (m.get("role_key") == "boss")   # 原先比 `a["role"] == "boss"`（那一档的值恰好是 ASCII）
     if m.get("skills"):
         a["skills"] = list(m["skills"])
     return a
@@ -121,10 +124,13 @@ def pick_encounter(monsters: dict, loc: str, node: str, level: int, *, seed: int
     ★ B3-5：`mul` = 现在开场事件给的遇敌加权（`{怪 id: 倍数}`，来源 `calendar.encounter_mul`）。
       **没给 = 零变化**（还是 `choice` 那一支，同一个种子挑出同一只 —— 判据钉着这一条）；
       给了就按权重挑（倍数为 0 的候选天然挑不中）。
+
+    ★ B3-6b-2d-keys-2：候选闸比的是 ASCII `role_key`（原先比中文枚举「普通 / 精英 / 头目」）——
+      层主 / 世界 Boss 照旧**不进**随机遇敌（它们是副本与塔顶的固定战）。**换键前后同一批怪**。
     """
     cand = []
     for k, m in monsters.items():
-        if m.get("role") not in ("普通", "精英", "头目"):
+        if m.get("role_key") not in ("normal", "elite", "chief"):
             continue
         hb = m.get("habitat") or {}
         if loc not in (hb.get("maps") or []):

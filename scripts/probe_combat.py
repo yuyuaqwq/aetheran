@@ -195,6 +195,48 @@ _lines_q = _drive_text(CQ.quest_deliver, _Q, "交 1")
     "★ 交活升级走 add_exp（%s + %s ⇒ level=%s · 余 %s）"
     % (int(CA.exp_need(1)) - _QREW, _QREW, _Q["level"], _Q["exp"]))
 
+# ⑮ ★ B3-6b-2d-keys-2：档位换 ASCII 机器键 `role_key`（P-20 甲案第二刀）—— **真造 actor + 真挑遇敌**
+#   ① actor 的 `role` 照旧是域里那个档位名（内容侧词汇：引擎那份 `role` 限定规则逐字比它）
+#   ② `is_boss` 与旧写法（`role == "boss"`）**逐只相同** —— 头目 / 层主 不算 BOSS
+#   ③ 随机遇敌的候选闸：新键那一组与旧写法那一组**同一批怪**，且层主 / 世界 Boss 一只都不进池
+sys.path.insert(0, os.path.join(REPO, "scripts"))           # 生成器那张表（ROLE_KEY）的唯一来源
+import rebuild_monsters as _RBM                                              # noqa: E402
+
+_PICK_RK = {_k for _k in _RBM.ROLE_KEY.values() if _k in ("normal", "elite", "chief")}
+_actor_bad = [k for k, m in MON.items()
+              if (lambda a: a.get("role") != m.get("role")
+                  or a.get("is_boss") != (m.get("role") == "boss"))(CB.monster_actor(k, m))]
+(ok if not _actor_bad else bad)("★ 怪 actor：`role` 照旧透传域里那个档位名 · `is_boss` 与 `role == \"boss\"` "
+                                "逐只相同（%d 只；例外 %s）" % (len(MON), _actor_bad or "无"))
+_pool = {k for k, m in MON.items() if m.get("role_key") in _PICK_RK}
+_pool_old = {k for k, m in MON.items() if _RBM.ROLE_KEY.get(m.get("role")) in _PICK_RK}
+(ok if _pool == _pool_old else bad)("★ 遇敌候选闸换键前后**同一批**（%d 只 · 差集 %s）"
+                                   % (len(_pool), sorted(_pool ^ _pool_old) or "无"))
+_MP2 = st.domain("maps") or {}
+_seen = set()
+for _loc, _mv in sorted(_MP2.items()):
+    for _n in (_mv.get("nodes") or []):
+        for _lv in (1, 5, 10, 15, 19):
+            for _s in range(6):
+                _seen.update(CB.pick_encounter(MON, _loc, _n.get("id"), _lv, seed=_s))
+(ok if _seen and _seen <= _pool else bad)("★ 真挑 6×5×%d 把：挑出来的（%d 只）全在候选闸里" % (len(_MP2), len(_seen)))
+_stranger = sorted(_seen - _pool)
+(ok if not _stranger else bad)("★ 层主 / 世界 Boss 一只都没混进随机遇敌（%s）" % (_stranger or "无"))
+if not _seen <= _pool:                                          # 真红了就把话补全（不然只有一句）
+    bad("  混进来的：%s" % _stranger)
+
+# ⑯ ★ B3-6b-2d-keys-2：打钱分档（`cmds_battle`）换 ASCII `role_key` 之后**逐档对得上**
+#   普通 3×lv · 精英 8×lv · 头目/层主/Boss 20×lv —— 与旧写法（中文那三组）在 17 只怪上逐只同值。
+_GOLD_NEW = {k: (8 if m.get("role_key") == "elite"
+                 else (20 if m.get("role_key") in ("chief", "warden", "boss") else 3))
+             for k, m in MON.items()}
+_GOLD_OLD = {k: (8 if m.get("role") == "精英"                 # 旧写法照抄一份，只为对账（探针侧允许引中文）
+                 else (20 if m.get("role") in ("头目", "层主", "boss") else 3))
+             for k, m in MON.items()}
+(ok if _GOLD_NEW == _GOLD_OLD else bad)("★ 掉钱分档换键前后逐只同值（差：%s）"
+                                       % (sorted(k for k in _GOLD_NEW if _GOLD_NEW[k] != _GOLD_OLD[k]) or "无"))
+(ok if set(_GOLD_NEW.values()) == {3, 8, 20} else bad)("★ 三档都还在用（%s）" % sorted(set(_GOLD_NEW.values())))
+
 print()
 print("结果：%s" % ("全绿 ✓" if not fails else "有红 ✗"))
 sys.exit(1 if fails else 0)

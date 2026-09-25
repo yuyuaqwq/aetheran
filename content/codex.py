@@ -31,10 +31,14 @@ _C: dict = {}
 
 BOOKS = ("material", "flavor", "monster", "relic")
 
-#: kind → 归哪本谱（05 §五：材料谱记「捡到的材料」，风味谱记「吃过的菜」；没人认得的旧东西进旧物谱）
-KIND_BOOK = {"材料": "material", "垃圾": "material", "线索": "material", "食物": "flavor"}
-#: 捡到就该进旧物谱的 kind（信物 = 有来处的旧东西；未鉴定 = 还不知道是什么）
-PICK_BOOK = {"信物": "relic", "未鉴定": "relic"}
+#: ★ B3-6b-2d-keys-2（P-20 甲案第二刀）：`kind_key`（ASCII 机器键）→ 归哪本谱。
+#: 口径（05 §五 / 14_图鉴四谱口径_v1）：材料谱记「捡到的材料」= material / junk / clue；
+#: 风味谱记「吃过的菜」= food；旧物谱 = keepsake（有来处的旧东西）+ unidentified（还不知道是什么）。
+#: ★ 代码只比 ASCII 键（原先比的是域里的**中文枚举**「材料 / 垃圾 / 线索 / 食物 / 信物 / 未鉴定」，
+#:   K48 / K51）；中文那一栏留在域里，`probe_copy` ⑮ 静态守卫钉着「代码里 0 处」。
+KIND_BOOK = {"material": "material", "junk": "material", "clue": "material", "food": "flavor"}
+#: 捡到就该进旧物谱的机器键
+PICK_BOOK = {"keepsake": "relic", "unidentified": "relic"}
 
 
 def _d(name: str):
@@ -150,7 +154,8 @@ def note_item(p: dict, iid: str) -> str | None:
     """一件东西到手 → 归谱（★ 只记第一次）。返回归到哪本（没归就不回）。"""
     from . import loot as LT                       # 本地 import：避免包装载期的环
     rec = LT.rec_of(iid)
-    bk = KIND_BOOK.get(rec.get("kind")) or PICK_BOOK.get(rec.get("kind"))
+    k = rec.get("kind_key")                        # ★ ASCII 机器键（未鉴定那类走池上的 kind_key）
+    bk = KIND_BOOK.get(k) or PICK_BOOK.get(k)
     if not bk:
         return None
     # ★ 旧物谱先给一行问号（捡回来的旧东西，认没认出来是两回事）—— 别的谱到手就算记上

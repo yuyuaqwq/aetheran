@@ -37,6 +37,13 @@ OLD = os.path.join(ARCHIVE, "06_装备道具", "00_装备体系与PE预算.md")
 
 STAT_KEY = {"攻击": "atk", "防御": "def", "生命上限": "hp"}
 QUAL_RANK = {"普通": 0, "精制": 1, "稀有": 2, "遗物": 3}
+#: ★ B3-6b-2d-keys-2：配方 `kind`（中文）→ ASCII **机器键** `kind_key`（P-20 甲案第二刀）。
+#:   取值与 `_meta` 的两块**同名**（`cook` / `enhance` —— 域里本来就这么叫）；代码只比 ASCII 键
+#:   （原先 `cmds_recipe._cookable` 比的是中文「烹饪」）。表是唯一来源：`probe_recipes` ⑬ 三头对账。
+KIND_KEY = {"烹饪": "cook", "强化": "enhance"}
+#: 菜（items 域）的机器键 —— 与 `scripts/rebuild_kind_keys.py` 的 `ITEM_KIND_KEY["食物"]` 同值
+#: （那边管整个 items 域，这边只管它自己造的 8 道菜；`probe_items` ⑧ 两头对账）。
+DISH_KIND_KEY = "food"
 
 
 def rd(path: str) -> str:
@@ -183,7 +190,7 @@ def main(argv) -> int:
         learn = quest_of(r["learn"])
         rid = "rc_cook_" + r["id"][len("i_food_"):]
         recipes[rid] = {
-            "name": r["name"], "kind": "烹饪", "icon": r["icon"],
+            "name": r["name"], "kind": "烹饪", "kind_key": KIND_KEY["烹饪"], "icon": r["icon"],
             "inputs": ins, "out": r["id"], "out_n": 1,
             "buff": {"stat": STAT_KEY[stat_name], "stat_name": stat_name,
                      "pct": pct, "seconds": minutes * 60},
@@ -191,7 +198,7 @@ def main(argv) -> int:
             "desc": r["line"], "source": "13_配方域口径_v1 §三",
         }
         dish_meta[r["id"]] = {
-            "name": r["name"], "icon": r["icon"], "kind": "食物",
+            "name": r["name"], "icon": r["icon"], "kind": "食物", "kind_key": DISH_KIND_KEY,
             "price": round_half_up(sum(price(e["id"]) * e["n"] for e in ins) * sell_mult),
             "desc": r["line"],
             "food": {"stat": STAT_KEY[stat_name], "pct": pct, "seconds": minutes * 60},
@@ -209,7 +216,7 @@ def main(argv) -> int:
         else:
             raise SystemExit("+%d 没有成功率（率表只覆盖 %d–%d）" % (lv, rate_from, rate_from + len(rates) - 1))
         recipes["rc_enh_%02d" % lv] = {
-            "name": "强化 +%d" % lv, "kind": "强化", "level": lv,
+            "name": "强化 +%d" % lv, "kind": "强化", "kind_key": KIND_KEY["强化"], "level": lv,
             "inputs": [{"id": ing_a, "n": n}, {"id": ing_b, "n": n}],
             "gold": fee, "rate": rate,
             "float": (float_pct / 100.0 if lv >= float_from else 0.0),

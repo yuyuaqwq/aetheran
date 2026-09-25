@@ -9,7 +9,8 @@
       "required": [
         "name",
         "icon",
-        "kind"
+        "kind",
+        "kind_key"
       ],
       "properties": {
         "name": {
@@ -33,6 +34,23 @@
             "线索",
             "食物"
           ]
+        },
+        "kind_key": {
+          "enum": [
+            "weapon",
+            "armor_top",
+            "armor_bottom",
+            "helmet",
+            "boots",
+            "accessory",
+            "material",
+            "food",
+            "tool",
+            "junk",
+            "keepsake",
+            "clue"
+          ],
+          "$comment": "★ B3-6b-2d-keys-2：`kind` 的 **ASCII 机器键** —— 代码只认它（K48 / K51 / P-20 甲案第二刀）。装备那六类与 `slot` 同值；非装备六类各有各的键。映射表唯一来源 = `scripts/rebuild_kind_keys.py`（与本 enum 两头对账，见 probe_items ⑧）。中文 `kind` 是玩家看得见的分类名，保留。"
         },
         "quality": {
           "enum": [

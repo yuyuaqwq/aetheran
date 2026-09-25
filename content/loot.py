@@ -32,7 +32,10 @@ def items() -> dict:
     return _d("items")
 
 
-K_MATERIAL = "材料"          # 物品 kind 的兜底（条目没写、物品表也没有时）
+#: ★ B3-6b-2d-keys-2：条目机器键的兜底（条目没写、物品表也没有时）—— **ASCII 键**，不是中文枚举。
+#:   与 `items.schema.json` 的 `kind_key` enum 同值（`probe_drops` ⑭ 对账）；中文名那一栏在域里，
+#:   代码一个字都不引（K48 / P-20 甲案第二刀）。
+K_MATERIAL_KEY = "material"
 
 #: 动态项 `*<格>_random` 里的**格**（ASCII，写在 drop_pools 的 out 上）→ 域里现成的 ASCII
 #: `slot`（六格见 `schemas/items.schema.json` 的 `slot.enum`）。
@@ -54,16 +57,19 @@ def rec_of(oid: str) -> dict:
     return items().get(oid) or pools().get(oid) or {}
 
 
-def kind_of(oid: str, kind: str | None = None) -> str:
-    """条目的 kind 归一 —— **唯一的一口**：条目写的 → 物品表的 → 未鉴定池自己写的 → 兜底。
+def kind_key_of(oid: str, kind_key: str | None = None) -> str:
+    """条目的**机器键**归一 —— **唯一的一口**：条目写的 → 物品表的 → 未鉴定池自己写的 → 兜底。
 
-    ★ `unid_*` 不是物品表里的东西，它的 marker 写在 `drop_pools` 的池上（`kind`）——
+    ★ B3-6b-2d-keys-2（P-20 甲案第二刀）：返回的是 ASCII `kind_key`，**不再是中文 `kind`** ——
+      原先调用方拿中文枚举当筛选键 / 兜底（K48 / K51：一字之差就静默挑不出东西）。
+      中文 `kind` 还在域里（玩家看得见的分类名），但**不进代码**（`probe_copy` ⑮ 静态守卫钉 0 处）。
+    ★ `unid_*` 不是物品表里的东西，它的 marker 写在 `drop_pools` 的池上（`kind_key`）——
       别在调用方手写「未鉴定」（K48 同族）。
     """
-    k = kind or (items().get(oid) or {}).get("kind")
+    k = kind_key or (items().get(oid) or {}).get("kind_key")
     if not k and str(oid).startswith("unid_"):
-        k = (pools().get(oid) or {}).get("kind")
-    return k or K_MATERIAL
+        k = (pools().get(oid) or {}).get("kind_key")
+    return k or K_MATERIAL_KEY
 
 
 def _pick(entries, rnd: random.Random):
@@ -105,7 +111,11 @@ def _resolve(out: str, entry: dict, level: int, rnd: random.Random, items_tbl: d
 
 
 def roll_pool(pool_id: str, *, level: int = 1, rnd: random.Random | None = None) -> list:
-    """按池抽掉落，返回 [{id, n, kind, story?}]。同一池不许抽重（unique）。"""
+    """按池抽掉落，返回 [{id, n, kind_key, story?}]。同一池不许抽重（unique）。
+
+    ★ B3-6b-2d-keys-2：那一格叫 `kind_key`（ASCII 机器键），不再是中文 `kind` —— 它与域里
+      新增的 `kind_key` 同名同值（中文分类名留在域里，代码不引）。
+    """
     rnd = rnd or random.Random()
     p = pools().get(pool_id)
     if not p:
@@ -117,7 +127,7 @@ def roll_pool(pool_id: str, *, level: int = 1, rnd: random.Random | None = None)
         e = _pick(p.get("entries") or [], rnd)
         if not e:
             continue
-        if e.get("kind") == "池":                       # 嵌套池
+        if e.get("kind_key") == "pool":                 # 嵌套池（ASCII 机器键；原先比中文枚举）
             out.extend(roll_pool(e["out"], level=level, rnd=rnd))
             continue
         oid = _resolve(str(e.get("out")), e, level, rnd, it)
@@ -130,7 +140,7 @@ def roll_pool(pool_id: str, *, level: int = 1, rnd: random.Random | None = None)
         rng = e.get("n")
         if isinstance(rng, list) and len(rng) == 2:
             n = rnd.randint(int(rng[0]), int(rng[1]))
-        rec = {"id": oid, "n": n, "kind": kind_of(oid, e.get("kind"))}
+        rec = {"id": oid, "n": n, "kind_key": kind_key_of(oid, e.get("kind_key"))}
         if e.get("story"):
             rec["story"] = e["story"]
         out.append(rec)
@@ -138,10 +148,10 @@ def roll_pool(pool_id: str, *, level: int = 1, rnd: random.Random | None = None)
 
 
 def open_unid(unid_id: str, *, rnd: random.Random | None = None) -> dict:
-    """开一件未鉴定：返回 {id, kind, story?}（「开出了什么」）。"""
+    """开一件未鉴定：返回 {id, kind_key, story?}（「开出了什么」）。"""
     rnd = rnd or random.Random()
     u = pools().get(unid_id)
-    if not u or u.get("kind") != "未鉴定":
+    if not u or u.get("kind_key") != "unidentified":
         return {}
     it = items()
     e = _pick(u.get("pool") or [], rnd)
@@ -150,7 +160,7 @@ def open_unid(unid_id: str, *, rnd: random.Random | None = None) -> dict:
     oid = _resolve(str(e.get("out")), e, 1, rnd, it)
     if not oid:
         return {}
-    r = {"id": oid, "kind": kind_of(oid, e.get("kind")), "from_unid": unid_id}
+    r = {"id": oid, "kind_key": kind_key_of(oid, e.get("kind_key")), "from_unid": unid_id}
     if e.get("story"):
         r["story"] = e["story"]
     return r

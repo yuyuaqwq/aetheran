@@ -4,6 +4,7 @@
     "icon": "🐀",
     "archetype": "群居",
     "role": "普通",
+    "role_key": "normal",
     "lv": 3,
     "habitat": {
       "maps": [
@@ -48,6 +49,7 @@
     "icon": "🐕",
     "archetype": "群居",
     "role": "普通",
+    "role_key": "normal",
     "lv": 4,
     "habitat": {
       "maps": [
@@ -90,6 +92,7 @@
     "icon": "💀",
     "archetype": "厚甲",
     "role": "普通",
+    "role_key": "normal",
     "lv": 6,
     "habitat": {
       "maps": [
@@ -131,6 +134,7 @@
     "icon": "🐦",
     "archetype": "快速",
     "role": "普通",
+    "role_key": "normal",
     "lv": 4,
     "habitat": {
       "maps": [
@@ -172,6 +176,7 @@
     "icon": "🐺",
     "archetype": "杂兵",
     "role": "普通",
+    "role_key": "normal",
     "lv": 6,
     "habitat": {
       "maps": [
@@ -215,6 +220,7 @@
     "icon": "👻",
     "archetype": "消耗",
     "role": "普通",
+    "role_key": "normal",
     "lv": 8,
     "habitat": {
       "maps": [
@@ -256,6 +262,7 @@
     "icon": "🦀",
     "archetype": "厚甲",
     "role": "普通",
+    "role_key": "normal",
     "lv": 9,
     "habitat": {
       "maps": [
@@ -297,6 +304,7 @@
     "icon": "🧺",
     "archetype": "爆发",
     "role": "精英",
+    "role_key": "elite",
     "lv": 7,
     "habitat": {
       "maps": [
@@ -350,6 +358,7 @@
     "icon": "🪓",
     "archetype": "消耗",
     "role": "精英",
+    "role_key": "elite",
     "lv": 9,
     "habitat": {
       "maps": [
@@ -390,6 +399,7 @@
     "icon": "🌳",
     "archetype": "法系",
     "role": "精英",
+    "role_key": "elite",
     "lv": 11,
     "habitat": {
       "maps": [
@@ -431,6 +441,7 @@
     "icon": "🛶",
     "archetype": "支援",
     "role": "精英",
+    "role_key": "elite",
     "lv": 12,
     "habitat": {
       "maps": [
@@ -471,6 +482,7 @@
     "icon": "🌫️",
     "archetype": "爆发",
     "role": "精英",
+    "role_key": "elite",
     "lv": 13,
     "habitat": {
       "maps": [
@@ -511,6 +523,7 @@
     "icon": "🛡️",
     "archetype": "厚甲",
     "role": "头目",
+    "role_key": "chief",
     "lv": 14,
     "habitat": {
       "maps": [
@@ -549,6 +562,7 @@
     "icon": "🐕🦺",
     "archetype": "快速",
     "role": "头目",
+    "role_key": "chief",
     "lv": 10,
     "habitat": {
       "maps": [
@@ -589,6 +603,7 @@
     "icon": "🧟",
     "archetype": "厚甲",
     "role": "头目",
+    "role_key": "chief",
     "lv": 15,
     "habitat": {
       "maps": [
@@ -629,6 +644,7 @@
     "icon": "🦴",
     "archetype": "法系",
     "role": "层主",
+    "role_key": "warden",
     "lv": 17,
     "habitat": {
       "maps": [
@@ -669,6 +685,7 @@
     "icon": "🗿",
     "archetype": "厚甲",
     "role": "boss",
+    "role_key": "boss",
     "lv": 19,
     "habitat": {
       "maps": [

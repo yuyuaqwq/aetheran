@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""探针：items 域 —— kind/quality/slot 合法 · ★ 词条 stat 守命名规范 · 遗物必有「来处」。
+"""探针：items 域 —— kind/quality/slot/**kind_key** 合法 · ★ 词条 stat 守命名规范 · 遗物必有「来处」。
 
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_items.py
 """
@@ -11,8 +11,10 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
+SCRIPTS = Path(__file__).resolve().parent
 ENGINE = os.environ.get("GWEN_ENGINE", "C:/Users/yuyu/framework-engine")
 sys.path.insert(0, str(REPO))
+sys.path.insert(0, str(SCRIPTS))
 sys.path.insert(0, ENGINE)
 
 from saintess_engine.package import load_stack                       # noqa: E402
@@ -30,8 +32,9 @@ try:
     KINDS = set(_PROPS["kind"]["enum"])
     QUALITIES = set(_PROPS["quality"]["enum"])
     SLOTS = set(_PROPS["slot"]["enum"])
+    KIND_KEYS = set(_PROPS["kind_key"]["enum"])       # ★ B3-6b-2d-keys-2：ASCII 机器键那一栏
 except Exception as _exc:                                              # noqa: BLE001
-    print("  ✗ items.schema.json 读不到（kind/quality/slot 的唯一真源，没有回退副本）：%s" % _exc)
+    print("  ✗ items.schema.json 读不到（kind/quality/slot/kind_key 的唯一真源，没有回退副本）：%s" % _exc)
     sys.exit(1)
 # 数值类（必须用属性字典标准键）—— 照 11_装备特色词条池 §六
 NUMERIC = {"hp", "atk", "matk", "def", "res", "spd", "hit", "eva", "crit", "critdmg",
@@ -86,6 +89,39 @@ chk("★ 装备 %d 件都带 `slot` · 非装备 %d 件一件都没带（换 ASC
     % (len(equip), len(it) - len(equip)),
     all(v.get("slot") for v in equip.values())
     and not [k for k, v in it.items() if not v.get("slot") and v["kind"] in _with])
+
+# ⑧ ★ B3-6b-2d-keys-2：机器键 `kind_key`（P-20 甲案第二刀）—— **三头对账**：
+#   schema enum（唯一真源） ↔ 生成器那张表（`scripts/rebuild_kind_keys.py`） ↔ 域里 122 条。
+#   为什么三头都要核：表漂了（代码侧的键变了）或 enum 漂了（校验口径变了）或数据漂了，
+#   任何一种都会让「代码比 A、域里写 B」静默不命中 —— 那正是这半批要根除的病。
+try:
+    import rebuild_kind_keys as RK                                          # noqa: E402
+except Exception as _exc:                                                   # noqa: BLE001
+    print("  ✗ scripts/rebuild_kind_keys.py 读不到（kind_key 映射表的唯一来源）：%s" % _exc)
+    sys.exit(1)
+_bad_kk = [k for k, v in it.items() if v.get("kind_key") not in KIND_KEYS]
+chk("★ 每件东西都带 `kind_key` 且值都在 schema 的 enum 里（%d 类）" % len(KIND_KEYS),
+    not _bad_kk, "缺/非法：%s" % _bad_kk[:6])
+chk("★ 生成器映射表 == schema enum（两张表逐值相等：%s）"
+    % " · ".join("%s→%s" % kv for kv in sorted(RK.ITEM_KIND_KEY.items())),
+    set(RK.ITEM_KIND_KEY.values()) == KIND_KEYS,
+    "表=%s / enum=%s" % (sorted(set(RK.ITEM_KIND_KEY.values()) - KIND_KEYS),
+                         sorted(KIND_KEYS - set(RK.ITEM_KIND_KEY.values()))))
+_k2k: dict = {}
+for _k, _v in it.items():
+    _k2k.setdefault(_v["kind"], set()).add(_v.get("kind_key"))
+chk("★ 中文 kind → ASCII kind_key 是**单射**且与生成器表逐条一致（域自己就是那张映射表）",
+    all(len(_s) == 1 and RK.ITEM_KIND_KEY[_k] == sorted(_s)[0] for _k, _s in _k2k.items()),
+    "%s" % {a: sorted(b) for a, b in _k2k.items() if len(b) != 1})
+chk("★ 装备那半：`kind_key` == `slot`（第一刀收的机器键与这一刀新补的键**同值**· %d 件）"
+    % len(equip), all(v["kind_key"] == v["slot"] for v in equip.values()),
+    "%s" % [(k, v["kind_key"], v["slot"]) for k, v in equip.items() if v["kind_key"] != v["slot"]][:4])
+_nonkey = {v["kind_key"] for v in it.values() if not v.get("slot")}
+chk("★ 非装备那半：`kind_key` 落在非装备六类里（%s）且一件都没带 slot"
+    % "/".join(sorted(_nonkey)),
+    _nonkey == (KIND_KEYS - SLOTS)
+    and not [k for k, v in it.items() if not v.get("slot") and v.get("kind_key") in SLOTS],
+    "%s" % sorted(_nonkey - (KIND_KEYS - SLOTS)))
 
 # ② 装备类字段齐
 bad2 = [k for k, v in equip.items() if not v.get("affixes")]

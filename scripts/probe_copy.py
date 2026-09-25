@@ -19,9 +19,12 @@
   ⑭ ★ P-27：还没择业的档（无职业）= 没有面板 ⇒ `状态` 的生命上限照实说「未定」，
      要数字的地方（打架 / 歇脚）出一行点名行、不许显示那两个写死的 100
      （三处一致 + 反证那几条在 probe_panel 里）
-  ⑮ ★ B3-6b-2d-b：静态守卫 —— content/*.py 里不许再**拿中文枚举当机器键**
-     （K48 / K51 / P-20：黑名单 = 域里现成的枚举字段取值；装备那半已走 ASCII `slot`、
-     技能那半走 `owner_class`）。数字钉在 ENUM_KEYS 上，**只降不升**。
+  ⑮ ★ B3-6b-2d-b / keys-2：静态守卫 —— content/*.py 里不许再**拿中文枚举当机器键**
+     （K48 / K51 / P-20：黑名单 = 域里现成的枚举字段取值）。**两刀收完 ⇒ 必须 0 处**
+     （装备走 ASCII `slot` · 技能走 `owner_class` · 其余走域里新增的 `kind_key` / `role_key`）。
+     另钉一份「已收口的取值」清单（ENUM_DONE，只许变长）。
+  ⑯ ★ B3-6b-2d-keys-2：代码里比的 ASCII 机器键**都在域里真出现过**
+     （role_key / kind_key / pool / unidentified / cook —— 与 ⑦ chain / ⑧ verb 同款）。
 
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_copy.py [--inventory]
 """
@@ -51,38 +54,38 @@ MISSING = "[MISSING TEXT"
 
 #: ★ 已收口（必须 0）—— 收口一个就往这里搬一个
 SEALED = ("cmds_ast.py", "cmds_talk.py", "cmds_quest.py", "cmds_gather.py", "panel_build.py",
-          "skills_lookup.py")          # ← B3-6b-2d-b（技能那半走 ASCII `owner_class`）
+          "skills_lookup.py",          # ← B3-6b-2d-b（技能那半走 ASCII `owner_class`）
+          "codex.py")                  # ← B3-6b-2d-keys-2（图鉴归属走 ASCII `kind_key`）
 
 #: 快照上限（B3-6b 收口时的实测值；**只降不升**，不在表里的文件必须 0）
 BUDGET = {                      # B3-6b 收口时实测（124 条）；下一批往下压，只能降
-    "cmds_battle.py": 14,       # 战斗结算与日志（B3-8 收掉死亡那两句：改走 SYS_DEATH_*）
-    "loot.py": 6,               # B3-6b-2d-b：11 → 6（装备那 5 处中文 kind 改走 ASCII `slot`）
-    "cmds_recipe.py": 3,        # B3-6b-2d-b：9 → 3（强化白名单 6 处中文 kind 改走 `slot`）
-    "codex.py": 6,              # 谱的分类名
-    "combat.py": 5,             # 战斗里的兜底名
-    "apply.py": 1,              # B3-6b-2d-b：2 → 1（技能类别值改从 skills 域取；余「挥击」）
+    "cmds_battle.py": 11,       # ← 6b-2d-keys-2：14 → 11（掉钱分档 3 处中文 role 枚举改走 ASCII `role_key`）
+    "loot.py": 3,               # ← 6b-2d-b 11 → 6（装备 5 处）· 6b-2d-keys-2 6 → 3（兜底 / 池 / 未鉴定）
+    "cmds_recipe.py": 2,        # ← 6b-2d-b 9 → 3（强化白名单 6 处）· keys-2 3 → 2（「烹饪」）
+    "combat.py": 1,             # ← 6b-2d-keys-2：5 → 1（怪 role 兜底与两支筛选 4 处；余「无名者」）
+    "apply.py": 1,              # ← 6b-2d-b：2 → 1（技能类别值改从 skills 域取；余「挥击」）
 }
 
-#: ★ B3-6b-2d-b：「中文枚举当机器键」的收口快照（＝每个 content/*.py 里还剩几处）——
-#: 判据与 BUDGET 同款：**只降不升**、不在表里默认 0。黑名单见 `_enum_words()`：
-#: 只收**域里现成的枚举字段取值**（items.kind/quality · monsters.role · recipes.kind ·
-#: skills.kind · gathering.kind/verb · drop_pools 的 kind 与条目 kind），所以纯文案不算。
-#: 本批收掉 14 处：装备那半 items.kind → ASCII `slot`（loot 5 · cmds_recipe 6）·
-#: 技能那半 skills.kind → ASCII `owner_class` + 域里那一份值（skills_lookup 2 · apply 1）。
-#: 余下 17 处全在**第二刀**：codex 6（非装备 kind）· combat 4 + cmds_battle 3（monsters.role）·
-#: cmds_recipe 1（recipes.kind）· loot 3（items.kind 兜底 + drop_pools 的「池」「未鉴定」）。
-ENUM_KEYS = {
-    "codex.py": 6,
-    "combat.py": 4,
-    "cmds_battle.py": 3,
-    "cmds_recipe.py": 1,
-    "loot.py": 3,
-}
+#: ★ B3-6b-2d-b / keys-2：「中文枚举当机器键」的收口快照（＝每个 content/*.py 里还剩几处）——
+#: ★ 第二刀（B3-6b-2d-keys-2）已把它**整体清空**：判据从「≤ 快照」改成「**必须 0**」。
+#: 黑名单见 `_enum_words()`：只收**域里现成的枚举字段取值**（items.kind/quality · monsters.role ·
+#: recipes.kind · skills.kind · gathering.kind/verb · drop_pools 的 kind 与条目 kind），纯文案不算。
+#: 两刀一共收掉 31 处：装备那半 items.kind → ASCII `slot`（loot 5 · cmds_recipe 6）·
+#: 技能那半 skills.kind → ASCII `owner_class` + 域里那一份值（skills_lookup 2 · apply 1）·
+#: 非装备 items.kind → `kind_key`（codex 6 · loot 1）· monsters.role → `role_key`（combat 4 ·
+#: cmds_battle 3）· recipes.kind → `kind_key`（cmds_recipe 1）· drop_pools 的池 / 未鉴定
+#: → `kind_key`（loot 2）。
+ENUM_KEYS = {}
 
-#: ★ 本批（B3-6b-2d-b 第一刀）**已收口**的那几个中文枚举取值 —— 哪个文件里都不许再当机器键
-#: 出现：装备六类 `kind`（ASCII 替身 = `slot`）与技能类别「主动」（ASCII 替身 = `owner_class`
-#: ＋ 域里那一份 kind 值）。这一条是「只加强」的：清单只许变长，不许变短。
-ENUM_DONE = ("武器", "上甲", "下甲", "头盔", "靴子", "饰品", "主动")
+#: ★ 已收口的那些中文枚举取值 —— 哪个文件里都不许再当机器键出现（清单只许变长，不许变短）。
+#: 第一刀：装备六类 `kind`（替身 = `slot`）与技能类别「主动」（替身 = `owner_class`）。
+#: 第二刀：非装备六类 `kind` + 池侧 `kind` + 怪的五档 `role` + 配方的两类 `kind`
+#: （替身 = `kind_key` / `role_key`；取值口径见 `scripts/rebuild_kind_keys.py` /
+#: `rebuild_monsters.py` / `rebuild_recipes.py` 里那三张表）。
+ENUM_DONE = ("武器", "上甲", "下甲", "头盔", "靴子", "饰品", "主动",
+             "材料", "食物", "道具", "垃圾", "信物", "线索", "未鉴定", "池", "装备",
+             "普通", "精英", "头目", "层主",
+             "烹饪", "强化")
 
 ok = True
 
@@ -277,22 +280,45 @@ def main():
         if _bad:
             _ehits[p.name] = _bad
     _etotal = sum(len(v) for v in _ehits.values())
-    _eover = [(k, len(v), ENUM_KEYS.get(k, 0)) for k, v in sorted(_ehits.items())
-              if len(v) > ENUM_KEYS.get(k, 0)]
     print("  · 中文枚举当机器键（%d 个黑名单取值）：%s · 合 %d 处"
           % (len(_enum_words),
              " · ".join("%s %d" % (k, len(v)) for k, v in sorted(_ehits.items())) or "一处都没有",
              _etotal))
-    chk("★ 代码里「拿中文枚举当机器键」%d 处 ≤ 快照 %d（装备走 ASCII `slot` · 技能走 `owner_class`）"
-        % (_etotal, sum(ENUM_KEYS.values())), not _eover,
-        "超了：%s；明细：%s" % (_eover, {k: v[:3] for k, v in sorted(_ehits.items())}))
+    # ★ B3-6b-2d-keys-2：**必须 0 处**（原先「≤ 快照 ENUM_KEYS」）—— 两刀把这几族全收口了：
+    #   装备走 `slot` · 技能走 `owner_class` · 非装备 items.kind / recipes.kind / drop_pools 的池与
+    #   未鉴定走 `kind_key` · monsters.role 走 `role_key`。再出现一处就是**回退**。
+    chk("★ 代码里「拿中文枚举当机器键」**必须 0 处**（%d 个黑名单取值；装备走 `slot` · 技能走 "
+        "`owner_class` · 其余走 `kind_key` / `role_key`）" % len(_enum_words),
+        not _ehits, "有 %d 处：%s" % (_etotal, {k: v[:3] for k, v in sorted(_ehits.items())}))
     _done_bad = {}
     for _f, _v in _ehits.items():
         for _w in ENUM_DONE:
             if any(_x[1] == _w for _x in _v):
                 _done_bad.setdefault(_w, []).append(_f)
-    chk("★ 本批收口的枚举取值不许再当机器键（%s；ASCII 替身 = slot / owner_class）"
+    chk("★ 已收口的枚举取值不许再当机器键（%s；ASCII 替身 = slot / owner_class / kind_key / role_key）"
         % " / ".join(ENUM_DONE), not _done_bad, "%s" % _done_bad)
+
+    # ⑯ ★ B3-6b-2d-keys-2：代码里比的 ASCII 机器键**都在域里真出现过**（与 ⑦ chain / ⑧ verb 同款）——
+    #   机器键最怕「代码比 A、域里写 B」：一个字之差就静默不命中（promo 里那 7 处就是这么来的）。
+    _rk = {v.get("role_key") for v in (st.domain("monsters") or {}).values()}
+    _miss_rk = sorted({"normal", "elite", "chief", "warden", "boss"} - _rk)
+    chk("★ 代码按 role_key 判档位：monsters 里真有 normal / elite / chief / warden / boss（%d 只怪）"
+        % len(st.domain("monsters") or {}), not _miss_rk, "缺：%s" % _miss_rk)
+    _ik = {v.get("kind_key") for v in (st.domain("items") or {}).values()}
+    _miss_ik = sorted({"material", "junk", "clue", "food", "keepsake"} - _ik)
+    chk("★ 代码按 kind_key 判图鉴归属：items 里真有 material / junk / clue / food / keepsake（%d 件）"
+        % len(st.domain("items") or {}), not _miss_ik, "缺：%s" % _miss_ik)
+    _dl = st.domain("drop_pools") or {}
+    _pk = {v.get("kind_key") for v in _dl.values()} | {
+        e.get("kind_key") for v in _dl.values()
+        for e in (list(v.get("entries") or []) + list(v.get("pool") or [])) if isinstance(e, dict)}
+    _miss_pk = sorted({"pool", "unidentified"} - _pk)
+    chk("★ 代码按 kind_key 判嵌套池 / 未鉴定：drop_pools 里真有 pool / unidentified（%d 个池）"
+        % len(_dl), not _miss_pk, "缺：%s" % _miss_pk)
+    _ck = {v.get("kind_key") for v in (st.domain("recipes") or {}).values()}
+    chk("★ 代码按 kind_key 判可下锅的菜：recipes 里真有 cook（%d 条配方）"
+        % len([k for k in (st.domain("recipes") or {}) if not str(k).startswith("_")]),
+        "cook" in _ck, "recipes 的 kind_key = %s" % sorted(x for x in _ck if x))
 
     # ⑨ 面板分层名（B3-6b-2d）：真造一个 actor（骑士 10 级 + 食物增益 ⇒ 六层全在），逐层核 src
     from content import panel_build as PBL                                # noqa: E402
