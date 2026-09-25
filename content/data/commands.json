@@ -296,7 +296,15 @@
     "usage": "登记",
     "visible": true,
     "order": 12,
-    "guard_desc": "在公会且未登记"
+    "guard_desc": "在公会且未登记",
+    "bind": {
+      "handler": "content.cmds_self:register",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "board": {
     "patterns": [
@@ -457,7 +465,15 @@
     "usage": "评级",
     "visible": true,
     "order": 19,
-    "guard_desc": "已登记"
+    "guard_desc": "已登记",
+    "bind": {
+      "handler": "content.cmds_self:rank",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "rank_up": {
     "patterns": [
@@ -625,15 +641,23 @@
   },
   "rename": {
     "patterns": [
-      "^改名$",
-      "^名字$"
+      "^改名(?:\\s+(.+))?$",
+      "^名字(?:\\s+(.+))?$"
     ],
     "category": "角色",
     "desc": "改一次名字",
     "usage": "改名",
     "visible": true,
     "order": 29,
-    "guard_desc": "未用过"
+    "guard_desc": "未用过",
+    "bind": {
+      "handler": "content.cmds_self:rename",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "origin": {
     "patterns": [
@@ -1234,7 +1258,15 @@
     "usage": "教堂",
     "visible": true,
     "order": 63,
-    "guard_desc": "在镇上"
+    "guard_desc": "在镇上",
+    "bind": {
+      "handler": "content.cmds_places:chapel",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "junk_shop": {
     "patterns": [
@@ -1246,7 +1278,15 @@
     "usage": "旧货",
     "visible": true,
     "order": 64,
-    "guard_desc": "在镇上"
+    "guard_desc": "在镇上",
+    "bind": {
+      "handler": "content.cmds_places:junk_shop",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "inn": {
     "patterns": [
@@ -1257,7 +1297,15 @@
     "usage": "客栈",
     "visible": true,
     "order": 65,
-    "guard_desc": "在镇上"
+    "guard_desc": "在镇上",
+    "bind": {
+      "handler": "content.cmds_places:inn",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "caravan": {
     "patterns": [
@@ -1268,7 +1316,15 @@
     "usage": "商队",
     "visible": true,
     "order": 66,
-    "guard_desc": "在镇上"
+    "guard_desc": "在镇上",
+    "bind": {
+      "handler": "content.cmds_places:caravan",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "codex": {
     "patterns": [
@@ -1587,7 +1643,15 @@
     "usage": "公告",
     "visible": true,
     "order": 83,
-    "guard_desc": "随时"
+    "guard_desc": "随时",
+    "bind": {
+      "handler": "content.cmds_self:notice",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "feedback": {
     "patterns": [
@@ -1632,7 +1696,16 @@
     "usage": "排行",
     "visible": true,
     "order": 87,
-    "guard_desc": "随时"
+    "guard_desc": "随时",
+    "bind": {
+      "handler": "content.cmds_self:ranking",
+      "call": "run",
+      "args": [
+        "group_id",
+        "uid",
+        "player"
+      ]
+    }
   },
   "achievements": {
     "patterns": [

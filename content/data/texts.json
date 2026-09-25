@@ -3857,5 +3857,240 @@
     ],
     "category": "系统",
     "desc": "B3-12 成就 · 不设「记满」的那本（旧物谱）"
+  },
+  "SYS_PLACE_HEAD": {
+    "value": "【{name}】",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "B3-16b 镇上那几处 · 抬头"
+  },
+  "SYS_PLACE_NOTOWN": {
+    "value": "这几处都在镇上 —— 出了镇就找不到了。",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-16b 镇上那几处 · 人在野外"
+  },
+  "SYS_PLACE_AWAY": {
+    "value": "{name}不在这儿 —— 打『去 {name}』走一趟。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "B3-16b 镇上那几处 · 没走到那一站"
+  },
+  "SYS_CHAPEL_HEAL": {
+    "value": "{who}让你在长凳上坐下，把伤处看过一遍 —— 血回来了。",
+    "params": [
+      "who"
+    ],
+    "category": "系统",
+    "desc": "B3-16b 教堂 · 治疗那一下"
+  },
+  "SYS_CHAPEL_FULL": {
+    "value": "{who}看了你一眼：「没伤，用不着治。」",
+    "params": [
+      "who"
+    ],
+    "category": "系统",
+    "desc": "B3-16b 教堂 · 身上没伤"
+  },
+  "SYS_INN_SLEEP": {
+    "value": "你在角落那张床睡下 —— 再睁眼，日头已经换了地方。",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-16b 客栈 · 住店那一下"
+  },
+  "SYS_INN_FULL": {
+    "value": "你现在不疼也不困 —— 睡一觉也没用。",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-16b 客栈 · 不用住店"
+  },
+  "SYS_INN_BOX": {
+    "value": "后院那只旧木箱还在：「存放 <东西>」「取出 <东西>」。",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-16b 客栈 · 指箱子"
+  },
+  "SYS_CARAVAN_HEAD": {
+    "value": "【商队歇脚处】通北商道上下来的消息先到这儿。",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-16b 商队 · 抬头"
+  },
+  "SYS_CARAVAN_QUIET": {
+    "value": "棚子空着 —— 绳子和木桩堆在角上，今天没有车来。",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-16b 商队 · 今天没车"
+  },
+  "SYS_CARAVAN_WHO": {
+    "value": "跟着商队来的外人现在在：{list}",
+    "params": [
+      "list"
+    ],
+    "category": "系统",
+    "desc": "B3-16b 商队 · 外人在哪一站"
+  },
+  "SYS_CARAVAN_HOW": {
+    "value": "想细问就打『搭话 <名字>』。",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-16b 商队 · 怎么细问"
+  },
+  "SYS_JUNK_HEAD": {
+    "value": "【旧货铺】柜台上摊着一堆没人要的东西。",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-16b 旧货 · 抬头"
+  },
+  "SYS_JUNK_MINE": {
+    "value": "你包里能出手的：",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-16b 旧货 · 收的那几件"
+  },
+  "SYS_JUNK_ROW": {
+    "value": "· {name} ×{n} —— 收 {gold} 铜板",
+    "params": [
+      "name",
+      "n",
+      "gold"
+    ],
+    "category": "系统",
+    "desc": "B3-16b 旧货 · 逐件一行"
+  },
+  "SYS_JUNK_NONE": {
+    "value": "你包里没有它肯收的东西。",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-16b 旧货 · 一件都没有"
+  },
+  "SYS_JUNK_RELIC": {
+    "value": "旧物谱上记着 {n} 件 —— 打『旧物谱』看。",
+    "params": [
+      "n"
+    ],
+    "category": "系统",
+    "desc": "B3-16b 旧货 · 旧物谱那一行"
+  },
+  "SYS_JUNK_HOW": {
+    "value": "要卖就打『卖出 <东西>』。",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-16b 旧货 · 怎么卖"
+  },
+  "SYS_REG_ASKNAME": {
+    "value": "「叫什么名字？」—— 先打『改名 <名字>』，回头再来办证。",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-16b 登记 · 档上还没名字"
+  },
+  "SYS_REG_DONE": {
+    "value": "证办好了：见习。牌子是新的，边上还有点毛刺。",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-16b 登记 · 办下来那一下"
+  },
+  "SYS_REG_HAS": {
+    "value": "你已经有一张证了。",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-16b 登记 · 已经有证"
+  },
+  "SYS_RANK_NOCARD": {
+    "value": "你还没有证 —— 打『登记』办一张见习证。",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-16b 评级 · 还没登记"
+  },
+  "SYS_RANK_CHIEF": {
+    "value": "打掉的头目：{n} 只",
+    "params": [
+      "n"
+    ],
+    "category": "系统",
+    "desc": "B3-16b 评级 · 头目那一行"
+  },
+  "SYS_RENAME_ASK": {
+    "value": "想叫什么？打『改名 <名字>』—— 一到八个字，只改这一回。",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-16b 改名 · 没带名字"
+  },
+  "SYS_RENAME_DONE": {
+    "value": "好，{name}。往后就这么叫你。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "B3-16b 改名 · 改好了"
+  },
+  "SYS_RENAME_USED": {
+    "value": "名字只改一次 —— 这一回已经用掉了。",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-16b 改名 · 改过了"
+  },
+  "SYS_RANKING_HEAD": {
+    "value": "【本群榜】按等级与经验排 —— 只有这个群里的人。",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-16b 排行 · 抬头"
+  },
+  "SYS_RANKING_ROW": {
+    "value": "{i}. {name} —— {level} 级 · 经验 {exp}",
+    "params": [
+      "i",
+      "name",
+      "level",
+      "exp"
+    ],
+    "category": "系统",
+    "desc": "B3-16b 排行 · 逐行"
+  },
+  "SYS_RANKING_TAIL": {
+    "value": "（第一阶段的榜只记到本群 —— 出了这个群就不算。）",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-16b 排行 · 尾注"
+  },
+  "SYS_RANKING_OFF": {
+    "value": "榜读不出来 —— 存档库没接上。",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-16b 排行 · 库没接上"
+  },
+  "SYS_NOTICE_HEAD": {
+    "value": "【公告】本服现在跑的是这一份：",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-16b 公告 · 抬头"
+  },
+  "SYS_NOTICE_PKG": {
+    "value": "· {name} · 版本 {ver}",
+    "params": [
+      "name",
+      "ver"
+    ],
+    "category": "系统",
+    "desc": "B3-16b 公告 · 包与版本"
+  },
+  "SYS_NOTICE_CMDS": {
+    "value": "· 已经接上的指令：{n} / {total} 条（打『帮助』看清单）",
+    "params": [
+      "n",
+      "total"
+    ],
+    "category": "系统",
+    "desc": "B3-16b 公告 · 已接条数"
+  },
+  "SYS_NOTICE_TAIL": {
+    "value": "世界上的动静看『异动』。",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-16b 公告 · 尾注"
   }
 }
