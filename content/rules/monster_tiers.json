@@ -11,10 +11,10 @@
   ],
   "tiers": {
     "普通": {"n_me": 4.0, "n_them": 18.0, "def_n": 1.00, "spd": 92, "res_coef": 0.50},
-    "精英": {"n_me": 6.4, "n_them": 15.50, "def_n": 1.50, "spd": 104, "res_coef": 0.55},
-    "头目": {"n_me": 8.5, "n_them": 13.40, "def_n": 2.00, "spd": 116, "res_coef": 0.60},
-    "层主": {"n_me": 10.4, "n_them": 12.00, "def_n": 2.50, "spd": 128, "res_coef": 0.65},
-    "boss": {"n_me": 60.0, "n_them": 11.00, "def_n": 3.00, "spd": 140, "res_coef": 0.72}
+    "精英": {"n_me": 5.9, "n_them": 15.5, "def_n": 1.50, "spd": 104, "res_coef": 0.55},
+    "头目": {"n_me": 8.8, "n_them": 13.4, "def_n": 2.00, "spd": 116, "res_coef": 0.60},
+    "层主": {"n_me": 13.0, "n_them": 12.0, "def_n": 2.50, "spd": 128, "res_coef": 0.65},
+    "boss": {"n_me": 51.5, "n_them": 11.0, "def_n": 3.00, "spd": 140, "res_coef": 0.72}
   },
   "arch": {
     "杂兵": {"hp": 1.00, "atk": 1.00, "def": 1.00, "res": 1.00, "spd": 1.00},

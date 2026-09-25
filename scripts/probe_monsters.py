@@ -203,23 +203,32 @@ chk("★ 反解常数 = 公式表 $const（K_def=%s / K_rate=%s）· 与 panel_b
     RB.K_DEF == int(_C["K_def"]) and RB.K_RATE == int(_C["K_rate"])
     and RB.K_DEF == _PB.K_DEF and RB.K_RATE == _PB.K_RATE)
 
-# ⑬ ★ B3-18：**档位单调（全原型空间）** —— 「普通 < 精英 < 头目 < 层主 < boss」在
-#   hp/atk/def/spd 逐项成立，且**跨原型**（8 原型 × 5 档 × 6 锚点 × 4 项全格）：
-#   任意原型的高一档 > 任意原型的低一档。比「同族看得到档位差」硬得多 ——
-#   原表的病灶正是「同族能看出、跨族同级倒挂」（lv9 石滩螃蟹 def 29 > 精英伐木工 def 20）。
+# ⑬ ★ B3-18：**档位单调** —— 「普通 < 精英 < 头目 < 层主 < boss」逐项成立。
+#   ★ 2026-09-25 鱼鱼拍板分两条（`_notes.md` §三）：
+#     def/spd：**跨原型全空间**（8 原型 × 5 档 × 6 锚点）—— 任意原型的高一档 > 任意原型的低一档；
+#             原表的病灶正在这里（lv9 石滩螃蟹 def 29 > 精英伐木工 def 20）。
+#     hp/atk ：只要**基准阶梯**（杂兵）严格；原型保 14 号原表全幅（δ=1）——
+#             跨族倒挂是设计的一部分（群居血薄，它一次来 3–4 只）。
 _mono_bad = RB.check_monotone(verbose=False)
-chk("★ 档位单调（8 原型 × 5 档 × %d 锚点 × hp/atk/def/spd 全格）：任意原型的高一档 > 任意原型的低一档"
+chk("★ 档位单调（def/spd 跨原型全空间 + hp/atk 基准阶梯 · 8 原型 × 5 档 × %d 锚点）："
+    "任意原型的高一档 > 任意原型的低一档（def/spd）· 基准高档 > 基准低档（hp/atk）"
     % len(RB.ANCHORS), not _mono_bad, " · ".join(_mono_bad[:3]))
 
 # ⑭ ★ B3-18：**交换余量**（打得过的预算）—— n_them/n_me 是「它杀我要几下 / 我要打它几下」之比。
-#   实机扫描（`_sweep_tier.py` 的层主扫描）测得「单刷能赢」的边界 ≈ 1.0–1.2；这条钉 ≥ 1.05
-#   （够用来拦住「atk 升上去、hp 不降 ⇒ 层主必败」那种阶梯），**精细验收归 probe_combat ④**
-#   （真跑 36 局：自己那一级 ≥83% 胜 · 低 4 级 0 胜）。Boss 反过来必须 < 0.8（4 人队内容）。
-_g = {t: RB.TIERS[t]["n_them"] / RB.TIERS[t]["n_me"] for t in RB.TIER_ORDER}
-_solo = [t for t in RB.TIER_ORDER if t != "boss"]
-chk("★ 四个单刷档的交换余量 ≥ 1.05（%s）" % " · ".join("%s %.2f" % (t, _g[t]) for t in _solo),
-    all(_g[t] >= 1.05 for t in _solo))
-chk("★ Boss 的交换余量 < 0.8（%.2f —— 单人必倒地，4 人队才打得完）" % _g["boss"], _g["boss"] < 0.8)
+#   实机扫描（`scripts/balance_sweep.py` 的层主扫描）测得「单刷能赢」的边界 ≈ 1.0–1.2，
+#   这条钉 **≥ 1.05**；★ 按**域里真实存在的那 17 只**逐只算（hp/atk 保了原型全幅之后，
+#   基准值本身不再是「那只怪」）—— 精细验收仍归 probe_combat ④（真跑 36 局）。
+#   Boss 反过来必须 < 0.8（它是 4 人队内容 ⇒ 单人必倒地）。
+_g = {}
+for _name, _tier, _lv, _arch in RB.MOS:
+    _g[_name] = (RB.TIERS[_tier]["n_them"] / RB.design_ttk(_tier, _arch)[0], _tier)
+_solo = {k: v[0] for k, v in _g.items() if v[1] != "boss"}
+_boss_g = next(v[0] for v in _g.values() if v[1] == "boss")
+chk("★ 16 只非 Boss 的交换余量 ≥ 1.05（最小 %.2f：%s）"
+    % (min(_solo.values()), min(_solo, key=_solo.get)),
+    all(v >= 1.05 for v in _solo.values()))
+chk("★ Boss 的交换余量 < 0.8（%.2f —— 单人必倒地，4 人队才打得完）"
+    % _boss_g, _boss_g < 0.8)
 
 # ⑮ ★ B3-18：**单源** —— 档位/原型两张表只在 `content/rules/monster_tiers.json` 里，
 #   代码不许再抄第二份（`ARCH`/`TIERS` 必须是那个文件的对象本身，不是重建的副本）。
@@ -233,7 +242,10 @@ chk("★ 档位/原型表唯一来源 = content/rules/monster_tiers.json（%d �
 print()
 print("  · 档位 × 原型的 δ（保序压幅）：%s"
       % " · ".join("%s %.3f" % (k, v) for k, v in sorted(RB.delta_of().items())))
-print("  · 交换余量 g = n_them/n_me：%s" % " · ".join("%s %.2f" % (t, _g[t]) for t in RB.TIER_ORDER))
+print("  · 交换余量 g = n_them/n_me（基准）：%s"
+      % " · ".join("%s %.2f" % (t, RB.TIERS[t]["n_them"] / RB.TIERS[t]["n_me"]) for t in RB.TIER_ORDER))
+print("  · 交换余量（17 只实际）：最小 %.2f（%s）· 最大 %.2f"
+      % (min(v[0] for v in _g.values()), min(_g, key=lambda k: _g[k][0]), max(v[0] for v in _g.values())))
 
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))

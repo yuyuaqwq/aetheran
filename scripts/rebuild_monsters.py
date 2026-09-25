@@ -243,26 +243,32 @@ def lstat(stat, tier, arch):
     return ladder(stat, tier) * (1.0 + delta_of()[stat] * dev(stat, arch))
 
 
+#: ★ 2026-09-25 鱼鱼拍板（`_notes.md` §三）：四项**分两条判据**——
+#:   `def`/`spd` → 跨族全原型空间**严格**不越档（「普通怪比精英怪还硬」那个病的所在）；
+#:   `hp`/`atk`  → 只要**基准阶梯**（杂兵）严格不越档，原型**保 14 号原表全幅**（δ=1）
+#:                ⇒ 代价：群居精英的血可能低于厚甲普通（群居的原意是「一次来 3–4 只」，
+#:                那 3 只加起来还是厚）。这是设计取舍，不是判据放宽的意外。
+FULL_BAND_STATS = ("hp", "atk")
+
 _DELTA_CACHE = {}
 
 
 def delta_of():
-    """★ 原型偏移幅度 δ（每项一个数）—— **「跨族同级不越档」这条硬判据的精确反解**，不手写。
+    """每项的**原型偏移幅度 δ**（δ=1 ⇔ `14_怪物原型_v1.md` §二 那张表逐字可用）。
 
     ```text
-    要不越档：对每个锚点、每对相邻档，**任意原型**的高一档 > **任意原型**的低一档
-      min_原型(t) > max_原型(t−1) + 取整量子
-      base(t)(1 + δ·dev_min)  >  base(t−1)(1 + δ·dev_max) + MARGIN
-    ⇒ 逐格解出 δ 的上界，取全格最小值，再乘 safety；封顶 1.0
-      （δ=1 ⇔ 原表逐字可用；δ<1 ⇔ 保序压幅 —— 幅度只会被压，不会被放大）
-
-    ★ 取整量子为什么必须留：低等级面板只有个位数（1 级怪 atk ≈ 8），
-      分离量不到 1 点会被 `round()` 抹成平手 ⇒ 那格判据假红。
+    def/spd：要不越档：任意原型的高一档 > 任意原型的低一档
+            ⇔ 档间距 > 原型全幅          ← 按各锚点真算出来的基准值逐格解出 δ 的上界
+              （含取整量子：1 级怪的面板只有个位数，分离量不到 1 点会被 round() 抹成平手）
+    hp/atk ：鱼鱼拍板保全幅 ⇒ δ 恒 1.0（跨族倒挂是设计的一部分，见 FULL_BAND_STATS）
     ```
     """
     if _DELTA_CACHE:
         return _DELTA_CACHE
     for st in ("hp", "atk", "def", "spd"):
+        if st in FULL_BAND_STATS:
+            _DELTA_CACHE[st] = 1.0
+            continue
         vs = [dev(st, a) for a in ARCH]
         dmin, dmax = min(vs), max(vs)
         if dmax - dmin <= 0:
@@ -333,24 +339,33 @@ ANCHORS = (1, 20, 40, 60, 80, 100)
 
 
 def check_monotone(levels=ANCHORS, verbose=True):
-    """「跨族同级不越档」自检：**全原型空间**（8 原型 × 5 档 × 全部锚点），逐项四项。
+    """自检（★ 2026-09-25 鱼鱼拍板的分工 · `_notes.md` §三）：
 
-    判据（比「同族看得到档位差」硬得多）：对任意两个原型，高档那一只的四项都必须
-    严格大于低档那一只 —— 不是「碰巧某两只没撞车」。
+    ```text
+    def / spd：**全原型空间**严格不越档 —— 任意原型的高一档 > 任意原型的低一档
+               （「普通怪比精英怪还硬」那个病的所在，不许再犯）
+    hp  / atk：只要**基准阶梯**（杂兵）严格不越档 —— 原型保 14 号原表全幅（δ=1），
+               跨族倒挂是设计的一部分（群居血薄，它一次来 3–4 只）
+    ```
     """
     bad = []
-    for st in ("hp", "atk", "def", "spd"):
+    for st in ("def", "spd"):                       # 全原型空间
         for L in levels:
-            vals = {}
-            for t in TIER_ORDER:
-                vals[t] = [panel_of(L, t, a)[st] for a in ARCH]
+            vals = {t: [panel_of(L, t, a)[st] for a in ARCH] for t in TIER_ORDER}
             for i in range(1, len(TIER_ORDER)):
                 lo, hi = TIER_ORDER[i - 1], TIER_ORDER[i]
                 if min(vals[hi]) <= max(vals[lo]):
-                    bad.append("%s L%d %s(%d) 没压住 %s(%d)"
+                    bad.append("[跨族] %s L%d %s(%d) 没压住 %s(%d)"
                                % (st, L, hi, min(vals[hi]), lo, max(vals[lo])))
+    for st in ("hp", "atk"):                        # 只看基准（杂兵）
+        for L in levels:
+            vals = [baseline(L, t)[st] for t in TIER_ORDER]
+            for i in range(1, len(vals)):
+                if vals[i] <= vals[i - 1]:
+                    bad.append("[基准] %s L%d %s(%d) 没压住 %s(%d)"
+                               % (st, L, TIER_ORDER[i], vals[i], TIER_ORDER[i - 1], vals[i - 1]))
     if verbose:
-        print("  「跨族同级不越档」全原型空间（8 原型 × 5 档 × %d 个锚点 × 4 项）：%s"
+        print("  「档位单调」def/spd 跨族全原型空间 + hp/atk 基准阶梯（8 原型 × 5 档 × %d 个锚点）：%s"
               % (len(levels), "全绿 ✓" if not bad else "红 %d 条 ✗" % len(bad)))
         for b in bad[:6]:
             print("     -", b)
