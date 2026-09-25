@@ -3,6 +3,7 @@
   "_src": "槽位名 = `ext_combat/battle/landing.py` 里 `render_via(battle, \"…\")` 的第一参（逐字抄，别改）",
   "slots": {
     "battle.landing.element_immune": "COMBAT_ELEM_IMMUNE",
-    "battle.landing.element_weak": "COMBAT_ELEM_WEAK"
+    "battle.landing.element_weak": "COMBAT_ELEM_WEAK",
+    "battle.schedule.dot_tick": "COMBAT_DOT_TICK"
   }
 }

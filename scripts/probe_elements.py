@@ -14,7 +14,8 @@
   ⑦ 真战斗（技能 → 落地）：放真技能打样例怪 —— 两态差值对得上（冰 == int(基线×1.25) · 火 == 0）
      + 两行日志逐字 · 战斗照旧打得完
   ⑧ 一键撤 / 零影响：关掉样例 ⇒ actor 上没有那两个字段（逐字相同）· 非样例怪两态逐字相同
-  ⑨ 死槽位：声明的两条槽位**真被引擎请求过**（`TextTable.unused()` 空）
+  ⑨ 死槽位：声明的槽位（含 2026-09-25 补的 DoT 每跳那条）**真被引擎请求过**（`TextTable.unused()` 空）
+     · ⑨-a 顺带钉死「DoT 那行不含状态机器键」（引擎兜底会打出 `bleeding`）
   ⑩ 渲染口绝不抛（纪律）：没声明的 key / 空表 ⇒ 一律回字符串 —— 引擎 `landing.py` 那 108 行
      包在 `except Exception: pass` 里，渲染口一抛，免疫会连「伤害归 0」一起静默失效
 
@@ -273,8 +274,30 @@ finally:
 # ══════════════════════════════════════════════════════════════
 # ⑨ 死槽位（声明的两条**真被引擎请求过**）
 # ══════════════════════════════════════════════════════════════
+from ext_combat.battle import schedule as SCH                        # noqa: E402
+
+#: ★ 2026-09-25（P-38）：先让一个 DoT **真跳一跳**（否则下面那条「dot_tick 槽位被请求过」是假死）。
+#:   顺带把一件事钉死：引擎兜底那句 `🔥 {name} 受 {key} {n} 层影响…` 里的 `{key}` 是**状态机器键**
+#:   （B4-1 合入后 e2e 实测打出「受 **bleeding** 1 层影响」）—— 走槽位就是为了把它收掉。
+_bd = CB.build({"cls": "cls_assassin", "level": 16, "name": "探", "uid": "u_dot"}, [MID], MON, uid="u_dot")
+_ed = _bd.sides[CB.ENEMY_SIDE][0]
+_cd2 = _bd.focus()
+random.seed(SEED)
+_sub_dot, _e_dot, _w_dot = _bd.human_act("skill", "SKILL_SHD_bleed", _cd2)
+SCH.settle_landing(_bd, [], _cd2)
+SCH._advance_time(_bd, 1.0, [])                                      # 首次挂：登记下一跳
+_lg_dot = []
+SCH._advance_time(_bd, 30.0, _lg_dot)                                # 跳一次
+_dot_pre = str(_tx[BT.slots()["battle.schedule.dot_tick"]]["value"]).split("{")[0]     # 前缀现算，别手写那句
+_dot_lines = [x for x in _lg_dot if _dot_pre in x]
+chk("⑨-a 真放「割喉」⇒ DoT 每跳那行走**槽位**渲染（%s）" % (_dot_lines[:1] or "（没跳）"),
+    bool(_dot_lines))
+chk("⑨-a 那行**不含**状态机器键（%r）—— 引擎兜底会把它原样打给玩家"
+    % "bleeding",
+    bool(_dot_lines) and not any("bleeding" in x for x in _dot_lines))
+
 _unused = BT.battle_text().unused()
-chk("⑨ 声明的两条槽位都被引擎真请求过（unused = %r）" % (_unused,), _unused == ())
+chk("⑨ 声明的槽位（%d 条）都被引擎真请求过（unused = %r）" % (len(BT.slots()), _unused), _unused == ())
 
 # ══════════════════════════════════════════════════════════════
 # ⑩ 渲染口绝不抛（纪律：引擎那 108 行是 `except Exception: pass`）

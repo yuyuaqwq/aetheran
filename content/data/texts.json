@@ -4839,5 +4839,15 @@
     ],
     "category": "战斗",
     "desc": "P-1 元素样例：承伤方对该元素有弱点（引擎 battle.landing.element_weak 那条日志走这个槽位）"
+  },
+  "COMBAT_DOT_TICK": {
+    "value": "🔥 【{name}】持续受损（{n} 层）—— 损失 {dmg} 生命",
+    "params": [
+      "dmg",
+      "n",
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "战斗 · 持续伤害每跳一行（引擎 `battle.schedule.dot_tick` 那一口；★ 收掉引擎兜底里的 {key} 机器键）"
   }
 }

@@ -45,9 +45,12 @@ for sid, rec in (sk or {}).items():
 print("     六职业分布：%s" % " · ".join("%s %d" % (k, len(v)) for k, v in sorted(by_cls.items())))
 
 # ② 七维完整性
-need = ("name", "kind", "lv", "desc", "cd", "cast", "recover", "range", "mp", "power")
+#: ★ 2026-09-25（P-40）：「描述」那一维从 `desc`（悬空的槽位名）改成 `note`（技能页真渲它那句）
+#:   —— 这一条**只加强**：48 条技能现在**每条都必须有**一句玩家看得见的描述（摘要是红的）。
+need = ("name", "kind", "kind_key", "lv", "note", "cd", "cast", "recover", "range", "mp", "power")
 missing = [(sid, k) for sid, r in (sk or {}).items() for k in need if k not in r]
-chk("%d 条技能 7 维齐全（含 name/kind/lv/desc/cd/cast/recover/range/mp/power）" % len(sk or {}), not missing,
+chk("%d 条技能字段齐全（name/kind/kind_key/lv/note/cd/cast/recover/range/mp/power）" % len(sk or {}),
+    not missing,
     "" if not missing else str(missing[:4]))
 
 # ③ 三份默认域 + actions

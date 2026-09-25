@@ -117,7 +117,7 @@ def kind_key_of(rec: dict) -> str:
     if k not in KIND_KEY:
         raise KeyError("技能 %r 的 `kind` = %r 不在 KIND_KEY 表里（有的：%s）—— "
                        "新类别要先补表（表在 scripts/rebuild_skills.py）"
-                       % (rec.get("name") or rec.get("desc") or "?", k, " · ".join(sorted(KIND_KEY))))
+                       % (rec.get("name") or "?", k, " · ".join(sorted(KIND_KEY))))
     return KIND_KEY[k]
 
 

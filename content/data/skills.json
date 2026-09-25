@@ -4,7 +4,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 1,
-    "desc": "SKILL_KNT_slash_desc",
     "cd": 0,
     "cast": {
       "base": 60
@@ -34,7 +33,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 1,
-    "desc": "SKILL_KNT_oathwall_desc",
     "cd": 6,
     "cast": {
       "base": 40
@@ -60,7 +58,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 1,
-    "desc": "SKILL_KNT_taunt_desc",
     "cd": 12,
     "cast": {
       "base": 40
@@ -84,7 +81,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 1,
-    "desc": "SKILL_KNT_oathslash_desc",
     "cd": 5,
     "cast": {
       "base": 50
@@ -113,7 +109,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 1,
-    "desc": "SKILL_KNT_standfast_desc",
     "cd": 30,
     "cast": {
       "base": 80
@@ -140,7 +135,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 11,
-    "desc": "SKILL_KNT_bulwark_desc",
     "cd": 18,
     "cast": {
       "base": 60
@@ -167,7 +161,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 14,
-    "desc": "SKILL_KNT_rearguard_desc",
     "cd": 20,
     "cast": {
       "base": 50
@@ -191,7 +184,6 @@
     "kind": "被动",
     "kind_key": "passive",
     "lv": 16,
-    "desc": "SKILL_KNT_blockoath_desc",
     "cd": 0,
     "cast": {
       "base": 0
@@ -214,7 +206,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 1,
-    "desc": "SKILL_BSK_cleave_desc",
     "cd": 0,
     "cast": {
       "base": 60
@@ -241,7 +232,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 1,
-    "desc": "SKILL_BSK_sunder_desc",
     "cd": 4,
     "cast": {
       "base": 40
@@ -257,7 +247,7 @@
     "element": "ELE_PHYS",
     "mech": "def_break",
     "mech_val": 30.0,
-    "note": "自伤 8% max_hp；目标 def −30%（300 刻）",
+    "note": "自伤 8% 生命上限，换一记 1.6 倍重击 + 破甲：目标护甲 −30%，300 刻",
     "tier": 1,
     "kind_override": "物理",
     "exprs": [
@@ -269,7 +259,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 1,
-    "desc": "SKILL_BSK_rampage_desc",
     "cd": 6,
     "cast": {
       "base": 60
@@ -283,7 +272,7 @@
     "owner_class": "cls_berserker",
     "lv_band": "P1",
     "element": "ELE_PHYS",
-    "note": "自伤 12% max_hp",
+    "note": "自伤 12% 生命上限，换一记 2.4 倍重击（血就是你的资源）",
     "tier": 1,
     "kind_override": "物理",
     "exprs": [
@@ -295,7 +284,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 1,
-    "desc": "SKILL_BSK_immolate_desc",
     "cd": 30,
     "cast": {
       "base": 90
@@ -309,7 +297,7 @@
     "owner_class": "cls_berserker",
     "lv_band": "P1",
     "element": "ELE_FIRE",
-    "note": "自伤 35% 当前 hp（上限 40）；一场一次",
+    "note": "割开自己当前生命的 35%（最多 40 点）换一记 3.2 倍重击 —— 一场只放得出一次",
     "tier": 1,
     "kind_override": "物理",
     "exprs": [
@@ -321,7 +309,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 11,
-    "desc": "SKILL_BSK_blooddebt_desc",
     "cd": 16,
     "cast": {
       "base": 50
@@ -345,7 +332,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 14,
-    "desc": "SKILL_BSK_riposte_desc",
     "cd": 20,
     "cast": {
       "base": 40
@@ -369,7 +355,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 16,
-    "desc": "SKILL_BSK_sweep_desc",
     "cd": 20,
     "cast": {
       "base": 80
@@ -398,7 +383,6 @@
     "kind": "被动",
     "kind_key": "passive",
     "lv": 16,
-    "desc": "SKILL_BSK_bloodbrave_desc",
     "cd": 0,
     "cast": {
       "base": 0
@@ -421,7 +405,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 1,
-    "desc": "SKILL_RNG_shortbow_desc",
     "cd": 0,
     "cast": {
       "base": 60
@@ -451,7 +434,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 1,
-    "desc": "SKILL_RNG_aimshot_desc",
     "cd": 3,
     "cast": {
       "base": 30
@@ -477,7 +459,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 1,
-    "desc": "SKILL_RNG_snipe_desc",
     "cd": 8,
     "cast": {
       "base": 80
@@ -506,7 +487,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 1,
-    "desc": "SKILL_RNG_volley_desc",
     "cd": 30,
     "cast": {
       "base": 120
@@ -523,7 +503,7 @@
     "res_cost": {
       "RES_AIM": 6
     },
-    "note": "清空准星，每一层打一发（0.9 × 层数）",
+    "note": "把准星一次清空 —— 有几层就打几发（每发 0.9 倍）",
     "tier": 1,
     "kind_override": "物理",
     "exprs": [
@@ -535,7 +515,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 1,
-    "desc": "SKILL_RNG_quickstep_desc",
     "cd": 8,
     "cast": {
       "base": 30
@@ -559,7 +538,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 1,
-    "desc": "SKILL_RNG_backstep_desc",
     "cd": 2,
     "cast": {
       "base": 30
@@ -582,7 +560,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 11,
-    "desc": "SKILL_RNG_pindown_desc",
     "cd": 12,
     "cast": {
       "base": 50
@@ -613,7 +590,6 @@
     "kind": "被动",
     "kind_key": "passive",
     "lv": 16,
-    "desc": "SKILL_RNG_hawkeye_desc",
     "cd": 0,
     "cast": {
       "base": 0
@@ -636,7 +612,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 1,
-    "desc": "SKILL_MAG_stardust_desc",
     "cd": 0,
     "cast": {
       "base": 40
@@ -666,7 +641,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 1,
-    "desc": "SKILL_MAG_iceshard_desc",
     "cd": 4,
     "cast": {
       "base": 40
@@ -687,14 +661,14 @@
     "kind_override": "魔法",
     "exprs": [
       "matk*1.1"
-    ]
+    ],
+    "note": "起手最快的一记冰棱 —— 攒 1 层印记（水里的东西怕它）"
   },
   "SKILL_MAG_flameprint": {
     "name": "焰痕",
     "kind": "主动",
     "kind_key": "active",
     "lv": 1,
-    "desc": "SKILL_MAG_flameprint_desc",
     "cd": 6,
     "cast": {
       "base": 80
@@ -723,7 +697,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 1,
-    "desc": "SKILL_MAG_ignite_desc",
     "cd": 8,
     "cast": {
       "base": 200
@@ -742,7 +715,7 @@
     },
     "mech": "mark_burst",
     "mech_val": 0.35,
-    "note": "清空印记：power 1.0 + 0.35×层数；★ 200 刻前摇比刺客的打断窗口（160 刻）长",
+    "note": "把攒下的印记一次引爆：基础一记，每多一层再添三分 —— 前摇很长，容易被人截住",
     "tier": 1,
     "kind_override": "魔法",
     "exprs": [
@@ -754,7 +727,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 1,
-    "desc": "SKILL_MAG_fallenstar_desc",
     "cd": 30,
     "cast": {
       "base": 240
@@ -773,7 +745,7 @@
     },
     "mech": "mark_burst",
     "mech_val": 0.8,
-    "note": "清空印记：0.8×层数 + 眩晕 100 刻",
+    "note": "印记攒到三层以上才放得出来：这一下砸下去，每层再添 0.8 倍，并把它砸晕 100 刻",
     "tier": 1,
     "kind_override": "魔法",
     "exprs": [
@@ -785,7 +757,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 11,
-    "desc": "SKILL_MAG_silence_desc",
     "cd": 15,
     "cast": {
       "base": 80
@@ -816,7 +787,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 14,
-    "desc": "SKILL_MAG_frostveil_desc",
     "cd": 18,
     "cast": {
       "base": 60
@@ -844,7 +814,6 @@
     "kind": "被动",
     "kind_key": "passive",
     "lv": 16,
-    "desc": "SKILL_MAG_starred_desc",
     "cd": 0,
     "cast": {
       "base": 0
@@ -867,7 +836,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 1,
-    "desc": "SKILL_PRS_staff_desc",
     "cd": 0,
     "cast": {
       "base": 60
@@ -894,7 +862,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 1,
-    "desc": "SKILL_PRS_lullaby_desc",
     "cd": 6,
     "cast": {
       "base": 60
@@ -910,7 +877,7 @@
     "element": "ELE_HOLY",
     "mech": "hot",
     "mech_val": 300.0,
-    "note": "一次挂 300 刻再生（每刻 heal 的 1/4）",
+    "note": "挂上 300 刻的再生：每一跳回一次血，一跳约等于这一次治疗量的四分之一",
     "tier": 1,
     "kind_override": "治疗"
   },
@@ -919,7 +886,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 1,
-    "desc": "SKILL_PRS_absolve_desc",
     "cd": 10,
     "cast": {
       "base": 50
@@ -934,7 +900,7 @@
     "lv_band": "P1",
     "element": "ELE_HOLY",
     "mech": "cleanse",
-    "note": "解掉一个控制效果",
+    "note": "替队友解掉一个控制（被控、被定住这类）",
     "tier": 1,
     "kind_override": "增益"
   },
@@ -943,7 +909,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 1,
-    "desc": "SKILL_PRS_aegis_desc",
     "cd": 12,
     "cast": {
       "base": 40
@@ -967,7 +932,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 1,
-    "desc": "SKILL_PRS_matins_desc",
     "cd": 30,
     "cast": {
       "base": 100
@@ -986,7 +950,7 @@
     },
     "mech": "immune_window",
     "mech_val": 100.0,
-    "note": "全队 100 刻免疫窗口",
+    "note": "全队进入 100 刻的免疫窗口 —— 这 100 刻里落上来的东西不算数",
     "tier": 1,
     "kind_override": "增益"
   },
@@ -995,7 +959,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 11,
-    "desc": "SKILL_PRS_discipline_desc",
     "cd": 8,
     "cast": {
       "base": 70
@@ -1024,7 +987,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 14,
-    "desc": "SKILL_PRS_nightwatch_desc",
     "cd": 22,
     "cast": {
       "base": 50
@@ -1048,7 +1010,6 @@
     "kind": "被动",
     "kind_key": "passive",
     "lv": 16,
-    "desc": "SKILL_PRS_comfort_desc",
     "cd": 0,
     "cast": {
       "base": 0
@@ -1071,7 +1032,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 1,
-    "desc": "SKILL_SHD_blade_desc",
     "cd": 0,
     "cast": {
       "base": 60
@@ -1098,7 +1058,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 1,
-    "desc": "SKILL_SHD_sever_desc",
     "cd": 5,
     "cast": {
       "base": 30
@@ -1114,7 +1073,7 @@
     "element": "ELE_PHYS",
     "mech": "interrupt",
     "mech_val": 200.0,
-    "note": "打断待发动作 + 挂破绽 200 刻（承伤 ×1.35）",
+    "note": "打断对面正在念的那一手，并在它身上划开破绽：200 刻内全队打它更疼（×1.35）",
     "tier": 1,
     "kind_override": "物理",
     "exprs": [
@@ -1126,7 +1085,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 1,
-    "desc": "SKILL_SHD_findgap_desc",
     "cd": 3,
     "cast": {
       "base": 20
@@ -1152,7 +1110,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 1,
-    "desc": "SKILL_SHD_shadowstrike_desc",
     "cd": 20,
     "cast": {
       "base": 70
@@ -1178,7 +1135,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 1,
-    "desc": "SKILL_SHD_backstep_desc",
     "cd": 2,
     "cast": {
       "base": 30
@@ -1201,7 +1157,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 11,
-    "desc": "SKILL_SHD_bleed_desc",
     "cd": 10,
     "cast": {
       "base": 40
@@ -1217,7 +1172,7 @@
     "element": "ELE_PHYS",
     "mech": "bleed",
     "mech_val": 300,
-    "note": "一刀拉开口子：300 刻里持续失血（0.04 倍攻击/层 · 每 30 刻跳一次 · 最多 3 层 · 目标见底时翻倍）",
+    "note": "一刀拉开口子：接下来 300 刻它一直在失血，同一处最多叠三层 —— 伤口叠得越深掉得越快，它快见底时血流得更凶",
     "tier": 1,
     "kind_override": "物理",
     "exprs": [
@@ -1229,7 +1184,6 @@
     "kind": "主动",
     "kind_key": "active",
     "lv": 14,
-    "desc": "SKILL_SHD_sidestep_desc",
     "cd": 16,
     "cast": {
       "base": 30
@@ -1253,7 +1207,6 @@
     "kind": "被动",
     "kind_key": "passive",
     "lv": 16,
-    "desc": "SKILL_SHD_keenedge_desc",
     "cd": 0,
     "cast": {
       "base": 0

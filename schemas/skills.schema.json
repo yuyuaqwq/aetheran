@@ -9,7 +9,7 @@
         "kind",
         "kind_key",
         "lv",
-        "desc",
+        "note",
         "cd",
         "cast",
         "recover",
@@ -38,10 +38,10 @@
           "type": "integer",
           "minimum": 1
         },
-        "desc": {
+        "note": {
           "type": "string",
           "minLength": 1,
-          "$comment": "文案真源 = content/data/text_specs.json，此处只传槽位"
+          "$comment": "★ 玩家看得见的那句描述（技能页「↳ …」渲的就是它）· 写机制人话，不写数值表 —— 数值走 power/exprs/cd/mp，两处口径会打架。★ 2026-09-25（P-40）：原先这里是 `desc`（槽位名），48 条技能全挂着 `SKILL_*_desc` 而 texts 域里一条都没有、代码里也没消费端 ⇒ 撤掉那个字段；描述真源 = `note`。要写风味文案（文学向）再单开一批，字段与出口一起加。"
         },
         "cd": {
           "type": "integer",
