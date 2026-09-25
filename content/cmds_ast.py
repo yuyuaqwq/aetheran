@@ -87,6 +87,34 @@ def exp_need(level):
     return lv * lv * 40
 
 
+def exp_of_kill(monster_level):
+    """打怪给的经验 = **同级升级需求的 1/40**（`00_第一阶段内容总纲_v1 §七` 经验产出）。
+
+    「同级」= 那只怪**自己**的等级 ⇒ 同级打同级平均 **40 只升一级**（精英 / 头目天然更高，
+    它们等级本来就高）。★ 分母不手打：走 `exp_need` 一个口 —— 曲线一旦定下来（P-22），
+    这里自动跟着变。
+    """
+    lv = max(1, int(monster_level or 1))
+    return max(1, int(round(exp_need(lv) / 40.0)))
+
+
+def add_exp(p, n):
+    """加经验并结算升级 —— 升级判定**唯一口**（打怪与交活都走它）。返回升了几级。
+
+    曲线只认 `exp_need`；经验**跨级结转**（一次加很多也能连升几级）。
+    """
+    p["exp"] = int(p.get("exp") or 0) + int(n or 0)
+    lv = int(p.get("level", 1) or 1)
+    ups = 0
+    while p["exp"] >= exp_need(lv):
+        p["exp"] -= exp_need(lv)
+        lv += 1
+        ups += 1
+    if ups:
+        p["level"] = lv
+    return ups
+
+
 def _save(env):
     """★ 落档是处理器的责任（引擎 2026-09-15 起不再每条消息整档回写）。"""
     try:

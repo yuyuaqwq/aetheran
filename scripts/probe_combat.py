@@ -132,6 +132,69 @@ _MP = st.domain("maps") or {}
 _NODES = [n.get("id") for n in ((_MP.get(CA.CHAPEL[0]) or {}).get("nodes") or [])]
 (ok if CA.CHAPEL[1] in _NODES else bad)("★ 复活点 %s 是 maps 域里的真节点" % (CA.CHAPEL[1],))
 
+# ⑪ ★ B3-13 打怪给经验：真调「攻击」⇒ 经验涨的正好是 `exp_of_kill`（怪自己那级）
+#    （口径：`06_第一阶段垂直切片/00_第一阶段内容总纲_v1 §七` 怪给经验 = 同级升级需求的 1/40）
+import random as _rnd                                                       # noqa: E402
+
+_rnd.seed(20260925)                        # 遭遇战内部走全局随机 ⇒ 钉住种子好对账
+_MID = "ms_field_mouse"
+_MON_LV = int(MON[_MID].get("lv", 1) or 1)
+_GAIN = dict(CA.DEFAULT_PLAYER)
+_GAIN.update({"cls": "cls_knight", "level": 10, "hp": 400, "hp_max": 400,
+              "gold": 0, "exp": 0, "loc": "belt_north", "node": "bn_bone",
+              "bag": {}, "uid": "u_exp"})
+_real_pick = CBmod.pick_encounter
+CBmod.pick_encounter = lambda *a, **k: [_MID]
+try:
+    _lines_exp = _drive(CBAT.attack, _GAIN)
+finally:
+    CBmod.pick_encounter = _real_pick
+(ok if any("打完了" in x for x in _lines_exp) else bad)("⑪ 前提：这一场真赢了（下面两条才成立）")
+(ok if int(_GAIN["exp"]) == CA.exp_of_kill(_MON_LV) else bad)(
+    "★ 打怪给经验（%s Lv%s ⇒ +%s · 实得 %s）" % (_MID, _MON_LV, CA.exp_of_kill(_MON_LV), _GAIN["exp"]))
+(ok if int(_GAIN["gold"]) > 0 else bad)("打怪照样给钱（金币 %s）" % _GAIN["gold"])
+
+# ⑫ ★ 「同级 40 只升一级」：1..20 级逐级对账 —— 偏出「一只」以上就红（数值不许手打）
+_off = [(L, CA.exp_of_kill(L)) for L in range(1, 21)
+        if abs(CA.exp_of_kill(L) * 40 - CA.exp_need(L)) > 40]
+(ok if not _off else bad)("★ 同级 40 只升一级（逐级对账；偏出 %s）" % (_off or "无"))
+
+# ⑬ ★ 升级唯一口 + 经验跨级结转（打怪与交活都走 `add_exp` —— 曲线只有 `exp_need` 一处）
+_UP = dict(CA.DEFAULT_PLAYER)
+_UP.update({"level": 1, "exp": 0})
+_N = int(CA.exp_need(1) + CA.exp_need(2) + 5)
+_ups = CA.add_exp(_UP, _N)
+(ok if (_ups == 2 and _UP["level"] == 3 and _UP["exp"] == 5) else bad)(
+    "★ 经验跨级结转（一次 +%s ⇒ 升 %s 级 · level=%s · 余 %s）" % (_N, _ups, _UP["level"], _UP["exp"]))
+
+# ⑭ ★ 交活那条线也走同一个口（换掉原先内联的 while 之后不许变形）
+from content import cmds_quest as CQ                                        # noqa: E402
+
+_QREW = int((st.domain("quests") or {})["q_main_01"]["reward_exp"])
+_Q = dict(CA.DEFAULT_PLAYER)
+_Q.update({"level": 1, "exp": int(CA.exp_need(1)) - _QREW, "uid": "u_up",
+           "flags": {"quests_active": ["q_main_01"], "quests_done": []}})
+
+
+def _drive_text(fn, p, text, uid="u_up"):
+    """要带参数的实现体：env.text 给出来（`交 1`）。"""
+    out = []
+
+    async def _go():
+        e = _E()
+        e.text = text
+        async for line in fn(e, None, uid, p):
+            out.append(line)
+
+    asyncio.run(_go())
+    return out
+
+
+_lines_q = _drive_text(CQ.quest_deliver, _Q, "交 1")
+(ok if (int(_Q["level"]) == 2 and int(_Q["exp"]) == 0) else bad)(
+    "★ 交活升级走 add_exp（%s + %s ⇒ level=%s · 余 %s）"
+    % (int(CA.exp_need(1)) - _QREW, _QREW, _Q["level"], _Q["exp"]))
+
 print()
 print("结果：%s" % ("全绿 ✓" if not fails else "有红 ✗"))
 sys.exit(1 if fails else 0)

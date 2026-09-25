@@ -6,7 +6,7 @@
 """
 from __future__ import annotations
 
-from .cmds_ast import _data, _p, _save, _map_of, _name_of_node, T, exp_need
+from .cmds_ast import _data, _p, _save, _map_of, _name_of_node, T, add_exp
 from .cmds_talk import _arg
 from .cmds_ast import _npcs_here
 
@@ -140,17 +140,10 @@ async def quest_deliver(env, sink, uid, player):
         return
     _set(p, "quests_active", [a for a in act if a != k])
     _set(p, "quests_done", _done(p) + [k])
-    p["exp"] = p.get("exp", 0) + x["reward_exp"]
     p["gold"] = p.get("gold", 0) + x["reward_gold"]
+    # ★ B3-13：升级判定收成 `cmds_ast.add_exp` **一个口**（打怪给经验也走它）
+    leveled = bool(add_exp(p, x["reward_exp"]))
     lv = p.get("level", 1)
-    while p["exp"] >= exp_need(lv):                 # ★ 曲线只有 cmds_ast.exp_need 一个口
-        p["exp"] -= exp_need(lv)
-        lv += 1
-    if lv != p.get("level"):
-        p["level"] = lv
-        leveled = True
-    else:
-        leveled = False
     if player is not None:
         player.update(p)
     _save(env)

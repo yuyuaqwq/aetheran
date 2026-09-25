@@ -8,10 +8,14 @@
   不掉装备 —— 口径 `00_总纲/03_主要玩法 §4.9`，曲线走 `cmds_ast.exp_need` 一个口）；
   倒地与掉经验的话走向 `texts` 槽位（`SYS_DEATH_WILD` / `SYS_DEATH_QUEST_LOSS`）；
   每场结束写 `flags.last_battle` —— 那是『战斗日志』**唯一**的来源（原先只有读端）。
+★ B3-13 补上产出那一半：**胜利给经验**（= 同级升级需求的 1/40 · `cmds_ast.exp_of_kill`），升级判定走
+  `cmds_ast.add_exp`（与交活同一个口）—— 原先打怪只给钱与掉落，升级只能靠交活。
 """
 from __future__ import annotations
 
-from .cmds_ast import _data, _p, _save, _map_of, _name_of_node, T, CHAPEL, exp_need
+from .cmds_ast import (
+    _data, _p, _save, _map_of, _name_of_node, T, CHAPEL, exp_need,
+    exp_of_kill, add_exp)
 from .cmds_talk import _arg
 from .cmds_codex import new_lines
 from . import codex as CX
@@ -83,6 +87,10 @@ async def attack(env, sink, uid, player):
         gold = lv * (8 if m.get("role") == "精英" else (20 if m.get("role") in ("头目", "层主", "boss") else 3))
         p["gold"] = int(p.get("gold", 0)) + gold
         p["hp"] = hp_after
+        # ★ B3-13：打怪给经验（原先只有交活给 —— 「接活→出门→打怪→交活」这条循环里，
+        #   打怪那一半是白打的）。公式走 `exp_of_kill`，升级走 `add_exp` —— 都只有一个口。
+        exp_gain = exp_of_kill(lv)
+        ups = add_exp(p, exp_gain)
         # ★ 掉落（B2-3）：按怪身上的 dp_* 池抽（可复现：种子 = 玩家 uid + 怪 id）
         drops = []
         for pool_id in (m.get("drops") or []):
@@ -95,7 +103,10 @@ async def attack(env, sink, uid, player):
         if player is not None:
             player.update(p)
         _save(env)
-        yield "铜板 +%d（现在 %d）｜ 生命 %d" % (gold, p["gold"], hp_after)
+        yield T("SYS_REWARD", exp=exp_gain, gold=gold)      # ★ 现成槽位（26_消息模板 §5）
+        yield "铜板 %d ｜ 生命 %d ｜ 经验 %d" % (p["gold"], hp_after, p["exp"])
+        if ups:
+            yield T("SYS_JOB_LEVELUP", level=p["level"])
         if drops:
             for d in drops:
                 rec = LT.rec_of(d["id"])     # ★ 未鉴定的 marker 名字在池上（唯一一口）
