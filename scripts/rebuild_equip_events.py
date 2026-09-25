@@ -15,6 +15,9 @@
      点 = 垂钓点里节点名含「浅滩」的那一个；权重 = 该域「关键物」的现成惯例（5 个搜查点的套装件都是 10），
      并要求它确实比该池里别的条目都小（= 最稀的那一位 ⇒ 反复采时最先被捡走）。
 
+★ 机器键：新信物那条记录里 `kind` 与 `kind_key` **成对写**，表 = `rebuild_kind_keys.ITEM_KIND_KEY`
+  （单一来源 · 不抄第二份）—— 落完再跑 `rebuild_kind_keys.py` 是 0 处要补（幂等）。
+
 不在本脚本里的（**因为它们不是表**）：
   · 6 处挂载（dialogues 域 5 处 `need.holding` · monsters 域 1 处战内台词）= 手写在域里。
     理由（B1-4 先例）：对话文案的真源就是 dialogues 域自身，给它再加一层生成器 = 两处口径。
@@ -32,6 +35,11 @@ import json
 import os
 import re
 import sys
+
+#: ★ 机器键那张表（中文 kind → ASCII kind_key）的**唯一来源**就是这支生成器 ——
+#:   这里 import 它，不另抄一份（P-41：两处口径打架的根因）。
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import rebuild_kind_keys as KK                                     # noqa: E402
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PLAN = os.environ.get("AST_PLAN", "C:/Users/yuyu/aetheran-plan")
@@ -193,8 +201,14 @@ def main():
         raise RuntimeError("codex 旧物谱里没有 %s 的 hint（来处没处取）" % NEW_ITEM_SRC)
     if NEW_ITEM_SRC not in pois:
         raise RuntimeError("pois 里没有 %s —— 新信物正是那处地方的东西" % NEW_ITEM_SRC)
-    want_item = {"name": NEW_ITEM_NAME, "icon": NEW_ITEM_ICON, "kind": kind, "quality": "遗物",
-                 "price": 0, "lore": src["hint"], "desc": NEW_ITEM_DESC}
+    # ★ P-41：机器键 `kind_key` 与中文 `kind` **成对写**（表取自 rebuild_kind_keys.ITEM_KIND_KEY）。
+    #   缺这一格 ⇒ `rebuild_kind_keys` 补完之后本脚本重跑即炸（逐字比对不过 · 波九就记过一笔）。
+    kind_key = KK.ITEM_KIND_KEY.get(kind)
+    if not kind_key:
+        raise RuntimeError("★ kind=%r 不在机器键表里（先补 rebuild_kind_keys.ITEM_KIND_KEY 与 schema enum）"
+                           % kind)
+    want_item = {"name": NEW_ITEM_NAME, "icon": NEW_ITEM_ICON, "kind": kind, "kind_key": kind_key,
+                 "quality": "遗物", "price": 0, "lore": src["hint"], "desc": NEW_ITEM_DESC}
     if NEW_ITEM_ID in items:
         if items[NEW_ITEM_ID] != want_item:
             raise RuntimeError("★ %s 已存在且与本次口径逐字不同：%s" % (NEW_ITEM_ID, items[NEW_ITEM_ID]))

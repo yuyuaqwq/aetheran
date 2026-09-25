@@ -29,6 +29,7 @@
 ★ 本模块只提供算法（panel_of）；写文件走 main —— **import 不改任何数据**。
   用法：python scripts/rebuild_monsters.py          （重写 content/data/monsters.json）
         python scripts/rebuild_monsters.py --table  （只打印表，不写）
+        python scripts/rebuild_monsters.py --dry    （算完不写盘；有改动会报出来）
 """
 import io
 import json
@@ -552,7 +553,16 @@ def main(argv=None):
         rec["mods"] = mods
         mos[key] = rec
         fixed += 1
-    io.open(p, "w", encoding="utf-8", newline="\n").write(json.dumps(mos, ensure_ascii=False, indent=2) + "\n")
+    out = json.dumps(mos, ensure_ascii=False, indent=2) + "\n"
+    cur = io.open(p, encoding="utf-8").read()
+    dirty = out != cur
+    if "--dry" in argv:
+        print("--dry：不写盘（%s）" % ("有改动待落" if dirty else "与域里逐字节相同 —— 幂等 ✓"))
+    elif not dirty:
+        print("· 无变化 —— 数据不变（幂等）")
+    else:
+        io.open(p, "w", encoding="utf-8", newline="\n").write(out)
+        print("· 已写 content/data/monsters.json")
     print("重算 %d 只怪的 panel（档位反解 · 取整）· 补 role_key（%s）"
           % (fixed, " / ".join("%s→%s" % kv for kv in ROLE_KEY.items())))
     print("按人数缩放档（%s）：%s"
