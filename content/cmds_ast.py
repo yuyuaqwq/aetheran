@@ -259,6 +259,8 @@ async def be_race(env, sink, uid, player):
     cost = rec.get("cost") or {}
     if cost:
         yield T("SYS_RACE_COST", name=cost.get("name", ""), effect=cost.get("effect", ""))
+    if not p.get("cls"):        # ★ B4-7：建号第二步在等着（定过就不再啰嗦）
+        yield T("SYS_CLS_ASK")
 
 
 def race_menu():
@@ -285,6 +287,126 @@ def _cls_label(cls):
         return T("SYS_UNSET")
     d = _data("classes")
     return (d.get(c) or d.get("cls_" + c.lower()) or {}).get("name") or c
+
+
+def _cls_rec(cls):
+    """档上的职业 id（`cls_knight`）→ classes 域里那条记录（认不出给空表）。
+
+    与 `_race_rec` 同形：短名（`knight`）也认（域里的键带「cls_」前缀那一份）。
+    """
+    c = str(cls or "").strip()
+    if not c:
+        return {}
+    d = _data("classes")
+    return d.get(c) or d.get("cls_" + c.lower()) or {}
+
+
+def _cls_all():
+    """六门按 `order` 排（真源 `03_职业与技能/08_六职业对照_v2 §一` 的表序：
+    骑士 → 狂战士 → 游侠 → 法师 → 修女 → 刺客）。
+
+    ★ 别按 id 字母序 —— 那样菜单第一行是「刺客」（`cls_assassin`），
+      而那份对照表把「骑士」放在第一行（玩家最可能选的就是它）。
+    """
+    d = _data("classes")
+    return sorted(((k, v) for k, v in d.items() if isinstance(v, dict) and not k.startswith("_")),
+                  key=lambda kv: (kv[1].get("order") or 99, kv[0]))
+
+
+def _cls_match(want):
+    """玩家写的那个词 →（id, 记录）：中文名 / 短名（`knight`）/ 全 id（`cls_knight`）都认。"""
+    w = str(want or "").strip().lower()
+    if not w:
+        return None
+    for k, v in _cls_all():
+        if w in (str(v.get("name") or "").strip().lower(), k.lower(), k.lower().replace("cls_", "")):
+            return (k, v)
+    return None
+
+
+def _cls_star(p, rec):
+    """菜单那一行末尾那个星 —— 跟**你选的那一族**的 `recommend` 走（真源 18 §二 推荐组合）。
+
+    `任意`（人类那条）不算推荐：它说的是「哪一门都行」，不该六行全挂星。
+    """
+    recs = (_race_rec(p.get("race")) or {}).get("recommend") or []
+    return T("SYS_CLS_STAR") if rec.get("name") in recs else ""
+
+
+def class_menu(p) -> list:
+    """建号第二步那一眼：每种打法两行（一行是什么人 · 一行什么节奏）。文案一个字都不在这里写。"""
+    out = [T("SYS_CLS_HEAD", race=_race_label(p.get("race")))]
+    for i, (k, v) in enumerate(_cls_all(), 1):
+        out.append(T("SYS_CLS_ROW", i="①②③④⑤⑥"[i - 1] if i <= 6 else str(i),
+                     star=_cls_star(p, v), icon=v.get("icon", ""), name=v.get("name", k),
+                     role=v.get("role", ""), desc=v.get("desc", "")))
+        out.append(T("SYS_CLS_MECH", mech=v.get("mech", "")))
+    out.append(T("SYS_CLS_HOW"))
+    return out
+
+
+def _cls_page(rec) -> list:
+    """定过之后再「职业」那一眼 —— 名字 · 定位 · 一句自述 · 节奏（与菜单同一句话，不另写一份）。"""
+    return [T("SYS_CLS_VIEW", icon=rec.get("icon", ""), name=rec.get("name", ""),
+              role=rec.get("role", ""), desc=rec.get("desc", ""), mech=rec.get("mech", ""))]
+
+
+async def be_class(env, sink, uid, player):
+    """★ 建号第二步：定下自己是哪一门（B4-7）。
+
+    为什么需要：档上 `cls` 原先**没有任何写端**（建号只走完了第一步选族）⇒ 新号没有面板：
+    `状态` 的生命是「未定」，「攻击」「歇脚」这类要数字的地方全被 fail-closed 挡掉
+    （回「职业基础 还没接上」）—— 端到端玩一把就能看到。
+
+    三个触发词一件事：`选职业 <职业名>` 定下来 · 裸 `选职业` / `职业` 看六种打法。
+    定过之后再敲 = 看你这一门；带名字想换 ⇒ 明说「已经定了」（换门是 21–40 级的转职，
+    真源 18 §五）—— 与 `be_race` 同一条纪律：手滑换门会毁档。
+    """
+    p = _p(player)
+    raw = (getattr(env, "text", "") or "").strip()
+    parts = raw.split(None, 1)
+    want = parts[1].strip() if len(parts) > 1 else ""
+    all6 = _cls_all()
+    cur = str(p.get("cls") or "").strip()
+
+    if cur:
+        rec = _cls_rec(cur)
+        if not rec:                                     # 声明错了：不猜、不出假页
+            yield T("SYS_CLS_HAS", name=_cls_label(cur))
+            return
+        for line in _cls_page(rec):
+            yield line
+        if want:
+            yield T("SYS_CLS_HAS", name=rec.get("name", cur))
+        return
+
+    if not p.get("race"):                               # 建号第一步还没走完
+        yield T("SYS_CLS_NORACE")
+        return
+
+    if not want:
+        for line in class_menu(p):
+            yield line
+        return
+
+    hit = _cls_match(want)
+    if hit is None:
+        yield T("SYS_CLS_BAD", want=want, all=" · ".join(v.get("name", k) for k, v in all6))
+        return
+
+    kid, rec = hit
+    p["cls"] = kid
+    p = _p(p)                       # ★ 出档口现算：上限这一格随职业落地（`hp` 跟着回满）
+    if player is not None:
+        player.update(p)
+    _save(env)
+    yield T("SYS_CLS_DONE", name=rec.get("name", kid))
+    yield T("SYS_CLS_MECH", mech=rec.get("mech", ""))
+    if p.get("hp_max"):
+        yield T("SYS_CLS_HP", hp=p.get("hp"), max=p.get("hp_max"))
+    yield T("SYS_CLS_NEXT", left=AL.left_of_record(p), alloc=_alloc_verb())
+    if not str(p.get("name") or "").strip():            # 建号第三步（取名）还没走完
+        yield T("SYS_CLS_NAME")
 
 
 def _npcs_here(loc, node, st=None, p=None):

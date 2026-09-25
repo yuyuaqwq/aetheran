@@ -1,6 +1,7 @@
 {
   "cls_knight": {
     "name": "骑士",
+    "order": 1,
     "role": "坦克",
     "dmg_channel": "phys",
     "icon": "🛡️",
@@ -65,6 +66,7 @@
   },
   "cls_berserker": {
     "name": "狂战士",
+    "order": 2,
     "role": "近战输出",
     "dmg_channel": "phys",
     "icon": "🪓",
@@ -123,6 +125,7 @@
   },
   "cls_ranger": {
     "name": "游侠",
+    "order": 3,
     "role": "远程输出",
     "dmg_channel": "phys",
     "icon": "🏹",
@@ -182,6 +185,7 @@
   },
   "cls_mage": {
     "name": "法师",
+    "order": 4,
     "role": "法术输出",
     "dmg_channel": "magi",
     "icon": "✨",
@@ -245,6 +249,7 @@
   },
   "cls_priest": {
     "name": "修女",
+    "order": 5,
     "role": "支援",
     "dmg_channel": "magi",
     "icon": "🕊️",
@@ -312,6 +317,7 @@
   },
   "cls_assassin": {
     "name": "刺客",
+    "order": 6,
     "role": "爆发输出",
     "dmg_channel": "phys",
     "icon": "🗡️",

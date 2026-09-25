@@ -462,6 +462,21 @@ def main():
         ("状态(族与职业都定过)", CA.status, "",
          {"loc": "windmill_town", "node": "wt_gate_n", "level": 3, "cls": "cls_knight", "race": "elf"}),
         ("出身", CA.origin, "", {"race": "elf"}),
+        # ★ B4-7（建号第二步）：新接的那一条 + 建号第一步的收尾 —— 每一支都真跑一遍
+        #   （没定族 / 递菜单 / 定下来（还没取名 / 有名字）/ 定过再看 / 确认换门 / 认不出），
+        #   于是 ⑥ 的「不缺文案」与「不漏机器键」两条**自动**罩到它们身上（K61）。
+        ("职业(还没定族)", CA.be_class, "职业", {"race": "", "cls": ""}),
+        ("职业(递菜单)", CA.be_class, "职业", {"race": "human", "cls": ""}),
+        ("选职业(定下来·还没取名)", CA.be_class, "选职业 骑士",
+         {"race": "human", "cls": "", "name": "", "alloc": {}}),
+        ("选职业(定下来·有名字)", CA.be_class, "选职业 法师",
+         {"race": "elf", "cls": "", "name": "试", "alloc": {}}),
+        ("职业(定过再看)", CA.be_class, "职业", {"race": "human", "cls": "cls_knight"}),
+        ("选职业(定过了·想换)", CA.be_class, "选职业 法师",
+         {"race": "human", "cls": "cls_knight"}),
+        ("选职业(认不出)", CA.be_class, "选职业 大魔王", {"race": "human", "cls": ""}),
+        ("选族(建号第一步·收尾那句)", CA.be_race, "我是 精灵", {"race": "", "cls": ""}),
+
         ("背包(空)", CA.bag, "", {"bag": {}}),
         ("背包(有东西)", CA.bag, "", {"bag": {"i_material_iron_chip": 2}}),
         ("钱袋", CA.money, "", {"gold": 42}),

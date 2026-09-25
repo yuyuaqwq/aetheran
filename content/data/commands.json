@@ -1959,5 +1959,26 @@
         "player"
       ]
     }
+  },
+  "be_class": {
+    "patterns": [
+      "^选职业\\s*(.+)$",
+      "^选职业$",
+      "^职业$"
+    ],
+    "category": "角色",
+    "desc": "建号：定下自己是哪一门（六种打法选一）",
+    "usage": "选职业 <职业名>",
+    "visible": true,
+    "order": 4,
+    "bind": {
+      "handler": "content.cmds_ast:be_class",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    },
+    "guard_desc": "定了族、还没定职业时"
   }
 }

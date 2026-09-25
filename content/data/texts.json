@@ -4877,5 +4877,119 @@
     ],
     "category": "战斗",
     "desc": "战斗 · 资源不足（顶掉引擎那句坏格式符的兜底；★ 不显示资源机器键，玩家自己那一条资源不用点名）"
+  },
+  "SYS_CLS_ASK": {
+    "value": "还差一步：打『选职业』看六种打法，定下你往后怎么打。",
+    "params": [],
+    "category": "系统",
+    "desc": "B4-7 建号第二步 · 选完族那一下的下一步（真源 18 §一 第 2 步）"
+  },
+  "SYS_CLS_HEAD": {
+    "value": "你是{race}了 —— 还没定下怎么打。\n—— 六种打法，挑一个你愿意一直用的。",
+    "params": [
+      "race"
+    ],
+    "category": "系统",
+    "desc": "B4-7 建号第二步 · 菜单头"
+  },
+  "SYS_CLS_ROW": {
+    "value": "{i}{star} {icon} {name}（{role}） —— {desc}",
+    "params": [
+      "i",
+      "star",
+      "icon",
+      "name",
+      "role",
+      "desc"
+    ],
+    "category": "系统",
+    "desc": "B4-7 建号第二步 · 每种打法一行（名 · 定位 · 一句自述）"
+  },
+  "SYS_CLS_STAR": {
+    "value": "★推荐",
+    "params": [],
+    "category": "系统",
+    "desc": "B4-7 建号第二步 · 与你那一族合得上的那行（races.recommend；「任意」不算）"
+  },
+  "SYS_CLS_MECH": {
+    "value": "节奏 · {mech}",
+    "params": [
+      "mech"
+    ],
+    "category": "系统",
+    "desc": "B4-7 建号第二步 · 打起来什么感觉（classes.mech · 真源 18 §一「节奏来源一句话」）"
+  },
+  "SYS_CLS_HOW": {
+    "value": "选一个：『选职业 骑士』 · 或者把每一种都读一遍再决定。",
+    "params": [],
+    "category": "系统",
+    "desc": "B4-7 建号第二步 · 怎么选"
+  },
+  "SYS_CLS_DONE": {
+    "value": "你是{name}了。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "B4-7 建号第二步 · 定好了"
+  },
+  "SYS_CLS_HP": {
+    "value": "生命 {hp}/{max} —— 往后的升级与换装都长在这一条上。",
+    "params": [
+      "hp",
+      "max"
+    ],
+    "category": "系统",
+    "desc": "B4-7 建号第二步 · 面板随职业落地（P-27 唯一来源）"
+  },
+  "SYS_CLS_NEXT": {
+    "value": "还没投的点有 {left} —— 打『{alloc}』投出去；『技能』看你往后会哪些。",
+    "params": [
+      "left",
+      "alloc"
+    ],
+    "category": "系统",
+    "desc": "B4-7 建号第二步 · 收尾指路（点数走 alloc.left_of_record · 触发词从声明取）"
+  },
+  "SYS_CLS_NAME": {
+    "value": "名字还没定 —— 打『改名 <名字>』，只改这一回。",
+    "params": [],
+    "category": "系统",
+    "desc": "B4-7 建号第二步 · 建号第三步没走完时点一行（真源 18 §一 第 3 步）"
+  },
+  "SYS_CLS_HAS": {
+    "value": "你已经定了 —— 你是{name}。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "B4-7 建号第二步 · 已经选过了（不许手滑换）"
+  },
+  "SYS_CLS_NORACE": {
+    "value": "先定下你是哪一族 —— 打『我是 <族名>』。",
+    "params": [],
+    "category": "系统",
+    "desc": "B4-7 建号第二步 · 族还没定"
+  },
+  "SYS_CLS_BAD": {
+    "value": "没有叫「{want}」的职业。能选的：{all}",
+    "params": [
+      "want",
+      "all"
+    ],
+    "category": "系统",
+    "desc": "B4-7 建号第二步 · 认不出那个词"
+  },
+  "SYS_CLS_VIEW": {
+    "value": "【{icon} {name}】（{role}）\n{desc}\n节奏 · {mech}",
+    "params": [
+      "icon",
+      "name",
+      "role",
+      "desc",
+      "mech"
+    ],
+    "category": "系统",
+    "desc": "B4-7 建号第二步 · 定过之后再看（裸『职业』）"
   }
 }

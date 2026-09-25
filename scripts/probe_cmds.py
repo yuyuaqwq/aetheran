@@ -185,7 +185,11 @@ DOC = (
         ("脱 拾荒人的重剑", "unequip"),
         ("称号", "titles"), ("头衔", "titles"),
         ("改名", "rename"), ("名字", "rename"),
+        ("我是 人类", "be_race"), ("选族 精灵", "be_race"),
+        ("选职业 骑士", "be_class"), ("选职业", "be_class"), ("职业", "be_class"),
     )),
+
+
     ("§四 背包与物品", (
         ("背包", "bag"), ("包", "bag"), ("包裹", "bag"), ("inv", "bag"),
         ("查看 伤药", "item_show"),
