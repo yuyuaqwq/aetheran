@@ -253,6 +253,9 @@ DOC = (
         ("公告", "notice"), ("反馈", "feedback"), ("设置", "settings"),
         ("自动战斗偏好", "battle_pref"),
         ("排行", "ranking"), ("榜", "ranking"), ("成就", "achievements"),
+        # ★ B4-17：04 §十 新添的两行（长列表分页）—— 触发词照样逐条 first_hit
+        ("下一页", "page_next"), ("下页", "page_next"), ("翻页", "page_next"),
+        ("回 2", "page_back"),
         ("搭话", "talk"), ("搭话 玛莎", "talk"), ("说话 玛莎", "talk"), ("聊 玛莎", "talk"),
         ("去 北口", "go_to"), ("走到 北口", "go_to"), ("前往 北口", "go_to"),
         ("烹饪 烤石斑", "cook"), ("做 烤石斑", "cook"), ("煮 烤石斑", "cook"),

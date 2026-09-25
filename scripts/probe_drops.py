@@ -106,9 +106,30 @@ from content import cmds_ast as CA                                      # noqa: 
 _bag_out = []
 
 
+class _EBag(object):
+    """背包那个呈现口要的最小环境（★ B4-17：它现在会分页
+    ⇒ `env.page` / `env.page_items` 是引擎契约里的两个输入面，替身要照实给）。"""
+
+    text = ""
+    key = ""
+    group_id = "g_probe_drops"
+    uid = "u_probe"
+
+    def save(self):
+        pass
+
+    def page(self, raw=None, default=1):
+        from saintess_engine.command import parse_page
+        return int(parse_page(self.text if raw is None else raw) or default)
+
+    def page_items(self, items, page=1, per_page=10):
+        from saintess_engine.command import page_items
+        return page_items(items, page, per_page=per_page)
+
+
 async def _go_bag():
     p10 = dict(CA.DEFAULT_PLAYER, bag={"unid_rare": 1, "i_material_iron_chip": 2})
-    async for ln in CA.bag(None, None, "u_probe", p10):
+    async for ln in CA.bag(_EBag(), None, "u_probe", p10):
         _bag_out.append(str(ln))
 
 

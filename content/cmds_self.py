@@ -37,8 +37,8 @@ from . import argv as AV
 from . import calendar as CAL
 from . import ranks as RK
 
-#: 榜上最多列几条（一屏内 —— 呈现口径，不是数值；与 `cmds_quest.board` 的 `[:3]` 同族）
-TOP = 10
+#: ★ B4-17：榜**一页**列几条归 `content/pager.py::PER_PAGE`（分页的唯一登记处）
+#:   —— 本模块不再自己写第二份（原来是 `TOP = 10`）。
 
 
 def _flags(p) -> dict:
@@ -193,24 +193,17 @@ async def rename(env, sink, uid, player):
     yield T("SYS_RENAME_DONE", name=want)
 
 
-async def ranking(env, sink, group_id, uid, player):
-    """`排行` —— 本群榜（第一阶段只到本群为止）。
+def _board_rows(p, group_id, uid) -> list:
+    """本群榜的每一行（★ 序号是**全局序号** —— 翻到第 2 页也接着 11、12 往下数）。
 
     ★ 榜 = **本群**存档里那些定下名字的人（`persistence.all_players(group_id)`）——
       包自己的存档半边就是这一格的来源，不新建容器、不另存一份快照。
     ★ 排序键 = 等级 · 经验（都是档上已有的账，现读现排；并列按名字）。
     ★ 自己那一行**一定在**：库里没有（探针 / 刚建号还没落库）就拿手上这份档补上 ——
       「榜上没你」是玩家最不能忍的那种榜。
-    ★ 读不到库（存档半边没接上）⇒ 出一行点名的 fail-closed 行，不假装榜是空的。
     """
-    p = _p(player)
     from . import persistence as PS
-
-    try:
-        rows = PS.all_players(str(group_id or ""))
-    except Exception:                                          # noqa: BLE001 —— 读不到就说读不到
-        yield T("SYS_RANKING_OFF")
-        return
+    rows = PS.all_players(str(group_id or ""))
     board = []
     for r in rows:
         d = r.get("data") if isinstance(r, dict) else None
@@ -224,10 +217,32 @@ async def ranking(env, sink, group_id, uid, player):
         board.append((int(p.get("level") or 1), int(p.get("exp") or 0),
                       mine or T("SYS_NAME_UNKNOWN")))
     board.sort(key=lambda x: (-x[0], -x[1], x[2]))
-    yield T("SYS_RANKING_HEAD")
-    for i, (_lv, _exp, nm) in enumerate(board[:TOP], 1):
-        yield T("SYS_RANKING_ROW", i=i, name=nm, level=_lv, exp=_exp)
-    yield T("SYS_RANKING_TAIL")
+    return [T("SYS_RANKING_ROW", i=i, name=nm, level=lv, exp=exp)
+            for i, (lv, exp, nm) in enumerate(board, 1)]
+
+
+async def ranking_page(env, sink, group_id, uid, player, page=None):
+    """`排行` 的第 `page` 页（★ B4-17：长列表分页 · 切页走 `content/pager.py` 那一口）。
+
+    ★ 读不到库（存档半边没接上）⇒ 出一行点名的 fail-closed 行，不假装榜是空的。
+    """
+    from . import pager as PG
+    p = _p(player)
+    try:
+        rows = _board_rows(p, group_id, uid)
+    except Exception:                                          # noqa: BLE001 —— 读不到就说读不到
+        yield T("SYS_RANKING_OFF")
+        return
+    # ★ 尾注走 render 的 `tail`：页脚（第 x/y 页）**永远是最后一行**
+    tail = [T("SYS_RANKING_TAIL")]
+    for line in PG.render(env, "ranking", [T("SYS_RANKING_HEAD")], rows, page=page, tail=tail):
+        yield line
+
+
+async def ranking(env, sink, group_id, uid, player):
+    """`排行` —— 本群榜（第一阶段只到本群为止）；页码从本条消息里取（`排行 2`）。"""
+    async for line in ranking_page(env, sink, group_id, uid, player):
+        yield line
 
 
 def _manifest() -> dict:

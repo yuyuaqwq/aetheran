@@ -149,13 +149,33 @@ def scan(path):
 
 
 class _E:
-    """实现体只要 env.save() + env.text（落档是处理器的责任）。"""
+    """实现体要的那几格：`text` / `save`（落档是处理器的责任）+ **分页那两个输入面**。
+
+    ★ B4-17：`env.page` / `env.page_items` 是引擎 `host/env.py` 的契约（纯函数包一层）
+      —— 替身要照实给（K6：探针也要给注入面的同一个道理），
+      否则「背包 / 榜」这两个已经分页的呈现口在直调那一路直接报 AttributeError（假红）。
+      切片 / 解页码用引擎自己那两个函数，不另写一份。
+    """
 
     def __init__(self, text=""):
         self.text = text
+        self.key = ""
+        self.group_id = "g_copy"
+        self.uid = "u_copy"
 
     def save(self):
         pass
+
+    def page(self, raw=None, default=1):
+        from saintess_engine.command import parse_page
+        try:
+            return int(parse_page(self.text if raw is None else raw) or default)
+        except Exception:                                    # noqa: BLE001
+            return int(default or 1)
+
+    def page_items(self, items, page=1, per_page=10):
+        from saintess_engine.command import page_items
+        return page_items(items, page, per_page=per_page)
 
 
 def _drive(fn, p, text=""):
@@ -386,6 +406,7 @@ def main():
 
     # ⑥ 真跑实现体：产出的行里不许有取不到文案的标记
     from content import cmds_ast as CA                                    # noqa: E402
+    from content import pager as PG                                       # noqa: E402
     from content import cmds_talk as CT                                   # noqa: E402
     from content import cmds_quest as CQ                                  # noqa: E402
     from content import cmds_gather as CG                                 # noqa: E402
@@ -562,6 +583,12 @@ def main():
         # ★ B3-10 ②：K56 族的另一半 —— 这些呈现口原先没被逐行扫过
         ("时间", CA.time_now, "", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
         ("背包(满)", CA.bag, "", _rich()),
+        # ★ B4-17：长列表分页——这三条落进用例表，于是上面那两条守卫
+        #   （不缺文案 / 不漏机器键）**自动**罩到它们身上（K61）；
+        #   页码取参走的是 `argv` 那一口（与真主机同一条路）。
+        ("背包(翻到第二页)", CA.bag, "背包 2", _rich()),
+        ("下一页(在背包上翻)", PG.page_next, "下一页", _rich()),
+        ("回(回第一页)", PG.page_back, "回 1", _rich()),
         ("攻击(野外)", CBL.attack, "",
          {"loc": "belt_north", "node": "bn_bone", "cls": "cls_knight", "level": 3, "hp": 80,
           "bag": {}, "codex": {}, "flags": {}}),
@@ -813,6 +840,14 @@ def main():
     chk("★ 一个取不到文案的都没有（不出现 %s）" % MISSING, not bad, "%s" % bad)
     chk("★ 呈现口不漏机器键（%d 个域键 · %d 条用例逐行扫）" % (len(_KEYS), len(cases)), not leaked,
         "%s" % leaked[:4])
+
+    # ★ B4-17：分页那两条的「还没翻过任何列表」那一支 —— 光标是**进程内**的
+    #   （用例表跑到这里时它已经被前面那几条设过了）⇒ 先 `forget` 掉再真跑一次。
+    PG.forget(_E())
+    _oP17 = _drive(PG.page_next, _player(**{"bag": {}, "flags": {}}), "下一页")
+    chk("★ 『下一页』还没翻过任何列表 ⇒ 回 `SYS_PAGE_NONE`"
+        "（不拿空串当第一页、不漏机器键）",
+        _oP17 == [CA.T("SYS_PAGE_NONE")], "%s" % (_oP17[:2],))
 
     # ★ B3-16b：`排行` 是**五参帧**（声明 args = group_id / uid / player）—— 单独真跑一遍，
     #   同样过「不缺文案 / 不漏机器键」两条（连档上还没名字那一档一起）

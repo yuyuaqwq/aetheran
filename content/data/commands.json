@@ -708,7 +708,10 @@
       "^背包$",
       "^包$",
       "^包裹$",
-      "^inv$"
+      "^inv$",
+      "^背包\\s*(\\d+)$",
+      "^包\\s*(\\d+)$",
+      "^包裹\\s*(\\d+)$"
     ],
     "category": "背包与物品",
     "desc": "打开背包（分页）",
@@ -1843,7 +1846,9 @@
   "ranking": {
     "patterns": [
       "^排行$",
-      "^榜$"
+      "^榜$",
+      "^排行\\s*(\\d+)$",
+      "^榜\\s*(\\d+)$"
     ],
     "category": "社交与系统",
     "desc": "第一阶段的榜只有本地",
@@ -2038,5 +2043,45 @@
       ]
     },
     "guard_desc": "定了族、还没定职业时"
+  },
+  "page_next": {
+    "patterns": [
+      "^下一页$",
+      "^下页$",
+      "^翻页$"
+    ],
+    "category": "社交与系统",
+    "desc": "翻到下一页（背包 / 本群榜这类长列表）",
+    "usage": "下一页",
+    "visible": true,
+    "order": 89,
+    "guard_desc": "翻过一次列表",
+    "bind": {
+      "handler": "content.pager:page_next",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
+  },
+  "page_back": {
+    "patterns": [
+      "^回\\s*(\\d+)$"
+    ],
+    "category": "社交与系统",
+    "desc": "回某一页（页码写在词后面）",
+    "usage": "回 <页码>",
+    "visible": true,
+    "order": 90,
+    "guard_desc": "翻过一次列表",
+    "bind": {
+      "handler": "content.pager:page_back",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   }
 }

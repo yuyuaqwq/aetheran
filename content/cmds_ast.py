@@ -877,19 +877,33 @@ async def origin(env, sink, uid, player):
             why=rs.get("line") or rs.get("why") or T("SYS_ORIGIN_WHY_TODO"))  # ★ P-10：域里的字段叫 line（原来读 why，永远给「还没写」）
 
 
-async def bag(env, sink, uid, player):
+def _bag_rows(p) -> list:
+    """背包里每一行（★ 顺序 = 档上的插入序）—— 分页只负责切，行怎么拼只在这一处。"""
+    from . import loot as LT                      # local import：免得包装载期成环
+    rows = []
+    for k, v in (p.get("bag") or {}).items():
+        rec = LT.rec_of(k)                        # ★ 未鉴定的 marker：名字与图标写在池上
+        rows.append("· %s %s ×%s" % (rec.get("icon", ""), rec.get("name", k), v))
+    return rows
+
+
+async def bag_page(env, sink, uid, player, page=None):
+    """`背包` 的第 `page` 页（★ B4-17：长列表分页 · 切页走 `content/pager.py` 那一口）。"""
     p = _p(player)
     items = p.get("bag") or {}
     if not items:
         yield T("SYS_BAG_EMPTY")
         return
-    yield T("SYS_BAG_HEAD", n=len(items))
-    from . import loot as LT                      # 本地 import：避免包装载期的环
-    for k, v in list(items.items())[:20]:
-        rec = LT.rec_of(k)                        # ★ 未鉴定的 marker：名字与图标写在池上
-        yield "· %s %s ×%s" % (rec.get("icon", ""), rec.get("name", k), v)
-    if len(items) > 20:
-        yield T("SYS_BAG_MORE", n=len(items) - 20)
+    from . import pager as PG
+    head = [T("SYS_BAG_HEAD", n=len(items))]
+    for line in PG.render(env, "bag", head, _bag_rows(p), page=page):
+        yield line
+
+
+async def bag(env, sink, uid, player):
+    """`背包` —— 页码从本条消息里取（`背包 2`），不写就是第一页。"""
+    async for line in bag_page(env, sink, uid, player):
+        yield line
 
 
 async def money(env, sink, uid, player):

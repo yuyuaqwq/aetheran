@@ -2129,14 +2129,6 @@
     "category": "系统",
     "desc": "背包 · 表头"
   },
-  "SYS_BAG_MORE": {
-    "value": "…（还有 {n} 种）",
-    "params": [
-      "n"
-    ],
-    "category": "系统",
-    "desc": "背包 · 只列前 20 种"
-  },
   "SYS_MONEY_POUCH": {
     "value": "你身上有 {gold} 枚铜板。",
     "params": [
@@ -5167,5 +5159,20 @@
     ],
     "category": "系统",
     "desc": "B4-16 评级 / 换证 · 已经是最后一档"
+  },
+  "SYS_PAGE_FOOT": {
+    "value": "📄 第 {page}/{pages} 页 ｜ 翻页：『下一页』·『回 <页码>』",
+    "params": [
+      "page",
+      "pages"
+    ],
+    "category": "系统",
+    "desc": "B4-17 分页 · 页脚（一列分了两页以上才出）"
+  },
+  "SYS_PAGE_NONE": {
+    "value": "先打开一个列表（『背包』看东西 ·『排行』看本群榜）—— 再敲『下一页』或『回 <页码>』。",
+    "params": [],
+    "category": "系统",
+    "desc": "B4-17 分页 · 还没翻过任何列表"
   }
 }
