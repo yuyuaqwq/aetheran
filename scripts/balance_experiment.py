@@ -89,7 +89,10 @@ def _fight(party, mids, monsters, seed, mode="flat"):
         a = CB.player_actor(_player(cls_id, level, gear, mode))
         a["uid"] = "p%d" % i
         ps.append(a)
-    es = [CB.monster_actor(mid, monsters[mid]) for mid in mids if mid in monsters]
+    # ★ B3-17：队伍人数要真传下去 —— 团队内容（Boss）按人数缩放面板（单人 hp ÷2，
+    #   真源 `12_怪物面板…` §一④ / `17_组队与策略配合_v1` §五 / `22_旧哨塔_逐间设计_v1` §三④）。
+    #   不传 = 不知道 ⇒ 设计值（4 人档），见 `content/combat.party_scale_of`。
+    es = [CB.monster_actor(mid, monsters[mid], party=len(ps)) for mid in mids if mid in monsters]
     random.seed(seed)
     b = Battle("monster", sides={"player": ps, "enemy": es})
     logs = []
@@ -101,7 +104,10 @@ def _fight(party, mids, monsters, seed, mode="flat"):
     return {"result": b.result, "acts": n, "acts_sum": sum(n.values()),
             "ticks": float(getattr(b, "_now", 0) or 0),
             "hp": [int(x.get("hp", 0)) for x in ps],
-            "max_hp": [int(x.get("max_hp", 0) or 0) for x in ps], "logs": len(logs)}
+            "max_hp": [int(x.get("max_hp", 0) or 0) for x in ps],
+            # ★ B3-17：这一场**敌人实际用的面板血**（含单人档缩放）—— 与设计值并列，
+            #   免得表里摆着一个这一场根本没用的数。
+            "ehp": [int(x.get("max_hp", 0) or 0) for x in es], "logs": len(logs)}
 
 
 def main():
@@ -203,14 +209,17 @@ def main():
                     outs[k] = outs.get(k, 0) + 1
                 ac = sorted(r["acts_sum"] for r in seed_rows)
                 tk = sorted(r["ticks"] for r in seed_rows)
+                # ★ B3-17：本场敌人实际用的面板血（走单人档的那几只与设计值不一样）
+                _ehp = seed_rows[0].get("ehp") or [hp]
                 rows.append({"monster": mid, "name": m["name"], "tier": tier, "arch": arch,
                              "lv": lv, "hp": hp, "design": design, "who": label, "plv": plv,
                              "n": a.seeds, "win": wins, "alloc": a.alloc, "outcomes": outs,
                              "acts_med": ac[len(ac) // 2], "acts_min": ac[0], "acts_max": ac[-1],
-                             "ticks_med": round(tk[len(tk) // 2], 1)})
+                             "ticks_med": round(tk[len(tk) // 2], 1),
+                             "hp_used": int(_ehp[0]), "party": len(members)})
                 r = rows[-1]
-                print("%-16s %-4s %-4s lv=%-3d hp=%-7d 设计%5.1f 次 | %-22s lv=%-3d 胜 %3d/%-3d %-22s 出手 med=%-4d [%d..%d] 刻 med=%.0f"
-                      % (m["name"], tier, arch, lv, hp, design, label, plv, wins, a.seeds,
+                print("%-16s %-4s %-4s lv=%-3d hp=%-7d(本场 %-6d · %d 人) 设计%5.1f 次 | %-22s lv=%-3d 胜 %3d/%-3d %-22s 出手 med=%-4d [%d..%d] 刻 med=%.0f"
+                      % (m["name"], tier, arch, lv, hp, r["hp_used"], len(members), design, label, plv, wins, a.seeds,
                          str(outs), r["acts_med"], r["acts_min"], r["acts_max"], r["ticks_med"]),
                       flush=True)
     if a.out:

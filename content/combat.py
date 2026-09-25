@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import random
+import re
 
 from ext_combat import Battle
 from ext_combat.battle.actors import make_actor
@@ -20,6 +21,41 @@ from . import alloc as ALLOC          # ★ P-34：档上那份加点只走它�
 
 PLAYER_SIDE = "player"
 ENEMY_SIDE = "enemy"
+
+_PARTY_KEY = re.compile(r"[1-9][0-9]*")
+
+
+def party_scale_of(m: dict, party: int | None) -> dict:
+    """取「这个人数下，这只怪的面板倍数」（域里的 `mods.party_scale`）。
+
+    ★ B3-17 **单人口径**（真源四处，只有一处给了数）：
+      `12_怪物面板与精英词条池_v1.md` §一④「Boss …按 4 人队 × 18 次行动设计 —— 单人打会很吃力
+      （有意的，它是团队内容）；**单人挑战时按 ÷2 看（≈3670）**」·
+      `17_组队与策略配合_v1.md` §五「单人　能过（**Boss 血按 ÷2 看**）」·
+      `22_旧哨塔_逐间设计_v1.md` §三④「**组队时按人数缩放**（P1 单人也能过）」·
+      台账 P-36（设计原话「单人打 Boss 伤害 ÷2」）。数只有**一格**（1 人 = hp ×0.5），
+      写在生成器 `scripts/rebuild_monsters.PARTY_SCALE` → 数据 `mods.party_scale`（唯一来源）。
+
+    ★ fail-closed 三条（不许静默）：
+      · `party is None`（不知道几个人）⇒ **不缩放**（返回 `{}`）：那走的就是设计值（4 人档），
+        绝不会因为「不知道」而悄悄把 Boss 削弱；
+      · 表在、但键不是正整数 / 是别的东西 ⇒ **当场抛**（数据坏了不兜底）；
+      · 要缩的那一项**必须真在面板里**（键名对不上 ⇒ 抛，不静默当 0）—— 那一半在
+        `monster_actor` 里落（本函数只回答「缩哪些项、缩多少」）。
+    """
+    tbl = (m.get("mods") or {}).get("party_scale")
+    if not tbl:
+        return {}
+    if isinstance(tbl, bool) or not isinstance(tbl, dict):
+        raise ValueError("party_scale 必须是「人数 → 面板倍数」的表：%r" % (tbl,))
+    for k in tbl:
+        if not _PARTY_KEY.fullmatch(str(k)):
+            raise ValueError("party_scale 的键必须是正整数人数：%r" % (k,))
+    if party is None:
+        return {}
+    if isinstance(party, bool) or not isinstance(party, int) or party < 1:
+        raise ValueError("队伍人数必须是正整数（不知道就传 None）：%r" % (party,))
+    return {str(k): float(v) for k, v in (tbl.get(str(party)) or {}).items()}
 
 
 def player_actor(player: dict, stack_prefix: str = "aetheran") -> dict:
@@ -75,7 +111,7 @@ def _default_skills(cls_id: str):
     return [k for _, k in mine]
 
 
-def monster_actor(mid: str, m: dict) -> dict:
+def monster_actor(mid: str, m: dict, *, party: int | None = None) -> dict:
     """怪数据（monsters 域）→ 战斗 actor。
 
     ★ B3-14：**域里那套键名要翻成引擎消费端那一套**（键名契约 —— 照域里的名字传，
@@ -92,8 +128,16 @@ def monster_actor(mid: str, m: dict) -> dict:
         · `crit`→ 引擎当**率**读（`random.random() < crit`）⇒ 域里 13/47/94 这些**数值**
           被当成率 ⇒ **怪必然暴击**（`13 > 1` 恒真）。
       ⇒ 四个键一律在这儿换名 + 率化（率化共用 `panel_build.rate_of`，与玩家同一把尺）。
+
+    ★ B3-17：`party` = 这一场的队伍人数 —— 走 `party_scale_of` 落单人口径（Boss 单人 hp ÷2）。
+      缩放加在**域那一套键名**上（`hp` / `atk`），换名之前；**不传 = 不知道 ⇒ 不缩放**
+      （设计值 = 4 人档），见 `party_scale_of` 的 fail-closed 三条。
     """
     panel = dict(m.get("panel") or {})
+    for _k, _v in party_scale_of(m, party).items():
+        if _k not in panel:
+            raise KeyError("party_scale 要缩的面板键不在 panel 里（键名对不上不静默）：%s.%s" % (mid, _k))
+        panel[_k] = int(round(float(panel[_k]) * _v))
     panel["max_hp"] = panel.pop("hp", panel.get("max_hp"))
     panel["mdef"] = panel.pop("res", panel.get("mdef"))
     panel["dodge"] = PB.rate_of(panel.pop("eva", 0))
@@ -112,24 +156,29 @@ def monster_actor(mid: str, m: dict) -> dict:
     return a
 
 
-def build(player: dict, monster_ids, monsters: dict) -> Battle:
-    """组一场战斗：玩家 1 人 vs 指定的怪。"""
+def build(player: dict, monster_ids, monsters: dict, *, party: int | None = None) -> Battle:
+    """组一场战斗：玩家 1 人 vs 指定的怪。
+
+    `party` = 队伍人数（今天只有单人，所以调用方一律传 1；组队接线那批把真实人数传进来）——
+    它只影响「团队内容」那几只怪的面板（`mods.party_scale`），别的怪一格不动。
+    """
     ps = [player_actor(player)]
     es = []
     for i, mid in enumerate(monster_ids):
         m = monsters.get(mid)
         if not m:
             continue
-        a = monster_actor(mid, m)
+        a = monster_actor(mid, m, party=party)
         es.append(a)
     return Battle("monster", sides={PLAYER_SIDE: ps, ENEMY_SIDE: es})
 
 
-def run_auto(player: dict, monster_ids, monsters: dict, *, seed: int | None = None):
+def run_auto(player: dict, monster_ids, monsters: dict, *, seed: int | None = None,
+             party: int | None = None):
     """★ 第一版主路径：自动打完，返回 (结果, 日志行, 玩家战后血量)。"""
     if seed is not None:
         random.seed(seed)                       # 可复现（探针用）
-    b = build(player, monster_ids, monsters)
+    b = build(player, monster_ids, monsters, party=party)
     logs: list = []
     b.auto_run(logs)
     pa = b.sides[PLAYER_SIDE][0]

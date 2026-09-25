@@ -358,7 +358,8 @@ _BS_OUT = {}
 for _cid in sorted(_BASIS):
     _pl = {"cls": _cid, "level": 20, "uid": "u_b", "name": "试", "alloc": _RBM.alloc_of(20, _cid)}
     _pl["hp"] = CA.hp_cap(_pl)
-    _r, _l, _ = CB.run_auto(_pl, [_BOSS], MON, seed=5150)
+    # ★ B3-17：走**真实单人口径**（`cmds_battle` 就是这么调的：今天只有单人 ⇒ party=1）
+    _r, _l, _ = CB.run_auto(_pl, [_BOSS], MON, seed=5150, party=1)
     _BS_OUT[_cid] = (_r, sum(1 for x in _l if ("🌀 %s 开始出招" % _pl["name"]) in x))
 (ok if all(v[0] in ("victory", "defeat") for v in _BS_OUT.values()) else bad)(
     "★ Boss 单刷**一定出结果**（不再撞 500 步护栏返回 None ⇒ 命令层只会回「（战斗结束：None）」）"
@@ -378,12 +379,98 @@ for _s in range(8):
     from ext_combat import Battle as _Btl                                        # noqa: E402
     _rnd2.seed(31337 + _s)
     _b2 = _Btl("monster", sides={"player": _ps,
-                                 "enemy": [CB.monster_actor(_BOSS, MON[_BOSS])]})
+                                 "enemy": [CB.monster_actor(_BOSS, MON[_BOSS], party=len(_BP))]})
     _l2 = []
     _b2.auto_run(_l2)
     _BW += 1 if _b2.result == "victory" else 0
 (ok if _BW >= 7 else bad)("★ 4 人队（骑士/狂战士/游侠/法师 · 19 级）真打完 Boss：胜 %d/8 —— 这是 Boss 唯一走得通的路"
                           "（组队今天还没接线 ⇒ 塔顶那间单刷必倒地，见 _notes.md）" % _BW)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ★ B3-17 ⑤ 单人口径（Boss 单人 ÷2）—— 数据 / 判据 / 真跑统计量三头
+# ══════════════════════════════════════════════════════════════════════════════
+print()
+print("── ★ B3-17 ⑤ 单人口径：Boss 单人 hp ÷2（真源 `12_…` §一④ / `17_组队与策略配合_v1` §五"
+      "/ `22_旧哨塔_逐间设计_v1` §三④「组队时按人数缩放（P1 单人也能过）」）")
+_PS_ONLY = sorted(k for k, m in MON.items() if (m.get("mods") or {}).get("party_scale"))
+(ok if _PS_ONLY == [_BOSS] else bad)(
+    "★ 带「按人数缩放」表的只有团队内容那一只（%s）—— 别的怪一格不动"
+    % " · ".join(MON[k]["name"] for k in _PS_ONLY))
+
+_BH = MON[_BOSS]["panel"]
+_a1 = CB.monster_actor(_BOSS, MON[_BOSS], party=1)
+_a4 = CB.monster_actor(_BOSS, MON[_BOSS], party=4)
+_an = CB.monster_actor(_BOSS, MON[_BOSS])
+_want1 = int(round(float(_BH["hp"]) * 0.5))
+(ok if int(_a1.get("max_hp")) == _want1 else bad)(
+    "★ 单人（party=1）Boss 的面板血 = 面板 ÷2（%s → %s · 期望 %s）"
+    % (_BH["hp"], _a1.get("max_hp"), _want1))
+(ok if int(_a1.get("atk")) == int(_BH["atk"]) else bad)(
+    "★ 单人档**只动血那一项**（文档两处字面都只说「**血**按 ÷2 看」）—— atk 仍是 %s"
+    % _a1.get("atk"))
+(ok if int(_a4.get("max_hp")) == int(_BH["hp"]) and int(_an.get("max_hp")) == int(_BH["hp"]) else bad)(
+    "★ 4 人档 / 不传人数（= 不知道 ⇒ 设计值）都是**原值**（%s / %s vs 面板 %s）"
+    % (_a4.get("max_hp"), _an.get("max_hp"), _BH["hp"]))
+_drift = [k for k, m in MON.items() if k != _BOSS
+          and int(CB.monster_actor(k, m, party=1).get("max_hp"))
+          != int(CB.monster_actor(k, m).get("max_hp"))]
+(ok if not _drift else bad)("★ 另外 16 只：单人档与设计档**逐只同值**（差：%s）" % (_drift or "无"))
+
+_FC = []
+try:                       # ① 表的键不是正整数人数 ⇒ 当场抛
+    CB.party_scale_of({"mods": {"party_scale": {"solo": {"hp": 0.5}}}}, 1)
+    _FC.append("非法键没抛")
+except ValueError:
+    pass
+try:                       # ② 人数不是正整数 ⇒ 抛（不知道要传 None，不许拿 0 蒙）
+    CB.party_scale_of({"mods": {"party_scale": {"1": {"hp": 0.5}}}}, 0)
+    _FC.append("party=0 没抛")
+except ValueError:
+    pass
+if CB.party_scale_of({"mods": {"party_scale": {"1": {"hp": 0.5}}}}, None) != {}:
+    _FC.append("party=None 没有退回设计值")
+try:                       # ③ 要缩的面板键不在 panel 里 ⇒ 抛（键名对不上不静默当 0）
+    CB.monster_actor("syn_fake", {"name": "假怪", "lv": 1, "panel": {"hp": 10, "atk": 1},
+                                  "mods": {"party_scale": {"1": {"mdef": 0.5}}}}, party=1)
+    _FC.append("面板键对不上没抛")
+except KeyError:
+    pass
+(ok if not _FC else bad)("★ fail-closed 三条（非法键 / 非正整数人数 / 面板键对不上 —— 都当场抛；"
+                         "「不知道几个人」= 不缩放）　%s" % ("全对" if not _FC else "红：%s" % _FC))
+
+_BST = []
+for _lv in (18, 19, 20):
+    _arm = {}
+    for _party in (1, None):                     # 单人档 vs 设计档（同种子 · 同配置 · 16 场 × 6 职业）
+        _rows = []
+        for _cid in sorted(_BASIS):
+            for _s in range(16):
+                _pl = {"cls": _cid, "level": _lv, "uid": "u_ps", "name": "试",
+                       "alloc": _RBM.alloc_of(_lv, _cid)}
+                _pl["hp"] = CA.hp_cap(_pl)
+                _r, _l, _ = CB.run_auto(_pl, [_BOSS], MON, seed=6100 + _s, party=_party)
+                _rows.append((_r, sum(1 for x in _l if ("🌀 %s 开始出招" % _pl["name"]) in x)))
+        _ac = sorted(x[1] for x in _rows)
+        _arm[_party] = (sum(1 for x in _rows if x[0] == "victory"), len(_rows), _ac[len(_ac) // 2])
+    _BST.append((_lv, _arm[1], _arm[None]))
+    print("     lv%-3d ｜ 单人档 胜 %2d/%-2d 出手 med=%-3d ｜ 设计档 胜 %2d/%-2d 出手 med=%d"
+          % (_lv, _arm[1][0], _arm[1][1], _arm[1][2], _arm[None][0], _arm[None][1], _arm[None][2]))
+(ok if all(b[0] >= a[0] for _lv, a, b in _BST) else bad)(
+    "★ 单人档**只会更宽松**（同种子同配置：单人档胜场 ≥ 设计档 —— 缩放方向不许反）　%s"
+    % " · ".join("lv%d %d≥%d" % (lv, b[0], a[0]) for lv, a, b in _BST))
+print("     · ★ 但**单人仍然全败**（%s）⇒ 「÷2」这条口径落了、也没落错，可它**没达到**"
+      " `17_ §五`「单人能过」 / `22_ §三④`「P1 单人也能过」那句 —— 见 `_notes.md` §二·1（附实测对照）"
+      % " · ".join("lv%d %d/96" % (lv, b[0]) for lv, _a, b in _BST))
+# ③ 三头对账：生成器那张表 ↔ schema 的键形状 ↔ 域里那一格（单人口径只有**一个**来源）
+_PS_SCHEMA = _io.open(os.path.join(REPO, "schemas", "monsters.schema.json"), encoding="utf-8").read()
+_PS_TBL = (MON[_BOSS].get("mods") or {}).get("party_scale") or {}
+_PS_OK = (_PS_TBL == {n: dict(v) for n, v in _RBM.PARTY_SCALE.items()}
+          and set(_RBM.PARTY_SCALE) == {"1"}
+          and '"party_scale"' in _PS_SCHEMA and "^[1-9][0-9]*$" in _PS_SCHEMA
+          and abs(float(_RBM.PARTY_SCALE["1"]["hp"]) - 0.5) < 1e-9)
+(ok if _PS_OK else bad)(
+    "★ 单人档三头对账：生成器 `RBM.PARTY_SCALE` == 域 `mods.party_scale` == schema 那一格"
+    "（键形状 `^[1-9][0-9]*$`）· 值 = 文档给的 0.5（%s）" % _PS_TBL)
 
 print()
 print("结果：%s" % ("全绿 ✓" if not fails else "有红 ✗"))

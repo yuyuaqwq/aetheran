@@ -26,6 +26,24 @@ TIERS = {"普通": dict(hp_n=4.0, spd=92, res=0.50), "精英": dict(hp_n=12.0, s
 K_RATE = 500
 CRIT_EXP = 0.5          # crit_exp = 1 + 暴击率 × 0.5（暴伤基准 1.5）
 HIT_RATE = 0.95         # 命中率占位（怪物侧未定；与旧口径同一个值，保持连续）
+#: ★ B3-17：Boss 的**单人档**（「单人也能过」那条口径 —— 落在数据里，不靠代码记住）。
+#:
+#:   真源四处（都点名了同一件事，只有一处给了数）：
+#:     · `06_第一阶段垂直切片/12_怪物面板与精英词条池_v1.md` §一④
+#:       「Boss …按 **4 人队 × 18 次行动**设计 —— 单人打会很吃力（有意的，它是团队内容）；
+#:        **单人挑战时按 ÷2 看（≈3670）**，一场约 30 次行动」
+#:     · `06_第一阶段垂直切片/17_组队与策略配合_v1.md` §五「单人　**能过（Boss 血按 ÷2 看）**」
+#:     · `06_第一阶段垂直切片/22_旧哨塔_逐间设计_v1.md` §三④「**组队时按人数缩放**（P1 单人也能过）」
+#:     · 台账 P-36（设计原话「单人打 Boss 伤害 ÷2」）
+#:
+#:   ⇒ 形状 = 「队伍人数 → 面板倍数」，**只放文档给了数的那一格**：1 人 = hp ×0.5。
+#:     2 / 3 人**没有数**（不猜）⇒ 表里不写；查不到的人数一律走设计值（= 4 人档）。
+#:     fail-closed 那一半在 `content/combat.party_scale_of`（键不是数字当场抛）。
+#:   ★ 只收 `hp` 这一项：四处真源里两处字面写的是「**血**按 ÷2 看」（12_ §一④ / 17_ §五）——
+#:     伤害 / 防御 / 速度那几项**文档没说**，一律不动（见 `_notes.md` §四·1 的实测：
+#:     只缩血仍 0/48，「单人能过」这条意图要靠什么达成属**待拍板**）。
+PARTY_SCALE = {"1": {"hp": 0.5}}
+PARTY_SCALE_ON = ("ms_boss_oath_sentry",)   # ★ 哪几只算「团队内容」（真源只点了 Boss 这一只）
 #: ★ B3-6b-2d-keys-2：档位（中文）→ ASCII **机器键** `role_key`（P-20 甲案第二刀）。
 #:   为什么：代码原先拿中文枚举当机器键（战斗里挑遇敌 / 掉钱分档 / 是不是 BOSS）—— K48 / K51。
 #:   取值口径：普通=normal · 精英=elite · 头目=chief（区域头目）· 层主=warden（副本层主）· boss（世界 Boss）。
@@ -119,6 +137,38 @@ def panel_of(level, tier, arch):
         "crit": round(a["crit"] * t["res"] * k["res"])}
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# ★ B3-17：**上一版口径**（B3-14 那次修正之前那一版）—— 只为对账，**不参与生成**。
+#
+#   为什么要留着它：真源 `06_第一阶段垂直切片/12_怪物面板与精英词条池_v1.md` §一 那张表
+#   是**那一版口径的快照**（B3-17 逐只复算：17/17 行 hp 与它逐字相符）。探针要能现算
+#   「doc 那一列 == 旧口径复算」才证明那列**不是手打偏的**，而是一次**口径变更**留下的
+#   快照（探针 `probe_monsters ⑫`）。写法照 B3-14 前那一版逐字（`bbdc15f` 的 panel_of）：
+#     · 通道是 `max(六职业**平均** atk, 六职业**平均** matk)` —— 把非通道那根也平均进来了；
+#     · crit 率的分母是**等级尺** `300 + 30L`（不是战斗侧那把 K_RATE=500）。
+#   ★ 它跟 `panel_of` 只差这两处 —— 差出来的就是 B3-14 修的那条（实测击杀行动数只有设计值的 ~2/3）。
+def per_hit_v1(level):
+    a = avg_panel(level)
+    crit_mult = 1.0 + (a["crit"] / (a["crit"] + 300 + 30 * level)) * 0.5
+    return max(a["atk"], a["matk"]) * crit_mult * 0.95
+
+
+def panel_of_v1(level, tier, arch):
+    """B3-14 之前那一版的面板算法（对账用；真源 `12_…` §一 表就是它的快照）。"""
+    a = avg_panel(level); t = TIERS[tier]; k = ARCH[arch]
+    dr = a["def"] / (a["def"] + (100.0 + 20.0 * level))
+    per_hit = per_hit_v1(level)
+    return {
+        "hp": round(per_hit * t["hp_n"] * k["hp"]),
+        "atk": round(a["hp"] / (18.0 * (1 - dr)) * k["atk"]),
+        "def": round(a["def"] * t["res"] * k["dfn"]),
+        "res": round(a.get("res", a["def"]) * t["res"] * k["dfn"]),
+        "spd": int(t["spd"] * k["spd"]),
+        "hit": round(a["hit"] * t["res"] * k["res"]),
+        "eva": round(a["eva"] * t["res"] * k["res"]),
+        "crit": round(a["crit"] * t["res"] * k["res"])}
+
+
 def main():
     p = os.path.join(REPO, "content/data/monsters.json")
     mos = json.load(io.open(p, encoding="utf-8"))
@@ -145,11 +195,23 @@ def main():
         if "role" not in rec:                         # 记录里压根没有 role（不该发生）⇒ 补一对
             rec["role"], rec["role_key"] = tier, role_key
         rec["lv"] = lv
+        # ★ B3-17：单人档那一格（只有团队内容那几只有）—— 照 PARTY_SCALE 重写，
+        #   不在表里的怪**显式抹掉**这一格（换表之后不留旧值）。
+        mods = dict(rec.get("mods") or {})
+        if key in PARTY_SCALE_ON:
+            mods["party_scale"] = {n: dict(v) for n, v in PARTY_SCALE.items()}
+        else:
+            mods.pop("party_scale", None)
+        rec["mods"] = mods
         mos[key] = rec
         fixed += 1
     io.open(p, "w", encoding="utf-8", newline="\n").write(json.dumps(mos, ensure_ascii=False, indent=2) + "\n")
     print("重算 %d 只怪的 panel（取整口径）· 补 role_key（%s）"
           % (fixed, " / ".join("%s→%s" % kv for kv in ROLE_KEY.items())))
+    print("单人档（%s）：%s"
+          % ("+".join(PARTY_SCALE_ON),
+             " · ".join("%s 人 → %s" % (n, "+".join("%s×%s" % kv for kv in sorted(v.items())))
+                        for n, v in sorted(PARTY_SCALE.items()))))
     for k in ("ms_field_mouse", "ms_bone_wanderer", "ms_stone_crab", "ms_boss_oath_sentry"):
         v = mos[k]; pp = v["panel"]
         print("  %-22s %-4s lv%-3s hp=%-6s atk=%-4s def=%-4s spd=%-4s" % (
