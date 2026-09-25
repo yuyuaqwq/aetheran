@@ -508,8 +508,11 @@ def main():
         ("交(手上没有)", CQ.quest_deliver, "交 1", {"level": 5}),
         ("交(不在手上)", CQ.quest_deliver, "交 99", {"level": 5, "flags": {"quests_active": ["q_main_01"]}}),
         ("交(还没做完)", CQ.quest_deliver, "交 12", {"level": 5, "flags": {"quests_active": ["q_main_12"]}}),
+        #   ★ B4-2（P-25 §①）：主线也有 `require` 了（主 1 = 「问玛莎」）⇒ 这条档把那笔账做上，
+        #     本用例钉的「交掉了 + 升级」那两行才真被走到（不许因为条件没做而悄悄改走「还没做完」）。
         ("交(交掉了·升级)", CQ.quest_deliver, "交 1", {"level": 1, "exp": 39,
-                                                        "flags": {"quests_active": ["q_main_01"]}}),
+                                                        "flags": {"quests_active": ["q_main_01"],
+                                                                  "talked": {"dlg_masha": 1}}}),
         ("放弃(手上没活)", CQ.quest_abandon, "放弃", {}),
         ("放弃(没这条)", CQ.quest_abandon, "放弃 不存在这条", {"flags": {"quests_active": ["q_main_01"]}}),
         ("放弃(放弃了)", CQ.quest_abandon, "放弃", {"flags": {"quests_active": ["q_main_01"]}}),
