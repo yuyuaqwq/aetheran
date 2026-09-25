@@ -77,7 +77,7 @@
             "object",
             "array"
           ],
-          "$comment": "机器可读前置（P-25 · 只有需要前置的条目才写）：{kind: visit|kill|item, ...} 一条或一串；认不出的 kind 一律算没满足（fail-closed）。中文 objective 不解析 —— 条件真源是这里。",
+          "$comment": "机器可读前置（P-25 · 只有需要前置的条目才写）：{kind: visit|kill|item, ...} 一条或一串；认不出的 kind 一律算没满足（fail-closed）。中文 objective 不解析 —— 条件真源是这里。★ B3-11：`kill` 两种写法 —— 点名一只（`monster` + `n`）或点**某一档**（`role` = monsters 域的 `role_key`，如 normal/elite/chief，+ `n`；合计击杀数达标即可）。",
           "items": {
             "type": "object",
             "required": [
