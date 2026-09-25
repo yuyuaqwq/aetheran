@@ -3,6 +3,9 @@
     "cycle": "game_day",
     "pick": "weighted_stable_hash",
     "weights_source": "games/orlandia/content/time_weather.py::today_weather 文档串：日期哈希伪随机。晴50/多云20/雨15/暴雨5/雪(冬)15/雾(特定地图)10。（只取本作四类）",
+    "rain_max_gap_days": 3,
+    "guarantee": "连续 3 个游戏日内至少一场雨（往前 2 天一场雨都没有 ⇒ 今天定成雨；★ 只加雨、不删别的天气、不动 weight、不存历史 —— 消费端 content/calendar.weather_of）",
+    "guarantee_source": "content/rules/calendar.json::rain_max_gap_days = 3（新增口径 · 台账 ⏸ P-5「N 天内必有一场雨」；真源待补行见本分支 _notes.md §一）",
     "skipped": {
       "多云": "不在 19 文档的四类里（本作 P1 不落）",
       "暴雨": "不在 19 文档的四类里（本作 P1 不落）"

@@ -5,6 +5,8 @@
   · 游戏日长度 = `calendar._clock.real_seconds_per_game_day`（源：05_玩法数值口径 §七）
   · 时辰窗界 = `calendar.hr_*` 的 from/to 小时；中文名 = **texts 域**的 `HOUR_*` / `WEATHER_*`
   · 天气 = 纯函数 `游戏日 → 天气`（按 `weather.w_*.weight` 抽；稳定哈希 ⇒ 全服一致、跨进程可复现）
+    ★ 保底（B4-3 · 台账 ⏸ P-5）：连续 `weather._rules.rain_max_gap_days` 个游戏日内**至少一场雨** ——
+      往前那几天都没雨时把今天定成雨（只加雨、不动 weight、不存历史）。不带保底的那一层 = `weather_raw()`。
   · 世界事件（B3-5）= `events` 域的三尺度判定（世界 / 限时 / 每日）—— `event_on` / `events_now`；
     它们也是「现在」的判断，所以与时辰/天气同一个口（别处不许自己算 —— K65 家族）
 
@@ -108,11 +110,28 @@ def hour_at(hod: float) -> str:
     raise ValueError("时辰表没盖住 %r 点 —— 表错了（探针会拦）" % hod)
 
 
-def weather_of(day: int) -> str:
-    """游戏日 → 天气 id。稳定哈希 + 权重（同一天全服一致，跨进程可复现）。
+def rain_max_gap_days() -> int:
+    """★ 天气保底的天数 N（`weather._rules.rain_max_gap_days`）—— **表是唯一真源，代码不写数**。
 
-    ★ 权重走 `weather_weights(day)` —— 表里的 weight 再叠开场事件的 `weather_mul`
-      （初雪那 3 天里「初雪」的窗变宽；没有事件时与表逐字相同）。
+    「连续 N 个游戏日内至少一场雨」；缺这一格 / 不是 ≥1 的整数 = 抛（fail-closed：
+    保底是玩法承诺，静默取消会比报错更糟）。取数口径见 `content/rules/calendar.json`。
+    """
+    n = (weathers_meta().get("rain_max_gap_days"))
+    if isinstance(n, bool) or not isinstance(n, int) or n < 1:
+        raise ValueError("weather._rules.rain_max_gap_days 缺失或不是 ≥1 的整数：%r —— 表是唯一真源" % (n,))
+    return n
+
+
+def weathers_meta() -> dict:
+    """`weather._rules`（私有块 · 权重来源 / 保底 / 季节与地图那几条说明）。"""
+    return dict(_d("weather").get("_rules") or {})
+
+
+def weather_raw(day: int) -> str:
+    """游戏日 → 天气 id（**表格抽签那一层**：权重 + 稳定哈希，**不含保底**）。
+
+    ★ 单独留着这一层是为了对账：分布与权重逐日一致这件事由它担保（`probe_weather ⑦`），
+      保底则是在它上面「只加雨」（`probe_weather ⑧⑨`）。玩法层一律走 `weather_of`。
     """
     w = weather_weights(day)
     if not w:
@@ -126,6 +145,30 @@ def weather_of(day: int) -> str:
         if r < acc:
             return wid
     return sorted(w)[-1]
+
+
+def weather_of(day: int) -> str:
+    """游戏日 → 天气 id（★ 唯一出口：表格抽签 + 天气保底）。
+
+    ★ 权重走 `weather_weights(day)`（表里的 weight 再叠开场事件的 `weather_mul` ——
+      初雪那 3 天里「初雪」的窗变宽；没有事件时与表逐字相同）。
+    ★ 保底（`weather._rules.rain_max_gap_days` = N）：「连续 N 个游戏日内至少一场雨」
+      ⇒ 连着 N−1 天没有雨的那个第 N 天，定成雨。于是**最长连续无雨 = N−1 天**
+      （等雨最长 N−1 天 —— 支线 4「雨后的东西」那类挂在板上的线等得起；B4-3 · 台账 ⏸ P-5）。
+    ★ 怎么现算（★ 纯函数、不存历史 —— 没有第二个源，改刻度不会不同步）：
+      从今往回找**最近一次「表格抽签就是雨」的那天 r**（保底补出来的雨只用来看计数，
+      不必再往前追），从 r 起重数 ⇒ `(day − r) % N == 0` 就是雨（`r` 那天本身 + 之后每 N 天补一场）。
+      等价写法 = 递推「往前 N−1 天（算上保底）都没有雨 ⇒ 今天雨」—— 探针两支逐日对照
+      （`scripts/probe_weather.py` ⑥），不是两处口径。
+    ★ 只加雨：不碰 weight、不删别的天气（`weather_raw` 那一层与权重逐日一致）。
+    """
+    n = rain_max_gap_days()
+    r = int(day)
+    while weather_raw(r) != "w_rain":         # 最近一次「抽签就是雨」的日子（伪随机 ⇒ 实际几天的量级）
+        r -= 1
+    if (int(day) - r) % n == 0:
+        return "w_rain"
+    return weather_raw(day)
 
 
 def weather_weights(day: int) -> dict:
