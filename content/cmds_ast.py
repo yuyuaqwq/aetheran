@@ -15,6 +15,7 @@ import os
 from . import calendar as CAL        # 时辰/天气的唯一出口（它不 import 本模块，无环）
 from . import codex as CX            # 图鉴四谱的唯一记录口（B2-7）
 from . import eggs as EG              # 彩蛋（B3-1）：条件在 eggs 域，判定走引擎声明算子
+from . import alloc as AL             # ★ P-34：加点算术的唯一出口（等级→总点数−已花=余额）
 from . import titles as TT            # 称号（B3-2）：显示跟着名字走 · 判定在 titles 域
 from . import scene as SC           # 场景槽位解析（B3-6a）：节点级近景 → 退地图级第一眼
 from . import timed_events as TE     # 限时事件那一格（B3-5）：宿主维护门落档 · 这里只读
@@ -127,7 +128,7 @@ def _save(env):
 
 
 #: ★ B3-12（K57 的活口）：默认档里的**可变容器** —— 出档一律换新对象，别把默认档当草稿纸
-_MUTABLE = ("bag", "equipped", "flags", "codex")
+_MUTABLE = ("bag", "equipped", "flags", "codex", "alloc")
 
 
 def _fresh(base) -> dict:
@@ -742,6 +743,131 @@ async def bag(env, sink, uid, player):
 async def money(env, sink, uid, player):
     p = _p(player)
     yield T("SYS_MONEY_POUCH", gold=p.get("gold"))
+
+
+# ══════════════════════════════════════════════════════════════
+# ★ P-34：加点（`加点 <属性> [次数]`）—— 建号 8 点 + 每级 3 点，玩家自己分
+# ══════════════════════════════════════════════════════════════
+#: 真源 `06_第一阶段垂直切片/04_指令总表.md`：`加点 <属性> [次数]` ｜ 条件「有属性点」｜ 分配
+#: ★ 为什么原先「加不了点」：这条声明一直在（`content/data/commands.json`），但**没有实现体**
+#:   —— 引擎走「该声明未提供处理器」那一支。而配平（怪面板 = 按建议权重**铺满**反推）与
+#:   六职业详案（「1 级行 = 职业基础值（**建号 8 点未投**）」）都假定这些点是真的会被投出去的。
+#:   裁决（2026-09-25 鱼鱼拍板 · 甲案）：**玩家自己加点**，不做「新档自动平铺」——
+#:   依据 `06_第一阶段垂直切片/18_建号与新手引导_v1.md` §四 第一小时目标清单
+#:   「升到 2 级并加点（`加点 STR 3`）」与 `16_玩家体验走查_v1.md`「他能做什么 …加点…」。
+#:   ⇒ 铺满 = **参照上界**（配平基准）· 零加点 = **下界**，两头都用数字钉住（probe_panel ⑦）。
+def _alloc_verb() -> str:
+    """这条指令的**触发词**（取声明自己的 `usage` 第一个词 —— 代码里一个中文都不写）。"""
+    u = str((_data("commands").get("alloc") or {}).get("usage") or "").split(" ")
+    return (u[0].strip() if u else "")
+
+
+def _stat_slot(stat) -> str:
+    """五维 → 中文名槽位（`SYS_STAT_STR` = 力量）—— 维名的中文只有 texts 那一处。"""
+    return T("SYS_STAT_%s" % str(stat or "").upper())
+
+
+def _stat_of(want) -> str:
+    """玩家写的那个词 → 五维之一（ASCII `str` / 中文名 `力量` 都认）；认不出回空串。"""
+    w = str(want or "").strip()
+    if not w:
+        return ""
+    up = w.upper()
+    for s in AL.STATS:
+        if up == s:
+            return s
+    for s in AL.STATS:
+        if w == _stat_slot(s):
+            return s
+    return ""
+
+
+def _stat_list() -> str:
+    """五个维名的**呈现面**（加点提示与认不出维名那一行共用 —— 只一处拼）。"""
+    return " · ".join(_stat_slot(s) for s in AL.STATS)
+
+
+def _alloc_arg(env) -> str:
+    """`加点 力量 3` → `力量 3` —— 剥掉这条声明自己的触发词（不手写镜像表）。"""
+    raw = (getattr(env, "text", "") or "").strip()
+    verb = _alloc_verb()
+    if verb and raw.startswith(verb):
+        return raw[len(verb):].strip()
+    parts = raw.split(None, 1)
+    return parts[1].strip() if len(parts) > 1 else ""
+
+
+async def alloc_points(env, sink, uid, player):
+    """`加点 <属性> [次数]` —— 把等级给的点真投到五维上（★ P-34）。
+
+    点数只有一个来源（`content/alloc.py`）：**总点数 = 8 + 3×(级−1)**（真源
+    `00_总纲/05_系统总表与阶段开放_v1.md`「五维加点（建号 8 + 每级 3）」）——
+    **不落档、不另发**（等级改了它自动跟着变；写了新容器就是两个源）。余额 = 总点数 − 已花。
+
+    fail-closed（`fail-closed-boundaries` §1）—— 三种"加不了"分开说，**都不动档**：
+      · 档上还没有职业 ⇒ 属性跟着职业走（`SYS_ATTR_NOCLS`，与「属性」页同一个口）
+      · 认不出的维 / 次数不是 1 以上的整数 ⇒ 点名回一行
+      · 想加的点数超了余额 ⇒ 只说不够（**余额就是硬上限**：总点数没有别的门）
+      · 档上那一格 `alloc` 本身是坏的（认不出的维 / 小数 / 超投）⇒ 点名（`SYS_ALLOC_BAD_SAVE`），
+        不"当作没投过"接着加
+    """
+    p = _p(player)
+    cls = str(p.get("cls") or "").strip()
+    if not cls:
+        yield T("SYS_ATTR_NOCLS")
+        return
+    lv = max(1, int(p.get("level") or 1))
+    try:
+        al = AL.of_record(p)                     # 这档实际分了多少（唯一口；坏档 ⇒ 抛）
+        left = AL.balance(lv, al)
+    except AL.AllocError as e:
+        yield T("SYS_ALLOC_BAD_SAVE", why=e)
+        return
+    usage = str((_data("commands").get("alloc") or {}).get("usage") or "")
+    arg = _alloc_arg(env)
+
+    if not arg:
+        # 不带参数：把「还剩几点 / 能加哪几维 / 设计基线长什么样」一次说清
+        # （甲案把点数交给玩家自己分 ⇒ 得让人一眼看见自己手里有点）
+        if left <= 0:
+            yield T("SYS_ALLOC_DONE", total=AL.total_points(lv))
+            return
+        yield T("SYS_ALLOC_ASK", usage=usage, left=left, list=_stat_list())
+        # 只列**真投得出点**的维（0 点的维不占屏）；投法来自同一份权重（`alloc.plan`）
+        yield T("SYS_ALLOC_SUGGEST", total=AL.total_points(lv),
+                list=" · ".join("%s %d" % (_stat_slot(s), n)
+                                for s, n in AL.plan(lv, cls).items() if n))
+        return
+
+    parts = arg.split()
+    stat = _stat_of(parts[0])
+    if not stat:
+        yield T("SYS_ALLOC_BAD_STAT", want=parts[0], list=_stat_list())
+        return
+    cnt = 1
+    if len(parts) > 1:
+        try:
+            cnt = int(parts[1])
+        except (TypeError, ValueError):
+            cnt = 0
+        if len(parts) > 2 or cnt < 1:
+            yield T("SYS_ALLOC_BAD_NUM", want=" ".join(parts[1:]))
+            return
+    if cnt > left:
+        yield T("SYS_ALLOC_SHORT", stat=_stat_slot(stat), n=cnt, left=left, usage=usage)
+        return
+
+    try:
+        p["alloc"] = AL.apply(al, stat, cnt)
+    except AL.AllocError as e:                   # 档上那一格是小数（配平基准那种）⇒ 不截断，点名
+        yield T("SYS_ALLOC_BAD_SAVE", why=e)
+        return
+    p = _p(p)                     # ★ 出档口再算一遍：生命上限跟着加点一起动（P-27 同一个口）
+    if player is not None:
+        player.update(p)
+    _save(env)
+    yield T("SYS_ALLOC_OK", stat=_stat_slot(stat), n=cnt,
+            now=int((p.get("alloc") or {}).get(stat) or 0), left=left - cnt)
 
 
 # ══════════════════════════════════════════════════════════════

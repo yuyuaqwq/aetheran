@@ -512,14 +512,23 @@
   },
   "alloc": {
     "patterns": [
-      "^加点\\s*(.+)$"
+      "^加点\\s*(.+)$",
+      "^加点\\s*$"
     ],
     "category": "角色",
     "desc": "分配属性点",
-    "usage": "加点 <参数>",
+    "usage": "加点 <属性> [次数]",
     "visible": true,
     "order": 23,
-    "guard_desc": "有属性点"
+    "guard_desc": "有属性点",
+    "bind": {
+      "handler": "content.cmds_ast:alloc_points",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   },
   "skills": {
     "patterns": [

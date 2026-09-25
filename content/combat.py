@@ -16,6 +16,7 @@ from ext_combat import Battle
 from ext_combat.battle.actors import make_actor
 
 from . import panel_build as PB
+from . import alloc as ALLOC          # ★ P-34：档上那份加点只走它（`of_record`）
 
 PLAYER_SIDE = "player"
 ENEMY_SIDE = "enemy"
@@ -33,7 +34,10 @@ def player_actor(player: dict, stack_prefix: str = "aetheran") -> dict:
     #   时钟是宿主注入的那根）。★ P-27：与「档上的上限」（`panel_build.hp_cap`）吃**同一份**
     #   取值口 ⇒ 面板 / 档 / 战斗 actor 三处同一个数。
     gear, buffs = PB.gear_and_buffs(player)
-    a = PB.build_actor(cls, lv, player.get("alloc"), gear, buffs=buffs, stack_prefix=stack_prefix)
+    # ★ P-34：「这档实际分了多少」只走 `alloc.of_record`（归一化 + fail-closed）——
+    #   原先这里写的是 `player.get("alloc")`：档上那一格坏了（认不出的维 / 小数 / 超投）
+    #   战斗会当没投过照样开打，而「属性」页 / 生命上限却按别的数算 ⇒ 三处对不上。
+    a = PB.build_actor(cls, lv, ALLOC.of_record(player), gear, buffs=buffs, stack_prefix=stack_prefix)
     a["uid"] = str(player.get("uid") or "p1")
     a["name"] = player.get("name") or "无名者"
     a["side"] = PLAYER_SIDE

@@ -10,6 +10,7 @@ import json
 from pathlib import Path
 
 from .cmds_ast import T     # 文案真源只有 texts 域（B3-6b-2d）：分段名只传槽位
+from . import alloc as ALLOC   # ★ P-34：「这档实际分了多少」只走它（`of_record`）
 
 _DATA = Path(__file__).resolve().parent / "data"
 _CLASSES = None
@@ -195,6 +196,21 @@ def gear_and_buffs(record) -> tuple:
     return (GB.gear_stats(rec) or None), (GB.food_buff(rec) or None)
 
 
+def actor_of_record(record) -> dict:
+    """档 → 战斗那只 actor（职业 + 等级 + **档上实际那份加点** + 装备 + 增益）——**唯一口**。
+
+    ★ P-34：上一批（P-27）把「装备 / 增益」收成了一个口（`gear_and_buffs`），
+      这一批把「加点」也收了（`alloc.of_record`）。上游（战斗 / 生命上限 / 属性页 /
+      下一批的**装备门槛**）要「这档的面板」一律走这里 —— 别再各自 `rec.get("alloc")`。
+    """
+    rec = record if isinstance(record, dict) else {}
+    cls = str(rec.get("cls") or "").strip()
+    cls_rec(cls)                               # 空 / 不在域里 ⇒ 当场抛（fail-closed）
+    lv = max(1, int(rec.get("level") or 1))
+    gear, buffs = gear_and_buffs(rec)
+    return build_actor(cls, lv, ALLOC.of_record(rec), gear, buffs=buffs)
+
+
 def hp_cap(record, *, strict: bool = True):
     """玩家档 → **生命上限**（宪法键 `hp_max`）。唯一来源：本函数（职业面板）。
 
@@ -213,7 +229,5 @@ def hp_cap(record, *, strict: bool = True):
     cls = str(rec.get("cls") or "").strip()
     if not cls and not strict:
         return None                            # 还没择业 ⇒ 上限未定（不猜数、也不崩）
-    cls_rec(cls)                               # ★ 唯一的把关口（空 / 不在域里 ⇒ 当场抛）
-    lv = max(1, int(rec.get("level") or 1))
-    gear, buffs = gear_and_buffs(rec)
-    return int(build_actor(cls, lv, rec.get("alloc"), gear, buffs=buffs)["max_hp"])
+    # ★ P-34：档 → 面板只走一个口（职业 + 等级 + **档上实际那份加点** + 装备 + 增益）
+    return int(actor_of_record(rec)["max_hp"])

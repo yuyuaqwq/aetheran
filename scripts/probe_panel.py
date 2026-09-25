@@ -299,5 +299,209 @@ else:
         % (_ITS[_CRIT_ITEM]["name"], _cv, _c0, _c1), _c1 > _c0)
 
 print("")
+print("── ⑦ ★ P-34（甲案：玩家自己加点）：点数只有一个口 · **上界（铺满）与下界（零加点）两头都用数字钉住**")
+#   真源：`00_总纲/05_系统总表与阶段开放_v1.md`「五维加点（建号 8 + 每级 3）」
+#        `06_第一阶段垂直切片/04_指令总表.md`「加点 <属性> [次数]」
+#   裁决（2026-09-25 鱼鱼拍板 · 甲案）：**玩家自己加点**，不做「新档自动平铺」——
+#   依据 `18_建号与新手引导_v1.md` §四「升到 2 级并加点」· `16_玩家体验走查_v1.md`「他能做什么 …加点」。
+#   于是配平那把尺（怪面板 = 按建议权重**铺满**反推）是**参照上界**，玩家档上可以一个点都没投 = **下界**。
+if os.path.join(PKG, "scripts") not in sys.path:
+    sys.path.insert(0, os.path.join(PKG, "scripts"))
+import rebuild_monsters as _RBM34                                     # noqa: E402
+from content import alloc as _AL34                                    # noqa: E402
+
+_L34 = list(range(1, 21)) + [40, 60, 80, 100]
+_CLS34 = [c for c in sorted(panel_build.classes()) if not c.startswith("_")]
+
+# ① 点数公式是**等级的线性函数**（不逐级硬编码）—— 扩到 100 级也成立
+_bad34a = [_L for _L in _L34
+           if _AL34.total_points(_L) != _AL34.LV1_POINTS + _AL34.PER_LEVEL_POINTS * (_L - 1)]
+chk("★ P-34 点数 = `LV1_POINTS(%d) + PER_LEVEL_POINTS(%d) × (级−1)` —— 1/20/100 级 = %d/%d/%d 点"
+    "（公式是等级的线性函数，不是逐级表：五阶段扩到 100 级照样成立）"
+    % (_AL34.LV1_POINTS, _AL34.PER_LEVEL_POINTS, _AL34.total_points(1),
+       _AL34.total_points(20), _AL34.total_points(100)),
+    not _bad34a and (_AL34.total_points(1), _AL34.total_points(20), _AL34.total_points(100)) == (8, 65, 305),
+    "%s" % _bad34a)
+
+# ② `plan`（建议整数投法）与 `flat`（配平铺满）**都恰好把点投完**；两者每维差 < 1
+_bad34b = []
+for _L in _L34:
+    for _cid in _CLS34:
+        _p34, _f34 = _AL34.plan(_L, _cid), _AL34.flat(_L, _cid)
+        if sum(_p34.values()) != _AL34.total_points(_L) or _AL34.balance(_L, _p34) != 0 \
+                or abs(sum(_f34.values()) - _AL34.total_points(_L)) > 1e-9 \
+                or max(abs(_p34[_s] - _f34[_s]) for _s in _f34) >= 1:
+            _bad34b.append((_L, _cid, _p34, _f34))
+chk("★ P-34 六职业 × (%d 个等级)：`plan`（整数投法）与 `flat`（配平铺满）都**余额 0**"
+    "· 每维差 < 1（建议投法 = 配平基准的取整）；且生成器 `rebuild_monsters.alloc_of` 与本口同源"
+    % len(_L34),
+    not _bad34b, "%s" % _bad34b[:1])
+
+# ③ 真敲「加点」（真存档半边）：档上那格真变 ⇒ 面板 / 档 / actor 三处一起动 · 余额对得上
+class _E34(object):
+    """直调实现体：只要 env.save() + env.text（与别处同形）。"""
+
+    def __init__(self, text=""):
+        self.text = text
+
+    def save(self):
+        pass
+
+
+def _drive34(fn, rec, text=""):
+    out34 = []
+
+    async def _go():
+        async for _l in fn(_E34(text), None, "u_p34", rec):
+            out34.append(str(_l))
+
+    asyncio.run(_go())
+    return out34
+
+
+_uid34 = "u_p34_alloc"
+_rec34 = {"cls": "cls_knight", "level": 6, "hp": 0, "gold": 0, "bag": {}, "equipped": {}, "codex": {}, "flags": {}}
+
+
+def _store34(rec):
+    _r34 = CA._p(dict(rec))
+    _r34.pop("uid", None)
+    PS.update_player("g_hp", _uid34, **_r34)                     # 落档
+    return PS.get_player("g_hp", _uid34)                         # ← 真从库里读回来
+
+
+_b34 = _store34(_rec34)
+_cap0_34 = int(_b34["hp_max"])
+_live34 = dict(_b34)
+_out34 = []
+for _t34 in ("加点 力量 3", "加点 体质 2", "加点 意志 1"):
+    _out34 += _drive34(CA.alloc_points, _live34, _t34)
+_want34 = {_s: _n for _s, _n in (("STR", 3), ("VIT", 2), ("WIL", 1))}
+_pan34 = int(panel_build.hp_cap(_live34))
+_act34 = int(CB.player_actor(_live34)["max_hp"])
+chk("★ P-34 真敲三次「加点」（骑士 6 级 · 共 %d 点）⇒ 档上那格真变 %s · 面板 / 档 / actor **三处同一个数**"
+    "（%s → %s）· 余额 %s = 总点数 − 已花"
+    % (_AL34.total_points(6), _want34, _cap0_34, _pan34, _AL34.left_of_record(_live34)),
+    _AL34.of_record(_live34) == _want34 and _pan34 == int(_live34["hp_max"]) == _act34 > _cap0_34
+    and _AL34.left_of_record(_live34) == _AL34.total_points(6) - 6, "%s / %s / %s" % (
+        _AL34.of_record(_live34), _live34.get("hp_max"), _act34))
+
+_want34lines = [CA.T("SYS_ALLOC_OK", stat=CA.T("SYS_STAT_STR"), n=3, now=3, left=20),
+                CA.T("SYS_ALLOC_OK", stat=CA.T("SYS_STAT_VIT"), n=2, now=2, left=18),
+                CA.T("SYS_ALLOC_OK", stat=CA.T("SYS_STAT_WIL"), n=1, now=1, left=17)]
+chk("★ P-34 那三行回话**逐字**取自 texts 槽位（`SYS_ALLOC_OK`）：%s" % _out34[0],
+    _out34 == _want34lines, "%s" % _out34)
+
+_b34b = _store34(_live34)                                        # 加了点之后真落库再读回来
+chk("★ P-34 加了点再落库读回：档上那格 = 面板 = actor（%s）—— 玩家加的点**真进了战斗面板**"
+    % _b34b.get("hp_max"),
+    int(_b34b["hp_max"]) == int(panel_build.hp_cap(_b34b)) == int(CB.player_actor(_b34b)["max_hp"]) == _pan34,
+    "%s / %s" % (_b34b.get("hp_max"), _b34b.get("alloc")))
+
+# ④ 战力两头（固定种子 40 场）：上界 / 建议投法 / 下界 —— 数字钉死，别再"感觉差一倍"
+_MON34 = st.domain("monsters") or {}
+
+
+def _rec34_of(level, cid, mode):
+    _al34 = {"flat": lambda: _AL34.flat(level, cid), "plan": lambda: _AL34.plan(level, cid),
+             "none": lambda: {}}[mode]()
+    _pl34 = {"cls": cid, "level": level, "uid": "u_b34", "name": "试", "alloc": _al34,
+             "bag": {}, "gold": 0}
+    _pl34["hp"] = CA.hp_cap(_pl34)
+    return _pl34
+
+
+def _run34(mid, level, cid, mode, n=40):
+    _w34, _acts34 = 0, []
+    for _s34 in range(n):
+        _pl34 = _rec34_of(level, cid, mode)
+        _r34, _logs34, _hp34 = CB.run_auto(_pl34, [mid], _MON34, seed=1000 + _s34)
+        _w34 += 1 if _r34 == "victory" else 0
+        _acts34.append(sum(1 for _x in _logs34 if ("🌀 %s 开始出招" % _pl34["name"]) in _x))
+    _acts34.sort()
+    return _w34, _acts34[len(_acts34) // 2]
+
+
+_END34 = {}
+for _mid34, _lv34, _cid34, _tag34 in (("ms_wild_dog", 6, "cls_knight", "普通·野狗 lv6"),
+                                      ("ms_bitten_lumberjack", 9, "cls_knight", "精英·被咬过的伐木工 lv9")):
+    _u34 = _run34(_mid34, _lv34, _cid34, "flat")
+    _p34 = _run34(_mid34, _lv34, _cid34, "plan")
+    _d34 = _run34(_mid34, _lv34, _cid34, "none")
+    _END34[_mid34] = (_u34, _p34, _d34)
+    print("     %-22s 上界（铺满）%2d/40 出手 %2d ｜ 建议整数投法 %2d/40 出手 %2d ｜ 下界（零加点）%2d/40 出手 %2d"
+          % (_tag34, _u34[0], _u34[1], _p34[0], _p34[1], _d34[0], _d34[1]))
+chk("★ P-34 两头钉住（骑士 · 固定种子 40 场）：**普通怪**（野狗 lv6）上界 40/40 出手 6 → 下界 13/40 出手 15"
+    "（出手 2.5×）· **精英**（被咬过的伐木工 lv9）上界 40/40 → 下界 0/40 ⇒ 「照样打得完」与"
+    "「当场倒地」都在这一条上（口径一变就红）",
+    _END34["ms_wild_dog"][0][0] == 40 and _END34["ms_wild_dog"][2][0] <= 20
+    and _END34["ms_wild_dog"][2][1] >= 1.5 * _END34["ms_wild_dog"][0][1]
+    and _END34["ms_bitten_lumberjack"][0][0] == 40
+    and _END34["ms_bitten_lumberjack"][2][0] <= 4,
+    "%s / %s" % (_END34["ms_wild_dog"], _END34["ms_bitten_lumberjack"]))
+
+print("")
+print("── ⑧ ★ P-34 跨 100 级：面板成长与上限也用**等级函数**表达（1/20/40/60/80/100 六个锚点）")
+_ANC34 = (1, 20, 40, 60, 80, 100)
+_TAB34 = []
+for _L in _ANC34:
+    _a34 = _RBM34.avg_panel(_L)
+    _m34 = _RBM34.panel_of(_L, "普通", "杂兵")
+    _tab34 = {"L": _L, "pts": _AL34.total_points(_L), "hp": _a34["hp"], "atk": _a34["atk"],
+              "matk": _a34["matk"], "def": _a34["def"], "mdef": _a34["res"],
+              "spd": sum(_RBM34.player_panel(_L, _c)["spd"] for _c in _CLS34) / len(_CLS34),
+              "mhp": _m34["hp"], "m_atk": _m34["atk"], "m_def": _m34["def"], "m_res": _m34["res"],
+              "perhit": _RBM34.standard_per_hit(_L)}
+    _TAB34.append(_tab34)
+    print("     L%-4d %3d 点 ｜ 玩家(铺满均值) hp %7.0f atk %6.1f matk %6.1f def %6.1f mdef %6.1f spd %6.1f"
+          " ｜ 同级基准怪 hp %5d atk %4d def %4d ｜ 挨 %4.1f 下"
+          % (_L, _tab34["pts"], _tab34["hp"], _tab34["atk"], _tab34["matk"], _tab34["def"],
+             _tab34["mdef"], _tab34["spd"], _tab34["mhp"], _tab34["m_atk"], _tab34["m_def"],
+             _tab34["hp"] / max(_tab34["m_atk"], 1)))
+
+_bad34c = []
+for _i, _t in enumerate(_TAB34):
+    # 怪 hp 就是照「标准单次行动伤害 × 4」反推的（配平口径是等级的 ⇒ L100 也照样成立）
+    if _t["mhp"] != round(_t["perhit"] * 4):
+        _bad34c.append(("怪 hp 与 per_hit×4 对不上", _t["L"], _t["mhp"], round(_t["perhit"] * 4)))
+    if _i:                                    # 面板单调增（不出现"某级之后往回掉"）
+        _p34 = _TAB34[_i - 1]
+        for _k34 in ("hp", "atk", "matk", "def", "mdef", "spd"):
+            if _t[_k34] <= _p34[_k34]:
+                _bad34c.append(("面板不增", _t["L"], _k34))
+    # 玩家挨的怪攻击次数稳定（不秒杀 · 也不无敌）· 通道 ÷ 怪防不倒挂
+    if not 8.0 <= _t["hp"] / max(_t["m_atk"], 1) <= 30.0:
+        _bad34c.append(("挨几下出界", _t["L"], _t["hp"] / max(_t["m_atk"], 1)))
+    for _c in _CLS34:
+        _p34 = _RBM34.player_panel(_t["L"], _c)
+        _ch34 = panel_build.classes()[_c]["dmg_channel"]
+        _basis34 = _p34["atk"] if _ch34 == "phys" else _p34["matk"]
+        _prot34 = _t["m_def"] if _ch34 == "phys" else _t["m_res"]
+        if _basis34 < 1.5 * _prot34:
+            _bad34c.append(("通道被怪防压住", _t["L"], _c, _basis34, _prot34))
+_HP34 = _TAB34[-1]["hp"] / _TAB34[0]["hp"]
+_AT34 = _TAB34[-1]["atk"] / _TAB34[0]["atk"]
+chk("★ P-34 六个锚点（1/20/40/60/80/100 级）：面板**单调增 · 不爆**（hp %0.2f× · atk %0.2f× 拉满 100 级）"
+    "· 同级基准怪 hp 仍 = 标准单发×4（配平是等级函数 ⇒ L100 照样成立）· 玩家挨的怪攻击 %0.1f~%0.1f 下"
+    "（跨 100 级稳定）· 六职业的伤害通道都在怪防 1.5 倍以上（不倒挂）"
+    % (_HP34, _AT34, min(_t["hp"] / max(_t["m_atk"], 1) for _t in _TAB34),
+       max(_t["hp"] / max(_t["m_atk"], 1) for _t in _TAB34)),
+    not _bad34c and _HP34 < 25.0 and _AT34 < 35.0, "%s" % _bad34c[:3])
+
+# ⑤ L100 也真敲一次（余额 / 上限的校验不许在低等级写死常数）
+_l100 = _rec34_of(100, "cls_knight", "none")
+_o100 = _drive34(CA.alloc_points, _l100, "加点 力量 1")
+_o100b = _drive34(CA.alloc_points, _l100, "加点 力量 %d" % (_AL34.total_points(100) + 1))
+chk("★ P-34 100 级真敲：加 1 点 ⇒ 还剩 %d 点（%d − 1）· 想加 %d 点（超总点数）⇒ 只说不够、**不动档**"
+    % (_AL34.total_points(100) - 1, _AL34.total_points(100), _AL34.total_points(100) + 1),
+    _o100 == [CA.T("SYS_ALLOC_OK", stat=CA.T("SYS_STAT_STR"), n=1, now=1,
+                   left=_AL34.total_points(100) - 1)]
+    and _o100b == [CA.T("SYS_ALLOC_SHORT", stat=CA.T("SYS_STAT_STR"),
+                        n=_AL34.total_points(100) + 1, left=_AL34.total_points(100) - 1,
+                        usage=str((CA._data("commands").get("alloc") or {}).get("usage") or ""))]
+    and _AL34.of_record(_l100) == {"STR": 1},
+    "%s / %s / %s" % (_o100, _o100b, _AL34.of_record(_l100)))
+
+print("")
 print("===== %s =====" % ("★ P-27 三处一致 + 反证都过 ✅" if not fails else "P-27 有红 ❌ %s" % fails))
 sys.exit(0 if ok else 1)

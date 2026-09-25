@@ -387,8 +387,9 @@ UNBOUND = {k: v for k, v in DECL.items()
 #: ★ 「声明了、可见、包内还没实现」的条数**只许降**（与 probe_copy 的 BUDGET 同一套纪律）——
 #:   B3-6 收口时 45，B3-9（装备与技能那组）接下 装备 / 卸下 / 对比 / 学习 / 技能 5 条 ⇒ **38 → 33**；
 #:   ★ B3-12（这一批）再接下 8 条（看 <编号> / 属性 / 查看 / 丢弃 / 卖出 / 整理背包 / 存放取出 / 成就）
-#:   ⇒ **33 → 25**。再往上加就是回退（要么是新声明没实现、要么是有人把 bind 摘了）。
-UNBOUND_MAX = 25
+#:   ⇒ **33 → 25**；★ B3-15（P-34）接下 `alloc`（加点）⇒ **25 → 24**。
+#:   再往上加就是回退（要么是新声明没实现、要么是有人把 bind 摘了）。
+UNBOUND_MAX = 24
 
 print("⑤ ★ P-23：「帮助」只列**有处理器**的声明（真敲 · 逐条对账）")
 try:
@@ -848,6 +849,17 @@ def _decl_usage(key):
     return str((DECL.get(key) or {}).get("usage") or "").split(" ")[0].strip()
 
 
+def _statlist13():
+    """五个维名的呈现串（期望值从 texts 槽位现拼 —— 与实现体同一个口，不手写中文）。"""
+    from content import alloc as _AL
+    return " · ".join(_r("SYS_STAT_%s" % _s) for _s in _AL.STATS)
+
+
+def _decl_usage_full(key):
+    """声明里那条 `usage` **原样**（`加点 <属性> [次数]`）—— 提示行里递给玩家看的就是它。"""
+    return str((DECL.get(key) or {}).get("usage") or "")
+
+
 def _rows12(actor):
     return [_r("SYS_ATTR_ROW", label=_r("SYS_STAT_%s" % slot), value=_num12(actor[key]))
             for key, slot in _CM12.PANEL_ROWS if key in actor]
@@ -862,6 +874,7 @@ def _crit12(actor):
 
 try:
     from content import cmds_more as _CM12                                # noqa: E402
+    from content import alloc as _AL13                                    # noqa: E402
     from content import loot as _LT12                                    # noqa: E402
     from content import codex as _CX12                                   # noqa: E402
     from content import eggs as _EG12                                    # noqa: E402
@@ -943,14 +956,17 @@ try:
     _recA = _sv12()
     _grA, _bfA = PB.gear_and_buffs(_recA)
     _actA = PB.build_actor(str(_recA.get("cls")), int(_recA.get("level") or 1),
-                           _recA.get("alloc"), _grA, buffs=_bfA)
+                           _AL13.of_record(_recA), _grA, buffs=_bfA)
     _capA = int(PB.hp_cap(dict(_recA)))
     _gA = _say12("属性")
     _wA = [_r("SYS_ATTR_HEAD", who=_r("SYS_NAME_UNKNOWN"), cls=_CL9["cls_knight"]["name"],
               level=_recA.get("level")),
            _r("SYS_ATTR_VITAL", hp=_num12(_actA.get("max_hp")), mo=_num12(_actA.get("max_mp")),
               crit=_num12(_crit12(_actA) * 100))] + _rows12(_actA) + [
-           _r("SYS_ATTR_NOALLOC"), _r("SYS_ATTR_NOGEAR"), _r("SYS_ATTR_NOTE")]
+           _r("SYS_ATTR_NOALLOC"),
+           # ★ P-34：没投的点那一行（余额 > 0 才出）—— 甲案下这是"点数在手里"的提示
+           _r("SYS_ATTR_LEFT", left=_AL13.left_of_record(_recA), usage=_decl_usage("alloc")),
+           _r("SYS_ATTR_NOGEAR"), _r("SYS_ATTR_NOTE")]
     if _gA != _wA:
         _BAD12.append(("属性", _gA, _wA))
     _want_cap = _r("SYS_ATTR_VITAL", hp=_num12(_capA), mo=_num12(_actA.get("max_mp")),
@@ -958,10 +974,13 @@ try:
     if _want_cap not in _gA:
         _BAD12.append(("属性 的生命上限 != hp_cap（两个源）", _gA[:2], _want_cap))
     _labs12 = [_r("SYS_STAT_%s" % s) for _k, s in _CM12.PANEL_ROWS]
-    if not all(any(lab in _ln for lab in _labs12) for _ln in _gA[2:len(_gA) - 3]):
+    # ★ P-34：尾注由三行变四行（多了一行「没投的点」）⇒ 二级属性那几行的范围**按行数取**，
+    #   不再靠"尾部减 3"这种位置猜（判据的意思没变：九行都要认得出标签）。
+    _n12 = len(_rows12(_actA))
+    if not all(any(lab in _ln for lab in _labs12) for _ln in _gA[2:2 + _n12]):
         _BAD12.append(("属性 的二级属性行认不出标签", _gA[:3]))
-    chk("★ `属性` 真敲：抬头 / 生命上限（= `hp_cap` 那唯一来源）/ 九行二级属性 / 加点 / 装备 —— "
-        "与 `panel_build` 现算的期望逐字一致",
+    chk("★ `属性` 真敲：抬头 / 生命上限（= `hp_cap` 那唯一来源）/ 九行二级属性 / 加点 **+ 没投的点** / "
+        "装备 —— 与 `panel_build` 现算的期望逐字一致",
         not [x for x in _BAD12 if x[0].startswith("属性")],
         "%s" % [x for x in _BAD12 if x[0].startswith("属性")][:2])
 
@@ -1130,6 +1149,80 @@ try:
         "不设记满的那本换一条行）且**看一眼成就 ≠ 往档里塞空容器**",
         not [x for x in _BAD12 if x[0] == "成就"],
         "%s" % [x for x in _BAD12 if x[0] == "成就"][:2])
+
+    # ── ★ P-34：加点（真敲各档 + 逐字对账 + 余额对得上 + 失败不动档）───────────────
+    #   口径：`content/alloc.py` 一个口（总点数 = 8 + 3×(级−1) · 余额 = 总点数 − 已花）；
+    #   甲案（玩家自己加点，不自动平铺）⇒ 点数不是"发出来的"，是**按等级派生**的。
+    from content import alloc as _AL13                                     # noqa: E402
+
+    _lv13 = int(_sv12().get("level") or 1)
+    _tot13 = _AL13.total_points(_lv13)
+
+    def _ok13(stat, n, now, left):
+        return [_r("SYS_ALLOC_OK", stat=_r("SYS_STAT_%s" % stat), n=n, now=now, left=left)]
+
+    def _alloc13():
+        return (_sv12().get("alloc") or {})
+
+    _g13a = _say12("加点 力量 3")
+    if _g13a != _ok13("STR", 3, 3, _tot13 - 3) or _alloc13() != {"STR": 3}:
+        _BAD12.append(("加点 力量 3", _g13a, _alloc13()))
+    _g13b = _say12("加点 STR 2")
+    if _g13b != _ok13("STR", 2, 5, _tot13 - 5) or _alloc13() != {"STR": 5}:
+        _BAD12.append(("加点 STR 2（ASCII 也认）", _g13b, _alloc13()))
+    _asks = [("加点 运气 1", _r("SYS_ALLOC_BAD_STAT", want="运气", list=_statlist13()),
+              "认不出的维"),
+             ("加点 力量 0", _r("SYS_ALLOC_BAD_NUM", want="0"), "次数 0"),
+             ("加点 力量 1 2", _r("SYS_ALLOC_BAD_NUM", want="1 2"), "次数写了两个"),
+             ("加点 体质 99", _r("SYS_ALLOC_SHORT", stat=_r("SYS_STAT_VIT"), n=99,
+                                left=_tot13 - 5, usage=_decl_usage_full("alloc")), "超余额")]
+    for _t13, _w13, _why13 in _asks:
+        _before13 = dict(_alloc13())
+        _got13 = _say12(_t13)
+        if _got13 != [_w13] or _alloc13() != _before13:
+            _BAD12.append(("加点 %s" % _why13, _got13, _w13, _alloc13()))
+    _g13c = _say12("加点")
+    _w13c = [_r("SYS_ALLOC_ASK", usage=_decl_usage_full("alloc"), left=_tot13 - 5,
+                list=_statlist13()),
+             _r("SYS_ALLOC_SUGGEST", total=_tot13,
+                list=" · ".join("%s %d" % (_r("SYS_STAT_%s" % _s), _n)
+                                for _s, _n in _AL13.plan(_lv13, "cls_knight").items() if _n))]
+    if _g13c != _w13c or _alloc13() != {"STR": 5}:
+        _BAD12.append(("加点（不带参数）", _g13c, _w13c, _alloc13()))
+    _g13d = _say12("加点 意志 %d" % (_tot13 - 5))
+    if _g13d != _ok13("WIL", _tot13 - 5, _tot13 - 5, 0) or _AL13.left_of_record(_sv12()) != 0 \
+            or _AL13.spent_of_record(_sv12()) != _tot13:
+        _BAD12.append(("加点（投满）", _g13d, _alloc13(), _AL13.left_of_record(_sv12())))
+    _g13e = _say12("加点")
+    if _g13e != [_r("SYS_ALLOC_DONE", total=_tot13)]:
+        _BAD12.append(("加点（投满了）", _g13e))
+    _g13f = _say12("加点 力量 1")
+    if _g13f != [_r("SYS_ALLOC_SHORT", stat=_r("SYS_STAT_STR"), n=1, left=0,
+                    usage=_decl_usage_full("alloc"))]:
+        _BAD12.append(("加点（余额 0 还想加）", _g13f))
+    chk("★ P-34 `加点` 真敲 11 档：中文名 / ASCII 都认 · 逐字对账 · **余额对得上**"
+        "（总点数 %d = 8 + 3×(级−1)）· 超余额 / 认不出的维 / 次数不是正整数 各回一行且**不动档**"
+        " · 投满 ⇒ `DONE`" % _tot13,
+        not [x for x in _BAD12 if str(x[0]).startswith("加点")],
+        "%s" % [x for x in _BAD12 if str(x[0]).startswith("加点")][:2])
+
+    # ── ★ P-34：档上那格坏掉 ⇒ 点名（fail-closed），不"当作没投过"接着加 ─────────
+    _bad13 = _Ad([], seed=dict(_SEED12, level=1, alloc={"STR": 99}))
+    _db13 = os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp", "ast_probe_cmds_alloc.db")
+    try:
+        os.remove(_db13)
+    except OSError:
+        pass
+    _h13 = Host(_bad13, str(REPO), inject={"db_path": _db13, "clock": time.time})
+    _h13.boot()
+    _bad13.out.clear()
+    _h13.handle({"uid": "u_c", "group_id": "g_c", "text": "加点"})
+    _g13g = list(_bad13.out)
+    chk("★ P-34 档上 `alloc` 坏了（投了 99 点 / 1 级只有 8 点）⇒ 点名一行、**不动档**"
+        "（不静默当没投过）",
+        len(_g13g) == 1 and _g13g[0].startswith(str(TX["SYS_ALLOC_BAD_SAVE"]["value"]).split("{")[0])
+        and (_bad13.saved or {}).get("alloc") == {"STR": 99},
+        "%s / %s" % (_g13g, (_bad13.saved or {}).get("alloc")))
 
     # ── 收口三扫：不是 soon 句 · 不漏机器键 · 不缺文案 ────────────────────
     _all12 = [ln for _t, _o in _said12 for ln in _o] + _gS3 + _gAway

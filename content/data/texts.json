@@ -3606,6 +3606,89 @@
     "category": "系统",
     "desc": "B3-12 属性 · 尾注"
   },
+  "SYS_ALLOC_ASK": {
+    "value": "{usage} ｜ 还剩 {left} 点没投 ｜ 可加：{list}",
+    "params": [
+      "usage",
+      "left",
+      "list"
+    ],
+    "category": "系统",
+    "desc": "P-34 加点（B3-15）"
+  },
+  "SYS_ALLOC_SUGGEST": {
+    "value": "设计基线（按建议权重铺满 {total} 点）：{list}",
+    "params": [
+      "total",
+      "list"
+    ],
+    "category": "系统",
+    "desc": "P-34 加点（B3-15）"
+  },
+  "SYS_ALLOC_OK": {
+    "value": "{stat} +{n} ⇒ {stat} {now} ｜ 还剩 {left} 点",
+    "params": [
+      "stat",
+      "n",
+      "now",
+      "left"
+    ],
+    "category": "系统",
+    "desc": "P-34 加点（B3-15）"
+  },
+  "SYS_ALLOC_SHORT": {
+    "value": "{stat} 想加 {n} 点，只剩 {left} 点（{usage}）",
+    "params": [
+      "stat",
+      "n",
+      "left",
+      "usage"
+    ],
+    "category": "系统",
+    "desc": "P-34 加点（B3-15）"
+  },
+  "SYS_ALLOC_BAD_STAT": {
+    "value": "认不出「{want}」这一维 —— 可加：{list}",
+    "params": [
+      "want",
+      "list"
+    ],
+    "category": "系统",
+    "desc": "P-34 加点（B3-15）"
+  },
+  "SYS_ALLOC_BAD_NUM": {
+    "value": "次数得写 1 以上的整数（你写的是「{want}」）",
+    "params": [
+      "want"
+    ],
+    "category": "系统",
+    "desc": "P-34 加点（B3-15）"
+  },
+  "SYS_ALLOC_DONE": {
+    "value": "点数都投完了（{total} 点全在五维上）—— 升级再来",
+    "params": [
+      "total"
+    ],
+    "category": "系统",
+    "desc": "P-34 加点（B3-15）"
+  },
+  "SYS_ALLOC_BAD_SAVE": {
+    "value": "档上的加点这一格不对：{why} —— 先别加了，免得后面全对不上",
+    "params": [
+      "why"
+    ],
+    "category": "系统",
+    "desc": "P-34 加点（B3-15）"
+  },
+  "SYS_ATTR_LEFT": {
+    "value": "没投的点：{left} —— 敲「{usage}」投出去",
+    "params": [
+      "left",
+      "usage"
+    ],
+    "category": "系统",
+    "desc": "P-34 加点（B3-15）"
+  },
   "SYS_STAT_STR": {
     "value": "力量",
     "params": [],

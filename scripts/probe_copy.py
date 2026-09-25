@@ -637,6 +637,14 @@ def main():
          {"loc": "windmill_town", "node": "wt_inn", "bag": {},
           "flags": {"stash": {_wpn: 1}}}),
         ("取出(空箱)", CMO.stash, "取出 不存在的", {"loc": "windmill_town", "node": "wt_inn"}),
+        # ★ P-34：加点（真跑各支 —— ⑥ 的「不缺文案 / 不漏机器键 / 不空回」自动罩到它身上）
+        ("加点(不带参数)", CA.alloc_points, "", {"cls": "cls_knight", "level": 6}),
+        ("加点(加上了)", CA.alloc_points, "加点 力量 3", {"cls": "cls_knight", "level": 6}),
+        ("加点(认不出的维)", CA.alloc_points, "加点 运气 1", {"cls": "cls_knight", "level": 6}),
+        ("加点(次数不对)", CA.alloc_points, "加点 力量 0", {"cls": "cls_knight", "level": 6}),
+        ("加点(超余额)", CA.alloc_points, "加点 力量 99", {"cls": "cls_knight", "level": 6}),
+        ("加点(投满了)", CA.alloc_points, "", {"cls": "cls_knight", "level": 1, "alloc": {"STR": 8}}),
+        ("加点(还没择业)", CA.alloc_points, "加点 力量 1", {}),
         ("成就(空档)", CMO.achievements, "", {}),
         ("成就(有账)", CMO.achievements, "", _rich()),
     ]

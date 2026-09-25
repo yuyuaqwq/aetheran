@@ -36,6 +36,7 @@ from .cmds_ast import _data, _p, _save, T, name_with_title, _cls_label
 from .cmds_quest import _done, _mine, _quests, _shadow, _unmet
 from .cmds_recipe import _have, _take
 from .cmds_gear import affix_lines, stat_label
+from . import alloc as ALLOC
 from . import codex as CX
 from . import eggs as EG
 from . import gear as GB
@@ -213,20 +214,25 @@ async def attrs(env, sink, uid, player):
         yield T("SYS_ATTR_NOCLS")
         return
     gear, buffs = PB.gear_and_buffs(p)                 # ★ 与面板 / 战斗同一个取值口
-    actor = PB.build_actor(cls, max(1, int(p.get("level") or 1)), p.get("alloc"),
+    actor = PB.build_actor(cls, max(1, int(p.get("level") or 1)), ALLOC.of_record(p),
                            gear, buffs=buffs)
     yield T("SYS_ATTR_HEAD", who=name_with_title(p), cls=_cls_label(cls), level=p.get("level"))
     yield T("SYS_ATTR_VITAL", hp=_fmt(actor.get("max_hp", 0)), mo=_fmt(actor.get("max_mp", 0)),
             crit=_fmt(_crit_rate(actor) * 100))
     for line in _panel_rows(actor):
         yield line
-    al = dict(p.get("alloc") or {})
+    al = ALLOC.of_record(p)                            # ★ P-34：这一档实际分了多少（唯一口）
     if al:
         yield T("SYS_ATTR_ALLOC",
                 list=" · ".join("%s %d" % (stat_label(k), int(v)) for k, v in sorted(al.items())),
-                n=sum(int(v) for v in al.values()))
+                n=ALLOC.spent_of_record(p))
     else:
         yield T("SYS_ATTR_NOALLOC")
+    # ★ P-34：还剩几点 —— 甲案（玩家自己加点）下这一行是"点数真的在手里"的唯一提示；
+    #   投满了就不出（不占屏）。
+    _left = ALLOC.left_of_record(p)
+    if _left > 0:
+        yield T("SYS_ATTR_LEFT", left=_left, usage=_usage("alloc"))
     eq = [LT.rec_of(iid).get("name") or iid for iid in (p.get("equipped") or {}).values()]
     yield T("SYS_ATTR_GEAR", list=" · ".join(eq)) if eq else T("SYS_ATTR_NOGEAR")
     yield T("SYS_ATTR_NOTE")

@@ -1,0 +1,201 @@
+# -*- coding: utf-8 -*-
+"""加点（五维分配）的**唯一算术出口**（P-34）。
+
+真源口径
+--------
+· 总点数 = 建号 8 + 每级 3 —— `00_总纲/05_系统总表与阶段开放_v1.md`「五维加点（建号 8 + 每级 3）」
+  （同口径另见 `03_职业与技能/00_重做总纲_v2.md` §数值口径：加点 1 级 8 点、每级 +3）
+· 建议权重 = 六职业详案那份示例加点 ⇒ 落在 `classes.json` 的 `suggest_alloc`
+· 「1 级行 = 职业基础值（**建号 8 点未投**）」（`03_职业与技能/*_v2.md` 表头口径）
+  ⇒ 平铺 `flat()` 是**配平基准**（怪物面板就是照它反推的），不是往玩家档上自动填的东西；
+  玩家真能投的那个口是 `plan()`（**整数** · 最大余数分摊 · 和恰好 = 总点数）。
+
+为什么单开一个模块（P-34 的病根）
+--------------------------------
+生成器（`scripts/rebuild_monsters.py`）· 面板（`content/panel_build.py`）· 命令层 · 探针
+四处都要「总点数 / 已花 / 余额」。各算一份就是四把尺 —— 这里一个口，别处不许再写一遍。
+
+★ 本模块**只用标准库**（生成器在没挂引擎的路径下也要 import 得动）；也**不 import 包内别的模块**
+（免得 `panel_build` ↔ `cmds_ast` 那种环）。五个维名是 ASCII（与 `classes.json` 的
+`conv` / `suggest_alloc` 同一套键）—— 中文名走 texts 槽位 `SYS_STAT_*`，代码里不写中文。
+"""
+from __future__ import annotations
+
+import json
+import os
+
+#: 五维（=`classes.json` 的 `conv` / `suggest_alloc` 用的那五个键 · 顺序即呈现顺序）
+STATS = ("STR", "AGI", "INT", "VIT", "WIL")
+
+#: 建号给的点 · 每级再给的点（真源见模块抬头；改这两行就是改整条线）
+LV1_POINTS = 8
+PER_LEVEL_POINTS = 3
+
+_DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+_CLASSES = None
+
+
+class AllocError(Exception):
+    """加点这条线上的两类错 —— 都当场点名（`fail-closed-boundaries` §1）：
+
+      · **档坏了**：`alloc` 里认不出的维 / 负数 / 小数、或者已花 > 总点数（不可能由本包写出来）
+      · **声明错了**：档上的职业不在 `classes` 域里 / 域里那条没有 `suggest_alloc`
+
+    两类都不许静默兜底（"当作没投过"最坏：玩家以为投了、面板没变）。
+    """
+
+
+def classes() -> dict:
+    """`classes` 域（本模块只读它一份 JSON —— 不 import `panel_build`，免得成环）。"""
+    global _CLASSES
+    if _CLASSES is None:
+        with open(os.path.join(_DATA, "classes.json"), encoding="utf-8") as f:
+            _CLASSES = json.load(f)
+    return _CLASSES
+
+
+# ══════════════════════════════════════════════════════════════
+# 一、点数：等级 → 总点数 − 已花 = 余额（**唯一口**）
+# ══════════════════════════════════════════════════════════════
+def total_points(level) -> int:
+    """该等级一共该有多少点（建号 8 + 每级 3）。**不落档** —— 等级改了它自动跟着改。"""
+    lv = max(1, int(level or 1))
+    return LV1_POINTS + PER_LEVEL_POINTS * (lv - 1)
+
+
+def spent(alloc) -> int:
+    """档上那一格 `alloc` 已经投出去多少点（认不出的维 / 非数字 / 负数 ⇒ `AllocError`）。
+
+    ★ 值可以是整数，也可以是**小数** —— 小数只可能来自**配平基准 / 测试档**
+      （`flat()` 是浮点平铺：怪物面板就是照它反推的），玩家自己投的永远是整数
+      （写入那一步由 `apply()` 把关）。读取这一口**不截断**（截断就是静默改数）。
+    """
+    if alloc in (None, "", {}):
+        return 0
+    if not isinstance(alloc, dict):
+        raise AllocError("alloc 不是一份表（%r）" % (alloc,))
+    total = 0
+    for stat, n in alloc.items():
+        if str(stat) not in STATS:
+            raise AllocError("认不出的维：%r（五维：%s）" % (stat, " / ".join(STATS)))
+        if isinstance(n, bool) or not isinstance(n, (int, float)):
+            raise AllocError("%s 那一格不是数字：%r" % (stat, n))
+        if float(n) != float(n) or float(n) in (float("inf"), float("-inf")):
+            raise AllocError("%s 那一格不是有限数：%r" % (stat, n))
+        if float(n) < 0:
+            raise AllocError("%s 那一格是负数：%r" % (stat, n))
+        total += n
+    return int(total) if float(total).is_integer() else total
+
+
+def balance(level, alloc) -> int:
+    """还剩几点 = 总点数 − 已花。**超投 ⇒ `AllocError`**（那是档坏了，不是"不够"）。"""
+    total = total_points(level)
+    used = spent(alloc)
+    if used > total:
+        raise AllocError("已花 %s 点 > 该等级的总点数 %d（等级 %s）" % (used, total, level))
+    left = total - used
+    return int(left) if float(left).is_integer() else round(left, 3)
+
+
+def apply(alloc, stat, n) -> dict:
+    """把 n 点投到 stat 上 —— 返回**新表**（不动入参）。
+
+    ★ 只有**整数**能进这一口：玩家投的点不可分。档上若原本带着小数（配平基准 / 测试档），
+      这里**当场抛**（`AllocError`）而不是悄悄截断 —— 截断就是静默改数（fail-closed §1）。
+    """
+    key = str(stat or "")
+    if key not in STATS:
+        raise AllocError("认不出的维：%r（五维：%s）" % (stat, " / ".join(STATS)))
+    cnt = int(n)
+    out = {}
+    for k, v in (alloc or {}).items():
+        k = str(k)
+        if k not in STATS:
+            raise AllocError("认不出的维：%r（五维：%s）" % (k, " / ".join(STATS)))
+        if float(v) != int(v):
+            raise AllocError("%s 那一格是小数（%r）—— 档上只有整数才敢往上加" % (k, v))
+        out[k] = int(v)
+    out[key] = out.get(key, 0) + cnt
+    return {k: out[k] for k in STATS if k in out}          # 稳定顺序（呈现不用再排）
+
+
+# ══════════════════════════════════════════════════════════════
+# 一之二、**「这一档实际分了多少」的唯一口**（★ P-34 的接口名，见 `_notes.md`）
+# ══════════════════════════════════════════════════════════════
+#: 上游（装备门槛 · 呈现 · 战斗）要问「这档分了多少 / 还剩几点」时**只走下面三个**：
+#:     alloc.of_record(record)         → 分配结果  {维: 点数}（缺 = 空表；坏档 ⇒ AllocError）
+#:     alloc.spent_of_record(record)   → 这档实际分了多少点（= sum(分配结果)）
+#:     alloc.left_of_record(record)    → 还剩几点（总点数 − 已花；超投 ⇒ AllocError）
+#: 与 `flat()` / `plan()` 的分工：那两个是**按职业 + 等级**推的参照上界 / 建议投法；
+#: 这三个是**按档**读的现实。别处不许再 `record.get("alloc")` 之后自己算（那就是第二把尺）。
+def of_record(record) -> dict:
+    """档 → **这档的加点**（归一化成 `{维: 点数}`；稳序；`alloc` 那一格坏 ⇒ `AllocError`）。
+
+    ★ 「归一化」= 只留五维、按 `STATS` 稳序、缺 = 空表；**值不截断**（小数照原样读出来 ——
+      那只能是配平基准 / 测试档；玩家档上是整数，写入由 `apply()` 把关）。
+    """
+    rec = record if isinstance(record, dict) else {}
+    raw = rec.get("alloc")
+    if raw in (None, "", {}):
+        return {}
+    spent(raw)                                  # 校验走同一个口（认不出的维 / 非数 / 负数都抛）
+    return {s: raw[s] for s in STATS if s in raw}
+
+
+def spent_of_record(record) -> int:
+    """档 → 已投的点数（= `sum(of_record(record).values())`）。"""
+    return spent(of_record(record))
+
+
+def left_of_record(record) -> int:
+    """档 → 还剩几点可投（等级决定总点数；超投 ⇒ `AllocError`）。"""
+    rec = record if isinstance(record, dict) else {}
+    return balance(rec.get("level"), of_record(rec))
+
+
+# ══════════════════════════════════════════════════════════════
+# 二、建议：权重 → 平铺（配平基准）· 整数投法（玩家真能敲的那个）
+# ══════════════════════════════════════════════════════════════
+def weights(cls_id) -> dict:
+    """职业的**建议权重**（六职业详案那份示例加点 · `classes.json` 的 `suggest_alloc`）。"""
+    cid = str(cls_id or "").strip()
+    rec = classes().get(cid)
+    if rec is None:
+        raise AllocError("职业 %r 不在 classes 域里（有的：%s）"
+                         % (cid, " · ".join(sorted(classes()))))
+    sug = rec.get("suggest_alloc")
+    if not isinstance(sug, dict) or not sug:
+        raise AllocError("职业 %r 没有 suggest_alloc（建议权重是唯一来源，缺了不猜）" % cid)
+    return dict(sug)
+
+
+def flat(level, cls_id) -> dict:
+    """按建议权重把该等级的点**平铺**出去（浮点 · 配平基准）。
+
+    ★ 与 `scripts/rebuild_monsters.py` 那把尺**逐字同形**（那边已改成调本函数）——
+      怪物面板就是照它反推的：改这里 = 改配平。
+    """
+    sug = weights(cls_id)
+    base = sum(sug.values())
+    total = total_points(level)
+    return {stat: total * w / base for stat, w in sug.items()}
+
+
+def plan(level, cls_id) -> dict:
+    """**建议投法**（整数 · 和恰好 = 该等级的总点数）——「照它投就是配平基线」那一份。
+
+    最大余数分摊：先按权重取整（向下），余下的点按**小数部分**从大到小补（并列按权重降序、
+    再按 `STATS` 顺序定死 —— 同一份输入永远同一份输出）。
+    """
+    sug = weights(cls_id)
+    base = sum(sug.values())
+    total = total_points(level)
+    exact = {s: total * w / base for s, w in sug.items()}
+    out = {s: int(v) for s, v in exact.items()}
+    rest = total - sum(out.values())
+    order = sorted(exact, key=lambda s: (-(exact[s] - int(exact[s])), -sug[s],
+                                         STATS.index(s) if s in STATS else len(STATS)))
+    for s in order[:max(0, rest)]:
+        out[s] += 1
+    return {k: out[k] for k in STATS if k in out}

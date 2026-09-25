@@ -33,12 +33,28 @@ sys.path.insert(0, REPO)
 sys.path.insert(0, os.path.join(REPO, "scripts"))
 
 
-def _player(cls_id, level, gear=None):
-    """一份起手档：职业 + 等级 + 示例加点（走生成器那一个口）+ 可选装备。"""
+#: `--alloc` 三种口径的中文说法（只用于实验输出；玩家侧的那份在 texts 槽位里）
+_MODE_LABEL = {"flat": "按建议权重平铺 · 配平基准",
+               "int": "照建议整数投法 · 玩家真敲得出来的那一份",
+               "none": "一点不投 · 建号那 8 点没动"}
+
+
+def _player(cls_id, level, gear=None, mode="flat"):
+    """一份起手档：职业 + 等级 + 加点（走 `content.alloc` 那一个口）+ 可选装备。
+
+    `mode`（★ P-34：战力基线口径 —— 三种都能量出来，别再用"感觉"）：
+      flat = 按建议权重**平铺**（浮点 · **配平基准**：怪物面板就是照它反推的）
+      int  = 照建议**整数投法**（`alloc.plan` —— 玩家真能一点一点敲出来的那一份）
+      none = **一点不投**（建号那 8 点没动 —— 装上加点指令之前玩家的真实战力）
+    """
     import rebuild_monsters as RBM
+    from content import alloc as AL
     from content import panel_build as PB
+    al = {"flat": lambda: RBM.alloc_of(level, cls_id),
+          "int": lambda: AL.plan(level, cls_id),
+          "none": lambda: {}}[mode]()
     p = {"cls": cls_id, "level": level, "uid": "u_%s_%d" % (cls_id, level), "name": PB.classes()[cls_id]["name"],
-         "alloc": RBM.alloc_of(level, cls_id), "bag": {}, "gold": 0}
+         "alloc": al, "bag": {}, "gold": 0}
     if gear:
         p["equipped"] = dict(gear)
     p["hp"] = PB.hp_cap(p)
@@ -64,13 +80,13 @@ def _best_gear(level):
     return {slot: iid for slot, (iid, _s) in best.items()}
 
 
-def _fight(party, mids, monsters, seed):
-    """打一场：party = [(职业, 等级, 装备)]（1 人 = 单刷）。"""
+def _fight(party, mids, monsters, seed, mode="flat"):
+    """打一场：party = [(职业, 等级, 装备)]（1 人 = 单刷）。`mode` 见 `_player`（战力基线口径）。"""
     from content import combat as CB
     from ext_combat import Battle
     ps = []
     for i, (cls_id, level, gear) in enumerate(party):
-        a = CB.player_actor(_player(cls_id, level, gear))
+        a = CB.player_actor(_player(cls_id, level, gear, mode))
         a["uid"] = "p%d" % i
         ps.append(a)
     es = [CB.monster_actor(mid, monsters[mid]) for mid in mids if mid in monsters]
@@ -96,6 +112,9 @@ def main():
     ap.add_argument("--monsters", default="ms_wild_dog,ms_bitten_lumberjack,ms_sunken_corpse,ms_bone_warden,ms_boss_oath_sentry")
     ap.add_argument("--party", default="", help="多人队 = 逗号分隔的职业（1 个 = 单刷）")
     ap.add_argument("--gear", action="store_true", help="给每人穿上「该等级能捡到的最好那一套」")
+    ap.add_argument("--alloc", default="flat", choices=("flat", "int", "none"),
+                    help="加点口径（★ P-34 战力基线）：flat=按建议权重平铺（配平基准，默认）· "
+                         "int=照建议整数投法（玩家真敲得出来的那一份）· none=一点不投")
     ap.add_argument("--out", default="")
     ap.add_argument("--onlevel", action="store_true",
                     help="1–20 逐级：造一只「同级 杂兵 普通怪」（panel_of(L,'普通','杂兵')），"
@@ -122,12 +141,13 @@ def main():
                 "archetype": "杂兵", "panel": RBM.panel_of(_L, "普通", "杂兵"),
                 "mods": {}, "habitat": {}, "skills": [], "drops": [], "elite_pool": []}
         _cls_list = a.classes.split(",")
+        print("── 加点口径 --alloc=%s（%s）" % (a.alloc, _MODE_LABEL[a.alloc]), flush=True)
         for _L in range(1, 21):
             _med = sorted(_cls_list, key=lambda c: RBM.per_hit_of(_L, c))[3]     # 六取中位
             seed_rows = []
             for s in range(16):
                 try:
-                    seed_rows.append(_fight([(_med, _L, None)], ["syn_normal_%d" % _L], MON, 1000 + s))
+                    seed_rows.append(_fight([(_med, _L, None)], ["syn_normal_%d" % _L], MON, 1000 + s, a.alloc))
                 except Exception as exc:                                # noqa: BLE001
                     seed_rows.append({"result": "ERR:%s" % exc, "acts": {}, "acts_sum": 0,
                                       "ticks": 0, "hp": [], "max_hp": [], "logs": 0})
@@ -137,6 +157,7 @@ def main():
             rows.append({"monster": "syn_normal_%d" % _L, "name": "同级基准怪", "tier": "普通",
                          "arch": "杂兵", "lv": _L, "hp": MON["syn_normal_%d" % _L]["panel"]["hp"],
                          "design": 4.0, "who": _med, "plv": _L, "n": 16, "win": wins,
+                         "alloc": a.alloc,
                          "outcomes": {"victory": wins, "defeat": 16 - wins},
                          "acts_med": ac[8], "acts_min": ac[0], "acts_max": ac[-1],
                          "ticks_med": round(tk[8], 1)})
@@ -171,7 +192,7 @@ def main():
                         g = _best_gear(plv) if a.gear else None
                         if g:
                             party = [(c, plv, g) for c in members]
-                        seed_rows.append(_fight(party, [mid], MON, 1000 + s))
+                        seed_rows.append(_fight(party, [mid], MON, 1000 + s, a.alloc))
                     except Exception as exc:                       # noqa: BLE001
                         seed_rows.append({"result": "ERR:%s" % exc, "acts": {}, "acts_sum": 0,
                                           "ticks": 0, "hp": [], "max_hp": [], "logs": 0})
@@ -184,7 +205,7 @@ def main():
                 tk = sorted(r["ticks"] for r in seed_rows)
                 rows.append({"monster": mid, "name": m["name"], "tier": tier, "arch": arch,
                              "lv": lv, "hp": hp, "design": design, "who": label, "plv": plv,
-                             "n": a.seeds, "win": wins, "outcomes": outs,
+                             "n": a.seeds, "win": wins, "alloc": a.alloc, "outcomes": outs,
                              "acts_med": ac[len(ac) // 2], "acts_min": ac[0], "acts_max": ac[-1],
                              "ticks_med": round(tk[len(tk) // 2], 1)})
                 r = rows[-1]

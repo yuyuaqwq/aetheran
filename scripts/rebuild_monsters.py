@@ -8,8 +8,12 @@
 import io
 import json
 import os
+import sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if REPO not in sys.path:                # ★ P-34：加点算术的唯一出口在包内（`content/alloc.py`）
+    sys.path.insert(0, REPO)
+from content import alloc as AL         # noqa: E402 —— 只读 classes.json，不 import 引擎
 CLS = json.loads(io.open(os.path.join(REPO, "content/data/classes.json"), encoding="utf-8").read())
 
 TIERS = {"普通": dict(hp_n=4.0, spd=92, res=0.50), "精英": dict(hp_n=12.0, spd=104, res=0.55),
@@ -49,14 +53,11 @@ MOS = [("田鼠", "普通", 3, "群居"), ("拾荒野狗", "普通", 4, "群居"
 def alloc_of(level, cid):
     """该等级该职业的**示例加点**（口径 = 六职业详案「8 + 3×(级−1) 点，按建议权重平铺」）。
 
-    单一出口：`player_panel`（本文件）与 `scripts/balance_experiment.py`（配平实验）都走它 ——
-    两处各算一份加点 = 两把尺，实验就复算不出生成器那张表。
+    单一出口：本函数只是 `content.alloc.flat()` 的一个别名（P-34 收口）——
+    `scripts/balance_experiment.py`（配平实验）· `probe_*` · 本文件都走它，
+    而「总点数 / 已花 / 余额」的算术只有 `content/alloc.py` 那一份（原先这里有第二份）。
     """
-    c = CLS[cid]
-    sug = c["suggest_alloc"]
-    base = sum(sug.values())
-    total = 8 + 3 * (level - 1)
-    return {stat: total * w / base for stat, w in sug.items()}
+    return AL.flat(level, cid)
 
 
 def player_panel(level, cid):
