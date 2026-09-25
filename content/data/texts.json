@@ -4373,7 +4373,7 @@
     "desc": "后撤 · 跑不掉（对方那一下正落下来 = 不许无脑逃跑）"
   },
   "COMBAT_FOCUS_SOLO": {
-    "value": "集火是几个人的事 —— 今天打手只有你一个（组队还没接线）。",
+    "value": "集火是几个人的事 —— 今天打手只有你一个。",
     "params": [],
     "category": "战斗",
     "desc": "集火 · 单人"
@@ -4385,6 +4385,18 @@
     ],
     "category": "战斗",
     "desc": "集火 · 单人（点名那只在 monsters 域里认得出来）"
+  },
+  "COMBAT_FOCUS_PARTY": {
+    "value": "🚧「集火」还没接上\n💡 全队打同一个还没做 —— 这一场各自出手。",
+    "params": [],
+    "category": "战斗",
+    "desc": "B4-18 集火 · 有队"
+  },
+  "COMBAT_FLEE_TODO": {
+    "value": "🚧「逃跑」还没接上\n💡 打不过就打『后撤』—— 对方没在出招时，它把你带出去。",
+    "params": [],
+    "category": "战斗",
+    "desc": "B4-18 逃跑 · 尚未落地"
   },
   "SYS_PARTY_HEAD": {
     "value": "【队伍】{n}/{max} 人 · 队长：{cap}",

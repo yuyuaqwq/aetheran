@@ -66,8 +66,9 @@ SEALED = ("cmds_ast.py", "cmds_talk.py", "cmds_quest.py", "cmds_gather.py", "pan
 
 #: 快照上限（B3-6b 收口时的实测值；**只降不升**，不在表里的文件必须 0）
 BUDGET = {                      # B3-6b 收口时实测（124 条）；下一批往下压，只能降
-    "cmds_battle.py": 8,        # ← 6b-2d-keys-2：14 → 11（掉钱分档 3 处中文 role 枚举改走 ASCII `role_key`）
+    "cmds_battle.py": 7,        # ← 6b-2d-keys-2：14 → 11（掉钱分档 3 处中文 role 枚举改走 ASCII `role_key`）
                                 #    ★ B3-23：11 → 8（遇敌 / 没遇敌 / 防御那条桩句 三处搬进 texts 槽位）
+                                #    ★ B4-18：8 → 7（「逃跑」那句内联桩句搬进 `COMBAT_FLEE_TODO`）
     "loot.py": 3,               # ← 6b-2d-b 11 → 6（装备 5 处）· 6b-2d-keys-2 6 → 3（兜底 / 池 / 未鉴定）
     "cmds_recipe.py": 2,        # ← 6b-2d-b 9 → 3（强化白名单 6 处）· keys-2 3 → 2（「烹饪」）
     "combat.py": 1,             # ← 6b-2d-keys-2：5 → 1（怪 role 兜底与两支筛选 4 处；余「无名者」）

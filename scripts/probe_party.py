@@ -20,6 +20,9 @@
            ★ 名册是现算的（pid 对不上的假档不算队员）· 存档读不出来 ⇒ 四条各回一句点名行、不动档
 ⑥ 进战人数 ★ `cmds_battle` 那三处 `party=…` 真传人数：没队 = 1 · 同节点的队友算进来 ·
            队友在别的节点 / 血空都不算 · 存档读不出来 = None（= 不知道 ⇒ 不缩放，接上 B3-17 那条）
+⑦ ★ B4-18  「集火」按**此刻真在不在队里**分档（单人两句 / 有队一句 / 队读不出来同有队）·
+           「逃跑」那句内联桩句收进 `COMBAT_FLEE_TODO`（照实说 + 指向真能用的『后撤』）·
+           两条都真敲、都不动档；再一条源码守卫：那句桩句不许回来
 
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_party.py
 Python 用 3.12（3.11 假红）。
@@ -611,6 +614,99 @@ chk("★ 单人那档与 B3-17 之前**逐字相同**（party=1 ⇒ 那只 Boss 
     _SEC[0][1] == 1
     and int(CBT.monster_actor(_BOSS, MON[_BOSS], party=1).get("max_hp"))
     == int(round(float(_BH["hp"]) * float(RB.PARTY_SCALE["1"]["hp"]))))
+
+# ══════════════════════════════════════════════════════════════
+print("⑦ ★ B4-18：集火按此刻真在不在队里分档 · 逃跑那句桩句收进槽位")
+_B7 = []
+# ── 一、单人（没队）：两句照旧（认得出 / 认不出），且**过时那半句**一个字都没有
+_set_party("u_a", None)
+_set_party("u_b", None)
+_at("u_a", LOC, NODE, hp=80)
+_o1 = say("u_a", "集火")
+_o2 = say("u_a", "集火 田鼠")
+if _o1 != [_r("COMBAT_FOCUS_SOLO")]:
+    _B7.append(("单人 集火", _o1, _r("COMBAT_FOCUS_SOLO")))
+if _o2 != [_r("COMBAT_FOCUS_NAMED", name="田鼠")]:
+    _B7.append(("单人 集火 田鼠", _o2, _r("COMBAT_FOCUS_NAMED", name="田鼠")))
+chk("★ 单人档：『集火』= `COMBAT_FOCUS_SOLO`（%s）· 『集火 田鼠』= `COMBAT_FOCUS_NAMED`（%s）"
+    % (_o1[0] if _o1 else "", _o2[0] if _o2 else ""), not _B7, "%s" % _B7[:2])
+
+# ── 二、有队（两人站一起）⇒ 单人那两句都不许再说，走「有队」那一句
+#      （★ 场是跨指令留着的 ⇒ 与 §⑥ 同一条纪律：先 clear 再敲）
+_B7 = []
+_set_party("u_a", {"id": _PID, "role": "captain", "tick": 1, "invites": {}})
+_set_party("u_b", {"id": _PID, "role": "member", "captain": "u_a"})
+_at("u_a", LOC, NODE, hp=80)
+_at("u_b", LOC, NODE, hp=70)
+INST.clear(G)
+_o3 = say("u_a", "集火 田鼠")
+_o4 = say("u_a", "集火")
+if _o3 != [_r("COMBAT_FOCUS_PARTY")]:
+    _B7.append(("有队 集火 田鼠", _o3, _r("COMBAT_FOCUS_PARTY")))
+if _o4 != [_r("COMBAT_FOCUS_PARTY")]:
+    _B7.append(("有队 集火", _o4, _r("COMBAT_FOCUS_PARTY")))
+# ── 三、在队里但存档读不出来（不知道几个人）⇒ 同「有队」那一句（fail-closed）
+try:
+    PS.all_players = _boom
+    _o5 = say("u_a", "集火")
+finally:
+    PS.all_players = _keep_all
+if _o5 != [_r("COMBAT_FOCUS_PARTY")]:
+    _B7.append(("队读不出来 集火", _o5, _r("COMBAT_FOCUS_PARTY")))
+chk("★ 有队档：『集火 <名>』『集火』都回**有队那一句**（%s / %s）；队在、存档读不出来也回同一句"
+    "（%s）—— 不拿单人那两句去说一支读不出来的队" % (_o3[0] if _o3 else "", _o4[0] if _o4 else "",
+                                                    _o5[0] if _o5 else ""),
+    not _B7, "%s" % _B7[:2])
+
+# ── 四、逃跑：两个别名都真敲 ⇒ 槽位那句 · 不含内部词 · 指向『后撤』· 档一个字不动
+_B7 = []
+_BEFORE = json.dumps(PS.get_player(G, "u_a") or {}, sort_keys=True, ensure_ascii=False)
+_o6 = say("u_a", "逃跑")
+_o7 = say("u_a", "脱离")
+_AFTER = json.dumps(PS.get_player(G, "u_a") or {}, sort_keys=True, ensure_ascii=False)
+if _o6 != [_r("COMBAT_FLEE_TODO")] or _o7 != [_r("COMBAT_FLEE_TODO")]:
+    _B7.append(("逃跑 / 脱离", _o6, _o7, _r("COMBAT_FLEE_TODO")))
+if _BEFORE != _AFTER:
+    _B7.append(("逃跑动了档", _BEFORE[:80], _AFTER[:80]))
+for _txt in _o6 + _o7:
+    if ("第一版" in _txt) or ("轮流制" in _txt) or ("MISSING" in _txt) or ("【" in _txt):
+        _B7.append(("还有内部词 / 内部 key", _txt))
+if "后撤" not in (_o6[0] if _o6 else ""):
+    _B7.append(("指不到真能用的那条路", _o6))
+chk("★ `逃跑`（别名 `脱离`）真敲 = `COMBAT_FLEE_TODO`（%s）· 不含「第一版 / 轮流制 / 内部 key」· "
+    "指向『后撤』· **档一个字不动**" % ((_o6[0] if _o6 else "").replace(chr(10), " / ")),
+    not _B7, "%s" % _B7[:2])
+
+# ── 五、覆盖面（源码守卫）：那句内联桩句不许回来（K61：判据的覆盖面跟判据一起加）
+_CBSRC = io.open(os.path.join(str(REPO), "content", "cmds_battle.py"), encoding="utf-8").read()
+# ★ 口径走 ast（K46）：注释 / docstring 里提到那句桩句**不算**「还在回它」——
+#   要钉的是「`flee` 这个实现体里一个字符串字面量都不许有」（除了它自己的 docstring）。
+import ast as _ast                                                     # noqa: E402
+_FN = [n for n in _ast.parse(_CBSRC).body
+       if isinstance(n, _ast.AsyncFunctionDef) and n.name == "flee"]
+#   ★ docstring 那一格**按节点排掉**（不拿 get_docstring 的 clean 结果去比 —— 多行 docstring
+#     的原始字面量与 clean 后的字面量不一样，K46 同族的一个小坑）
+_DOC = (_FN[0].body[0].value
+        if _FN and _FN[0].body and isinstance(_FN[0].body[0], _ast.Expr)
+        and isinstance(_FN[0].body[0].value, _ast.Constant)
+        and isinstance(_FN[0].body[0].value.value, str) else None)
+#   ★ 什么算「文案」：docstring 不算（K46）· 槽位键那种全大写机器键不算（那是传槽位，不是文案）
+_FN_LITS = [n.value for n in _ast.walk(_FN[0])
+            if isinstance(n, _ast.Constant) and isinstance(n.value, str)
+            and n is not _DOC and re.match(r"^[A-Z][A-Z0-9_]+$", n.value) is None] if _FN else []
+_yields = [n for n in _ast.walk(_FN[0]) if isinstance(n, _ast.Yield)] if _FN else []
+_HAS_SLOT = bool(re.search(r'^\s*yield T\("COMBAT_FLEE_TODO"\)', _CBSRC, re.M))
+chk("★ 覆盖（ast）：`flee` 里**没有内联文案**（%d 处 —— 注释 / docstring / 槽位键都不算）· "
+    "它 yield 出来的就是槽位那一句（`yield T(\"COMBAT_FLEE_TODO\")`：%s）"
+    % (len(_FN_LITS), _HAS_SLOT),
+    len(_FN) == 1 and not _FN_LITS and _HAS_SLOT)
+chk("★ 覆盖：两条新槽位都在 texts 里、且占位与 params 双向对账（%s）"
+    % " · ".join("%s=%s" % (k, sorted((TX.get(k) or {}).get("params") or []))
+                 for k in ("COMBAT_FOCUS_PARTY", "COMBAT_FLEE_TODO")),
+    all((TX.get(k) or {}).get("value") for k in ("COMBAT_FOCUS_PARTY", "COMBAT_FLEE_TODO"))
+    and all(not (TX.get(k) or {}).get("params") for k in ("COMBAT_FOCUS_PARTY", "COMBAT_FLEE_TODO"))
+    and not re.search(r"\{", (TX.get("COMBAT_FOCUS_PARTY") or {}).get("value", "")
+                      + (TX.get("COMBAT_FLEE_TODO") or {}).get("value", "")))
 
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
