@@ -684,6 +684,528 @@
     "category": "任务",
     "desc": "主线 12 往北的路"
   },
+  "QUEST_SIDE13_STORY": {
+    "value": "柯尔把话说明白：一件装备，往上强化 —— 学徒的活从这儿开始。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 柯尔的学徒 · 接时行文（源 24 §二 支 1 · 21 §二 同条）"
+  },
+  "QUEST_SIDE13_PROGRESS": {
+    "value": "那件装备还没往上动过，炉子那边没等到成品。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 柯尔的学徒 · 进行中行文（源 24 §二 支 1 · 21 §二 同条）"
+  },
+  "QUEST_SIDE13_DELIVER": {
+    "value": "柯尔验过那件东西，没挑毛病 —— 往后你在他这儿强化，费打折。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 柯尔的学徒 · 交时行文（源 24 §二 支 1 · 21 §二 同条）"
+  },
+  "QUEST_SIDE14_STORY": {
+    "value": "柯尔不缺工钱。他要一块旧铁 —— 他手上那把锤子，还缺这一块。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 他自己的锤子 · 接时行文（源 24 §二 支 2 · 21 §二 同条）"
+  },
+  "QUEST_SIDE14_PROGRESS": {
+    "value": "那块旧铁还没到手 —— 他要的只有这一样。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 他自己的锤子 · 进行中行文（源 24 §二 支 2 · 21 §二 同条）"
+  },
+  "QUEST_SIDE14_DELIVER": {
+    "value": "旧铁交到柯尔手上。他把它搁进炉子 —— 号角那条线，从这儿接上。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 他自己的锤子 · 交时行文（源 24 §二 支 2 · 21 §二 同条）"
+  },
+  "QUEST_SIDE15_STORY": {
+    "value": "娜娜要三种药草，各三份 —— 少一份都算没采齐。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 娜娜的药单 · 接时行文（源 24 §二 支 3 · 21 §二 同条）"
+  },
+  "QUEST_SIDE15_PROGRESS": {
+    "value": "三种药草还没凑齐，摊上一直缺着这几样。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 娜娜的药单 · 进行中行文（源 24 §二 支 3 · 21 §二 同条）"
+  },
+  "QUEST_SIDE15_DELIVER": {
+    "value": "三份一摞摆上摊。娜娜把自配药水那张方子推给你 —— 往后你自己配。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 娜娜的药单 · 交时行文（源 24 §二 支 3 · 21 §二 同条）"
+  },
+  "QUEST_SIDE16_STORY": {
+    "value": "娜娜提过的那种菌，只有雨天才有 —— 天不出雨，摊上就缺这一样。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 雨后的东西 · 接时行文（源 24 §二 支 4 · 21 §二 同条）"
+  },
+  "QUEST_SIDE16_PROGRESS": {
+    "value": "雨还没下过，那种菌也就还没到手。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 雨后的东西 · 进行中行文（源 24 §二 支 4 · 21 §二 同条）"
+  },
+  "QUEST_SIDE16_DELIVER": {
+    "value": "菌交到娜娜手上。她连方子一起给了你 —— 菌汤，往后你自己能做。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 雨后的东西 · 交时行文（源 24 §二 支 4 · 21 §二 同条）"
+  },
+  "QUEST_SIDE17_STORY": {
+    "value": "贝拉要三道菜，端到她面前尝 —— 客栈的招牌，得先过她这一关。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 客栈的招牌 · 接时行文（源 24 §二 支 5 · 21 §二 同条）"
+  },
+  "QUEST_SIDE17_PROGRESS": {
+    "value": "三道菜还没端齐 —— 她一口都还没尝。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 客栈的招牌 · 进行中行文（源 24 §二 支 5 · 21 §二 同条）"
+  },
+  "QUEST_SIDE17_DELIVER": {
+    "value": "三道菜尝完，贝拉认了。客栈里那张桌子，往后是你的固定座位。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 客栈的招牌 · 交时行文（源 24 §二 支 5 · 21 §二 同条）"
+  },
+  "QUEST_SIDE18_STORY": {
+    "value": "贝拉要看你能不能拿出稀有食材 —— 做一次，就一次。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 下一顿 · 接时行文（源 24 §二 支 6 · 21 §二 同条）"
+  },
+  "QUEST_SIDE18_PROGRESS": {
+    "value": "稀有食材还没下过锅 —— 贝拉的那一顿还没着落。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 下一顿 · 进行中行文（源 24 §二 支 6 · 21 §二 同条）"
+  },
+  "QUEST_SIDE18_DELIVER": {
+    "value": "那锅东西端上去，贝拉尝了第一口 —— 一锅炖的谱子，她写在纸上给了你。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 下一顿 · 交时行文（源 24 §二 支 6 · 21 §二 同条）"
+  },
+  "QUEST_SIDE19_STORY": {
+    "value": "白烛堂的灯该添油了。艾德把油壶递过来，让你跟着跑一趟。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 白烛堂的灯 · 接时行文（源 24 §二 支 7）"
+  },
+  "QUEST_SIDE19_PROGRESS": {
+    "value": "灯油还没送到，配那一次也还没陪着。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 白烛堂的灯 · 进行中行文（源 24 §二 支 7）"
+  },
+  "QUEST_SIDE19_DELIVER": {
+    "value": "灯添上了。艾德慢慢念完一整本祷词 —— 你听下来，觉得少了一句。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 白烛堂的灯 · 交时行文（源 24 §二 支 7）"
+  },
+  "QUEST_SIDE20_STORY": {
+    "value": "艾德把饭交给你：送到北墙根，趁热。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 给哈根送饭 · 接时行文（源 24 §二 支 8 · 21 §二 同条）"
+  },
+  "QUEST_SIDE20_PROGRESS": {
+    "value": "那碗饭还在你手上 —— 北墙根还没走到。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 给哈根送饭 · 进行中行文（源 24 §二 支 8 · 21 §二 同条）"
+  },
+  "QUEST_SIDE20_DELIVER": {
+    "value": "饭到北墙根。哈根接过去，头一次多说了一句话。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 给哈根送饭 · 交时行文（源 24 §二 支 8 · 21 §二 同条）"
+  },
+  "QUEST_SIDE21_STORY": {
+    "value": "老陶要讲那条旧路 —— 他讲一遍不算完，得听够三回。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 老陶的旧路 · 接时行文（源 24 §二 支 9）"
+  },
+  "QUEST_SIDE21_PROGRESS": {
+    "value": "老陶那条路还没讲完 —— 他讲到一半就拐到别处去了。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 老陶的旧路 · 进行中行文（源 24 §二 支 9）"
+  },
+  "QUEST_SIDE21_DELIVER": {
+    "value": "第三回讲完，那条路合上了 —— 那是地图上没有的一条路。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 老陶的旧路 · 交时行文（源 24 §二 支 9）"
+  },
+  "QUEST_SIDE22_STORY": {
+    "value": "有封信要送出去，得有人陪着走一趟 —— 老陶把这活儿挂了出来。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 带路 · 接时行文（源 24 §二 支 10）"
+  },
+  "QUEST_SIDE22_PROGRESS": {
+    "value": "那封信还在你身上，路也还没陪着走完。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 带路 · 进行中行文（源 24 §二 支 10）"
+  },
+  "QUEST_SIDE22_DELIVER": {
+    "value": "信送到了。路上他讲了半段旧事 —— 这一趟的工钱，也一并结了。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 带路 · 交时行文（源 24 §二 支 10）"
+  },
+  "QUEST_SIDE23_STORY": {
+    "value": "皮特天天有酒喝，钱却不像是挣来的 —— 这笔账得替他查。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 他的酒钱 · 接时行文（源 24 §二 支 11）"
+  },
+  "QUEST_SIDE23_PROGRESS": {
+    "value": "皮特那笔酒钱的来处，还没查出来。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 他的酒钱 · 进行中行文（源 24 §二 支 11）"
+  },
+  "QUEST_SIDE23_DELIVER": {
+    "value": "来处查到了 —— 这笔酒钱，牵到号角那条线上。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 他的酒钱 · 交时行文（源 24 §二 支 11）"
+  },
+  "QUEST_SIDE24_STORY": {
+    "value": "皮特醉话里有个名字，他从来不说完 —— 那个名字得你自己找。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 他不说的那个名字 · 接时行文（源 24 §二 支 12）"
+  },
+  "QUEST_SIDE24_PROGRESS": {
+    "value": "那个名字还没落到纸上。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 他不说的那个名字 · 进行中行文（源 24 §二 支 12）"
+  },
+  "QUEST_SIDE24_DELIVER": {
+    "value": "名字找到了。皮特那天没醉 —— 他正经说了一段不醉的话。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 他不说的那个名字 · 交时行文（源 24 §二 支 12）"
+  },
+  "QUEST_SIDE25_STORY": {
+    "value": "小满把那块石头塞给你 —— 它该回到缺着它的那块碑上去。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 还石头 · 接时行文（源 24 §二 支 13）"
+  },
+  "QUEST_SIDE25_PROGRESS": {
+    "value": "石头还在你手里 —— 碑上缺的那一角，还没合上。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 还石头 · 进行中行文（源 24 §二 支 13）"
+  },
+  "QUEST_SIDE25_DELIVER": {
+    "value": "石头按进碑上那道缺口，严丝合缝 —— 缺的一角，回来了。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 还石头 · 交时行文（源 24 §二 支 13）"
+  },
+  "QUEST_SIDE26_STORY": {
+    "value": "小满要去看塔 —— 你带他到塔下就行，他不进去。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 带他看塔 · 接时行文（源 24 §二 支 14）"
+  },
+  "QUEST_SIDE26_PROGRESS": {
+    "value": "塔还没走到 —— 小满一路上都在催。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 带他看塔 · 进行中行文（源 24 §二 支 14）"
+  },
+  "QUEST_SIDE26_DELIVER": {
+    "value": "塔下站住了。小满仰头看了一会儿，说了一段小孩的话。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 带他看塔 · 交时行文（源 24 §二 支 14）"
+  },
+  "QUEST_SIDE27_STORY": {
+    "value": "格雷腰间那把断剑，断口一直空着 —— 他要一块配得上的旧铁。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 他的断剑 · 接时行文（源 24 §二 支 15）"
+  },
+  "QUEST_SIDE27_PROGRESS": {
+    "value": "那截旧铁还没找到，断剑上那道口子也还空着。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 他的断剑 · 进行中行文（源 24 §二 支 15）"
+  },
+  "QUEST_SIDE27_DELIVER": {
+    "value": "旧铁配上了。格雷没道谢，只把断口对上 —— 剩下的事，得去问柯尔。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 他的断剑 · 交时行文（源 24 §二 支 15）"
+  },
+  "QUEST_SIDE28_STORY": {
+    "value": "格雷要讲断剑团的事 —— 三段，每段他自己都缺着一块。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 断剑团的旧事 · 接时行文（源 24 §二 支 16）"
+  },
+  "QUEST_SIDE28_PROGRESS": {
+    "value": "三段还没讲完 —— 他讲到哪儿，哪儿就断掉。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 断剑团的旧事 · 进行中行文（源 24 §二 支 16）"
+  },
+  "QUEST_SIDE28_DELIVER": {
+    "value": "三段听完，拼起来是完整的一块 —— 塔从前是谁守的，这回说清了。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 断剑团的旧事 · 交时行文（源 24 §二 支 16）"
+  },
+  "QUEST_SIDE29_STORY": {
+    "value": "瑟兰在找一座塔，她自己不问人 —— 三个人，得你去问。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 她在找的塔 · 接时行文（源 24 §二 支 17）"
+  },
+  "QUEST_SIDE29_PROGRESS": {
+    "value": "三个人还没问完 —— 商队走之前，得问出来。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 她在找的塔 · 进行中行文（源 24 §二 支 17）"
+  },
+  "QUEST_SIDE29_DELIVER": {
+    "value": "三个答案凑齐了。瑟兰给了你一枚护符 —— 也讲了几句外面世界的事。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 她在找的塔 · 交时行文（源 24 §二 支 17）"
+  },
+  "QUEST_SIDE30_STORY": {
+    "value": "杜林先问你手上有什么料 —— 他要按自己的口味吃一道菜。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 杜林的口味 · 接时行文（源 24 §二 支 18 · 21 §二 同条）"
+  },
+  "QUEST_SIDE30_PROGRESS": {
+    "value": "那道菜还没端到杜林面前。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 杜林的口味 · 进行中行文（源 24 §二 支 18 · 21 §二 同条）"
+  },
+  "QUEST_SIDE30_DELIVER": {
+    "value": "他尝了，没说话 —— 从怀里抽出一张价目单推过来。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 支线 杜林的口味 · 交时行文（源 24 §二 支 18 · 21 §二 同条）"
+  },
+  "QUEST_TRADE31_STORY": {
+    "value": "娜娜嫌你采得太浅 —— 三条带，各走到底，各采一次。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 生活 深一点的 · 接时行文（源 28 §四 新 1 · 21 §二）"
+  },
+  "QUEST_TRADE31_PROGRESS": {
+    "value": "三条带还没走全 —— 总有哪一条的最深处没去过。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 生活 深一点的 · 进行中行文（源 28 §四 新 1 · 21 §二）"
+  },
+  "QUEST_TRADE31_DELIVER": {
+    "value": "三处都采过了。娜娜丢给你一件顺手的工具 —— 往后手底下能多落一个。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 生活 深一点的 · 交时行文（源 28 §四 新 1 · 21 §二）"
+  },
+  "QUEST_TRADE32_STORY": {
+    "value": "娜娜要一块长在石头缝里的矿 —— 旧哨塔那一片才有。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 生活 石头缝里的 · 接时行文（源 28 §四 新 2 · 21 §二）"
+  },
+  "QUEST_TRADE32_PROGRESS": {
+    "value": "那块矿还在石头缝里，你没敲下来。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 生活 石头缝里的 · 进行中行文（源 28 §四 新 2 · 21 §二）"
+  },
+  "QUEST_TRADE32_DELIVER": {
+    "value": "矿搁到摊上。娜娜收下，讲了一段她自己的事。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 生活 石头缝里的 · 交时行文（源 28 §四 新 2 · 21 §二）"
+  },
+  "QUEST_TRADE33_STORY": {
+    "value": "老陶的鱼篓空着 —— 他要三种常见的鱼。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 生活 老陶的鱼篓 · 接时行文（源 28 §四 新 3 · 21 §二）"
+  },
+  "QUEST_TRADE33_PROGRESS": {
+    "value": "三种鱼还没凑齐，篓子底下还是空的。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 生活 老陶的鱼篓 · 进行中行文（源 28 §四 新 3 · 21 §二）"
+  },
+  "QUEST_TRADE33_DELIVER": {
+    "value": "篓子满了。老陶把钓竿接过去换了个梢 —— 往后上钩的鱼，稀罕的多一些。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 生活 老陶的鱼篓 · 交时行文（源 28 §四 新 3 · 21 §二）"
+  },
+  "QUEST_TRADE34_STORY": {
+    "value": "水里有条鱼只在夜里上钩 —— 老陶把这一条单拎出来给你。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 生活 夜里的那条 · 接时行文（源 28 §四 新 4 · 21 §二）"
+  },
+  "QUEST_TRADE34_PROGRESS": {
+    "value": "那条鱼还在水里 —— 夜里那几网都空着。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 生活 夜里的那条 · 进行中行文（源 28 §四 新 4 · 21 §二）"
+  },
+  "QUEST_TRADE34_DELIVER": {
+    "value": "那条鱼上岸了。老陶认下这件事 —— 夜里下网的，往后你也算一个。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 生活 夜里的那条 · 交时行文（源 28 §四 新 4 · 21 §二）"
+  },
+  "QUEST_TRADE35_STORY": {
+    "value": "贝拉要一条鱼，指名的那种 —— 换的是一张菜谱。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 生活 贝拉要的 · 接时行文（源 28 §四 新 5 · 21 §二）"
+  },
+  "QUEST_TRADE35_PROGRESS": {
+    "value": "那条鱼还没钓上来，菜谱也还没换到手上。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 生活 贝拉要的 · 进行中行文（源 28 §四 新 5 · 21 §二）"
+  },
+  "QUEST_TRADE35_DELIVER": {
+    "value": "鱼交到厨房。贝拉把客栈的招牌这张谱子抄给了你。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 生活 贝拉要的 · 交时行文（源 28 §四 新 5 · 21 §二）"
+  },
+  "QUEST_TRADE36_STORY": {
+    "value": "浅滩底下钓上来过不是鱼的东西 —— 贝拉要你再试一次。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 生活 水下的东西 · 接时行文（源 28 §四 新 6 · 21 §二）"
+  },
+  "QUEST_TRADE36_PROGRESS": {
+    "value": "水底下那东西还没上来 —— 每次收线都是一条鱼。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 生活 水下的东西 · 进行中行文（源 28 §四 新 6 · 21 §二）"
+  },
+  "QUEST_TRADE36_DELIVER": {
+    "value": "钩上来的不是鱼 —— 是石阶。水下的石阶，头一块到你手上了。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 生活 水下的东西 · 交时行文（源 28 §四 新 6 · 21 §二）"
+  },
+  "QUEST_TRADE37_STORY": {
+    "value": "那件有故事的旧装备还断着 —— 柯尔肯修，修完他会说这东西的来处。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 生活 断了的东西 · 接时行文（源 28 §四 新 7 · 21 §二）"
+  },
+  "QUEST_TRADE37_PROGRESS": {
+    "value": "断着的那件东西还没修好。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 生活 断了的东西 · 进行中行文（源 28 §四 新 7 · 21 §二）"
+  },
+  "QUEST_TRADE37_DELIVER": {
+    "value": "东西接上了。柯尔就着炉火讲了它的来处 —— 旧物谱上，又多了一件。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 生活 断了的东西 · 交时行文（源 28 §四 新 7 · 21 §二）"
+  },
+  "QUEST_TRADE38_STORY": {
+    "value": "柯尔开口要一块旧铁：骨田底下挖出来的那种。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 生活 铁从哪来 · 接时行文（源 28 §四 新 8 · 21 §二）"
+  },
+  "QUEST_TRADE38_PROGRESS": {
+    "value": "骨田那块旧铁还没到你手上。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 生活 铁从哪来 · 进行中行文（源 28 §四 新 8 · 21 §二）"
+  },
+  "QUEST_TRADE38_DELIVER": {
+    "value": "旧铁过了他的手，他愣了一下 —— 那一下你没看错。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 生活 铁从哪来 · 交时行文（源 28 §四 新 8 · 21 §二）"
+  },
+  "QUEST_BOUNTY101_STORY": {
+    "value": "单子是从挂板墙上取下来的 —— 一只普通怪，打掉，回来交。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 悬赏档 悬赏·普通 · 接时行文（源 24 §二 悬赏板 · 05 §一）"
+  },
+  "QUEST_BOUNTY101_PROGRESS": {
+    "value": "那只怪还活着 —— 单子还在你手上。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 悬赏档 悬赏·普通 · 进行中行文（源 24 §二 悬赏板 · 05 §一）"
+  },
+  "QUEST_BOUNTY101_DELIVER": {
+    "value": "交了。下次还有。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 悬赏档 悬赏·普通 · 交时行文（源 24 §二 悬赏板 · 05 §一）"
+  },
+  "QUEST_BOUNTY102_STORY": {
+    "value": "这一张写的是精英怪 —— 光靠硬碰，交不回来。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 悬赏档 悬赏·精英 · 接时行文（源 24 §二 悬赏板 · 05 §一）"
+  },
+  "QUEST_BOUNTY102_PROGRESS": {
+    "value": "那只精英还站着 —— 单子还没到期。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 悬赏档 悬赏·精英 · 进行中行文（源 24 §二 悬赏板 · 05 §一）"
+  },
+  "QUEST_BOUNTY102_DELIVER": {
+    "value": "这活儿你接得住。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 悬赏档 悬赏·精英 · 交时行文（源 24 §二 悬赏板 · 05 §一）"
+  },
+  "QUEST_BOUNTY103_STORY": {
+    "value": "板子最里头那张写的是头目 —— 那种单子，接的人不多。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 悬赏档 悬赏·头目 · 接时行文（源 24 §二 悬赏板 · 05 §一）"
+  },
+  "QUEST_BOUNTY103_PROGRESS": {
+    "value": "那个头目还没倒下。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 悬赏档 悬赏·头目 · 进行中行文（源 24 §二 悬赏板 · 05 §一）"
+  },
+  "QUEST_BOUNTY103_DELIVER": {
+    "value": "……我没想到你真办到了。",
+    "params": [],
+    "category": "任务",
+    "desc": "B3-8 · 悬赏档 悬赏·头目 · 交时行文（源 24 §二 悬赏板 · 05 §一）"
+  },
   "TITLE_READER": {
     "value": "读碑的人",
     "params": [],
