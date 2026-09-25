@@ -28,6 +28,10 @@
   ⑰ ★ B3-9（装备与技能那组）：新接的 5 条（装备 / 卸下 / 装备对比 / 学习 / 技能）也进用例表 ——
      主要支路各跑一遍（穿 / 换下同格 / 已经穿着 / 不是能穿的 / 身上没有 / 位子空着 /
      还没择业），于是 ⑥ 的「不缺文案」与「不漏机器键」两条**自动**罩到它们身上。
+  ⑱ ★ B3-16b（这一批）：新接的 9 条里能按四参帧直调的那 8 条（教堂 / 客栈 / 商队 / 旧货 /
+     登记 / 评级 / 改名 / 公告）也进用例表，主要支路各跑一遍（野外 / 镇上没走到那一站 /
+     档上还没择业 / 有证没证 / 改过没改过 …）；`排行` 是五参帧（group_id + uid + player），
+     单独真跑两档 —— 同样过 ⑥ 那两条，也一并进 ⑬ 的「默认档不许被就地改」。
 
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_copy.py [--inventory]
 """
@@ -394,6 +398,8 @@ def main():
     from content import cmds_gear as CGR                                  # noqa: E402
     from content import cmds_skill as CSK                                 # noqa: E402
     from content import cmds_more as CMO                                  # noqa: E402
+    from content import cmds_places as CPLA                                # noqa: E402
+    from content import cmds_self as CSEL                                  # noqa: E402
 
     town = _node_names(st, "windmill_town")
     belt = _node_names(st, "belt_north")
@@ -425,6 +431,14 @@ def main():
     _eid = next((k for k in sorted(st.domain("eggs") or {}) if not str(k).startswith("_")), "")
     # ★ B3-5：今天那个游戏日（「异动」标「新开的 / 收了」要看维护门那一格是不是今天的）
     _ev_today = int(CA.CAL.state()["game_day"])
+    # ★ B3-16b：镇上那几处的**那一站**从 npcs 域的职能键现读（heal / board）—— 不手写镜像
+    _NP16C = st.domain("npcs") or {}
+    _HEAL_NODE = next((str(v.get("subarea") or "") for v in _NP16C.values()
+                       if isinstance(v, dict) and v.get("map") == "windmill_town"
+                       and "heal" in (v.get("funcs") or [])), "wt_chapel")
+    _GUILD_NODE = next((str(v.get("subarea") or "") for v in _NP16C.values()
+                        if isinstance(v, dict) and v.get("map") == "windmill_town"
+                        and "board" in (v.get("funcs") or [])), "wt_board")
 
     def _rich(**kw):
         """一口袋全物品 + 等级/族/职业都定过的档（背包 / 图鉴 / 配方 那几条要用）。"""
@@ -647,6 +661,38 @@ def main():
         ("加点(还没择业)", CA.alloc_points, "加点 力量 1", {}),
         ("成就(空档)", CMO.achievements, "", {}),
         ("成就(有账)", CMO.achievements, "", _rich()),
+        # ★ B3-16b（这一批新接的 9 条里能按四参帧直调的那 8 条）：每一支都真跑一遍 ——
+        #   ⑥ 的「不缺文案 / 不漏机器键」与 ⑬ 的「默认档不被就地改」从此**自动**罩到它们身上
+        #   （`排行` 那一条是五参帧，单独在下面跑）
+        ("教堂(野外)", CPLA.chapel, "", {"loc": "belt_north", "node": "bn_bone"}),
+        ("教堂(镇上没走到那一站)", CPLA.chapel, "", {"loc": "windmill_town", "node": "wt_gate_n"}),
+        ("教堂(站到了·治疗)", CPLA.chapel, "",
+         {"loc": "windmill_town", "node": _HEAL_NODE, "cls": "cls_knight", "hp": 10}),
+        ("教堂(档上还没择业)", CPLA.chapel, "", {"loc": "windmill_town", "node": _HEAL_NODE}),
+        ("客栈(不在客栈)", CPLA.inn, "", {"loc": "windmill_town", "node": "wt_gate_n"}),
+        ("客栈(住店)", CPLA.inn, "",
+         {"loc": "windmill_town", "node": CMO.STASH_NODE, "cls": "cls_knight", "hp": 10}),
+        ("商队(车还在路上)", CPLA.caravan, "",
+         {"loc": "windmill_town", "node": "wt_gate_n", "flags": {}}),
+        ("商队(车到了)", CPLA.caravan, "",
+         {"loc": "windmill_town", "node": "wt_gate_n", "flags": {"quests_done": ["q_main_03"]}}),
+        ("旧货(包里有东西)", CPLA.junk_shop, "",
+         {"loc": "windmill_town", "node": "wt_inn", "bag": {"i_junk_bone": 2}}),
+        ("旧货(包里空的)", CPLA.junk_shop, "",
+         {"loc": "windmill_town", "node": "wt_inn", "bag": {}}),
+        ("登记(野外)", CSEL.register, "", {"loc": "belt_north", "node": "bn_bone"}),
+        ("登记(档上还没名字)", CSEL.register, "", {"loc": "windmill_town", "node": _GUILD_NODE}),
+        ("登记(办下来)", CSEL.register, "",
+         {"loc": "windmill_town", "node": _GUILD_NODE, "name": "考据的人", "flags": {}}),
+        ("登记(已经有证)", CSEL.register, "",
+         {"loc": "windmill_town", "node": _GUILD_NODE, "name": "考据的人", "flags": {"card": 1}}),
+        ("评级(还没登记)", CSEL.rank, "", {"flags": {}}),
+        ("评级(有证)", CSEL.rank, "",
+         {"flags": {"card": 1, "quests_done": ["q_main_01"]}}),
+        ("改名(没带名字)", CSEL.rename, "改名", {"flags": {}}),
+        ("改名(改好了)", CSEL.rename, "改名 考据的人", {"flags": {}}),
+        ("改名(改过了)", CSEL.rename, "改名 别人", {"flags": {"renamed": 1}}),
+        ("公告", CSEL.notice, "", {}),
     ]
     bad, empty, sample = [], [], []
     leaked = []
@@ -673,6 +719,28 @@ def main():
     chk("★ 一个取不到文案的都没有（不出现 %s）" % MISSING, not bad, "%s" % bad)
     chk("★ 呈现口不漏机器键（%d 个域键 · %d 条用例逐行扫）" % (len(_KEYS), len(cases)), not leaked,
         "%s" % leaked[:4])
+
+    # ★ B3-16b：`排行` 是**五参帧**（声明 args = group_id / uid / player）—— 单独真跑一遍，
+    #   同样过「不缺文案 / 不漏机器键」两条（连档上还没名字那一档一起）
+    def _drive5(fn, p, text="", group_id="g_copy", uid="u_copy"):
+        out = []
+
+        async def go():
+            async for _ln in fn(_E(text), None, group_id, uid, p):
+                out.append(str(_ln))
+
+        asyncio.run(go())
+        return out
+
+    _rank_bad = []
+    for _labR, _pR in (("排行(有名字·库里没有别人)", _player(name="考据的人", level=7, exp=5)),
+                       ("排行(还没名字)", _player(level=2))):
+        _outR = _drive5(CSEL.ranking, _pR, "")
+        if not _outR or any(MISSING in _ln for _ln in _outR) \
+                or any(k in _ln for _ln in _outR for k in _KEYS):
+            _rank_bad.append((_labR, _outR[:3]))
+    chk("★ `排行` 真跑两档（有名字 / 档上还没名字）：出榜头与尾注 · 不漏机器键 · 不缺文案",
+        not _rank_bad, "%s" % _rank_bad[:2])
 
     # ⑬ B3-12 ★ 默认档不许被就地改（K57 的活口）：跑完这么多实现体，那四个容器必须没动
     _soiled = [(_k, _DEF_SNAP[_k], CA.DEFAULT_PLAYER.get(_k)) for _k in _MUT

@@ -36,8 +36,8 @@ priority 降序、同值按注册序，见引擎 `tests/test_host_priority_route
      塔里 / 塔外两档回的都是真话，不是「还没接上」那一句（槽位 `SYS_CMD_SOON`）
   ⑨ ★ B3-9（真敲）：装备 / 卸下 / 装备对比 / 学习 / 技能 五条接上了 —— 回的都是填了槽位的真话
      （顺序：装备 → 状态 跟着面板走 → 对比（含别名）→ 卸下 → 穿脱回原样 → 学习 → 技能）；
-     且「声明了、可见、还没实现」那一条**只许降**（B3-6 收口 45 → B3-9 收 33 → **本批 25**，
-     `UNBOUND_MAX` 钉着）
+     且「声明了、可见、还没实现」那一条**只许降**（B3-6 收口 45 → B3-9 收 33 → B3-12 收 25 →
+     **本批 B3-16b 收 16**，`UNBOUND_MAX` 钉着）
   ⑩ ★ B3-9（直调）：学习 / 技能 的语义 —— 六职业 1 级解锁那一班 · 四道门（没有这条 / 不是本职业 /
      解锁等级没到 / 已经会了）· 落档后**档上那班 = 战斗真放的那班** · 用档上那班真打一场出伤害
   ⑪ ★ B3-9（直调）：`装备对比` 逐字对账 —— 期望值由 `gear.gear_stats`（唯一取值口）+ texts 现算，
@@ -47,12 +47,21 @@ priority 降序、同值按注册序，见引擎 `tests/test_host_priority_route
      档上副作用逐条核（bag / gold / flags.stash 的增减与摘条目），并扫「没有域 id / 没有
      取不到文案 / 不再回「还没接上」那一句」；其中「整理背包」钉**键序真重排 + 一件没少**、
      「存放·取出」钉**方向取自声明（单字别名同向）**、「属性」钉**生命上限 = `hp_cap` 那一个来源**
+  ⑬ ★ B3-16b（真敲）：这一批新接的 9 条 —— 教堂 / 客栈 / 商队 / 旧货 / 登记 / 评级 / 改名 /
+     排行 / 公告。同样**真宿主真敲**、逐字对槽位：镇上那几处按「野外 / 镇上没走到那一站 /
+     站到了」分档（治疗与住店都钉**血真回到上限**，上限走 `hp_cap` 那唯一来源）· 商队两档
+     （车在路上 / 车到了）钉「动静取自 `events` 域 + 外人在哪一站现算」· 旧货逐件与
+     `items.price` 现算对账 · 登记 / 改名 / 评级钉**档上副作用**（`flags.card` 只在那一下写、
+     `name` + `flags.renamed` 落档、只许改一次）· 排行钉「榜 = 本群存档（`all_players`）+
+     自己那一行一定在」· 公告钉「包名/版本取自 `game.json`、已接条数现点声明表」；
+     并扫「没有域 id / 没有取不到文案 / 不再回「还没接上」那一句」
 
 跑法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_cmds.py
 """
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import re
 import sys
@@ -386,10 +395,11 @@ UNBOUND = {k: v for k, v in DECL.items()
 
 #: ★ 「声明了、可见、包内还没实现」的条数**只许降**（与 probe_copy 的 BUDGET 同一套纪律）——
 #:   B3-6 收口时 45，B3-9（装备与技能那组）接下 装备 / 卸下 / 对比 / 学习 / 技能 5 条 ⇒ **38 → 33**；
-#:   ★ B3-12（这一批）再接下 8 条（看 <编号> / 属性 / 查看 / 丢弃 / 卖出 / 整理背包 / 存放取出 / 成就）
-#:   ⇒ **33 → 25**；★ B3-15（P-34）接下 `alloc`（加点）⇒ **25 → 24**。
-#:   再往上加就是回退（要么是新声明没实现、要么是有人把 bind 摘了）。
-UNBOUND_MAX = 24
+#:   ★ B3-12（那一批）再接下 8 条（看 <编号> / 属性 / 查看 / 丢弃 / 卖出 / 整理背包 / 存放取出 / 成就）
+#:   ⇒ **33 → 25**；★ B3-15（P-34）接下 `alloc`（加点）⇒ **25 → 24**；
+#:   ★ B3-16b（同一波）再接下 9 条（教堂 / 客栈 / 商队 / 旧货 / 登记 / 评级 / 改名 /
+#:   排行 / 公告）⇒ **24 → 15**。再往上加就是回退（要么是新声明没实现、要么是有人把 bind 摘了）。
+UNBOUND_MAX = 15
 
 print("⑤ ★ P-23：「帮助」只列**有处理器**的声明（真敲 · 逐条对账）")
 try:
@@ -1239,6 +1249,267 @@ try:
         not _leak12, "%s" % _leak12[:3])
 except Exception as exc:                                              # noqa: BLE001
     chk("★ B3-12 那 8 条真敲跑得起来（真宿主契约）", False,
+        "%s: %s" % (type(exc).__name__, exc))
+
+print("⑬ ★ B3-16b（真宿主）：这一批新接的 9 条真敲 —— 逐字对槽位 · 档上副作用对 · 不再回「还没接上」")
+#: 本批接下处理器的 9 条（镇上那几处 + 公会那三件 + 名与榜 + 公告）
+NEW16 = ("chapel", "inn", "caravan", "junk_shop", "register", "rank", "rename", "ranking", "notice")
+try:
+    from content import calendar as CAL16                                 # noqa: E402
+    from content import cmds_places as CPL16                              # noqa: E402
+    from content import cmds_quest as CQ16                                # noqa: E402
+    from content import codex as CX16                                     # noqa: E402
+    from content import loot as LT16                                      # noqa: E402
+    from content import persistence as PS16                               # noqa: E402
+
+    chk("★ 这一批 %d 条都挂了 bind（%s）" % (len(NEW16), " · ".join(NEW16)),
+        not [k for k in NEW16 if not (DECL.get(k) or {}).get("bind")],
+        "%s" % [k for k in NEW16 if not (DECL.get(k) or {}).get("bind")])
+    chk("★ 「声明了、可见、还没实现」25 → %d 条（%s）" % (len(UNBOUND), " · ".join(sorted(UNBOUND))),
+        len(UNBOUND) == UNBOUND_MAX, "%s" % sorted(UNBOUND))
+
+    _NP16 = st.domain("npcs") or {}
+    _GUILD_NODE16 = ""
+    _CHAPEL_NODE16 = ""
+    for _k16, _v16 in _NP16.items():
+        if not isinstance(_v16, dict) or _v16.get("map") != "windmill_town":
+            continue
+        if "board" in (_v16.get("funcs") or []):
+            _GUILD_NODE16 = str(_v16.get("subarea") or "")
+        if "heal" in (_v16.get("funcs") or []):
+            _CHAPEL_NODE16 = str(_v16.get("subarea") or "")
+
+    def _nname16(node):
+        return CA9._name_of_node("windmill_town", node)
+
+    _INN_NODE16 = CPL16.STASH_NODE
+
+    _SEED16 = {"cls": "cls_knight", "race": "human", "level": 3, "exp": 0, "hp": 20, "gold": 30,
+               "loc": "windmill_town", "node": "wt_gate_n", "prev": [],
+               "bag": {"i_junk_bone": 3, "i_material_iron_scrap": 2}, "equipped": {},
+               "codex": {}, "flags": {}}
+
+    def _roster16(node, p):
+        """这一站现在有谁（走 `_npcs_here` 那一个读口现算 —— 不手写镜像串）。"""
+        rows = [v for _k, v in CA9._npcs_here("windmill_town", node, p=p)]
+        return rows, " · ".join("『%s』%s" % (v.get("name"), v.get("icon", "")) for v in rows)
+
+    _db16 = os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp", "ast_probe_cmds_b316.db")
+    try:
+        os.remove(_db16)
+    except OSError:
+        pass
+    _ad16 = _Ad([], seed=dict(_SEED16))
+    _h16 = Host(_ad16, str(REPO), inject={"db_path": _db16, "clock": time.time})
+    _h16.boot()
+    _said16 = []
+    _BAD16 = []
+
+    def _say16(text):
+        _ad16.out.clear()
+        _h16.handle({"uid": "u_c", "group_id": "g_c", "text": text})
+        _said16.append((text, list(_ad16.out)))
+        return list(_ad16.out)
+
+    def _cmp16(label, got, want):
+        if got != want:
+            _BAD16.append((label, got, want))
+
+    def _sv16():
+        return _ad16.saved or {}
+
+    _cap16 = int(PB.hp_cap(CA9._p(dict(_sv16()))))
+
+    # ── 教堂：镇上（没走到那一站）→ 站到了治疗（血回满）· 野外那一档 ────────
+    _cmp16("教堂（人在北口）", _say16("教堂"), [_r("SYS_PLACE_AWAY", name=_nname16(_CHAPEL_NODE16))])
+    _ad16.saved["loc"] = "belt_north"
+    _ad16.saved["node"] = "bn_bone"
+    _cmp16("教堂（人在野外）", _say16("教堂"), [_r("SYS_PLACE_NOTOWN")])
+    _ad16.saved["loc"] = "windmill_town"
+    _ad16.saved["node"] = "wt_gate_n"
+    _say16("去 %s" % _nname16(_CHAPEL_NODE16))
+    _rowsC16, _lineC16 = _roster16(_CHAPEL_NODE16, _sv16())
+    _whoC16 = next((str(v.get("name")) for v in _rowsC16 if "heal" in (v.get("funcs") or [])), "")
+    _cmp16("教堂（站到了 · 治疗）", _say16("教堂"),
+           [_r("SYS_PLACE_HEAD", name=_nname16(_CHAPEL_NODE16)),
+            _r("SYS_LOOK_WHO", list=_lineC16),
+            _r("SYS_CHAPEL_HEAL", who=_whoC16),
+            _r("SYS_REST_HEAL", add=_cap16 - 20, hp=_cap16, max=_cap16),
+            _r("SYS_TALK_HOW", name=_whoC16)])
+    _cmp16("教堂（身上没伤）", _say16("教堂"),
+           [_r("SYS_PLACE_HEAD", name=_nname16(_CHAPEL_NODE16)),
+            _r("SYS_LOOK_WHO", list=_lineC16),
+            _r("SYS_CHAPEL_FULL", who=_whoC16),
+            _r("SYS_TALK_HOW", name=_whoC16)])
+    chk("★ `教堂` 真敲四档：野外 / 镇上没走到那一站 / 站到了治疗（上限走唯一来源 `hp_cap`）/ "
+        "没伤那一档 —— 整段与 npcs + maps + texts 现算的期望逐字一致",
+        not [x for x in _BAD16 if x[0].startswith("教堂")] and int(_sv16().get("hp") or 0) == _cap16,
+        "%s（hp=%s/%s）" % ([x for x in _BAD16 if x[0].startswith("教堂")][:1],
+                            _sv16().get("hp"), _cap16))
+
+    # ── 客栈：那一站 = 箱子那一站（同一个节点）· 住店回满 · 箱子那两句 ──────
+    _cmp16("客栈（人在白烛堂）", _say16("客栈"), [_r("SYS_PLACE_AWAY", name=_nname16(_INN_NODE16))])
+    _say16("去 %s" % _nname16(_INN_NODE16))
+    _rowsI16, _lineI16 = _roster16(_INN_NODE16, _sv16())
+    _whoI16 = str((_rowsI16[0].get("name") if _rowsI16 else ""))
+    _cmp16("客栈（不疼也不困）", _say16("客栈"),
+           [_r("SYS_PLACE_HEAD", name=_nname16(_INN_NODE16)), _r("SYS_LOOK_WHO", list=_lineI16),
+            _r("SYS_INN_FULL"), _r("SYS_INN_BOX"), _r("SYS_TALK_HOW", name=_whoI16)])
+    _ad16.saved["hp"] = 20                              # 造一个带伤的档（真敲读回）
+    _cmp16("客栈（住店）", _say16("客栈"),
+           [_r("SYS_PLACE_HEAD", name=_nname16(_INN_NODE16)), _r("SYS_LOOK_WHO", list=_lineI16),
+            _r("SYS_INN_SLEEP"), _r("SYS_REST_HEAL", add=_cap16 - 20, hp=_cap16, max=_cap16),
+            _r("SYS_INN_BOX"), _r("SYS_TALK_HOW", name=_whoI16)])
+    chk("★ `客栈` 真敲三档：指路 / 不用住店 / 住店睡得血回满 —— 且那一站与『存放』认的是同一个节点"
+        "（`cmds_more.STASH_NODE`，一处只写一份）",
+        not [x for x in _BAD16 if x[0].startswith("客栈")] and int(_sv16().get("hp") or 0) == _cap16
+        and _INN_NODE16 == _CM12.STASH_NODE,
+        "%s（hp=%s/%s · 客栈站=%s）" % ([x for x in _BAD16 if x[0].startswith("客栈")][:1],
+                                        _sv16().get("hp"), _cap16, _INN_NODE16))
+
+    # ── 旧货：收什么 = 域里有价的那些（逐件对账）· 看一眼 ≠ 动档 ────────────
+    def _junk_want16(p):
+        rows = []
+        for iid in sorted(p.get("bag") or {}):
+            rec = LT16.rec_of(iid)
+            price = rec.get("price")
+            if not isinstance(price, (int, float)) or isinstance(price, bool) or price <= 0:
+                continue
+            n = int((p.get("bag") or {}).get(iid) or 0)
+            rows.append((str(rec.get("name") or iid), n, int(price) * n))
+        out = [_r("SYS_JUNK_HEAD")]
+        if rows:
+            out.append(_r("SYS_JUNK_MINE"))
+            out += [_r("SYS_JUNK_ROW", name=nm, n=n, gold=g) for nm, n, g in sorted(rows)]
+        else:
+            out.append(_r("SYS_JUNK_NONE"))
+        out.append(_r("SYS_JUNK_RELIC",
+                      n=CX16.count(CQ16._shadow(CA9._p(dict(p))), "relic")))
+        out.append(_r("SYS_JUNK_HOW"))
+        return out
+
+    _bag16 = dict(_sv16().get("bag") or {})
+    _snap16 = dict(_sv16())
+    _cmp16("旧货（包里有东西）", _say16("旧货"), _junk_want16(_sv16()))
+    _ad16.saved["bag"] = {}
+    _cmp16("旧货（包里空的）", _say16("旧货"), _junk_want16(_sv16()))
+    _ad16.saved["bag"] = _bag16
+    chk("★ `旧货` 真敲两档（有东西 / 空的）：逐件与 `items.price` 现算的期望逐字一致，"
+        "且**看一眼旧货铺不动档**（bag / flags 原样）",
+        not [x for x in _BAD16 if x[0].startswith("旧货")]
+        and (_sv16().get("bag") or {}) == (_snap16.get("bag") or {}),
+        "%s" % [x for x in _BAD16 if x[0].startswith("旧货")][:2])
+
+    # ── 商队：今天开着的世界级镇上事件 + 跟车来的人此刻在哪一站（两档）──────
+    def _caravan_want16(p):
+        st16 = CAL16.state()
+        out = [_r("SYS_CARAVAN_HEAD")]
+        news = [r for r in CAL16.events_now(st16, p)
+                if str(r.get("scale_key")) == "world" and CAL16.where_hit(r, "windmill_town")]
+        out += [_r(str(r["text"])) for r in news if r.get("text")]
+        if not news:
+            out.append(_r("SYS_CARAVAN_QUIET"))
+        who = []
+        for nd in ((st.domain("maps") or {}).get("windmill_town") or {}).get("nodes") or []:
+            nid = str(nd.get("id") or "")
+            for _kk, vv in CA9._npcs_here("windmill_town", nid, st16, p):
+                if not ((vv.get("condition") or {}).get("event")):
+                    continue
+                who.append("%s（%s）" % (vv.get("name"), _nname16(nid)))
+        if who:
+            out += [_r("SYS_CARAVAN_WHO", list=" · ".join(who)), _r("SYS_CARAVAN_HOW")]
+        return out
+
+    _on16 = _say16("商队")
+    _cmp16("商队（车还在路上）", _on16, _caravan_want16(_sv16()))
+    _ad16.saved["flags"] = dict(_sv16().get("flags") or {}, quests_done=["q_main_03"])
+    _arr16 = _say16("商队")
+    _cmp16("商队（车到了）", _arr16, _caravan_want16(_sv16()))
+    _who_line16 = [ln for ln in _arr16 if "（" in ln and "搭话" not in ln and "歇脚处" not in ln]
+    chk("★ `商队` 真敲两档（车在路上 / 车到了）：动静取自 `events` 域那两条的槽位、"
+        "「外人在哪一站」逐条现算（走 `_npcs_here` 那一口）—— 车到了那档**真多出**"
+        "外人与细问那两行（不是同一段话念两遍）",
+        not [x for x in _BAD16 if x[0].startswith("商队")]
+        and bool(_who_line16) and _arr16 != _on16,
+        "%s（%s）" % ([x for x in _BAD16 if x[0].startswith("商队")][:2], _who_line16[:1]))
+
+    # ── 登记 / 改名 / 评级：在公会那一站 · 先要名字 · 证与进度 ──────────────
+    _cmp16("登记（人在客栈）", _say16("登记"), [_r("SYS_PLACE_AWAY", name=_nname16(_GUILD_NODE16))])
+    _say16("去 %s" % _nname16(_GUILD_NODE16))
+    _cmp16("登记（档上还没名字）", _say16("登记"), [_r("SYS_REG_ASKNAME")])
+    _cmp16("改名（没带名字）", _say16("改名"), [_r("SYS_RENAME_ASK")])
+    _cmp16("改名（第一次）", _say16("改名 张三"), [_r("SYS_RENAME_DONE", name="张三")])
+    _ren16 = (_sv16().get("flags") or {}).get("renamed")
+    _cmp16("改名（只许一次）", _say16("改名 李四"), [_r("SYS_RENAME_USED")])
+    _cmp16("登记（办下来）", _say16("登记"), [_r("SYS_REG_DONE")])
+    _card16 = (_sv16().get("flags") or {}).get("card")
+    _cmp16("登记（已经有证）", _say16("登记"), [_r("SYS_REG_HAS")])
+    #: 「刚办证」那一档的已交条数**现读**（前面几档动过 `flags.quests_done` —— 期望值跟着档走）
+    _cnt16 = len(((_sv16().get("flags") or {}).get("quests_done") or []))
+    _cmp16("评级（刚办证）", _say16("评级"),
+           [_r("SYS_MINE_RANK"), _r("SYS_MINE_DONE", n=_cnt16), _r("SYS_RANK_CHIEF", n=0)])
+    _ad16.saved["flags"] = dict(_sv16().get("flags") or {},
+                               quests_done=["q_main_01", "q_main_02", "q_main_03"])
+    _chief16 = next((m for m, v in (st.domain("monsters") or {}).items()
+                     if v.get("role_key") == "chief" and m in CX16.book("monster")), "")
+    _ad16.saved["books"] = {"monster": {_chief16: {"day": 1, "kills": 2}}}
+    _cmp16("评级（有进度）", _say16("评级"),
+           [_r("SYS_MINE_RANK"), _r("SYS_MINE_DONE", n=3), _r("SYS_RANK_CHIEF", n=1)])
+    chk("★ `登记 / 改名 / 评级` 真敲：改名的名字与 `flags.renamed` 落档 · 证只在**办下来**那一下写 "
+        "`flags.card` · 评级逐字对槽位（已交条数取自 `flags.quests_done`、头目数按域里 "
+        "`role_key == chief` 数）· 没带名字时登记不替玩家编一个",
+        not [x for x in _BAD16 if x[0].startswith(("登记", "改名", "评级"))]
+        and _sv16().get("name") == "张三" and _ren16 is not None and _card16 is not None
+        and _chief16 != "",
+        "%s（name=%s renamed=%s card=%s）" % (
+            [x for x in _BAD16 if x[0].startswith(("登记", "改名", "评级"))][:2],
+            _sv16().get("name"), _ren16, _card16))
+
+    # ── 排行：本群榜（库里那两位 + 手上这一份）· 看一眼 ≠ 动档 ─────────────
+    _snapP16 = dict(_sv16())
+    PS16.update_player("g_c", "u_x", name="乙", level=5, exp=10)
+    PS16.update_player("g_c", "u_y", name="丙", level=5, exp=99)
+    _cmp16("排行（本群三个人）", _say16("排行"),
+           [_r("SYS_RANKING_HEAD"),
+            _r("SYS_RANKING_ROW", i=1, name="丙", level=5, exp=99),
+            _r("SYS_RANKING_ROW", i=2, name="乙", level=5, exp=10),
+            _r("SYS_RANKING_ROW", i=3, name="张三", level=3, exp=0),
+            _r("SYS_RANKING_TAIL")])
+    _rank_db16 = sorted((r["uid"], (r["data"] or {}).get("name"))
+                        for r in PS16.all_players("g_c"))
+    chk("★ `排行` 真敲：榜 = **本群**存档里那些定下名字的人（`persistence.all_players` 现读 · "
+        "按等级/经验排）· 自己那一行一定在（库里没有就拿手上这份档补上）· 看一眼排行**不动档**",
+        not [x for x in _BAD16 if x[0].startswith("排行")]
+        and sorted(u for u, _n in _rank_db16) == ["u_x", "u_y"]
+        and dict(_sv16()) == _snapP16,
+        "%s（库里=%s）" % ([x for x in _BAD16 if x[0].startswith("排行")][:1], _rank_db16))
+
+    # ── 公告：包名 / 版本 / 已接条数（现点声明表）────────────────────────
+    _mf16 = json.loads((Path(str(REPO)) / "game.json").read_text(encoding="utf-8"))
+    _nb16 = len([1 for v in DECL.values() if (v or {}).get("bind")])
+    _cmp16("公告", _say16("公告"),
+           [_r("SYS_NOTICE_HEAD"),
+            _r("SYS_NOTICE_PKG", name=_mf16.get("name") or "", ver=_mf16.get("version") or ""),
+            _r("SYS_NOTICE_CMDS", n=_nb16, total=len(DECL)),
+            _r("SYS_NOTICE_TAIL")])
+    chk("★ `公告` 真敲：包名 / 版本取自 `game.json`、已接条数**现点**声明表里真有 `bind` 的那几条"
+        "（与『帮助』同一批口径）",
+        not [x for x in _BAD16 if x[0].startswith("公告")],
+        "%s" % [x for x in _BAD16 if x[0].startswith("公告")][:2])
+
+    # ── 收口三扫：不是 soon 句 · 不漏机器键 · 不缺文案 ────────────────────
+    _all16 = [ln for _t, _o in _said16 for ln in _o]
+    _soon16 = [k for k in NEW16 for ln in _all16 if soon_text(k) in ln]
+    chk("★ 这 9 条一条都不再回「还没接上」那一句", not _soon16, "%s" % _soon16[:3])
+    _KEYS16 = [k for d in ("items", "monsters", "pois", "classes", "races", "quests", "gathering",
+                           "drop_pools", "recipes", "npcs", "skills", "eggs", "titles", "dialogues")
+               for k in (st.domain(d) or {})]
+    _leak16 = [ln[:40] for ln in _all16
+               if any(kk in ln for kk in _KEYS16) or "[MISSING TEXT" in ln]
+    chk("★ 这 9 条的回话里没有域 id、也没有取不到文案（%d 行逐行扫）" % len(_all16),
+        not _leak16, "%s" % _leak16[:3])
+except Exception as exc:                                              # noqa: BLE001
+    chk("★ B3-16b 那 9 条真敲跑得起来（真宿主契约）", False,
         "%s: %s" % (type(exc).__name__, exc))
 
 print("")
