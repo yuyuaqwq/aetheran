@@ -46,6 +46,9 @@ def parse_doc(path=DOC):
         if len(cells) != 5:
             raise SystemExit("列数不是 5（别改列数）：%s" % ln)
         key, value, params, cat, srcname = cells
+        # ★ 多行文案：表里写 `\n`（反斜杠 n）＝真换行（行内不许出现真换行 —— 真换行会把一行切成两行，
+        #   第二行不是槽位行、**静默漏掉**）。JSON 落盘时它就是一个真换行（与 SCENE_* 那些多段正文同形）。
+        value = value.replace("\\n", "\n")
         prm = [] if params in ("-", "") else [x.strip() for x in params.split(",") if x.strip()]
         out.append({"key": key, "value": value, "params": prm,
                     "category": cat, "src": srcname})
