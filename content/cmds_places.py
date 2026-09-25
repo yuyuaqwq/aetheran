@@ -215,7 +215,7 @@ async def junk_shop(env, sink, uid, player):
         if not isinstance(price, (int, float)) or isinstance(price, bool) or price <= 0:
             continue
         n = int((p.get("bag") or {}).get(iid) or 0)
-        rows.append((str(rec.get("name") or iid), n, int(price) * n))
+        rows.append((LT.label_of(iid), n, int(price) * n))   # ★ B4-20：重名的缀品阶
     if rows:
         yield T("SYS_JUNK_MINE")
         for name, n, gold in sorted(rows):

@@ -18,6 +18,7 @@ import json
 import os
 
 from .cmds_ast import TOWN, _data, _name_of_node
+from . import loot as LT
 from . import town as TW
 
 RULES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "rules", "shop.json")
@@ -77,20 +78,20 @@ def goods() -> list:
 
 
 def find(name) -> tuple:
-    """柜上按名字 / id 找一件 —— `(id, rec, gold)`；找不到 `(None, {}, 0)`。
+    """柜上按名字 / id 找一件 —— `(id, rec, gold, cands)`；找不到 `(None, {}, 0, [])`。
 
-    比法照仓里现成的惯例（`cmds_more._bag_hit` / `cmds_recipe._item_of_name`）：
-    id 或全名相等，或者（名字 ≥ 2 字）是名字的一部分。
+    ★ B4-20：比法走**全包唯一的一口** `loot.match_ids`（原先这里自己写了一份「遍历序里
+      第一个命中的就算」）。`cands` 非空 = 柜上有**好几件同一个名字** ⇒ 调用方照实说，
+      不替玩家挑（今天柜上那两件名字不重，但这一格归了口就不会再各自跑偏）。
     """
-    want = str(name or "").strip()
-    if not want:
-        return (None, {}, 0)
-    for g in goods():
-        rec = g["rec"]
-        nm = str(rec.get("name") or "")
-        if want == g["id"] or (nm and (want == nm or (len(want) >= 2 and want in nm))):
-            return (g["id"], rec, g["gold"])
-    return (None, {}, 0)
+    shelf = goods()
+    hits = LT.match_ids([g["id"] for g in shelf], name)
+    if len(hits) > 1:
+        return (None, {}, 0, sorted(hits))
+    if not hits:
+        return (None, {}, 0, [])
+    g = next(x for x in shelf if x["id"] == hits[0])
+    return (g["id"], g["rec"], g["gold"], [])
 
 
 def station_name(loc: str = TOWN) -> str:

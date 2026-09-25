@@ -193,3 +193,120 @@ def add_to_bag(player: dict, drops: list) -> list:
             codex[d["id"]] = True
             first.append(d["id"])
     return first
+
+
+# ══════════════════════════════════════════════════════════════
+# ★ B4-20：玩家点名的**一件东西** —— 「名字 / id → 那一个 id」收成一个口
+# ══════════════════════════════════════════════════════════════
+# 为什么要有这一节：全包原先有**五份**「按名字在背包里找一件」的实现
+#   （`cmds_more._bag_hit` · `cmds_gear._in_bag` · `cmds_recipe._item_of_name`〔扫的是**整张物品表**〕·
+#     `cmds_recipe.item_use` 内联那一段 · `shop.find`），五份都是「**遍历序里第一个命中的就算**」——
+#   两条玩家看得见的后果（都有真跑证据）：
+#     ① **精确名输给部分名**：`查看 苦叶` 回的却是「苦叶汤」（`i_food_*` 在字典序里先撞上，
+#        而「苦叶」明明**字字相等**）；`使用 苦叶` 更狠 —— 把那碗汤**吃掉**了。
+#     ② **同名四档的装备挑不出也看不见**：`拾荒人的重剑` 四档同名（真源 15 那四行），
+#        背包里两行列得一模一样；`强化 拾荒人的重剑` 只有精制那档时会回「背包里没有」
+#        （它扫的是物品表的第一件 = 普通档），两档在手时又**静默**强了普通那件。
+#   ⇒ 这一节是**唯一的一口**：id / 全名相等优先，名字的一部分次之；命中**多件就照实说**
+#     （不替玩家挑 —— 挑错就是白花材料 / 穿错装备，K69 同族：先把事实说清）。
+def quality_words() -> set:
+    """品阶词表（普通 / 精制 / 稀有 / 遗物 …）—— **从域里现取**，代码里一个中文都不写。
+
+    来处：`items` 域里出现过的 `quality` 值（`schemas/items.schema.json` 的 enum 是同一套）。
+    域里添了新一档，「重剑 <新档>」这种写法当场就认（K48 / P-20 甲案）。
+    """
+    out = set()
+    for rec in items().values():
+        if isinstance(rec, dict) and rec.get("quality"):
+            out.add(str(rec["quality"]))
+    return out
+
+
+def split_quality(want: str):
+    """玩家写的那个名字里有没有**点明品阶** —— 三种写法都认，返回 `(名字, 品阶 or None)`。
+
+    `拾荒人的重剑 精制` / `精制 拾荒人的重剑` / `拾荒人的重剑（精制）`（半角括号也认）。
+    没点名就是 `(原名, None)`。名字与品阶都是**域里的词**，这一层不做任何归一化。
+    """
+    w = str(want or "").strip()
+    for q in quality_words():
+        for l, r in (("（", "）"), ("(", ")")):
+            if len(w) > len(l + q + r) and w.endswith(l + q + r):
+                return (w[: -len(l + q + r)].strip(), q)
+    parts = w.split()
+    if len(parts) >= 2:
+        if parts[-1] in quality_words():
+            return (" ".join(parts[:-1]).strip(), parts[-1])
+        if parts[0] in quality_words():
+            return (" ".join(parts[1:]).strip(), parts[0])
+    return (w, None)
+
+
+def match_ids(ids, want: str, *, need_slot: bool = False) -> list:
+    """名字 / id → **命中的那些** id（可能 0 个、可能多件）—— 命中的判定只在这一处。
+
+    · **id 或全名相等**优先于**名字的一部分**（一条东西叫「苦叶」、另一条叫「苦叶汤」时，
+      玩家写「苦叶」要拿到苦叶 —— 原先撞上哪一条取决于遍历序，K71 同族）；
+    · `need_slot=True` 只认能穿的（域里 ASCII `slot`，同 `probe_items` ①之二）；
+    · 点明品阶的只认那一档。
+    """
+    name, q = split_quality(want)
+    if not name:
+        return []
+    exact, part = [], []
+    for iid in ids:
+        rec = rec_of(iid) or {}
+        if need_slot and not rec.get("slot"):
+            continue
+        if q and str(rec.get("quality") or "") != q:
+            continue
+        nm = str(rec.get("name") or "")
+        if name == iid or (nm and name == nm):
+            exact.append(iid)
+        elif nm and len(name) >= 2 and name in nm:
+            part.append(iid)
+    return exact or part
+
+
+def pick(ids, want: str, *, need_slot: bool = False):
+    """`(id, 记录, 候选)` —— 唯一命中就用它；**命中多件不挑**（候选交回调用方照实说）。"""
+    hits = match_ids(ids, want, need_slot=need_slot)
+    if len(hits) == 1:
+        return (hits[0], rec_of(hits[0]), [])
+    if len(hits) > 1:
+        return (None, {}, sorted(hits))
+    return (None, {}, [])
+
+
+def ambiguous_names() -> set:
+    """**一个名字在域里对得着好几件**的那些名字 —— 从域里现算（谁都不许手抄一份）。"""
+    n: dict = {}
+    for rec in items().values():
+        if isinstance(rec, dict) and rec.get("name"):
+            nm = str(rec["name"])
+            n[nm] = n.get(nm, 0) + 1
+    return set(k for k, v in n.items() if v > 1)
+
+
+def label_of(oid: str) -> str:
+    """**列表里**那一行的名字 —— 「这名字在域里对得着好几件」时缀上品阶（「拾荒人的重剑 · 精制」）。
+
+    为什么：同名四档的装备在列表里原本长得**一模一样**（两行都是「⚔️ 拾荒人的重剑 ×1」），
+    玩家既分不清手里是哪几档、也说不出要动哪一件（B4-20）。
+    ★ 缀不缀**只看「名字重不重」**（域里现算），不看这一格的背包里有什么 ——
+      同一条东西在谁的背包里都长一个样（判据好钉，玩家也好学）。
+      一名一件的（材料 / 食物 / 道具）一个字不改。
+    """
+    rec = rec_of(oid) or {}
+    nm = str(rec.get("name") or oid)
+    q = str(rec.get("quality") or "")
+    return ("%s · %s" % (nm, q)) if (q and nm in ambiguous_names()) else nm
+
+
+def cands_label(ids) -> str:
+    """候选那几件 → 一行里点得出的名字（「普通 · 精制」）。没有品阶的退回名字。"""
+    out = []
+    for i in ids:
+        rec = rec_of(i) or {}
+        out.append(str(rec.get("quality") or rec.get("name") or i))
+    return " · ".join(out)

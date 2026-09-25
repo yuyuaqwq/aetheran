@@ -48,6 +48,7 @@ from content import panel_build                          # noqa: E402
 from content import combat as CB                          # noqa: E402
 from content import cmds_ast as CA                        # noqa: E402
 from content import persistence as PS                     # noqa: E402
+from content import loot as LPICK                         # noqa: E402  ★ B4-20 显示名那唯一的一口
 from saintess_engine import config                       # noqa: E402
 
 print("panel_layers_fn 已挂:", config.get_hook("panel_layers_fn") is not None)
@@ -691,7 +692,7 @@ try:
     chk("★ ④ 真跑 `装备` 另一个方向：加点够了 ⇒ 穿上那一句 + 真进 `equipped`"
         % (),
         _out_enuf7[:1] == [CA.T("SYS_GEAR_EQUIP_OK", icon=_EQ7[_cat7].get("icon", ""),
-                                name=_EQ7[_cat7].get("name", _cat7),
+                                name=LPICK.label_of(_cat7),
                                 kind=_EQ7[_cat7].get("kind", ""))]
         and _enuf7.get("equipped") == {_EQ7[_cat7]["slot"]: _cat7},
         "%s / %s" % (_out_enuf7[:1], _enuf7.get("equipped")))

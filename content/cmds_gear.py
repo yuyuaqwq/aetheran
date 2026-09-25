@@ -34,7 +34,9 @@ from __future__ import annotations
 
 from .cmds_ast import _data, _p, _save, T
 from .cmds_talk import _arg
+from . import argv as AV
 from . import gear as GB
+from . import loot as LT
 
 
 # ══════════════════════════════════════════════════════════════
@@ -181,21 +183,23 @@ def _take(p, iid, n: int = 1) -> None:
 
 
 def _in_bag(p, want, need_slot: bool = False):
-    """背包里按名字（或 id）找一件；`need_slot=True` 时只认能穿的。返回 `(iid, rec)`。
+    """背包里按名字（或 id）找一件 —— **转发到全包唯一的一口** `loot.pick`（B4-20）。
 
-    ★ 「≥2 字才算部分匹配」与 `cmds_recipe._item_of_name` 同一口径（一个字太容易误中）。
+    返回 `(iid, rec, cands)`：`cands` 非空 = **这名字在背包里对着好几件** —— 调用方要照实
+    说清（`ambig_line`），**不许替玩家挑一件**（挑错就是穿错装备 / 白花材料）。
     """
-    want = str(want or "").strip()
-    if not want:
-        return (None, None)
-    for iid in sorted(p.get("bag") or {}):
-        rec = _item(iid)
-        if need_slot and not rec.get("slot"):
-            continue
-        nm = str(rec.get("name") or "")
-        if want == iid or (nm and (want == nm or (len(want) >= 2 and want in nm))):
-            return (iid, rec)
-    return (None, None)
+    return LT.pick(sorted(p.get("bag") or {}), want, need_slot=need_slot)
+
+
+def ambig_line(key: str, want: str, cands) -> str:
+    """「背包里有 N 件叫「X」的：普通 · 精制 —— 打『强化 X 精制』说清哪一件。」（唯一一口）
+
+    `key` = 那条指令自己的声明键 —— 例子里的触发词从 `usage` 现取（代码里不写中文）。
+    品阶认三种写法（见 `loot.split_quality`），例子给的是手机上好打的那一种。
+    """
+    name = LT.split_quality(want)[0]
+    say = " ".join(x for x in (AV.usage(key), name, LT.cands_label(cands[:1])) if x)
+    return T("SYS_PICK_AMBIG", n=len(cands), name=name, list=LT.cands_label(cands), say=say)
 
 
 def _worn(p, want):
@@ -218,7 +222,9 @@ def _not_there(p, want):
     _s, worn_iid, worn_rec = _worn(p, want)
     if worn_iid:
         return T("SYS_GEAR_WORN", name=worn_rec.get("name", worn_iid))
-    other, orec = _in_bag(p, want)
+    other, orec, cands = _in_bag(p, want)
+    if not other and cands:            # ★ B4-20：好几件同名 ⇒ 随便点一件说清「不是能穿的」
+        other, orec = cands[0], _item(cands[0])
     if other:
         return T("SYS_GEAR_NOT_WEARABLE", name=orec.get("name", other))
     return T("SYS_GEAR_IN_BAG", name=want)
@@ -242,9 +248,12 @@ async def equip(env, sink, uid, player):
     if not want:                       # ★ B4-10：没带东西就照实说
         yield T("SYS_GEAR_EQUIP_ASK")
         return
-    iid, rec = _in_bag(p, want, need_slot=True)
+    iid, rec, cands = _in_bag(p, want, need_slot=True)
     if not iid:
-        yield _not_there(p, want)
+        if cands:                      # ★ B4-20：同名好几件 ⇒ 照实说，不替玩家挑
+            yield ambig_line("equip", want, cands)
+        else:
+            yield _not_there(p, want)
         return
 
     short = unmet_req(p, iid)
@@ -267,12 +276,12 @@ async def equip(env, sink, uid, player):
         player.update(p)
     _save(env)
 
-    yield T("SYS_GEAR_EQUIP_OK", icon=rec.get("icon", ""), name=rec.get("name", iid),
+    yield T("SYS_GEAR_EQUIP_OK", icon=rec.get("icon", ""), name=LT.label_of(iid),
             kind=rec.get("kind", ""))
     for line in affix_lines(rec):
         yield line
     if old and old != iid:
-        yield T("SYS_GEAR_SWAP_OUT", name=_item(old).get("name", old))
+        yield T("SYS_GEAR_SWAP_OUT", name=LT.label_of(old))
     if cap0 is not None and cap1 is not None and int(cap0) != int(cap1):
         yield T("SYS_GEAR_HP_CAP", old=int(cap0), new=int(cap1))
 
@@ -335,9 +344,12 @@ async def item_compare(env, sink, uid, player):
         # ★ B4-13：裸「对比」—— 照实说「没带东西」
         yield T("SYS_CMP_ASK")
         return
-    iid, rec = _in_bag(p, want, need_slot=True)
+    iid, rec, cands = _in_bag(p, want, need_slot=True)
     if not iid:
-        yield _not_there(p, want)
+        if cands:                      # ★ B4-20：同名好几件 ⇒ 照实说，不替玩家挑
+            yield ambig_line("item_compare", want, cands)
+        else:
+            yield _not_there(p, want)
         return
 
     slot = str(rec.get("slot"))

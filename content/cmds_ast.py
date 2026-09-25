@@ -883,7 +883,8 @@ def _bag_rows(p) -> list:
     rows = []
     for k, v in (p.get("bag") or {}).items():
         rec = LT.rec_of(k)                        # ★ 未鉴定的 marker：名字与图标写在池上
-        rows.append("· %s %s ×%s" % (rec.get("icon", ""), rec.get("name", k), v))
+        # ★ B4-20：名字走 `LT.label_of` —— 「域里重名的那些」缀品阶（同名四档装备原先两行一模一样）
+        rows.append("· %s %s ×%s" % (rec.get("icon", ""), LT.label_of(k), v))
     return rows
 
 

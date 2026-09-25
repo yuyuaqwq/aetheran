@@ -511,9 +511,9 @@ async def battle_item(env, sink, uid, player):
         yield _line
         return
     want = _arg(env)
-    iid, rec = CG._in_bag(p, want)
+    iid, rec, cands = CG._in_bag(p, want)          # ★ B4-20：三元组（多件同名不替玩家挑）
     if not iid:
-        yield T("COMBAT_ITEM_BAD", name=want)
+        yield CG.ambig_line("battle_item", want, cands) if cands else T("COMBAT_ITEM_BAD", name=want)
         return
     hand = BA.Hand("item", p=p, item=iid)
     _head = T("COMBAT_ITEM_HEAD", name=rec.get("name", iid))
@@ -604,7 +604,7 @@ async def swap_weapon(env, sink, uid, player):
     eq0["weapon"] = iid
     p["equipped"] = eq0
     p = _p(p)                                  # ★ 上限/现血按新的 equipped 重新派生（P-27）
-    ok = T("COMBAT_SWAP_OK", icon=rec.get("icon", ""), name=rec.get("name", iid),
+    ok = T("COMBAT_SWAP_OK", icon=rec.get("icon", ""), name=LT.label_of(iid),   # ★ B4-20 同一个显示名口
            kind=rec.get("kind", ""))
     pick, ms, affixes, _mline = _meet(p, uid)
     if not pick:
@@ -612,12 +612,12 @@ async def swap_weapon(env, sink, uid, player):
         if player is not None:
             player.update(p)
         _save(env)
-        yield T("SYS_GEAR_EQUIP_OK", icon=rec.get("icon", ""), name=rec.get("name", iid),
+        yield T("SYS_GEAR_EQUIP_OK", icon=rec.get("icon", ""), name=LT.label_of(iid),
                 kind=rec.get("kind", ""))
         return
     if len(cand) > 1:                          # 还有别的能换（只提示 —— 换哪一件由数据说话）
         yield T("COMBAT_SWAP_ASK", list=" · ".join(
-            "『%s』" % (CG._item(k) or {}).get("name", k) for k in cand[1:]))
+            "『%s』" % LT.label_of(k) for k in cand[1:]))
     hand = BA.Hand("swap", p=p, lines=[ok])
     yield _mline
     for line in encounter_lines(ms[pick[0]], p):

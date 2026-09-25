@@ -26,7 +26,7 @@ from __future__ import annotations
 import json
 import os
 
-__all__ = ["decl", "lit_prefix", "hit_prefix", "arg_of"]
+__all__ = ["decl", "usage", "lit_prefix", "hit_prefix", "arg_of"]
 
 #: 正则里的元字符（`lit_prefix` 扫到它就停 —— 前缀是「连着写的那几个字」）
 _META = chr(92) + "[](){}.*+?|$^"          # 反斜杠不进源码（避转义）
@@ -42,6 +42,15 @@ def decl(key: str) -> dict:
         with open(os.path.join(_DIR, "commands.json"), encoding="utf-8") as f:
             _ALL.update(json.load(f))
     return _ALL.get(key) or {}
+
+
+def usage(key: str) -> str:
+    """这条指令**玩家看见的那个词**（声明自己 `usage` 的第一个词 —— 如 `存放`）。
+
+    `usage` 是声明的字段、也就是数据；代码里不另抄一份中文（B4-10 那条纪律同源）。
+    """
+    u = str((decl(key) or {}).get("usage") or "").split()
+    return u[0].strip() if u else ""
 
 
 def lit_prefix(pat: str) -> str:

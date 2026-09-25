@@ -88,7 +88,7 @@ def _norm_class(class_name: str | None) -> str | None:
     """职业名或 id 都收（`骑士` 或 `cls_knight`）。
 
     ★ B3-6b-2d-b 复核：这是**入参解析**（中文名 → 机器键），不是「拿中文枚举当机器键」——
-      与 `cmds_recipe._item_of_name` / `去 <地方>` 同一族（玩家/调用方给的是名字）。
+      与 `loot.match_ids` / `去 <地方>` 同一族（玩家/调用方给的是名字）。
       机器键本身（`owner_class` / actor 的 `class_name`）一律是 ASCII `cls_*`。
     """
     if not class_name:

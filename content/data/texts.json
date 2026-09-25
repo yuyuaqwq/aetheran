@@ -5274,5 +5274,16 @@
     "params": [],
     "category": "系统",
     "desc": "B4-19 兜底普攻那条技的名字（apply.py 那条 `basic_fallback` 的 `name`）"
+  },
+  "SYS_PICK_AMBIG": {
+    "value": "有 {n} 件叫「{name}」的：{list}。想动哪一件，就在名字后头补品阶 —— 比如「{say}」。",
+    "params": [
+      "n",
+      "name",
+      "list",
+      "say"
+    ],
+    "category": "系统",
+    "desc": "B4-20 · 同名多件时不替玩家挑（查看 / 装备 / 对比 / 丢弃 / 卖出 / 使用 / 强化 / 存放·取出 / 购买 共用一个口）"
   }
 }

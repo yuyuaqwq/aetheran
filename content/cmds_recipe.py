@@ -21,6 +21,7 @@ import random
 from .cmds_ast import _data, _p, _save, T, hp_cap_or_line
 from .town import _func_node, town_gate
 from .cmds_talk import _arg
+from .cmds_gear import ambig_line
 from .cmds_codex import new_lines
 from . import codex as CX
 from . import loot as LT
@@ -41,27 +42,6 @@ def _item(iid: str) -> dict:
 
 def _quest_name(qid: str) -> str:
     return (_data("quests").get(qid) or {}).get("name") or qid
-
-
-def _item_of_name(name: str, equip_only: bool = False):
-    """按名字（或名字的一部分）找一件东西 —— 背包里的优先。
-
-    ★ B3-6b-2d-b：`equip_only` 走域里现成的 ASCII `slot`（原先按 `kind` 的**中文枚举**
-      白名单筛 —— 「中文枚举当机器键」K48 / P-20）。`items.schema.json` 里 `slot` 只给装备
-      六格（weapon / armor_top / armor_bottom / helmet / boots / accessory），材料·食物·道具·
-      信物·垃圾·线索那 25 条一律没有 ⇒ 两种写法今天**同集合**（`probe_items` ①之二 钉着）。
-    """
-    hit = None
-    for iid, rec in _data("items").items():
-        if str(iid).startswith("_"):
-            continue
-        if equip_only and not rec.get("slot"):
-            continue
-        nm = str(rec.get("name") or "")
-        if name == nm or (len(name) >= 2 and name in nm):
-            hit = (iid, rec)
-            break
-    return hit
 
 
 def _bag(p) -> dict:
@@ -218,12 +198,16 @@ async def enhance(env, sink, uid, player):
     if not want:
         yield T("SYS_ENHANCE_SHOP")
         return
-    # ★ B3-6b-2d-b：白名单 = 「有 ASCII `slot` 的那些」（原先按 items 的**中文** kind 六类筛）
-    hit = _item_of_name(want, equip_only=True)
-    if not hit or _have(p, hit[0]) <= 0:
-        yield T("SYS_ENHANCE_NOITEM", input=want)
+    # ★ B4-20：认的是**背包里**的那一件（`need_slot` = 域里 ASCII `slot` 那六格）。
+    #   原先扫的是**整张物品表**的第一个同名 —— 手里只有「精制」那档时会回「背包里没有」，
+    #   两档在手时又静默强了字典序在前的那一件。
+    iid, rec, cands = LT.pick(sorted(p.get("bag") or {}), want, need_slot=True)
+    if not iid:
+        if cands:                      # ★ B4-20：同名好几件 ⇒ 照实说，不替玩家挑
+            yield ambig_line("enhance", want, cands)
+        else:
+            yield T("SYS_ENHANCE_NOITEM", input=want)
         return
-    iid, rec = hit
     meta = _meta()
     cap = int(meta.get("cap") or 0)
     lv_now = int(((p.get("enhance") or {}).get(iid) or {}).get("lv") or 0)
@@ -318,13 +302,11 @@ async def item_use(env, sink, uid, player):
         # ★ B4-13：裸「使用」/「用」/「吃」—— 原先回「『（空）』不是这么用的」（空引号错话）
         yield T("SYS_USE_ASK")
         return
-    hit = None
-    for iid in _bag(p):
-        rec = _item(iid)
-        nm = str(rec.get("name") or "")
-        if want == nm or (len(want) >= 2 and want in nm):
-            hit = (iid, rec)
-            break
+    iid, rec, cands = LT.pick(sorted(_bag(p)), want)     # ★ B4-20：一件东西只认一个口
+    if not iid and cands:                  # ★ B4-20：同名好几件 ⇒ 照实说（别吃错东西）
+        yield ambig_line("item_use", want, cands)
+        return
+    hit = (iid, rec) if iid else None
     if not hit or _have(p, hit[0]) <= 0:
         # ★ B4-8：**手上没有这件**与「有、但认不出效果」是两件事 —— 原先两句共用
         #   `SYS_USE_NOT`（「药水不是这么用的」），玩家手里压根没有药水时听到这句，

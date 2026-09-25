@@ -335,6 +335,7 @@ class _Ad(object):
 
 
 from saintess_engine.host.runtime import Host          # noqa: E402
+from content import loot as LPICK                       # noqa: E402  ★ B4-20 显示名那唯一的一口
 
 _db = os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp", "ast_probe_cmds_e2e.db")
 try:
@@ -638,7 +639,8 @@ try:
     _bad9 = []
     _wear9 = _say9("装备 %s" % _W1N)
     if not _wear9 or _wear9[0] != _r("SYS_GEAR_EQUIP_OK", icon=_IT9[_W1].get("icon", ""),
-                                     name=_W1N, kind=_IT9[_W1].get("kind", "")):
+                                     name=LPICK.label_of(_W1),
+                                     kind=_IT9[_W1].get("kind", "")):
         _bad9.append(("装备", _wear9[:1]))
     _sv9 = _ad9.saved or {}
     if int(_sv9.get("hp_max") or 0) != _cap0_9 + _dhp9 \
@@ -711,7 +713,8 @@ try:
     chk("★ 同一件东西两条真分开：`装备对比` 回对比抬头（位子空着）· `装备` 回穿上那一句",
         _cmpB[:1] == [_r("SYS_CMP_HEAD", name=_W1N, quality=_IT9[_W1].get("quality", ""),
                          kind=_IT9[_W1].get("kind", ""), cur=_r("SYS_GEAR_SLOT_EMPTY"))]
-        and _eqB[:1] == [_r("SYS_GEAR_EQUIP_OK", icon=_IT9[_W1].get("icon", ""), name=_W1N,
+        and _eqB[:1] == [_r("SYS_GEAR_EQUIP_OK", icon=_IT9[_W1].get("icon", ""),
+                            name=LPICK.label_of(_W1),
                             kind=_IT9[_W1].get("kind", ""))],
         "%s / %s" % (_cmpB[:1], _eqB[:1]))
 except Exception as exc:                                               # noqa: BLE001 —— 起不来就是红
@@ -1175,7 +1178,7 @@ try:
     for _kk in sorted(_grp4):
         _ids = _grp4[_kk]
         _w4.append(_r("SYS_SORT_ROW", kind=_LT12.rec_of(_ids[0]).get("kind") or _kk, n=len(_ids),
-                      list=" · ".join("%s ×%d" % (_LT12.rec_of(i).get("name") or i, _bagB4[i])
+                      list=" · ".join("%s ×%d" % (_LT12.label_of(i), _bagB4[i])
                                       for i in _ids)))
     _w4.append(_r("SYS_SORT_TAIL"))
     _bagA4 = dict(_sv12().get("bag") or {})
@@ -1668,7 +1671,8 @@ try:
         _b13.append(("加点不够却动了档", _s_lack))
     _o_enuf, _s_enuf = _run13(dict(_BASE13, alloc={_A13: _V13}), "装备 %s" % _IT13[_W13]["name"])
     if _o_enuf[:1] != [_r("SYS_GEAR_EQUIP_OK", icon=_IT13[_W13].get("icon", ""),
-                          name=_IT13[_W13]["name"], kind=_IT13[_W13].get("kind", ""))] \
+                          name=LPICK.label_of(_W13),
+                          kind=_IT13[_W13].get("kind", ""))] \
             or _s_enuf.get("equipped") != {_IT13[_W13]["slot"]: _W13} \
             or (_s_enuf.get("bag") or {}):
         _b13.append(("加点够了却没穿上 / 没摘背包", _o_enuf[:1], _s_enuf.get("equipped"),
@@ -1677,7 +1681,8 @@ try:
                                "bag": {_F13: 1}, "equipped": {}, "codex": {}, "flags": {},
                                "alloc": {}}, "装备 %s" % _IT13[_F13]["name"])
     if _o_free[:1] != [_r("SYS_GEAR_EQUIP_OK", icon=_IT13[_F13].get("icon", ""),
-                          name=_IT13[_F13]["name"], kind=_IT13[_F13].get("kind", ""))] \
+                          name=LPICK.label_of(_F13),
+                          kind=_IT13[_F13].get("kind", ""))] \
             or _s_free.get("equipped") != {_IT13[_F13]["slot"]: _F13}:
         _b13.append(("无门槛件 0 加点穿不上", _o_free[:1], _s_free.get("equipped")))
     _OLD13 = dict(_BASE13, alloc={}, bag={}, equipped={_IT13[_W13]["slot"]: _W13})
@@ -1903,7 +1908,8 @@ try:
     _o_none2, _s_none2 = _say23(dict(_BASE23), "换武器")
     _o_ask, _s_ask = _say23(dict(_BASE23), "换武器", pin=None)
     if _o_town[:1] != [_r("SYS_GEAR_EQUIP_OK", icon=(_IT9.get(_WPN23) or {}).get("icon", ""),
-                          name=_wpn_name, kind=(_IT9.get(_WPN23) or {}).get("kind", ""))] \
+                          name=LPICK.label_of(_WPN23),
+                          kind=(_IT9.get(_WPN23) or {}).get("kind", ""))] \
             or (_s_town.get("equipped") or {}).get("weapon") != _WPN23 \
             or (_s_town.get("bag") or {}):
         _B23.append(("换武器 镇里", _o_town[:2], _s_town.get("equipped")))
@@ -1919,7 +1925,7 @@ try:
     if _wpn2:
         _o_two, _s_two = _say23(dict(_BASE23, bag={_WPN23: 1, _wpn2[0]: 1}), "换武器")
         if (_s_two.get("equipped") or {}).get("weapon") != _wpn2[0] \
-                or _r("COMBAT_SWAP_ASK", list="『%s』" % _wpn_name) not in _o_two:
+                or _r("COMBAT_SWAP_ASK", list="『%s』" % LPICK.label_of(_WPN23)) not in _o_two:
             _B23.append(("换武器 带两件", _o_two[:3], _s_two.get("equipped")))
     if _o_none2 != [_r("COMBAT_SWAP_NONE")] or _s_none2.get("equipped"):
         _B23.append(("换武器 没得换", _o_none2))

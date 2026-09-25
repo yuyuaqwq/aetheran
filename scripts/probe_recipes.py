@@ -40,6 +40,7 @@ from content import calendar as CAL                                  # noqa: E40
 from content import cmds_quest as CQ                                 # noqa: E402
 from content import cmds_recipe as CR                                # noqa: E402
 from content import gear as GB                                       # noqa: E402
+from content import loot as LT                                       # noqa: E402
 from content import combat as CB                                     # noqa: E402
 
 SCALE = CAL.scale_seconds()
@@ -331,17 +332,20 @@ for tgt in (6, 10):
         not bad_rule, "%s" % (bad_rule[:3] or "无"))
 
 # ⑫ ★ B3-6b-2d-b：强化白名单 = 「有 ASCII `slot` 的那些」（原按 items 的**中文** kind 六类筛）
-#   ① 逐件对账：`equip_only` 收下的 = 「带 slot 的」（同名多品阶只命中排序在前的那个 ⇒ 记「收下了」）
+#   ★ B4-20：那一段现在走 `loot.match_ids`（唯一的一口）—— 这一条改成**对着同一个口**逐件对账，
+#     判据照旧：查得到的 ⇔ 带 slot 的（表级的「同名四档」会一次命中好几件，非空即算收下）。
+#   ① 逐件对账：`need_slot=True` 收下的 = 「带 slot 的」
 #   ② 真跑一件**非装备**（料/钱都给够）⇒ 必须拒掉、档上不动
 _ok_names, _not_names = [], []
+_ids_all = [k for k in sorted(IT) if not str(k).startswith("_")]
 for _iid, _rec in sorted(IT.items()):
-    _got = CR._item_of_name(str(_rec.get("name") or ""), equip_only=True)
+    _got = LT.match_ids(_ids_all, str(_rec.get("name") or ""), need_slot=True)
     if _rec.get("slot"):
         if _got:
             _ok_names.append(_iid)
     elif _got:
         _not_names.append(_iid)
-chk("★ `equip_only` 收下的 = 「带 slot 的那些」（%d 件 · 非装备一件都没收下：%s）"
+chk("★ `need_slot` 收下的 = 「带 slot 的那些」（%d 件 · 非装备一件都没收下：%s）"
     % (len(_ok_names), _not_names or "无"), not _not_names)
 _plain = next(k for k, v in sorted(IT.items()) if not v.get("slot"))
 _pname = IT[_plain].get("name") or _plain

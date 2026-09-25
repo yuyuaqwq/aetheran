@@ -37,7 +37,7 @@ from .town import _func_node, town_gate
 from . import argv as AV
 from .cmds_quest import _done, _mine, _quests, _shadow, _unmet
 from .cmds_recipe import _have, _take
-from .cmds_gear import affix_lines, stat_label
+from .cmds_gear import affix_lines, ambig_line, stat_label
 from . import alloc as ALLOC
 from . import codex as CX
 from . import eggs as EG
@@ -60,11 +60,6 @@ PANEL_ROWS = (
     ("heal_pow", "HEAL_POW"),
 )
 
-def _usage(key: str) -> str:
-    """这条指令**玩家看见的那个词**（`usage` 的第一个词 —— 如 `存放`）。"""
-    return str(AV.decl(key).get("usage") or "").split(" ")[0].strip()
-
-
 
 
 def _split_n(arg: str):
@@ -76,16 +71,12 @@ def _split_n(arg: str):
 
 
 def _bag_hit(p, want):
-    """背包里按名字 / id 找一件 —— 走 `loot.rec_of`（未鉴定的名字挂在**池**上，物品表里没有它）。"""
-    want = str(want or "").strip()
-    if not want:
-        return (None, {})
-    for iid in sorted(p.get("bag") or {}):
-        rec = LT.rec_of(iid)
-        nm = str(rec.get("name") or "")
-        if want == iid or (nm and (want == nm or (len(want) >= 2 and want in nm))):
-            return (iid, rec)
-    return (None, {})
+    """背包里按名字 / id 找一件 —— **转发到全包唯一的一口** `loot.pick`（B4-20）。
+
+    走 `loot.rec_of`（未鉴定的名字挂在**池**上，物品表里没有它）。返回三元组：`cands` 非空
+    = 这名字在背包里对着好几件 ⇒ 调用方走 `ambig_line` 照实说。
+    """
+    return LT.pick(sorted(p.get("bag") or {}), want)
 
 
 def _fmt(v) -> str:
@@ -201,7 +192,7 @@ async def attrs(env, sink, uid, player):
     #   投满了就不出（不占屏）。
     _left = ALLOC.left_of_record(p)
     if _left > 0:
-        yield T("SYS_ATTR_LEFT", left=_left, usage=_usage("alloc"))
+        yield T("SYS_ATTR_LEFT", left=_left, usage=AV.usage("alloc"))
     eq = [LT.rec_of(iid).get("name") or iid for iid in (p.get("equipped") or {}).values()]
     yield T("SYS_ATTR_GEAR", list=" · ".join(eq)) if eq else T("SYS_ATTR_NOGEAR")
     yield T("SYS_ATTR_NOTE")
@@ -221,9 +212,12 @@ async def item_show(env, sink, uid, player):
         # ★ B4-13：裸「查看」—— 照实说「没带东西」（原先拿空名字查表 ⇒ 「背包里没有『』。」）
         yield T("SYS_ITEM_SHOW_ASK")
         return
-    iid, rec = _bag_hit(p, want)
+    iid, rec, cands = _bag_hit(p, want)
     if not iid:
-        yield T("SYS_GEAR_IN_BAG", name=want)
+        if cands:                      # ★ B4-20：同名好几件 ⇒ 照实说，不替玩家挑
+            yield ambig_line("item_show", want, cands)
+        else:
+            yield T("SYS_GEAR_IN_BAG", name=want)
         return
     detail = str(rec.get("kind") or "")
     if rec.get("quality"):
@@ -262,7 +256,11 @@ async def item_drop(env, sink, uid, player):
     if not name:                       # ★ B4-10：没带东西就照实说
         yield T("SYS_DROP_ASK")
         return
-    iid, rec = _bag_hit(p, name)
+    _hits = LT.match_ids(sorted(p.get("bag") or {}), name)
+    if len(_hits) > 1:                 # ★ B4-20：同名好几件 ⇒ 照实说，不替玩家挑
+        yield ambig_line("item_drop", name, _hits)
+        return
+    iid, rec = (_hits[0], LT.rec_of(_hits[0])) if _hits else (None, {})
     have = int((p.get("bag") or {}).get(iid) or 0) if iid else 0
     if not iid or have <= 0:
         yield T("SYS_GEAR_IN_BAG", name=name)
@@ -290,7 +288,11 @@ async def item_sell(env, sink, uid, player):
     if not name:                       # ★ B4-10：没带东西就照实说
         yield T("SYS_SELL_ASK")
         return
-    iid, rec = _bag_hit(p, name)
+    _hits = LT.match_ids(sorted(p.get("bag") or {}), name)
+    if len(_hits) > 1:                 # ★ B4-20：同名好几件 ⇒ 照实说，不替玩家挑
+        yield ambig_line("item_sell", name, _hits)
+        return
+    iid, rec = (_hits[0], LT.rec_of(_hits[0])) if _hits else (None, {})
     have = int((p.get("bag") or {}).get(iid) or 0) if iid else 0
     if not iid or have <= 0:
         yield T("SYS_GEAR_IN_BAG", name=name)
@@ -335,9 +337,12 @@ async def item_buy(env, sink, uid, player):
     if not name:                                   # ★ B4-10：没带东西就照实说
         yield T("SYS_SHOP_ASK")
         return
-    iid, rec, gold = SH.find(name)
+    iid, rec, gold, cands = SH.find(name)
     if not iid:
-        yield T("SYS_SHOP_NOGOOD", name=name)
+        if cands:                      # ★ B4-20：柜上同名好几件 ⇒ 照实说，不替玩家挑
+            yield ambig_line("item_buy", name, cands)
+        else:
+            yield T("SYS_SHOP_NOGOOD", name=name)
         return
     total = int(gold) * int(n)
     have = int(p.get("gold") or 0)
@@ -382,7 +387,7 @@ async def bag_sort(env, sink, uid, player):
         ids = groups[kk]
         rec0 = LT.rec_of(ids[0])
         yield T("SYS_SORT_ROW", kind=rec0.get("kind") or kk, n=len(ids),
-                list=" · ".join("%s ×%d" % (LT.rec_of(i).get("name") or i, bag[i]) for i in ids))
+                list=" · ".join("%s ×%d" % (LT.label_of(i), bag[i]) for i in ids))
     yield T("SYS_SORT_TAIL")
 
 
@@ -434,16 +439,19 @@ async def stash(env, sink, uid, player):
         yield line
         return
     hit = AV.hit_prefix("stash", raw)
-    into = bool(hit) and hit in _usage("stash")
+    into = bool(hit) and hit in AV.usage("stash")
     name, n = _split_n(raw[len(hit):].strip() if hit else "")
     if not name:
         yield T("SYS_STASH_ASK")
         return
     box = _box(p)
     if into:
-        iid, rec = _bag_hit(p, name)
+        iid, rec, cands = _bag_hit(p, name)
         if not iid:
-            yield T("SYS_STASH_NONE", name=name)
+            if cands:                  # ★ B4-20：同名好几件 ⇒ 照实说，不替玩家挑
+                yield ambig_line("stash", name, cands)
+            else:
+                yield T("SYS_STASH_NONE", name=name)
             return
         bag = dict(p.get("bag") or {})
         move = _move(bag, box, iid, n)
@@ -458,11 +466,12 @@ async def stash(env, sink, uid, player):
     if not box:
         yield T("SYS_STASH_EMPTY")
         return
-    iid = next((i for i in sorted(box)
-                if name == i or name == str(LT.rec_of(i).get("name") or "")
-                or (len(name) >= 2 and name in str(LT.rec_of(i).get("name") or ""))), "")
+    iid, _rec, cands = LT.pick(sorted(box), name)      # ★ B4-20：箱子这一边也归同一个口
     if not iid:
-        yield T("SYS_STASH_MISS", name=name)
+        if cands:                      # ★ B4-20：同名好几件 ⇒ 照实说，不替玩家挑
+            yield ambig_line("stash", name, cands)
+        else:
+            yield T("SYS_STASH_MISS", name=name)
         return
     rec = LT.rec_of(iid)
     bag = dict(p.get("bag") or {})
@@ -490,8 +499,8 @@ async def achievements(env, sink, uid, player):
     p = _p(player)
     s = _shadow(p)
     yield T("SYS_ACH_HEAD")
-    yield T("SYS_ACH_ROW", name=_usage("titles"), n=TT.count(s), total=TT.total())
-    yield T("SYS_ACH_ROW", name=_usage("eggs"), n=EG.count(s), total=EG.total())
+    yield T("SYS_ACH_ROW", name=AV.usage("titles"), n=TT.count(s), total=TT.total())
+    yield T("SYS_ACH_ROW", name=AV.usage("eggs"), n=EG.count(s), total=EG.total())
     tgt = CX.targets()
     for bk in CX.BOOKS:
         n = CX.count(s, bk)

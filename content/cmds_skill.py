@@ -68,7 +68,7 @@ def _ordered(p, ids) -> list:
 def _by_name(sk: dict, want: str) -> tuple:
     """技能按名字（或 id）认一条；认不出回 `(None, None)`。
 
-    ★ 「≥2 字才算部分匹配」与 `cmds_recipe._item_of_name` 同一口径。
+    ★ 「≥2 字才算部分匹配」与 `loot.match_ids` 同一口径（B4-20 起那一个是唯一的一口）。
       （重名的那一对「后撤」落在两个职业上 —— 认到的那条**不是你职业的**会被
       `SYS_SKILL_NOTMINE` 挡住，不乱学。）
     """
