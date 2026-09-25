@@ -331,6 +331,10 @@ async def item_compare(env, sink, uid, player):
     """
     p = _p(player)
     want = _arg(env)
+    if not want:
+        # ★ B4-13：裸「对比」—— 照实说「没带东西」
+        yield T("SYS_CMP_ASK")
+        return
     iid, rec = _in_bag(p, want, need_slot=True)
     if not iid:
         yield _not_there(p, want)

@@ -37,6 +37,7 @@ PY = sys.executable
 #: ★ 期望名单（= `scripts/rebuild_*.py`，逐支跑 `--dry`）。**新生成器进来要同时改这里**：
 #:   这一行就是「哪些产物有重跑门禁」的明细 —— 别让生成器在暗处长出来。
 EXPECT = [
+    "rebuild_bare_patterns.py",
     "rebuild_calendar.py",
     "rebuild_codex.py",
     "rebuild_eggs.py",

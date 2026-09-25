@@ -216,6 +216,10 @@ async def item_show(env, sink, uid, player):
     """
     p = _p(player)
     want, _n = _split_n(AV.arg_of(env, "item_show"))
+    if not want:
+        # ★ B4-13：裸「查看」—— 照实说「没带东西」（原先拿空名字查表 ⇒ 「背包里没有『』。」）
+        yield T("SYS_ITEM_SHOW_ASK")
+        return
     iid, rec = _bag_hit(p, want)
     if not iid:
         yield T("SYS_GEAR_IN_BAG", name=want)

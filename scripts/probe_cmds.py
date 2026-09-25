@@ -2233,6 +2233,56 @@ except Exception as exc:                                                  # noqa
         "%s: %s" % (type(exc).__name__, exc))
 
 
+# ══════════════════════════════════════════════════════════════
+# ★ B4-13：裸触发词照实说（第 2 刀）—— 覆盖面 + 真宿主真敲
+# ══════════════════════════════════════════════════════════════
+print("⑱ ★ B4-13：裸触发词（帮助里写着的那些词**本身**）照实说 —— 覆盖面 + 真宿主真敲")
+try:
+    from content.argv import lit_prefix as _lp18
+
+    # ── ① 覆盖面：凡可见声明的每个 pattern 的**字面量前缀**，单独出现都必须被某条可见声明接住
+    _words18, _miss18 = {}, []
+    for _k, _d in sorted(DECL.items()):
+        if (_d or {}).get("visible", True) is False:
+            continue
+        for _p in (_d.get("patterns") or []):
+            _w = _lp18(_p)
+            if _w:
+                _words18.setdefault(_w, []).append(_k)
+    for _w in _words18:
+        if getattr(REG.first_hit(_w, visible_only=True), "key", None) is None:
+            _miss18.append((_w, _words18[_w]))
+    chk("★ 覆盖面：每个触发词 / 别名**单独出现**都接得住（%d 个词）—— 一个都不许落到宿主那句"
+        "「没有命中包内任何指令声明；输入 /help 看宿主命令」（K71 第 2 刀）" % len(_words18),
+        not _miss18, "落空：%s" % (_miss18[:6],))
+
+    # ── ② 真宿主真敲：这一批补的那些词（= 自己那条声明**要参**、而它同时有 `^词$` 裸 pattern 的）
+    _batch18 = sorted(_w for _w in _words18
+                      if any(("^" + _w + "$") in (DECL[_k].get("patterns") or []) for _k in _words18[_w])
+                      and any("(" in _p for _k in _words18[_w]
+                              for _p in (DECL[_k].get("patterns") or [])))
+    _SEED18 = {"cls": "cls_knight", "race": "human", "name": "试炼者", "level": 5,
+               "exp": 0, "gold": 100, "hp": 116, "loc": "windmill_town", "node": "wt_inn",
+               "prev": [], "bag": {}, "equipped": {}, "codex": {}, "flags": {}}
+    _DIRTY18 = ("没有命中包内任何指令声明", "/help", "content/", "commands.py", "『』")
+    _bad18, _n18 = [], 0
+    for _w in _batch18:
+        _o18, _s18 = _say15(_SEED18, _w)
+        _n18 += 1
+        _txt = "\n".join(_o18)
+        _dirty = [d for d in _DIRTY18 if d in _txt]
+        _moved = [k for k in set(list(_SEED18) + list(_s18 or {}))
+                  if (_s18 or {}).get(k) != _SEED18.get(k)]
+        if not _o18 or _dirty or _moved:
+            _bad18.append((_w, _dirty, _o18[:2], _moved))
+    chk("★ 真敲这一批的 %d 个裸触发词：回话都是人话（没漏宿主那句兜底 / `/help` / 内部路径 / "
+        "空引号「『』」），且**档一个字不动** —— 裸「放弃」原先会拿 `act[0]` 顶上 ⇒ 当场丢一条委托"
+        % _n18, not _bad18, "%s" % (_bad18[:4],))
+except Exception as exc:                                                  # noqa: BLE001
+    chk("★ B4-13 裸触发词那一族跑得起来（真宿主契约）", False,
+        "%s: %s" % (type(exc).__name__, exc))
+
+
 print("")
 print("结果：全绿 ✓" if ok else "结果：有红 ✗")
 sys.exit(0 if ok else 1)

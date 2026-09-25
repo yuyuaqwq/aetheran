@@ -315,7 +315,8 @@ async def item_use(env, sink, uid, player):
     p = _p(player)
     want = _arg(env)
     if not want:
-        yield T("SYS_COOK_UNKNOWN", input=want or "（空）")
+        # ★ B4-13：裸「使用」/「用」/「吃」—— 原先回「『（空）』不是这么用的」（空引号错话）
+        yield T("SYS_USE_ASK")
         return
     hit = None
     for iid in _bag(p):

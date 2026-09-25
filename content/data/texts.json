@@ -5015,5 +5015,41 @@
     "params": [],
     "category": "系统",
     "desc": "B4-10 学习 · 没带技能名"
+  },
+  "SYS_ITEM_SHOW_ASK": {
+    "value": "看哪一件？打『查看 <东西>』。",
+    "params": [],
+    "category": "系统",
+    "desc": "B4-13 查看 · 没带东西"
+  },
+  "SYS_USE_ASK": {
+    "value": "用哪一件？打『使用 <东西>』。",
+    "params": [],
+    "category": "系统",
+    "desc": "B4-13 使用 · 没带东西"
+  },
+  "SYS_CMP_ASK": {
+    "value": "拿哪一件跟身上这件对？打『对比 <东西>』。",
+    "params": [],
+    "category": "系统",
+    "desc": "B4-13 对比 · 没带东西"
+  },
+  "SYS_SKILL_CAST_ASK": {
+    "value": "放哪一手？打『技能 <名>』。",
+    "params": [],
+    "category": "系统",
+    "desc": "B4-13 放技能 · 没带技能名"
+  },
+  "SYS_JOB_DELIVER_ASK": {
+    "value": "交哪一条？打『我的委托』看手上有什么。",
+    "params": [],
+    "category": "系统",
+    "desc": "B4-13 交活 · 没给编号"
+  },
+  "SYS_JOB_ABANDON_ASK": {
+    "value": "放弃哪一条？打『我的委托』看手上有什么。",
+    "params": [],
+    "category": "系统",
+    "desc": "B4-13 放弃 · 没给编号"
   }
 }

@@ -637,6 +637,10 @@ async def quest_accept(env, sink, uid, player):
 async def quest_deliver(env, sink, uid, player):
     p = _p(player)
     want = _arg(env)
+    if not want:
+        # ★ B4-13：裸「交」—— 原先回「这条不是你的委托」（拿空名字去比，等于说了句假话）
+        yield T("SYS_JOB_DELIVER_ASK")
+        return
     qs = _quests()
     act = _mine(p)
     if not act:
@@ -707,9 +711,13 @@ async def quest_abandon(env, sink, uid, player):
         yield T("SYS_JOB_NO_ACTIVE")
         return
     want = _arg(env)
+    if not want:
+        # ★ B4-13：裸「放弃」—— **不许**拿 act[0] 顶上（B3-14 那条判据：裸「放弃」不许动档）
+        yield T("SYS_JOB_ABANDON_ASK")
+        return
     qs = _quests()
-    k = act[0] if not want else next((a for a in act if qs.get(a, {}).get("name") == want
-                                      or qs.get(a, {}).get("order") == (int(want) if want.isdigit() else -1)), None)
+    k = next((a for a in act if qs.get(a, {}).get("name") == want
+              or qs.get(a, {}).get("order") == (int(want) if want.isdigit() else -1)), None)
     if not k:
         yield T("SYS_JOB_NO_ACTIVE_ONE")
         return
