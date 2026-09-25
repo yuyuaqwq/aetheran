@@ -280,11 +280,11 @@
   },
   "board_show": {
     "patterns": [
-      "^看\\s*(.+)$"
+      "^看\\s*(\\d+)$"
     ],
     "category": "公会与委托",
     "desc": "委托全文",
-    "usage": "看 <参数>",
+    "usage": "看 <编号>",
     "visible": true,
     "order": 14,
     "guard_desc": "在公会"
@@ -671,7 +671,8 @@
     "usage": "对比 <参数>",
     "visible": true,
     "order": 39,
-    "guard_desc": "背包里有"
+    "guard_desc": "背包里有",
+    "priority": 50
   },
   "money": {
     "patterns": [
@@ -764,7 +765,7 @@
     "patterns": [
       "^技能\\s*(.+)$",
       "^技\\s*(.+)$",
-      "^放\\s*(.+)$"
+      "^放\\s+(.+)$"
     ],
     "category": "战斗",
     "desc": "放技能",
@@ -805,7 +806,8 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "priority": 50
   },
   "focus_fire": {
     "patterns": [
@@ -1062,7 +1064,8 @@
     "usage": "药铺",
     "visible": true,
     "order": 62,
-    "guard_desc": "在镇上"
+    "guard_desc": "在镇上",
+    "priority": 50
   },
   "chapel": {
     "patterns": [
