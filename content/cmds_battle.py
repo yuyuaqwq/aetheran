@@ -22,6 +22,7 @@ from . import calendar as CAL
 from . import codex as CX
 from . import combat as CB
 from . import loot as LT
+from . import affix as AFFIX        # ★ B3-24：精英词条（遭遇抽词条 / 名字与那一行走 texts 槽位）
 
 
 def _flags(p):
@@ -97,18 +98,34 @@ async def attack(env, sink, uid, player):
         return
     ms = _data("monsters")
     pick = _encounter(p, uid)
+    # ★ B3-24：这一格今天出精英 ⇒ 遭遇就是它（怪 + 词条都由 `affix.elite_of` 现算；
+    #   「观察」读的是**同一个口**（同一 uid / 图 / 节点 / 游戏日 ⇒ 同一个种子）——
+    #   所以观察那行是真预告，不是另抽一次。词条池里一条都没接线 ⇒ 回 None（不出精英）。
+    affixes = []
+    _el = AFFIX.elite_of(ms, p["loc"], p["node"], uid,
+                         CAL.state().get("game_day"), int(p.get("level", 1) or 1))
+    if _el:
+        pick, affixes = [_el[0]], list(_el[1])
     if not pick:
         yield "这一带暂时没有遇到什么。"
         return
-    yield "⚠️ 遭遇：%s" % ms[pick[0]].get("name", pick[0])
+    if affixes:                                        # 名字行 + 一句话效果（逐字走 texts 槽位）
+        yield AFFIX.elite_line(str(ms[pick[0]].get("name", pick[0])), affixes)
+    else:
+        yield "⚠️ 遭遇：%s" % ms[pick[0]].get("name", pick[0])
     # ★ B3-4：怪身上挂着「先开口」的台词时，它先说话（数据驱动 —— 本文件不写文案）
     for line in encounter_lines(ms[pick[0]], p):
         yield line
+    # ★ B3-24：这一场的名字（精英带 `† … †`；没词条时 = 原样怪名）
+    _ename = AFFIX.display_name(str(ms[pick[0]].get("name", pick[0])), affixes)
     seen = CX.note_kill(p, pick[0])            # ★ 打过一次就进谱（输了也算「见过」）
+    # ★ B3-24：这一场打几只 —— 群居那条词条让池子里多站两只（第二只半血，数在 rules/elite.json）；
+    #   没有词条 ⇒ 打一只（`([mid], [None])` = 与接线前逐字相同）。
+    _ids, _hm = AFFIX.spawn_plan(pick[0], affixes)
     # ★ B3-17 单人口径：今天的『攻击』只有单人这一条路（组队命令还没接线）⇒ 人数 = 1；
     #   它只对「团队内容」那几只怪生效（Boss 单人 hp ÷2 —— 真源 `12_怪物面板…` §一④ /
     #   `17_组队与策略配合_v1` §五 / `22_旧哨塔_逐间设计_v1` §三④）。组队接线那批把真实人数传进来。
-    res, logs, hp_after = CB.run_auto(p, pick, ms, party=1)
+    res, logs, hp_after = CB.run_auto(p, _ids, ms, party=1, affixes=affixes, hp_mults=_hm)
     for line in _fmt(logs):
         yield line
     yield "━" * 12
@@ -131,10 +148,12 @@ async def attack(env, sink, uid, player):
         for pool_id in (m.get("drops") or []):
             drops.extend(LT.roll_pool(pool_id, level=lv,
                                      rnd=__import__("random").Random("%s:%s" % (uid, pick[0]))))
+        # ★ B3-24：掉落按词条 PE 等比上调 + 富饶那条的「材料翻倍」（倍数在 rules/elite.json）
+        drops = AFFIX.scale_drops(drops, affixes)
         if drops:
             LT.add_to_bag(p, drops)
         new = CX.note_items(p, [d["id"] for d in drops]) if drops else []
-        _note_battle(p, m.get("name", pick[0]), logs, res)
+        _note_battle(p, _ename, logs, res)
         if player is not None:
             player.update(p)
         _save(env)
@@ -162,7 +181,7 @@ async def attack(env, sink, uid, player):
         else:
             yield "（战斗结束：%s）" % res
             p["hp"] = max(1, hp_after)
-        _note_battle(p, ms[pick[0]].get("name", pick[0]), logs, res)
+        _note_battle(p, _ename, logs, res)
         if player is not None:
             player.update(p)
         _save(env)

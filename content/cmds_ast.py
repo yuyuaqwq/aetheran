@@ -19,6 +19,7 @@ from . import alloc as AL             # ★ P-34：加点算术的唯一出口�
 from . import titles as TT            # 称号（B3-2）：显示跟着名字走 · 判定在 titles 域
 from . import scene as SC           # 场景槽位解析（B3-6a）：节点级近景 → 退地图级第一眼
 from . import timed_events as TE     # 限时事件那一格（B3-5）：宿主维护门落档 · 这里只读
+from . import affix as AFFIX         # ★ B3-24：精英词条（观察那行预告 = 遭遇的同一个种子）
 
 _DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 _CACHE: dict = {}
@@ -474,6 +475,13 @@ async def look(env, sink, uid, player):
         yield T("SYS_LOOK_WHO", list=" · ".join("『%s』%s" % (v.get("name"), v.get("icon", "")) for v in npc_here))
     for line in event_lines(p, loc, node):      # ★ B3-5：这一站聚人那一下（集日）
         yield line
+    # ★ B3-24：这一格今天的精英 —— 观察**提前看到**（09_ §二「玩家在「观察」时能提前看到」）。
+    #   与「攻击」的遭遇读**同一个口**（同一 uid / 图 / 节点 / 游戏日 ⇒ 同一种子）⇒ 这行是真预告；
+    #   文案逐字走 texts 槽位（`COMBAT_ELITE_SPAWN`），本文件不写一个字。
+    _el = AFFIX.elite_of(_data("monsters"), loc, node, uid,
+                         CAL.state().get("game_day"), int(p.get("level", 1) or 1))
+    if _el:
+        yield AFFIX.elite_line(str((_data("monsters")[_el[0]] or {}).get("name", _el[0])), _el[1])
     yield T("SYS_LOOK_HINT")
     for line in egg_lines(p, player, env):      # ★ B3-1：看四周那一下可能把两件事连起来
         yield line
