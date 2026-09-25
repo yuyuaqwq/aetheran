@@ -84,6 +84,30 @@ chk("texts 条目都有 value/category", not bad7, " · ".join(bad7))
 bad8 = [k for k, v in po.items() if v.get("kind") == "隐藏点" and not v.get("effect")]
 chk("隐藏点都有 effect（产出）", not bad8, " · ".join(bad8))
 
+# ⑨ ★ B3-7：旧物谱入口那条串得起三个域（pois ↔ codex ↔ gathering/drop_pools）
+#    ① 塔内那 5 条这一批新加的可读物（正文槽位 READ_TOWER_*）**一条都不挂 into_codex** ——
+#       塔内这几条是「就地线索」（22 §二 的「可做」列），12 类那个数（`10_地图探索元素库 §一A`）不动；
+#    ② 2 房（门厅）那件不认得的（`unid_tower`）挂在池表（未鉴定 marker）+ 在旧物谱里（捡的）⇒
+#       到手那一刻旧物谱先给一行问号（K28：known=False 起步）；
+#    ③ 三处「可做」所在的三间（门厅/储藏室/号角室）各有一个「可搜物」（gathering 的 search 点）。
+cx9 = st.domain("codex") or {}
+ga9 = st.domain("gathering") or {}
+dp9 = st.domain("drop_pools") or {}
+tw_slots = sorted(k for k, v in po.items() if str(v.get("read_text") or "").startswith("READ_TOWER_"))
+chk("★ 塔内那 5 条新可读物一条都不进旧物谱（%s）" % " · ".join(tw_slots),
+    len(tw_slots) == 5 and not [k for k in tw_slots if k in (cx9.get("relic") or {}) or po[k].get("into_codex")],
+    "%d 条" % len(tw_slots))
+chk("★ 门厅那件不认得的：挂在池表（未鉴定）· 在旧物谱里（捡的）· 是门厅那个可搜物的产物",
+    "unid_tower" in dp9
+    and (cx9.get("relic", {}).get("unid_tower") or {}).get("from") == "pick"
+    and any(str(e.get("out")) == "unid_tower" for v in ga9.values()
+            if v.get("subarea") == "tower_hall" for e in (v.get("pool") or [])),
+    "%s" % (cx9.get("relic", {}).get("unid_tower")))
+_miss9 = [nd for nd in ("tower_hall", "tower_storage", "tower_horn_room")
+          if not [g for g, v in ga9.items() if v.get("map") == "old_watchtower"
+                  and v.get("subarea") == nd and v.get("verb") == "search"]]
+chk("★ 三处「可做」所在的三间（门厅/储藏室/号角室）各有一个可搜物", not _miss9, "%s" % _miss9)
+
 print()
 print("按类别计数：")
 for kd in KINDS:

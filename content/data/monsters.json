@@ -93,11 +93,14 @@
     "lv": 6,
     "habitat": {
       "maps": [
-        "belt_north"
+        "belt_north",
+        "old_watchtower"
       ],
       "nodes": [
         "bn_bone",
-        "bn_tower"
+        "bn_tower",
+        "tower_hall",
+        "tower_stair2"
       ]
     },
     "panel": {
@@ -176,12 +179,14 @@
     "habitat": {
       "maps": [
         "belt_east",
-        "belt_north"
+        "belt_north",
+        "old_watchtower"
       ],
       "nodes": [
         "be_dogs",
         "be_shed",
-        "bn_tower"
+        "bn_tower",
+        "tower_outpost_out"
       ]
     },
     "panel": {
@@ -218,11 +223,14 @@
     "lv": 8,
     "habitat": {
       "maps": [
-        "belt_west"
+        "belt_west",
+        "old_watchtower"
       ],
       "nodes": [
         "bw_shoal",
-        "bw_ferry"
+        "bw_ferry",
+        "tower_water_room",
+        "tower_stair2"
       ]
     },
     "panel": {
@@ -305,8 +313,6 @@
       ],
       "nodes": [
         "bn_camp",
-        "tower_gate",
-        "tower_hall",
         "tower_armory"
       ]
     },
@@ -353,10 +359,12 @@
     "lv": 9,
     "habitat": {
       "maps": [
-        "belt_east"
+        "belt_east",
+        "old_watchtower"
       ],
       "nodes": [
-        "be_shed"
+        "be_shed",
+        "tower_stair1"
       ]
     },
     "panel": {
@@ -474,10 +482,12 @@
     "lv": 13,
     "habitat": {
       "maps": [
-        "belt_west"
+        "belt_west",
+        "old_watchtower"
       ],
       "nodes": [
-        "bw_old_ferry"
+        "bw_old_ferry",
+        "tower_storage"
       ]
     },
     "panel": {
@@ -515,6 +525,9 @@
     "habitat": {
       "maps": [
         "old_watchtower"
+      ],
+      "nodes": [
+        "tower_outpost_in"
       ]
     },
     "panel": {

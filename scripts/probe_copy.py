@@ -59,7 +59,7 @@ BUDGET = {                      # B3-6b 收口时实测（124 条）；下一批
     "loot.py": 6,               # B3-6b-2d-b：11 → 6（装备那 5 处中文 kind 改走 ASCII `slot`）
     "cmds_recipe.py": 3,        # B3-6b-2d-b：9 → 3（强化白名单 6 处中文 kind 改走 `slot`）
     "codex.py": 6,              # 谱的分类名
-    "combat.py": 5,             # 战斗里的兜底名
+    "combat.py": 2,             # B3-7：5 → 2（档位白名单删了 —— 遇敌唯一的门是 habitat）
     "apply.py": 1,              # B3-6b-2d-b：2 → 1（技能类别值改从 skills 域取；余「挥击」）
 }
 
@@ -69,11 +69,13 @@ BUDGET = {                      # B3-6b 收口时实测（124 条）；下一批
 #: skills.kind · gathering.kind/verb · drop_pools 的 kind 与条目 kind），所以纯文案不算。
 #: 本批收掉 14 处：装备那半 items.kind → ASCII `slot`（loot 5 · cmds_recipe 6）·
 #: 技能那半 skills.kind → ASCII `owner_class` + 域里那一份值（skills_lookup 2 · apply 1）。
-#: 余下 17 处全在**第二刀**：codex 6（非装备 kind）· combat 4 + cmds_battle 3（monsters.role）·
-#: cmds_recipe 1（recipes.kind）· loot 3（items.kind 兜底 + drop_pools 的「池」「未鉴定」）。
+#: 余下 14 处全在**第二刀**：codex 6（非装备 kind）· cmds_battle 3（monsters.role）·
+#: combat 1（`role` 的兜底名）· cmds_recipe 1（recipes.kind）· loot 3（items.kind 兜底 +
+#: drop_pools 的「池」「未鉴定」）。★ B3-7：combat 4 → 1（`pick_encounter` 的档位白名单删掉 ——
+#: 遇敌唯一的门是 `habitat`，档位不再当机器键；那条白名单也正是「层主/Boss 永远打不上」的根）。
 ENUM_KEYS = {
     "codex.py": 6,
-    "combat.py": 4,
+    "combat.py": 1,
     "cmds_battle.py": 3,
     "cmds_recipe.py": 1,
     "loot.py": 3,

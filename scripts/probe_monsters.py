@@ -83,6 +83,72 @@ chk("Boss 存在且带阶段卡", bool(boss) and len(boss[0]["mods"].get("phases
 print("  · 档位分布：" + " · ".join("%s %d" % (r, len(vs)) for r, vs in sorted(by_role.items())))
 print("  · 原型分布：" + " · ".join("%s %d" % (a, sum(1 for v in mo.values() if v["archetype"] == a))
                                     for a in sorted(ARCHS)))
+
+# ⑧ ★ B3-7：`habitat` 的形状 + 跨域（monsters ↔ maps）—— 每条怪的栖息地都要落在真图上
+MP = st.domain("maps") or {}
+TOWER = "old_watchtower"
+hb_bad = []
+for k, v in mo.items():
+    hb = v.get("habitat") or {}
+    maps_ = [str(x) for x in (hb.get("maps") or [])]
+    if not maps_:
+        hb_bad.append((k, "没有 maps（哪儿都不出）"))
+        continue
+    for mk in maps_:
+        if mk not in MP:
+            hb_bad.append((k, "图不存在", mk))
+    room_ids = {str(n.get("id")) for mk in maps_ if mk in MP
+                for n in (MP[mk].get("nodes") or [])}
+    for nd in (hb.get("nodes") or []):
+        if str(nd) not in room_ids:
+            hb_bad.append((k, "节点不在那几张图上", nd))
+chk("★ 每条怪的 habitat.maps / habitat.nodes 都落在真图真节点上（%d 只）" % len(mo),
+    not hb_bad, "%s" % hb_bad[:4])
+
+
+def cands(loc, node):
+    """这一格上按 `habitat` 算得进候选的那几只（与 `combat.pick_encounter` 同一套规则）。"""
+    out = []
+    for k, m in mo.items():
+        hb = m.get("habitat") or {}
+        if loc not in (hb.get("maps") or []):
+            continue
+        ns = hb.get("nodes") or []
+        if ns and node not in ns:
+            continue
+        out.append(k)
+    return out
+
+
+# ⑨ 没有空挂的怪（每条怪在它自己说的那几张图的某个节点上真的算得进候选）
+orphan = [k for k, m in mo.items()
+          if not any(k in cands(mk, str(n.get("id")))
+                     for mk in ((m.get("habitat") or {}).get("maps") or [])
+                     for n in ((MP.get(mk) or {}).get("nodes") or []))]
+chk("★ 没有空挂的怪（每条怪在它自己说的那几张图上都有落点）", not orphan, "%s" % orphan)
+
+# ⑩ ★ 层主 / Boss 只在旧哨塔（真调 pick_encounter 扫种子 —— 野外五张图 + 村镇一只都挑不出来）
+CB = st.optional_submodule("combat")
+HEAVY = sorted(k for k, v in mo.items() if v.get("role") in ("层主", "boss"))
+leak, tw_hits = [], {}
+for mk, mv in MP.items():
+    for n in (mv.get("nodes") or []):
+        got = {tuple(CB.pick_encounter(mo, mk, str(n.get("id")), 14, seed=s)) for s in range(40)}
+        hit = sorted(g[0] for g in got if g and g[0] in HEAVY)
+        if not hit:
+            continue
+        if mk == TOWER:
+            tw_hits[str(n.get("id"))] = hit
+        else:
+            leak.append((mk, str(n.get("id")), hit))
+chk("★ 层主 / Boss 只在旧哨塔（野外与村镇真扫 40 个种子：一只都挑不出来）", not leak, "%s" % leak[:3])
+chk("★ 塔里的层主 / Boss 真挑得出来（%s）"
+    % " · ".join("%s=%s" % (k, "+".join(mo[x]["name"] for x in v)) for k, v in sorted(tw_hits.items())),
+    sorted(x for v in tw_hits.values() for x in v) == HEAVY, "%s" % tw_hits)
+print("  · 旧哨塔逐间候选（按 habitat 算）："
+      + " · ".join("%s=%s" % (n.get("name"),
+                              "+".join(mo[k]["name"] for k in cands(TOWER, str(n.get("id")))) or "（无）")
+                   for n in ((MP.get(TOWER) or {}).get("nodes") or [])))
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
 sys.exit(0 if ok else 1)

@@ -18,6 +18,12 @@ r"""探针：旧哨塔副本（B3-6）—— 12 间房真能走一遍 · 五条�
   ⑦ P-19：`SCENE_OLD_WATCHTOWER` 不再是死槽位 —— 『进塔』那一屏取的就是它（且与节点级
      的塔门那一屏不是同一段字）
   ⑧ 三档空档都说人话：没站到本层最后一间 / 已经在塔顶 / 那一间没有可读物
+  ⑨ ★ B3-7：塔内 12 间的「主要敌人」↔ `monsters.habitat` 逐间对齐（探针自己解析 §一 那一列 ·
+     候选算法与 `combat.pick_encounter` 同一套）· 文档写「无」的那几间一只候选都算不出来
+  ⑩ ★ B3-7：真敲『攻击』—— 12 间逐间遇上的就是文档说的那只；**层主 / Boss 那两间真打完一场**
+     （原先档位白名单把它们挡在遭遇之外）· 镇上仍是安全区
+  ⑪ ★ B3-7：三处容器（22 §二「可做」列里认出来的那三间）『搜查』真拿得到关键件 ——
+     逐处换 24 个人 × 当日第 1/2 遍（`uid` 进采集种子）；到手那一刻旧物谱真多一行问号
 
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_tower.py
 """
@@ -96,13 +102,13 @@ def parse_overview(text):
 
 
 def parse_rooms(text):
-    """§二 逐间块 → {序号: {"floor":…, "name":…, "出口":…}}"""
+    """§二 逐间块 → {序号: {"floor":…, "name":…, "exit":…, "todo":…}}"""
     out, cur = {}, None
     for ln in text.split("\n"):
         h = re.match(r"^###\s+(\S+?)\s*·\s*(\d+)\s*·\s*(.+?)\s*$", ln)
         if h:
             cur = int(h.group(2))
-            out[cur] = {"floor": h.group(1), "name": _room_name(h.group(3)), "exit": ""}
+            out[cur] = {"floor": h.group(1), "name": _room_name(h.group(3)), "exit": "", "todo": ""}
             continue
         if cur is None:
             continue
@@ -111,6 +117,8 @@ def parse_rooms(text):
         m = re.match(r"^(\S+)\s{2,}(.*)$", ln)
         if m and m.group(1) == "出口":
             out[cur]["exit"] = m.group(2).strip()
+        elif m and m.group(1) == "可做":
+            out[cur]["todo"] = m.group(2).strip()
     return out
 
 
@@ -214,15 +222,23 @@ class _Ad(object):
         self.saved = {"loc": "windmill_town", "node": "wt_gate_n", "race": "human",
                       "level": 3, "gold": 50, "bag": {}, "equipped": {}, "codex": {},
                       "flags": {}, "prev": []}
+        #: ★ B3-7：容器那几处要**换人再搜一遍**（`uid` 进采集种子 —— 换人 = 换一串抽签）
+        self.by_uid = {}
 
     def recv(self):
         return self._msgs.pop(0) if self._msgs else None
 
     def load_player(self, uid):
-        return self.saved if uid == "u_t" else None
+        if uid == "u_t":
+            return self.saved
+        return self.by_uid.get(uid)
 
     def save_player(self, uid, data):
-        self.saved = dict(data) if isinstance(data, dict) else data
+        rec = dict(data) if isinstance(data, dict) else data
+        if uid == "u_t":
+            self.saved = rec
+        else:
+            self.by_uid[uid] = rec
 
     def say(self, to, text):
         self.out.append(str(text))
@@ -244,6 +260,16 @@ def send(text):
     host.handle({"uid": "u_t", "group_id": "g_t", "text": text})
     got = list(ad.out)
     LOG.append((text, got, (ad.saved.get("loc"), ad.saved.get("node"))))
+    return got
+
+
+def send_as(uid, text):
+    """★ B3-7：换一个人敲同一条（容器那几处要换 uid —— 它进采集种子）。"""
+    ad.out.clear()
+    host.handle({"uid": uid, "group_id": "g_t", "text": text})
+    got = list(ad.out)
+    rec = ad.by_uid.get(uid) or {}
+    LOG.append((text, got, (rec.get("loc"), rec.get("node"))))
     return got
 
 
@@ -414,6 +440,153 @@ for cmd in ("进塔", "下一层", "副本地图", "调查", "撤退"):
 want_line = txt("SYS_TOWER_NOT_IN", name=GNAME.get(ent.get("node")))
 chk("★ 塔外敲这五条：一律说「塔门在『%s』」那一句（不静默 · 不崩）" % GNAME.get(ent.get("node")),
     all(outs[c] == [want_line] for c in outs), "%s" % {c: outs[c][:1] for c in outs})
+
+# ══════════════════════════════════════════════════════════════
+# ⑨ ★ B3-7：塔内 12 间的「主要敌人」↔ `monsters.habitat` 逐间对齐
+#    真源那一列 = §一 总览表第 4 列（**探针自己解析**，不手抄镜像表）。
+#    候选算法与 `combat.pick_encounter` 同一套：这一间在图里 ∧ （没写 nodes ∨ 这一间在 nodes 里）。
+# ══════════════════════════════════════════════════════════════
+print("⑨ 塔内 12 间的「主要敌人」↔ monsters.habitat（逐间对）")
+MS = st.domain("monsters") or {}
+ROLE_OF = {k: v.get("role") for k, v in MS.items()}
+
+
+def enemy_tokens(raw):
+    """`游荡的骸骨 ×2` / `拾荒人（精英）` / `骸骨 ×3 + 水鬼 ×1` / `无` → 名字 token 列表。"""
+    out = []
+    for part in re.split(r"[+·/、]", _plain(str(raw))):
+        t = re.sub(r"[×xX]\s*\d+", "", part).strip()
+        t = re.sub(r"^\d+\s*", "", t).strip()
+        if t and t != "无":
+            out.append(t)
+    return out
+
+
+def cands_at(node):
+    """这一间按 `habitat` 算得出的候选（与 `combat.pick_encounter` 同一套规则）。"""
+    out = []
+    for k, m in MS.items():
+        hb = m.get("habitat") or {}
+        if TOWER not in (hb.get("maps") or []):
+            continue
+        ns = hb.get("nodes") or []
+        if ns and node not in ns:
+            continue
+        out.append(k)
+    return out
+
+
+align_bad, room_cand = [], {}
+for _f, _no, rname, _teach, enemy, _reads in overview:
+    nd = ID_OF.get(rname)
+    got = cands_at(nd)
+    room_cand[rname] = got
+    toks = enemy_tokens(enemy)
+    hit = [t for t in toks if any(t in (MS[k].get("name") or "") for k in got)]
+    extra = [k for k in got if not any(t in (MS[k].get("name") or "") for t in toks)]
+    if len(hit) != len(toks) or extra:
+        align_bad.append((rname, enemy, "缺 %s" % [t for t in toks if t not in hit],
+                          "多 %s" % [MS[k]["name"] for k in extra]))
+chk("★ §一「主要敌人」逐间对得上（12 间 · 点名的都在 · 没多点名的）", not align_bad, "%s" % align_bad[:3])
+_empty = [rname for _f, _no, rname, _t, enemy, _reads in overview if not enemy_tokens(enemy)]
+chk("★ 文档写「无」的那几间（%s）一只候选都算不出来" % " · ".join(_empty),
+    bool(_empty) and all(not room_cand[r] for r in _empty), "%s" % {r: room_cand[r] for r in _empty})
+print("  · 逐间候选：" + " · ".join("%s=%s" % (r, "+".join(MS[k]["name"] for k in room_cand[r]) or "（无）")
+                                  for _f, _no, r, _t, _e, _rd in overview))
+
+# ══════════════════════════════════════════════════════════════
+# ⑩ ★ 真敲『攻击』：12 间逐间遇上的就是 §一 说的那只；层主 / Boss 那两间**真打完**一场
+#    （原先档位白名单把 层主 / Boss 挡在遭遇之外 ⇒ 那两间只回「这一带暂时没有遇到什么」）
+# ══════════════════════════════════════════════════════════════
+print("⑩ 真敲『攻击』（12 间逐间 · 村镇仍是安全区）")
+FIGHT = dict(ad.saved, cls="cls_knight", level=14, hp=999, gold=0, exp=0, flags={})
+fight_bad, fight_seen = [], []
+for _f, _no, rname, _teach, enemy, _reads in overview:
+    nd = ID_OF.get(rname)
+    toks = enemy_tokens(enemy)
+    ad.saved = dict(FIGHT, loc=TOWER, node=nd, prev=[])
+    got = send("攻击")
+    head = [x for x in got if "遭遇" in x]
+    if not toks:
+        if head or len(got) != 1:
+            fight_bad.append((rname, "文档写「无」却打起来了", got[:1]))
+        continue
+    if not head or not any(t in head[0] for t in toks):
+        fight_bad.append((rname, enemy, got[:1]))
+        continue
+    mid = next((k for k in cands_at(nd) if MS[k]["name"] in head[0]), "")
+    fight_seen.append((rname, MS[mid]["name"], ROLE_OF[mid]))
+    if ROLE_OF[mid] in ("层主", "boss"):          # ★ 层主 / Boss 这一场要真出结果（日志成篇）
+        #   三种收尾都算「打得上」：打赢了 / 倒地 / 战斗提前结束（Boss 的「回塔」那一阶段）
+        end = [x for x in got if any(w in x for w in ("打完了", "眼前一黑", "战斗结束"))]
+        if not (end and any("还有" in x for x in got)):
+            fight_bad.append((rname, "%s 这场没打完" % MS[mid]["name"], got[-2:]))
+        else:
+            fight_seen[-1] = (rname, MS[mid]["name"], "%s · %s" % (ROLE_OF[mid], end[0].strip()))
+ad.saved = dict(FIGHT, loc="windmill_town", node="wt_gate_n", prev=[])
+_safe = send("攻击")
+chk("★ 12 间逐间真敲『攻击』：遇上的就是文档说的那只（层主 / Boss 也真打完一场）",
+    not fight_bad, "%s" % fight_bad[:3])
+chk("★ 镇上（安全区）敲『攻击』一条「遭遇」都没有",
+    len(_safe) == 1 and not any("遭遇" in x for x in _safe), "%s" % _safe[:1])
+print("  · 逐间遭遇：" + " · ".join("%s→%s(%s)" % x for x in fight_seen))
+
+# ══════════════════════════════════════════════════════════════
+# ⑪ ★ 三处容器『搜查』真拿得到（真宿主 · 逐处换 24 个人 × 当日第 1/2 次 —— uid 进采集种子）
+#    真源：22 §二 的「可做」列（探针自己从那一列认出这三间）。
+#    关键件的出处：`06_装备获取与支线玩法_v1 §1.2`（哨兵的护手 ← 副本二层）·
+#                `14_图鉴四谱口径` 旧物表（半截号角 = 信物 `i_horn_half`）·
+#                门厅那件 = 未鉴定（不读书、只给一条问号 —— 池表 `unid_tower`）。
+#    到手那一刻就该在旧物谱里留一行问号（装备那类不进谱，另核）。
+# ══════════════════════════════════════════════════════════════
+print("⑪ 三处容器『搜查』真拿得到（逐处 24 个人 × 2 遍）")
+CX = st.domain("codex") or {}
+TODO_KEY = (("开箱", "i_set_sentry_gauntlet"), ("拿半截号角", "i_horn_half"),
+            ("旧物谱第一个问号", "unid_tower"))
+TARGET = {}
+for _no, _r in sorted(rooms.items()):
+    for _kw, _iid in TODO_KEY:
+        if _kw in _r.get("todo", ""):
+            TARGET[_r["name"]] = (_kw, _iid)
+chk("★ 22 §二「可做」列里认出三处可拿物（%s）" % " · ".join("%s=%s" % v for v in TARGET.values()),
+    len(TARGET) == 3, "%s" % TARGET)
+cont_bad, cont_ok = [], {}
+for rname, (kw, iid) in TARGET.items():
+    nd = ID_OF.get(rname)
+    hit = None
+    for i in range(24):
+        uid = "u_c%d" % i
+        ad.by_uid[uid] = dict(FIGHT, loc=TOWER, node=nd, bag={}, codex={}, books={}, foot={},
+                              prev=[], flags={})
+        for nth in range(2):
+            send_as(uid, "搜查")
+            if str(iid) in (ad.by_uid[uid].get("bag") or {}):
+                hit = (uid, nth + 1)
+                break
+        if hit:
+            break
+    if not hit:
+        cont_bad.append((rname, iid, "24 人 × 2 遍都没拿到"))
+        continue
+    cont_ok[rname] = (iid, hit)
+    uid, nth = hit
+    books = ((ad.by_uid[uid].get("books") or {}).get("relic") or {})
+    if iid.startswith("i_set_"):                    # 装备那类：不进谱（只进背包）
+        if iid in books:
+            cont_bad.append((rname, iid, "装备不该进谱", list(books)))
+        continue
+    rec = books.get(iid)
+    if not (rec and rec.get("known") is False):
+        cont_bad.append((rname, iid, "没进旧物谱 / 不是从问号起步", rec))
+        continue
+    hint = str(((CX.get("relic") or {}).get(iid) or {}).get("hint") or "")
+    book = send_as(uid, "旧物谱")
+    if not hint or not any(hint in x for x in book):
+        cont_bad.append((rname, iid, "旧物谱里没出那一行问号", book))
+chk("★ 三处容器真拿得到（背包里真进了那件）· 旧物谱那条线也接上（问号行照字出）",
+    not cont_bad, "%s" % (cont_bad[:2] or ["无"]))
+print("  · 逐处：" + " · ".join("%s→%s（%s 第 %d 遍）" % (r, iid, uid, nth)
+                              for r, (iid, (uid, nth)) in sorted(cont_ok.items())))
 
 # ④ 五条指令真接上：不是 SYS_CMD_SOON · 不漏内部 key / 文件路径 / 取不到文案
 soon = (TX.get("SYS_CMD_SOON") or {}).get("value") or ""

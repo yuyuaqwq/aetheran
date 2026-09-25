@@ -513,15 +513,19 @@
     "times_per_day": 3
   },
   "gt_tw_search_1": {
-    "name": "储藏室的架子",
+    "name": "储藏室里那口箱子",
     "map": "old_watchtower",
     "subarea": "tower_storage",
     "kind": "搜查",
     "verb": "search",
     "pool": [
       {
+        "out": "i_set_sentry_gauntlet",
+        "w": 100
+      },
+      {
         "out": "i_material_old_iron",
-        "w": 40,
+        "w": 24,
         "n": [
           1,
           2
@@ -529,19 +533,19 @@
       },
       {
         "out": "i_potion_minor",
-        "w": 30,
+        "w": 16,
         "n": [
           1,
-          2
+          1
         ]
       },
       {
         "out": "unid_rare",
-        "w": 30
+        "w": 10
       }
     ],
     "time": null,
-    "desc": "架子空了大半。剩下的都是没人要的东西 —— 或者说，他们走的时候来不及拿。",
+    "desc": "箱子是从别处搬来的，摆得很整齐 —— 盖子开着，里面的东西叠得齐齐的。有人在这儿住过很久。",
     "times_per_day": 3
   },
   "gt_tw_search_2": {
@@ -609,19 +613,23 @@
     "times_per_day": 3
   },
   "gt_tw_search_4": {
-    "name": "号角室墙上的钩子",
+    "name": "屋子正中的石台",
     "map": "old_watchtower",
     "subarea": "tower_horn_room",
     "kind": "搜查",
     "verb": "search",
     "pool": [
       {
+        "out": "i_horn_half",
+        "w": 100
+      },
+      {
         "out": "i_set_sentry_horn",
-        "w": 10
+        "w": 20
       },
       {
         "out": "i_junk_bone",
-        "w": 40,
+        "w": 16,
         "n": [
           1,
           2
@@ -629,19 +637,47 @@
       },
       {
         "out": "i_potion_minor",
-        "w": 26,
+        "w": 12,
+        "n": [
+          1,
+          1
+        ]
+      }
+    ],
+    "time": null,
+    "desc": "石台正中放着那半截号角，铜锈从断口里长出来。旁边立着一块刻满名字的碑。钩子空着 —— 号角早就不在钩上了。",
+    "times_per_day": 3
+  },
+  "gt_tw_search_hall": {
+    "name": "门厅地上的东西",
+    "map": "old_watchtower",
+    "subarea": "tower_hall",
+    "kind": "搜查",
+    "verb": "search",
+    "pool": [
+      {
+        "out": "unid_tower",
+        "w": 100
+      },
+      {
+        "out": "i_junk_bone",
+        "w": 20,
         "n": [
           1,
           2
         ]
       },
       {
-        "out": "unid_rare",
-        "w": 5
+        "out": "i_material_old_iron",
+        "w": 16,
+        "n": [
+          1,
+          1
+        ]
       }
     ],
     "time": null,
-    "desc": "钩子空着。号角不在钩上 —— 它在屋子最里面，落了一层灰，铜锈从裂口里长出来。",
+    "desc": "两具东西散在地上 —— 捡得起来的不多，有一件不认得是什么，灰被人抹掉过一道。",
     "times_per_day": 3
   }
 }

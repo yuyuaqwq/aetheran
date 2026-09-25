@@ -10,7 +10,7 @@
       "flavor": 8,
       "material": 12,
       "monster": 17,
-      "relic": 16
+      "relic": 17
     },
     "material_reachable": [
       "i_clue_page",
@@ -349,6 +349,16 @@
       "hint": "上面有字。不是这儿的话。",
       "known": "与镇口那块石头上的第二种字同一只手。石片是从别处带来的。",
       "name": "一块刻着字的石片"
+    },
+    "unid_tower": {
+      "ask": [
+        "npc_grey",
+        "npc_durin"
+      ],
+      "from": "pick",
+      "hint": "凉的。灰被抹掉过一道，露出底下的亮 —— 不知道是做什么的。",
+      "known": "是胸甲上的搭扣，从里侧拧下来的。拆它的人手很急，皮子还连着。",
+      "name": "一块看不出用途的旧东西"
     }
   }
 }

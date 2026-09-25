@@ -290,5 +290,41 @@
       }
     ],
     "kind": "未鉴定"
+  },
+  "unid_tower": {
+    "name": "一块看不出用途的旧东西",
+    "icon": "❓",
+    "tier": "普通",
+    "from": [
+      "副本搜查（旧哨塔）"
+    ],
+    "hint": "凉的。灰被抹掉过一道，露出底下亮的那一层 —— 有人最近翻过它。",
+    "seen_after": "unid_tower",
+    "pool": [
+      {
+        "out": "i_material_old_iron",
+        "kind": "材料",
+        "w": 45
+      },
+      {
+        "out": "*armor_random",
+        "kind": "装备",
+        "w": 30,
+        "quality": [
+          "普通"
+        ]
+      },
+      {
+        "out": "i_junk_bone",
+        "kind": "垃圾",
+        "w": 15
+      },
+      {
+        "out": "i_material_iron_chip",
+        "kind": "材料",
+        "w": 10
+      }
+    ],
+    "kind": "未鉴定"
   }
 }
