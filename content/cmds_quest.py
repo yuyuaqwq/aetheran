@@ -42,6 +42,21 @@
     （那个键仓库里没有任何地方写）。今天现有的 12 条老支线仍在死路径上（P-25 §② 未收口，见报告）
   · 落法（重跑）：`python scripts/rebuild_prof_quests.py`（从真源解析 · 数值不手打）
   · 判据：`scripts/probe_quests.py` ⑪（trade 四值 · 16 条与 21 §二 逐条对账 · 条件真能验 · 副业指令真跑）
+
+★ B3-6c 主线三段行文归位 texts（解 P-17 甲案）
+------------------------------------------------
+主线 12 条的「接 / 进行中 / 交」三段行文原先内联在 quests 域的 `story` / `progress_text` /
+`deliver_text`（写着「待写」「（进行中：…）」），而 texts 域的 `QUEST_MAIN%02d_{STORY,PROGRESS,
+DELIVER}` 36 条**谁也读不到** —— 两处真源。裁定甲案：**真源归 texts**。
+
+  · 域里那三个字段**主线已裁掉**（支线 / 生活 / 悬赏那 29 条本批没有槽位，照旧留域内 ——
+    现状登记在 `scripts/probe_quests.py` ⑲，别当成「已经全归位」）
+  · 消费端只按 `chain` + `order` 映射取槽位（`_slot_of` / `_beat` 两个口）——
+    **不拿名字拼键名**，一个中文都不内联
+  · `story` 的落点 = `接 <编号>` 那一下（槽位出处自己写着「接时行文」）；
+    `progress_text` = 交活没做完那一行；`deliver_text` = 交掉之后那一行
+  · 判据：`scripts/probe_quests.py` ⑲（12 条真取到 · 与 24 号文档逐条对账 · 36 条非占位 ·
+    支线/生活/悬赏现状登记）
 """
 from __future__ import annotations
 
@@ -67,6 +82,33 @@ def _set(p, key, val):
     f = dict(p.get("flags") or {})
     f[key] = val
     p["flags"] = f
+
+
+# ── B3-6c：主线三段行文（接 / 进行中 / 交）从 texts 槽位取 ────────────────────
+# 真源：`00_总纲/17_文案收口口径_v1.md` 的 `QUEST_MAIN%02d_{STORY,PROGRESS,DELIVER}` 表（36 条）。
+# P-17 甲案：quests 域内联的 story / progress_text / deliver_text 三个字段**主线已裁掉** ——
+# 消费端只按 `chain` + `order` 映射取槽位；支线 / 生活 / 悬赏本批还没有槽位，照旧读域内字段
+# （现状登记在 `scripts/probe_quests.py` ⑲）。
+_FIELD_OF = {"STORY": "story", "PROGRESS": "progress_text", "DELIVER": "deliver_text"}
+
+
+def _slot_of(x, part):
+    """主线 → 槽位名（`QUEST_MAIN%02d_<PART>`）；不是主线 ⇒ None（本批没有它的槽位）。
+
+    ★ 只认「主线 + 编号」这一个映射 —— 不拿名字拼键名（名字改一个字，槽位不该跟着漂）。
+    ★ 编号对不上（写缺了 / 超出台账）时 `T()` 会把键名回显出来（fail-closed），不静默留白。
+    """
+    if x.get("chain") != "main":
+        return None
+    return "QUEST_MAIN%02d_%s" % (int(x.get("order") or 0), part)
+
+
+def _beat(x, part):
+    """三段行文的一口（唯一取口）—— 主线走 texts 槽位，其余链条走域内字段。"""
+    slot = _slot_of(x, part)
+    if slot:
+        return T(slot)
+    return x.get(_FIELD_OF[part]) or ""
 
 
 # ── 副业（B3-3 · 解 P-14「选甲」）：四个副业的声明在 quests 域的 `_meta.trades` ──────
@@ -315,6 +357,11 @@ async def quest_accept(env, sink, uid, player):
         player.update(p)
     _save(env)
     yield T("SYS_JOB_TAKEN", name=x["name"])
+    # ★ B3-6c：接时那一段（槽位自己的出处就写着「接时行文」）—— 只有主线有槽位，
+    #   其余链条**一行都不多**（与改前逐字节相同）。
+    slot = _slot_of(x, "STORY")
+    if slot:
+        yield T(slot)
     yield "  " + T("SYS_JOB_TODO", objective=x["objective"])
     if x.get("insight"):
         yield "  " + T("SYS_JOB_INSIGHT", insight=x["insight"])
@@ -347,7 +394,7 @@ async def quest_deliver(env, sink, uid, player):
         return
     x = qs[k]
     if not _obj_ok(x, p):
-        yield T("SYS_JOB_NOT_DONE") + (x.get("progress_text") or x["objective"])
+        yield T("SYS_JOB_NOT_DONE") + (_beat(x, "PROGRESS") or x["objective"])
         for line in _unmet(p, x):          # ★ P-25：把「还差什么」说清楚（老条目这里一行都不多）
             yield "  " + line
         return
@@ -362,7 +409,7 @@ async def quest_deliver(env, sink, uid, player):
         player.update(p)
     _save(env)
     yield T("SYS_JOB_DELIVERED", name=x["name"])
-    yield x.get("deliver_text") or ""
+    yield _beat(x, "DELIVER")         # ★ B3-6c：交时那一段（主线走槽位；其余链条读域内字段）
     yield T("SYS_JOB_REWARD", exp=x["reward_exp"], gold=x["reward_gold"])
     if leveled:
         yield T("SYS_JOB_LEVELUP", level=lv)

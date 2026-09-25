@@ -469,217 +469,217 @@
     "desc": "采集点 · 门槛没到"
   },
   "QUEST_MAIN01_STORY": {
-    "value": "〔待填：镇口的石头 · 接时行文〕",
+    "value": "镇口的石头你天天从它跟前过。今天你停下来了。",
     "params": [],
     "category": "任务",
     "desc": "主线 1 镇口的石头"
   },
   "QUEST_MAIN01_PROGRESS": {
-    "value": "〔待填：镇口的石头 · 进行中行文〕",
+    "value": "石头上的字，你还没读成句。",
     "params": [],
     "category": "任务",
     "desc": "主线 1 镇口的石头"
   },
   "QUEST_MAIN01_DELIVER": {
-    "value": "〔待填：镇口的石头 · 交时行文〕",
+    "value": "玛莎把第一张单子交到你手里 —— 那是她给你的第一个委托。挂板墙对你开了。",
     "params": [],
     "category": "任务",
     "desc": "主线 1 镇口的石头"
   },
   "QUEST_MAIN02_STORY": {
-    "value": "〔待填：半句话 · 接时行文〕",
+    "value": "白烛堂的侧屋你还没敲过。住在里头的人，说话只说一半。",
     "params": [],
     "category": "任务",
     "desc": "主线 2 半句话"
   },
   "QUEST_MAIN02_PROGRESS": {
-    "value": "〔待填：半句话 · 进行中行文〕",
+    "value": "莉安还是那半句话。剩下那半句，镇上没人肯接。",
     "params": [],
     "category": "任务",
     "desc": "主线 2 半句话"
   },
   "QUEST_MAIN02_DELIVER": {
-    "value": "〔待填：半句话 · 交时行文〕",
+    "value": "莉安开始认得你了。她还是只说半句 —— 但那半句现在是对你说的。",
     "params": [],
     "category": "任务",
     "desc": "主线 2 半句话"
   },
   "QUEST_MAIN03_STORY": {
-    "value": "〔待填：三张牌 · 接时行文〕",
+    "value": "玛莎一次给了你三张单子，没多解释 —— 北边、东边、西边，各一张。",
     "params": [],
     "category": "任务",
     "desc": "主线 3 三张牌"
   },
   "QUEST_MAIN03_PROGRESS": {
-    "value": "〔待填：三张牌 · 进行中行文〕",
+    "value": "三张单子还没凑齐。骨田、白桦林、浅滩，哪儿都还欠着一趟。",
     "params": [],
     "category": "任务",
     "desc": "主线 3 三张牌"
   },
   "QUEST_MAIN03_DELIVER": {
-    "value": "〔待填：三张牌 · 交时行文〕",
+    "value": "三张单子都交回去了。三条带全对你开了。",
     "params": [],
     "category": "任务",
     "desc": "主线 3 三张牌"
   },
   "QUEST_MAIN04_STORY": {
-    "value": "〔待填：骨田 · 接时行文〕",
+    "value": "北边那片地叫骨田。碑排成一排立在土里，大半埋着。",
     "params": [],
     "category": "任务",
     "desc": "主线 4 骨田"
   },
   "QUEST_MAIN04_PROGRESS": {
-    "value": "〔待填：骨田 · 进行中行文〕",
+    "value": "土底下那件旧铁，还没到你手里。",
     "params": [],
     "category": "任务",
     "desc": "主线 4 骨田"
   },
   "QUEST_MAIN04_DELIVER": {
-    "value": "〔待填：骨田 · 交时行文〕",
+    "value": "柯尔把铁件翻过来看了一遍，又翻回去 —— 他愣了一下，手就停在那儿。",
     "params": [],
     "category": "任务",
     "desc": "主线 4 骨田"
   },
   "QUEST_MAIN05_STORY": {
-    "value": "〔待填：拾荒人 · 接时行文〕",
+    "value": "拾荒营地你还没走到。风一来，那几块篷布就往一边倒。",
     "params": [],
     "category": "任务",
     "desc": "主线 5 拾荒人"
   },
   "QUEST_MAIN05_PROGRESS": {
-    "value": "〔待填：拾荒人 · 进行中行文〕",
+    "value": "字条还留在营地那边，你没拿回来。",
     "params": [],
     "category": "任务",
     "desc": "主线 5 拾荒人"
   },
   "QUEST_MAIN05_DELIVER": {
-    "value": "〔待填：拾荒人 · 交时行文〕",
+    "value": "字条在你手上了 —— 写给「后来的人」。背包里还多出一件拾荒人的旧物。",
     "params": [],
     "category": "任务",
     "desc": "主线 5 拾荒人"
   },
   "QUEST_MAIN06_STORY": {
-    "value": "〔待填：塔门 · 接时行文〕",
+    "value": "北边那座塔的轮廓，你在镇上就看得见 —— 今天你走到旧哨塔下，门就在跟前。",
     "params": [],
     "category": "任务",
     "desc": "主线 6 塔门"
   },
   "QUEST_MAIN06_PROGRESS": {
-    "value": "〔待填：塔门 · 进行中行文〕",
+    "value": "门还推不开。闩在里侧，从外面够不着。",
     "params": [],
     "category": "任务",
     "desc": "主线 6 塔门"
   },
   "QUEST_MAIN06_DELIVER": {
-    "value": "〔待填：塔门 · 交时行文〕",
+    "value": "旧哨塔的门开了 —— 里头那地方，你现在进得去。",
     "params": [],
     "category": "任务",
     "desc": "主线 6 塔门"
   },
   "QUEST_MAIN07_STORY": {
-    "value": "〔待填：最后一夜的账 · 接时行文〕",
+    "value": "旧哨塔里几间房，一间一间往里走。水房在最里头。",
     "params": [],
     "category": "任务",
     "desc": "主线 7 最后一夜的账"
   },
   "QUEST_MAIN07_PROGRESS": {
-    "value": "〔待填：最后一夜的账 · 进行中行文〕",
+    "value": "水房的纸还泡在水里，墙上那道道浅痕你也没数完。",
     "params": [],
     "category": "任务",
     "desc": "主线 7 最后一夜的账"
   },
   "QUEST_MAIN07_DELIVER": {
-    "value": "〔待填：最后一夜的账 · 交时行文〕",
+    "value": "泡水的游记只余半页。旧哨塔里的第一件遗物，归你了。",
     "params": [],
     "category": "任务",
     "desc": "主线 7 最后一夜的账"
   },
   "QUEST_MAIN08_STORY": {
-    "value": "〔待填：号角不响 · 接时行文〕",
+    "value": "塔里再往上还有一层。守在那儿的东西，不是人。",
     "params": [],
     "category": "任务",
     "desc": "主线 8 号角不响"
   },
   "QUEST_MAIN08_PROGRESS": {
-    "value": "〔待填：号角不响 · 进行中行文〕",
+    "value": "半截号角还没到手。往上那层的路还堵着。",
     "params": [],
     "category": "任务",
     "desc": "主线 8 号角不响"
   },
   "QUEST_MAIN08_DELIVER": {
-    "value": "〔待填：号角不响 · 交时行文〕",
+    "value": "半截号角在你怀里，断口是齐的。你问过艾德，他把话岔开了。",
     "params": [],
     "category": "任务",
     "desc": "主线 8 号角不响"
   },
   "QUEST_MAIN09_STORY": {
-    "value": "〔待填：守塔的东西 · 接时行文〕",
+    "value": "格雷先开的口 —— 他从前不主动跟人说话。",
     "params": [],
     "category": "任务",
     "desc": "主线 9 守塔的东西"
   },
   "QUEST_MAIN09_PROGRESS": {
-    "value": "〔待填：守塔的东西 · 进行中行文〕",
+    "value": "塔顶那个东西，你还没上去看。",
     "params": [],
     "category": "任务",
     "desc": "主线 9 守塔的东西"
   },
   "QUEST_MAIN09_DELIVER": {
-    "value": "〔待填：守塔的东西 · 交时行文〕",
+    "value": "旧誓哨兵站在塔顶，等着你上去。格雷的话到此为止。",
     "params": [],
     "category": "任务",
     "desc": "主线 9 守塔的东西"
   },
   "QUEST_MAIN10_STORY": {
-    "value": "〔待填：北墙根的骨头 · 接时行文〕",
+    "value": "北墙根那个人一直坐在墙边数什么。今天他抬了头。",
     "params": [],
     "category": "任务",
     "desc": "主线 10 北墙根的骨头"
   },
   "QUEST_MAIN10_PROGRESS": {
-    "value": "〔待填：北墙根的骨头 · 进行中行文〕",
+    "value": "哈根那句才起头，他还没说完。",
     "params": [],
     "category": "任务",
     "desc": "主线 10 北墙根的骨头"
   },
   "QUEST_MAIN10_DELIVER": {
-    "value": "〔待填：北墙根的骨头 · 交时行文〕",
+    "value": "哈根头一次把话说整了。北墙根那堆东西，来历露出来一角。",
     "params": [],
     "category": "任务",
     "desc": "主线 10 北墙根的骨头"
   },
   "QUEST_MAIN11_STORY": {
-    "value": "〔待填：白桦上的名字 · 接时行文〕",
+    "value": "白桦林里的刻名，你已经记下来了。塔里那一排，还在等着比。",
     "params": [],
     "category": "任务",
     "desc": "主线 11 白桦上的名字"
   },
   "QUEST_MAIN11_PROGRESS": {
-    "value": "〔待填：白桦上的名字 · 进行中行文〕",
+    "value": "白桦林里的名字，和号角室那排名字，还没对上。",
     "params": [],
     "category": "任务",
     "desc": "主线 11 白桦上的名字"
   },
   "QUEST_MAIN11_DELIVER": {
-    "value": "〔待填：白桦上的名字 · 交时行文〕",
+    "value": "莉安把两处名字念了一遍，头一次把话说整 —— 念得很慢，念了很久。",
     "params": [],
     "category": "任务",
     "desc": "主线 11 白桦上的名字"
   },
   "QUEST_MAIN12_STORY": {
-    "value": "〔待填：往北的路 · 接时行文〕",
+    "value": "塔顶只剩一层没走。上面那个东西，一直在那儿等着。",
     "params": [],
     "category": "任务",
     "desc": "主线 12 往北的路"
   },
   "QUEST_MAIN12_PROGRESS": {
-    "value": "〔待填：往北的路 · 进行中行文〕",
+    "value": "旧誓哨兵还没打倒，塔顶那层你也没上去。",
     "params": [],
     "category": "任务",
     "desc": "主线 12 往北的路"
   },
   "QUEST_MAIN12_DELIVER": {
-    "value": "〔待填：往北的路 · 交时行文〕",
+    "value": "刻字的石片在你手里。回头往北看 —— 那道裂口，第一次是给你看的。",
     "params": [],
     "category": "任务",
     "desc": "主线 12 往北的路"

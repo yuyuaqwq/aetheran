@@ -15,6 +15,16 @@ B3-3 加的那一组（生活职业任务 / 副业）：
   ⑱ ★ 生活任务端到端走得通（真调 接 → 交）：条件没满足时拦住并说清缺什么；补齐后交得掉、
       奖励入档、`flags.quests` 写下 done（这把「新条目落在死路径上」那类事当场钉住）
 
+B3-6c 加的那一组（主线三段行文归位 texts · 解 P-17 甲案）：
+  ⑨（改）交付文案的取口不再直接读域字段 —— 主线走 texts 槽位，其余链条读域内字段
+  ⑲ 主线 12 × 3 = 36 条槽位齐备 · 且都不是占位（「〔待填…〕」「（待写）」「（进行中：…）」）
+  ⑳ ★ 12 条与 24_任务线_v1 §一 **逐条对账**（探针自己解析那份文档）：名字一致 ·
+      三条行文各自落在**本条**的专名锚上（NPC / 怪 / 物 / 图 / 节点名）· 交时那一段必须命中
+      「交付」栏的锚 · 不许提别的条才有的人 / 怪（串台哨兵）
+  ㉑ ★ 真跑「接 <编号>」/「交 <编号>」各 12 遍：槽位里的字必须**逐字**出现在屏上
+      （取不到文案的标记一个都不许有）—— 槽位 → 玩家眼睛的闭环
+  ㉒ 支线 / 生活 / 悬赏的现状登记（**不判红** · 本批没有槽位）：如实印出还有多少条走域内字段
+
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_quests.py
 """
 from __future__ import annotations
@@ -109,8 +119,22 @@ for k, v in QE.items():
 (ok if not recalc else bad)("★ 主线奖励可复算（奖励 = 等级函数，不手打；坏 %s）" % (recalc or "无"))
 
 # ⑨ 交付文案不为空（三段式的第三段）
-no_deliver = [k for k, v in QE.items() if not v.get("deliver_text")]
-(ok if not no_deliver else bad)("每条都有交付文案（缺 %s）" % (no_deliver or "无"))
+#   ★ B3-6c：取口不再直接读域字段 —— 主线走 texts 槽位（`QUEST_MAIN%02d_DELIVER`），
+#     其余链条读域内字段。用**代码里那个映射**（`cmds_quest._slot_of` / `_FIELD_OF`），
+#     不另写一份镜像表（镜像表漂了就把这条判据变成假的）。
+from content import cmds_quest as CQ                                      # noqa: E402
+
+
+def _beat_of(x, part):
+    slot = CQ._slot_of(x, part)
+    if slot:
+        return (TX.get(slot) or {}).get("value") or ""
+    return x.get(CQ._FIELD_OF[part]) or ""
+
+
+no_deliver = [k for k, v in QE.items() if not _beat_of(v, "DELIVER")]
+(ok if not no_deliver else bad)("每条都有交付文案（三段式的第三段 · 主线走 texts 槽位；缺 %s）"
+                                % (no_deliver or "无"))
 
 # ⑩ 解锁指向的东西真实存在（怪 / 图）
 bad_unlock = []
@@ -310,8 +334,7 @@ for mid, nd in deep:
 (ok if not deep_bad else bad)(
     "★ 三条带最深处 %s 各有采集点（空的 %s）" % ([(m, n) for m, n in deep], deep_bad or "无"))
 
-# ⑰ 「副业」指令真跑（无参 · 四个带参 · 一个错参）
-from content import cmds_quest as CQ                                      # noqa: E402
+# ⑰ 「副业」指令真跑（无参 · 四个带参 · 一个错参）—— `CQ` 已在 ⑨ 那节导入
 from content import cmds_ast as CA                                        # noqa: E402
 
 MISSING = "[MISSING TEXT"
@@ -387,6 +410,143 @@ taken_ok = qid in ((p1.get("flags") or {}).get("quests_active") or []) and any(Q
     "（经验 +%d · 铜板 +%d · flags.quests 写下 done=%s）"
     % (QE[qid]["name"], order, taken_ok, (blocked[0][:14] if blocked else "?"),
        QE[qid]["reward_exp"], QE[qid]["reward_gold"], done_ok))
+
+# ══════════════════════════════════════════════════════════════
+# ⑲–㉒ B3-6c 主线三段行文归位 texts（解 P-17 甲案）
+#     源：`06_第一阶段垂直切片/24_任务线_v1.md` §一（主线 12 条 · 步骤/交付/教/钩子）
+#     ★ 探针**自己**解析那份文档再比（照 ⑬ 对 21 §二 那种做法），不信域的自述。
+# ══════════════════════════════════════════════════════════════
+import io as _io                                                          # noqa: E402
+import re as _re                                                          # noqa: E402
+
+DOC24 = os.path.join(PLAN, "06_第一阶段垂直切片", "24_任务线_v1.md")
+_BLK = _re.compile(r"^###\s*主\s*(\d+)\s*·\s*(.+?)\s*$")
+_FLD = _re.compile(r"^(步骤|交付|教|★\s*认知推进|钩子)\s+(.*)$")
+
+
+def _parse_main24():
+    """24 §一 → {order: {name, 步骤, 交付, 教, ★认知推进, 钩子, raw}}（解析不出就当场抛）。"""
+    if not os.path.exists(DOC24):
+        raise SystemExit("24 号文档不在：%s" % DOC24)
+    out, cur = {}, None
+    for ln in _io.open(DOC24, encoding="utf-8", newline="").read().split("\n"):
+        m = _BLK.match(ln)
+        if m:
+            cur = out[int(m.group(1))] = {"name": m.group(2).split("（")[0].strip(), "raw": []}
+            continue
+        if cur is None:
+            continue
+        if ln.startswith("## ") or ln.startswith("---"):
+            cur = None                    # §一 结束 / 下一节 —— 别把支线表吃进最后一块
+            continue
+        cur["raw"].append(ln)
+        f = _FLD.match(ln.strip())
+        if f:
+            cur[f.group(1).replace("★ ", "★")] = f.group(2).strip()
+    return out
+
+
+doc24 = _parse_main24()
+#: 「锚」= 块里真出现的**专名**（NPC / 怪 / 物 / 图 / 节点名）—— 用来钉「这三条行文是在说本条」
+_NAMES = {str(v.get("name")) for d_ in (NPCS, MON, ITEMS) for v in d_.values() if v.get("name")}
+for _mm in MAPS.values():
+    _NAMES.add(str(_mm.get("name") or ""))
+    for _nd in (_mm.get("nodes") or []):
+        _NAMES.add(str(_nd.get("name") or ""))
+_NAMES = {x for x in _NAMES if len(x) >= 2}
+#: 只拿「人 / 怪」当串台哨兵（地名共享是合理的 —— 玩家本来就要到处走）
+_PROPER = {str(v.get("name")) for d_ in (NPCS, MON) for v in d_.values() if v.get("name")}
+
+mainq = {int(v["order"]): (k, v) for k, v in QE.items() if v.get("chain") == "main"}
+
+# ⑲ 36 条槽位齐备 · 且都不是占位（「〔待填…〕」「（待写）」「（进行中：…）」）
+PLACE = ("待填", "待写", "〔", "（待", "进行中")
+slot_miss, slot_place = [], []
+for _n in range(1, 13):
+    for _part in ("STORY", "PROGRESS", "DELIVER"):
+        _key = "QUEST_MAIN%02d_%s" % (_n, _part)
+        _v = str((TX.get(_key) or {}).get("value") or "")
+        if not _v:
+            slot_miss.append(_key)
+        elif any(t in _v for t in PLACE):
+            slot_place.append((_key, _v[:18]))
+(ok if not slot_miss and not slot_place else bad)(
+    "★ 主线 36 条槽位齐备且都不是占位（缺 %s · 还是占位 %s）" % (slot_miss or "无", slot_place or "无"))
+
+# ⑳ ★ 12 条主线按 chain+order 真取到槽位 · 与 24 §一 逐条对账（名字 / 锚 / 交付 / 不串台）
+recon_bad, recon_lines = [], []
+for _n in sorted(doc24):
+    if _n not in mainq:
+        recon_bad.append("域里没有编号 %d 的主线" % _n)
+        continue
+    _k, _x = mainq[_n]
+    _b = doc24[_n]
+    _own = sorted({a for a in _NAMES if a in "\n".join(_b["raw"])})
+    _vals = {p: _beat_of(_x, p) for p in ("STORY", "PROGRESS", "DELIVER")}
+    _hits = {a for a in _own if any(a in _vals[p] for p in _vals)}
+    _need = min(2, len(_own))
+    if _x["name"] != _b["name"]:
+        recon_bad.append("主%d 名字「%s」≠ 文档「%s」" % (_n, _x["name"], _b["name"]))
+    if len(_hits) < _need:
+        recon_bad.append("主%d 三条行文只命中 %d/%d 个文档锚 %s" % (_n, len(_hits), _need, _own))
+    _dl = {a for a in _own if a in (_b.get("交付") or "")}
+    if _dl and not any(a in _vals["DELIVER"] for a in _dl):
+        recon_bad.append("主%d 交时那一段没命中「交付」栏的锚 %s" % (_n, sorted(_dl)))
+    _cross = sorted(a for a in _PROPER if a not in _own
+                    and any(a in _vals[p] for p in _vals))
+    if _cross:
+        recon_bad.append("主%d 串台（提了别的条才有的人 / 怪）%s" % (_n, _cross))
+    recon_lines.append("主%-2d %-7s 锚 %s" % (_n, _b["name"], "/".join(sorted(_hits))))
+    if not (_b.get("步骤") and _b.get("交付") and _b.get("钩子")):
+        recon_bad.append("主%d 24 号文档那块的 步骤/交付/钩子 没解析全" % _n)
+(ok if len(doc24) == 12 and not recon_bad else bad)(
+    "★ 主线 12 条与 24 §一 逐条对账（名字 · 三条行文落在本条的锚上 · 交时命中「交付」栏 · 不串台；"
+    "坏 %s）" % (recon_bad or "无"))
+for _ln in recon_lines:
+    print("      %s" % _ln)
+
+# ㉑ ★ 真跑「接 <编号>」/「交 <编号>」：槽位里的字必须**原样**出现在屏上（槽位 → 玩家眼睛的闭环）
+drive_bad, drive_lines = [], []
+for _n in range(1, 13):
+    _k, _x = mainq[_n]
+    _lv = int(_x["min_level"])
+    _acc = _drive(CQ.quest_accept, _player(level=_lv), "接 %d" % _n)
+    # 「没做完」的档：等级压到这条线之下（主 1 的门槛就是 1 ⇒ 用 0 —— 别拿 1 当「不够」）
+    _nod = _drive(CQ.quest_deliver, _player(level=max(0, _lv - 1), flags={"quests_active": [_k]}),
+                  "交 %d" % _n)
+    _pay = _drive(CQ.quest_deliver, _player(level=_lv, flags={"quests_active": [_k]}), "交 %d" % _n)
+    _want = {p: _beat_of(_x, p) for p in ("STORY", "PROGRESS", "DELIVER")}
+    if _want["STORY"] not in _acc:
+        drive_bad.append((_n, "接", _acc[:2]))
+    if not any(ln.startswith("还没做完") and _want["PROGRESS"] in ln for ln in _nod):
+        drive_bad.append((_n, "交(没做完)", _nod[:2]))
+    if _want["DELIVER"] not in _pay:
+        drive_bad.append((_n, "交", _pay[:3]))
+    if any(MISSING in ln for ln in _acc + _nod + _pay):
+        drive_bad.append((_n, "取不到文案", ""))
+    drive_lines.append("主%-2d 接「%s…」｜ 没做完「%s…」｜ 交「%s…」"
+                       % (_n, _want["STORY"][:12], _want["PROGRESS"][:10], _want["DELIVER"][:12]))
+(ok if not drive_bad else bad)(
+    "★ 主线 12 条真跑：接 / 交(没做完) / 交 各一遍，槽位里的字逐字在屏上（坏 %s）" % (drive_bad or "无"))
+for _ln in drive_lines:
+    print("      %s" % _ln)
+
+# ㉒ 支线 / 生活 / 悬赏的现状登记（**不判红** —— 本批没做：没有槽位）
+_reg, _cnt_place, _cnt_todo = {}, 0, 0
+for _k, _v in QE.items():
+    if _v.get("chain") == "main":
+        continue
+    _reg.setdefault(_v["chain"], []).append(_k)
+    if "进行中" in str(_v.get("progress_text") or ""):
+        _cnt_place += 1
+    if "待写" in str(_v.get("story") or ""):
+        _cnt_todo += 1
+notes.append("B3-6c 现状登记（**本批不做** · 别当成「任务文案已全归位」）：主线 12 条已归 texts；"
+             "其余 %d 条**还没有槽位**、仍读 quests 域内联字段（支线 %d / 生活 %d / 悬赏 %d）—— "
+             "其中 %d 条的 progress_text 还是备注腔「（进行中：…）」、%d 条的 story 还写着「（待写）」"
+             "（其余链条的 story 今天没有任何消费端，所以它印不到玩家眼前）"
+             % (len(QE) - 12, len(_reg.get("side") or []), len(_reg.get("trade") or []),
+                len(_reg.get("bounty") or []), _cnt_place, _cnt_todo))
 
 for n in notes:
     print("  · " + n)
