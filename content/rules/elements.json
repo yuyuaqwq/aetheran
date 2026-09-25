@@ -8,6 +8,7 @@
     },
     "ELE_FIRE": {"engine": "fire"},
     "ELE_ICE": {"engine": "ice"},
+    "ELE_THUNDER": {"engine": "thunder"},
     "ELE_WATER": {"engine": "water"},
     "ELE_ARCANE": {
       "engine": "",

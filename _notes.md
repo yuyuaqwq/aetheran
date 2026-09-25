@@ -4050,3 +4050,29 @@ e2e （真宿主契约 · FakeAdapter）：
 · 临时件：`%LOCALAPPDATA%/Temp/b4_5_scratch*.py`（三份探查脚本）· `%LOCALAPPDATA%/Temp/p1_probe_*.out`
   （全量输出）—— 未进包；关键输出已逐字抄在上面。
 ```
+
+---
+
+# §合入波十（b4-1 ~ b4-5 五条分支 · 2026-09-25 · 主线）
+
+五条分支各自在自己的工作树里跑绿，**合起来**才照出两处「跨批契约」问题（都是各自单跑看不见的）：
+
+```text
+① b4-1（技能 T1）× b4-5（元素通道）：装配期当场红 ——
+   content/elements.py::check_domain -> KeyError：
+   「域里这些技能的元素码没声明过（域 → 引擎这条线会静默当「无元素」）：SKILL_MAG_silence=ELE_THUNDER」
+   · b4-1 给「静默」写了 element = ELE_THUNDER（一声闷雷那一手）—— b4-5 立那条 fail-closed
+     校验的时候，域里还没有任何技能用雷 ⇒ 它的声明表里没有 ELE_THUNDER 这一档。
+   · 修法（**不削弱判据**）：元素声明表补上 `ELE_THUNDER: {"engine": "thunder"}` ——
+     宪法 §二·五 那八元素里本来就有雷（环「火 → 冰 → 水 → 雷 → 土 → 风 → 火」），
+     只是此前没有技能引用它，所以没进「在用的码」那一档。改的是数据，判据一行没动。
+   · 同批把 probe_elements 文档串里写死的「域里 5 个码」改成「用到的码（条数现算）」——
+     写死的数会随批次漂（和本仓其它地方同一纪律）。
+
+② b4-4 的草案探针是**故意红着**的（量的是「引擎还没接 segment_plan_fn」）⇒ 合入时改名
+   `scripts/probe_timing.py` -> `scripts/_draft_probe_timing.py`，不让它进 `probe_*.py` 全量通配
+   （门禁带一条已知红 = 违反「探针全绿才算完」）。接线那天改回原名并纳入闸。
+
+合入后：**全量探针 33/33 绿**（32 + b4-5 的 probe_elements）· 主线 master 干净。
+五条分支的 `_notes` 各自的小节都在本文件里（取并集，同键零打架）；`texts.json` 也是取键并集
+（master 664 键 + b4-5 新增 2 键 = 666，同键零打架，逐字节没动别的）。
