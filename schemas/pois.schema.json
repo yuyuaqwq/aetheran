@@ -46,7 +46,7 @@
         },
         "into_codex": {
           "type": "string",
-          "description": "读完后进哪本谱"
+          "description": "读完后进哪本谱（非空时只认 relic_codex）；**空串 = 读它但不进谱** —— 只许塔内的就地线索这么写（22 §二「可做」列 · 见工作树 _notes.md §一 的裁决）"
         },
         "effect": {
           "type": "object",

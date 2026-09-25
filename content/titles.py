@@ -93,7 +93,9 @@ def ctx(p: dict, st: dict | None = None) -> dict:
 
     ★ 前 13 个键由 `eggs.ctx` 出（同一套语汇，两个域不许各算一套）；
       后面这几个只有称号用得上：
-        read_all  读过几处可读物（口径 §二 #2 的 12 = pois 里 into_codex 的条数）
+        read_all  读过几处可读物（口径 §二 #2 的 12 = pois 里 into_codex 的条数 —— 就是 19 §三A
+                  那 12 条量账；塔内那几条**就地线索**（`into_codex` 空串 · 22 §二「可做」列）
+                  读完也不进谱、不往这里加，见工作树 `_notes.md` §一）
         mat       材料谱里有哪几样（夜里下网的：那条鱼在不在谱里）
         visited   去过几回（`codex.note_step` 记的账）· 值 {图:节点: 次数}
         heard     听过几句（`heard` 模块记的账）· 值 {对话树 id: 句数}

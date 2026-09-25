@@ -14,7 +14,8 @@
   ⑨ ★ 六条指令都接在 content.cmds_codex 上，且实现体真的存在
   ⑩ 图鉴用到的文案槽位都在 texts 域
   ⑪ ★ P-8 行为：自己看（端详）—— 看过 ≠ 认出来 · 不可逆 · 手上没有不给看 · 物证句来自实物域
-  ⑫ ★ B3-7 旧物谱入口：新那条（`unid_tower`）真拿得到（有出产）· 塔内那 5 条新可读物不进谱（12 类不动）
+  ⑫ ★ B3-7 旧物谱入口：新那条（`unid_tower`）真拿得到（有出产）· 塔内那 6 条就地线索不进谱（12 类不动）
+  ⑬ ★ B3-10：12 条「读的」旧物逐条真跑『旧物谱』—— 问号行 / 认出后那行**照字出**（逐字取自 14 号文档）
 
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_codex.py
 """
@@ -28,9 +29,12 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 ENGINE = os.environ.get("GWEN_ENGINE", "C:/Users/yuyu/framework-engine")
 sys.path.insert(0, str(REPO))
+sys.path.insert(0, str(REPO / "scripts"))           # read_kinds（可读物那个数的唯一解析口）
 sys.path.insert(0, ENGINE)
 
 from saintess_engine.package import load_stack                       # noqa: E402
+
+import read_kinds as RK                                              # noqa: E402
 
 ok = True
 
@@ -85,10 +89,18 @@ chk("★ 旧物谱（捡的）都在 items / drop_pools 里", not bad_pick, bad_
 bad_ask = [k for k, v in BOOK["relic"].items() if [a for a in v.get("ask") or [] if a not in NP]]
 chk("★ 旧物谱的 ask 都在 npcs 域", not bad_ask, bad_ask[:4])
 
-# ③ 反向：可读物 ↔ 旧物谱（读的）
+# ③ 反向：可读物 ↔ 旧物谱（读的）—— ★ 条数**不许手打**：`scripts/read_kinds.py` 从四处文档
+#    现解析（10 §一A 的编号项 · 19 §三A 的 3+9 · 21 §一 称号那句 · 16 §二 的条件），
+#    再与域里现算（pois.into_codex / 旧物谱 from=read / titles.read_all）逐处比对。
+_rk = RK.audit(pois=PO, relic_read=read_ids, titles=(st.domain("titles") or {}))
 want = {k for k, v in PO.items() if v.get("into_codex")}
-chk("★ 每个 into_codex 的可读物都在旧物谱里（12 类）",
-    want == set(read_ids), "pois %d / 谱 %d；缺 %s" % (len(want), len(read_ids), sorted(want - set(read_ids))))
+chk("★ 每个 into_codex 的可读物都在旧物谱里 · 且条数 = 文档那 12 类"
+    "（10 §一A %(10)d · 19 §三A %(f)d+%(e)d · 21 §一 %(21)d · 16 §二 %(16)d · 域里 %(rr)s）"
+    % {"10": _rk["doc"]["10"], "f": _rk["doc"]["19_fixed"], "e": _rk["doc"]["19_expand"],
+       "21": _rk["doc"]["21"], "16": _rk["doc"]["16"],
+       "rr": _rk["live"].get("codex.relic[from=read]")},
+    want == set(read_ids) and not _rk["bad"],
+    "pois %d / 谱 %d；缺 %s；%s" % (len(want), len(read_ids), sorted(want - set(read_ids)), _rk["bad"]))
 
 # ④ ★ 材料谱里「真拿得到」的条数 ≥ 记满（探针自己从三个域重算）
 produced = set()
@@ -345,12 +357,36 @@ for _r in RC.values():
 _no_src = [k for k in pick_ids if k not in _produced]
 chk("★ 旧物谱里「捡的」每一条都在某个域的出产里（%d 条 · 缺出产的：%s）" % (len(pick_ids), _no_src or "无"),
     not _no_src, " · ".join(pick_ids))
-_tw = sorted(k for k, v in PO.items() if str(v.get("read_text") or "").startswith("READ_TOWER_"))
-chk("★ 塔内那 5 条新可读物一条都不进旧物谱（%d 条 · 12 类那个数不动）" % len(_tw),
-    len(_tw) == 5 and not [k for k in _tw if k in BOOK["relic"] or PO[k].get("into_codex")], _tw)
+_TW22 = RK.tower_reads(RK.rd(RK.DOC22))          # 22 §一「可读物」那一列（塔内 9 项）
+_in_tw = [k for k in read_ids if PO[k].get("map") == "old_watchtower"]
+_loc = sorted(k for k, v in PO.items() if v.get("kind") == "可读物"
+              and v.get("map") == "old_watchtower" and not v.get("into_codex"))
+chk("★ 塔内那 %d 条就地线索一条都不进旧物谱（= 22 §一 那 %d 项 − 其中已进谱的 %d 条）· 12 类那个数不动"
+    % (len(_loc), _TW22["n"], len(_in_tw)),
+    len(_loc) == _TW22["n"] - len(_in_tw)
+    and not [k for k in _loc if k in BOOK["relic"] or PO[k].get("into_codex")], _loc)
 chk("★ 新那条（unid_tower）的物证句 = 池表上那一句（端详那条线接得上）",
     bool(CM.evidence("unid_tower")) and CM.evidence("unid_tower") == (DP.get("unid_tower") or {}).get("hint"),
     "%s" % CM.evidence("unid_tower"))
+
+# ⑬ ★ B3-10：**谱里那一行照字出** —— 12 条「读的」旧物逐条真跑 `旧物谱`：
+#    没认出来时那一行 = 14 号文档的 `hint`（逐字）· 认出来之后那一行 = `known`（逐字）。
+#    这不是读 `codex.json` 自述（那是产物）—— 是**真跑呈现口**（cmds_codex.codex_relic）。
+print("⑬ 12 条「读的」旧物逐条真跑『旧物谱』：那一行照字出")
+_line_bad = []
+for _rid in sorted(read_ids):
+    _rec = BOOK["relic"][_rid]
+    _p13 = {"day": 1, "loc": "windmill_town", "node": "wt_gate_n",
+            "books": {"relic": {_rid: {"known": False}}}, "foot": {}}
+    _q = _run("旧物谱", _p13, CC.codex_relic)
+    _p13["books"]["relic"][_rid]["known"] = True
+    _k = _run("旧物谱", _p13, CC.codex_relic)
+    if not [x for x in _q if str(_rec.get("hint") or "") in x]:
+        _line_bad.append((_rid, "问号行没照字出", _q[-1:]))
+    elif not [x for x in _k if str(_rec.get("known") or "") in x]:
+        _line_bad.append((_rid, "认出后那行没照字出", _k[-1:]))
+chk("★ 12 条「读的」旧物：谱里那一行逐字取自 14 号文档（问号行 hint · 认出后 known）",
+    not _line_bad, "%s" % (_line_bad[:2] or "%d 条都对" % len(read_ids)))
 
 print()
 print("按谱：%s" % " · ".join("%s %d" % (LABEL[b], len(BOOK[b])) for b in BOOKS))

@@ -7,6 +7,8 @@
   ③ ★ 跨域对账：条件里每个取值都在对应域里真存在（地图节点 / 物品 / 任务 / 怪 / 彩蛋谱 / 材料谱 / 对话树）
   ④ ★ 条件只用引擎算子的声明节点，且整表能编译（形状错当场抛，不静默）
   ⑤ ★ 造实例：**逐条造一个满足它的档** → scan 必须命中它；再扫一遍不再报（幂等）
+  ⑤b ★ B3-10：「认得三种字的人」那个数 —— 四处文档 + 两处域里现算 = 同一个数；再由行为验一次
+     （读满 12 条 → 挂上；少一条 → 一个字不给）
   ⑥ ★ 反向：什么都没做过的档 → 一个称号都不给（不白送）
   ⑦ ★ 显示跟着名字走：有称号 = 「名字 · 称号」，没称号 = 名字本身；只显示最近那个
   ⑧ ★ 接线真生效：走到就记一趟（note_step）· 听过一句就记一句（heard.note，同一句不记第二遍）
@@ -209,6 +211,35 @@ for tid in BOOK:
         twitch.append("%s 报了第二遍 %s" % (tid, second))
 chk("★ 十条逐条造实例：满足它的档一定挂上它", not miss, miss[:4])
 chk("★ 挂上那一下是幂等的（挂过的不再报）", not twitch, twitch[:3])
+
+# ⑤b ★ B3-10：可读物那个数 —— **三处文档 + 两处域里现算 = 同一个数**，再由行为验一次。
+#    （「认得三种字的人」的载体就是这 12 条：谁把某条挪出/挪进旧物谱，这里当场红。）
+import read_kinds as RK10                                              # noqa: E402
+
+_rk10 = RK10.audit(pois=PO, titles=BOOK)
+chk("★ 可读物那个数处处一致（10 §一A %(10)d · 19 §三A %(f)d+%(e)d · 21 §一 %(21)d · 16 §二 %(16)d · "
+    "pois.into_codex %(pc)s · titles.read_all %(ta)s）"
+    % {"10": _rk10["doc"]["10"], "f": _rk10["doc"]["19_fixed"], "e": _rk10["doc"]["19_expand"],
+       "21": _rk10["doc"]["21"], "16": _rk10["doc"]["16"],
+       "pc": _rk10["live"].get("pois.into_codex"), "ta": _rk10["live"].get("titles.read_all")},
+    not _rk10["bad"], _rk10["bad"])
+_READS12 = sorted(k for k, v in PO.items() if v.get("into_codex"))
+
+
+def _read_profile(ids):
+    """读满 ids 这些可读物的档（其余全空 —— 只让 read_all 这一条起作用）。"""
+    return {"day": 4, "level": 3, "name": "试", "loc": "", "node": "", "bag": {}, "equipped": {},
+            "books": {"relic": {i: {"known": True} for i in ids}, "material": {}, "monster": {},
+                      "flavor": {}},
+            "foot": {"nodes": {}, "visits": {}}, "flags": {}, "heard": {}}
+
+
+_FULL = TT.scan(_read_profile(_READS12), dict(CAL.state()))
+_MINUS = TT.scan(_read_profile(_READS12[:-1]), dict(CAL.state()))
+chk("★ 真跑：读满全部 %d 条 → 挂上「%s」· 少一条（%d 条）→ 一个字不给"
+    % (len(_READS12), BOOK["title_three_scripts"]["name"], len(_READS12) - 1),
+    _FULL == ["title_three_scripts"] and _MINUS == [],
+    "满 %s / 少一条 %s" % (_FULL, _MINUS))
 
 # ⑥ 反向：什么都没做过 → 一个都不给
 blank = {"day": 1, "level": 1, "loc": "belt_east", "node": "be_birch", "bag": {}, "equipped": {},

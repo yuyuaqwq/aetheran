@@ -181,6 +181,11 @@ def main(argv) -> int:
         raise SystemExit("可读物与旧物谱（读的）对不上：缺 %s / 多 %s"
                          % (sorted(want_read - have_read), sorted(have_read - want_read)))
 
+    # ── ③b ★ B3-10：那个数还要与**文档那 12 类**对上（10 §一A / 19 §三A / 21 §一 / 16 §二）——
+    #    四处不一致就是「两个数各说一套」；塔内那几条**就地线索**本来就不在这 12 里（见 22 §二）。
+    import read_kinds as _RK3
+    _RK3.assert_agree(pois=pois, relic_read=have_read)
+
     # ── ④ 条数 ≥ 记满（05 §五）────────────────────────────────
     short = {k: (len(codex[k]), v) for k, v in targets.items() if len(codex[k]) < v}
     if short:
