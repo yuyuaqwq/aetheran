@@ -23,7 +23,21 @@ B3-6c 加的那一组（主线三段行文归位 texts · 解 P-17 甲案）：
       「交付」栏的锚 · 不许提别的条才有的人 / 怪（串台哨兵）
   ㉑ ★ 真跑「接 <编号>」/「交 <编号>」各 12 遍：槽位里的字必须**逐字**出现在屏上
       （取不到文案的标记一个都不许有）—— 槽位 → 玩家眼睛的闭环
-  ㉒ 支线 / 生活 / 悬赏的现状登记（**不判红** · 本批没有槽位）：如实印出还有多少条走域内字段
+  ㉒ 归位总账（**不判红** · 两条批一起算）：quests 域 41 条 · 真源 = texts 123 条槽位 ·
+      域里那三个内嵌字段 0 处
+
+B3-8 加的那一组（支线 18 / 生活 8 / 悬赏 3 三段行文归位 · 同一套映射一次收完）：
+  ㉓ ★ 29 条按 chain+order 都算得出**真槽位**（不是 fail-closed 哨兵）· 域里**每一条**都不是
+      哨兵 · 且域名里那三个内嵌字段 `story/progress_text/deliver_text` **0 处**
+      （B3-3 的生成器 `rebuild_prof_quests.py` 还会写那三个字段 —— 谁重跑它，这条当场红）
+  ㉔ ★ 29 条与三份真源**逐条对账**（探针自己解析）：
+      支线 = `24 §二` 的支线表（名字 · 谁给 · 步骤=objective · 奖励=hook · 三条行文落在
+      步骤/奖励的锚上 · 奖励里「」的词一个不落）· 生活 = `28 §四` 新 8 条（+ `21 §二` 两稿
+      对账）· 悬赏 = `24 §二` 悬赏板块 + `05 §一`（报酬区间两处一致 · 域里的钱落在区间里）
+      · 串台哨兵（三段行文里只许提本条文档行出现过的人）· 悬赏三条「交时行文」逐字＝
+      归位前域里那一行（玩家看到的字一个没动）
+  ㉕ ★ 87 条槽位非占位（「待填 / 待写 / 〔 / （待 / 进行中」）· 无阿拉伯数字 · 无机器键 · 互不重复
+  ㉖ ★ 支线 / 生活 / 悬赏 各抽一条真跑：接 / 交(没做完) / 交 —— 三拍的字逐字在屏上、奖励入档
 
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_quests.py
 """
@@ -119,17 +133,14 @@ for k, v in QE.items():
 (ok if not recalc else bad)("★ 主线奖励可复算（奖励 = 等级函数，不手打；坏 %s）" % (recalc or "无"))
 
 # ⑨ 交付文案不为空（三段式的第三段）
-#   ★ B3-6c：取口不再直接读域字段 —— 主线走 texts 槽位（`QUEST_MAIN%02d_DELIVER`），
-#     其余链条读域内字段。用**代码里那个映射**（`cmds_quest._slot_of` / `_FIELD_OF`），
-#     不另写一份镜像表（镜像表漂了就把这条判据变成假的）。
+#   ★ B3-6c / B3-8：取口就是 code 里那个映射（`cmds_quest._slot_of` / `_beat` · 不另写镜像表）——
+#     四条链都走 texts 槽位；域里那三个内嵌字段已裁掉（㉓ 钉着「0 处」）。
 from content import cmds_quest as CQ                                      # noqa: E402
 
 
 def _beat_of(x, part):
     slot = CQ._slot_of(x, part)
-    if slot:
-        return (TX.get(slot) or {}).get("value") or ""
-    return x.get(CQ._FIELD_OF[part]) or ""
+    return (TX.get(slot) or {}).get("value") or ""
 
 
 no_deliver = [k for k, v in QE.items() if not _beat_of(v, "DELIVER")]
@@ -226,11 +237,11 @@ for trade, _what, rows in doc21:
                 why.append("内容「%s」vs 文档「%s」" % (v["objective"], content))
             else:
                 wording.append("%s：「%s」vs「%s」" % (name, v["objective"], content))
-        if not _recon(v.get("deliver_text"), reward):
-            why.append("奖励「%s」对不上「%s」" % (v.get("deliver_text"), reward))
+        if not _recon(v.get("hook"), reward):
+            why.append("奖励「%s」对不上「%s」" % (v.get("hook"), reward))
         if why:
             mismatch.append((name, why))
-        recon_lines.append("%s → %s" % (name, v.get("deliver_text")))
+        recon_lines.append("%s → %s" % (name, _beat_of(v, "DELIVER")))
 extra = [v["name"] for k, v in trade_q.items() if v["name"] not in doc16]
 (ok if len(doc16) == 16 and not notfound and not mismatch and not extra else bad)(
     "★ 与 21 §二 逐条对账（16 条 · 名字/副业/奖励；缺 %s · 不符 %s · 多出 %s）"
@@ -531,22 +542,260 @@ for _n in range(1, 13):
 for _ln in drive_lines:
     print("      %s" % _ln)
 
-# ㉒ 支线 / 生活 / 悬赏的现状登记（**不判红** —— 本批没做：没有槽位）
-_reg, _cnt_place, _cnt_todo = {}, 0, 0
+# ㉒ 归位总账（**不判红** —— 数字登记 · 判据在 ㉓–㉖）
+_lane = {}
 for _k, _v in QE.items():
-    if _v.get("chain") == "main":
-        continue
-    _reg.setdefault(_v["chain"], []).append(_k)
-    if "进行中" in str(_v.get("progress_text") or ""):
-        _cnt_place += 1
-    if "待写" in str(_v.get("story") or ""):
-        _cnt_todo += 1
-notes.append("B3-6c 现状登记（**本批不做** · 别当成「任务文案已全归位」）：主线 12 条已归 texts；"
-             "其余 %d 条**还没有槽位**、仍读 quests 域内联字段（支线 %d / 生活 %d / 悬赏 %d）—— "
-             "其中 %d 条的 progress_text 还是备注腔「（进行中：…）」、%d 条的 story 还写着「（待写）」"
-             "（其余链条的 story 今天没有任何消费端，所以它印不到玩家眼前）"
-             % (len(QE) - 12, len(_reg.get("side") or []), len(_reg.get("trade") or []),
-                len(_reg.get("bounty") or []), _cnt_place, _cnt_todo))
+    _lane.setdefault(_v["chain"], []).append(_k)
+notes.append("B3-6c + B3-8 归位总账：quests 域 %d 条（主线 %d / 支线 %d / 生活 %d / 悬赏 %d）—— "
+             "三段行文真源唯一 = texts 的 %d 条槽位（主线 36 + 支线/生活/悬赏 87）；"
+             "域里 `story` / `progress_text` / `deliver_text` 三个内嵌字段 **0 处**"
+             % (len(QE), len(_lane.get("main") or []), len(_lane.get("side") or []),
+                len(_lane.get("trade") or []), len(_lane.get("bounty") or []),
+                3 * len(QE)))
+
+# ══════════════════════════════════════════════════════════════
+# ㉓–㉖ B3-8 支线 18 / 生活 8 / 悬赏 3 三段行文归位 texts（同一套映射 · 一次收完）
+#      源：`24_任务线_v1.md §二`（支线表 + 悬赏板块）· `28 §四`（新 8 条）+ `21 §二`（奖励）
+#          · `05_玩法数值口径_v1.md §一`（悬赏报酬区间）
+#      ★ 探针**自己**解析那几份文档再比（照 ⑬ 对 21 §二 / ⑳ 对 24 §一 的做法），不信域的自述。
+# ══════════════════════════════════════════════════════════════
+DOC05 = os.path.join(PLAN, "06_第一阶段垂直切片", "05_玩法数值口径_v1.md")
+_ROW_SIDE = _re.compile(r"^\|\s*(\d+)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*$")
+_BOUNTY_RANGE = _re.compile(r"报酬\s*(\d+)[–\-~](\d+)（普通）\s*/\s*(\d+)[–\-~](\d+)（精英）"
+                            r"\s*/\s*(\d+)[–\-~](\d+)（头目）")
+#: 05 §一 的那一行（同一件事的另一份写法）：`悬赏报酬 | 按目标档位：普通 **20–40** 币 · 精英 …`
+_BOUNTY_RANGE05 = _re.compile(r"按目标档位：普通\s*\**\s*(\d+)[–\-~](\d+)\s*\**\s*币\s*·\s*"
+                              r"精英\s*\**\s*(\d+)[–\-~](\d+)\s*\**\s*·\s*"
+                              r"头目\s*\**\s*(\d+)[–\-~](\d+)\s*\**")
+
+
+def _parse_side24():
+    """24 §二 → (支线 rows, 悬赏板块文本)。支线 row = (序号, 名字, 谁给, 步骤, 奖励)。"""
+    if not os.path.exists(DOC24):
+        raise SystemExit("24 号文档不在：%s" % DOC24)
+    lines = [x.rstrip("\r") for x in
+             _io.open(DOC24, encoding="utf-8", newline="").read().split("\n")]
+    on, rows, blk_at, stop = False, [], None, None
+    for i, ln in enumerate(lines):
+        if ln.startswith("## 二、"):
+            on = True
+            continue
+        if on and ln.startswith("## 三、"):
+            stop = i
+            break
+        if not on:
+            continue
+        if ln.startswith("**悬赏板**"):
+            blk_at = i
+            continue
+        if blk_at is None:
+            m = _ROW_SIDE.match(ln)
+            if m and m.group(1).isdigit() and "---" not in ln:
+                rows.append((int(m.group(1)), m.group(2), m.group(3), m.group(4), m.group(5)))
+    blk = lines[blk_at:stop] if blk_at is not None else []
+    return rows, "\n".join(blk)
+
+
+side24, bounty_blk = _parse_side24()
+side_rows = {r[1]: r for r in side24}
+#: 悬赏报酬区间：24 §二 与 05 §一 **两处都要写着**，且必须一致（双源对账）
+_b24 = _BOUNTY_RANGE.search(bounty_blk)
+_b05 = _BOUNTY_RANGE05.search(_io.open(DOC05, encoding="utf-8", newline="").read()
+                              if os.path.exists(DOC05) else "")
+_rng = None
+if _b24:
+    _rng = {"普通": (int(_b24.group(1)), int(_b24.group(2))),
+            "精英": (int(_b24.group(3)), int(_b24.group(4))),
+            "头目": (int(_b24.group(5)), int(_b24.group(6)))}
+(ok if side24 and _rng and _b05 and _b05.groups() == _b24.groups() else bad)(
+    "★ 悬赏板真源：24 §二 的报酬区间 %s ＝ 05 §一 的同一条（%s）" %
+    (_rng, "两处一致" if _b05 and _b24 and _b05.groups() == _b24.groups() else "对不上"))
+
+side_q = {k: v for k, v in QE.items() if v.get("chain") == "side"}
+trade_chain_q = {k: v for k, v in QE.items() if v.get("chain") == "trade"}
+bounty_q = {k: v for k, v in QE.items() if v.get("chain") == "bounty"}
+#: 串台哨兵只认**人**（NPC 名）—— 地名共享是合理的（支线本来就横跨三带）
+_NPC_NAMES = {str(v.get("name")) for v in NPCS.values() if v.get("name")}
+LANES = (("支线", "side", side_q, 18, "24 §二"), ("生活", "trade", trade_chain_q, 8, "28 §四"),
+         ("悬赏", "bounty", bounty_q, 3, "24 §二 悬赏板"))
+
+# ㉓ ★ 每一条都能按 chain + order 算出**真槽位**（不是哨兵）；域里那三个内嵌字段 0 处
+slot_bad, keys29 = [], []
+for _kind, _chain, _qs, _want, _src in LANES:
+    for _k, _x in _qs.items():
+        for _p in ("STORY", "PROGRESS", "DELIVER"):
+            _s = CQ._slot_of(_x, _p)
+            if str(_s).startswith("QUEST_UNMAPPED"):
+                slot_bad.append((_k, _p, _s))
+            elif _s not in TX:
+                slot_bad.append((_k, _p, "texts 里没有 " + _s))
+            else:
+                keys29.append(_s)
+# 另外两条链（主线 / 后面新加的）也一并钉：**域里每一条**都算得出真槽位
+allq_bad = [(k, p) for k, v in QE.items() for p in ("STORY", "PROGRESS", "DELIVER")
+            if str(CQ._slot_of(v, p)).startswith("QUEST_UNMAPPED")]
+inline = sorted("%s.%s" % (k, f) for k, v in QE.items()
+                for f in ("story", "progress_text", "deliver_text") if f in v)
+(ok if not slot_bad and not allq_bad and not inline else bad)(
+    "★ 29 条按 chain+order 都算得出真槽位（坏 %s）· 域里每一条都不是哨兵（坏 %s）· "
+    "那三个内嵌字段 0 处（还有 %s）" % (slot_bad or "无", allq_bad or "无", inline or "无"))
+
+# ㉔ ★ 29 条与三份真源**逐条对账**（名字 · 谁给 · 步骤/内容 · 奖励锚 · 不串台 · 悬赏报酬区间）
+_side_ok, _why_side, _lines29 = 0, [], []
+_doc28_new = {r[0]: r for r in doc_new8}
+_doc21_r = {name: (content, reward) for _t, _w, rows in doc21 for name, content, reward in rows}
+
+
+def _common(a, b):
+    """最长公共子串（打印给人看用 —— 判据就是它的长度；与 ⑬ 那个 `_lcs` 同源）。"""
+    a, b = _norm(a), _norm(b)
+    row = [0] * (len(b) + 1)
+    best = ""
+    for i, ca in enumerate(a, 1):
+        prev, row = row, [0] * (len(b) + 1)
+        for j, cb in enumerate(b, 1):
+            if ca == cb:
+                row[j] = prev[j - 1] + 1
+                if row[j] > len(best):
+                    best = a[i - row[j]:i]
+    return best
+
+
+def _anchor(a, b, n=2):
+    """共同片段 ≥ n 字（子串判据 —— 文案是照文档写的**行文**，不是文档的抄件 · 与 ⑳ 同款）。"""
+    return len(_common(a, b)) >= n
+
+
+for _kind, _chain, _qs, _want, _src in LANES:
+    if len(_qs) != _want:
+        _why_side.append("%s 条数 %d ≠ %d" % (_kind, len(_qs), _want))
+    for _k, _x in sorted(_qs.items(), key=lambda kv: kv[1]["order"]):
+        _3 = "".join(_beat_of(_x, p) for p in ("STORY", "PROGRESS", "DELIVER"))
+        _dl = _beat_of(_x, "DELIVER")
+        _own = [_x["name"], _x["objective"]]
+        _giver = (NPCS.get(_x["giver"]) or {}).get("name") or _x["giver"]
+        if _chain == "side":
+            _r = side_rows.get(_x["name"])
+            if not _r:
+                _why_side.append("%s 不在 24 §二 支线表里" % _k)
+                continue
+            _n, _nm, _who, _steps, _reward = _r
+            _own += [_steps, _reward]
+            if _who != _giver:
+                _why_side.append("%s 谁给「%s」≠ 域 giver「%s」" % (_k, _who, _giver))
+            if _norm(_steps) != _norm(_x["objective"]):
+                _why_side.append("%s 步骤「%s」≠ objective「%s」" % (_k, _steps, _x["objective"]))
+            if _norm(_reward) != _norm(_x.get("hook")):
+                _why_side.append("%s 奖励「%s」≠ hook「%s」" % (_k, _reward, _x.get("hook")))
+            if not _anchor(_3, _steps):
+                _why_side.append("%s 三条行文没落在「步骤」上" % _k)
+            if not _anchor(_dl, _reward):
+                _why_side.append("%s 交时那一段没落在「奖励」上" % _k)
+            _miss = [t for t in _re.findall(r"「([^」]+)」", _reward) if t not in _3]
+            if _miss:
+                _why_side.append("%s 奖励里的词一个都没落：%s" % (_k, _miss))
+        elif _chain == "trade":
+            _r = _doc28_new.get(_k)
+            if not _r:
+                _why_side.append("%s 不在 28 §四 新 8 条里" % _k)
+                continue
+            _qid, _nm, _tr, _prose, _reward, _who = _r
+            _own += [_prose, _reward]
+            if _nm != _x["name"] or _tr != _x.get("trade") or _who != _giver:
+                _why_side.append("%s 名字/副业/挂谁 与 28 §四 对不上（%s）" % (_k, _r))
+            if _norm(_prose) != _norm(_x["objective"]):
+                _why_side.append("%s 内容「%s」≠ objective「%s」" % (_k, _prose, _x["objective"]))
+            if not _anchor(_3, _prose):
+                _why_side.append("%s 三条行文没落在「内容」上" % _k)
+            if not _anchor(_dl, _reward):
+                _why_side.append("%s 交时那一段没落在「奖励」上" % _k)
+            _miss = [t for t in _re.findall(r"「([^」]+)」", _reward) if t not in _3]
+            if _miss:
+                _why_side.append("%s 奖励里的词一个都没落：%s" % (_k, _miss))
+            _a21 = _doc21_r.get(_x["name"])
+            if not _a21 or not _recon(_a21[1], _reward):
+                _why_side.append("%s 21 §二 奖励与 28 §四 对不上（%s）" % (_k, _a21))
+        else:                                   # 悬赏档：真源是 24 §二 悬赏块 + 05 §一
+            _tier = _x["name"].split("·")[-1]
+            _lo, _hi = (_rng or {}).get(_tier, (0, -1))
+            if not (_lo <= int(_x["reward_gold"]) <= _hi):
+                _why_side.append("%s 报酬 %d 不在文档区间 %s（%s）"
+                                 % (_k, _x["reward_gold"], (_lo, _hi), _x["name"]))
+            if _x["name"] != "悬赏·%s" % _tier or _tier not in _x["objective"]:
+                _why_side.append("%s 名字/目标与档位对不上：%s" % (_k, _x["objective"]))
+        # 串台哨兵：三段行文里只许提**本条文档行里出现过的人**（谁给 / 名字 / 步骤 / 奖励）
+        _doc_text = "".join(_own)
+        _cross = sorted(n for n in sorted(_NPC_NAMES)
+                        if n not in _doc_text and n not in (_giver,) and n in _3)
+        if _cross:
+            _why_side.append("%s 串台（提了别条的人）%s" % (_k, _cross))
+        _side_ok += 1
+        _lines29.append("%s %-9s 锚「%s」（%d 字）｜ 交「%s」" % (
+            {"side": "支", "trade": "生", "bounty": "赏"}[_chain], _x["name"],
+            _common(_3, "".join(_own))[:6], _lcs(_norm(_3), _norm("".join(_own))), _dl[:16]))
+#: 悬赏那三条的「交时行文」= 归位前域里的 `deliver_text` **逐字保留**（玩家看到的字一个没动）
+_BOUNTY_FROZEN = {"q_bounty_normal": "交了。下次还有。",
+                  "q_bounty_elite": "这活儿你接得住。",
+                  "q_bounty_boss": "……我没想到你真办到了。"}
+_frozen_bad = [(k, _beat_of(QE[k], "DELIVER")) for k, want in _BOUNTY_FROZEN.items()
+               if _beat_of(QE.get(k) or {}, "DELIVER") != want]
+(ok if not _why_side and not _frozen_bad and _side_ok == 29 else bad)(
+    "★ 29 条与真源逐条对账（支线 24 §二 / 生活 28 §四 + 21 §二 / 悬赏 24 §二 悬赏板 + 05 §一）："
+    "名字 · 谁给 · 步骤=objective · 奖励锚落在交时 · 不串台（坏 %s）· 悬赏三条交时行文逐字＝归位前"
+    "域里那一行（坏 %s）" % (_why_side or "无", _frozen_bad or "无"))
+for _ln in _lines29:
+    print("      %s" % _ln)
+
+# ㉕ ★ 87 条槽位值都非占位（「待填 / 待写 / 〔 / （待 / 进行中」）+ 与主线同款的硬约束
+_place87 = [(s, str((TX.get(s) or {}).get("value"))[:16]) for s in keys29
+            if any(t in str((TX.get(s) or {}).get("value") or "") for t in PLACE)]
+_digit87 = [s for s in keys29 if _re.search(r"[0-9]", str((TX.get(s) or {}).get("value") or ""))]
+_keyleak87 = [s for s in keys29
+              if _re.search(r"(q_[a-z_]+|[A-Z][A-Z0-9_]{3,})",
+                            str((TX.get(s) or {}).get("value") or ""))]
+_dup87 = [s for s in set(keys29)
+          if [str((TX.get(x) or {}).get("value")) for x in keys29].count(
+              str((TX.get(s) or {}).get("value"))) > 1]
+(ok if len(keys29) == 87 and len(set(keys29)) == 87 and not _place87
+ and not _digit87 and not _keyleak87 and not _dup87 else bad)(
+    "★ 29 条 × 3 = 87 条槽位齐备 · 都不是占位（还是占位 %s）· 无阿拉伯数字（%s）· 无机器键（%s）· "
+    "互不重复（%s）" % (_place87 or "无", _digit87 or "无", _keyleak87 or "无", _dup87 or "无"))
+
+# ㉖ ★ 三类各真跑一遍：接 / 交(没做完) / 交 —— 槽位里的字必须**逐字**出现在屏上
+_drive3, _drive3_lines = [], []
+_DRIVE = (("支线", "q_side_02", "item", {"bag": {"i_material_old_iron": 1}}),
+          ("生活", "q_trade_02", "visit+item",
+           {"foot": {"nodes": {"belt_north:bn_tower": 1}}, "bag": {"i_material_iron_scrap": 1}}),
+          ("悬赏", "q_bounty_normal", "legacy-flag", {"flags": {"side_悬赏·普通": True}}))
+for _kind, _k, _shape, _fix in _DRIVE:
+    _x = QE[_k]
+    _n = int(_x["order"])
+    _lv = int(_x["min_level"])
+    _acc = _drive(CQ.quest_accept, _player(level=_lv), "接 %d" % _n)
+    _nod = _drive(CQ.quest_deliver, _player(level=_lv, flags={"quests_active": [_k]}), "交 %d" % _n)
+    _flags = {"quests_active": [_k]}
+    _flags.update({k: v for k, v in _fix.items() if k == "flags"}.get("flags", {}) or {})
+    _p2 = _player(level=_lv)
+    _p2.update({k: v for k, v in _fix.items() if k != "flags"})
+    _p2["flags"] = _flags
+    _pay = _drive(CQ.quest_deliver, _p2, "交 %d" % _n)
+    _want = {p: _beat_of(_x, p) for p in ("STORY", "PROGRESS", "DELIVER")}
+    if _want["STORY"] not in _acc:
+        _drive3.append((_k, "接", _acc[:2]))
+    if not any(ln.startswith("还没做完") and _want["PROGRESS"] in ln for ln in _nod):
+        _drive3.append((_k, "交(没做完)", _nod[:2]))
+    if _want["DELIVER"] not in _pay or _k not in (_p2.get("flags") or {}).get("quests_done", []):
+        _drive3.append((_k, "交", _pay[:3]))
+    if any(MISSING in ln for ln in _acc + _nod + _pay):
+        _drive3.append((_k, "取不到文案", ""))
+    _drive3_lines.append("%s %s（编号 %d）接「%s」｜ 没做完「%s」｜ 交「%s」"
+                         % (_kind, _x["name"], _n, _want["STORY"][:14],
+                            _want["PROGRESS"][:12], _want["DELIVER"][:14]))
+(ok if not _drive3 and len(_drive3_lines) == 3 else bad)(
+    "★ 支线 / 生活 / 悬赏 各抽一条真跑：接 / 交(没做完) / 交 三拍的字逐字在屏上、奖励入档"
+    "（坏 %s）" % (_drive3 or "无"))
+for _ln in _drive3_lines:
+    print("      %s" % _ln)
 
 for n in notes:
     print("  · " + n)

@@ -49,14 +49,27 @@
 `deliver_text`（写着「待写」「（进行中：…）」），而 texts 域的 `QUEST_MAIN%02d_{STORY,PROGRESS,
 DELIVER}` 36 条**谁也读不到** —— 两处真源。裁定甲案：**真源归 texts**。
 
-  · 域里那三个字段**主线已裁掉**（支线 / 生活 / 悬赏那 29 条本批没有槽位，照旧留域内 ——
-    现状登记在 `scripts/probe_quests.py` ⑲，别当成「已经全归位」）
+  · 域里那三个字段**主线已裁掉**（`content/data/quests.json`）
   · 消费端只按 `chain` + `order` 映射取槽位（`_slot_of` / `_beat` 两个口）——
     **不拿名字拼键名**，一个中文都不内联
   · `story` 的落点 = `接 <编号>` 那一下（槽位出处自己写着「接时行文」）；
     `progress_text` = 交活没做完那一行；`deliver_text` = 交掉之后那一行
-  · 判据：`scripts/probe_quests.py` ⑲（12 条真取到 · 与 24 号文档逐条对账 · 36 条非占位 ·
-    支线/生活/悬赏现状登记）
+  · 判据：`scripts/probe_quests.py` ⑲（12 条真取到 · 与 24 号文档逐条对账 · 36 条非占位）
+
+★ B3-8 支线 18 / 生活 8 / 悬赏 3 三段行文归位（同一套办法 · 一次收完）
+------------------------------------------------------------------
+B3-6c 只做了主线 12 条；剩下 29 条（支线 18 · 生活 8 · 悬赏 3）仍读域内字段 —— `story` 是
+「（待写）」、`progress_text` 是备注腔「（进行中：…）」，而它们的 `deliver_text` 今天**是玩家
+看得到的**（交活那一行）。本批照同一套映射把这 29 条也归位：
+
+  · 槽位键 = 链模板 + `order`（`QUEST_SIDE%02d` 13–30 · `QUEST_TRADE%02d` 31–38 ·
+    `QUEST_BOUNTY%02d` 101–103）—— 与主线那 36 条同一个形状（`_SLOT_TPL` 四个字面量）
+  · 域里那三个字段**29 条也裁掉**（现在是「四条链一条不剩」；探针 ㉓ 钉着「域里 0 处」）
+  · 文案依据只有三份真源：支线 = `24 §二`（步骤 / 奖励）· 生活 = `28 §四` + `21 §二` ·
+    悬赏 = `24 §二` 的悬赏板块 + `05 §一`（报酬区间 / 经验 1/8）—— 文档只给一句就只写那一拍
+  · 悬赏那三条的「交时行文」= 归位前域里的 `deliver_text` **逐字保留**（玩家看到的字一个没动）
+  · 判据：`scripts/probe_quests.py` ㉓㉔㉕㉖（29 条真取到槽位 · 与三份文档逐条对账 ·
+    87 条非占位 · 三类各真跑一遍接/交）
 """
 from __future__ import annotations
 
@@ -84,31 +97,36 @@ def _set(p, key, val):
     p["flags"] = f
 
 
-# ── B3-6c：主线三段行文（接 / 进行中 / 交）从 texts 槽位取 ────────────────────
-# 真源：`00_总纲/17_文案收口口径_v1.md` 的 `QUEST_MAIN%02d_{STORY,PROGRESS,DELIVER}` 表（36 条）。
-# P-17 甲案：quests 域内联的 story / progress_text / deliver_text 三个字段**主线已裁掉** ——
-# 消费端只按 `chain` + `order` 映射取槽位；支线 / 生活 / 悬赏本批还没有槽位，照旧读域内字段
-# （现状登记在 `scripts/probe_quests.py` ⑲）。
-_FIELD_OF = {"STORY": "story", "PROGRESS": "progress_text", "DELIVER": "deliver_text"}
+# ── B3-6c / B3-8：任务三段行文（接 / 进行中 / 交）都从 texts 槽位取 ─────────────
+# 真源：`00_总纲/17_文案收口口径_v1.md` 的 `QUEST_{MAIN,SIDE,TRADE,BOUNTY}%02d_{STORY,PROGRESS,
+# DELIVER}` 表（B3-6c 主线 36 条 + B3-8 支线/生活/悬赏 87 条 = 123 条）。
+# P-17 甲案：quests 域内联的 story / progress_text / deliver_text 三个字段**四条链全裁掉** ——
+# 消费端只按 `chain` + `order` 映射取槽位（一个中文都不内联）。
+#   · `order` 是域里现成的稳定标识（『接 <编号>』用的就是它：主线 1–12 · 支线 13–30 ·
+#     生活 31–38 · 悬赏档 101–103），所以键名 = 链模板 + 编号 —— 不拿名字拼键名。
+#   · 四条链的模板写成**字面量**（`_SLOT_TPL`）：probe_copy ⑤ 的「口径表每条都被引用」认这种
+#     `前缀%02d_%s` 形状（模板拼出来的键也算引用），别改成运行时拼串。
+#   · 认不出的链**不许静默留白**：回一个 fail-closed 哨兵键 —— `T()` 当场回显
+#     `[MISSING TEXT: QUEST_UNMAPPED_STORY]`（探针 ㉓ 也钉着「域里每条都算得出真槽位」）。
+_SLOT_TPL = {"main": "QUEST_MAIN%02d_%s", "side": "QUEST_SIDE%02d_%s",
+             "trade": "QUEST_TRADE%02d_%s", "bounty": "QUEST_BOUNTY%02d_%s"}
 
 
 def _slot_of(x, part):
-    """主线 → 槽位名（`QUEST_MAIN%02d_<PART>`）；不是主线 ⇒ None（本批没有它的槽位）。
+    """这条委托的这一拍 → 槽位名（`QUEST_<链>%02d_<PART>`）；认不出的链 ⇒ fail-closed 哨兵键。
 
-    ★ 只认「主线 + 编号」这一个映射 —— 不拿名字拼键名（名字改一个字，槽位不该跟着漂）。
+    ★ 只认「链 + 编号」这一个映射 —— 不拿名字拼键名（名字改一个字，槽位不该跟着漂）。
     ★ 编号对不上（写缺了 / 超出台账）时 `T()` 会把键名回显出来（fail-closed），不静默留白。
     """
-    if x.get("chain") != "main":
-        return None
-    return "QUEST_MAIN%02d_%s" % (int(x.get("order") or 0), part)
+    tpl = _SLOT_TPL.get(str(x.get("chain") or ""))
+    if tpl is None:
+        return "QUEST_UNMAPPED_%s" % part
+    return tpl % (int(x.get("order") or 0), part)
 
 
 def _beat(x, part):
-    """三段行文的一口（唯一取口）—— 主线走 texts 槽位，其余链条走域内字段。"""
-    slot = _slot_of(x, part)
-    if slot:
-        return T(slot)
-    return x.get(_FIELD_OF[part]) or ""
+    """三段行文的一口（唯一取口）—— 四条链都走 texts 槽位（域内那三个字段已裁掉）。"""
+    return T(_slot_of(x, part))
 
 
 # ── 副业（B3-3 · 解 P-14「选甲」）：四个副业的声明在 quests 域的 `_meta.trades` ──────
@@ -357,11 +375,8 @@ async def quest_accept(env, sink, uid, player):
         player.update(p)
     _save(env)
     yield T("SYS_JOB_TAKEN", name=x["name"])
-    # ★ B3-6c：接时那一段（槽位自己的出处就写着「接时行文」）—— 只有主线有槽位，
-    #   其余链条**一行都不多**（与改前逐字节相同）。
-    slot = _slot_of(x, "STORY")
-    if slot:
-        yield T(slot)
+    # ★ B3-6c / B3-8：接时那一段（槽位自己的出处就写着「接时行文」）—— 四条链都取槽位。
+    yield _beat(x, "STORY")
     yield "  " + T("SYS_JOB_TODO", objective=x["objective"])
     if x.get("insight"):
         yield "  " + T("SYS_JOB_INSIGHT", insight=x["insight"])
@@ -409,7 +424,7 @@ async def quest_deliver(env, sink, uid, player):
         player.update(p)
     _save(env)
     yield T("SYS_JOB_DELIVERED", name=x["name"])
-    yield _beat(x, "DELIVER")         # ★ B3-6c：交时那一段（主线走槽位；其余链条读域内字段）
+    yield _beat(x, "DELIVER")         # ★ B3-6c / B3-8：交时那一段（四条链都走槽位）
     yield T("SYS_JOB_REWARD", exp=x["reward_exp"], gold=x["reward_gold"])
     if leveled:
         yield T("SYS_JOB_LEVELUP", level=lv)

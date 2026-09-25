@@ -36,6 +36,7 @@ st = load_stack(str(REPO), inject={"db_path": DB, "clock": lambda: FIXED})
 st.install()
 
 from content import calendar as CAL                                  # noqa: E402
+from content import cmds_quest as CQ                                 # noqa: E402
 from content import cmds_recipe as CR                                # noqa: E402
 from content import gear as GB                                       # noqa: E402
 from content import combat as CB                                     # noqa: E402
@@ -99,12 +100,20 @@ def _by_name(nm):
     return None, None
 
 
+def _deliver_of(qid):
+    """这条委托的「交时那一段」—— ★ B3-8：三段行文归位 texts 后，域里 `deliver_text` 已裁掉，
+    真源改读**槽位**（`cmds_quest._slot_of`，不另写镜像表）；域里那一格（`hook`）也一并带上，
+    两处都得写着这道菜 —— 判据只加强。"""
+    x = Q.get(qid) or {}
+    slot = CQ._slot_of(x, "DELIVER")
+    return "%s ｜ %s" % ((TX.get(slot) or {}).get("value") or "", x.get("hook") or "")
+
+
 named = []
 for nm, qid, word in (("菌汤", "q_side_04", "菌汤"), ("一锅炖", "q_side_06", "一锅炖")):
     rid, v = _by_name(nm)
-    q = Q.get(qid) or {}
-    named.append((nm, bool(v), (v or {}).get("learn"), word in str(q.get("deliver_text") or "")))
-chk("★ 具名配方：菌汤 ← q_side_04 · 一锅炖 ← q_side_06（且委托的交付物就写着它）",
+    named.append((nm, bool(v), (v or {}).get("learn"), word in _deliver_of(qid)))
+chk("★ 具名配方：菌汤 ← q_side_04 · 一锅炖 ← q_side_06（且委托的交时行文与域里那一格都写着它）",
     all(a and b and c for _n, a, b, c in named), "%s" % named)
 
 # ⑤ ★ 强化：结构 + 对着源文档重解析一遍复核（不拿域里的值自证）
