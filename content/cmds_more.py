@@ -83,9 +83,21 @@ def _bag_hit(p, want):
 
 
 def _fmt(v) -> str:
-    """面板上的数：整数不带小数点（14.0 → 14），小数留一位（14.36 → 14.4）。"""
-    f = float(v)
-    return "%d" % int(f) if f.is_integer() else "%.1f" % f
+    """面板上的**数值**：整数显示（`02_数值宪法/01_属性字典与基础公式.md §一`「数值 = 整数显示，
+    内部浮点，计算保留 6 位」· 台账 K9「面板 / 怪数值取整（数值凑整）」）。
+
+    ★ B4-22：原先「小数留一位」（14.36 → 14.4）—— 那是 `02_数值宪法/_旧案参考` 的写法
+      （旧案「ATK/MATK 保留 1 位」），与现行宪法 §一 打架；怪面板那一侧早就全字段取整
+      （12 号文档：「已按最终值重算并**全字段取整**（数值凑整）」），只有玩家这一页还在印
+      16.4 / 20.4 / 5.6。取整口径与 `rebuild_monsters` 一致（`round()`）。
+    """
+    return "%d" % round(float(v))
+
+
+def _fmt_pct(v) -> str:
+    """面板上的**率**：显示成百分比、一位小数（同一份 §一：「率（由数值算出）→ 显示成百分比，
+    一位小数」）—— 率与数值**两个写法**，别混成一条。"""
+    return "%.1f" % float(v)
 
 
 def _panel_rows(actor: dict) -> list:
@@ -179,7 +191,7 @@ async def attrs(env, sink, uid, player):
                            gear, buffs=buffs, uid=uid)  # ★ B3-28 ①：栈 id 带上这个人
     yield T("SYS_ATTR_HEAD", who=name_with_title(p), cls=_cls_label(cls), level=p.get("level"))
     yield T("SYS_ATTR_VITAL", hp=_fmt(actor.get("max_hp", 0)), mo=_fmt(actor.get("max_mp", 0)),
-            crit=_fmt(_crit_rate(actor) * 100))
+            crit=_fmt_pct(_crit_rate(actor) * 100))
     for line in _panel_rows(actor):
         yield line
     al = ALLOC.of_record(p)                            # ★ P-34：这一档实际分了多少（唯一口）

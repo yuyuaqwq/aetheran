@@ -937,9 +937,14 @@ _BAD12 = []
 
 
 def _num12(v):
-    """面板数的写法（整数不带小数点 · 小数一位）—— 期望值按这一条现算，不手写镜像串。"""
-    f = float(v)
-    return "%d" % int(f) if f.is_integer() else "%.1f" % f
+    """面板**数值**的写法：整数显示（`02_数值宪法 §一` · 台账 K9）—— 取整口径与
+    `rebuild_monsters` 一致（`round()`）。期望值按这一条现算，不手写镜像串。"""
+    return "%d" % round(float(v))
+
+
+def _pct12(v):
+    """面板**率**的写法：百分比、一位小数（同一份 §一）。"""
+    return "%.1f" % float(v)
 
 
 def _decl_usage(key):
@@ -990,8 +995,8 @@ def _rate21(rating):
 
 
 def _crit_pct21(cls_id, level, alloc, gear=None):
-    """`属性` 页「暴击率」那一格该印的数（百分比，一格小数 —— 宪法 §一）。"""
-    return _num12(_rate21(_rating21(cls_id, "crit", level, alloc, gear)) * 100)
+    """`属性` 页「暴击率」那一格该印的数（**率** ⇒ 百分比、一位小数 —— 宪法 §一）。"""
+    return _pct12(_rate21(_rating21(cls_id, "crit", level, alloc, gear)) * 100)
 
 
 def _eva_row21(cls_id, level, alloc, gear=None):
@@ -1113,11 +1118,11 @@ try:
         _BAD12.append(("属性 的生命上限 != hp_cap（两个源）", _gA[:2], _want_cap))
     _labs12 = [_r("SYS_STAT_%s" % s) for _k, s in _CM12.PANEL_ROWS]
     # ★ P-34：尾注由三行变四行（多了一行「没投的点」）⇒ 二级属性那几行的范围**按行数取**，
-    #   不再靠"尾部减 3"这种位置猜（判据的意思没变：九行都要认得出标签）。
+    #   不再靠"尾部减 3"这种位置猜（判据的意思没变：九行都要认得出标签；B4-21 起「闪避」那一行终于真出 —— PANEL_ROWS 九条整）。
     _n12 = len(_rows12(_actA))
     if not all(any(lab in _ln for lab in _labs12) for _ln in _gA[2:2 + _n12]):
         _BAD12.append(("属性 的二级属性行认不出标签", _gA[:3]))
-    chk("★ `属性` 真敲：抬头 / 生命上限（= `hp_cap` 那唯一来源）/ 十行二级属性 / 加点 **+ 没投的点** / "
+    chk("★ `属性` 真敲：抬头 / 生命上限（= `hp_cap` 那唯一来源）/ 九行二级属性 / 加点 **+ 没投的点** / "
         "装备 —— 与 `panel_build` 现算的期望逐字一致",
         not [x for x in _BAD12 if x[0].startswith("属性")],
         "%s" % [x for x in _BAD12 if x[0].startswith("属性")][:2])
@@ -1209,6 +1214,27 @@ try:
     chk("★ B4-21 `属性` 那一页的两个非线性数（真敲 + 真源现算）：暴击率那一格 = 宪法 F3 现算"
         "（六职业各不相同 · 都不是 0 · 换 crit 装跟着涨）· 二级属性里「闪避」那一行真在且 = 真源"
         "现算（换 eva 装跟着涨）", not _B21, "%s" % _B21[:2])
+
+    #: ── ★ B4-22：那一页的**数值**一律整数显示（`02_数值宪法 §一`「数值 = 整数显示，内部浮点」·
+    #:   台账 K9「面板 / 怪数值取整」）—— 十行逐行与**真源现算**比，且行值里不许出现小数点。
+    #:   原先 `_fmt` 是「小数留一位」（14.36 → 14.4）—— 那是 `_旧案参考` 的写法（旧案「ATK/MATK
+    #:   保留 1 位」）；怪面板那一侧早就全字段取整，只有玩家这一页还在印 16.4 / 20.4 / 5.6。
+    _ENG2CONST22 = {v: k for k, v in PB.KEYMAP.items()}          # 引擎键名 → 宪法键名（唯一次映射）
+    _gp22 = _say12("属性")
+    _badInt22 = []
+    for _k22, _slot22 in _CM12.PANEL_ROWS:
+        _field22 = _ENG2CONST22.get(_k22, _k22)
+        _want22 = _r("SYS_ATTR_ROW", label=_r("SYS_STAT_%s" % _slot22),
+                     value="%d" % round(_rating21(_clsB, _field22, _lvB, _alB, _grB)))
+        if _want22 not in _gp22:
+            _badInt22.append((_slot22, _want22,
+                              [ln for ln in _gp22 if _r("SYS_STAT_%s" % _slot22) in ln]))
+    _vals22 = [ln[2:].rsplit(" ", 1)[-1] for ln in _gp22 if ln.startswith("· ")]
+    if any("." in _v22 for _v22 in _vals22):
+        _badInt22.append(("行值里有小数点（不是整数显示）", _vals22))
+    chk("★ B4-22 二级属性那 %d 行**逐行 = 真源现算的整数**（classes 域 base/growth/conv + 装备那一份，"
+        "取整口径与 `rebuild_monsters` 同一条），且行值里一个小数点都没有" % len(_CM12.PANEL_ROWS),
+        not _badInt22, "%s" % _badInt22[:2])
 
     # ── 查看 <物品>：详情逐字对账（分类 · 词条 · 说明 · 收价）──────────────
     def _detail12(rec):
