@@ -112,7 +112,12 @@ class _Ad(object):
         return self._msgs.pop(0) if self._msgs else None
 
     def load_player(self, uid):
-        return self.saved if uid == "u_n" else None
+        if uid != "u_n":
+            return None
+        # ★ P-10：档上要有族（否则「观察」第一眼变成选族菜单）
+        d = dict(self.saved or {})
+        d.setdefault("race", "human")
+        return d
 
     def save_player(self, uid, data):
         self.saved = dict(data) if isinstance(data, dict) else data

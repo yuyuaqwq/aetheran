@@ -2044,6 +2044,20 @@
     "category": "系统",
     "desc": "采集 · 出产那一行"
   },
+  "SYS_GATHER_AGAIN": {
+    "value": "翻过一遍了 —— 剩下的都不稀罕。",
+    "params": [],
+    "category": "系统",
+    "desc": "采集 · 当日第 2 次起（池里最稀罕的那条已经让先来的捡走了）"
+  },
+  "SYS_GATHER_BARE": {
+    "value": "{name}翻到底了，什么也没剩下。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "采集 · 池被翻空那一遍（空手）"
+  },
   "SYS_REST_FULL": {
     "value": "你不累。",
     "params": [],
@@ -2115,5 +2129,79 @@
     ],
     "category": "系统",
     "desc": "去 · 目标就是脚下这一站"
+  },
+  "SYS_RACE_HEAD": {
+    "value": "你还不知道自己是谁。\n—— 先想清楚：你是从哪儿来的？",
+    "params": [],
+    "category": "系统",
+    "desc": "建号 · 头（新号第一眼）"
+  },
+  "SYS_RACE_ROW": {
+    "value": "{i} {name} —— {line}",
+    "params": [
+      "i",
+      "name",
+      "line"
+    ],
+    "category": "系统",
+    "desc": "建号 · 每个族一行"
+  },
+  "SYS_RACE_HOW": {
+    "value": "选一个：『我是 人类』 · 或者把六个都读一遍再决定。",
+    "params": [],
+    "category": "系统",
+    "desc": "建号 · 怎么选"
+  },
+  "SYS_RACE_BAD": {
+    "value": "没有叫「{want}」的族。这儿只有：{all}",
+    "params": [
+      "want",
+      "all"
+    ],
+    "category": "系统",
+    "desc": "建号 · 选了个不存在的族"
+  },
+  "SYS_RACE_DONE": {
+    "value": "你是{name}了。\n{line}",
+    "params": [
+      "name",
+      "line"
+    ],
+    "category": "系统",
+    "desc": "建号 · 选好了（含「为什么来」）"
+  },
+  "SYS_RACE_TALENT": {
+    "value": "天赋 · {name}：{effect}",
+    "params": [
+      "name",
+      "effect"
+    ],
+    "category": "系统",
+    "desc": "建号 · 天赋一行"
+  },
+  "SYS_RACE_COST": {
+    "value": "代价 · {name}：{effect}",
+    "params": [
+      "name",
+      "effect"
+    ],
+    "category": "系统",
+    "desc": "建号 · 代价一行"
+  },
+  "SYS_RACE_HAS": {
+    "value": "你已经定了 —— 你是{name}。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "建号 · 已经选过了"
+  },
+  "SYS_RACE_NOARG": {
+    "value": "选哪个？这儿的六个：{all}",
+    "params": [
+      "all"
+    ],
+    "category": "系统",
+    "desc": "建号 · 没说选哪个"
   }
 }

@@ -98,7 +98,7 @@ class _E:               # 「观察」只要 env.save()（落档是处理器的�
 
 def _look_first(loc, node):
     p = dict(CA.DEFAULT_PLAYER)
-    p.update({"loc": loc, "node": node})
+    p.update({"loc": loc, "node": node, "race": "human"})  # ★ P-10：档上要有族，否则第一眼是「选族菜单」而不是场景（探针测的是已建号的玩家）
     out = []
 
     async def _go():

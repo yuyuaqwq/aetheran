@@ -164,6 +164,68 @@ def _race_rec(race):
     return d.get("race_" + r) or d.get(r) or {}
 
 
+def _race_all():
+    """六族按 `order` 排（照 02_种族体系 §四 的表序：人类→精灵→矮人→兽人→龙裔→亚人）。
+
+    ★ 别按 id 字母序 —— 那样菜单第一行是「亚人」，玩家最可能选的是排在最后的「人类」。
+    """
+    d = _data("races")
+    return sorted(d.items(), key=lambda kv: (kv[1].get("order") or 99, kv[0]))
+
+
+async def be_race(env, sink, uid, player):
+    """★ 建号：定下自己是哪一族（P-10）。
+
+    为什么需要：原先档上 `race` 恒为空 ⇒ 六族天赋全落空（精灵的「铭文之眼」
+    是彩蛋 3 的条件）。档上存**短名**（`elf`）—— 与 `_race_rec` / `eggs.ctx` 一致。
+    已经定过的：不再改（免得玩家手滑换族）；要重来是另一件事（没做）。
+    """
+    p = _p(player)
+    raw = (getattr(env, "text", "") or "").strip()
+    parts = raw.split(None, 1)
+    want = parts[1].strip() if len(parts) > 1 else ""
+    all6 = _race_all()
+
+    if p.get("race"):
+        yield T("SYS_RACE_HAS", name=_race_label(p.get("race")))
+        return
+
+    if not want:
+        yield T("SYS_RACE_NOARG", all=" · ".join(v.get("name", k) for k, v in all6))
+        return
+
+    hit = None
+    for k, v in all6:
+        if want in (v.get("name"), k, k.replace("race_", "")):
+            hit = (k, v)
+            break
+    if hit is None:
+        yield T("SYS_RACE_BAD", want=want, all=" · ".join(v.get("name", k) for k, v in all6))
+        return
+
+    kid, rec = hit
+    p["race"] = kid.replace("race_", "")
+    if player is not None:
+        player.update(p)
+    _save(env)
+    yield T("SYS_RACE_DONE", name=rec.get("name", kid), line=rec.get("line") or "")
+    for tal in (rec.get("talents") or []):
+        yield T("SYS_RACE_TALENT", name=tal.get("name", ""), effect=tal.get("effect", ""))
+    cost = rec.get("cost") or {}
+    if cost:
+        yield T("SYS_RACE_COST", name=cost.get("name", ""), effect=cost.get("effect", ""))
+
+
+def race_menu():
+    """新号第一眼：还没定族就把菜单递过去（`观察` 里用）。"""
+    out = [T("SYS_RACE_HEAD")]
+    for i, (k, v) in enumerate(_race_all(), 1):
+        out.append(T("SYS_RACE_ROW", i="①②③④⑤⑥"[i - 1] if i <= 6 else str(i),
+                     name=v.get("name", k), line=v.get("line") or ""))
+    out.append(T("SYS_RACE_HOW"))
+    return out
+
+
 def _race_label(race):
     """呈现口用：族 id → 中文名（`elf` → 精灵）；没定给 SYS_UNSET，认不出就原样回显。"""
     if not str(race or "").strip():
@@ -311,6 +373,11 @@ def egg_lines(p, player=None, env=None) -> list:
 # ══════════════════════════════════════════════════════════════
 async def look(env, sink, uid, player):
     p = _p(player)
+    # ★ P-10：还没定族 —— 第一眼不是风景，是「你是谁」（建号是玩的第一步）
+    if not p.get("race"):
+        for line in race_menu():
+            yield line
+        return
     if TT.newest(p):                            # ★ B3-2：称号跟着名字走（一个都没拿到就不多这一行）
         yield name_with_title(p)
     loc, node = p["loc"], p["node"]
@@ -519,7 +586,8 @@ async def origin(env, sink, uid, player):
         return
     rs = _race_rec(p.get("race"))
     yield T("SYS_ORIGIN_WHO", name=rs.get("name") or _race_label(p.get("race")))
-    yield T("SYS_ORIGIN_WHY", why=rs.get("why") or T("SYS_ORIGIN_WHY_TODO"))
+    yield T("SYS_ORIGIN_WHY",
+            why=rs.get("line") or rs.get("why") or T("SYS_ORIGIN_WHY_TODO"))  # ★ P-10：域里的字段叫 line（原来读 why，永远给「还没写」）
 
 
 async def bag(env, sink, uid, player):

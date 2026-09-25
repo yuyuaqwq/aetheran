@@ -258,9 +258,9 @@ def main():
         over.update(kw)
         return _player(**over)
     cases = [
-        ("观察", CA.look, "", {"loc": "windmill_town", "node": "wt_gate_n"}),
-        ("地图", CA.map_view, "", {"loc": "windmill_town", "node": "wt_gate_n"}),
-        ("聆听", CA.listen, "", {"loc": "windmill_town", "node": "wt_gate_n"}),
+        ("观察", CA.look, "", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
+        ("地图", CA.map_view, "", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
+        ("聆听", CA.listen, "", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
         ("状态", CA.status, "", {"loc": "windmill_town", "node": "wt_gate_n", "level": 3}),
         ("状态(族与职业都定过)", CA.status, "",
          {"loc": "windmill_town", "node": "wt_gate_n", "level": 3, "cls": "cls_knight", "race": "elf"}),
@@ -273,21 +273,21 @@ def main():
         ("帮助", CA.help_cmd, "", {}),
         ("触摸", CA.touch, "", {"loc": touch_at[0], "node": touch_at[1]}),
         ("读", CA.read_thing, "", {"loc": rmap, "node": rnode}),
-        ("去(没给地方)", CA.go_to, "去", {"loc": "windmill_town", "node": "wt_gate_n"}),
-        ("去(走到)", CA.go_to, "去 %s" % town[3], {"loc": "windmill_town", "node": "wt_gate_n"}),
+        ("去(没给地方)", CA.go_to, "去", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
+        ("去(走到)", CA.go_to, "去 %s" % town[3], {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
         ("去(不是邻居)", CA.go_to, "去 %s" % belt[-1], {"loc": "belt_north", "node": "bn_bone"}),
-        ("去(没这地方)", CA.go_to, "去 高塔", {"loc": "windmill_town", "node": "wt_gate_n"}),
-        ("北口", CA.go_north, "", {"loc": "windmill_town", "node": "wt_gate_n"}),
-        ("往东", CA.go_east, "", {"loc": "windmill_town", "node": "wt_gate_n"}),
-        ("往西", CA.go_west, "", {"loc": "windmill_town", "node": "wt_gate_n"}),
+        ("去(没这地方)", CA.go_to, "去 高塔", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
+        ("北口", CA.go_north, "", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
+        ("往东", CA.go_east, "", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
+        ("往西", CA.go_west, "", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
         ("进镇", CA.enter_town, "", {"loc": "belt_north", "node": "bn_bone"}),
         ("返回(有上一处)", CA.go_back, "", {"loc": "belt_east", "node": "be_birch",
                                           "prev": [["windmill_town", "wt_gate_n"]]}),
         ("返回(没上一处)", CA.go_back, "", {"loc": "windmill_town", "node": "wt_gate_n", "prev": []}),
-        ("搭话(这儿有谁)", CT.talk, "搭话", {"loc": "windmill_town", "node": "wt_gate_n"}),
-        ("搭话(没有这个人)", CT.talk, "搭话 不存在的人", {"loc": "windmill_town", "node": "wt_gate_n"}),
+        ("搭话(这儿有谁)", CT.talk, "搭话", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
+        ("搭话(没有这个人)", CT.talk, "搭话 不存在的人", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
         ("搭话(这儿没人)", CT.talk, "搭话", {"loc": "belt_north", "node": "bn_bone"}),
-        ("问路(镇上)", CT.ask_way, "", {"loc": "windmill_town", "node": "wt_gate_n"}),
+        ("问路(镇上)", CT.ask_way, "", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
         ("问路(野外)", CT.ask_way, "", {"loc": "belt_north", "node": "bn_bone"}),
         # 公会与委托（B3-6b-2b：34 个槽位逐个真跑一遍 —— 不许出现取不到文案）
         ("公会", CQ.guild, "", {}),
@@ -312,7 +312,7 @@ def main():
                                                           "quests_done": ["q_main_02"]}}),
         # 野外采集（B3-6b-2c：11 个槽位逐个真跑一遍）
         ("采集(有)", CG.gather, "", {"loc": "windmill_town", "node": "wt_wall"}),
-        ("采集(这儿没有)", CG.gather, "", {"loc": "windmill_town", "node": "wt_gate_n"}),
+        ("采集(这儿没有)", CG.gather, "", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
         ("采集(今天翻过了)", CG.gather, "", {"loc": "windmill_town", "node": "wt_wall",
                                               "flags": {"gather_used": {"gt_wt_herb_1": 3}}}),
         ("挖掘(有)", CG.dig, "", {"loc": "belt_north", "node": "bn_bone"}),
@@ -322,9 +322,9 @@ def main():
         ("歇脚(歇下了)", CG.rest, "", {"hp": 40, "hp_max": 100}),
         ("拾取", CG.pick_up, "", {}),
         # ★ B3-10 ①：去「脚下这一站」（原先错走 SYS_MOVE_FAR 那一支）
-        ("去(就在这儿)", CA.go_to, "去 %s" % cur, {"loc": "windmill_town", "node": "wt_gate_n"}),
+        ("去(就在这儿)", CA.go_to, "去 %s" % cur, {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
         # ★ B3-10 ②：K56 族的另一半 —— 这些呈现口原先没被逐行扫过
-        ("时间", CA.time_now, "", {"loc": "windmill_town", "node": "wt_gate_n"}),
+        ("时间", CA.time_now, "", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
         ("背包(满)", CA.bag, "", _rich()),
         ("攻击(野外)", CBL.attack, "",
          {"loc": "belt_north", "node": "bn_bone", "level": 3, "hp": 80, "hp_max": 100,
@@ -364,7 +364,7 @@ def main():
         ("北口(就在骨田)", CA.go_north, "", {"loc": "belt_north", "node": "bn_bone"}),
         ("往东(就在白桦林)", CA.go_east, "", {"loc": "belt_east", "node": "be_birch"}),
         ("往西(就在旧渡口)", CA.go_west, "", {"loc": "belt_west", "node": "bw_old_ferry"}),
-        ("进镇(就在镇口)", CA.enter_town, "", {"loc": "windmill_town", "node": "wt_gate_n"}),
+        ("进镇(就在镇口)", CA.enter_town, "", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
     ]
     bad, empty, sample = [], [], []
     leaked = []

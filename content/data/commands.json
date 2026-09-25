@@ -1535,5 +1535,25 @@
         "player"
       ]
     }
+  },
+  "be_race": {
+    "patterns": [
+      "^我是\\s*(.+)$",
+      "^选族\\s*(.+)$"
+    ],
+    "category": "角色",
+    "desc": "建号：定下自己是哪一族",
+    "usage": "我是 <族名>",
+    "guard_desc": "还没定族时",
+    "visible": true,
+    "order": 3,
+    "bind": {
+      "handler": "content.cmds_ast:be_race",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
   }
 }

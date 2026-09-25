@@ -1,6 +1,7 @@
 {
   "race_human": {
     "name": "人类",
+    "order": 1,
     "home": "萤穗原野",
     "lifespan": "百年上下",
     "build": "什么样的人都算人类",
@@ -39,6 +40,7 @@
   },
   "race_elf": {
     "name": "精灵",
+    "order": 2,
     "home": "银月林海",
     "lifespan": "长到记不清",
     "build": "瘦高，耳尖，眼睛比人亮",
@@ -78,6 +80,7 @@
   },
   "race_dwarf": {
     "name": "矮人",
+    "order": 3,
     "home": "深炉山系",
     "lifespan": "百五十年上下",
     "build": "矮，宽，手上全是旧茧",
@@ -118,6 +121,7 @@
   },
   "race_orc": {
     "name": "兽人",
+    "order": 4,
     "home": "古战场边缘",
     "lifespan": "六十年上下",
     "build": "魁梧，獠牙，肩比门框窄不了多少",
@@ -157,6 +161,7 @@
   },
   "race_dragonkin": {
     "name": "龙裔",
+    "order": 5,
     "home": "霜角北境",
     "lifespan": "一百二十年上下",
     "build": "鳞片在颈侧，竖瞳",
@@ -198,6 +203,7 @@
   },
   "race_beastkin": {
     "name": "亚人",
+    "order": 6,
     "home": "季风群岛（散居诸国城镇）",
     "lifespan": "七十年上下",
     "build": "兽耳兽尾，体型近人",
