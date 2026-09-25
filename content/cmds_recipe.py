@@ -236,7 +236,7 @@ async def enhance(env, sink, uid, player):
     fee = int(step.get("gold") or 0)
     lack = _lack_str(p, ins)
     if fee > int(p.get("gold") or 0):
-        lack += (" · " if lack else "") + "铜板 ×%d" % (fee - int(p.get("gold") or 0))
+        lack += (" · " if lack else "") + T("SYS_GOLD_X", n=fee - int(p.get("gold") or 0))
     if lack:
         yield T("SYS_ENHANCE_MISSING", lv=nxt, need=_need_str(ins), gold=fee, lack=lack)
         return

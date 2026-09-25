@@ -98,8 +98,9 @@ def player_actor(player: dict, stack_prefix: str = "aetheran", *,
     #   战斗会当没投过照样开打，而「属性」页 / 生命上限却按别的数算 ⇒ 三处对不上。
     a = PB.build_actor(cls, lv, ALLOC.of_record(player), gear, buffs=buffs,
                        stack_prefix=stack_prefix, uid=uid)
+    from .cmds_ast import T                    # ★ B4-19：本地 import（免得包装载期成环）
     a["uid"] = str(uid or player.get("uid") or "p1")
-    a["name"] = player.get("name") or "无名者"
+    a["name"] = player.get("name") or T("SYS_NAME_UNKNOWN")
     a["side"] = PLAYER_SIDE
     a["kind"] = "player"
     a["human_controlled"] = True

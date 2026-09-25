@@ -129,7 +129,7 @@ def _fmt(logs, limit=12):
     """日志压到一屏（超了给省略）。"""
     out = list(logs)
     if len(out) > limit:
-        out = out[:limit] + ["…（还有 %d 条 —— 『战斗日志』看全部）" % (len(logs) - limit)]
+        out = out[:limit] + [T("COMBAT_LOG_MORE", n=len(logs) - limit)]
     return out
 
 
@@ -204,7 +204,7 @@ async def _settle(env, p, uid, pick, ms, res, logs, hp_after, seen, player, affi
     _ename = AFFIX.display_name(str(ms[pick[0]].get("name", pick[0])), list(affixes))
     yield "━" * 12
     if res == "victory":
-        yield "✔ 打完了。"
+        yield T("COMBAT_DONE")
         # 掉钱（第一版：按怪等级给，普通 3×lv / 精英 8×lv / 头目·层主·Boss 20×lv）
         # ★ B3-6b-2d-keys-2：分档比 ASCII `role_key`（原先比中文枚举「精英 / 头目 / 层主 / boss」）
         m = ms[pick[0]]
@@ -232,7 +232,7 @@ async def _settle(env, p, uid, pick, ms, res, logs, hp_after, seen, player, affi
             player.update(p)
         _save(env)
         yield T("SYS_REWARD", exp=exp_gain, gold=gold)      # ★ 现成槽位（26_消息模板 §5）
-        yield "铜板 %d ｜ 生命 %d ｜ 经验 %d" % (p["gold"], hp_after, p["exp"])
+        yield T("COMBAT_TAIL_STATE", gold=p["gold"], hp=hp_after, exp=p["exp"])
         if ups:
             yield T("SYS_JOB_LEVELUP", level=p["level"])
         if drops:
@@ -240,7 +240,7 @@ async def _settle(env, p, uid, pick, ms, res, logs, hp_after, seen, player, affi
                 rec = LT.rec_of(d["id"])     # ★ 未鉴定的 marker 名字在池上（唯一一口）
                 nm = rec.get("name", d["id"])
                 ic = rec.get("icon", "·")
-                yield "拾取：%s %s ×%s" % (ic, nm, d.get("n", 1))
+                yield T("COMBAT_DROP_ROW", icon=ic, name=nm, n=d.get("n", 1))
                 if d.get("story"):
                     yield "  （%s）" % d["story"]
             for line in new_lines(new):
@@ -255,7 +255,7 @@ async def _settle(env, p, uid, pick, ms, res, logs, hp_after, seen, player, affi
         elif res == "fled":
             p["hp"] = max(1, hp_after)              # 跑掉了：血是打完当下的血，不掉经验
         else:
-            yield "（战斗结束：%s）" % res
+            yield T("COMBAT_END_WHY", why=res)
             p["hp"] = max(1, hp_after)
         _note_battle(p, _ename, logs, res)
         if player is not None:
@@ -667,9 +667,9 @@ async def battle_log(env, sink, uid, player):
     p = _p(player)
     last = (p.get("flags") or {}).get("last_battle")
     if not last:
-        yield "还没有打过。"
+        yield T("COMBAT_LOG_NONE")
         return
-    yield "【上一场】%s" % last.get("enemy")
+    yield T("COMBAT_LOG_HEAD", enemy=last.get("enemy"))
     for line in last.get("logs") or []:
         yield line
 

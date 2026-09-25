@@ -167,14 +167,18 @@ def open_unid(unid_id: str, *, rnd: random.Random | None = None) -> dict:
 
 
 def help_text_of(uid_id: str, npc_id: str) -> str | None:
-    """谁认得出这个（杜林认锻造物 / 莉安认铭文 / 柯尔只认铁 / 艾德认教会器物）。"""
+    """谁认得出这个（杜林认锻造物 / 莉安认铭文 / 柯尔只认铁 / 艾德认教会器物）。
+
+    ★ B4-19：三句话都走 texts 槽位（原先这里是三句内联 —— 文案真源只有 texts 域）。
+    """
+    from .cmds_ast import T                    # ★ B4-19：本地 import（免得包装载期成环）
     u = pools().get(uid_id) or {}
     if npc_id in (u.get("identify_by") or []):
-        return "「这个……我见过。不是在这儿。」"
+        return T("TALK_IDENTIFY_KNOWN")
     if npc_id == "npc_durin":
-        return "「拿来我看。」（他翻了两下）「……看不出。你留着吧。」"
+        return T("TALK_IDENTIFY_NONE")
     if npc_id == "npc_lian":
-        return "（她看了很久，没有说话。）"
+        return T("TALK_IDENTIFY_LIAN")
     return None
 
 

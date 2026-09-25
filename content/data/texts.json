@@ -5186,5 +5186,93 @@
     "params": [],
     "category": "系统",
     "desc": "B4-17 分页 · 还没翻过任何列表"
+  },
+  "COMBAT_DONE": {
+    "value": "✔ 打完了。",
+    "params": [],
+    "category": "战斗",
+    "desc": "B4-19 战斗结算 · 打完那一行"
+  },
+  "COMBAT_LOG_MORE": {
+    "value": "…（还有 {n} 条 —— 『战斗日志』看全部）",
+    "params": [
+      "n"
+    ],
+    "category": "战斗",
+    "desc": "B4-19 战斗日志 · 一屏压不下时那一行"
+  },
+  "COMBAT_TAIL_STATE": {
+    "value": "铜板 {gold} ｜ 生命 {hp} ｜ 经验 {exp}",
+    "params": [
+      "gold",
+      "hp",
+      "exp"
+    ],
+    "category": "战斗",
+    "desc": "B4-19 战斗结算 · 钱 / 血 / 经验那一行"
+  },
+  "COMBAT_DROP_ROW": {
+    "value": "拾取：{icon} {name} ×{n}",
+    "params": [
+      "icon",
+      "name",
+      "n"
+    ],
+    "category": "战斗",
+    "desc": "B4-19 战斗结算 · 每件掉落一行"
+  },
+  "COMBAT_END_WHY": {
+    "value": "（战斗结束：{why}）",
+    "params": [
+      "why"
+    ],
+    "category": "战斗",
+    "desc": "B4-19 战斗结算 · 既不是胜 / 败 / 跑掉的那一档（照实报引擎给的结果名）"
+  },
+  "COMBAT_LOG_NONE": {
+    "value": "还没有打过。",
+    "params": [],
+    "category": "战斗",
+    "desc": "B4-19 战斗日志 · 一场都没打过"
+  },
+  "COMBAT_LOG_HEAD": {
+    "value": "【上一场】{enemy}",
+    "params": [
+      "enemy"
+    ],
+    "category": "战斗",
+    "desc": "B4-19 战斗日志 · 抬头（怪名）"
+  },
+  "SYS_GOLD_X": {
+    "value": "铜板 ×{n}",
+    "params": [
+      "n"
+    ],
+    "category": "系统",
+    "desc": "B4-19 强化 · 「还差」那一段里的钱那一项"
+  },
+  "TALK_IDENTIFY_KNOWN": {
+    "value": "「这个……我见过。不是在这儿。」",
+    "params": [],
+    "category": "对话",
+    "desc": "B4-19 未鉴定 · 认得这一门的那个人（`pools[].identify_by` 点名的）"
+  },
+  "TALK_IDENTIFY_NONE": {
+    "value": "「拿来我看。」（他翻了两下）「……看不出。你留着吧。」",
+    "params": [],
+    "category": "对话",
+    "desc": "B4-19 未鉴定 · 杜林翻了两下（认不出锻造物）"
+  },
+  "TALK_IDENTIFY_LIAN": {
+    "value": "（她看了很久，没有说话。）",
+    "params": [],
+    "category": "对话",
+    "desc": "B4-19 未鉴定 · 莉安（铭文那一条路）"
+  },
+  "SYS_BASIC_NAME": {
+    "value": "挥击",
+    "params": [],
+    "category": "系统",
+    "desc": "B4-19 兜底普攻那条技的名字（apply.py 那条 `basic_fallback` 的 `name`）"
   }
 }

@@ -77,6 +77,12 @@ def _recover_model(spd, base):
     return _table().eval("F6_act_time", {"base": float(base), "spd": float(spd or 0)})
 
 
+def _basic_name() -> str:
+    """兜底普攻那条技的名字 —— 走 texts 槽位（★ B4-19：这一格原先写死「挥击」）。"""
+    from .cmds_ast import T                    # ★ B4-19：本地 import（免得包装载期成环）
+    return T("SYS_BASIC_NAME")
+
+
 def install_engine():
     """把本包的 hook 挂进引擎 config（全局一次、幂等）。"""
     global _MOUNTED
@@ -107,8 +113,8 @@ def install_engine():
         #   （`basic_kind()` = 物理，fail-closed）。空串会被引擎判成「治疗」（`actions.py:110`）。
         #   B3-14：这条兜底同时是**怪物普攻**（怪没有 class_name ⇒ 走它），它必须带 `exprs`
         #   并走物理通道 —— 否则怪伤害恒为下限 1（matk=0 走魔法支）。
-        #   `name`（挥击）是「这条兜底技叫什么」的文案，属第二刀（该技要进 skills 域 + texts 槽位）。
-        basic_fallback={"name": "挥击", "kind": _SL.basic_kind(), "power": 1.0, "cd": 0,
+        #   `name`（SYS_BASIC_NAME）是「这条兜底技叫什么」的文案 —— ★ B4-19 已进 texts 槽位。
+        basic_fallback={"name": _basic_name(), "kind": _SL.basic_kind(), "power": 1.0, "cd": 0,
                         "exprs": ["atk*1"],
                         "cast": {"base": 60}, "recover": {"base": 0}, "range": 1, "mp": 0,
                         "_basic": True},
