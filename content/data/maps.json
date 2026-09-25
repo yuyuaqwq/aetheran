@@ -209,6 +209,39 @@
         "name": "塔顶",
         "role": "塔顶"
       }
-    ]
+    ],
+    "floors": [
+      {
+        "name": "一层",
+        "rooms": [
+          "tower_gate",
+          "tower_hall",
+          "tower_armory",
+          "tower_stair1"
+        ]
+      },
+      {
+        "name": "二层",
+        "rooms": [
+          "tower_outpost_out",
+          "tower_outpost_in",
+          "tower_water_room",
+          "tower_storage"
+        ]
+      },
+      {
+        "name": "三层",
+        "rooms": [
+          "tower_empty_room",
+          "tower_horn_room",
+          "tower_stair2",
+          "tower_top"
+        ]
+      }
+    ],
+    "entrance": {
+      "map": "belt_north",
+      "node": "bn_tower"
+    }
   }
 }

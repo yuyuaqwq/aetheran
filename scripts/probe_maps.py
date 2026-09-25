@@ -70,6 +70,26 @@ chk("风车镇 3 个出口（北/东/西）", len(gates) == 3, " · ".join(n["na
 # ⑥ 每条带 3 节点
 chk("三条带各 3 节点", all(len(mp[k]["nodes"]) == 3 for k in belts))
 
+# ⑥-b ★ B3-6：副本那张图（旧哨塔）—— 12 间 · 三层（floors）· 进塔那一格（entrance）
+tower = mp.get("old_watchtower", {})
+tfl = [(str(f.get("name")), [str(x) for x in (f.get("rooms") or [])])
+       for f in (tower.get("floors") or [])]
+tflat = [r for _n, rs in tfl for r in rs]
+tnodes = [n["id"] for n in (tower.get("nodes") or [])]
+chk("★ 副本那张图：12 间 · chain · 三层 floors 覆盖 12 间不重不漏",
+    len(tnodes) == 12 and tower.get("topology") == "chain"
+    and tflat == tnodes and len(set(tflat)) == 12 and len(tfl) >= 2,
+    " / ".join("%s %d" % (n, len(rs)) for n, rs in tfl))
+tent = tower.get("entrance") or {}
+chk("★ 副本那张图的 entrance 是真节点（从哪儿进塔 —— 跨图那一格）",
+    tent.get("map") in mp
+    and tent.get("node") in [n["id"] for n in (mp.get(tent.get("map")) or {}).get("nodes", [])],
+    "%s:%s" % (tent.get("map"), tent.get("node")))
+entry_role = (tower.get("roles") or {}).get("entry")
+entry_node = next((n["id"] for n in (tower.get("nodes") or []) if n.get("role") == entry_role), None)
+chk("★ roles.entry 落在第一层第一间（进门站的那一间）",
+    bool(tfl) and entry_node == tfl[0][1][0], "%r" % entry_node)
+
 # ⑦ ★ 引擎形状真能消费（ext_world.space）
 try:
     from ext_world.space import Space

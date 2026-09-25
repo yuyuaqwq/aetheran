@@ -58,9 +58,9 @@
     "name": "拾荒人留的字条",
     "icon": "📄",
     "kind": "可读物",
-    "map": "belt_north",
-    "subarea": "bn_camp",
-    "hint": "压在石头下的一张字条",
+    "map": "old_watchtower",
+    "subarea": "tower_storage",
+    "hint": "箱子上摊着一张字条，字写得很潦草",
     "read_text": "READ_SCAVENGER_NOTE",
     "into_codex": "relic_codex"
   },
@@ -211,5 +211,59 @@
         "退潮"
       ]
     }
+  },
+  "poi_gate_marks": {
+    "name": "门闩上的三道刻痕",
+    "icon": "🚪",
+    "kind": "可读物",
+    "map": "old_watchtower",
+    "subarea": "tower_gate",
+    "hint": "门闩上有三道刻痕，三道都新",
+    "read_text": "READ_TOWER_GATE_MARKS"
+  },
+  "poi_armory_names": {
+    "name": "架子上的名字",
+    "icon": "🗡️",
+    "kind": "可读物",
+    "map": "old_watchtower",
+    "subarea": "tower_armory",
+    "hint": "每格下沿都刻着一个名字",
+    "read_text": "READ_TOWER_ARMORY_NAMES"
+  },
+  "poi_floating_page": {
+    "name": "水里飘着的一页纸",
+    "icon": "📄",
+    "kind": "可读物",
+    "map": "old_watchtower",
+    "subarea": "tower_water_room",
+    "hint": "水面上漂着一页纸，湿透了没沉",
+    "read_text": "READ_SOAKED_JOURNAL"
+  },
+  "poi_stele_names": {
+    "name": "石碑上的名单",
+    "icon": "🪦",
+    "kind": "可读物",
+    "map": "old_watchtower",
+    "subarea": "tower_horn_room",
+    "hint": "碑上的名字一排排往下刻",
+    "read_text": "READ_TOWER_STELE_NAMES"
+  },
+  "poi_top_words": {
+    "name": "塔顶那行字",
+    "icon": "✍️",
+    "kind": "可读物",
+    "map": "old_watchtower",
+    "subarea": "tower_top",
+    "hint": "石头地上刻着一行字",
+    "read_text": "READ_TOWER_TOP_WORDS"
+  },
+  "poi_north_rift": {
+    "name": "北边的裂口",
+    "icon": "🌫️",
+    "kind": "可读物",
+    "map": "old_watchtower",
+    "subarea": "tower_top",
+    "hint": "北边的天边上有一道口子",
+    "read_text": "READ_TOWER_NORTH_RIFT"
   }
 }
