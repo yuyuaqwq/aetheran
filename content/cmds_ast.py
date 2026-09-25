@@ -921,6 +921,8 @@ async def touch(env, sink, uid, player):
         if rt:
             yield "「%s」" % T(rt)
         if v.get("into_codex") and CX.note_read(p, pid):     # ★ 读到就进旧物谱（先一行问号）
+            # ★ B3-10 裁决：`into_codex` **空串** = 就地线索（塔内那几条 · 22 §二「可做」列）——
+            #   读到就念正文，但**不进旧物谱**（12 类那个量账不动）。判据：probe_pois ②b/⑩。
             got.append(pid)
         # ★ P-28：上手那一下的 effect 走唯一消费端（原先 `effect` 谁都读 —— 摸了等于没摸）
         async for line in poi_effect_lines(env, sink, uid, p, pid, v, "touch", player=player):
@@ -962,7 +964,7 @@ async def read_thing(env, sink, uid, player):
     # ★ P-28：可读物身上的 effect 也走同一个消费端（「读」与「触摸」不分家）
     async for line in poi_effect_lines(env, sink, uid, p, k, v, "read", player=player):
         yield line
-    if v.get("into_codex") and CX.note_read(p, k):
+    if v.get("into_codex") and CX.note_read(p, k):        # ★ B3-10：空串 = 就地线索，不进谱（同 touch）
         if player is not None:
             player.update(p)
         _save(env)

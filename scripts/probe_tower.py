@@ -10,10 +10,11 @@ r"""探针：旧哨塔副本（B3-6）—— 12 间房真能走一遍 · 五条�
      · `roles.entry` 点的那间 = 文档第 1 间（塔门）
   ③ ★ 真进塔（真宿主 · 逐条真敲）：镇上 → 塔门 → 『进塔』 → 12 间逐间『去 <房间>』
      —— 每一间都到得了，到的就是文档那一间；每间的**出口**与 §二 逐条对
-     （一步邻居 / 文档写「二选一」的那间至少一条通达 / 塔外那一格由『撤退』验）
+     （一步邻居 / 文档写「二选一」的那两间顺链可达且第一间就是下一步 / 塔外那一格由『撤退』验）
+     · B3-10：**空手**走完全 12 间（P1 链式 = 无锁无分支；「钥匙」那条口径见 _notes.md §二）
   ④ 五条指令都有人接 —— 真敲回来的是真话（不是 `SYS_CMD_SOON` · 不漏内部 key / 文件路径）
   ⑤ ★ 9 项可读物：§一 点名的那几项，在文档说的那一间真拿得到（『读 <名>』 · 房间里的
-     『触摸』也全都在）
+     『触摸』也全都在）· 且**清单与 §一 那一列双向相等**（不多不少）
   ⑥ 『撤退』真的出塔（回到 `entrance` 那一格）· 塔外敲塔里的事 fail-closed 说人话
   ⑦ P-19：`SCENE_OLD_WATCHTOWER` 不再是死槽位 —— 『进塔』那一屏取的就是它（且与节点级
      的塔门那一屏不是同一段字）
@@ -24,6 +25,8 @@ r"""探针：旧哨塔副本（B3-6）—— 12 间房真能走一遍 · 五条�
      （原先档位白名单把它们挡在遭遇之外）· 镇上仍是安全区
   ⑪ ★ B3-7：三处容器（22 §二「可做」列里认出来的那三间）『搜查』真拿得到关键件 ——
      逐处换 24 个人 × 当日第 1/2 遍（`uid` 进采集种子）；到手那一刻旧物谱真多一行问号
+  ⑫ ★ B3-10：塔内 9 项可读物分两档真跑 —— 就地线索 6 条（22 §二「可做」列）念得出正文但
+     **旧物谱一条不加**；进谱的 3 条真多一行问号（照字出）
 
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_tower.py
 """
@@ -325,6 +328,13 @@ chk("★ 9 项一条都不落在塔外（「拾荒人留的字条」已从 bn_ca
     len(read_seen) == 9
     and not [(k, v.get("map")) for k, v in PO.items()
              if v.get("name") in [r[1] for r in DOC_READS] and v.get("map") != TOWER])
+# ★ B3-10：清单**双向相等** —— 塔内 kind=可读物 的那几条与 22 §一 那一列一模一样（不多不少；
+#   多一条（比如顺手加的可读物）或少一条都会当场红）。
+_want_names = sorted(r[1] for r in DOC_READS)
+_got_names = sorted(str(v.get("name")) for v in PO.values()
+                    if v.get("map") == TOWER and v.get("kind") == "可读物")
+chk("★ 塔内可读物的清单 ↔ 22 §一「可读物」那一列**双向相等**（%d 项 · 不多不少）" % len(_want_names),
+    _want_names == _got_names, "对不上的：%s" % sorted(set(_want_names) ^ set(_got_names)))
 
 # 触摸：水房那两项一次全出（文档说这一间有两项）
 water = ID_OF.get("水房")
@@ -338,7 +348,8 @@ chk("★ 水房『触摸』把这一间的两项都念出来（%s）" % " · ".j
 
 # ③ 12 间逐间走（从塔门起，按文档顺序）+ 每间的出口对账
 print("③ 真走：12 间逐间『去』+ 每间出口与 §二 逐条对")
-ad.saved = dict(ad.saved, loc=TOWER, node=NODES[0], prev=[])
+ad.saved = dict(ad.saved, loc=TOWER, node=NODES[0], prev=[], bag={}, equipped={})
+_bag_before = dict(ad.saved.get("bag") or {})
 walk_bad, walked = [], [NODES[0]]
 from content import cmds_ast as CA                                  # noqa: E402
 
@@ -351,18 +362,30 @@ for no in range(2, 13):
 
 chk("★ 从塔门逐间走得到全部 12 间（按文档顺序 · 每一间都真敲『去』）",
     len(walked) == 12 and len(set(walked)) == 12 and not walk_bad, "%s" % walk_bad[:3])
+# ★ B3-10 收口：22 §二·2 出口写着「3 武器架室 / 4 楼梯前（二选一，**钥匙在 3 里**）」、
+#   §三① 写「钥匙在每层的『资源房』里」—— 本批裁决：**P1 链式、不锁不分支**
+#   （22 §三① 自己写「3 层线性推进」；3 / 8 号房本来就在必经路上 ⇒ 无门可锁）。
+#   判据按文档那一行**逐条核**，但核的方式比原来严：
+#     · 不带「二选一」的出口 = 链上**一步邻居**；
+#     · 带「二选一」的两间 = 都在链上**顺链可达**（本步之后的某一间），且**第一间就是下一步**。
+#   ⇒ 空手（`bag` 空）走完全 12 间那一条（上面那条判据）就是「无锁」的实证。
+chk("★ 空手走完 12 间（没有任何锁 / 钥匙拦着 —— P1 链式的实证）",
+    not _bag_before and not ad.saved.get("bag"), "走之前背包 %s" % _bag_before)
 
 exit_bad = []
 for no in sorted(rooms):
     here, raw = NODES[no - 1], rooms[no]["exit"]
     tg = exit_targets(raw, ROOM_NAMES)
     nb = CA._neighbors(TOWER, here)
+    i = NODES.index(here)
+    ahead = NODES[i + 1:]                      # 顺链走得到的（本步之后的每一间）
     into = [t for t in tg if t in ID_OF]
     out_of = [t for t in tg if t not in ID_OF]
     if "二选一" in raw:
-        hit = [t for t in into if ID_OF[t] in nb]
-        if not hit:
-            exit_bad.append((no, raw, nb))
+        if not into or [t for t in into if ID_OF[t] not in ahead]:
+            exit_bad.append((no, raw, "二选一那两间不都在链上顺链可达", into))
+        elif ID_OF[into[0]] != (ahead[0] if ahead else ""):
+            exit_bad.append((no, raw, "二选一的第一间不是链上的下一步", into, nb))
     else:
         for t in into:
             if ID_OF[t] not in nb:
@@ -370,7 +393,7 @@ for no in sorted(rooms):
     for t in out_of:                       # 塔外那一格（塔下）—— 由『撤退』验，不在图里
         if t not in GNAME.get(ent.get("node"), ""):
             exit_bad.append((no, raw, t))
-chk("★ 每间的出口与 §二 逐条对得上（一步邻居 / 二选一至少一条 / 塔外那格是 entrance）",
+chk("★ 每间的出口与 §二 逐条对得上（一步邻居 / 二选一两间顺链可达且第一间是下一步 / 塔外那格是 entrance）",
     not exit_bad, "%s" % exit_bad[:3])
 
 # ⑧ 下一层：没站到本层最后一间 · 已经在塔顶
@@ -587,6 +610,54 @@ chk("★ 三处容器真拿得到（背包里真进了那件）· 旧物谱那�
     not cont_bad, "%s" % (cont_bad[:2] or ["无"]))
 print("  · 逐处：" + " · ".join("%s→%s（%s 第 %d 遍）" % (r, iid, uid, nth)
                               for r, (iid, (uid, nth)) in sorted(cont_ok.items())))
+
+# ══════════════════════════════════════════════════════════════
+# ⑫ ★ B3-10：塔内那 9 项可读物里，「进谱的 3 条」与「就地线索 6 条」**各真跑一遍**：
+#    · 就地线索（22 §二「可做」列）真敲『读』→ 正文逐字拿到 · **旧物谱一条都不加**（读完不留痕）；
+#    · 已进谱的 3 条（墙上的划痕 / 拾荒人留的字条 / 没寄出的信）真敲『读』→ 旧物谱真多一行**问号**，
+#      且那一行的字就是 14 号文档那一格（照字出）。
+#    判据是行为 —— 谁进谱不是靠注释说的，是真敲出来的。
+# ══════════════════════════════════════════════════════════════
+print("⑫ 塔内 9 项可读物：进谱的 3 条 / 就地线索 6 条（真敲『读』逐条）")
+_L12 = st.domain("codex") or {}
+_LOCAL = sorted(k for k, v in PO.items() if v.get("kind") == "可读物" and v.get("map") == TOWER
+                and not v.get("into_codex"))
+_INCX = sorted(k for k, v in PO.items() if v.get("kind") == "可读物" and v.get("map") == TOWER
+               and v.get("into_codex"))
+loc_bad = []
+for pid in _LOCAL:
+    v = PO[pid]
+    body = (TX.get(v.get("read_text")) or {}).get("value") or ""
+    ad.saved = dict(FIGHT, loc=TOWER, node=v.get("subarea"), prev=[], bag={},
+                    books={"relic": {}}, foot={})
+    got = send("读 %s" % v.get("name"))
+    books = ((ad.saved.get("books") or {}).get("relic") or {})
+    if txt("SYS_READ_HEAD", name=v.get("name")) not in got or body not in got:
+        loc_bad.append((pid, "正文没拿到", got[:2]))
+    elif books:
+        loc_bad.append((pid, "就地线索不该进旧物谱", books))
+chk("★ 塔内那 %d 条就地线索真敲『读』：正文逐字拿到 · 旧物谱一条不加（22 §二 的「可做」不进谱）"
+    % len(_LOCAL), not loc_bad, "%s" % (loc_bad[:2] or " · ".join(_LOCAL)))
+
+inc_bad = []
+for pid in _INCX:
+    v = PO[pid]
+    ad.saved = dict(FIGHT, loc=TOWER, node=v.get("subarea"), prev=[], bag={},
+                    books={"relic": {}}, foot={})
+    got = send("读 %s" % v.get("name"))
+    books = ((ad.saved.get("books") or {}).get("relic") or {})
+    hint = str(((_L12.get("relic") or {}).get(pid) or {}).get("hint") or "")
+    if not (books.get(pid) or {}).get("known") is False:
+        inc_bad.append((pid, "没进谱 / 不是问号起步", books))
+        continue
+    if txt("SYS_CODEX_NEW", book="旧物谱", name=v.get("name")) not in got:
+        inc_bad.append((pid, "没报「新进谱」", got[-2:]))
+        continue
+    book = send("旧物谱")
+    if not hint or not any(hint in x for x in book):
+        inc_bad.append((pid, "旧物谱里没出那一行问号", book))
+chk("★ 塔内那 %d 条进谱的（划痕 / 字条 / 信）真敲『读』：旧物谱真多一行问号（照字出）" % len(_INCX),
+    not inc_bad, "%s" % (inc_bad[:2] or " · ".join(_INCX)))
 
 # ④ 五条指令真接上：不是 SYS_CMD_SOON · 不漏内部 key / 文件路径 / 取不到文案
 soon = (TX.get("SYS_CMD_SOON") or {}).get("value") or ""

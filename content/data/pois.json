@@ -219,7 +219,8 @@
     "map": "old_watchtower",
     "subarea": "tower_gate",
     "hint": "门闩上有三道刻痕，三道都新",
-    "read_text": "READ_TOWER_GATE_MARKS"
+    "read_text": "READ_TOWER_GATE_MARKS",
+    "into_codex": ""
   },
   "poi_armory_names": {
     "name": "架子上的名字",
@@ -228,7 +229,8 @@
     "map": "old_watchtower",
     "subarea": "tower_armory",
     "hint": "每格下沿都刻着一个名字",
-    "read_text": "READ_TOWER_ARMORY_NAMES"
+    "read_text": "READ_TOWER_ARMORY_NAMES",
+    "into_codex": ""
   },
   "poi_floating_page": {
     "name": "水里飘着的一页纸",
@@ -237,7 +239,8 @@
     "map": "old_watchtower",
     "subarea": "tower_water_room",
     "hint": "水面上漂着一页纸，湿透了没沉",
-    "read_text": "READ_SOAKED_JOURNAL"
+    "read_text": "READ_SOAKED_JOURNAL",
+    "into_codex": ""
   },
   "poi_stele_names": {
     "name": "石碑上的名单",
@@ -246,7 +249,8 @@
     "map": "old_watchtower",
     "subarea": "tower_horn_room",
     "hint": "碑上的名字一排排往下刻",
-    "read_text": "READ_TOWER_STELE_NAMES"
+    "read_text": "READ_TOWER_STELE_NAMES",
+    "into_codex": ""
   },
   "poi_top_words": {
     "name": "塔顶那行字",
@@ -255,7 +259,8 @@
     "map": "old_watchtower",
     "subarea": "tower_top",
     "hint": "石头地上刻着一行字",
-    "read_text": "READ_TOWER_TOP_WORDS"
+    "read_text": "READ_TOWER_TOP_WORDS",
+    "into_codex": ""
   },
   "poi_north_rift": {
     "name": "北边的裂口",
@@ -264,6 +269,7 @@
     "map": "old_watchtower",
     "subarea": "tower_top",
     "hint": "北边的天边上有一道口子",
-    "read_text": "READ_TOWER_NORTH_RIFT"
+    "read_text": "READ_TOWER_NORTH_RIFT",
+    "into_codex": ""
   }
 }

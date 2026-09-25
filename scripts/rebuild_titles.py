@@ -229,6 +229,13 @@ def counter_ok(key: str, num: int, target, why: str, D: dict) -> str:
         n = len([1 for _k, v in D["pois"].items() if v.get("into_codex")])
         if num != n:
             return "read_all 写的是 %d，而 pois 里可读物有 %d 条（现算）" % (num, n)
+        # ★ B3-10：这个数还要与**文档那 12 类**对上 —— 10 §一A 的编号项 · 19 §三A 的 3+9 ·
+        #   21 §一 那句话（四处不一致就是「两个数各说一套」，那条称号会悄悄变成拿不到 / 白送）。
+        import read_kinds as _RK
+        _d = _RK.docs()
+        _nums = {"10 §一A": _d["10"], "19 §三A": _d["19_fixed"] + _d["19_expand"], "21 §一": _d["21"]}
+        if len(set(_nums.values()) | {num}) != 1:
+            return "read_all 那个数与文档对不上：%s / 条件里写 %d" % (_nums, num)
     elif key == "visited":
         if not target:
             return "visited 少了目标（图:节点）"
