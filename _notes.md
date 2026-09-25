@@ -1741,3 +1741,250 @@ e2e_drive：塔内层主（骑士 17 · 号角室）胜 · 塔顶 Boss（狂战�
 4. `_affix_hooks` 的 `once` 守卫是必需的：引擎每一动都会调一次钩子（不守就是 12→16→21→…→60）。
 5. 只从 `status=="on"` 抽词条 = 本批的 fail-closed 主线：**宁可这只怪今天不出精英，也不发一条
    只有名字没有效果的词条**（`拾荒人` 就是这条的结果）。
+
+
+---
+
+# B3-25 · 组队第一层（队伍数据 + 三条指令 + 一个『同意』动作 + 2/3/4 人档面板倍数）
+
+> 分支 `b3-25-party`（基线 `3ee9148`）· 真源仓 `C:/Users/yuyu/aetheran-plan` **只读**（一字未改，
+> `git status` 空）· 引擎仓 `C:/Users/yuyu/framework-engine` **零改动**（`git status` 空）。
+> 本批按纪律把要补的真源行**落在本分支里**（`content/data/texts.json` 是生成物，分支里可直接改），
+> 下面 §一 那些行由**主线**在合入时补进真源那份表，再跑 `scripts/rebuild_syscopy.py` 重生成
+> （生成器只认「已存在且逐字一致」⇒ 幂等、零 diff）。
+
+## §〇 一句话
+
+**单人说不了话就入不了队**：队伍是「档上那一格 + 现算的名册」，入队必须**被邀的人自己敲『同意』**；
+面板倍数从「只有 1 人档」扩成 **1/2/3/4 四档**（1 人 ÷2 是真源写死的、4 人 = 设计值、
+中间两档按递减排法），`cmds_battle` 那三处 `party=1` 改成**进战那一刻现算的真实人数**
+（在队 + 同节点 + 活人）。
+
+## §一 真源待补行
+
+### 1.1 新文案槽位（**28 条** · 五列表行 · 键不带反引号）
+
+归属：`00_总纲/17_文案收口口径_v1.md`（在那份槽位表下方**新增一张小表**即可，脚本按行全扫）。
+键**不带反引号**；多行文案写 `\n`。本批已按上表**逐字**落进本分支 `content/data/texts.json`
+（612 → 640 条）。
+
+```text
+| SYS_PARTY_HEAD | 【队伍】{n}/{max} 人 · 队长：{cap} | n,max,cap | 系统 | B3-25 组队 · 抬头 |
+| SYS_PARTY_ROW | · {name}（{level} 级）｜ 生命 {hp}/{hpmax} ｜ 现在在 {where} | name,level,hp,hpmax,where | 系统 | B3-25 组队 · 逐人一行 |
+| SYS_PARTY_TAIL | （打『邀请 <名字>』拉人 —— 他得自己打『同意』才算入队；打『离队』退出。） | - | 系统 | B3-25 组队 · 尾注 |
+| SYS_PARTY_MAKE | 你起了个队（队长：你）—— 上限 {max} 人。 | max | 系统 | B3-25 组队 · 建队那一下 |
+| SYS_PARTY_PEND | 有一封邀请：{cap} 邀你入队（还剩 {left} 刻）—— 打『同意』答应。 | cap,left | 系统 | B3-25 组队 · 待答的邀请 |
+| SYS_PARTY_JOINED | 你已经在队里了 —— 队长：{cap}。 | cap | 系统 | B3-25 组队 · 已经在队里 |
+| SYS_PARTY_OFF | 队伍读不出来 —— 存档库没接上。 | - | 系统 | B3-25 组队 · 库没接上（fail-closed） |
+| SYS_PARTY_STALE | （{cap} 那支队已经不在了 —— 你这一格名字消掉了。） | cap | 系统 | B3-25 组队 · 队长没了自愈 |
+| SYS_PARTY_INV_ASK | 打『邀请 <名字>』—— 名字写清楚点。 | - | 系统 | B3-25 邀请 · 没带名字 |
+| SYS_PARTY_INV_NOBODY | 这个群里没有叫「{name}」的人（他得先在群里说过话）。 | name | 系统 | B3-25 邀请 · 查无此人 |
+| SYS_PARTY_INV_SELF | 你自己就是队长 —— 不用邀自己。 | - | 系统 | B3-25 邀请 · 邀自己 |
+| SYS_PARTY_INV_NOTCAP | 只有队长能拉人 —— 跟{cap}说一声。 | cap | 系统 | B3-25 邀请 · 不是队长 |
+| SYS_PARTY_INV_NOCLS | 「{name}」还没定下职业（建号没走完）—— 队伍收不了他。 | name | 系统 | B3-25 邀请 · 还没建号（fail-closed） |
+| SYS_PARTY_INV_MEMBER | 「{name}」已经在队里了。 | name | 系统 | B3-25 邀请 · 已在本队 |
+| SYS_PARTY_INV_OTHER | 「{name}」在别人的队里 —— 让他先打『离队』。 | name | 系统 | B3-25 邀请 · 已在别的队 |
+| SYS_PARTY_INV_FULL | 队里已经 {max} 个人了 —— 装不下了。 | max | 系统 | B3-25 邀请 · 满员 |
+| SYS_PARTY_INV_FAR | 「{name}」不在这儿 —— 他在{where}。同一张图的人才能进同一支队。 | name,where | 系统 | B3-25 邀请 · 不同图（03_ §4.7 同地图） |
+| SYS_PARTY_INV_AGAIN | 已经邀过「{name}」了 —— 等他自己打『同意』。 | name | 系统 | B3-25 邀请 · 重复邀请 |
+| SYS_PARTY_INV_OK | 跟「{name}」说过了 —— {ttl} 刻内他自己打『同意』就算入队。 | name,ttl | 系统 | B3-25 邀请 · 发出去了 |
+| SYS_PARTY_ACC_NONE | 没有人邀你。 | - | 系统 | B3-25 同意 · 没这封邀请 |
+| SYS_PARTY_ACC_EXPIRED | {cap} 那封邀请过期了 —— 让他再邀一次。 | cap | 系统 | B3-25 同意 · 邀请过期 |
+| SYS_PARTY_ACC_FULL | {cap} 那支队满了（{max} 人）。 | cap,max | 系统 | B3-25 同意 · 满员 |
+| SYS_PARTY_ACC_FAR | {cap} 现在在{where} —— 不在一处，进不了队。 | cap,where | 系统 | B3-25 同意 · 不在同一处 |
+| SYS_PARTY_ACC_OK | 入队了：{cap} 的队，现在 {n} 人。 | cap,n | 系统 | B3-25 同意 · 入队那一下 |
+| SYS_PARTY_LV_NONE | 你没在队里。 | - | 系统 | B3-25 离队 · 没队 |
+| SYS_PARTY_LV_MEMBER | 你退出了 {cap} 的队。 | cap | 系统 | B3-25 离队 · 队员退 |
+| SYS_PARTY_LV_CAPTAIN | 你把队散了 —— 队里的人（{list}）得自己再找队。 | list | 系统 | B3-25 离队 · 队长散队 |
+| SYS_PARTY_LV_SOLO | 你把队散了。 | - | 系统 | B3-25 离队 · 队长散队（队里就自己一个） |
+```
+
+★ **本批没借任何现成槽位**（不欠语义账）。★ 本批的槽位全部由 `probe_party` ② 现扫实现体
+（`T("…")` 直调 + 映射表里的字面量两处都扫）与 texts 对账，占位 / params 双向核。
+
+### 1.2 真源待补的**口径行**（不是文案，逐条列清）
+
+| # | 差什么 | 真源现在怎么写的 | 本批怎么办 |
+|---|---|---|---|
+| 甲 | **队伍上限 4 人** | ✅ 已有：`00_总纲/03_主要玩法.md` §4.7「组队 \| 副本支持 1–4 人」 | 落进 `content/data/party.json` 的 `pt_rules.max_members`（口径唯一来源） |
+| 乙 | **队长 = 发起人** | ⬜ 没有这一行 | 本批拍板（`captain_is_founder`），**待补真源行** |
+| 丙 | **入队要一个『同意』动作**（外加 `同意` 这条指令本身） | ⬜ `04_指令总表 §十` 那张表只写了「`邀请 <人>` / `离队`」 | 本批新加声明 `party_accept`（`^同意$`），**待补真源**：`04_指令总表 §十` 加一行「`同意` \| 非战斗 \| 应下最近那封邀请（入队）」 |
+| 丁 | **邀请有效期** | ⬜ 没有这一行 | 本批拍板 `invite_ttl_ticks = 43200` 刻 = 半个游戏日（1 刻 = 1 游戏秒 ⇒ 现实 1 小时），**待补真源行** |
+| 戊 | **2 人 / 3 人档的面板倍数** | ⬜ `12_怪物面板…` §一④ / `17_组队…` §五只给了「单人 ÷2」；`22_旧哨塔…` §三④只说「按人数缩放」 | 本批拍板 **递减排法**：`1 人 hp×0.5 → 2 人 ×0.75 → 3 人 ×0.9 → 4 人 ×1.0`（两边锚点不动：4 人 = 设计值、1 人 = 真源 ÷2；增量 +0.25/+0.15/+0.10 递减），**待补真源行** |
+| 己 | **「进战人数 = 在队且同节点的活人」** | ⬜ `17_ §五` 只说「组队时难度按人数缩放」 | 本批拍板（`content/party.members_present` / `present_count`），**待补真源行** |
+| 庚 | **`COMBAT_FOCUS_SOLO` 那一行过时了** | 文案写着「集火是几个人的事 —— 今天打手只有你一个（**组队还没接线**）。」 | 组队**这一批接上了**（队伍/邀请/同意/离队四条可用）⇒ **真源那一行待改**（真源只读，本批不动；`集火` 的多人那一层仍留给「战斗内轮流制」那批） |
+| 辛 | **「离线」怎么判** | ⬜ 没有 presence 口径 | 本批**不编**（宿主没给 presence 注入面 —— 见 §二·3），列成**待拍板** |
+
+## §二 设计：本批自定的那几条（可复现 · 写清）
+
+### 1. 档上那一格（两个角色，两个形状）
+
+```text
+队长   flags.party = {"id": "pt_<队长uid>_<起队那一刻>", "role": "captain",
+                      "tick": <起队刻>, "invites": {"<uid>": {"tick": <刻>}}}
+队员   flags.party = {"id": <同一个 id>, "role": "member", "captain": "<队长 uid>"}
+```
+
+* **名册是现算的**（不另存一份）：队长的队员 = 本群存档里那些档上写着「我在他这个队里」的人
+  （`role == member` 且 `id` / `captain` 都对得上）。判据：`probe_party` ⑤（pid 对不上的假档不算队员）。
+* **「队长不在了」不用谁来收尸**：读队的人现算时发现队长那一格不在 ⇒ 判 `stale`，**只清自己那一格**
+  （自愈），队名对不上也走这条。判据：`probe_party` ④（解散之后队员那条路）。
+* **零跨档写**：建队 / 邀请 / 同意 / 离队**只写自己的档**（邀请记在队长自己那一格上；
+  同意只写自己那一格）—— 不去改别人的档。
+* 邀请「已经用掉」是**现算**跳过的：入队那一下不回头清队长那一格的名单，读的时候按「我档上写的就是
+  那支队」跳过（`party.pending`）。
+
+### 2. 「同意」怎么表达 · 「离线」为什么不许编
+
+* 文字游戏里弹不出窗 ⇒ **「同意」就是被邀的人自己打的那一下**（`party_accept`，触发词 `同意`）。
+  ★ 别名只收「同意」一个：**「接受」与 `quest_accept` 的触发词撞车**（probe_cmds ① 当场拦住）。
+* ⇒「**离线的人进不来**」是**结构性**保证：他不敲那一下就在队外；邀请到点作废（有明确回话）。
+* **本批不造 presence 判据**：宿主没有 presence 注入面（`saintess_engine/host/runtime.py` 只给
+  `battle_check` 这一个可选钩子），「多久没落档 = 离线」那种数**编不出来**（编了就是编口径）——
+  这一格列成**待拍板**（见 §六·2）。
+
+### 3. 邀请有效期 = 43200 刻
+
+* 时间尺：**1 刻 = 1 游戏秒**（与档上的账、战斗窗口同一个尺）；钟源只有一个 = `content/calendar`
+  （`party.now_ticks` 就是 `游戏日 × 86400 + 当日秒`，本批没碰日历那个模块）。
+* 43200 刻 = **半个游戏日**（`calendar._clock.real_seconds_per_game_day = 7200` ⇒ 现实 **1 小时**）。
+  边界判据：正好 ttl 还算数 · 过一刻就不算（`probe_party` ③）。
+
+### 4. 「同一处」= 同一张图（真源原话）· 节点级开关不采纳
+
+* `03_ §4.7` 字面是「**同地图**玩家可一起进」⇒ 硬门槛 = 同 `loc`。
+* 更严的「同一个节点」做成域里的开关 `pt_rules.same_node = false`（**不采纳** —— 真源没说；
+  要收紧就改域一个布尔，行为跟着变，代码不写死）。判据：`probe_party` ③（两态真跑）。
+* 邀请那一步的「不在一处」是**预判**（按他档上那份「现在在哪」）；**权威的那一判在『同意』里**
+  （那一刻再判一次，连同「队长还在不在」「队满没满」）。
+
+### 5. 进战那一刻的人数（`cmds_battle` 三处的唯一来源）
+
+```text
+没队              ⇒ 1（单人那条老路：与 B3-17 接线之前逐字相同，连存档都不用读）
+在队              ⇒ 现算「在队 + 同节点 + 活人」的**人数**（含自己）
+在队但读不到存档  ⇒ None（= 「不知道几个人」）⇒ `combat.party_scale_of` 不缩放（走设计值）
+```
+
+★ 为什么「不知道」要传 `None` 而不是垫个 1：**垫 1 会静默把 Boss 削一半**（单人档 hp×0.5）。
+这条与 B3-17 立的那条 fail-closed 同一条纪律（绝不因为「不知道」而悄悄改难度）。
+★ 「活人」= 档上那格血不是 ≤0。**命令这条路造不出这一档**（出档口 `cmds_ast._p` 把血钳到 ≥1），
+所以那条判据走**直调**（`probe_party` ⑥）。
+
+## §三 判据怎么加的（**只加强，没放宽**）
+
+| 探针 | 加/改了哪条 | 为什么是「加强」 |
+|---|---|---|
+| **`scripts/probe_party.py`（本批新增 · 第 30 个）** | 六档：① 形状（域/schema 现读/值域/键名/口径坏了当场抛四档）② 跨域（`party_scale` 键集合 == 本域档位 · 每档都有数 · 实现体引用的 28 个槽位都在 texts 且占位双向对账）③ 可复算（面板逐档现算 · pid 可复现 · 「同一处」两态 · TTL 边界）④ 接线（四条触发词各自命中 · **真宿主真敲** 建队→邀请→同意→看队→fail-closed 八档→满员→过期→解散→自愈，逐字对槽位 + 档上副作用逐条核）⑤ 纪律（幂等 · 看队不动档 · 默认档不被就地改 · 假档不算队员 · 库读不到时四条各回点名行且不动档）⑥ 进战人数（`攻击` 真敲五档 + `combat.build(party=…)` 现读） | 新域 + 新指令的整条线一次钉住；期望值全部**现算**（schema / 域 / texts / maps 现读，不手写镜像串） |
+| `scripts/probe_cmds.py` | `UNBOUND_MAX` **10 → 8**（+ 注释：本批接下 `party` / `party_leave`；`party_invite` 从 invisible 开成可见、`party_accept` 新加，两条一落就带 bind ⇒ 不进这一格） | 只降不升那一条照旧；「帮助」列的就是「可见 + 有 bind」那些（⑤ 逐条真敲对账，本批自动多出四条 usage） |
+| `scripts/probe_monsters.py` ⑮ | 从「**2 / 3 人表里不写**、`set(PARTY_SCALE) == {"1"}`」改成三条更严的：**档位集合 == party 域声明的 `1..上限`**（跨域：上限 == 表里最大档 == 键集合）· **每档的键集合恰好是 `{hp}`** · **递减排法**（严格递增 + 增量递减 + 4 人 = 设计值 ×1 + 1 人 = 真源 ÷2） | 旧判据是「除 1 人档之外**不许有**」——那是在「真源没给数」的前提下立的；本批主线拍板给了两档数、且上限有真源（03_ §4.7），于是判据换成**更强**的「四档阶梯必须自洽且与另一域对账」。**不是放宽**：旧判据管的是「有没有编数」，新判据同时管「编的数对不对、档位齐不齐、两边域一不一致」 |
+| `scripts/probe_combat.py` ⑤ | 加「四档真造一遍：逐档 == 面板 × 生成器那张表」+「严格递增 + 四档 atk 同值（只动血）」；fail-closed 从**三条**加到**四条**（新增「人数 > 表里最大档 ⇒ 当场抛」，含真表 `party=5`）；③ 三头对账加强成「四档阶梯 + 只收 hp + 两边锚点 + 档位集合 == party 域上限」 | 旧口径只在「1 人档」上判；现在四档都真造、并把「5 人以上不许编」变成**当场抛**（静默按设计值 = 悄悄改难度） |
+
+★ 判据**没放宽**的地方也点名：`probe_combat` ⑤ 原来那条「另外 16 只：单人档与设计档逐只同值」
+一个字节没动（本批的缩放表只挂在 Boss 那一只上）；`probe_copy` 的 BUDGET / SEALED 一个数没动
+（`cmds_party.py` 是新文件 ⇒ 默认 0，实测 0）。
+
+## §四 改了什么（逐处）
+
+| 文件 | 改了什么 |
+|---|---|
+| `content/data/party.json`（新） | 组队口径域：`_src` 元信息 + `pt_rules`（上限 4 · same_map/same_node · 队长归属 · 要不要『同意』· 邀请有效期 43200 刻） |
+| `schemas/party.schema.json`（新） | `$defs.rule` + `patternProperties ^pt_…` + `x-primary`（编辑器认的那一套，与 races/skills 同形） |
+| `game.json` | **域清单 + `party`**；顺带把 `desc` 里过时的条数改成现值（**100 指令声明 · 92 条真接了实现体** —— 原写 99/81，B3 几批之后早就不对了） |
+| `editor/domains.json` | 登记 `party`（label 组队口径 · schema · primary=rule · 🤝） |
+| `content/party.py`（新） | 队伍层唯一出口：口径读件 · 档上那一格（建队/清/判角色）· 名册现算（`membership`/`_roster`）· 四条动作（`create`/`invite`/`accept`/`leave`+`disband`）· 邀请现算（`pending` 含过期分档）· 同一处（`same_place`）· **进战人数**（`members_present`/`present_count`）。**零中文文案、零引擎形状** |
+| `content/cmds_party.py`（新） | 四条处理器（`party`/`party_invite`/`party_accept`/`party_leave`）：取数 → 判据码 → 槽位映射 → 回话；落档走 `_commit`（`_p()` 是副本，必须先写回引擎手上那份再 `env.save()`） |
+| `content/data/commands.json` | ① `party` / `party_leave` 加 `bind`（args 三槽位 `group_id`/`uid`/`player`）② `party_invite` 加 `bind` **且 `visible` 从 false 开成 true** ③ **新加声明** `party_accept`（`^同意$` · usage 同意 · order 101 · 带 bind）④ ★ 触发词从 `^邀请\s*(.+)$` 改成 `^邀请(?:\s*(.+))?$`（裸敲『邀请』**命中自己**、回一句怎么用，与 `搭话` 那条同形；不这么改就是引擎那句「没有命中任何指令声明」） |
+| `content/data/texts.json`（生成物 · 分支里改） | 新增 28 条 `SYS_PARTY_*`（612 → 640 条）；上面的 §一·1.1 那 28 行就是真源待补行 |
+| `content/cmds_battle.py` | 新增 `_party_now(env, p, uid)`；**三处 `party=1` 全换成 `party=_party_now(...)`**（`_open_and_hand`→`_run_hand` 新增 `party=` 形参 / `attack` / `retreat`） |
+| `content/combat.py` | `party_scale_of`：docstring 更新成四档口径；**fail-closed 三条 → 四条**（人数超过表里最大档当场抛）；`build` / `monster_actor` 的 docstring 跟账 |
+| `scripts/rebuild_monsters.py` | `PARTY_SCALE` 扩成四档（唯一来源）+ 抬头注释重写（两边锚点 / 递减排法 / 待补行 / 与 party 域的跨域对账）；末尾打印行标签「单人档」→「按人数缩放档」 |
+| `content/data/monsters.json`（生成物） | 由生成器重跑：**只有 Boss 那一格多了 2/3/4 三档**（diff 9 行，逐字可复算） |
+| `scripts/probe_party.py`（新） | 见 §三 |
+| `scripts/probe_cmds.py` / `probe_monsters.py` / `probe_combat.py` | 见 §三 |
+| `_notes.md` | 本节 |
+
+★ **没碰**：`content/cmds_instance_router*` 那种宿主路由（B3-26 那批的活）· `content/persistence.py`
+（**没有**加 presence 查询）· 引擎仓（一个字节）· 真源仓（一个字节）。
+
+## §五 门禁实跑（逐字）
+
+```text
+# 探针全量（Python 3.12 · GWEN_ENGINE=C:/Users/yuyu/framework-engine）
+for f in scripts/probe_*.py; do "$PY" "$f" >/dev/null 2>&1 || echo RED $f; done
+  ⇒ 30 个文件全绿，一个 RED 都没有（此前 29 个 + 本批新增 scripts/probe_party.py）
+    ★ 任务书里写的是 29 个 —— 实测工作树里是 29 个 + 新增 1 个 = 30（探针没少，只多）
+
+# 端到端
+"$PY" scripts/e2e_drive.py            ⇒ 全绿（落档 / 观察 / 场景正文照旧）
+"$PY" scripts/e2e_drive.py "队伍" "离队" "离队"
+  ⇒ 你起了个队（队长：你）—— 上限 4 人。 / 【队伍】1/4 人 · 队长：… / 逐人一行 / 尾注
+    你把队散了。 / 你没在队里。            （真机契约那一层：句句是槽位、没有机器键）
+
+# 生成器
+"$PY" scripts/rebuild_monsters.py      ⇒ 重算 17 只怪的 panel（逐字节不变）· 只给 Boss 补 2/3/4 三档
+                                           按人数缩放档（ms_boss_oath_sentry）：1 人 → hp×0.5 · 2 人 → hp×0.75 · 3 人 → hp×0.9 · 4 人 → hp×1.0
+（幂等复跑：数据逐字节不变）
+```
+
+★ **上线前那句实话**：探针全绿 ≠ 能上线（B3 那次的教训）。本批只到「包内 + 真宿主契约」这一层，
+线上冒烟（AstrBot 真机）由主线合入后做。
+
+## §六 没做成的 / 留账（不许当成已完）
+
+1. **战斗内那一层（轮流制 / 输入窗口 / 超时自动防御）不在本批** —— `17_ §四` 那三条照搬
+   （轮流给 30–45 秒 · 超时自动防御 · 日志全队可见）要「一场战斗跨多条指令」的持久状态，
+   与 B3-23 留在 `_notes.md` 的是同一条账。
+2. **「离线」不判**（列成待拍板）：宿主没给 presence 注入面，本批用「结构性保证 + 邀请有效期」
+   顶住（§二·2）。要真判，得先定「多久没落档算离线」这一格 —— 那是**编口径**，留给鱼鱼拍板。
+3. **多人真打完一场 Boss**：本批钉的是「人数**真传进** `combat.build`」（六档现读），
+   以及面板逐档可复算；「4 人队 19 级真打完 Boss（8/8）」那条实测在 `probe_combat` 里**早就有**
+   （那是直接造 actor，不经命令层）。**没做**：从命令层走完一场多人战斗 —— 那要轮流制（账同 1）。
+4. **`ACC_GONE`（「队长那支队已经不在了」）那一档删掉了**：设计上**不可达** —— 邀请记在队长那一格，
+   队长一散队那一格就没了 ⇒ 被邀的人那一步只会看到「没人邀你」/「那封过期了」。
+   留着就是死分支（连带 `SYS_PARTY_ACC_GONE` 这条槽位也删了，不留孤儿）。
+5. **`集火` 的文案过时**：`COMBAT_FOCUS_SOLO` 里那句「组队还没接线」现在不成立了（真源待改行见 §一·1.2 庚）；
+   本批**没动**它（真源只读 + 那句的多人那一层要靠轮流制）。
+6. **`party` 的守卫**：`04_指令总表 §十` 给的是「非战斗」（`guard_desc` 一直写着），但今天**没有**
+   「非战斗」这个内置守卫（引擎只有 `player` / `battle`）⇒ 与既有声明一样只留 `guard_desc` 文案，
+   等守卫那一批统一接（不是本批的范围）。
+7. **队伍**与「自动战斗偏好 / 战斗偏好」无关**：`17_ §六` 那两条（偏好规则 / 窗口提示）一个字没碰。
+
+## §七 可复现命令
+
+```bash
+export GWEN_ENGINE=C:/Users/yuyu/framework-engine AST_PLAN=C:/Users/yuyu/aetheran-plan
+PY="C:/Users/yuyu/AppData/Local/Programs/Python/Python312/python.exe"
+
+# 生成器（幂等）
+PYTHONIOENCODING=utf-8 "$PY" scripts/rebuild_monsters.py
+
+# 该域探针（本批新增）
+PYTHONIOENCODING=utf-8 "$PY" scripts/probe_party.py
+
+# 全量 30 + 端到端
+for f in scripts/probe_*.py; do PYTHONIOENCODING=utf-8 "$PY" "$f" >/dev/null 2>&1 || echo RED "$f"; done
+PYTHONIOENCODING=utf-8 "$PY" scripts/e2e_drive.py "队伍" "邀请 乙" "同意" "离队"
+```
+
+## §八 改动文件清单（显式 · 提交用）
+
+```text
+content/data/party.json           （新）
+schemas/party.schema.json         （新）
+content/party.py                  （新）
+content/cmds_party.py             （新）
+scripts/probe_party.py            （新）
+game.json
+editor/domains.json
+content/data/commands.json
+content/data/monsters.json        （生成物 · 生成器重跑）
+content/data/texts.json           （生成物 · 分支里落 28 条槽位，真源待补行见 §一）
+content/cmds_battle.py
+content/combat.py
+scripts/rebuild_monsters.py
+scripts/probe_cmds.py
+scripts/probe_monsters.py
+scripts/probe_combat.py
+_notes.md
+```

@@ -29,18 +29,27 @@ _PARTY_KEY = re.compile(r"[1-9][0-9]*")
 def party_scale_of(m: dict, party: int | None) -> dict:
     """取「这个人数下，这只怪的面板倍数」（域里的 `mods.party_scale`）。
 
-    ★ B3-17 **单人口径**（真源四处，只有一处给了数）：
+    ★ 真源四处（**只有一处给了数**）：
       `12_怪物面板与精英词条池_v1.md` §一④「Boss …按 4 人队 × 18 次行动设计 —— 单人打会很吃力
       （有意的，它是团队内容）；**单人挑战时按 ÷2 看（≈3670）**」·
       `17_组队与策略配合_v1.md` §五「单人　能过（**Boss 血按 ÷2 看**）」·
       `22_旧哨塔_逐间设计_v1.md` §三④「**组队时按人数缩放**（P1 单人也能过）」·
-      台账 P-36（设计原话「单人打 Boss 伤害 ÷2」）。数只有**一格**（1 人 = hp ×0.5），
-      写在生成器 `scripts/rebuild_monsters.PARTY_SCALE` → 数据 `mods.party_scale`（唯一来源）。
+      台账 P-36（设计原话「单人打 Boss 伤害 ÷2」）。
 
-    ★ fail-closed 三条（不许静默）：
+    ★ B3-25 起这张表是**四档**（1/2/3/4 人）：两边锚点都不许动 —— 4 人档 = 设计值（真源
+      「按 4 人队设计」）、1 人档 = 真源写死的 ÷2；中间两档（2/3 人）按主线拍板的**递减排法**
+      内插（每多一个人加得少一点：+0.25 / +0.15 / +0.10）。表写在生成器
+      `scripts/rebuild_monsters.PARTY_SCALE` → 数据 `mods.party_scale`（唯一来源）；
+      「有效人数档 = 1..上限」的另一半在 `content/data/party.json`（跨域对账在 probe_party）。
+      ★ **只收 `hp` 一项**：四处真源里两处字面写的是「**血**按 ÷2 看」——
+      伤害 / 防御 / 速度那几项文档没说，一律不动。
+
+    ★ fail-closed 四条（不许静默）：
       · `party is None`（不知道几个人）⇒ **不缩放**（返回 `{}`）：那走的就是设计值（4 人档），
         绝不会因为「不知道」而悄悄把 Boss 削弱；
       · 表在、但键不是正整数 / 是别的东西 ⇒ **当场抛**（数据坏了不兜底）；
+      · `party` **超过表里最大档** ⇒ 当场抛（队伍上限就是表里最大那一档；静默按设计值
+        = 悄悄改难度）；
       · 要缩的那一项**必须真在面板里**（键名对不上 ⇒ 抛，不静默当 0）—— 那一半在
         `monster_actor` 里落（本函数只回答「缩哪些项、缩多少」）。
     """
@@ -56,6 +65,10 @@ def party_scale_of(m: dict, party: int | None) -> dict:
         return {}
     if isinstance(party, bool) or not isinstance(party, int) or party < 1:
         raise ValueError("队伍人数必须是正整数（不知道就传 None）：%r" % (party,))
+    top = max(int(k) for k in tbl)
+    if party > top:
+        raise ValueError("队伍人数 %r 超过表里最大档（%d 人）—— 那几档没数，不许编"
+                         "（上限见 content/data/party.json 的 pt_rules.max_members）" % (party, top))
     return {str(k): float(v) for k, v in (tbl.get(str(party)) or {}).items()}
 
 
@@ -131,9 +144,10 @@ def monster_actor(mid: str, m: dict, *, party: int | None = None, affixes=None,
           被当成率 ⇒ **怪必然暴击**（`13 > 1` 恒真）。
       ⇒ 四个键一律在这儿换名 + 率化（率化共用 `panel_build.rate_of`，与玩家同一把尺）。
 
-    ★ B3-17：`party` = 这一场的队伍人数 —— 走 `party_scale_of` 落单人口径（Boss 单人 hp ÷2）。
-      缩放加在**域那一套键名**上（`hp` / `atk`），换名之前；**不传 = 不知道 ⇒ 不缩放**
-      （设计值 = 4 人档），见 `party_scale_of` 的 fail-closed 三条。
+    ★ B3-17 起的「按人数缩放」：`party` = 这一场的队伍人数 —— 走 `party_scale_of`
+      （1/2/3/4 档 · 4 人 = 设计值 · 1 人 = 真源写死的 ÷2）。缩放加在**域那一套键名**上
+      （`hp` / `atk`），换名之前；**不传 = 不知道 ⇒ 不缩放**（设计值 = 4 人档），见
+      `party_scale_of` 的 fail-closed 四条。
     """
     panel = dict(m.get("panel") or {})
     for _k, _v in party_scale_of(m, party).items():
@@ -217,7 +231,8 @@ def build(player: dict, monster_ids, monsters: dict, *, party: int | None = None
           override=None, affixes=None, hp_mults=None) -> Battle:
     """组一场战斗：玩家 1 人 vs 指定的怪。
 
-    `party` = 队伍人数（今天只有单人，所以调用方一律传 1；组队接线那批把真实人数传进来）——
+    `party` = 队伍人数（★ B3-25 起由 `cmds_battle._party_now` **进战那一刻现算**：
+    在队 + 同节点 + 活人 —— 单人 = 1、不知道 = None）——
     它只影响「团队内容」那几只怪的面板（`mods.party_scale`），别的怪一格不动。
     `override` = **非内置动作**的回调（引擎 `Battle.action_override` 那一个注入面）——
     B3-23 那几手（打断 / 用物 / 换手）走它；不传 = 与改前逐字相同（引擎不认识任何游戏词）。

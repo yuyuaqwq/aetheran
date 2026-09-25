@@ -1627,18 +1627,56 @@
     "usage": "队伍",
     "visible": true,
     "order": 78,
-    "guard_desc": "非战斗"
+    "guard_desc": "非战斗",
+    "bind": {
+      "handler": "content.cmds_party:party",
+      "call": "run",
+      "args": [
+        "group_id",
+        "uid",
+        "player"
+      ]
+    }
   },
   "party_invite": {
     "patterns": [
-      "^邀请\\s*(.+)$"
+      "^邀请(?:\\s*(.+))?$"
     ],
     "category": "社交与系统",
     "desc": "邀请",
     "usage": "邀请 <参数>",
-    "visible": false,
+    "visible": true,
     "order": 79,
-    "guard_desc": "非战斗"
+    "guard_desc": "非战斗",
+    "bind": {
+      "handler": "content.cmds_party:party_invite",
+      "call": "run",
+      "args": [
+        "group_id",
+        "uid",
+        "player"
+      ]
+    }
+  },
+  "party_accept": {
+    "patterns": [
+      "^同意$"
+    ],
+    "category": "社交与系统",
+    "desc": "应下邀请（入队）",
+    "usage": "同意",
+    "visible": true,
+    "order": 101,
+    "guard_desc": "非战斗",
+    "bind": {
+      "handler": "content.cmds_party:party_accept",
+      "call": "run",
+      "args": [
+        "group_id",
+        "uid",
+        "player"
+      ]
+    }
   },
   "party_leave": {
     "patterns": [
@@ -1649,7 +1687,16 @@
     "usage": "离队",
     "visible": true,
     "order": 80,
-    "guard_desc": "在队里"
+    "guard_desc": "在队里",
+    "bind": {
+      "handler": "content.cmds_party:party_leave",
+      "call": "run",
+      "args": [
+        "group_id",
+        "uid",
+        "player"
+      ]
+    }
   },
   "help": {
     "patterns": [

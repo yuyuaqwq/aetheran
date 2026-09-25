@@ -407,7 +407,10 @@ UNBOUND = {k: v for k, v in DECL.items()
 #:     注意 `battle_item` 是 `visible: false`（它的触发词与 item_use 逐字相同、路由归 item_use，
 #:     见 ③）⇒ 它本来就不在这一格里；这一批**能数进这一格的是 5 条**，第 6 条（battle_item）
 #:     在同一批里真接了实现体、走 ⑭ 那条真调判据。
-UNBOUND_MAX = 10
+#:   ★ B3-25（组队那一条）接下 `party`（队伍/组队）与 `party_leave`（离队）⇒ **10 → 8**。
+#:     同一批里 `party_invite`（本批从 invisible 开成可见）与**新加的** `party_accept`（同意）
+#:     一落就带 bind ⇒ 两条都不进这一格（它们走 probe_party 的真敲判据）。
+UNBOUND_MAX = 8
 
 print("⑤ ★ P-23：「帮助」只列**有处理器**的声明（真敲 · 逐条对账）")
 try:
