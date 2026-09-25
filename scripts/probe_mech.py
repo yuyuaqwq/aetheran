@@ -532,21 +532,35 @@ _mult2 = float(MECH.state_rule("blood_debt")["panel"]["mult"])
     "  · 定向：血债面板 atk %.0f ⇒ %.0f（声明 ×%s ⇒ 期望 %d）" % (_a0, _a1, _mult2, int(_a0 * _mult2)))
 _b3 = fresh("cls_berserker")
 _c3 = _b3.focus()
-_mob = (_b3.sides.get("enemy") or [None])[0]
+#: ★ fixture 收口（本批实测挖出来的一条引擎语义）：**承伤被闪避掉的那一下不触发 `on_taken`**
+#:   （`_apply_damage` 先 roll 闪避，闪掉了就直接 return 0 —— 引擎注释：「闪避免伤不打断蓄力」）。
+#:   语义上这是对的（「谁碰你一下」—— 闪开了就是没碰到），但对**判据**的要命之处是：
+#:   拿自带你 2~6% 闪避的玩家当挨打方，这条断言就变成掷硬币（实测 12 跑 1 红）。
+#:   ⇒ 挨打方仍是**玩家**（反击伤害要吃他的 atk），开打方换成**试桩**（不吃面板/闪避）；
+#:     挨的那一下若被闪掉就再来一下（最多 20 次 —— 全闪掉是 0.03^20，判据本体一个字没松）。
+_atk3 = stub(hp=500, battle=_b3)
 apply_mech(_b3, _c3, _c3, "SKILL_BSK_riposte")
 _want_re = int(float(ST.actor_stats(_b3, _c3).get("atk", 0) or 0)
                * float(MECH.state_rule("riposte_guard")["reflect_atk_mult"]))
-_hp0 = int(_mob.get("hp") or 0)
-LD.deal_damage(_b3, _mob, _c3, 100, [])
-_got = _hp0 - int(_mob.get("hp") or 0)
+_got, _tries = 0, 0
+while _got == 0 and _tries < 20:
+    _tries += 1
+    _hp0 = int(_atk3.get("hp") or 0)
+    if LD.deal_damage(_b3, _atk3, _c3, 100, []) <= 0:
+        continue                                       # 这一下被闪掉了 ⇒ 不算「碰到」（引擎语义）
+    _got = _hp0 - int(_atk3.get("hp") or 0)
 (ok if _got == _want_re and _want_re > 0 else bad)(
-    "  · 定向：狂态里被怪打一下 ⇒ 它自己挨 %d（= atk × %s ⇒ 期望 %d）"
-    % (_got, MECH.state_rule("riposte_guard")["reflect_atk_mult"], _want_re))
+    "  · 定向：狂态里真挨到的那一下 ⇒ 攻击者自己挨 %d（= atk × %s ⇒ 期望 %d；第 %d 次才挨到）"
+    % (_got, MECH.state_rule("riposte_guard")["reflect_atk_mult"], _want_re, _tries))
 _c3["effects"]["riposte_guard"]["expire"] = _b3._now - 1
-_hp1 = int(_mob.get("hp") or 0)
-LD.deal_damage(_b3, _mob, _c3, 100, [])
-(ok if int(_mob.get("hp") or 0) == _hp1 else bad)(
-    "  · 定向：态过期后再挨打 ⇒ 不反击（%d ⇒ %d）" % (_hp1, int(_mob.get("hp") or 0)))
+_hp1 = int(_atk3.get("hp") or 0)
+_tries2, _hit2 = 0, False
+while _tries2 < 20 and not _hit2:                       # ★ 同上：要**真挨到**的那一下才算数
+    _tries2 += 1
+    _hit2 = LD.deal_damage(_b3, _atk3, _c3, 100, []) > 0
+(ok if _hit2 and int(_atk3.get("hp") or 0) == _hp1 else bad)(
+    "  · 定向：态过期后**真挨到**的那一下不反击（第 %d 次挨到 · 桩 %d ⇒ %d）"
+    % (_tries2, _hp1, int(_atk3.get("hp") or 0)))
 _b4 = fresh("cls_berserker", lv=16)
 _c4, _t4, _l4 = do(_b4, "SKILL_BSK_riposte")
 (ok if has(_l4, "COMBAT_MECH_RIPOSTE") else bad)("  · 端到端：真出手 ⇒ 出「你不躲」那一行")
@@ -621,13 +635,18 @@ _c5 = _b5.focus()
 _m0 = float(ST.actor_stats(_b5, _c5).get("matk", 0) or 0)
 apply_mech(_b5, _c5, _c5, "SKILL_MAG_frostveil")
 _m1 = float(ST.actor_stats(_b5, _c5).get("matk", 0) or 0)
-_r5 = hit(_b5, _c5, 100)
+#: ★ 承伤乘区那半在**试桩**上量（玩家 actor 自带 2~6% 闪避 ⇒ 直接打他自己会掷硬币）
+_a5 = stub(battle=_b5)
+_a5.setdefault("effects", {})["frost_shell"] = {"stacks": 1, "expire": _b5._now + 240}
+_r5 = hit(_b5, _a5, 100)
 (ok if _r5 == 65 and _m1 == int(_m0 * 0.8) else bad)(
     "  · 定向：霜障两头都真落地（承伤 100 ⇒ %d · matk %.0f ⇒ %.0f —— 代价那半也算上）" % (_r5, _m0, _m1))
 _b6 = fresh("cls_priest")
 _c6 = _b6.focus()
 apply_mech(_b6, _c6, _c6, "SKILL_PRS_nightwatch")
-_r6 = hit(_b6, _c6, 100)
+_a6 = stub(battle=_b6)
+_a6.setdefault("effects", {})["night_lamp"] = {"stacks": 1, "expire": _b6._now + 250}
+_r6 = hit(_b6, _a6, 100)
 _h0 = float(ST.actor_stats(_b6, _c6).get("heal_pow", 0) or 0)
 (ok if _r6 == 65 and _h0 > 0 else bad)(
     "  · 定向：守夜承伤 100 ⇒ %d、治疗强度 %.1f（F8 的基数 ×1.25）" % (_r6, _h0))
@@ -671,9 +690,11 @@ _b3 = fresh("cls_assassin")
 _c3 = _b3.focus()
 apply_mech(_b3, _c3, _c3, "SKILL_SHD_sidestep")
 _eva = float(ST.actor_stats(_b3, _c3).get("eva", 0) or 0)
-_r3 = hit(_b3, _c3, 100)
+_a3 = stub(battle=_b3)                                 # ★ 同上：乘区那半在试桩上量
+_a3.setdefault("effects", {})["sidestep_veil"] = {"stacks": 1, "expire": _b3._now + 180}
+_r3 = hit(_b3, _a3, 100)
 (ok if _r3 == 100 else bad)(
-    "  · 定向：侧闪**不动减伤**（挨 100 点还是 100 点 —— 它改的是打不打得到；eva 现算 %.1f）" % _eva)
+    "  · 定向：侧闪**不动减伤**（100 点还是 100 点 —— 它改的是打不打得到；玩家自己的 eva 现算 %.1f）" % _eva)
 (ok if abs(float(((_c3.get("effects") or {}).get("sidestep_veil") or {}).get("expire") or 0)
            - (_b3._now + float(SKD["SKILL_SHD_sidestep"]["mech_val"]))) < 1e-6 else bad)(
     "  · 定向：侧闪时长 = mech_val(%s) 刻" % SKD["SKILL_SHD_sidestep"]["mech_val"])
