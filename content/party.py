@@ -253,6 +253,32 @@ def membership(rows, p, uid) -> dict:
             "members": _roster(idx, cap, mine["id"]), "stale": False}
 
 
+def members_of(group_id, uid) -> list:
+    """这一场该有谁 —— **B3-26 `content/instance.members_of` 点名的那个口**（跨批契约）。
+
+    · 口径**与 `_party_now`/`present_count` 同一支**：在队 + **同节点** + 活人（含自己）
+      —— 不把「在队但人在别的节点」的人塞进这一场（B3-26 的注释只写了「队伍名单」，
+      这里是合入时按 B3-25 的既有口径收口的点，见 _notes）；
+    · 单人 / 不在队里 / 队散了 ⇒ 回 `[uid]` 一个（不回空表）；
+    · **存档读不出来** ⇒ 也回 `[uid]`（走单人那条老路）—— B3-25 那边「读不到 ⇒ 不缩放」
+      的语义归 `present_count`（回 None）；这里是名单口，回不了 None，所以退单人。
+    · 顺序 = `_roster` 那一支的稳定序（uid 升序），同一份名单每次同一个顺序。
+    """
+    me = str(uid or "")
+    try:
+        rows = rows_of(group_id)
+    except PartyError:
+        return [me]
+    idx = index(rows)
+    mine = idx.get(me)
+    if not isinstance(mine, dict) or not _safe_rec(mine):
+        return [me]
+    out = list(members_present(rows, mine, me) or [])
+    if me not in out:
+        out.append(me)
+    return out
+
+
 def view(rows, p, uid) -> dict:
     """「队伍」那一屏要的账：这一队 + 逐人（名字 / 等级 / 血 / 在哪一站）。
 

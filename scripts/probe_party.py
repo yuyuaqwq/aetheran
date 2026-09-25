@@ -542,29 +542,38 @@ def _set_party(uid, val):
 
 _PID = PT.pid_of("u_a", 777)
 _SEC = []
+# ★ 合入提示（B3-26 × B3-25）：有队(≥2 站一起)之后 `攻击` 会走「场」（`instance.take_turn`）——
+#   场是**跨指令留着**的 ⇒ 每一档之前先 `INST.clear(G)`，否则上一档开着的场会把这一档吃掉
+#   （实测：不 clear ⇒ 后面三档根本不再 build，观测值停在上一档）。
+from content import instance as INST
 try:
     CBT.build, CBT.pick_encounter = _spy, (lambda *a, **k: [PIN])
     _set_party("u_a", None)                     # 一、单人（没队）⇒ 1（老路：一个数都没变）
     _at("u_a", LOC, NODE, hp=80)
+    INST.clear(G)
     say("u_a", "攻击")
     _SEC.append(("没队", _SEEN[-1], 1))
     _set_party("u_a", {"id": _PID, "role": "captain", "tick": 1, "invites": {}})
     _set_party("u_b", {"id": _PID, "role": "member", "captain": "u_a"})
     _at("u_a", LOC, NODE, hp=80)                # 二、两人同在骨田 ⇒ 2
     _at("u_b", LOC, NODE, hp=70)
+    INST.clear(G)
     say("u_a", "攻击")
     _SEC.append(("同节点两人", _SEEN[-1], 2))
     _at("u_b", LOC, "bn_camp")                  # 三、队友在同一张图的另一个节点 ⇒ 1
+    INST.clear(G)
     say("u_a", "攻击")
     _SEC.append(("队友在别站", _SEEN[-1], 1))
     _at("u_b", LOC, NODE, hp=70)
     _set_party("u_c", {"id": _PID, "role": "member", "captain": "u_a"})
     _at("u_b", LOC, NODE, hp=70)                # 五、三人同节点 ⇒ 3
     _at("u_c", LOC, NODE, hp=50)
+    INST.clear(G)
     say("u_a", "攻击")
     _SEC.append(("同节点三人", _SEEN[-1], 3))
     try:                                        # 六、在队里但读不到存档 ⇒ None（不缩放）
         PS.all_players = _boom
+        INST.clear(G)
         say("u_a", "攻击")
     finally:
         PS.all_players = _keep_all
