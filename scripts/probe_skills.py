@@ -13,8 +13,10 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
+SCRIPTS = Path(__file__).resolve().parent
 ENGINE = os.environ.get("GWEN_ENGINE", "C:/Users/yuyu/framework-engine")
 sys.path.insert(0, str(REPO))
+sys.path.insert(0, str(SCRIPTS))          # ★ 生成器那张表（rebuild_skills）的唯一来源
 sys.path.insert(0, ENGINE)
 
 from saintess_engine import config                                   # noqa: E402
@@ -92,29 +94,82 @@ if rec:
     cast_ticks = config.get_hook("time_model_fn")(111.0, rec["cast"]["base"])
     chk("引燃 200 刻基准 @法师 spd 111 → %.1f 刻（≈191）" % cast_ticks, 180 < cast_ticks < 200)
 
-# ⑦ ★ B3-6b-2d-b：技能那半走 ASCII `owner_class`（不再比 skills 的**中文** kind）——
-#   等价性 + 类别值的来源一起钉：
-#     ① 域里「有 owner_class」的技能 kind **只有一个值** ⇒ 用 owner_class 筛 == 用 kind 筛
-#     ② 类别值从域来（`skills_lookup.active_kind()`），且**不许是空串**
-#        （引擎那几处比的是 `kind == _kind("heal")`，本包没声明 kind 词表 ⇒ 空串会被判成治疗）
-#     ③ 六职业的普攻都在自己那一班里（`owner_class` 对得上、power 最低）
+# ⑦ ★ B3-14：**引擎通道 + 倍率公式**（原判据是「普攻取自己那班 power 最低的那条」——
+#    那条判据把**辅助技**钉成了普攻：骑士盾墙(0.0) / 刺客·游侠后撤(0.0) / 修女净罪(0.0)）。
+#    新判据（更严，且每一格都能复算）：
+#      ① 域里每条技能都有 `kind_override` 且落在 `content/rules/kinds.json` 的值域里
+#      ② 伤害技（kind_override ∈ 物理/魔法）必须有 `exprs`，且**等于** `<基准>*<power>`
+#         复算（基准 = `classes.dmg_channel`：物理→atk · 法系→matk）—— 数值不算手打
+#      ③ 治疗/增益类**不许**有 exprs（它们不产生伤害；有 exprs 就会去打人）
+#      ④ 六职业各有**恰好一条** `basic: true`，power > 0，通道 = 该职业的 dmg_channel
+#      ⑤ `basic_skill_of` 取回的就是那条（不是 power 最低的那条）
+#      ⑥ 引擎侧真读到了：`kinds` 挂上、`kind_of("phys")` 非空、普攻能过
+#         `resolve_basic_skill` 的 `exprs/formula` 门（缺了它六职业普攻全退化成兜底「挥击」）
 from content import skills_lookup as SL                              # noqa: E402
+import rebuild_skills as RSK                                         # noqa: E402
+
+_KINDS = SL.kinds()
+_ENGINE_NAMES = ("phys", "magi", "true", "heal", "buff")
+chk("★ kinds 词表三头对账：引擎要的 5 个语义名 == kinds.json 的键（%s）"
+    % " · ".join("%s→%s" % (k, _KINDS[k]) for k in _ENGINE_NAMES),
+    set(_KINDS) == set(_ENGINE_NAMES) and all(_KINDS.values()))
 
 _owned = {k: v for k, v in (sk or {}).items() if v.get("owner_class")}
-_kinds = {v.get("kind") for v in _owned.values()}
-chk("★ 域里「有 owner_class」的 %d 条技能 kind 同值（%s）⇒ 用 owner_class 筛 == 用 kind 筛"
-    % (len(_owned), "/".join(sorted(str(x) for x in _kinds))), len(_kinds) == 1)
-chk("★ 技能类别值从域现取（`active_kind()`）", SL.active_kind() in _kinds, "%r" % SL.active_kind())
-chk("★ 类别值不许是空串（空串 ⇒ 引擎把攻击技判成治疗：actions.py:110）", bool(SL.active_kind()))
-_bad_plain = []
-for _cls in sorted({v["owner_class"] for v in _owned.values()}):
+_badkind = [(k, v.get("kind_override")) for k, v in _owned.items() if v.get("kind_override") not in _KINDS.values()]
+chk("★ 30 条技能的 `kind_override` 都在 kinds 值域里（%d 条）" % len(_owned), not _badkind, "%s" % _badkind[:4])
+
+_badexpr = []
+for _k, _v in sorted(_owned.items()):
+    _want = RSK.exprs_of(_v)
+    _got = list(_v.get("exprs") or [])
+    if _want != _got:
+        _badexpr.append("%s 包=%s 算=%s" % (_v.get("name"), _got or "—", _want or "—"))
+chk("★ 倍率公式逐条可复算（`exprs` == `<基准>*<power>`；治疗/增益不带 exprs）",
+    not _badexpr, " · ".join(_badexpr[:4]))
+
+_chan = {k: (SL.classes().get(v["owner_class"]) or {}).get("dmg_channel") for k, v in _owned.items()}
+_badchan = [(k, c) for k, c in _chan.items() if c not in ("phys", "magi")]
+chk("★ 六职业在 classes 域里都声明了 `dmg_channel`（物理/法系）", not _badchan, "%s" % _badchan)
+_badbasis = [k for k, v in _owned.items()
+             if v.get("exprs") and not str(v["exprs"][0]).startswith(
+                 "atk*" if _chan.get(k) == "phys" else "matk*")]
+chk("★ `exprs` 的基准与职业通道一致（物理吃 atk · 法系吃 matk）", not _badbasis, "%s" % _badbasis)
+
+_BASIC = {k: v for k, v in _owned.items() if v.get("basic") is True}
+_per = {}
+for k in _BASIC:
+    _per.setdefault(_BASIC[k]["owner_class"], []).append(k)
+_badbasic = [c for c, ks in _per.items() if len(ks) != 1]
+_badbasic += [k for k, v in _BASIC.items() if float(v.get("power", 0) or 0) <= 0]
+chk("★ 六职业各有**恰好一条** `basic`，且是伤害技（power>0；原先是盾墙/后撤/净罪这些 0 倍率辅助技）",
+    set(_per) == {v["owner_class"] for v in _owned.values()} and not _badbasic,
+    " · ".join("%s→%s" % (c, "+".join(ks)) for c, ks in sorted(_per.items())) + (" ｜ 红：%s" % _badbasic if _badbasic else ""))
+
+_badpick = []
+for _cls in sorted(set(_per)):
     _b = SL.basic_skill_of(_cls)
-    _mine = sorted((v.get("power", 1.0), k) for k, v in _owned.items() if v["owner_class"] == _cls)
-    if not _b or _b.get("owner_class") != _cls or not _mine or _b.get("power") != _mine[0][0]:
-        _bad_plain.append((_cls, (_b or {}).get("name"), _mine[:1]))
-chk("★ 六职业普攻都取到自己那班 power 最低的那条（%s）"
-    % " · ".join("%s→%s" % (c, (SL.basic_skill_of(c) or {}).get("name")) for c in sorted({v["owner_class"] for v in _owned.values()})),
-    not _bad_plain, "%s" % (_bad_plain or "无"))
+    if not _b or _b.get("name") != (sk.get(_per[_cls][0]) or {}).get("name"):
+        _badpick.append((_cls, (_b or {}).get("name"), _per[_cls]))
+    elif not (_b.get("exprs") or _b.get("formula")):
+        _badpick.append((_cls, "没 expr", _b.get("name")))
+chk("★ `basic_skill_of` 取回的就是域里标了 basic 的那条（且带 exprs）"
+    "（%s）" % " · ".join("%s→%s" % (c, (sk[_per[c][0]] or {}).get("name")) for c in sorted(_per)),
+    not _badpick, "%s" % (_badpick or "无"))
+
+from ext_combat.battle.actions import resolve_basic_skill          # noqa: E402
+from ext_combat.battle import game_config as _GC                   # noqa: E402
+_kind_hook = config.get_hook("kinds")
+chk("★ 引擎 `kinds` 词表真挂上了（`kind_of('phys')` = %r）" % _GC.kind_of("phys"),
+    bool(_kind_hook) and _GC.kind_of("phys") == _KINDS["phys"] and _GC.kind_of("heal") == _KINDS["heal"])
+_badres = []
+for _cls in sorted(set(_per)):
+    _r = resolve_basic_skill(_cls)
+    if not _r.get("exprs") and not _r.get("formula"):
+        _badres.append(_cls)
+    elif _r.get("name") != SL.basic_skill_of(_cls).get("name"):
+        _badres.append("%s→%s" % (_cls, _r.get("name")))
+chk("★ 六职业普攻都过得了 `resolve_basic_skill` 的 expr 门（不过就回落兜底「挥击」）",
+    not _badres, "%s" % (_badres or "无"))
 
 print()
 print("结论：", "全过 ✅" if ok else "有红 ❌")

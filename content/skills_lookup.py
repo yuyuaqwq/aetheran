@@ -6,9 +6,22 @@
     monster_skill_fn 怪技能（本包 monsters 域里各怪带的技能）
     basic_skill_fn   职业普攻配置（没带技能时的第一选择）
     basic_fallback   普攻兜底（内容名）
+    kinds            引擎 kind 词表（`content/rules/kinds.json`）
 
-★ 为什么必须有：缺了这三口，引擎 `_index_one_actor` 索引不到技能 ⇒ 玩家/怪「静默空放」，
+★ 为什么必须有：缺了这几口，引擎 `_index_one_actor` 索引不到技能 ⇒ 玩家/怪「静默空放」，
   实测症状是双方都拿默认技（挑成了「圣光治愈」）打了 2000 条日志还打不完。
+
+★ B3-14（2026-09-25）第二件：**`skill_info` 是「域 → 引擎」的翻译口**，它要干两件事
+--------------------------------------------------------------------------
+① **kind 换语义**：域里 `kind = 主动` 是**技能类别**（主动/被动…），而引擎的 `kind` 是
+   **行动语义**（物理/魔法/真伤/治疗/增益）—— 引擎靠它分成「治疗 / 增益 / 伤害」三支，
+   并据此选防御通道（phys→def · magi→mdef · true→无视）。两个是不同轴，不能混用。
+   ⇒ 域里新加 `kind_override`（取值 = `kinds.json` 那 5 个值，由
+     `scripts/rebuild_skills.py` 从 `power` × 职业伤害通道算出来），本口把它顶上 `kind`。
+   ★ 没顶之前（B3-14 实测）：域里 30 条全是「主动」⇒ 引擎把**每条攻击**都判成魔法
+     （`actions.py:_skill_seg_damage` 的 kind 三分支），骑士 atk 51.6 白给、法师 matk 84 一发放倒田鼠。
+② **fail-closed**：`kind_override` 不在 `kinds.json` 的值域里 ⇒ **当场抛**（点名哪条技能）。
+   绝不回空串：空串会被引擎判成「治疗」（`actions.py:110` 那条 `kind == _kind("heal")`）。
 """
 from __future__ import annotations
 
@@ -16,7 +29,11 @@ import json
 import os
 
 _DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+_RULES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "rules")
 _C: dict = {}
+
+#: 引擎那份 kind 词表的键（`ext_combat/battle/actions.py` 比对的 5 个语义名）
+KIND_NAMES = ("phys", "magi", "true", "heal", "buff")
 
 
 def _load(name: str):
@@ -38,6 +55,33 @@ def monsters() -> dict:
     return _load("monsters")
 
 
+def kinds() -> dict:
+    """引擎 kind 词表（真源 = `content/rules/kinds.json`；代码里不写死这 5 个中文值）。"""
+    if "kinds" not in _C:
+        with open(os.path.join(_RULES, "kinds.json"), encoding="utf-8") as f:
+            _C["kinds"] = {k: v for k, v in json.load(f).items() if not str(k).startswith("_")}
+    return _C["kinds"]
+
+
+def kind_value(name: str) -> str:
+    """引擎语义名 → 域内用词。没这个语义名 ⇒ 抛（不猜）。"""
+    k = kinds()
+    if name not in k:
+        raise KeyError("kinds.json 里没有语义名 %r（有的：%s）" % (name, " · ".join(sorted(k))))
+    return k[name]
+
+
+def engine_kind(rec: dict) -> str:
+    """域里那条技能 → **给引擎看的 `kind`**（= `kind_override`）。fail-closed：缺/非法 ⇒ 抛。"""
+    v = rec.get("kind_override")
+    vals = set(kinds().values())
+    if v not in vals:
+        raise KeyError(
+            "技能 %r 的 `kind_override` = %r 不在 kinds.json 的值域里（有的：%s）"
+            "—— 跑 `python scripts/rebuild_skills.py` 重算" % (rec.get("name") or rec, v, " · ".join(sorted(vals))))
+    return str(v)
+
+
 def _norm_class(class_name: str | None) -> str | None:
     """职业名或 id 都收（`骑士` 或 `cls_knight`）。
 
@@ -56,23 +100,16 @@ def _norm_class(class_name: str | None) -> str | None:
     return class_name
 
 
-def active_kind() -> str:
-    """「主动技」这个类别**值** —— 唯一来源 = skills 域（域里 30 条记录共用同一个值）。
+def basic_kind() -> str:
+    """普攻兜底那条的通道值（物理）—— 唯一来源 = `kinds.json`（代码不写死中文枚举）。"""
+    return kind_value("phys")
 
-    ★ B3-6b-2d-b：这个值既是给人看的词、又是**引擎 `do_skill` 分派**（治疗 / 增益 / 攻击）
-      要比对的机器键 ⇒ 代码里不许写死这一份中文枚举（K48 / P-20），只认域里那一份。
-    ★ fail-closed：域里一条带 `kind` 的技能都没有 ⇒ **抛**。绝不回空串 ——
-      引擎那三处比的是 `kind == _kind("heal")`，而本包没声明 kind 词表（`_kind()` 回 ""），
-      空串会让攻击技落进治疗那一支（`ext_combat/battle/actions.py:110`）。
-    """
-    sk = skills()
-    for k in sorted(sk):
-        if str(k).startswith("_"):
-            continue
-        v = sk[k]
-        if isinstance(v, dict) and v.get("kind"):
-            return str(v["kind"])
-    raise KeyError("skills 域里没有带 kind 的技能 —— 拿不到「主动技」那个值")
+
+def _to_engine(v: dict) -> dict:
+    """域里那条记录 → 引擎消费的那一份（浅副本 + kind 换语义）。"""
+    out = dict(v)
+    out["kind"] = engine_kind(v)
+    return out
 
 
 def skill_info(class_name: str, skill_name: str):
@@ -85,44 +122,52 @@ def skill_info(class_name: str, skill_name: str):
         v = sk[key]
         if cls and v.get("owner_class") not in (None, cls):
             return None
-        return dict(v)
+        return _to_engine(v)
     for k, v in sk.items():                       # 中文名路
         if v.get("name") == skill_name and (not cls or v.get("owner_class") in (None, cls)):
-            return dict(v)
+            return _to_engine(v)
     return None
 
 
 def skill_by_key(key: str):
     v = skills().get(key)
-    return dict(v) if isinstance(v, dict) else None
+    return _to_engine(v) if isinstance(v, dict) else None
 
 
 def monster_skill(key: str):
-    """怪技能：本包把怪技挂在 monsters 域的 skills 列表里（当前只给 id，名字即 id）。"""
+    """怪技能：本包把怪技挂在 monsters 域的 skills 列表里（当前只给 id，名字即 id）。
+
+    ★ B3-14：怪技能一律走**物理通道**（域里那些 `ms_skill_*` 没有记录、也无从谈魔法）——
+      原先给的是 `kind = "主动"`，配上没挂的 kinds 词表 ⇒ 怪物伤害恒为下限 1
+      （matk=0 的怪走魔法支，`calc_damage(0, …)` 保底 1 点）。物理通道下它吃怪的 `atk`
+      （真源 `12_怪物面板与精英词条池_v1.md`：`怪 atk = 玩家标准 HP / (18 × (1−玩家DR) × 暴击乘区)`
+      ⇒ 普通怪打玩家 18 次才打死）。
+    """
     for mid, m in monsters().items():
         for sid in (m.get("skills") or []):
             if sid == key:
-                return {"name": key, "kind": active_kind(), "power": 1.0, "cd": 0,
-                        "owner_monster": mid, "_basic": False}
+                return {"name": key, "kind": basic_kind(), "power": 1.0, "cd": 0,
+                        "exprs": ["atk*1"], "owner_monster": mid, "_basic": False}
     return None
 
 
 def basic_skill_of(class_name: str):
-    """职业普攻：本职业 power 最低的那条（没带技能时引擎的第一选择）。
+    """职业普攻：本职业那条标了 `basic` 的（域里唯一一口；无则 `None` → 引擎回落兜底）。
 
-    ★ B3-6b-2d-b：候选只按域里现成的 ASCII `owner_class` 挑（原先还叠了一道
-      `kind == "主动"` 的**中文枚举**筛选 —— 「中文枚举当机器键」）。
-      等价性由 `scripts/probe_skills.py ⑦` 钉着：域里「有 owner_class」的技能 kind 同值。
+    ★ B3-14 之前是按 `power` 升序取「最低的那条」—— 那条判据把**辅助技**当成了普攻：
+      骑士取到盾墙(0.0)、刺客/游侠取到后撤(0.0)、修女取到净罪(0.0)。
+      「哪条是普攻」是设计决定（`02_技能体系规划_v1.md` §五「普攻 + 第一条主动」）⇒ 落成域里的
+      `basic: true`（由 `scripts/rebuild_skills.py` 写），不在代码里猜。
     """
     sk = skills()
     cls = _norm_class(class_name)
     if not cls:
         return None
-    mine = [(v.get("power", 1.0), k, v) for k, v in sk.items() if v.get("owner_class") == cls]
+    mine = [(v.get("lv", 1), k) for k, v in sk.items() if v.get("owner_class") == cls and v.get("basic") is True]
     if not mine:
         return None
     mine.sort()
-    v = dict(mine[0][2])
+    v = _to_engine(sk[mine[0][1]])
     v["_basic"] = True
     return v
 

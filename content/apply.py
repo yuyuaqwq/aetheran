@@ -85,6 +85,7 @@ def install_engine():
     tbl = _table()
     bind = _bindings()
     from ext_combat.battle import formulas as _formulas   # 引擎自带纯公式模块（引擎侧，非内容）
+    from . import skills_lookup as _SL                     # 技能取件口 + kind 词表（同一份真源）
     config.mount(
         formulas=_formulas,                     # ★ 缺了它引擎走 _NullFormulas：伤害算不出来
         formula_table_fn=lambda: tbl,
@@ -98,20 +99,21 @@ def install_engine():
         skill_lookup=_skills_mod(),
         monster_skill_fn=_monster_skill,
         basic_skill_fn=_basic_skill,
-        # ★ 兜底普攻的**类别值**不写死中文枚举（B3-6b-2d-b）—— 从 skills 域现取
-        #   （`active_kind()`，fail-closed）。空串会被引擎判成「治疗」（`actions.py:110`）。
+        # ★ B3-14：**引擎 kind 词表**（`content/rules/kinds.json`）—— 缺了它
+        #   `game_config.kind_of("phys")` 一律回空串 ⇒ 引擎把每条攻击都判成魔法
+        #   （吃 matk 不吃 atk）、治疗/增益技落进伤害支。值不在这里写死：整份从 rules 读。
+        kinds=_SL.kinds(),
+        # ★ 兜底普攻的**类别值**不写死中文枚举（B3-6b-2d-b）—— 从 kinds 词表现取
+        #   （`basic_kind()` = 物理，fail-closed）。空串会被引擎判成「治疗」（`actions.py:110`）。
+        #   B3-14：这条兜底同时是**怪物普攻**（怪没有 class_name ⇒ 走它），它必须带 `exprs`
+        #   并走物理通道 —— 否则怪伤害恒为下限 1（matk=0 走魔法支）。
         #   `name`（挥击）是「这条兜底技叫什么」的文案，属第二刀（该技要进 skills 域 + texts 槽位）。
-        basic_fallback={"name": "挥击", "kind": _active_kind(), "power": 1.0, "cd": 0,
+        basic_fallback={"name": "挥击", "kind": _SL.basic_kind(), "power": 1.0, "cd": 0,
+                        "exprs": ["atk*1"],
                         "cast": {"base": 60}, "recover": {"base": 0}, "range": 1, "mp": 0,
                         "_basic": True},
     )
     _MOUNTED = True
-
-
-def _active_kind():
-    """技能类别值 —— 从 skills 域现取（代码不写死中文枚举：B3-6b-2d-b）。"""
-    from . import skills_lookup
-    return skills_lookup.active_kind()
 
 
 def _skills_mod():

@@ -250,6 +250,141 @@ _GOLD_OLD = {k: (8 if m.get("role") == "精英"                 # 旧写法照�
                                        % (sorted(k for k in _GOLD_NEW if _GOLD_NEW[k] != _GOLD_OLD[k]) or "无"))
 (ok if set(_GOLD_NEW.values()) == {3, 8, 20} else bad)("★ 三档都还在用（%s）" % sorted(set(_GOLD_NEW.values())))
 
+# ══════════════════════════════════════════════════════════════
+# ★ B3-14 战斗面：键名契约 / 通道 / 配平（真跑，不看模型自说自话）
+# ══════════════════════════════════════════════════════════════
+import io as _io                                                           # noqa: E402
+import re as _re                                                           # noqa: E402
+sys.path.insert(0, os.path.join(REPO, "scripts"))                           # 生成器那张表
+import rebuild_monsters as _RBM                                            # noqa: E402
+from content import skills_lookup as _SL                                   # noqa: E402
+from ext_combat.battle import game_config as _GC                           # noqa: E402
+from ext_combat.battle.stats import actor_stats as _stats                  # noqa: E402
+
+print()
+print("── ★ B3-14 ① 键名契约：域里那套键名要真到得了引擎（照域里的名字传 ⇒ 静默当 0/1）")
+_KEY_BAD = []
+for _mid, _m in sorted(MON.items()):
+    _p = _m["panel"]
+    _a = CB.monster_actor(_mid, _m)
+    _st = _stats(None, _a)
+    _want = [("max_hp", int(_p["hp"])), ("mdef", int(_p["res"]))]
+    for _k, _v in _want:
+        if _a.get(_k) != _v or _st.get(_k) != _v:
+            _KEY_BAD.append("%s.%s actor=%s stats=%s 期望=%s" % (_mid, _k, _a.get(_k), _st.get(_k), _v))
+    if abs(float(_st.get("dodge", 0)) - _p["eva"] / (_p["eva"] + 500.0)) > 1e-6:
+        _KEY_BAD.append("%s.dodge=%s 期望率 %s" % (_mid, _st.get("dodge"), _p["eva"] / (_p["eva"] + 500.0)))
+    if not 0.0 <= float(_st.get("crit", 0)) <= 0.75:
+        _KEY_BAD.append("%s.crit=%s 不是率" % (_mid, _st.get("crit")))
+(ok if not _KEY_BAD else bad)("★ 17 只怪：`hp→max_hp`（原先恒 1）· `res→mdef`（原先恒 0）· `eva→dodge`（原先恒 0，"
+                              "且必须**率化**）· `crit` 率化（原先 13>1 ⇒ 必然暴击）　%s"
+                              % ("全对" if not _KEY_BAD else "红：%s" % _KEY_BAD[:3]))
+
+print()
+print("── ★ B3-14 ② 六职业普攻打的是**自己那根属性**（原先全走 matk ⇒ 物理职业 5 点伤害）")
+_BASIS = {}
+for _cid, _c in sorted(PB.classes().items()):
+    _ch = _c.get("dmg_channel")
+    _BASIS[_cid] = "atk" if _ch == "phys" else "matk"
+_DMG_RE = _re.compile(r"受到 (\d+) 点伤害")
+_HIT_BAD = []
+for _cid in sorted(_BASIS):
+    _r = _SL.basic_skill_of(_cid)
+    if not _r or not _r.get("exprs"):
+        _HIT_BAD.append("%s 普攻没 expr（回落兜底）" % _cid); continue
+    if not str(_r["exprs"][0]).startswith(_BASIS[_cid] + "*"):
+        _HIT_BAD.append("%s 普攻走 %s" % (_cid, _r["exprs"][0])); continue
+    _pl = {"cls": _cid, "level": 10, "uid": "u_ch", "name": "试", "alloc": _RBM.alloc_of(10, _cid)}
+    _pl["hp"] = CA.hp_cap(_pl)
+    _res, _logs, _ = CB.run_auto(_pl, [_MID], MON, seed=4242)
+    _dmg = [int(x) for x in (_DMG_RE.search(l).group(1) for l in _logs
+                             if ("💥 %s 受到" % MON[_MID].get("name", _MID)) in l and _DMG_RE.search(l))]
+    _st = _stats(None, PB.build_actor(_cid, 10, _pl["alloc"]))
+    _basis_v = float(_st.get(_BASIS[_cid], 0))
+    if not _dmg:
+        _HIT_BAD.append("%s 没打出伤害" % _cid); continue
+    _lo, _hi = 0.5 * _basis_v * 0.8, 2.0 * _basis_v
+    if not (_lo <= max(_dmg) <= _hi):
+        _HIT_BAD.append("%s 单发 max=%s 不在 [%.1f, %.1f]（%s=%.1f）" % (_cid, max(_dmg), _lo, _hi, _BASIS[_cid], _basis_v))
+(ok if not _HIT_BAD else bad)("★ 六职业 10 级真打一场：单发伤害落在自己那根属性附近（物理吃 atk · 法系吃 matk）　%s"
+                              % ("全对" if not _HIT_BAD else "红：%s" % _HIT_BAD))
+
+print()
+print("── ★ B3-14 ③ 配平：四档基准怪 × 该等级**中位职业** × 16 场，实测出手次数 vs 设计次数")
+#   设计次数 = `TIERS[档].hp_n × ARCH[原型].hp`（怪 hp 就是照它反推的）
+#   口径真源：`12_怪物面板与精英词条池_v1.md` §一
+_TIERS = (("ms_wild_dog", "普通"), ("ms_bitten_lumberjack", "精英"),
+          ("ms_sunken_corpse", "头目"), ("ms_bone_warden", "层主"))
+_BAL_BAD, _BAL_ROWS = [], []
+for _mid, _tier in _TIERS:
+    _m = MON[_mid]
+    _lv = int(_m.get("lv", 1))
+    _design = _RBM.TIERS[_tier]["hp_n"] * _RBM.ARCH[_m["archetype"]]["hp"]
+    _med = sorted(_BASIS, key=lambda c: _RBM.per_hit_of(_lv, c))[3]      # 六取中位（第 4 个）
+    _acts = []
+    for _s in range(16):
+        _pl = {"cls": _med, "level": _lv, "uid": "u_bal", "name": "试", "alloc": _RBM.alloc_of(_lv, _med)}
+        _pl["hp"] = CA.hp_cap(_pl)
+        _res, _logs, _ = CB.run_auto(_pl, [_mid], MON, seed=9000 + _s)
+        _acts.append(sum(1 for x in _logs if ("🌀 %s 开始出招" % _pl["name"]) in x))
+    _acts.sort()
+    _me = _acts[len(_acts) // 2]
+    _BAL_ROWS.append((_m["name"], _tier, _lv, _m["panel"]["hp"], _design, _med, _me))
+    if not (0.6 * _design <= _me <= 1.8 * _design):
+        _BAL_BAD.append("%s 设计 %.1f 实测中位 %d" % (_m["name"], _design, _me))
+    print("     %-8s %-4s lv=%-3d hp=%-6d 设计 %5.1f 次 ｜ 中位职业 %-14s 实测 %2d 次"
+          % (_m["name"], _tier, _lv, _m["panel"]["hp"], _design, _med, _me))
+(ok if not _BAL_BAD else bad)("★ 四档实测出手次数落在设计值的 [0.6, 1.8] 倍内（配平没跑飞）　%s"
+                              % ("全对" if not _BAL_BAD else "红：%s" % _BAL_BAD))
+
+print()
+print("── ★ B3-14 ④ 层主 / Boss 可打性（真跑 · 固定种子）：多少级稳、多少级难")
+_WD, _BOSS = "ms_bone_warden", "ms_boss_oath_sentry"
+_WD_LV = {}
+for _lv in (13, 14, 15, 16, 17):
+    _w = 0
+    for _cid in sorted(_BASIS):
+        for _s in range(6):
+            _pl = {"cls": _cid, "level": _lv, "uid": "u_w", "name": "试", "alloc": _RBM.alloc_of(_lv, _cid)}
+            _pl["hp"] = CA.hp_cap(_pl)
+            _r, _l, _ = CB.run_auto(_pl, [_WD], MON, seed=7000 + _s)
+            _w += 1 if _r == "victory" else 0
+    _WD_LV[_lv] = _w
+    print("     层主（守塔的骨架 lv17）· 单刷 lv%-3d ⇒ 胜 %2d/%-2d（%.0f%%）" % (_lv, _w, 36, 100.0 * _w / 36))
+(ok if _WD_LV[17] >= 30 else bad)("★ 层主在**自己那一级（17）**单刷稳（≥ 83%%：实测 %d/36）" % _WD_LV[17])
+(ok if _WD_LV[13] == 0 else bad)("★ 层主低 4 级（13）单刷打不过（实测 %d/36 —— 低于就是碾压，不该赢）" % _WD_LV[13])
+
+_BS_OUT = {}
+for _cid in sorted(_BASIS):
+    _pl = {"cls": _cid, "level": 20, "uid": "u_b", "name": "试", "alloc": _RBM.alloc_of(20, _cid)}
+    _pl["hp"] = CA.hp_cap(_pl)
+    _r, _l, _ = CB.run_auto(_pl, [_BOSS], MON, seed=5150)
+    _BS_OUT[_cid] = (_r, sum(1 for x in _l if ("🌀 %s 开始出招" % _pl["name"]) in x))
+(ok if all(v[0] in ("victory", "defeat") for v in _BS_OUT.values()) else bad)(
+    "★ Boss 单刷**一定出结果**（不再撞 500 步护栏返回 None ⇒ 命令层只会回「（战斗结束：None）」）"
+    "　%s" % " · ".join("%s=%s/%d 次" % (c.split("_")[-1], v[0], v[1]) for c, v in sorted(_BS_OUT.items())))
+(ok if all(v[0] == "defeat" for v in _BS_OUT.values()) else bad)(
+    "★ Boss 单人 **20 级 + 满强化对不上**（设计：4 人队内容 —— 单人必倒地，6 职业全 defeat）")
+_BP = ["cls_knight", "cls_berserker", "cls_ranger", "cls_mage"]
+_BW = 0
+for _s in range(8):
+    _ps = []
+    for _cid in _BP:
+        _pl = {"cls": _cid, "level": 19, "uid": "p_%s" % _cid, "name": _cid,
+               "alloc": _RBM.alloc_of(19, _cid)}
+        _pl["hp"] = CA.hp_cap(_pl)
+        _ps.append(CB.player_actor(_pl))
+    import random as _rnd2                                                       # noqa: E402
+    from ext_combat import Battle as _Btl                                        # noqa: E402
+    _rnd2.seed(31337 + _s)
+    _b2 = _Btl("monster", sides={"player": _ps,
+                                 "enemy": [CB.monster_actor(_BOSS, MON[_BOSS])]})
+    _l2 = []
+    _b2.auto_run(_l2)
+    _BW += 1 if _b2.result == "victory" else 0
+(ok if _BW >= 7 else bad)("★ 4 人队（骑士/狂战士/游侠/法师 · 19 级）真打完 Boss：胜 %d/8 —— 这是 Boss 唯一走得通的路"
+                          "（组队今天还没接线 ⇒ 塔顶那间单刷必倒地，见 _notes.md）" % _BW)
+
 print()
 print("结果：%s" % ("全绿 ✓" if not fails else "有红 ✗"))
 sys.exit(1 if fails else 0)

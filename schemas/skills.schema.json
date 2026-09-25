@@ -137,7 +137,22 @@
           "$comment": "内容侧声明；E3 技能极差的分组键（同职同级段）"
         },
         "kind_override": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1,
+          "$comment": "★ B3-14：给**引擎**看的 kind（域里的 `kind` 是技能类别「主动/被动」，引擎的 kind 是行动语义「物理/魔法/真伤/治疗/增益」—— 两个轴）。取值 = `content/rules/kinds.json` 那 5 个值；引擎靠它分治疗/增益/伤害三支并选防御通道。★ 由 `scripts/rebuild_skills.py` 从 `power` × `classes.dmg_channel` 算出来，**别手改**。"
+        },
+        "exprs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "$comment": "★ B3-14：**倍率公式**（逐级；本包技能不分级 ⇒ 一条）。引擎 `skill_formula_expr` 取 `exprs[min(skill_lv-1, len-1)]`，走表达式分支 ⇒ 不再按 kind 兜底取 matk；且 `resolve_basic_skill` 要求普攻必须带 `exprs`/`formula`。★ 写法 = `<基准>*<power>`（物理职业 `atk*2.2` · 法系 `matk*1.4`），由 `scripts/rebuild_skills.py` 算出来，**别手改**。治疗/增益类不写（它们不产生伤害）。"
+        },
+        "basic": {
+          "type": "boolean",
+          "$comment": "★ B3-14：这条是**本职业的普攻**（引擎 `resolve_basic_skill` 的第一选择）。原先按「power 最低」挑 ⇒ 挑到 0 倍率的辅助技（盾墙 / 后撤 / 净罪）。每职业恰好一条。"
         },
         "effect": {
           "type": "string"

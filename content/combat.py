@@ -72,8 +72,28 @@ def _default_skills(cls_id: str):
 
 
 def monster_actor(mid: str, m: dict) -> dict:
-    """怪数据（monsters 域）→ 战斗 actor。"""
+    """怪数据（monsters 域）→ 战斗 actor。
+
+    ★ B3-14：**域里那套键名要翻成引擎消费端那一套**（键名契约 —— 照域里的名字传，
+      引擎读不到就当 0/1，全程不报错）。域（真源 `12_怪物面板与精英词条池_v1.md`）写的是
+      `hp / res / eva / crit`，而引擎 `make_actor` + `stats._monster_base_stats` 读的是
+      `max_hp / mdef / dodge / crit**率**`：
+
+        · `hp`  → 引擎只认 `max_hp` ⇒ 实测 `actor_stats` 给出 **max_hp = 1**（真血靠
+          `a["hp"]` 走，所以「一击必死」没暴露，但按 max_hp 算的东西全错：
+          斩杀线 / hp% 技 / 护盾 / Boss 阶段阈值）。
+        · `res` → 引擎只认 `mdef` ⇒ **怪魔防恒 0**（法师/修女 的伤害无视「法系」原型那 1.6 倍法抗）。
+        · `eva` → 引擎只认 `dodge`，而且**当率读**（`landing._roll_dodge`：`min(dodge, 0.40)`）⇒
+          怪**永不闪避**（「快速」原型的 1.3 倍闪避白给）。
+        · `crit`→ 引擎当**率**读（`random.random() < crit`）⇒ 域里 13/47/94 这些**数值**
+          被当成率 ⇒ **怪必然暴击**（`13 > 1` 恒真）。
+      ⇒ 四个键一律在这儿换名 + 率化（率化共用 `panel_build.rate_of`，与玩家同一把尺）。
+    """
     panel = dict(m.get("panel") or {})
+    panel["max_hp"] = panel.pop("hp", panel.get("max_hp"))
+    panel["mdef"] = panel.pop("res", panel.get("mdef"))
+    panel["dodge"] = PB.rate_of(panel.pop("eva", 0))
+    panel["crit"] = PB.rate_of(panel.pop("crit", 0))
     panel.setdefault("mp", 0)
     panel.setdefault("max_mp", 0)
     a = make_actor(uid=mid, name=m.get("name", mid), side=ENEMY_SIDE, kind="monster",
