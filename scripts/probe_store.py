@@ -1,0 +1,153 @@
+# -*- coding: utf-8 -*-
+"""探针：存档半边（`content/persistence.py`）—— 表名不许撞生产库 · 存读往返 · fail-closed。
+
+为什么有它（2026-09-25 换包上线实测的**真事故**）
+------------------------------------------------
+存档半边原先建的是**裸名 `players`** 表，而宿主那台生产库里已经躺着**奥兰迪亚的 `players`**
+（列是 qq_id / name / level…）。`CREATE TABLE IF NOT EXISTS` 撞上它**静默跳过建表** ⇒ 之后每一次
+`SELECT data FROM players` 都 `no such column: data` ⇒ **在线机器人每条指令都崩**（连「我是 人类」
+都回异常）。137 个测试文件 + 当时 24 个探针全绿都照不出来 —— 它们各自用**新建的空库**；
+只有「真上线、真撞上那张库」才暴露。⇒ 本探针**造一个生产库形态的库**（先放一张别人的 `players`）
+来钉这一族。
+
+判据
+----
+  ① 五个口都在（宿主 `StoreFactory.HALF` 契约：get_player / update_player / init_db / lock / connect）
+  ② 存读往返一致 · 同一个 (group_id, uid) 覆盖不新增行
+  ③ ★ 库里已有**别人的**同名表 ⇒ 包照样存得上读得回，且那张表一行不动
+  ④ ★ 表名带包前缀（静态守卫：SQL 里不许出现裸 `players`）
+  ⑤ ★ fail-closed：同名表列不对 ⇒ **当场抛**（不是等到查询时 `no such column`）
+  ⑥ get_player_groups / all_players 与写进去的对得上
+
+用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_store.py
+"""
+from __future__ import annotations
+
+import os
+import re
+import sqlite3
+import sys
+import time
+from pathlib import Path
+
+import ast as _ast
+import inspect as _inspect
+
+REPO = Path(__file__).resolve().parent.parent
+ENGINE = os.environ.get("GWEN_ENGINE", "C:/Users/yuyu/framework-engine")
+sys.path.insert(0, str(REPO))
+sys.path.insert(0, ENGINE)
+
+from content import persistence as PS                                  # noqa: E402
+
+ok = True
+TMP = os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp")
+
+
+def chk(label, cond, extra=""):
+    global ok
+    ok = ok and bool(cond)
+    print("  %s %s%s" % ("✓" if cond else "✗", label, ("  —— %s" % extra) if extra else ""))
+
+
+def fresh(name, foreign_players=False, half_table=None):
+    """造一个库：`foreign_players` = 先放一张**别人的** `players`（生产库形态）。"""
+    p = os.path.join(TMP, "ast_probe_store_%s.db" % name)
+    if os.path.exists(p):
+        os.remove(p)
+    c = sqlite3.connect(p)
+    if foreign_players:
+        c.execute("CREATE TABLE players (qq_id TEXT PRIMARY KEY, name TEXT, level INTEGER)")
+        c.execute("INSERT INTO players VALUES('u_prod','老王',7)")
+    if half_table:
+        c.execute("CREATE TABLE %s (qq_id TEXT, name TEXT)" % PS.TBL)
+    c.commit()
+    c.close()
+    PS.bind(db_path=p)
+    return p
+
+
+print("探针：存档半边（表名不许撞生产库 · fail-closed）")
+
+print("① 宿主契约那五个口 + 签名")
+missing = [n for n in ("get_player", "update_player", "init_db", "lock", "connect")
+           if not callable(getattr(PS, n, None))]
+chk("★ 五个口都在（缺一个宿主就拒绝启动）", not missing, missing)
+_sig = _inspect.signature(PS.update_player)
+chk("★ update_player 收 **fields（宿主 `save_player` 逐字 `update_player(g, u, **fields)`）",
+    any(p.kind == p.VAR_KEYWORD for p in _sig.parameters.values()), str(_sig))
+chk("★ get_player(group_id, uid) 两参", len(_inspect.signature(PS.get_player).parameters) == 2,
+    str(_inspect.signature(PS.get_player)))
+
+print("② 存读往返（空库）")
+p0 = fresh("fresh")
+chk("空库 + init_db 不抛", PS.init_db() is True)
+chk("新号读回 None（引擎据此要初始档）", PS.get_player("g1", "u1") is None)
+fill = {"level": 3, "bag": {"i_horn_half": 1}, "books": {"relic": {"i_horn_half": {"studied": True}}}}
+PS.update_player("g1", "u1", **fill)
+PS.update_player("g1", "u1", level=4)                                  # 字段式覆盖（读-改-写）
+c = sqlite3.connect(p0)
+rows = c.execute("SELECT COUNT(*) FROM %s" % PS.TBL).fetchone()[0]
+c.close()
+chk("★ 读回来逐字段一致（含中文/嵌套 · 覆盖写只动那一格）",
+    PS.get_player("g1", "u1") == dict(fill, level=4), PS.get_player("g1", "u1"))
+chk("★ 同一个 (group_id, uid) 覆盖不新增行", rows == 1, "行数 %d" % rows)
+
+print("③ ★ 生产库形态：库里已经有别人的同名表")
+p1 = fresh("foreign", foreign_players=True)
+PS.update_player("g2", "u2", level=9)
+gone = PS.get_player("g2", "u2")
+c = sqlite3.connect(p1)
+tabs = [r[0] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")]
+mine = c.execute("SELECT COUNT(*) FROM %s" % PS.TBL).fetchone()[0]
+theirs = c.execute("SELECT qq_id, name, level FROM players").fetchall()
+c.close()
+chk("★ 包照样存得上读得回（不再 no such column）", gone == {"level": 9}, gone)
+chk("★ 别人的 `players` 一行不动、列也没被改", theirs == [("u_prod", "老王", 7)], theirs)
+chk("★ 包的表是带前缀的那张（两张表并存）", tabs == sorted(["aetheran_meta", PS.TBL, "players"]),
+    "%s · 包的行数 %d" % (tabs, mine))
+
+print("④ ★ 静态守卫：SQL 里的表名都带包前缀")
+src = open(os.path.join(str(REPO), "content", "persistence.py"), encoding="utf-8").read()
+tree = _ast.parse(src)
+# 只看**代码里的字符串**（注释 / docstring 里提到旧名是有意的，不算违规）
+_docs = set()
+for _n in _ast.walk(tree):
+    if isinstance(_n, (_ast.Module, _ast.FunctionDef, _ast.AsyncFunctionDef, _ast.ClassDef)):
+        _d = _ast.get_docstring(_n, clean=False)
+        if _d:
+            _docs.add(_d)
+_sqls = [n.value for n in _ast.walk(tree)
+         if isinstance(n, _ast.Constant) and isinstance(n.value, str) and n.value not in _docs]
+tbls = set()
+for _s in _sqls:
+    tbls |= set(re.findall(r"(?:FROM|INTO|EXISTS)\s+([A-Za-z_][A-Za-z_0-9]*|%s)", _s))
+bad = sorted(t for t in tbls if t != "%s" and not t.startswith("aetheran_"))
+chk("★ 代码里的 SQL 不出现裸表名（现取到：%s）" % (sorted(tbls),), not bad, bad)
+chk("★ 表名常量带包前缀", str(PS.TBL).startswith("aetheran_"), PS.TBL)
+
+print("⑤ ★ fail-closed：同名表列不对 ⇒ 当场抛")
+fresh("half", half_table=True)
+try:
+    PS.get_player("g3", "u3")
+    chk("★ 半截/异形的同名表 ⇒ 抛 RuntimeError", False, "居然没抛（会变成静默存不上档）")
+except RuntimeError as e:
+    chk("★ 半截/异形的同名表 ⇒ 抛 RuntimeError（说得清是哪张表）",
+        PS.TBL in str(e) and "列不对" in str(e), e)
+except Exception as e:                                                 # noqa: BLE001
+    chk("★ 半截/异形的同名表 ⇒ 抛 RuntimeError", False, "%s: %s" % (type(e).__name__, e))
+
+print("⑥ 附带查询")
+p2 = fresh("many")
+PS.update_player("g1", "u1", level=1)
+PS.update_player("g1", "u2", level=2)
+PS.update_player("g2", "u1", level=3)
+chk("★ get_player_groups（同一个人在哪几个群）", sorted(PS.get_player_groups("u1")) == ["g1", "g2"],
+    PS.get_player_groups("u1"))
+allp = PS.all_players()
+chk("★ all_players 全量 = 3 条", len(allp) == 3, len(allp))
+chk("★ all_players 按群过滤", len(PS.all_players("g1")) == 2, PS.all_players("g1"))
+
+print()
+print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
+sys.exit(0 if ok else 1)
