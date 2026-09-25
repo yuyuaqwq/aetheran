@@ -167,11 +167,13 @@ _miss9 = [nd for nd in ("tower_hall", "tower_storage", "tower_horn_room")
 chk("★ 三处「可做」所在的三间（门厅/储藏室/号角室）各有一个可搜物", not _miss9, "%s" % _miss9)
 
 # ══════════════════════════════════════════════════════════════
-# ⑩ ★ B3-10：**真跑**「读」这条指令 —— 18 条可读物逐条：正文真拿得到；
+# ⑩ ★ B3-10 + ★ P-31：**真跑**「读」这条指令 —— 18 条可读物逐条：正文真拿得到；
 #    进谱的那 12 条当场进旧物谱（问号起步）· 塔内那 6 条就地线索**一条都不进**（读完不留痕）。
 #    判据是行为（不是结构）：看完这一条就知道「谁进谱」不是靠注释说的。
+#    ★ P-31 加强：带 `condition` 的那几条先把**门槛该有的账**补上（交过的委托 / 读到过的
+#      那条）再敲 —— 「门槛满足时一条都不许少」与「门槛不满足时真被挡」两件事分开钉（⑫）。
 # ══════════════════════════════════════════════════════════════
-print("⑩ 真跑『读』：18 条可读物逐条拿到正文 · 谁进谱（12 / 6）由行为说了算")
+print("⑩ 真跑『读』：18 条可读物逐条拿到正文 · 谁进谱（12 / 6）由行为说了算 · 带门槛的先补账")
 import asyncio                                                            # noqa: E402
 
 from content import cmds_ast as CA10                                      # noqa: E402
@@ -197,11 +199,29 @@ def _run10(p, text):
     return out
 
 
-read_bad, read_ok = [], {"进谱": 0, "就地线索": 0}
+def _sat10(p10, rec):
+    """把这条 POI 门槛**该有的那本账**补上（P-31）—— 只补 `quest` / `read` 两路。
+
+    · `quest` → 算已交（交活那一刻写的就是 `flags.quests_done`）
+    · `read`  → 旧物谱里那条已在（`codex.note_read` 写的就是它）
+    · `time` / `weather` **不补** —— 那是真门槛（今天那两条写的是「退潮」，calendar 域里没有这个 token
+      ⇒ 判不了 ⇒ 照旧可读，见 ⑫）
+    """
+    cond = rec.get("condition") or {}
+    if cond.get("quest"):
+        p10.setdefault("flags", {})["quests_done"] = [str(cond["quest"])]
+    if cond.get("read"):
+        p10.setdefault("books", {}).setdefault("relic", {})[str(cond["read"])] = {"known": False}
+    return p10
+
+
+read_bad, read_ok = [], {"进谱": 0, "就地线索": 0, "带门槛": 0}
 for pid in sorted(reads):
     body = str((tx.get(po[pid].get("read_text")) or {}).get("value") or "")
-    p10 = {"day": 1, "loc": po[pid].get("map"), "node": po[pid].get("subarea"),
-           "books": {"relic": {}}, "foot": {}}
+    p10 = _sat10({"day": 1, "loc": po[pid].get("map"), "node": po[pid].get("subarea"),
+                  "books": {"relic": {}}, "foot": {}}, po[pid])
+    if po[pid].get("condition"):
+        read_ok["带门槛"] += 1
     got = _run10(p10, "读 %s" % po[pid].get("name"))
     books = ((p10.get("books") or {}).get("relic") or {})
     if not body or CA10.T("SYS_READ_HEAD", name=po[pid].get("name")) not in got or body not in got:
@@ -213,14 +233,292 @@ for pid in sorted(reads):
             continue
         read_ok["进谱"] += 1
     else:
-        if books or any(CA10.T("SYS_CODEX_NEW", book="", name="").split("{")[0] in x for x in got):
+        # ★ P-31：这条自己不许进谱（原先看「整本谱是不是空的」—— 补过门槛账的档会把它误判成进谱）
+        if pid in books or any(CA10.T("SYS_CODEX_NEW", book="", name="").split("{")[0] in x for x in got):
             read_bad.append((pid, "就地线索不该进旧物谱", books))
             continue
         read_ok["就地线索"] += 1
-chk("★ 18 条可读物逐条真敲『读』：正文逐字拿到（%d 条进谱 → 问号起步 · %d 条就地线索 → 不留痕）"
-    % (read_ok["进谱"], read_ok["就地线索"]),
-    not read_bad and read_ok == {"进谱": len(codexed), "就地线索": len(reads) - len(codexed)},
+chk("★ 18 条可读物逐条真敲『读』：正文逐字拿到（%d 条进谱 → 问号起步 · %d 条就地线索 → 不留痕 · "
+    "其中 %d 条带门槛，账补上了照样读得到）"
+    % (read_ok["进谱"], read_ok["就地线索"], read_ok["带门槛"]),
+    not read_bad and read_ok["进谱"] == len(codexed)
+    and read_ok["就地线索"] == len(reads) - len(codexed)
+    and read_ok["带门槛"] == len([k for k in reads if po[k].get("condition")]),
     "%s" % (read_bad[:2] or read_ok))
+
+# ══════════════════════════════════════════════════════════════
+# ⑪ ★ P-28：短时增益**真落到面板上**（数据 → 唯一消费端 → food_buff → 引擎面板 mul 层）
+# ------------------------------------------------------------
+# 判据是「摸了以后面板上的数真的变了」，不是「代码里有这一支」：
+#   ① 两张词表不许漂（`cmds_ast.POI_BUFF_STATS` ⊆ `gear.BUFF_KEY`）
+#   ② 数值**从数据现读**（不手抄）：stat 在白名单里 · pct > 0 · duration > 0
+#   ③ 真敲『触摸』那一站：出一行 `SYS_POI_BUFF`（逐字对槽位）+ 档上 `food_buff` 落档（until = 敲钟 + duration）
+#   ④ 面板真涨：引擎 `actor_stats` 的该键 == 基础 × (1 + pct/100)，**别的键一个都不动**
+#   ⑤ 过期自动失效（假钟拨过 duration）：`food_buff` 读回空、面板回基础值
+#   ⑥ 反证（有牙）：把数据那份 `pct` 抹掉 / `stat` 换成不认得的 ⇒ **不出 BUFF 行**（走点名那一支）
+# ══════════════════════════════════════════════════════════════
+print("")
+print("⑪ 真跑『触摸』：POI 的短时增益真进面板（P-28）")
+from content import gear as GB11                                          # noqa: E402
+from content import combat as CB11                                        # noqa: E402
+from content import calendar as CAL11                                     # noqa: E402
+from ext_combat.battle import stats as ST11                               # noqa: E402
+
+FIX11 = 100 * CAL11.scale_seconds() + (12.0 / 24.0) * CAL11.scale_seconds()
+CAL11.facade.bind_host(clock=lambda: FIX11)
+
+
+def _panel11(p):
+    b = CB11.build(p, [], {})
+    return ST11.actor_stats(b, b.sides["player"][0])
+
+
+class _E11(object):
+    def __init__(self, text=""):
+        self.text = text
+
+    def save(self):
+        pass
+
+
+def _touch11(p):
+    out = []
+
+    async def _go():
+        async for line in CA10.touch(_E11(), None, "u_buff", p):
+            out.append(str(line))
+
+    asyncio.run(_go())
+    return out
+
+
+_buff_pid = next((k for k, v in sorted(po.items())
+                  if isinstance(v.get("effect"), dict) and v["effect"].get("pct")), "")
+chk("★ 两张词表不漂（`POI_BUFF_STATS` ⊆ `gear.BUFF_KEY`：%s）"
+    % " · ".join(sorted(CA10.POI_BUFF_STATS)),
+    bool(_buff_pid) and set(CA10.POI_BUFF_STATS) <= set(GB11.BUFF_KEY), _buff_pid)
+
+if not _buff_pid:
+    chk("pois 域里有一条带数值的短时增益（找不到 ⇒ 这条测不了）", False, "")
+else:
+    _eff = po[_buff_pid]["effect"]
+    _stat, _pct, _secs = str(_eff.get("stat")), int(_eff.get("pct") or 0), int(_eff.get("duration") or 0)
+    chk("★ 数值从数据现读：%s.effect = %s（stat 在白名单里 · pct>0 · duration>0）"
+        % (_buff_pid, {k: _eff[k] for k in ("buff", "stat", "pct", "duration") if k in _eff}),
+        _stat in CA10.POI_BUFF_STATS and _pct > 0 and _secs > 0, _eff)
+    _pb = {"cls": "cls_knight", "level": 3, "race": "human", "hp": 100, "gold": 0, "bag": {},
+           "equipped": {}, "flags": {}, "books": {"relic": {}}, "codex": {}, "foot": {},
+           "loc": po[_buff_pid]["map"], "node": po[_buff_pid]["subarea"]}
+    _before = _panel11(_pb)
+    _out11 = _touch11(_pb)
+    _after = _panel11(_pb)
+    _want_line = CA10.T("SYS_POI_BUFF", name=po[_buff_pid]["name"],
+                        buff="%s +%d%%" % (CA10.T("SYS_STAT_%s" % _stat.upper()), _pct),
+                        minutes=_secs // 60)
+    _fb = _pb.get("food_buff") or {}
+    chk("★ 真敲『触摸』（%s）：出「%s」· 档上 food_buff 落档（stat=%s · pct=%s · until=敲钟+%d）"
+        % (po[_buff_pid]["name"], _want_line, _fb.get("stat"), _fb.get("pct"), _secs),
+        _want_line in _out11 and _fb.get("stat") == _stat and int(_fb.get("pct") or 0) == _pct
+        and abs(float(_fb.get("until") or 0) - (FIX11 + _secs)) < 1e-6,
+        "%s / %s" % (_out11[-1:], _fb))
+    _key = GB11.BUFF_KEY[_stat]
+    _okp = abs(float(_after.get(_key, 0)) - float(_before.get(_key, 0)) * (1 + _pct / 100.0)) <= 1e-6
+    _drift = {k: (_before.get(k), _after.get(k)) for k in sorted(set(_before) & set(_after))
+              if abs(float(_after.get(k, 0)) - float(_before.get(k, 0))) > 1e-9
+              and k != _key}
+    chk("★ 面板真涨（引擎 `actor_stats`）：%s %.2f → %.2f（×%.2f 才是对的）· 别的键一个都没动 %s"
+        % (_key, _before.get(_key, 0), _after.get(_key, 0), 1 + _pct / 100.0, sorted(_drift) or "✓"),
+        _okp and not _drift, "该 %s，实 %s" % (float(_before.get(_key, 0)) * (1 + _pct / 100.0),
+                                              _after.get(_key, 0)))
+    CAL11.facade.bind_host(clock=lambda: FIX11 + _secs + 1)              # ⑤ 过期（假钟）
+    _exp = _panel11(_pb)
+    chk("★ 过了 %d 秒自动失效：`food_buff` 读回空（%s）· 面板回基础值（%s → %s）"
+        % (_secs, GB11.food_buff(_pb) or "空", _after.get(_key), _exp.get(_key)),
+        not GB11.food_buff(_pb) and abs(float(_exp.get(_key, 0)) - float(_before.get(_key, 0))) <= 1e-6,
+        "%s / %s" % (GB11.food_buff(_pb), _exp.get(_key)))
+    CAL11.facade.bind_host(clock=lambda: FIX11)
+    # ⑥ 反证：数据没写数值 / 写了认不出的 —— 不许假装生效（走兜底回血或点名行）
+    _bad_pid, _bad_out = [], []
+    for _tag, _over in (("没了 pct", {"buff": "b_x", "stat": _stat, "duration": _secs}),
+                        ("stat 认不出", {"buff": "b_x", "stat": "luck", "pct": _pct, "duration": _secs})):
+        _r = dict(po[_buff_pid])
+        _r["effect"] = _over
+        _q = {"cls": "cls_knight", "level": 3, "race": "human", "hp": 50, "gold": 0, "bag": {},
+              "equipped": {}, "flags": {}, "books": {"relic": {}}, "codex": {}, "foot": {},
+              "loc": po[_buff_pid]["map"], "node": po[_buff_pid]["subarea"]}
+        _o = []
+
+        async def _go2(_r=_r, _q=_q):
+            async for _l in CA10.poi_effect_lines(_E11(), None, "u_bad", _q, _buff_pid, _r, "touch"):
+                _o.append(str(_l))
+
+        asyncio.run(_go2())
+        if any("+%d%%" % _pct in x for x in _o) or (_q.get("food_buff") or {}):
+            _bad_pid.append(_tag)
+        _bad_out.append((_tag, _o[-1:]))
+    chk("★ 反证（不写数值 / 认不出的 stat 都不许假装生效）：两种坏数据都不出增益行、也不落 food_buff",
+        not _bad_pid, "%s" % _bad_out)
+
+# ══════════════════════════════════════════════════════════════
+# ⑫ ★ P-31：四条 `condition` 真生效 —— **挡得下 · 放得开 · 判不了就点名**
+# ------------------------------------------------------------
+# ① 三处对账：域里用到的键 ⊆ 代码 `POI_COND_KEYS` == `schemas/pois.schema.json` 的 condition 键
+#    （schema 现解析，不手抄）
+# ② 每一条带门槛的：状态 ∈ {ok, no, unknown}，且 `no` 必须配 `SYS_POI_NOT_YET`、`unknown` 必须配
+#    `SYS_POI_COND_TODO`（**一条都不许静默**）
+# ③ 真挡 + 真放行（两面都跑，不写死名字）：
+#      · `quest` 门槛：没过 ⇒ 观察不列它、『读』只回点名行（正文一个字都不给）；补上那笔账 ⇒ 列表有它、正文出来
+#      · `read` 门槛：同理（账 = 旧物谱里那条）
+#      · `time` 门槛（合法的 token）：假钟两档 —— 不满足 `no` / 满足 `ok`
+# ④ 判不了的那两条（今天写的是「退潮」）：点名行出得来，且**照旧可用**（藏起来 = 静默删内容）
+# ══════════════════════════════════════════════════════════════
+print("")
+print("⑫ 真跑门槛：四条 condition 的 POI —— 挡 / 放行 / 判不了就点名（P-31）")
+import io as _io12                                                       # noqa: E402
+import json as _json12                                                   # noqa: E402
+
+_sch12 = _json12.load(_io12.open(os.path.join(REPO, "schemas", "pois.schema.json"), encoding="utf-8"))
+_sch_keys = set((_sch12.get("patternProperties") or {}).get("^poi_[a-z_]+$", {})
+                .get("properties", {}).get("condition", {}).get("propertyNames", {}).get("enum") or [])
+_used_keys = set()
+for _k, _v in po.items():
+    _used_keys |= set((_v.get("condition") or {}).keys())
+chk("★ 三处对账（条件键词表只有一份）：代码 %s == schema %s ⊇ 域里用到的 %s"
+    % (" · ".join(CA10.POI_COND_KEYS), " · ".join(sorted(_sch_keys)), " · ".join(sorted(_used_keys))),
+    set(_used_keys) <= set(CA10.POI_COND_KEYS) == _sch_keys, sorted(_used_keys))
+
+
+class _E12(object):
+    def __init__(self, text=""):
+        self.text = text
+
+    def save(self):
+        pass
+
+
+def _run12(fn, p, text=""):
+    out = []
+
+    async def _go():
+        async for line in fn(_E12(text), None, "u_cond", p):
+            out.append(str(line))
+
+    asyncio.run(_go())
+    return out
+
+
+def _player12(**kw):
+    q = {"cls": "cls_knight", "level": 3, "race": "human", "hp": 100, "gold": 0, "bag": {},
+         "equipped": {}, "flags": {}, "books": {"relic": {}}, "codex": {}, "foot": {}}
+    q.update(kw)
+    return q
+
+
+_cond_pids = sorted(k for k, v in po.items() if v.get("condition"))
+_bad12, _tally12 = [], {}
+for _pid in _cond_pids:
+    _rec12 = po[_pid]
+    _st12, _ln12 = CA10._poi_cond(_rec12, _player12(), None)
+    _tally12[_st12] = _tally12.get(_st12, 0) + 1
+    if _st12 == "ok":
+        if _ln12:
+            _bad12.append((_pid, "ok 不该有话说", _ln12))
+        continue
+    # 点名行必须是**那个槽位**渲染出来的（不手抄整句：拿槽位模板的前半截当判据）
+    _slot12 = "SYS_POI_NOT_YET" if _st12 == "no" else "SYS_POI_COND_TODO"
+    _head12 = str((tx.get(_slot12) or {}).get("value") or "").replace("{name}", str(_rec12["name"]))
+    _head12 = _head12.split("{")[0]
+    if not _ln12 or not _ln12.startswith(_head12):
+        _bad12.append((_pid, "点名行不是 %s 渲染的" % _slot12, _ln12[:40]))
+chk("★ 域里带门槛的 %d 条：每一条都判出了状态（%s），且**不满足 / 判不了都要点名**（一条都不许静默）"
+    % (len(_cond_pids), " · ".join("%s=%d" % kv for kv in sorted(_tally12.items()))),
+    not _bad12, "%s" % _bad12[:2])
+
+# ③-a `quest` 门槛：没过 / 已交 两面
+_q_pid = next((k for k, v in sorted(po.items()) if (v.get("condition") or {}).get("quest")), "")
+if not _q_pid:
+    chk("pois 域里有一条 `quest` 门槛（找不到 ⇒ 这条测不了）", False, "")
+else:
+    _qid = str(po[_q_pid]["condition"]["quest"])
+    _qname = str((st.domain("quests").get(_qid) or {}).get("name") or _qid)
+    _loc12, _node12 = po[_q_pid]["map"], po[_q_pid]["subarea"]
+    _p_no = _player12(loc=_loc12, node=_node12)
+    _p_yes = _player12(loc=_loc12, node=_node12, flags={"quests_done": [_qid]})
+    _no_txt = CA10.T("SYS_POI_NOT_YET", name=po[_q_pid]["name"],
+                     why=CA10.T("SYS_POI_WHY_QUEST", token=_qname))
+    _no_look = _run12(CA10.look, _p_no)
+    _no_read = _run12(CA10.read_thing, _p_no, "读 %s" % po[_q_pid]["name"])
+    _yes_look = _run12(CA10.look, _p_yes)
+    _yes_read = _run12(CA10.read_thing, _p_yes, "读 %s" % po[_q_pid]["name"])
+    _body12 = str((tx.get(po[_q_pid].get("read_text")) or {}).get("value") or "")
+    _sees12 = str((tx.get("SYS_LOOK_SEES") or {}).get("value") or "").split("{")[0]
+    chk("★ `quest` 门槛（%s ← %s）真挡：观察不列「%s」· 只回「%s」· **正文一个字都不给**"
+        % (_qid, _qname, po[_q_pid]["name"], _no_txt),
+        _no_txt in _no_look and _no_txt in _no_read and _body12 not in _no_read
+        and not any(x.startswith(_sees12) and po[_q_pid]["name"] in x for x in _no_look),
+        "%s / %s" % (_no_look[:1], _no_read))
+    chk("★ 交过那一条之后（`flags.quests_done` 那本账）**立刻放行**：观察列得出它 · 正文真出来",
+        any(po[_q_pid]["name"] in x for x in _yes_look) and _body12 in _yes_read
+        and _no_txt not in _yes_read, "%s / %s" % (_yes_look[3:4], _yes_read[:2]))
+
+# ③-b `read` 门槛：没读到过 / 读到过 两面
+_r_pid = next((k for k, v in sorted(po.items()) if (v.get("condition") or {}).get("read")), "")
+if not _r_pid:
+    chk("pois 域里有一条 `read` 门槛（找不到 ⇒ 这条测不了）", False, "")
+else:
+    _need = str(po[_r_pid]["condition"]["read"])
+    _need_name = str((po.get(_need) or {}).get("name") or _need)
+    _p_no2 = _player12(loc=po[_r_pid]["map"], node=po[_r_pid]["subarea"])
+    _p_yes2 = _player12(loc=po[_r_pid]["map"], node=po[_r_pid]["subarea"],
+                        books={"relic": {_need: {"known": False}}})
+    _no2 = CA10.T("SYS_POI_NOT_YET", name=po[_r_pid]["name"],
+                  why=CA10.T("SYS_POI_WHY_READ", token=_need_name))
+    _l_no2 = _run12(CA10.look, _p_no2)
+    _l_yes2 = _run12(CA10.look, _p_yes2)
+    _sees2 = str((tx.get("SYS_LOOK_SEES") or {}).get("value") or "").split("{")[0]
+    chk("★ `read` 门槛（先读到过『%s』）真挡：没读到 ⇒ 观察里列不出「%s」+ 点名「%s」"
+        % (_need_name, po[_r_pid]["name"], _no2),
+        _no2 in _l_no2
+        and not any(x.startswith(_sees2) and po[_r_pid]["name"] in x for x in _l_no2),
+        "%s" % _l_no2[3:5])
+    chk("★ 读到过那一条之后（旧物谱那本账）**立刻放行**：观察里列得出它",
+        any(po[_r_pid]["name"] in x for x in _l_yes2)
+        and not any(_no2 in x for x in _l_yes2), "%s" % _l_yes2[3:5])
+
+# ③-c `time` 门槛（合法 token · 假钟两档）：合成一条记录，证明合法 token 是**真门槛**
+_t_pid = next((k for k, v in sorted(po.items()) if (v.get("condition") or {}).get("time")), "")
+_syn = dict(po[_t_pid] or {})
+_syn["condition"] = {"time": [str(CAL11.name(CAL11.hour_at(22.0)))]}     # 取表里那个「夜」的名字（不写死中文）
+_t_night = CAL11.hour_at(22.0)
+_cases12 = []
+for _hod in (12.0, 22.0):
+    _e12 = 100 * CAL11.scale_seconds() + (_hod / 24.0) * CAL11.scale_seconds()
+    CAL11.facade.bind_host(clock=lambda _e12=_e12: _e12)
+    _cases12.append((_hod, CAL11.state()["hour"], CA10._poi_cond(_syn, _player12(), None)))
+CAL11.facade.bind_host(clock=lambda: FIX11)
+chk("★ 合法的时辰 token 是**真门槛**（假钟两档 · 同一条记录）：昼 = %s ⟶ %s ｜ 夜 = %s ⟶ %s"
+    % (_cases12[0][1], _cases12[0][2][0], _cases12[1][1], _cases12[1][2][0]),
+    _cases12[0][2][0] == "no" and _cases12[1][2][0] == "ok"
+    and CA10.T("SYS_POI_WHY_TIME", token=CAL11.name(_t_night)) in _cases12[0][2][1],
+    "%s" % _cases12)
+
+# ④ 判不了的那两条（「退潮」）：点名行出得来，且**照旧能读**（不许悄悄藏内容）
+_unk = [_pid for _pid in _cond_pids if CA10._poi_cond(po[_pid], _player12(), None)[0] == "unknown"]
+_unk_bad = []
+for _pid in _unk:
+    _line = CA10._poi_cond(po[_pid], _player12(), None)[1]
+    _p_u = _player12(loc=po[_pid]["map"], node=po[_pid]["subarea"])
+    if po[_pid].get("read_text"):
+        _o_u = _run12(CA10.read_thing, _p_u, "读 %s" % po[_pid]["name"])
+        if _line not in _o_u or str((tx.get(po[_pid]["read_text"]) or {}).get("value") or "") not in _o_u:
+            _unk_bad.append((_pid, _o_u[:2]))
+    else:
+        _o_u = _run12(CA10.touch, _p_u)
+        if _line not in _o_u:
+            _unk_bad.append((_pid, _o_u[:2]))
+chk("★ 判不了门槛的那 %d 条（%s）：点名行出得来、且**照旧可用**（藏起来 = 静默删内容 · 台账 P-31 甲待真源定刻度）"
+    % (len(_unk), " · ".join(str(po[k]["name"]) for k in _unk)),
+    bool(_unk) and not _unk_bad, "%s" % _unk_bad[:2])
 
 print()
 print("按类别计数：")

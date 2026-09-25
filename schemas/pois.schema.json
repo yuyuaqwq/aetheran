@@ -54,7 +54,16 @@
         },
         "condition": {
           "type": "object",
-          "description": "出现条件（时辰/flag 等）"
+          "description": "出现条件 —— 键词表只有五个，每个键一本账（判定唯一口 = content/cmds_ast._poi_cond；键名单与 POI_COND_KEYS 逐值相等，probe_pois ⑫ 钉着）：time / weather = 时辰或天气（与 npcs 同一套 token）· event = 世界事件 · quest = 那一条委托交没交（如 q_main_06）· read = 读到过那条可读物（如 poi_repeated_mark）。判不出的（键不在表里 / 值查不到账，如「退潮」）**不当成不成立**：照旧在场 + 点名（台账 P-31 甲 · 待真源定刻度）",
+          "propertyNames": {
+            "enum": [
+              "time",
+              "weather",
+              "event",
+              "quest",
+              "read"
+            ]
+          }
         }
       },
       "additionalProperties": false

@@ -465,10 +465,14 @@ async def look(env, sink, uid, player):
     yield "━" * 12
     nb = [_name_of_node(loc, x) for x in _neighbors(loc, node)]
     yield T("SYS_LOOK_WAY", list=" · ".join("『%s』" % x for x in nb)) if nb else T("SYS_LOOK_DEAD_END")
-    poi_here = [v for v in _data("pois").values()
-                if v.get("map") == loc and v.get("subarea") == node]
-    if poi_here:
-        yield T("SYS_LOOK_SEES", list=" · ".join("『%s』%s" % (v.get("name"), v.get("icon", "")) for v in poi_here))
+    # ★ P-31：列 poi 走唯一一口（`_pois_here` 现看门槛）—— 门槛判得出不成立的这一刻不算在场，
+    #   但**不静默**：逐条点名说清差什么；判不了的（如「退潮」）照旧在场 + 点名。
+    poi_here = _pois_here(loc, node, p)
+    seen_poi = poi_names_seen(poi_here)
+    if seen_poi:
+        yield T("SYS_LOOK_SEES", list=" · ".join("『%s』%s" % (v.get("name"), v.get("icon", "")) for v in seen_poi))
+    for _gate in poi_gate_lines(poi_here):
+        yield _gate
     npc_here = [v for _k, v in _npcs_here(loc, node, p=p)]
     if npc_here:
         yield T("SYS_LOOK_WHO", list=" · ".join("『%s』%s" % (v.get("name"), v.get("icon", "")) for v in npc_here))
@@ -678,12 +682,16 @@ async def go_to(env, sink, uid, player):
         player.update(p)
     _save(env)
     yield T("SYS_MOVE_TO", name=_name_of_node(loc, hit))
-    poi_here = [v for v in _data("pois").values() if v.get("map") == loc and v.get("subarea") == hit]
+    # ★ P-31：与「观察」同一个口（`_pois_here` 现看门槛）—— 原先这一条自己扫域、不判条件
+    poi_here = _pois_here(loc, hit, p)
+    seen_poi = poi_names_seen(poi_here)
     # ★ B3-15：走唯一一口 —— 出场条件（时辰 / 天气）现看。改前这一条自己扫域、不判条件，
     #   白天的「去 北墙根」照样把只在该在昏/夜的哈根列出来（与「观察」「问路」两处口径不一致）。
     npc_here = [v for _k, v in _npcs_here(loc, hit, p=p)]
-    if poi_here:
-        yield T("SYS_LOOK_SEES", list=" · ".join("『%s』%s" % (v.get("name"), v.get("icon", "")) for v in poi_here))
+    if seen_poi:
+        yield T("SYS_LOOK_SEES", list=" · ".join("『%s』%s" % (v.get("name"), v.get("icon", "")) for v in seen_poi))
+    for _gate in poi_gate_lines(poi_here):
+        yield _gate
     if npc_here:
         yield T("SYS_LOOK_WHO", list=" · ".join("『%s』%s" % (v.get("name"), v.get("icon", "")) for v in npc_here))
     # ★ B3-5：镇内/带内走一步只出「这一站」那一条（聚人）；跨图那一下（进镇 / 往东 / 往西 / 北口）
@@ -871,18 +879,141 @@ async def alloc_points(env, sink, uid, player):
 
 
 # ══════════════════════════════════════════════════════════════
-# 三、POI 的 effect（P-28）—— 原先「数据写了没人读」的那一个字段，唯一消费端在这一处
+# 三、POI：这一站有什么（门槛 · P-31）与上手那一下（effect · P-28）
 # ══════════════════════════════════════════════════════════════
-#: ★ P-28：`effect.buff` 带数值时落进**现成容器** `food_buff`（形状 `{stat, pct, until}`）。
-#:   stat 只认这三档 —— 与 `gear.BUFF_KEY` 是同一个词表（菜那套），别另开一份。
-POI_BUFF_STATS = ("atk", "def", "hp")
+# ★ P-31：`condition` 的**键词表**（唯一一处）—— 每个键都有唯一一本账：
+#   · `time` / `weather` —— 与 `npcs` 的出场条件同一套 token（`CAL.allows` 认时辰 / 天气名）
+#   · `event`            —— 与 `npcs` / 世界事件同一个口（`CAL.event_on`）
+#   · `quest`            —— 那一条委托交没交（`CAL.main_done`；账由「交活」那一下写）
+#   · `read`             —— 读到过那条可读物没有（`codex` 旧物谱（读的），`CX.note_read` 写的账）
+#   ★ 词表外的键 / 值查不到对应的账 ⇒ 一律算**判不了**（`unknown`）：点名给玩家看，
+#     不当成「不满足」—— 当不满足就是把内容悄悄藏起来，比点名更难被发现。
+#   ★ 三处对账：本常量 ↔ `schemas/pois.schema.json` 的 condition 键 ↔ 域里用到的键（probe_pois ⑫）。
+POI_COND_KEYS = ("time", "weather", "event", "quest", "read")
 
-#: ★ P-28 甲（**待拍板**）：`effect.buff` **只写了名字、没写数值**时的安全默认 ——
-#:   回生命上限的这一成数（与 `cmds_gather.rest` 的歇脚同一个 20% · 封顶）。
-#:   为什么不猜别的：`buff_shrine_blessing` 全仓没有定义处，文档（`05 §二`）只有
-#:   「神龛（短时增益）」一句 —— 给什么属性、多少，谁都没写。⇒ 按最保守的那一档落地，
-#:   让「摸了什么都不发生」变成「摸了有回血」；数值一旦定下来，往 pois 的 effect 里补
-#:   `stat` / `pct`（见 `_poi_buff_spec`）就**自动变成真增益，这一行不用改**。
+#: 门槛「为什么还动不了」那一句的槽位 —— 代码只挑槽位，中文全在 texts 域
+_POI_WHY_SLOT = {"time": "SYS_POI_WHY_TIME", "weather": "SYS_POI_WHY_WEATHER",
+                 "event": "SYS_POI_WHY_EVENT", "quest": "SYS_POI_WHY_QUEST",
+                 "read": "SYS_POI_WHY_READ"}
+
+
+def _poi_cond(rec, p, st=None):
+    """这条 POI 的门槛此刻过不过 → `(状态, 要说给玩家的那一行)`（P-31）。
+
+    三种状态，五条口（观察 / 去 / 触摸 / 读 / 调查）共用这一处判定：
+
+      · `ok`      —— 没写 `condition`，或门槛成立 ⇒ 那一行是**空串**（不多说一个字）
+      · `no`      —— 门槛**判得出、且不成立** ⇒ 这一条这一刻不算在场（列表里不列、上手不上手）
+                     + 那一行说清差什么（`SYS_POI_NOT_YET`）—— 不许静默不出现
+      · `unknown` —— 门槛**判不了**（键不在词表里 / 值查不到对应的账：如「退潮」今天不是
+                     calendar 域的合法 token，「main06_done」这样的 flag 全仓没有写端）
+                     ⇒ **照旧在场可用**（把它藏起来 = 悄悄删内容）+ 那一行点名差什么
+                     （`SYS_POI_COND_TODO`）—— 待真源定下刻度（台账 P-31 甲）
+
+    `st` 省 = 现取（与 `npcs` 同一口径）；没写 `condition` 的条目**不碰钟**。
+    """
+    cond = rec.get("condition")
+    if not isinstance(cond, dict) or not cond:
+        return ("ok", "")
+    if st is None:
+        st = CAL.state()
+    name = str(rec.get("name") or "")
+    unknown, blocked = [], []
+    for key in list(POI_COND_KEYS) + [k for k in cond if k not in POI_COND_KEYS]:
+        if key not in cond:
+            continue
+        want = cond[key]
+        if key in ("time", "weather"):
+            toks = list(want) if isinstance(want, (list, tuple)) else [want]
+            known = [str(t) for t in toks if CAL.resolve(t)[0]]
+            if not known:                       # 认不出的 token（「退潮」今天就是这一档）
+                unknown.append(" · ".join(str(t) for t in toks))
+            elif not CAL.allows(known, st):
+                blocked.append(T(_POI_WHY_SLOT[key], token=" · ".join(known)))
+        elif key == "event":
+            nm = str(want)
+            if not CAL.event(nm):
+                unknown.append(nm)
+            elif not CAL.event_on(nm, st, p):
+                blocked.append(T(_POI_WHY_SLOT[key], token=nm))
+        elif key == "quest":
+            qid = str(want)
+            q = (_data("quests") or {}).get(qid) or {}
+            if not q:                           # 账上没这条委托 ⇒ 判不了（不静默当没过）
+                unknown.append(qid)
+            elif not CAL.main_done(p, qid):
+                blocked.append(T(_POI_WHY_SLOT[key], token=q.get("name") or qid))
+        elif key == "read":
+            pid = str(want)
+            one = (_data("pois") or {}).get(pid) or {}
+            if not one.get("into_codex"):
+                unknown.append(pid)             # 不进谱的东西没有「读到过」这本账
+            elif pid not in ((p.get("books") or {}).get("relic") or {}):
+                blocked.append(T(_POI_WHY_SLOT[key], token=one.get("name") or pid))
+        else:
+            unknown.append("%s %s" % (key, want))     # 词表外的键
+    if unknown:
+        return ("unknown", T("SYS_POI_COND_TODO", name=name, keys=" · ".join(unknown)))
+    if blocked:
+        return ("no", T("SYS_POI_NOT_YET", name=name, why=" · ".join(blocked)))
+    return ("ok", "")
+
+
+def _pois_here(loc, node, p, st=None):
+    """这一站**所有** poi → `[(pid, rec, 状态, 那一行)]` —— 列 poi 的口**只此一处**（P-31）。
+
+    ★ 为什么收成一口（台账 P-31 乙案）：原先 `look` / `go_to` / `touch` / `read_thing` 四处
+      各自扫一遍 `pois` 域、都只按 map + subarea 过滤 ⇒ 带 `condition` 的四件永远在场
+      （「水下的石阶」「退潮后的石缝」「商会旧账簿」「白桦林深处的记号」）。
+    """
+    out = []
+    for pid, rec in _data("pois").items():
+        if rec.get("map") != loc or rec.get("subarea") != node:
+            continue
+        state, line = _poi_cond(rec, p, st)
+        out.append((pid, rec, state, line))
+    return out
+
+
+def poi_names_seen(here) -> list:
+    """能看见的那几条 —— `no` 不算在场（列表里不列）· `unknown` 照旧在场（点名但不藏）。"""
+    return [rec for _pid, rec, state, _ln in here if state != "no"]
+
+
+def poi_gate_lines(here) -> list:
+    """门槛那两句话：不满足的 · 判不了的，各点名一句（`ok` 的一条都不多说）。"""
+    return [ln for _pid, _rec, _st, ln in here if ln]
+
+
+#: ★ P-28：`effect.buff` 带数值时落进**现成容器** `food_buff`（形状 `{stat, pct, until}`）。
+#:   stat 只认这四档 —— 与 `gear.BUFF_KEY` 是同一个词表（菜那套 + 本批加的 `spd`），别另开一份。
+#:   ★ 为什么本批把 `spd` 加进白名单（甲 · 数据里那件要的就是它）：骨田边那件 POI 是
+#:     「诸神离开已久，只留遗迹与**祷词**」那条世界线下的一处 —— 摸的不是护身符，
+#:     是「心里定下来 ⇒ 脚程快一点」，落到面板上正是 `spd`（速度）。
+#:     而 `atk / def / hp` 三档是**烹饪**的领地（`05 §三`「攻击 / 防御 / 生命上限三选一」）——
+#:     再给同一档就是「一个菜的效果换了个名字」。`spd` 是引擎真读的面板键
+#:     （CTB 的两次行动间隔，`probe_panel` 钉着骑士 L10 = 109.0），与菜不重叠。
+#:   ★ 数值口径（本批落的值 · 真源待补）：`spd +10%` · `900 秒`（时长数据里本来就有）。
+#:     10% 与菜那档同量级（`items.food.pct` 现为 10–15%）；`spd` 只影响行动序，
+#:     不像攻击那样直接改伤害链 ⇒ 取菜档的**下沿**。
+POI_BUFF_STATS = ("atk", "def", "hp", "spd")
+
+
+def _poi_buff_label(key) -> str:
+    """增益的中文名 —— 只在 texts 域（`SYS_STAT_<键>` 那一族，与「属性」页 / 加点同一处）。
+
+    **代码里一个中文名都不写**：`01_属性字典 §2.2` 的词条名就是这么进 texts 的；
+    键 → 槽位的写法与 `_stat_slot`（五维）同款。
+    """
+    return T("SYS_STAT_%s" % str(key or "").upper())
+
+#: ★ P-28 甲（**兜底护栏** · 只在数据「写了 buff 名字却没写数值」时生效）：回生命上限的这一成数
+#:   （与 `cmds_gather.rest` 的歇脚同一个 20% · 封顶）。
+#:   ★ 本批起数据里那一件已经给了真数值（`spd` + `pct`）⇒ 走上面那一支，兜底不参与；
+#:     它继续留着是为了「新写的 buff 忘了写数值」时不至于静默什么都不发生。
+#:   为什么不猜别的：`buff_shrine_blessing` 那类名字全仓没有定义处、文档也没给刻度
+#:   ⇒ 一律按最保守的那一档落地，并把「往 pois 的 effect 里补 `stat` / `pct`」写在这里
+#:   （补上就**自动变成真增益，这一行不用改**）。
 POI_BLESS_HEAL_PCT = 0.2
 
 
@@ -930,13 +1061,13 @@ async def poi_effect_lines(env, sink, uid, p, pid, rec, verb, player=None):
         出提示等于把玩家引到死路上。⇒ 报告里挂 P-28 待拍板（乙）。
       · `rest: true` —— 歇脚回血。**不抄第二份**：整支委托 `cmds_gather.rest`
         （同一个「上限的 20% · 封顶」口径 —— 那边改了这儿跟着变）。
-      · `buff` —— 短时增益。**带数值的**（`stat` ∈ atk/def/hp + `pct` + `duration` 秒）
+      · `buff` —— 短时增益。**带数值的**（`stat` ∈ `POI_BUFF_STATS` + `pct` + `duration` 秒）
         写进**现成容器 `food_buff`**（`cmds_recipe.item_use` 写的就是它、`gear.food_buff`
         一直在读它 → 进引擎面板最后一层 `mul`）⇒ 不新建容器、不动读者、不碰面板。
-        **只写了名字没写数值的**（今天的神龛就是这一档）不瞎猜属性与数值 —— 走数据里
-        写着的 `hp` / `hp_pct`（与药水同一个词表）；连这个都没写，就按安全默认
-        `POI_BLESS_HEAL_PCT`（上限的 20% 回血 · 与歇脚同一个数）落地，口径写在报告里
-        （P-28 甲 待拍板）。
+        中文名走 `_poi_buff_label`（texts 域那一族槽位），增益名 `buff` 只是数据里的一个标签。
+        **只写了名字没写数值的**不瞎猜属性与数值 —— 走数据里写着的 `hp` / `hp_pct`
+        （与药水同一个词表）；连这个都没写，就按兜底 `POI_BLESS_HEAL_PCT`
+        （上限的 20% 回血 · 与歇脚同一个数）落地，并把「补 stat / pct」写在报告与注释里。
       · `talk` —— 按 id 去 dialogues 域找那条对话，**找到**就说它的第一句（择优逻辑
         只有一处：`cmds_talk._pick_indexed`）；**找不到**就明说没这条（fail-closed ——
         今天三条篝火都是这一档：`talk_campfire_*` 全仓没有定义处）。
@@ -974,7 +1105,8 @@ async def poi_effect_lines(env, sink, uid, p, pid, rec, verb, player=None):
         dirty = True
         consumed.update(("buff", "stat", "stat_name", "pct", "duration"))
         yield T("SYS_POI_BUFF", name=name,
-                buff="%s +%d%%" % (eff.get("stat_name") or key, pct), minutes=secs // 60)
+                buff="%s +%d%%" % (eff.get("stat_name") or _poi_buff_label(key), pct),
+                minutes=secs // 60)
     else:
         # ★ P-27：上限只有一个来源（职业面板）。档上还没有职业 ⇒ **不出假数**：出一行点名的
         #   fail-closed 行（借槽位，见 `hp_cap_or_line`），这一支整段不做。
@@ -987,8 +1119,8 @@ async def poi_effect_lines(env, sink, uid, p, pid, rec, verb, player=None):
             else:
                 bad = []
                 if eff.get("buff") and not wrote:
-                    # ★ 只写了名字、没写数值（今天的神龛就是这一档）—— **不猜属性也不猜数**：
-                    #   按安全默认「回生命上限的 POI_BLESS_HEAL_PCT」落地（与歇脚同一个数）。
+                    # ★ 只写了名字、没写数值 —— **不猜属性也不猜数**：
+                    #   按兜底「回生命上限的 POI_BLESS_HEAL_PCT」落地（与歇脚同一个数）。
                     #   真写了数值但认不出的那几个子键点名（fail-closed：别让它看着像生效了）。
                     gain = max(1, int(mx * POI_BLESS_HEAL_PCT))
                     bad = [k for k in ("stat", "stat_name", "pct") if k in eff]
@@ -1035,13 +1167,19 @@ async def poi_effect_lines(env, sink, uid, p, pid, rec, verb, player=None):
 # ══════════════════════════════════════════════════════════════
 async def touch(env, sink, uid, player):
     p = _p(player)
-    here = [(k, v) for k, v in _data("pois").items()
-            if v.get("map") == p["loc"] and v.get("subarea") == p["node"]]
+    # ★ P-31：这一站的 poi 走唯一一口（门槛现看）—— 原先这一条自己扫域、`condition` 谁都没读，
+    #   带条件的四件（水下的石阶 / 退潮后的石缝 / 商会旧账簿 / 白桦林深处的记号）永远能上手。
+    here = _pois_here(p["loc"], p["node"], p)
     if not here:
         yield T("SYS_TOUCH_NONE")
         return
     got = []
-    for pid, v in here:
+    for pid, v, cond_state, cond_line in here:
+        if cond_state == "no":                # 门槛判得出不成立 ⇒ 这一下不做，但点名说清差什么
+            yield cond_line
+            continue
+        if cond_line:                         # 判不了的门槛：照旧可用（藏起来 = 静默删内容），只点名
+            yield cond_line
         yield T("SYS_TOUCH_GET", icon=v.get("icon", ""), name=v.get("name"))
         rt = v.get("read_text")
         if rt:
@@ -1076,15 +1214,23 @@ async def read_thing(env, sink, uid, player):
     raw = (getattr(env, "text", "") or "").strip()
     parts = raw.split(None, 1)
     want = parts[1].strip() if len(parts) > 1 else ""
-    here = [(k, v) for k, v in _data("pois").items()
-            if v.get("map") == p["loc"] and v.get("subarea") == p["node"] and v.get("read_text")]
+    # ★ P-31：与「触摸」同一个口（门槛现看）—— 门槛判得出不成立的：正文一个字都不给，只点名
+    here = [(pid, v, st_, ln_) for pid, v, st_, ln_ in _pois_here(p["loc"], p["node"], p)
+            if v.get("read_text")]
     if want:
-        here = [(k, v) for k, v in here
+        here = [(pid, v, st_, ln_) for pid, v, st_, ln_ in here
                 if want == (v.get("name") or "") or want in (v.get("name") or "")]
-    if not here:
-        yield T("SYS_READ_NONE")
+    usable = [(pid, v, st_, ln_) for pid, v, st_, ln_ in here if st_ != "no"]
+    blocked = [ln_ for _pid, _v, _st, ln_ in here if _st == "no"]
+    if not usable:
+        for _ln in blocked:                   # 拦下来的那条：说清差什么（不静默回「没有能读的」）
+            yield _ln
+        if not blocked:
+            yield T("SYS_READ_NONE")
         return
-    k, v = here[0]
+    k, v, _st, _ln = usable[0]
+    if _ln:                                   # 判不了的门槛：正文照给，门槛那一句一起点名
+        yield _ln
     yield T("SYS_READ_HEAD", name=v.get("name"))
     yield T(v["read_text"])
     # ★ P-28：可读物身上的 effect 也走同一个消费端（「读」与「触摸」不分家）

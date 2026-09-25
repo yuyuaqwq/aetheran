@@ -15,8 +15,14 @@ from __future__ import annotations
 
 from . import facade
 
-#: 菜里写的增益名 → 引擎面板键（三种：攻击 / 防御 / 生命上限）
-BUFF_KEY = {"atk": "atk", "def": "def", "hp": "max_hp"}
+#: 增益名 → 引擎面板键（四种：攻击 / 防御 / 生命上限 / 速度）
+#: ★ 本批（P-28）加了 `spd`：`pois` 域那件 POI 的短时增益要的是速度
+#:   （「心定下来 ⇒ 脚程快一点」），而 `atk / def / hp` 三档归烹饪
+#:   （`05 §三`「攻击 / 防御 / 生命上限三选一」）—— 同档重复 = 换个名字的菜。
+#:   `spd` 是引擎真读的面板键（CTB 两次行动的间隔，`probe_panel` 钉着骑士 L10 = 109.0），
+#:   进面板最后一层 `mul`。★ 口径与白名单的「为什么」写在 `cmds_ast.POI_BUFF_STATS` 那一处，
+#:   两处**必须同步**（判据：`probe_pois` ⑪ 的「两张词表不漂」）。
+BUFF_KEY = {"atk": "atk", "def": "def", "hp": "max_hp", "spd": "spd"}
 
 
 def _items():

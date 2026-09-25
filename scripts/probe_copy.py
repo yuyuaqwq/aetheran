@@ -408,6 +408,12 @@ def main():
                     if v.get("read_text")), ("windmill_town", town[0] and "wt_gate_n", "?"))
     rmap, rnode, rname = read_at
     touch_at = next(((v.get("map"), v.get("subarea")) for v in pois.values()), (rmap, rnode))
+    # ★ P-31：带门槛的两条（从域里现挑，不写死 id）—— 一条 `quest` 门槛（账没交 ⇒ 真挡）、
+    #   一条 `time` 门槛（token 判不了 ⇒ 点名但照旧可用）
+    _gt_q = next((v for _k, v in sorted(pois.items())
+                  if (v.get("condition") or {}).get("quest")), {})
+    _gt_t = next((v for _k, v in sorted(pois.items())
+                  if (v.get("condition") or {}).get("time")), {})
     # ★ B3-10：脚下这一站的名字 · 一堆「塞满了东西」的档（呈现口那几条要有内容才扫得出漏键）
     cur = CA._name_of_node("windmill_town", "wt_gate_n")
     _its = {k: v for k, v in (st.domain("items") or {}).items() if not str(k).startswith("_")}
@@ -463,6 +469,15 @@ def main():
         ("帮助", CA.help_cmd, "", {}),
         ("触摸", CA.touch, "", {"loc": touch_at[0], "node": touch_at[1]}),
         ("读", CA.read_thing, "", {"loc": rmap, "node": rnode}),
+        # ★ P-31：门槛那两条（真挡 / 判不了就点名）—— 一起进用例表，于是⑥「不漏机器键」与
+        #   「取不到文案」两条守卫**自动**罩到它们身上（K61：覆盖面跟判据一起加）
+        ("观察(门槛没过)", CA.look, "", {"loc": _gt_q.get("map"), "node": _gt_q.get("subarea"),
+                                        "race": "human"}),
+        ("读(门槛没过)", CA.read_thing, "读 %s" % _gt_q.get("name"),
+         {"loc": _gt_q.get("map"), "node": _gt_q.get("subarea")}),
+        ("观察(门槛判不了)", CA.look, "", {"loc": _gt_t.get("map"), "node": _gt_t.get("subarea"),
+                                          "race": "human"}),
+        ("触摸(门槛判不了)", CA.touch, "", {"loc": _gt_t.get("map"), "node": _gt_t.get("subarea")}),
         ("去(没给地方)", CA.go_to, "去", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
         ("去(走到)", CA.go_to, "去 %s" % town[3], {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
         ("去(不是邻居)", CA.go_to, "去 %s" % belt[-1], {"loc": "belt_north", "node": "bn_bone"}),
@@ -772,17 +787,33 @@ def main():
     chk("★ P-27 还没择业的档 `攻击`：不开那一场、出一行点名行（职业基础 · 不猜数）",
         bool(_noClsAtk) and any("职业基础" in ln for ln in _noClsAtk)
         and not any("遭遇" in ln for ln in _noClsAtk), "%s" % _noClsAtk[:2])
-    # ★ P-27：POI 回血那一支（神龛 · `effect.buff` 只写了名字 ⇒ 走「上限的 20%」安全默认）
+    # ★ P-28（本批收口）：POI 的短时增益**真落到档上** —— 数据里那条给了数值（`stat` + `pct`），
+    #   于是走的是「真增益」那一支，不再是「只写了名字 ⇒ 兜底回血」。
+    #   ① 出的那一行**逐字**取自 texts（槽位 + 数据里的数）· 档上 `food_buff` 真落 · `gear.food_buff` 读得出乘数
+    #   ② 还没择业的档**照样拿得到**（短时增益与「生命上限」无关 —— 上限才要职业；这是与 P-27 那一条的分别）
+    #   ③ 兜底那一支（数据没写数值）的对象已换人：`probe_pois ⑪` 用坏数据反证「不许假装生效」
     _shr = next((k for k, v in (st.domain("pois") or {}).items()
-                 if isinstance(v.get("effect"), dict) and v["effect"].get("buff")), "")
+                 if isinstance(v.get("effect"), dict) and v["effect"].get("pct")), "")
     if _shr:
+        from content import gear as _GBP                                  # noqa: E402
         _pv = (st.domain("pois") or {})[_shr]
-        _shCls = _drive(CA.touch, _player(cls="cls_knight", loc=_pv.get("map"), node=_pv.get("subarea")))
-        _shNo = _drive(CA.touch, _player(loc=_pv.get("map"), node=_pv.get("subarea")))
-        chk("★ P-27 POI 回血走同一个口（%s）：有职业 ⇒ 真回血 · 没职业 ⇒ 点名行不回血" % _shr,
-            any("生命 +" in ln for ln in _shCls) and any("职业基础" in ln for ln in _shNo)
-            and not any("生命 +" in ln for ln in _shNo),
-            "%s / %s" % (_shCls[-1:], _shNo[-1:]))
+        _ev = _pv["effect"]
+        _stat = str(_ev.get("stat"))
+        _pct0 = int(_ev.get("pct") or 0)
+        _want_sh = CA.T("SYS_POI_BUFF", name=_pv.get("name"),
+                        buff="%s +%d%%" % (CA.T("SYS_STAT_%s" % _stat.upper()), _pct0),
+                        minutes=int(_ev.get("duration") or 0) // 60)
+        _p_cls = _player(cls="cls_knight", loc=_pv.get("map"), node=_pv.get("subarea"))
+        _shCls = _drive(CA.touch, _p_cls)
+        _p_no = _player(loc=_pv.get("map"), node=_pv.get("subarea"))
+        _shNo = _drive(CA.touch, _p_no)
+        _want_mult = {_GBP.BUFF_KEY[_stat]: 1.0 + _pct0 / 100.0}
+        chk("★ P-28 POI 的短时增益真落到档上（%s）：「%s」· 有职业与还没择业的档都拿得到"
+            "（buff 与「生命上限」无关）"
+            % (_shr, _want_sh),
+            _want_sh in _shCls and _want_sh in _shNo
+            and _GBP.food_buff(_p_cls) == _want_mult and _GBP.food_buff(_p_no) == _want_mult,
+            "%s / %s ｜ 乘数 %s" % (_shCls[-1:], _shNo[-1:], _GBP.food_buff(_p_cls)))
 
     # ⑩ B3-10 ①：`去 <脚下这一站>` —— 回的是「到了」，不是「过不去」
     here_out = _drive(CA.go_to, _player(loc="windmill_town", node="wt_gate_n"), "去 %s" % cur)

@@ -124,17 +124,19 @@
     "read_text": "READ_OLD_LEDGER",
     "into_codex": "relic_codex",
     "condition": {
-      "flag": "main06_done"
+      "quest": "q_main_06"
     }
   },
-  "poi_shrine_bonefield": {
-    "name": "骨田边的神龛",
-    "icon": "⛩️",
+  "poi_prayer_stone_bonefield": {
+    "name": "骨田边的祷词石",
+    "icon": "🪨",
     "kind": "触摸",
     "map": "belt_north",
     "subarea": "bn_bone",
     "effect": {
-      "buff": "buff_shrine_blessing",
+      "buff": "buff_prayer_stone",
+      "stat": "spd",
+      "pct": 10,
       "duration": 900
     }
   },
@@ -193,7 +195,7 @@
       "need": "search"
     },
     "condition": {
-      "flag": "read_repeated_mark"
+      "read": "poi_repeated_mark"
     }
   },
   "poi_hidden_shoal": {

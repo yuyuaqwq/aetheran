@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from . import codex as CX
 from .cmds_ast import (_data, _map_scene, _move, _name_of_node, _node_of, _p, _save,
-                       _scene_line, _map_of, T)
+                       _scene_line, _map_of, T, _pois_here)
 
 __all__ = ["tower_enter", "tower_next", "tower_map", "tower_investigate", "tower_leave"]
 
@@ -170,13 +170,19 @@ async def tower_investigate(env, sink, uid, player):
     if not _inside(p):
         yield T("SYS_TOWER_NOT_IN", name=_name_of_node(*_entrance()))
         return
-    here = [(k, v) for k, v in _data("pois").items()
-            if v.get("map") == TOWER and v.get("subarea") == p["node"] and v.get("read_text")]
+    # ★ P-31：列 poi 走唯一一口（门槛现看）—— 与「观察 / 去 / 触摸 / 读」同一处判定。
+    #   塔内今天没有带 `condition` 的可读物 ⇒ 输出逐字不变（回归），但口径不再各写一份。
+    here = [(pid, v, st_, ln_) for pid, v, st_, ln_ in _pois_here(TOWER, p["node"], p)
+            if v.get("read_text")]
     if not here:
         yield T("SYS_TOWER_INV_NONE")
         return
     got = []
-    for pid, v in here:
+    for pid, v, st_, ln_ in here:
+        if ln_:                                  # 门槛那句（判不了的点名 · 不成立的也在这一句里）
+            yield ln_
+        if st_ == "no":                          # 门槛判得出不成立 ⇒ 这一条不读
+            continue
         yield T("SYS_READ_HEAD", name=v.get("name"))
         yield T(v["read_text"])
         if v.get("into_codex") and CX.note_read(p, pid):

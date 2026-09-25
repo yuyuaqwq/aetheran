@@ -2207,6 +2207,64 @@
     "category": "系统",
     "desc": "POI · 认不出的 effect 键（fail-closed）"
   },
+  "SYS_POI_NOT_YET": {
+    "value": "{name} —— {why}，现在还动不了。",
+    "params": [
+      "name",
+      "why"
+    ],
+    "category": "系统",
+    "desc": "POI · 门槛判得出、不成立（不是静默不出现 · P-31）"
+  },
+  "SYS_POI_COND_TODO": {
+    "value": "（{name}的条件「{keys}」还没接上 —— 先当它没有。）",
+    "params": [
+      "keys",
+      "name"
+    ],
+    "category": "系统",
+    "desc": "POI · 门槛判不了（键不在词表 / 值查不到账 · 照旧在场但点名 · P-31 甲）"
+  },
+  "SYS_POI_WHY_TIME": {
+    "value": "得等到{token}",
+    "params": [
+      "token"
+    ],
+    "category": "系统",
+    "desc": "POI 门槛差什么 · 时辰（token 来自 pois 域那条 condition · P-31）"
+  },
+  "SYS_POI_WHY_WEATHER": {
+    "value": "得等到{token}天",
+    "params": [
+      "token"
+    ],
+    "category": "系统",
+    "desc": "POI 门槛差什么 · 天气（P-31）"
+  },
+  "SYS_POI_WHY_EVENT": {
+    "value": "得等『{token}』那件事",
+    "params": [
+      "token"
+    ],
+    "category": "系统",
+    "desc": "POI 门槛差什么 · 世界事件（P-31）"
+  },
+  "SYS_POI_WHY_QUEST": {
+    "value": "得先走完『{token}』那条",
+    "params": [
+      "token"
+    ],
+    "category": "系统",
+    "desc": "POI 门槛差什么 · 那一条委托（token = 委托名 · P-31）"
+  },
+  "SYS_POI_WHY_READ": {
+    "value": "得先读到过『{token}』",
+    "params": [
+      "token"
+    ],
+    "category": "系统",
+    "desc": "POI 门槛差什么 · 读到过那条可读物（token = 可读物名 · P-31）"
+  },
   "SYS_READ_NONE": {
     "value": "这里没有能读的东西。",
     "params": [],
