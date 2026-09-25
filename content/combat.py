@@ -20,6 +20,8 @@ from . import panel_build as PB
 from . import alloc as ALLOC          # ★ P-34：档上那份加点只走它（`of_record`）
 from . import affix as AFFIX          # ★ B3-24：精英词条（面板乘 / 先手 / 开场盾 / 血量阈值）
 from . import mech as MECH            # ★ B3-27：技能机制层（触发器 + 选目标注入点）
+from . import elements as ELE         # ★ P-1：元素通道（样例怪身上的免疫/弱点表）
+from . import battle_text as BT       # ★ P-1：战斗日志的文案槽位（`Battle(text=…)` 那一口）
 
 PLAYER_SIDE = "player"
 ENEMY_SIDE = "enemy"
@@ -201,6 +203,14 @@ def monster_actor(mid: str, m: dict, *, party: int | None = None, affixes=None,
     #   缺了档位名 ⇒ 拿机器键顶上（两个都不在 ⇒ 空串，两条路在引擎那边都是「不是 boss」）。
     a["role"] = m.get("role") or m.get("role_key") or ""
     a["is_boss"] = (m.get("role_key") == "boss")   # 原先比 `a["role"] == "boss"`（那一档的值恰好是 ASCII）
+    # ★ P-1（元素通道）：承伤方的免疫/弱点表 —— 引擎落地层读的就是这两个字段
+    #   （`ext_combat/battle/landing.py` 的 N10-B4：`element_immune` 含该元素 ⇒ 伤害归 0；
+    #   `element_weak[元素] > 1` ⇒ ×倍率）。**挂什么由声明说话**（`content/rules/elements.json`
+    #   的 `sample` 那一块）：没声明 / 关掉 / 不是那只怪 ⇒ 返回 `{}` ⇒ 一个字段都不写
+    #   ⇒ actor 与接线前**逐字相同**（探针有反证那一条）。P-1 只在**一只既有怪**上试水。
+    _el = ELE.sample_fields(mid)
+    if _el:
+        a.update(_el)
     # ★ B3-24：精英词条 —— 名字（`† 硬壳的田鼠 †`，走 texts 槽位）与开场盾（引擎 shields 容器）。
     #   没有词条 ⇒ 名字原样、盾字典为空（= 与接线前逐字相同）。
     if affixes:
@@ -298,7 +308,11 @@ def build(player: dict, monster_ids, monsters: dict, *, party: int | None = None
     b = Battle("monster", sides={PLAYER_SIDE: ps, ENEMY_SIDE: es}, action_override=override,
                # ★ B3-27：选目标注入点（引擎给内容侧的位）—— 挑战咆哮那一条要用它。
                #   没挂嘲讽态 ⇒ 回 None ⇒ 引擎走原来的目标解析（与接线前逐字相同）。
-               target_picker=MECH.taunt_picker)
+               target_picker=MECH.taunt_picker,
+               # ★ P-1：战斗日志的文案槽位（引擎 `Battle(text=…)` 那一口）。
+               #   表里**只有声明过的那几条**（`content/rules/battle_text.json`）⇒ 其余日志
+               #   走引擎兜底模板、逐字节不变（引擎 `render_or` 的既定语义）。
+               text=BT.battle_text())
     # ★ B3-24 两条词条通道要**在 Battle 造好之后**落（引擎构造期会给全体播种初始 ct）：
     ct = AFFIX.opening_ct(affixes)
     if ct is not None:

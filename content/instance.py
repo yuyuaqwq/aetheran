@@ -426,7 +426,10 @@ async def _open(env, g, p, uid):
 def _restore(st):
     """「场」里那份战斗态 → 引擎 Battle（引擎自带的往返，面板 / ct / 待发槽 / 效果都随档走）。"""
     from ext_combat.battle import serialize as SER
-    return SER.from_state(dict(st.get("battle") or {}))
+    from . import battle_text as BT
+    # ★ P-1：文案表**不落盘**（引擎 `from_state` 的注释明写「续战方重新传入」）——
+    #   不传 ⇒ 续战那几刻的日志退回引擎兜底模板（元素那两行走不到槽位 = 静默降级）。
+    return SER.from_state(dict(st.get("battle") or {}), text=BT.battle_text())
 
 
 def _result_of(st):

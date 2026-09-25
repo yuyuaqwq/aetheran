@@ -28,6 +28,8 @@ from __future__ import annotations
 import json
 import os
 
+from . import elements as ELE                    # ★ P-1：元素码 → 引擎元素名（同一份声明表）
+
 _DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 _RULES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "rules")
 _C: dict = {}
@@ -106,9 +108,19 @@ def basic_kind() -> str:
 
 
 def _to_engine(v: dict) -> dict:
-    """域里那条记录 → 引擎消费的那一份（浅副本 + kind 换语义）。"""
+    """域里那条记录 → 引擎消费的那一份（浅副本 + kind 与 element 换语义）。
+
+    ★ P-1：`element` 也得翻 —— 域里是 `ELE_FIRE` 这种**码**，而引擎落地层
+      （`ext_combat/battle/landing.py` 的免疫/弱点表 + `res_fire` 那一族抗性键）认的是
+      `fire` 这种**名**。原先这格是**原样透传**的：码进了引擎、而承伤方的免疫/弱点表
+      一个都没挂 ⇒ 谁都没发现它没生效（「表看着有、代码没消费」）。
+      ⇒ 翻名走 `content/elements.py`（唯一映射处，码没声明过**当场抛**，不静默当无元素）。
+      「明确不入环」的码（物理 / 域里那两个宪法没定义的档）翻成空串 ⇒ 引擎那整支不进，
+      与接线前**逐字相同**。
+    """
     out = dict(v)
     out["kind"] = engine_kind(v)
+    out["element"] = ELE.element_of(v)
     return out
 
 
