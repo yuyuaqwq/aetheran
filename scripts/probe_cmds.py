@@ -2283,6 +2283,61 @@ except Exception as exc:                                                  # noqa
         "%s: %s" % (type(exc).__name__, exc))
 
 
+# ══════════════════════════════════════════════════════════════
+# ★ B4-14：登记那一个门 —— 「办过证没有」只有一个判法
+# ══════════════════════════════════════════════════════════════
+print("⑲ ★ B4-14：`登记` 的证是**一个门** —— 无证档 `我的委托` 不许印「【评级】见习」")
+try:
+    import ast as _ast19
+
+    _SEED19 = {"cls": "cls_knight", "race": "human", "name": "试炼者", "level": 3, "exp": 0,
+               "gold": 0, "hp": 116, "loc": "windmill_town", "node": "wt_gate_n",
+               "prev": [], "bag": {}, "equipped": {}, "codex": {}, "flags": {}}
+    _rank19 = _r("SYS_MINE_RANK")
+
+    # ── ① 无证档：`我的委托` 不印那半句 · `评级` 回「你还没有证」
+    _o19a, _s19a = _say15(_SEED19, "我的委托")
+    _o19b, _ = _say15(_SEED19, "评级")
+    _BAD_Y19 = ("【评级】", "见习")
+    _bad19 = []
+    _txt19a = "\n".join(_o19a)
+    if any(x in _txt19a for x in _BAD_Y19):
+        _bad19.append(("无证 · 我的委托 印了评级那半句", _o19a[-2:]))
+    if _o19b != [_r("SYS_RANK_NOCARD")]:
+        _bad19.append(("无证 · 评级", _o19b[:2]))
+    chk("★ 无证档（没打过『登记』）：`我的委托` **不印**那半句评级（原先照印「【评级】见习」—— "
+        "与同一刻的『评级』回话直接打架）· `评级` 照旧回「你还没有证」",
+        not _bad19, "%s" % (_bad19[:2],))
+
+    # ── ② 有证档：两处印的**是同一句**（同一个槽位、逐字）
+    _o19c, _ = _say15(dict(_SEED19, flags={"card": 1}), "我的委托")
+    _o19d, _ = _say15(dict(_SEED19, flags={"card": 1}), "评级")
+    chk("★ 有证档：`我的委托` 与 `评级` 印的**是同一句**（同一个槽位 `SYS_MINE_RANK`，逐字）"
+        "—— 一件事一个门、一处文案",
+        _rank19 in _o19c and _o19d and _o19d[0] == _rank19, "%s / %s" % (_o19c[-1:], _o19d[:1]))
+
+    # ── ③ 覆盖面（静态）：读 `flags["card"]` 只许一处（has_card）· 写只许一处（register）
+    _read19, _write19 = [], []
+    for _f in sorted((REPO / "content").glob("*.py")):
+        _tree19 = _ast19.parse(_f.read_text(encoding="utf-8"))
+        for _n in _ast19.walk(_tree19):
+            if (isinstance(_n, _ast19.Call) and isinstance(_n.func, _ast19.Attribute)
+                    and _n.func.attr == "get" and _n.args
+                    and getattr(_n.args[0], "value", None) == "card"):
+                _read19.append("%s:%d" % (_f.name, _n.lineno))
+            if (isinstance(_n, _ast19.Subscript) and isinstance(_n.ctx, _ast19.Store)
+                    and getattr(_n.slice, "value", None) == "card"):
+                _write19.append("%s:%d" % (_f.name, _n.lineno))
+    chk("★ 覆盖面（静态）：**读** `flags[\"card\"]` 只有一处（`cmds_self.has_card`）· "
+        "**写** 只有一处（`cmds_self.register`）—— 谁再自己读一遍那一格，这里当场红",
+        len(_read19) == 1 and _read19[0].startswith("cmds_self.py")
+        and len(_write19) == 1 and _write19[0].startswith("cmds_self.py"),
+        "读 %s · 写 %s" % (_read19, _write19))
+except Exception as exc:                                                  # noqa: BLE001
+    chk("★ B4-14 登记那一个门跑得起来（真宿主契约）", False,
+        "%s: %s" % (type(exc).__name__, exc))
+
+
 print("")
 print("结果：全绿 ✓" if ok else "结果：有红 ✗")
 sys.exit(0 if ok else 1)

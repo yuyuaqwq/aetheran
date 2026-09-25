@@ -741,4 +741,8 @@ async def quest_mine(env, sink, uid, player):
             yield "· %s —— %s" % (x.get("name", k), x.get("objective", ""))
     if done:
         yield T("SYS_MINE_DONE", n=len(done))
-    yield T("SYS_MINE_RANK")
+    # ★ B4-14：那半句评级与『评级』**走同一个门**（`cmds_self.has_card`）—— 没办证的人
+    #   原先在这一条里照样印「【评级】见习」，与同一刻『评级』回的「你还没有证」直接打架。
+    from .cmds_self import has_card
+    if has_card(p):
+        yield T("SYS_MINE_RANK")

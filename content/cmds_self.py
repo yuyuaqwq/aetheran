@@ -50,6 +50,17 @@ def _day() -> int:
     return int(CAL.state().get("game_day") or 0)
 
 
+def has_card(p) -> bool:
+    """档上那格 `flags.card`（`登记` 写的那一下）—— **唯一判法**。
+
+    ★ B4-14：这一格原先有**两处读**（`评级` 读、`我的委托` 不读）⇒ 同一个档在同一刻
+      一边回「你还没有证」、一边印「【评级】见习」。谁要问「这人办过证没有」都走这一个口；
+      判据 = `probe_cmds ⑲`（真敲无证 / 有证两档 + 静态守卫：读那一格只许在本函数里）。
+    ★ 只读、不建容器（K57：看一眼评级不该往玩家档里塞东西）。
+    """
+    return bool((p.get("flags") or {}).get("card"))
+
+
 
 
 async def register(env, sink, uid, player):
@@ -64,7 +75,7 @@ async def register(env, sink, uid, player):
     if line:
         yield line
         return
-    if _flags(p).get("card"):
+    if has_card(p):
         yield T("SYS_REG_HAS")
         return
     if not str(p.get("name") or "").strip():
@@ -86,7 +97,7 @@ async def rank(env, sink, uid, player):
       头目数 = 图鉴怪物谱里那些 `role_key == "chief"` 的战绩（机器键取自 `monsters` 域）。
     """
     p = _p(player)
-    if not _flags(p).get("card"):
+    if not has_card(p):
         yield T("SYS_RANK_NOCARD")
         return
     from .cmds_quest import _done, _shadow
