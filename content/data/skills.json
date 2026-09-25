@@ -2,6 +2,7 @@
   "SKILL_KNT_slash": {
     "name": "横剑",
     "kind": "主动",
+    "kind_key": "active",
     "lv": 1,
     "desc": "SKILL_KNT_slash_desc",
     "cd": 0,
@@ -31,6 +32,7 @@
   "SKILL_KNT_oathwall": {
     "name": "盾墙",
     "kind": "主动",
+    "kind_key": "active",
     "lv": 1,
     "desc": "SKILL_KNT_oathwall_desc",
     "cd": 6,
@@ -56,6 +58,7 @@
   "SKILL_KNT_taunt": {
     "name": "挑战咆哮",
     "kind": "主动",
+    "kind_key": "active",
     "lv": 1,
     "desc": "SKILL_KNT_taunt_desc",
     "cd": 12,
@@ -79,6 +82,7 @@
   "SKILL_KNT_oathslash": {
     "name": "守誓斩",
     "kind": "主动",
+    "kind_key": "active",
     "lv": 1,
     "desc": "SKILL_KNT_oathslash_desc",
     "cd": 5,
@@ -107,6 +111,7 @@
   "SKILL_KNT_standfast": {
     "name": "不退",
     "kind": "主动",
+    "kind_key": "active",
     "lv": 1,
     "desc": "SKILL_KNT_standfast_desc",
     "cd": 30,
@@ -130,9 +135,84 @@
     "tier": 1,
     "kind_override": "增益"
   },
+  "SKILL_KNT_bulwark": {
+    "name": "誓约壁垒",
+    "kind": "主动",
+    "kind_key": "active",
+    "lv": 11,
+    "desc": "SKILL_KNT_bulwark_desc",
+    "cd": 18,
+    "cast": {
+      "base": 60
+    },
+    "recover": {
+      "base": 60
+    },
+    "range": 1,
+    "mp": 12,
+    "power": 0.0,
+    "owner_class": "cls_knight",
+    "lv_band": "P1",
+    "res_cost": {
+      "RES_OATH": 40
+    },
+    "mech": "oath_shield",
+    "mech_val": 300,
+    "note": "花 40 守誓，立起一张吸收伤害的墙（生命上限的 25%）· 300 刻",
+    "tier": 1,
+    "kind_override": "增益"
+  },
+  "SKILL_KNT_rearguard": {
+    "name": "断后",
+    "kind": "主动",
+    "kind_key": "active",
+    "lv": 14,
+    "desc": "SKILL_KNT_rearguard_desc",
+    "cd": 20,
+    "cast": {
+      "base": 50
+    },
+    "recover": {
+      "base": 40
+    },
+    "range": 1,
+    "mp": 14,
+    "power": 0.0,
+    "owner_class": "cls_knight",
+    "lv_band": "P1",
+    "mech": "hold_line",
+    "mech_val": 150,
+    "note": "把自己的下一次行动推后 60 刻 —— 这 150 刻里，落到身上的东西轻一半",
+    "tier": 1,
+    "kind_override": "增益"
+  },
+  "SKILL_KNT_blockoath": {
+    "name": "格挡回誓",
+    "kind": "被动",
+    "kind_key": "passive",
+    "lv": 16,
+    "desc": "SKILL_KNT_blockoath_desc",
+    "cd": 0,
+    "cast": {
+      "base": 0
+    },
+    "recover": {
+      "base": 0
+    },
+    "range": 1,
+    "mp": 0,
+    "power": 0.0,
+    "owner_class": "cls_knight",
+    "lv_band": "P1",
+    "mech": "block_oath",
+    "note": "格挡成功时额外 +8 守誓（与账本的 +12 并成 +20）",
+    "tier": 1,
+    "kind_override": "增益"
+  },
   "SKILL_BSK_cleave": {
     "name": "横劈",
     "kind": "主动",
+    "kind_key": "active",
     "lv": 1,
     "desc": "SKILL_BSK_cleave_desc",
     "cd": 0,
@@ -159,6 +239,7 @@
   "SKILL_BSK_sunder": {
     "name": "破势",
     "kind": "主动",
+    "kind_key": "active",
     "lv": 1,
     "desc": "SKILL_BSK_sunder_desc",
     "cd": 4,
@@ -186,6 +267,7 @@
   "SKILL_BSK_rampage": {
     "name": "狂斩",
     "kind": "主动",
+    "kind_key": "active",
     "lv": 1,
     "desc": "SKILL_BSK_rampage_desc",
     "cd": 6,
@@ -211,6 +293,7 @@
   "SKILL_BSK_immolate": {
     "name": "焚身",
     "kind": "主动",
+    "kind_key": "active",
     "lv": 1,
     "desc": "SKILL_BSK_immolate_desc",
     "cd": 30,
@@ -233,9 +316,110 @@
       "atk*3.2"
     ]
   },
+  "SKILL_BSK_blooddebt": {
+    "name": "血债",
+    "kind": "主动",
+    "kind_key": "active",
+    "lv": 11,
+    "desc": "SKILL_BSK_blooddebt_desc",
+    "cd": 16,
+    "cast": {
+      "base": 50
+    },
+    "recover": {
+      "base": 50
+    },
+    "range": 1,
+    "mp": 0,
+    "power": 0.0,
+    "owner_class": "cls_berserker",
+    "lv_band": "P1",
+    "mech": "blood_price",
+    "mech_val": 200,
+    "note": "自伤 10% 生命，换 200 刻攻击 +25%",
+    "tier": 1,
+    "kind_override": "增益"
+  },
+  "SKILL_BSK_riposte": {
+    "name": "狂态",
+    "kind": "主动",
+    "kind_key": "active",
+    "lv": 14,
+    "desc": "SKILL_BSK_riposte_desc",
+    "cd": 20,
+    "cast": {
+      "base": 40
+    },
+    "recover": {
+      "base": 40
+    },
+    "range": 1,
+    "mp": 0,
+    "power": 0.0,
+    "owner_class": "cls_berserker",
+    "lv_band": "P1",
+    "mech": "riposte",
+    "mech_val": 180,
+    "note": "自伤 8% —— 180 刻里谁打你一下，就得挨你一刀（0.8 倍攻击）",
+    "tier": 1,
+    "kind_override": "增益"
+  },
+  "SKILL_BSK_sweep": {
+    "name": "横扫",
+    "kind": "主动",
+    "kind_key": "active",
+    "lv": 16,
+    "desc": "SKILL_BSK_sweep_desc",
+    "cd": 20,
+    "cast": {
+      "base": 80
+    },
+    "recover": {
+      "base": 80
+    },
+    "range": 1,
+    "mp": 0,
+    "power": 1.4,
+    "owner_class": "cls_berserker",
+    "lv_band": "P1",
+    "element": "ELE_PHYS",
+    "mech": "blood_sweep",
+    "mech_val": 1,
+    "aoe": true,
+    "note": "自伤 10% —— 一把斧子抡过全场（1.4 倍，逐个结算）",
+    "tier": 1,
+    "kind_override": "物理",
+    "exprs": [
+      "atk*1.4"
+    ]
+  },
+  "SKILL_BSK_bloodbrave": {
+    "name": "血勇",
+    "kind": "被动",
+    "kind_key": "passive",
+    "lv": 16,
+    "desc": "SKILL_BSK_bloodbrave_desc",
+    "cd": 0,
+    "cast": {
+      "base": 0
+    },
+    "recover": {
+      "base": 0
+    },
+    "range": 1,
+    "mp": 0,
+    "power": 0.0,
+    "owner_class": "cls_berserker",
+    "lv_band": "P1",
+    "mech": "blood_brave",
+    "note": "生命低于一半时，攻击 ×1.25 —— 不用点，血少了自动生效",
+    "tier": 1,
+    "kind_override": "增益"
+  },
   "SKILL_RNG_shortbow": {
     "name": "短弓",
     "kind": "主动",
+    "kind_key": "active",
     "lv": 1,
     "desc": "SKILL_RNG_shortbow_desc",
     "cd": 0,
@@ -265,6 +449,7 @@
   "SKILL_RNG_aimshot": {
     "name": "点射",
     "kind": "主动",
+    "kind_key": "active",
     "lv": 1,
     "desc": "SKILL_RNG_aimshot_desc",
     "cd": 3,
@@ -290,6 +475,7 @@
   "SKILL_RNG_snipe": {
     "name": "狙击",
     "kind": "主动",
+    "kind_key": "active",
     "lv": 1,
     "desc": "SKILL_RNG_snipe_desc",
     "cd": 8,
@@ -318,6 +504,7 @@
   "SKILL_RNG_volley": {
     "name": "连射",
     "kind": "主动",
+    "kind_key": "active",
     "lv": 1,
     "desc": "SKILL_RNG_volley_desc",
     "cd": 30,
@@ -346,6 +533,7 @@
   "SKILL_RNG_quickstep": {
     "name": "抢拍",
     "kind": "主动",
+    "kind_key": "active",
     "lv": 1,
     "desc": "SKILL_RNG_quickstep_desc",
     "cd": 8,
@@ -369,6 +557,7 @@
   "SKILL_RNG_backstep": {
     "name": "后撤",
     "kind": "主动",
+    "kind_key": "active",
     "lv": 1,
     "desc": "SKILL_RNG_backstep_desc",
     "cd": 2,
@@ -388,9 +577,64 @@
     "tier": 1,
     "kind_override": "增益"
   },
+  "SKILL_RNG_pindown": {
+    "name": "箭止",
+    "kind": "主动",
+    "kind_key": "active",
+    "lv": 11,
+    "desc": "SKILL_RNG_pindown_desc",
+    "cd": 12,
+    "cast": {
+      "base": 50
+    },
+    "recover": {
+      "base": 40
+    },
+    "range": 3,
+    "mp": 18,
+    "power": 1.0,
+    "owner_class": "cls_ranger",
+    "lv_band": "P1",
+    "element": "ELE_PHYS",
+    "res_cost": {
+      "RES_AIM": 2
+    },
+    "mech": "pin_down",
+    "mech_val": 100,
+    "note": "花 2 层准星：截断对面正在念的那一手，并让它 100 刻里慢 20%",
+    "tier": 1,
+    "kind_override": "物理",
+    "exprs": [
+      "atk*1"
+    ]
+  },
+  "SKILL_RNG_hawkeye": {
+    "name": "鹰眼",
+    "kind": "被动",
+    "kind_key": "passive",
+    "lv": 16,
+    "desc": "SKILL_RNG_hawkeye_desc",
+    "cd": 0,
+    "cast": {
+      "base": 0
+    },
+    "recover": {
+      "base": 0
+    },
+    "range": 3,
+    "mp": 0,
+    "power": 0.0,
+    "owner_class": "cls_ranger",
+    "lv_band": "P1",
+    "mech": "hawk_eye",
+    "note": "你的眼睛比手快：命中 +12% · 暴击 +8",
+    "tier": 1,
+    "kind_override": "增益"
+  },
   "SKILL_MAG_stardust": {
     "name": "星屑",
     "kind": "主动",
+    "kind_key": "active",
     "lv": 1,
     "desc": "SKILL_MAG_stardust_desc",
     "cd": 0,
@@ -420,6 +664,7 @@
   "SKILL_MAG_iceshard": {
     "name": "冰棱",
     "kind": "主动",
+    "kind_key": "active",
     "lv": 1,
     "desc": "SKILL_MAG_iceshard_desc",
     "cd": 4,
@@ -447,6 +692,7 @@
   "SKILL_MAG_flameprint": {
     "name": "焰痕",
     "kind": "主动",
+    "kind_key": "active",
     "lv": 1,
     "desc": "SKILL_MAG_flameprint_desc",
     "cd": 6,
@@ -475,6 +721,7 @@
   "SKILL_MAG_ignite": {
     "name": "引燃",
     "kind": "主动",
+    "kind_key": "active",
     "lv": 1,
     "desc": "SKILL_MAG_ignite_desc",
     "cd": 8,
@@ -505,6 +752,7 @@
   "SKILL_MAG_fallenstar": {
     "name": "垂星",
     "kind": "主动",
+    "kind_key": "active",
     "lv": 1,
     "desc": "SKILL_MAG_fallenstar_desc",
     "cd": 30,
@@ -532,9 +780,92 @@
       "matk*0.8"
     ]
   },
+  "SKILL_MAG_silence": {
+    "name": "静默",
+    "kind": "主动",
+    "kind_key": "active",
+    "lv": 11,
+    "desc": "SKILL_MAG_silence_desc",
+    "cd": 15,
+    "cast": {
+      "base": 80
+    },
+    "recover": {
+      "base": 40
+    },
+    "range": 3,
+    "mp": 24,
+    "power": 0.9,
+    "owner_class": "cls_mage",
+    "lv_band": "P1",
+    "element": "ELE_THUNDER",
+    "res_cost": {
+      "RES_MARK": 3
+    },
+    "mech": "silence_lock",
+    "mech_val": 100,
+    "note": "花 3 层印记：一声闷雷压下去 —— 对面这 100 刻里用不出技能（只能普攻或防御）",
+    "tier": 1,
+    "kind_override": "魔法",
+    "exprs": [
+      "matk*0.9"
+    ]
+  },
+  "SKILL_MAG_frostveil": {
+    "name": "霜障",
+    "kind": "主动",
+    "kind_key": "active",
+    "lv": 14,
+    "desc": "SKILL_MAG_frostveil_desc",
+    "cd": 18,
+    "cast": {
+      "base": 60
+    },
+    "recover": {
+      "base": 40
+    },
+    "range": 1,
+    "mp": 20,
+    "power": 0.0,
+    "owner_class": "cls_mage",
+    "lv_band": "P1",
+    "element": "ELE_ICE",
+    "res_cost": {
+      "RES_MARK": 3
+    },
+    "mech": "frost_veil",
+    "mech_val": 240,
+    "note": "花 3 层印记把自己冻住：240 刻承伤 −35%，但你的法术也轻 20%",
+    "tier": 1,
+    "kind_override": "增益"
+  },
+  "SKILL_MAG_starred": {
+    "name": "枕星",
+    "kind": "被动",
+    "kind_key": "passive",
+    "lv": 16,
+    "desc": "SKILL_MAG_starred_desc",
+    "cd": 0,
+    "cast": {
+      "base": 0
+    },
+    "recover": {
+      "base": 0
+    },
+    "range": 3,
+    "mp": 0,
+    "power": 0.0,
+    "owner_class": "cls_mage",
+    "lv_band": "P1",
+    "mech": "starred",
+    "note": "星辰垫在背后：法术攻击 +12%",
+    "tier": 1,
+    "kind_override": "增益"
+  },
   "SKILL_PRS_staff": {
     "name": "圣杖",
     "kind": "主动",
+    "kind_key": "active",
     "lv": 1,
     "desc": "SKILL_PRS_staff_desc",
     "cd": 0,
@@ -561,6 +892,7 @@
   "SKILL_PRS_lullaby": {
     "name": "安神曲",
     "kind": "主动",
+    "kind_key": "active",
     "lv": 1,
     "desc": "SKILL_PRS_lullaby_desc",
     "cd": 6,
@@ -585,6 +917,7 @@
   "SKILL_PRS_absolve": {
     "name": "净罪",
     "kind": "主动",
+    "kind_key": "active",
     "lv": 1,
     "desc": "SKILL_PRS_absolve_desc",
     "cd": 10,
@@ -608,6 +941,7 @@
   "SKILL_PRS_aegis": {
     "name": "庇护",
     "kind": "主动",
+    "kind_key": "active",
     "lv": 1,
     "desc": "SKILL_PRS_aegis_desc",
     "cd": 12,
@@ -631,6 +965,7 @@
   "SKILL_PRS_matins": {
     "name": "晨祷",
     "kind": "主动",
+    "kind_key": "active",
     "lv": 1,
     "desc": "SKILL_PRS_matins_desc",
     "cd": 30,
@@ -655,9 +990,86 @@
     "tier": 1,
     "kind_override": "增益"
   },
+  "SKILL_PRS_discipline": {
+    "name": "戒律",
+    "kind": "主动",
+    "kind_key": "active",
+    "lv": 11,
+    "desc": "SKILL_PRS_discipline_desc",
+    "cd": 8,
+    "cast": {
+      "base": 70
+    },
+    "recover": {
+      "base": 40
+    },
+    "range": 3,
+    "mp": 12,
+    "power": 2.2,
+    "owner_class": "cls_priest",
+    "lv_band": "P1",
+    "element": "ELE_HOLY",
+    "res_cost": {
+      "RES_LITANY": 2
+    },
+    "note": "花 2 层祷言：把那口气还回去（法术伤害 2.2 倍）",
+    "tier": 1,
+    "kind_override": "魔法",
+    "exprs": [
+      "matk*2.2"
+    ]
+  },
+  "SKILL_PRS_nightwatch": {
+    "name": "守夜",
+    "kind": "主动",
+    "kind_key": "active",
+    "lv": 14,
+    "desc": "SKILL_PRS_nightwatch_desc",
+    "cd": 22,
+    "cast": {
+      "base": 50
+    },
+    "recover": {
+      "base": 40
+    },
+    "range": 1,
+    "mp": 20,
+    "power": 0.0,
+    "owner_class": "cls_priest",
+    "lv_band": "P1",
+    "mech": "night_watch",
+    "mech_val": 250,
+    "note": "守着灯：250 刻里自身承伤 −35%，治疗量 +25%",
+    "tier": 1,
+    "kind_override": "增益"
+  },
+  "SKILL_PRS_comfort": {
+    "name": "抚慰",
+    "kind": "被动",
+    "kind_key": "passive",
+    "lv": 16,
+    "desc": "SKILL_PRS_comfort_desc",
+    "cd": 0,
+    "cast": {
+      "base": 0
+    },
+    "recover": {
+      "base": 0
+    },
+    "range": 1,
+    "mp": 0,
+    "power": 0.0,
+    "owner_class": "cls_priest",
+    "lv_band": "P1",
+    "mech": "comfort",
+    "note": "你的手是暖的：治疗量 +12%",
+    "tier": 1,
+    "kind_override": "增益"
+  },
   "SKILL_SHD_blade": {
     "name": "短刃",
     "kind": "主动",
+    "kind_key": "active",
     "lv": 1,
     "desc": "SKILL_SHD_blade_desc",
     "cd": 0,
@@ -684,6 +1096,7 @@
   "SKILL_SHD_sever": {
     "name": "断势",
     "kind": "主动",
+    "kind_key": "active",
     "lv": 1,
     "desc": "SKILL_SHD_sever_desc",
     "cd": 5,
@@ -711,6 +1124,7 @@
   "SKILL_SHD_findgap": {
     "name": "寻隙",
     "kind": "主动",
+    "kind_key": "active",
     "lv": 1,
     "desc": "SKILL_SHD_findgap_desc",
     "cd": 3,
@@ -736,6 +1150,7 @@
   "SKILL_SHD_shadowstrike": {
     "name": "影袭",
     "kind": "主动",
+    "kind_key": "active",
     "lv": 1,
     "desc": "SKILL_SHD_shadowstrike_desc",
     "cd": 20,
@@ -761,6 +1176,7 @@
   "SKILL_SHD_backstep": {
     "name": "后撤",
     "kind": "主动",
+    "kind_key": "active",
     "lv": 1,
     "desc": "SKILL_SHD_backstep_desc",
     "cd": 2,
@@ -777,6 +1193,81 @@
     "lv_band": "P1",
     "mech": "retreat",
     "note": "对面霸体时的唯一选择",
+    "tier": 1,
+    "kind_override": "增益"
+  },
+  "SKILL_SHD_bleed": {
+    "name": "割喉",
+    "kind": "主动",
+    "kind_key": "active",
+    "lv": 11,
+    "desc": "SKILL_SHD_bleed_desc",
+    "cd": 10,
+    "cast": {
+      "base": 40
+    },
+    "recover": {
+      "base": 30
+    },
+    "range": 1,
+    "mp": 14,
+    "power": 0.8,
+    "owner_class": "cls_assassin",
+    "lv_band": "P1",
+    "element": "ELE_PHYS",
+    "mech": "bleed",
+    "mech_val": 300,
+    "note": "一刀拉开口子：300 刻里持续失血（0.04 倍攻击/层 · 每 30 刻跳一次 · 最多 3 层 · 目标见底时翻倍）",
+    "tier": 1,
+    "kind_override": "物理",
+    "exprs": [
+      "atk*0.8"
+    ]
+  },
+  "SKILL_SHD_sidestep": {
+    "name": "侧闪",
+    "kind": "主动",
+    "kind_key": "active",
+    "lv": 14,
+    "desc": "SKILL_SHD_sidestep_desc",
+    "cd": 16,
+    "cast": {
+      "base": 30
+    },
+    "recover": {
+      "base": 30
+    },
+    "range": 1,
+    "mp": 12,
+    "power": 0.0,
+    "owner_class": "cls_assassin",
+    "lv_band": "P1",
+    "mech": "sidestep",
+    "mech_val": 180,
+    "note": "180 刻里只做一件事：让他的手落空（闪避 ×1.6）",
+    "tier": 1,
+    "kind_override": "增益"
+  },
+  "SKILL_SHD_keenedge": {
+    "name": "刃熟",
+    "kind": "被动",
+    "kind_key": "passive",
+    "lv": 16,
+    "desc": "SKILL_SHD_keenedge_desc",
+    "cd": 0,
+    "cast": {
+      "base": 0
+    },
+    "recover": {
+      "base": 0
+    },
+    "range": 1,
+    "mp": 0,
+    "power": 0.0,
+    "owner_class": "cls_assassin",
+    "lv_band": "P1",
+    "mech": "keen_edge",
+    "note": "刀口熟了：暴击伤害 +30%",
     "tier": 1,
     "kind_override": "增益"
   }

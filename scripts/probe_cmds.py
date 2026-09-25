@@ -582,6 +582,13 @@ try:
                    if v.get("owner_class") == "cls_knight")
     _KNT9N = [v.get("name") for _l, _k, v in _KNT9]
     _KNT9LAB = _CL9["cls_knight"]["name"]
+    #: ★ B4-1：这个档是 **3 级**，所以「已会」= lv<=3 的那几条、「还没到等级」= 11/14/16 那几条。
+    #:   判据从「域里全部」改成**按等级现算**（`_of_class` 就是实现体读的那一口，不另写镜像）。
+    #: （这一节在 ⑩ 之前，`CSK` 还没 import ⇒ 就地取一次，别依赖别处的绑定）
+    from content import cmds_skill as _CSK9                              # noqa: E402
+    _KNT9AV, _KNT9LK = _CSK9._of_class("cls_knight", 3)
+    _KNT9N_AV = [v.get("name") for _k, v in _KNT9AV]
+    _KNT9N_LK = [(v.get("name"), _l) for _k, v, _l in _KNT9LK]
     # ★ B3-19（本批加）：档上要**够门槛**才穿得上 —— 这两把都是精制武器（`req` = 力量 9 ·
     #   门槛级 7；值见 `scripts/rebuild_item_reqs.py`）⇒ 起手档给一个真会加点的档
     #   （3 级 = 14 点，力量 9 ≥ 9）。这不是放宽判据：是让 fixture 符合游戏规则
@@ -637,9 +644,12 @@ try:
         _bad9.append(("学习", _learn9[:1]))
     _list9 = _say9("技能")
     if not _list9 or _list9[0] != _r("SYS_SKILL_HEAD", cls=_KNT9LAB,
-                                     known=len(_KNT9N), locked=0):
+                                     known=len(_KNT9N_AV), locked=len(_KNT9N_LK)):
         _bad9.append(("技能 抬头", _list9[:1]))
-    _miss9 = [n for n in _KNT9N if not any(n in _ln for _ln in _list9)]
+    _miss9 = [n for n in _KNT9N_AV if not any(n in _ln for _ln in _list9)]
+    #: ★ B4-1：没到等级的那几条也要**看得见**（19_ §五 的「玩家看得见再升几级会多出什么」）
+    _miss9 += [(n, l) for n, l in _KNT9N_LK
+               if not any(_r("SYS_SKILL_LOCKED", name=n, lv=l) in _ln for _ln in _list9)]
     if _miss9:
         _bad9.append(("技能 少了这几条", _miss9))
     chk("★ 真敲：装备 → 状态 → 对比 → 卸下 → 学习 → 技能，回的都是填了槽位的真话",
@@ -696,28 +706,60 @@ try:
 
     _SK10 = CA9._data("skills")        # ★ 走实现体真读的那一份（临时造一条也注入这里）
     _CL10 = st.domain("classes") or {}
-    _rows10 = {c: CSK._of_class(c, 1) for c in sorted(_CL10) if not str(c).startswith("_")}
+    #: ★ B4-1：等级段这一条**改成真账**（原先那句「今天没有 lv>1 的技能」是当时的现状描述，
+    #:  B4-1 把 11–20 那 18 条补进来之后它必然翻红 —— 按新数据换成下面这套**更强**的判据：
+    #:    ① 1 级解锁的那班 == 域里 lv<=1 的那些（不是"全部"了）
+    #:    ② 到 20 级 ⇒ 本职业**满编**（7 主动 + 1 被动 = 8）
+    #:    ③ 六职业合 48 条 · 每条都落在 [1, 20]
+    _CLS10 = [c for c in sorted(_CL10) if not str(c).startswith("_")]
+    _rows10 = {c: CSK._of_class(c, 1) for c in _CLS10}
     _tot10 = sum(len(a) for a, _l in _rows10.values())
-    _owned10 = [1 for v in _SK10.values() if v.get("owner_class")]
-    chk("★ 六职业 1 级解锁的技能：%s（合 %d 条 = 域里挂 owner_class 的全部）"
+    _lv1_10 = [1 for v in _SK10.values() if v.get("owner_class") and int(v.get("lv") or 1) <= 1]
+    chk("★ 六职业 1 级解锁的技能：%s（合 %d 条 = 域里 lv<=1 的那些 %d 条）"
         % (" · ".join("%s %d" % (_CL10[c]["name"], len(a)) for c, (a, _l) in sorted(_rows10.items())),
-           _tot10), _tot10 == len(_owned10), "%d vs %d" % (_tot10, len(_owned10)))
-    _hi10 = sorted((k, v.get("lv")) for k, v in _SK10.items() if int(v.get("lv") or 1) > 1)
-    chk("★ 今天没有「解锁等级 > 1」的技能（%d 条全 lv=1）—— 11–20 级那 12 条补进来之后"
-        "这一条会翻红，那时按新数据改它" % len(_SK10), not _hi10, "%s" % _hi10[:4])
+           _tot10, len(_lv1_10)), _tot10 == len(_lv1_10), "%d vs %d" % (_tot10, len(_lv1_10)))
+    _full10, _badfull10 = {}, []
+    for c in _CLS10:
+        _a20, _l20 = CSK._of_class(c, 20)
+        _full10[c] = (len(_a20), len(_l20))
+        if _l20:
+            _badfull10.append((c, "%d 条到 20 级还没解锁" % len(_l20)))
+    _owned10 = [v for v in _SK10.values() if v.get("owner_class")]
+    _act10 = [v for v in _owned10 if v.get("kind_key") == "active"]
+    _pas10 = [v for v in _owned10 if v.get("kind_key") == "passive"]
+    _bad_band10 = [(k, v.get("lv")) for k, v in _SK10.items()
+                   if v.get("owner_class") and not (1 <= int(v.get("lv") or 0) <= 20)]
+    chk("★ ★ B4-1：六职业到 20 级**满编** —— %s（每条 = 7 主动 + 1 被动；域里合 %d 条 = "
+        "%d 主动 + %d 被动）"
+        % (" · ".join("%s %d+%d" % (_CL10[c]["name"], _full10[c][0] - 1, 1) for c in _CLS10),
+           len(_owned10), len(_act10), len(_pas10)),
+        all(v == (8, 0) for v in _full10.values()) and len(_owned10) == 48
+        and len(_act10) == 42 and len(_pas10) == 6 and not _bad_band10,
+        "%s / %s" % (_badfull10 or _full10, _bad_band10[:3]))
+    _hi10 = sorted((k, v.get("lv")) for k, v in _SK10.items()
+                   if v.get("owner_class") and int(v.get("lv") or 1) > 1)
+    chk("★ ★ B4-1：11–20 段那 %d 条**真带解锁等级**（lv 取值 %s）—— 它们靠 `skills.lv` "
+        "逐级放行，不手写门槛"
+        % (len(_hi10), " / ".join(str(x) for x in sorted({l for _k, l in _hi10}))),
+        len(_hi10) == 18 and sorted({l for _k, l in _hi10}) == [11, 14, 16],
+        "%s" % _hi10[:4])
 
     _knt10 = {"cls": "cls_knight", "level": 3, "race": "human", "hp": 100,
               "bag": {}, "equipped": {}, "flags": {}, "codex": {}}
-    _name10 = [v.get("name") for _l, _k, v in sorted(
-        (int(v.get("lv") or 1), k, v) for k, v in _SK10.items()
-        if v.get("owner_class") == "cls_knight")]
+    _av10, _lk10 = CSK._of_class("cls_knight", 3)
+    _name10 = [v.get("name") for _k, v in _av10]           # 3 级此刻解锁的（不是全职业那 8 条）
+    _lkname10 = [(v.get("name"), _l) for _k, v, _l in _lk10]
     _lst10 = _drive9(CSK.skills, dict(_knt10))
-    _head10 = _r("SYS_SKILL_HEAD", cls=_CL10["cls_knight"]["name"], known=len(_name10), locked=0)
-    chk("★ 骑士档 `技能`：抬头「%s」· %d 条一条不落"
-        % (_head10, len(_name10)),
+    _head10 = _r("SYS_SKILL_HEAD", cls=_CL10["cls_knight"]["name"], known=len(_name10),
+                 locked=len(_lkname10))
+    _misslock10 = [(n, l) for n, l in _lkname10
+                   if not any(_r("SYS_SKILL_LOCKED", name=n, lv=l) in _ln for _ln in _lst10)]
+    chk("★ 骑士 3 级档 `技能`：抬头「%s」· 解锁的 %d 条一条不落 · 没到的 %d 条走「到 N 级才能学」"
+        % (_head10, len(_name10), len(_lkname10)),
         bool(_lst10) and _lst10[0] == _head10
-        and not [n for n in _name10 if not any(n in _ln for _ln in _lst10)],
-        "%s" % _lst10[:1])
+        and not [n for n in _name10 if not any(n in _ln for _ln in _lst10)]
+        and not _misslock10,
+        "%s / %s" % (_lst10[:1], _misslock10[:2]))
     _idleak10 = [_ln[:34] for _ln in _lst10 if any(k in _ln for k in _SK10)]
     chk("★ `技能` 只出名字，不漏技能 id（%d 行逐行扫）" % len(_lst10), not _idleak10,
         "%s" % _idleak10[:2])
@@ -727,7 +769,7 @@ try:
     _learn10 = _drive9(CSK.skill_learn, _one10, "学习 %s" % _name10[1])
     _ids10 = list(_one10.get("skills") or [])
     _names10 = sorted(_SK10[i].get("name") for i in _ids10 if i in _SK10)
-    chk("★ `学习 %s` 落档：档上那班 = 本职业此刻解锁的全部（%s）"
+    chk("★ `学习 %s` 落档：档上那班 = 本职业**此刻解锁**的全部（%s —— 3 级的号拿不到 11/16 那几条）"
         % (_name10[1], " · ".join(sorted(_name10))),
         bool(_learn10) and _learn10[0] == _r("SYS_SKILL_LEARN", name=_name10[1], n=len(_name10))
         and _names10 == sorted(_name10), "%s / %s" % (_learn10[:1], _names10))

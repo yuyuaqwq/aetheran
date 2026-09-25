@@ -7,6 +7,7 @@
       "required": [
         "name",
         "kind",
+        "kind_key",
         "lv",
         "desc",
         "cd",
@@ -20,6 +21,13 @@
         "name": {
           "type": "string",
           "minLength": 1
+        },
+        "kind_key": {
+          "enum": [
+            "active",
+            "passive"
+          ],
+          "$comment": "★ B4-1：技能类别（中文 `kind`）的 **ASCII 机器键** —— 代码只认它（K48 / K51 / P-20 同族：中文枚举不当机器键）。`active` = 能「放」的技 · `passive` = 常驻（不进战斗技能表、不许当技能放，开战时由事件总线挂上）。映射表唯一来源 = `scripts/rebuild_skills.py` 的 `KIND_KEY`（由生成器算出，别手改）；中文 `kind` 是玩家看得见的类别名，保留。"
         },
         "kind": {
           "type": "string",

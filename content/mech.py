@@ -28,16 +28,25 @@
    本表标 `"turns": "mech_val"` 去取，不重写）；② 真源文字里的常数（逐条抄在它自己的
    `_src` 上，见 `content/rules/skill_mech.json`）。取不到的**登记**（`status: pending` +
    `why`），不编一个数垫上。
-2. **两条路互斥（不许双源）**：每条机制在表里声明自己走哪条路 ——
+2. **三条路互斥（不许双源）**：每条机制在表里声明自己走哪条路 ——
      `engine` 引擎自己那条（`effects_from_skill` → 名词 → `EFFECT_ACTIONS`）：断势 / 破势 /
              挑战咆哮 / 不退 / 抢拍 / 庇护 / 晨祷（它们要落地在**命中时**，或引擎本来就够得着）
      `cast`   内容侧那一手（`act_cast` 触发器 → `aeth_on_cast`）：盾墙 / 净罪 / 安神曲
              （盾墙与净罪被 `mval` 门挡着；安神曲是**治疗路不吃 mech**）
-   表里声明 + 探针钉着「两条路不许同时出现一条机制」，所以同一个机制只有一处落地。
-3. **fail-closed**：加载期能回答的问题不留到运行期（引擎的 handler 异常是**吞掉**的 ——
-   运行期抛等于静默）。所以三件事在装配期就抛：表形状坏 / 声明了没注册的动词 /
-   域里出现表里没有的机制名（`check_domain`，点名是哪条技能）。
-4. **不装配 = 与今天逐字相同**：两张表不挂 ⇒ 引擎的取件口回空表 ⇒ 名词走 `[]`、
+     `trigger` 常驻被动（事件总线上的那一面）：血勇（`dmg_calc`· 按血线现算）/
+             鹰眼 · 枕星 · 抚慰 · 刃熟（`battle_start`· 常驻态）/ 反击类（`on_taken`）
+   表里声明 + 探针钉着「三条路互斥」，所以同一个机制只有一处落地。
+4. **第三条路：常驻被动（B4-1 扩的形状）** —— `route=trigger` + `trigger`（事件名）：
+   被动技**不是被"放"出来的**，它是挂在 actor 身上的触发器（引擎的事件总线那一面）。
+   `battle_start`（整场一次）挂常驻态、`dmg_calc`（攻击方乘区）按出手那一刻的血线现算、
+   `on_taken`（承伤后）做反击。事件名与动词的对应表 = `_TRIGGER_VERBS`（唯一来源），
+   `player_triggers()` 从它生成挂载面 —— 表里声明的与挂上去的**逐名相等**，不多不少。
+   ★ 这条路的动词一律 **fail-closed**：那两张表没挂（`EFFECT_RULES` 空）⇒ 一个字段都不写
+   （「不装配 = 与接线前一字不差」这条纪律对第三条路同样成立）。
+5. **fail-closed**：加载期能回答的问题不留到运行期（引擎的 handler 异常是**吞掉**的 ——
+  运行期抛等于静默）。所以三件事在装配期就抛：表形状坏 / 声明了没注册的动词 /
+  域里出现表里没有的机制名（`check_domain`，点名是哪条技能）。
+6. **不装配 = 与今天逐字相同**：两张表不挂 ⇒ 引擎的取件口回空表 ⇒ 名词走 `[]`、
    `mval` 门照旧关着 ⇒ 与接线前**一字不差**（探针有反证那一条）。
 """
 from __future__ import annotations
@@ -62,6 +71,17 @@ _CACHE: dict = {}
 #: route=cast 那几条机制的实现（表里声明，这里实现 —— 两边对不上在装配期抛）
 _CAST_VERBS: dict = {}
 
+#: ★ B4-1：常驻被动那条路 —— 事件名 → 动词名（**唯一来源**；`_validate` 拿它核对表，
+#:   `player_triggers()` 拿它生成挂载面）。加一个事件 = 在这里加一行（表里就能声明了）。
+_TRIGGER_VERBS: dict = {
+    "battle_start": "aeth_on_start",        # 整场一次：常驻态（面板型被动）
+    "dmg_calc": "aeth_on_dmg_calc",         # 攻击方乘区：按出手那一刻的血线现算（血勇）
+    "on_taken": "aeth_on_taken",            # 承伤后：反击类（狂态）
+}
+
+#: 盾容器里那一格的 key（同一个来源反复开 = 同源叠厚，引擎 `act_shield` 的语义）
+_SHIELD_KEY = "aeth.oath_shield"
+
 
 # ══════════════════════════════════════════════════════════════
 # 表：读 + 校验（fail-closed）
@@ -71,12 +91,14 @@ def _validate(t) -> dict:
     if not isinstance(t, dict) or not isinstance(t.get("mechs"), dict) or not t["mechs"]:
         raise ValueError("skill_mech.json 得是「一张 mechs 表」：%r" % (t,))
     cast_declared = set()
+    trigger_declared = {}
     for name, m in t["mechs"].items():
         if not isinstance(m, dict):
             raise ValueError("机制 %r 的声明得是 dict：%r" % (name, m))
         route = m.get("route")
-        if route not in ("engine", "cast", ""):
-            raise ValueError("机制 %r 的 route 只能是 engine / cast / 空（待接线）：%r" % (name, route))
+        if route not in ("engine", "cast", "trigger", ""):
+            raise ValueError("机制 %r 的 route 只能是 engine / cast / trigger / 空（待接线）：%r"
+                             % (name, route))
         if m.get("status") not in ("on", "partial", "pending"):
             raise ValueError("机制 %r 的 status 只能是 on / partial / pending：%r" % (name, m.get("status")))
         if m.get("status") in ("pending", "partial") and not m.get("why"):
@@ -85,6 +107,15 @@ def _validate(t) -> dict:
             raise ValueError("机制 %r 声明 route=engine，但没给 actions（动词序列）" % (name,))
         if route == "cast" and not m.get("verb"):
             raise ValueError("机制 %r 声明 route=cast，但没有 verb（写清由哪一手落）" % (name,))
+        if route == "trigger":
+            ev = str(m.get("trigger") or "")
+            if ev not in _TRIGGER_VERBS:
+                raise ValueError("机制 %r 声明 route=trigger，但事件 %r 不在 _TRIGGER_VERBS 里"
+                                 "（有的事件：%s）" % (name, ev, " · ".join(sorted(_TRIGGER_VERBS))))
+            if str(m.get("verb") or "") != _TRIGGER_VERBS[ev]:
+                raise ValueError("机制 %r 的 trigger=%s 该配动词 %r，表里写的是 %r"
+                                 % (name, ev, _TRIGGER_VERBS[ev], m.get("verb")))
+            trigger_declared[ev] = name
         if route == "cast":
             cast_declared.add(name)
         for a in (m.get("actions") or []):
@@ -100,6 +131,20 @@ def _validate(t) -> dict:
     if cast_declared != set(_CAST_VERBS):
         raise ValueError("route=cast 的机制与实现对不上：表里 %s · 代码里 %s"
                          % (sorted(cast_declared), sorted(_CAST_VERBS)))
+    # ★ 第三条路：**挂上去的事件与表里用到的事件逐名相等** —— 挂了一个没人在用的事件
+    #   （空挂：每场都跑一遍什么也不做），或表里声明的消费事件没挂（接了但永远不触发），
+    #   都在装配期点名。`consume_event` = 「这条机制的状态由哪个事件消费」（反击类用它）。
+    used = set(trigger_declared)
+    for name, m in t["mechs"].items():
+        ce = str(m.get("consume_event") or "")
+        if ce:
+            if ce not in _TRIGGER_VERBS:
+                raise ValueError("机制 %r 的 consume_event=%r 不在 _TRIGGER_VERBS 里（%s）"
+                                 % (name, ce, " · ".join(sorted(_TRIGGER_VERBS))))
+            used.add(ce)
+    if used != set(_TRIGGER_VERBS):
+        raise ValueError("route=trigger 的挂载面与表对不上：表里用到 %s · 代码里挂 %s"
+                         % (sorted(used), sorted(_TRIGGER_VERBS)))
     return t
 
 
@@ -253,6 +298,52 @@ def _live(holder: dict, key: str, now: float) -> bool:
     return exp is None or float(exp) > now
 
 
+def _self_cut(battle, caster, m: dict, logs) -> int:
+    """**付血**（代价那一半的公共实现）—— 按机制表里 `self_dmg_pct` 扣自己的 max_hp。
+
+    真源口径（02_狂战士_v2.md §一）：自伤按 **max_hp 的比例**算；**保底留 1 血**
+    （引擎没有「按条件判某条技能此刻能不能放」的注入面 ⇒ 先兜住下限，别让玩家被自己打死，
+    那条 why 见 `_notes.md` 破势那条）。破势（旧）/ 血债 / 狂态 / 横扫 四条共用这一处。
+    """
+    pct = _num(m, "self_dmg_pct")
+    if pct <= 0 or not isinstance(caster, dict) or caster.get("hp") is None:
+        return 0
+    mx = int(ST.actor_max_hp(battle, caster) or 0)
+    hp = int(caster.get("hp") or 0)
+    cut = min(int(round(mx * pct)), max(0, hp - 1))
+    if cut > 0:
+        LD.deal_damage(battle, None, caster, cut, logs)
+        logs.append(T("COMBAT_MECH_SELF_CUT", n=cut))
+    return cut
+
+
+def _grant(battle, caster, m: dict, params: dict, logs, slot: str, **fields):
+    """把这条机制声明的状态挂到施放者身上（时长取声明的 mech_val / 表里那个常数）+ 报一句。
+
+    ★ fail-closed：规则表里没有这个状态 key ⇒ **一个字段都不写**（「不装配 = 与接线前
+      一字不差」）。这一条对所有新动词都成立，不只是它。
+    """
+    key = str(m.get("state") or "")
+    turns = _turns(m, params)
+    if not isinstance(caster, dict) or not key or turns <= 0 or not state_rule(key):
+        return ""
+    _put(caster, key, _now(battle) + turns)
+    logs.append(T(slot, turns=int(turns), **fields))
+    return key
+
+
+def _panel_delta(rule: dict) -> int:
+    """状态规则里那条 `panel` 声明 → 「涨/降百分之几」（带符号：+25 / −20）。
+
+    口径只有一个：`(mult − 1) × 100`。要写「慢 {pct}%」这种句子的调用点自己取 `abs()`。
+    """
+    try:
+        mult = float((rule.get("panel") or {}).get("mult") or 1.0)
+    except (TypeError, ValueError):
+        return 0
+    return int(round((mult - 1.0) * 100))
+
+
 # ══════════════════════════════════════════════════════════════
 # 动词（引擎的 register_action 面 —— 内容侧扩展，不改引擎）
 # ══════════════════════════════════════════════════════════════
@@ -288,15 +379,7 @@ def aeth_sunder(battle, caster, target, params, logs):
     """
     m = of("def_break")
     # ① 付：自伤
-    pct = _num(m, "self_dmg_pct")
-    cut = 0
-    if pct > 0 and isinstance(caster, dict) and caster.get("hp") is not None:
-        mx = int(ST.actor_max_hp(battle, caster) or 0)
-        hp = int(caster.get("hp") or 0)
-        cut = min(int(round(mx * pct)), max(0, hp - 1))       # 保底 1 血（可用性门那半见 why）
-        if cut > 0:
-            LD.deal_damage(battle, None, caster, cut, logs)
-            logs.append(T("COMBAT_MECH_SELF_CUT", n=cut))
+    _self_cut(battle, caster, m, logs)                        # 保底 1 血（可用性门那半见 why）
     # ② 收：破防
     key = str(m.get("state") or "")
     turns = _turns(m, params)
@@ -529,8 +612,274 @@ def aeth_on_cast(battle, caster, target, params, logs):
 
 
 def player_triggers() -> dict:
-    """玩家 actor 要挂的两个注入点（引擎的事件总线 + 承伤乘区）。"""
-    return {
+    """玩家 actor 要挂的注入点（引擎的事件总线 + 承伤乘区 + B4-1 的常驻被动那条路）。
+
+    ★ 挂载面**从 `_TRIGGER_VERBS` 生成**（不手写字面量）：表里声明了几个事件、这里就挂几个，
+      多挂一个（空跑）少挂一个（接了永不触发）都在 `_validate` 里当场抛。
+    """
+    out = {
         "act_cast": [{"action": "aeth_on_cast"}],
         "taken_calc": [{"action": "aeth_mitigate"}],
     }
+    for ev, verb in _TRIGGER_VERBS.items():
+        out[ev] = [{"action": verb}]
+    return out
+
+
+# ══════════════════════════════════════════════════════════════
+# B4-1：T1 11–20 那批技能用的动词（11 条主动 + 6 条被动）
+# ══════════════════════════════════════════════════════════════
+def _passive_mech(actor) -> str:
+    """这个 actor **职业的那个被动**用的是哪条机制（现算：skills 域按 owner_class + kind_key 挑）。
+
+    只认域里那两格：`owner_class`（ASCII）与 `kind_key`（ASCII `passive`）—— 一个中文字都不比
+    （`scripts/rebuild_skills.py` 算出 `kind_key`，`probe_copy` ⑮ 钉着「中文枚举不当机器键」）。
+
+    ★ **解锁等级**必须一起看：被动在域里也带 `lv`（真源 05_系统总表「职业被动 P1 六条
+      （16–20 级开）」⇒ 六条都是 lv 16）。等级没到 ⇒ 回空串（**这个人的被动还没开**）。
+      少了这一道，一个 13 级的号就白拿了 16 级的被动 —— 实测就是这么把
+      `probe_combat ④`「层主低 4 级（13）单刷打不过」那条钉死的判据撞红的（基线 0/36 →
+      带了被动 3/36）。**这一道不是可选项**：它与 `combat._default_skills` 的等级闸是同一条口径。
+    """
+    from . import skills_lookup as _SL
+
+    cls = str((actor or {}).get("class_name") or "")
+    if not cls:
+        return ""
+    lv = int((actor or {}).get("level") or 0)
+    for sid, rec in _SL.skills().items():
+        if str(sid).startswith("_") or not isinstance(rec, dict):
+            continue
+        if rec.get("owner_class") != cls or rec.get("kind_key") != "passive" or not rec.get("mech"):
+            continue
+        if int(rec.get("lv") or 1) <= lv:
+            return str(rec["mech"])
+    return ""
+
+
+def _rules_mounted() -> bool:
+    """那两张表挂上了没有（`EFFECT_RULES` 非空）—— 常驻被动那条路的 fail-closed 门。"""
+    from ext_combat.battle import game_config as _GC
+
+    return bool(_GC.get_effect_rules())
+
+
+@EF.register_action("aeth_self_cut")
+def aeth_self_cut(battle, caster, target, params, logs):
+    """**付血**（血债 / 狂态 / 横扫 三条共用）：比例只认机制表里那条 `self_dmg_pct`。"""
+    m = of(_info(params).get("mech"))
+    if m:
+        _self_cut(battle, caster, m, logs)
+
+
+@EF.register_action("aeth_oath_shield")
+def aeth_oath_shield(battle, caster, target, params, logs):
+    """誓约壁垒（骑士 · 11 级）：花守誓换一张**吸收型**的墙（不是减伤率 —— 另一条通道）。
+
+    盾值 = 生命上限 × 表里那个比例（现算）；时长 = 域里 `mech_val`（刻）。落地走引擎现成的
+    `shield` 动词（护盾容器 shields + 它那句「获得护盾 N 点」），不自己另写一套护盾结算。
+    """
+    m = of("oath_shield")
+    if not isinstance(caster, dict):
+        return
+    pct = _num(m, "shield_pct")
+    turns = _turns(m, params)
+    val = int(round(int(ST.actor_max_hp(battle, caster) or 0) * pct))
+    if val <= 0 or turns <= 0:
+        return
+    EF.act_shield(battle, caster, caster,
+                  {"on": "caster", "value": val, "turns": int(turns), "key": _SHIELD_KEY}, logs)
+
+
+@EF.register_action("aeth_hold_line")
+def aeth_hold_line(battle, caster, target, params, logs):
+    """断后（骑士 · 14 级）：把自己的**下一次行动**推后 + 这段里承伤打对折。
+
+    ★ 与 `aeth_advance_ct`（抢拍）对称：那里是 `ct −= adv`，这里是 `ct += delay`；两处的
+      `ct` 都已经是**这一手之后**的下一个到点时刻（`battle.human_act` 的次序：T0 登记 →
+      推 ct → 推进期间才落地）—— 所以动的是下一次行动，不是当前这一手。
+    """
+    m = of("hold_line")
+    d = _num(m, "delay_ticks")
+    if not isinstance(caster, dict) or not state_rule(str(m.get("state") or "")):
+        return
+    now = _now(battle)
+    if d > 0:
+        caster["ct"] = float(caster.get("ct") or now) + d
+    _grant(battle, caster, m, params, logs, "COMBAT_MECH_REARGUARD",
+           ticks=int(d), pct=_pct_of_rule(state_rule(str(m.get("state") or ""))))
+
+
+@EF.register_action("aeth_blood_price")
+def aeth_blood_price(battle, caster, target, params, logs):
+    """血债（狂战士 · 11 级）：血已经付过了（`aeth_self_cut`），这里挂上那段攻击增益。"""
+    m = of("blood_price")
+    _grant(battle, caster, m, params, logs, "COMBAT_MECH_BLOODDEBT",
+           pct=abs(_panel_delta(state_rule(str(m.get("state") or "")))))
+
+
+@EF.register_action("aeth_riposte")
+def aeth_riposte(battle, caster, target, params, logs):
+    """狂态（狂战士 · 14 级）：挂上「谁打我谁挨一刀」那段态 —— 消费端是 `on_taken`。"""
+    m = of("riposte")
+    _grant(battle, caster, m, params, logs, "COMBAT_MECH_RIPOSTE",
+           pct=int(round(_num(m, "reflect_atk_mult") * 100)))
+
+
+@EF.register_action("aeth_pin_down")
+def aeth_pin_down(battle, caster, target, params, logs):
+    """箭止（游侠 · 11 级）：打断是引擎那一条动词干的，这里只挂减速那半截。"""
+    m = of("pin_down")
+    if target is None or not actor_alive(target):
+        return
+    key = str(m.get("state") or "")
+    turns = _turns(m, params)
+    if not key or turns <= 0 or not state_rule(key):
+        return
+    _put(target, key, _now(battle) + turns)
+    logs.append(T("COMBAT_MECH_PINDOWN", name=target.get("name", ""), turns=int(turns),
+                  pct=abs(_panel_delta(state_rule(key)))))
+
+
+@EF.register_action("aeth_silence_lock")
+def aeth_silence_lock(battle, caster, target, params, logs):
+    """静默（法师 · 11 级）：给目标挂一条**控制**（引擎认的那一格是条目上的 `mode`）。
+
+    `mode` 取表里声明的那个值（`no_skill` = 接下来那一手技能转普攻）；引擎的行动前检查读它。
+    ★ 这一条**不认态名**：谁带 `mode` 谁就是控制（净罪那半边也是同一条判据）。
+    """
+    m = of("silence_lock")
+    key = str(m.get("state") or "")
+    turns = _turns(m, params)
+    mode = str(m.get("mode") or "")
+    if target is None or not actor_alive(target) or not key or turns <= 0 or not mode:
+        return
+    if not state_rule(key):
+        return
+    _put(target, key, _now(battle) + turns, mode=mode)
+    logs.append(T("COMBAT_MECH_SILENCE", name=target.get("name", ""), turns=int(turns)))
+
+
+@EF.register_action("aeth_frost_veil")
+def aeth_frost_veil(battle, caster, target, params, logs):
+    """霜障（法师 · 14 级）：一条状态吃两头 —— 承伤乘区（−35%）与自己的面板（matk ×0.8）。"""
+    m = of("frost_veil")
+    _grant(battle, caster, m, params, logs, "COMBAT_MECH_FROSTVEIL",
+           pct=_pct_of_rule(state_rule(str(m.get("state") or ""))),
+           cost=abs(_panel_delta(state_rule(str(m.get("state") or "")))))
+
+
+@EF.register_action("aeth_night_watch")
+def aeth_night_watch(battle, caster, target, params, logs):
+    """守夜（修女 · 14 级）：承伤 −35% + 这段里治疗量 +25%（她把灯挪到自己跟前）。"""
+    m = of("night_watch")
+    _grant(battle, caster, m, params, logs, "COMBAT_MECH_NIGHTWATCH",
+           pct=_pct_of_rule(state_rule(str(m.get("state") or ""))),
+           gain=abs(_panel_delta(state_rule(str(m.get("state") or "")))))
+
+
+@EF.register_action("aeth_bleed")
+def aeth_bleed(battle, caster, target, params, logs):
+    """割喉（刺客 · 11 级）：目标挂**叠层**的流血（cap 取规则表；到期 = 域里的 mech_val）。
+
+    周期怎么跳由引擎按规则表里的 `period` 走（dir=damage · atk 系数 × **持刀那一刻**的施法者
+    面板 —— 快照由引擎的 `note_dot_source` 记，本层不自己算 DoT 的账）。
+    """
+    m = of("bleed")
+    key = str(m.get("state") or "")
+    turns = _turns(m, params)
+    cfg = state_rule(key)
+    if target is None or not actor_alive(target) or not key or turns <= 0 or not cfg:
+        return
+    ef = target.setdefault("effects", {})
+    old = ef.get(key) if isinstance(ef.get(key), dict) else {}
+    n = min(int(cfg.get("cap") or 1), int(old.get("stacks") or 0) + 1)
+    ef[key] = {"stacks": n, "expire": _now(battle) + turns}
+    EF.note_dot_source(battle, target, key, caster)
+    # ★ 跳的间隔从**规则表那一条**现读（文案里那个「每 N 刻」不许另写一个数 —— 单源）
+    _intv = int(float((cfg.get("period") or {}).get("interval") or 1))
+    logs.append(T("COMBAT_MECH_BLEED", name=target.get("name", ""), turns=int(turns),
+                  stacks=n, intv=_intv))
+
+
+@EF.register_action("aeth_sidestep")
+def aeth_sidestep(battle, caster, target, params, logs):
+    """侧闪（刺客 · 14 级）：只动闪避那一格（不改承伤乘区 —— 与四个减伤类防御不同轴）。"""
+    m = of("sidestep")
+    _grant(battle, caster, m, params, logs, "COMBAT_MECH_SIDESTEP",
+           pct=abs(_panel_delta(state_rule(str(m.get("state") or "")))))
+
+
+# ── 常驻被动那条路（route=trigger）的三个动词 ──────────────────────────
+@EF.register_action("aeth_on_start")
+def aeth_on_start(battle, caster, target, params, logs):
+    """开战（`battle_start`，整场一次）：把这个 actor 那个被动里声明的**每一条规则键**挂成常驻态。
+
+    ★ fail-closed 两道：① 那两张表没挂 ⇒ 直接返回（不装配 = 与接线前一字不差）；
+      ② 某条规则不在表里 ⇒ 跳过那一条（不写半个字段）。
+    """
+    if not _rules_mounted() or not isinstance(caster, dict):
+        return
+    m = of(_passive_mech(caster))
+    if not m or m.get("trigger") != "battle_start":
+        return
+    ef = caster.setdefault("effects", {})
+    for key in (m.get("rules") or {}):
+        if not state_rule(key):
+            continue
+        ef[key] = {"stacks": 1, "expire": None}          # 常驻：不到期
+
+
+@EF.register_action("aeth_on_dmg_calc")
+def aeth_on_dmg_calc(battle, caster, target, params, logs):
+    """攻击方乘区（`dmg_calc`）：按**出手那一刻**的血线现算（血勇：血少就打得狠）。
+
+    现算而不是挂态 ⇒ 「治疗回到线上」自动不再生效，不留过期态（见机制表那条 judge）。
+    """
+    if not _rules_mounted():
+        return
+    ctx = getattr(battle, "_fire_ctx", None)
+    if not isinstance(ctx, dict):
+        return
+    actor = caster if isinstance(caster, dict) else ctx.get("actor")
+    m = of(_passive_mech(actor))
+    if not m or m.get("trigger") != "dmg_calc" or not isinstance(actor, dict):
+        return
+    below = _num(m, "hp_below")
+    mult = _num(m, "dmg_mult")
+    mx = float(ST.actor_max_hp(battle, actor) or 0)
+    hp = float(actor.get("hp") or 0)
+    if mult <= 0 or below <= 0 or mx <= 0 or hp / mx >= below:
+        return
+    cur = ctx.get("mult")
+    ctx["mult"] = (1.0 if cur is None else float(cur)) * mult
+
+
+@EF.register_action("aeth_on_taken")
+def aeth_on_taken(battle, caster, target, params, logs):
+    """承伤后（`on_taken`）：把「谁打我谁挨一刀」那一类态兑现成对**攻击者**的伤害。
+
+    引擎零知识：哪些状态算反击全看规则表里那条 `reflect_atk_mult`（本函数不认任何态名）。
+    反击伤害 = 持有者 atk × 那个系数（现算）；攻击者缺失 / 已死 ⇒ 不反击（不静默打空气）。
+    """
+    if not _rules_mounted() or not isinstance(caster, dict):
+        return
+    ctx = getattr(battle, "_fire_ctx", None)
+    src = (ctx or {}).get("source") if isinstance(ctx, dict) else None
+    if not isinstance(src, dict) or not actor_alive(src):
+        return
+    now = _now(battle)
+    for k, e in list((caster.get("effects") or {}).items()):
+        if not isinstance(e, dict):
+            continue
+        exp = e.get("expire")
+        if exp is not None and float(exp) <= now:
+            continue
+        mult = float(state_rule(k).get("reflect_atk_mult") or 0)
+        if mult <= 0:
+            continue
+        dmg = int(float(ST.actor_stats(battle, caster).get("atk", 0) or 0) * mult)
+        if dmg <= 0:
+            continue
+        real = LD.deal_damage(battle, None, src, dmg, logs)
+        logs.append(T("COMBAT_MECH_TRANCE", name=src.get("name", ""), n=real))

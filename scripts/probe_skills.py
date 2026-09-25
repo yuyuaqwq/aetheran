@@ -47,7 +47,7 @@ print("     六职业分布：%s" % " · ".join("%s %d" % (k, len(v)) for k, v i
 # ② 七维完整性
 need = ("name", "kind", "lv", "desc", "cd", "cast", "recover", "range", "mp", "power")
 missing = [(sid, k) for sid, r in (sk or {}).items() for k in need if k not in r]
-chk("30 条技能 7 维齐全（含 name/kind/lv/desc/cd/cast/recover/range/mp/power）", not missing,
+chk("%d 条技能 7 维齐全（含 name/kind/lv/desc/cd/cast/recover/range/mp/power）" % len(sk or {}), not missing,
     "" if not missing else str(missing[:4]))
 
 # ③ 三份默认域 + actions
@@ -116,7 +116,7 @@ chk("★ kinds 词表三头对账：引擎要的 5 个语义名 == kinds.json �
 
 _owned = {k: v for k, v in (sk or {}).items() if v.get("owner_class")}
 _badkind = [(k, v.get("kind_override")) for k, v in _owned.items() if v.get("kind_override") not in _KINDS.values()]
-chk("★ 30 条技能的 `kind_override` 都在 kinds 值域里（%d 条）" % len(_owned), not _badkind, "%s" % _badkind[:4])
+chk("★ %d 条技能的 `kind_override` 都在 kinds 值域里" % len(_owned), not _badkind, "%s" % _badkind[:4])
 
 _badexpr = []
 for _k, _v in sorted(_owned.items()):
@@ -170,6 +170,114 @@ for _cls in sorted(set(_per)):
         _badres.append("%s→%s" % (_cls, _r.get("name")))
 chk("★ 六职业普攻都过得了 `resolve_basic_skill` 的 expr 门（不过就回落兜底「挥击」）",
     not _badres, "%s" % (_badres or "无"))
+
+# ══════════════════════════════════════════════════════════════
+# ⑧ ★ B4-1：T1 满编账（48 条 = 42 主动 + 6 被动）—— 域 · 生成器 · 消费端三头对账
+# ══════════════════════════════════════════════════════════════
+print()
+print("── ★ B4-1：T1 技能满编账（六职业 7 主动 + 1 被动 = 48 条）")
+import collections as _coll                                              # noqa: E402
+
+_CLS8 = sorted(k for k in (st.domain("classes") or {}) if not str(k).startswith("_"))
+_OWN = {k: v for k, v in (sk or {}).items() if isinstance(v, dict) and v.get("owner_class")}
+_KKS = {str(v.get("kind_key") or "") for v in _OWN.values()}
+chk("★ 48 条技能都带 ASCII `kind_key`（%s）：%s"
+    % (" · ".join(sorted(_KKS)), " · ".join(sorted({str(v.get("kind")) for v in _OWN.values()}))),
+    _KKS == {"active", "passive"} and all(
+        (v.get("kind_key") == "passive") == (v.get("kind") == "被动") for v in _OWN.values()),
+    "kind_key 取值 %s" % sorted(_KKS))
+
+_c8 = _coll.Counter((v.get("owner_class"), str(v.get("kind_key"))) for v in _OWN.values())
+_bad8 = [c for c in _CLS8 if (_c8[(c, "active")], _c8[(c, "passive")]) != (7, 1)]
+chk("★ 六职业到 20 级**满编**：%s（合 %d 条 = %d 主动 + %d 被动）"
+    % (" · ".join("%s %d+%d" % ((st.domain("classes")[c] or {}).get("name"), _c8[(c, "active")],
+                                _c8[(c, "passive")]) for c in _CLS8),
+       len(_OWN), sum(_c8[(c, "active")] for c in _CLS8), sum(_c8[(c, "passive")] for c in _CLS8)),
+    len(_OWN) == 48 and not _bad8, "%s" % _bad8)
+
+_badP8 = []
+for k, v in sorted(_OWN.items()):
+    if v.get("kind_key") != "passive":
+        continue
+    if float(v.get("power") or 0) != 0 or v.get("exprs") or int(v.get("lv") or 0) != 16 \
+            or int(v.get("mp") or 0) != 0 or int(v.get("cd") or 0) != 0 or not v.get("mech"):
+        _badP8.append((k, v.get("lv"), v.get("power"), v.get("exprs"), v.get("mech")))
+chk("★ 六条被动：power 0 · 不带 exprs（它们不产生伤害）· cd/mp 0 · lv=16（真源 05_系统总表"
+    "「职业被动 16–20 级开」）· 都挂机制", not _badP8, "%s" % _badP8[:3])
+
+_new18 = sorted((k, int(v.get("lv") or 0)) for k, v in _OWN.items()
+                if str(v.get("kind_key")) == "active" and int(v.get("lv") or 0) > 1)
+_old30 = [k for k, v in _OWN.items() if int(v.get("lv") or 0) <= 1]
+chk("★ B4-1 新补的 12 条主动都带解锁等级、落在 11–16（%s）；原先那 %d 条仍 lv=1（不动已落地的数据）"
+    % (" · ".join("%s@%d" % (k.replace("SKILL_", ""), l) for k, l in _new18), len(_old30)),
+    len(_new18) == 12 and all(11 <= l <= 20 for _k, l in _new18) and len(_old30) == 30,
+    "%s" % (_new18[:3],))
+
+# 消费端①：战斗技能表按等级挑、且**不含被动**
+from content import combat as _CB8                                       # noqa: E402
+
+_ds8 = {}
+for c in _CLS8:
+    _ds8[c] = [_CB8._default_skills(c, lv) for lv in (1, 10, 20)]
+_bad8b = [c for c in _CLS8 if len(_ds8[c][2]) != 7 or _ds8[c][2] == _ds8[c][1] == _ds8[c][0]]
+_bad8b += [c for c in _CLS8 if any(k in _ds8[c][2] for k, v in _OWN.items()
+                                   if v.get("owner_class") == c and v.get("kind_key") == "passive")]
+chk("★ 战斗技能表（`combat._default_skills`）按等级挑、**被动一条都不进**：%s"
+    % " · ".join("%s %d/%d/%d" % ((st.domain("classes")[c] or {}).get("name"), len(_ds8[c][0]),
+                                  len(_ds8[c][1]), len(_ds8[c][2])) for c in _CLS8),
+    not _bad8b, "%s" % _bad8b[:3])
+from content import cmds_skill as _CSK8                                   # noqa: E402
+
+_bad8d = []
+for c in _CLS8:
+    _av8 = [k for k, _v in _CSK8._of_class(c, 16)[0] if _v.get("kind_key") != "passive"]
+    if _av8 != _CB8._default_skills(c, 16):
+        _bad8d.append((c, _av8, _CB8._default_skills(c, 16)))
+chk("★ 16 级那一刻：`技能` 页里**能放的那班**与战斗技能表逐条同序（被动只出现在技能页、不进球场）",
+    not _bad8d, "%s" % _bad8d[:2])
+
+# 消费端②：被动不许当技能放（真调实现体那一手）
+import asyncio as _a8                                                     # noqa: E402
+import time as _t8                                                        # noqa: E402
+from content import cmds_battle as _CBL8                                  # noqa: E402
+
+
+class _E8(object):
+    def __init__(self, text=""):
+        self.text = text
+
+    def save(self):
+        pass
+
+
+def _drive8(fn, p, text=""):
+    out = []
+
+    async def _go():
+        async for _ln in fn(_E8(text), None, "u_sk8", p):
+            out.append(str(_ln))
+    _a8.run(_go())
+    return out
+
+
+_PK8 = next(k for k, v in sorted(_OWN.items()) if v.get("kind_key") == "passive"
+            and v.get("owner_class") == "cls_knight")
+_PN8 = _OWN[_PK8]["name"]
+_got8 = _drive8(_CBL8.skill_cast, {"cls": "cls_knight", "level": 16, "race": "human",
+                                   "hp": 100, "bag": {}, "equipped": {}, "flags": {}, "codex": {}},
+                "技能 %s" % _PN8)
+chk("★ 被动**不许当技能放**（真敲「技能 %s」⇒ 出一句放不出来，不是静默白费一手）" % _PN8,
+    _got8 == [(st.domain("texts") or {}).get("COMBAT_SKILL_BAD", {}).get("value", "")
+              .replace("{name}", _PN8)],
+    "%s" % _got8[:2])
+
+# 生成器：kind_key 的映射表是唯一来源（域里每条都能被它复算）
+import rebuild_skills as _RS8                                             # noqa: E402
+
+_bad8c = [(k, v.get("kind_key"), _RS8.kind_key_of(v)) for k, v in _OWN.items()
+          if v.get("kind_key") != _RS8.kind_key_of(v)]
+chk("★ `kind_key` 逐条可复算（唯一来源 = `rebuild_skills.KIND_KEY`：主动→active · 被动→passive）",
+    not _bad8c, "%s" % _bad8c[:3])
 
 print()
 print("结论：", "全过 ✅" if ok else "有红 ❌")

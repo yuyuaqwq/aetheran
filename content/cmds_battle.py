@@ -442,6 +442,10 @@ async def skill_cast(env, sink, uid, player):
       ① 没定职业 ⇒ `SYS_SKILL_NOCLS`  ② 认不出 / 不是本职业 / 没学过 ⇒ `COMBAT_SKILL_BAD`
       ③ 解锁等级没到 ⇒ `SYS_SKILL_TOO_LOW`
     过了就交给引擎那条技能路（mp / 冷却 / 伤害 / 治疗 / 增益都是它自己的事）。
+
+    ★ B4-1 第五道门：**被动不是能"放"的**（`kind_key == "passive"` ⇒ `COMBAT_SKILL_BAD`）。
+      被动开战时由事件总线挂上（`content/mech.py` 的 `route=trigger`），放进球场只会白费一次
+      行动。判据看 ASCII 机器键，不看中文类别名（K48/K51 同族）。
     """
     from .cmds_skill import _by_name, _skills, known_ids
     p = _p(player)
@@ -457,6 +461,9 @@ async def skill_cast(env, sink, uid, player):
     sid, rec = _by_name(_skills(), want)
     if not sid:
         yield T("COMBAT_SKILL_BAD", name=want)
+        return
+    if rec.get("kind_key") == "passive":
+        yield T("COMBAT_SKILL_BAD", name=rec.get("name", sid))
         return
     owner = str(rec.get("owner_class") or "")
     if (owner and owner != cls) or sid not in known_ids(p):

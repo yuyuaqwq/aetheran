@@ -1,14 +1,14 @@
 {
   "_src": {
     "真源": "aetheran-plan/03_职业与技能/01_骑士_v2.md（§三 挨打段 · §五 不退段）· 02_狂战士_v2.md（§一 账本 · §三 三个换法）· 03_游侠_v2.md §三 抢拍 · 04_法师_v2.md §三 印记的账 · 05_修女_v2.md（§一 状态机 · §三 三种救法 · §五 代入例）· 06_刺客_v2.md（§一 窗口表 · §二 破绽标记）· 02_数值宪法/02_战斗机制.md §二（A2 霸体 · A3 行动序 · E3 破绽 · C1 印记）",
-    "这张表是什么": "「技能 mech 名 → 引擎动词 / 注入面」的唯一机器可读副本（B3-27）。出口只有一个：`content/mech.py`（登记表 → `rules_module()` 算 EFFECT_ACTIONS / EFFECT_RULES；`load_game_rules` 挂进引擎；`check_domain()` 做跨域对账）。14 条 mech 名里今天真活的：**10 条机制 / 10 条技能**；`partial` 1 条（不退 —— 自身那半活了、霸体与全队那半没落）；`pending` 2 条（后撤 ×2 技能 · 引燃+垂星）—— 逐条 why 在下面。",
+    "这张表是什么": "「技能 mech 名 → 引擎动词 / 注入面」的唯一机器可读副本（B3-27 建 · B4-1 扩到 29 条）。出口只有一个：`content/mech.py`（登记表 → `rules_module()` 算 EFFECT_ACTIONS / EFFECT_RULES；`load_game_rules` 挂进引擎；`check_domain()` 做跨域对账）。**29 条机制的三档**：`on` **25 条**（B3-27 那 9 条 + B4-1 新落 16 条 = 11 主动 + 5 被动）· `partial` **1 条**（不退 —— 自身那半活了、霸体与全队那半没落）· `pending` **3 条**（后撤 ×2 技能 · 引燃+垂星 —— B3-27 留下的 + B4-1 登记的 `block_oath`「格挡回誓」：缺「格挡成功」事件 + 缺资源渠道）—— 逐条 why 在下面。",
     "数值来源（不许手打）": [
       "① skills 域有的（`mech_val`）⇒ 表里写 `\"turns\": \"mech_val\"` / 代码现算，**绝不把那个数抄一遍**",
       "② 域里没有、真源白纸黑字有的 ⇒ 落 `{\"value\": …, \"src\": …}`（逐条注明出处 + 见本工作树 _notes.md 的真源待补行）",
       "③ 域里没有、真源也没给的 ⇒ **不编**：机制标 `pending`，`why` 写明缺哪一环"
     ],
     "status": "on = 今天真生效（有可复算判据）· partial = 有半截真生效、另半截 pending（why 写清是哪半截）· pending = 一条都没接（why 写清缺哪一环，**与接线前一字不差**：不认得的机制由 `check_domain` 在装配期抛，绝不静默兜底成别的行为）",
-    "route": "engine = 引擎现成的通用路（技能 mech → 名词 → EFFECT_ACTIONS → 动词，`effects_from_skill` 那条）；cast = 引擎那条路够不着（治疗支不消费 mech / mech_val 被 int() 截成 0 / 没给 mech_val）⇒ 走 actor.triggers 的 act_cast（`aeth_on_cast`）。**两条路互斥**：route=cast 的机制不并进 EFFECT_ACTIONS（并进去 = 同一件事两处落地）。",
+    "route": "engine = 引擎现成的通用路（技能 mech → 名词 → EFFECT_ACTIONS → 动词，`effects_from_skill` 那条）；cast = 引擎那条路够不着（治疗支不消费 mech / mech_val 被 int() 截成 0 / 没给 mech_val）⇒ 走 actor.triggers 的 act_cast（`aeth_on_cast`）；**trigger = 常驻被动（B4-1 扩的第三条路）**：被动不是被「放」出来的，它挂在 actor 的事件触发器上（`battle_start` 常驻态 / `dmg_calc` 血线乘区 / `on_taken` 反击兑现）。**三条路互斥**：route=cast / trigger 的机制不并进 EFFECT_ACTIONS（并进去 = 同一件事两处落地）。事件名与动词名的唯一来源 = `mech._TRIGGER_VERBS`，挂载面从它生成（表里声明的与挂上去的逐名相等）。",
     "route_judge": "route=engine 有一条加载期判据（探针钉着）：声明这类机制的技能必须给得出**非 0 的整数 mech_val** —— 否则引擎 `effects_from_skill` 的 `if mech and mval` 门是关的（表写了、跑起来什么也不发生）。今天 5 条栽在这上面 ⇒ 它们走 cast 或 pending。",
     "join_key": "部分机制用 `join_key` 声明「与谁同轴」（例：`shield_ally` 的 30% 与 `unstoppable` 的 30% 同轴 ⇒ 同时开只算一次）。这只是**合并声明**，不是第二条路。"
   },
@@ -313,6 +313,388 @@
       "why_short": "印记（RES_MARK）今天既攒不出来、也花不出去 —— 两层都缺",
       "judge": "（无 —— pending：与接线前一字不差，什么也不发生；登记在 pending 清单里）",
       "src": "04_法师_v2.md §三/§六 · 02_数值宪法/02_战斗机制.md §二 C1"
+    },
+    "oath_shield": {
+      "status": "on",
+      "route": "engine",
+      "actions": [
+        {
+          "action": "aeth_oath_shield"
+        }
+      ],
+      "state": "",
+      "turns": "mech_val",
+      "shield_pct": {
+        "value": 0.25,
+        "src": "B4-1 本批设计（01_骑士_v2.md 的 11–20 段补章待收编）「花 40 守誓，立起一张吸收伤害的墙（生命上限的 25%）」—— 吸收量按**生命上限**的比例算，不走 F9（护盾吃 1.4 倍治疗强度）：骑士 10 级 heal_pow 只有 7.7，按 F9 算出来的盾小到看不出"
+      },
+      "rules": {},
+      "judge": "施放后 actor.shields 多一条（key=aeth.oath_shield）· 盾值 = int(生命上限 × 0.25)（现算，逐值复算）· 到期 = 现在 + mech_val(300)（引擎 shields.expire_at）· 这段里落上来的伤害先吃盾（引擎 `_apply_damage` 的护盾吸收），盾破之后照旧扣血。",
+      "src": "B4-1 本批设计（真源待补：01_骑士_v2.md 11–20 段）"
+    },
+    "hold_line": {
+      "status": "on",
+      "route": "engine",
+      "actions": [
+        {
+          "action": "aeth_hold_line"
+        }
+      ],
+      "state": "rear_guard",
+      "turns": "mech_val",
+      "delay_ticks": {
+        "value": 60,
+        "src": "B4-1 本批设计：把自己的下一次行动推后 60 刻（≈ 半手；10 级一次行动 95.8 刻）"
+      },
+      "rules": {
+        "rear_guard": {
+          "_src": "B4-1 本批设计「这 150 刻里，落到身上的东西轻一半」⇒ reduce_taken = 0.5；与 盾墙/不退/庇护 走**同一条**承伤乘区（join_key 相同 ⇒ 同时开只算最强那条，不会连乘成无敌）",
+          "cap": 1,
+          "reduce_taken": 0.5,
+          "join_key": "reduce_taken"
+        }
+      },
+      "judge": "① 施放后 caster['ct'] 比「同一场同一手不放断后」**多** delay_ticks(60) 刻（同种子逐值对）；② effects.rear_guard 到期 = 现在 + mech_val(150)；③ 这段里打它的伤害 ×0.5（taken_calc 乘区，逐值复算；与不退/庇护同开只算最强那条）。",
+      "src": "B4-1 本批设计（真源待补：01_骑士_v2.md 11–20 段）"
+    },
+    "blood_price": {
+      "status": "on",
+      "route": "engine",
+      "actions": [
+        {
+          "action": "aeth_self_cut"
+        },
+        {
+          "action": "aeth_blood_price"
+        }
+      ],
+      "state": "blood_debt",
+      "turns": "mech_val",
+      "self_dmg_pct": {
+        "value": 0.1,
+        "src": "B4-1 本批设计「自伤 10% 生命，换 200 刻攻击 +25%」（口径与 破势 的自伤同一条：按 max_hp 的比例，保底留 1 血）"
+      },
+      "rules": {
+        "blood_debt": {
+          "_src": "B4-1 本批设计「200 刻攻击 +25%」⇒ 面板乘区 op=mul mult=1.25（与 破势 的 def 乘区同一条通道、不同轴）",
+          "cap": 1,
+          "panel": {
+            "stat": "atk",
+            "op": "mul",
+            "mult": 1.25
+          }
+        }
+      },
+      "judge": "① 施放者先掉 int(max_hp × 0.10)（现算复算，保底留 1 血）；② 施放后 `actor_stats()['atk']` 变成 int(atk × 1.25)；③ mech_val(200) 刻后 atk 回到原值。",
+      "src": "B4-1 本批设计（真源待补：02_狂战士_v2.md 11–20 段）"
+    },
+    "riposte": {
+      "status": "on",
+      "route": "engine",
+      "actions": [
+        {
+          "action": "aeth_self_cut"
+        },
+        {
+          "action": "aeth_riposte"
+        }
+      ],
+      "state": "riposte_guard",
+      "turns": "mech_val",
+      "consume_event": "on_taken",
+      "self_dmg_pct": {
+        "value": 0.08,
+        "src": "B4-1 本批设计「自伤 8% —— 180 刻里谁打你一下，就得挨你一刀」（自伤口径同 破势：max_hp 比例，保底 1 血）"
+      },
+      "rules": {
+        "riposte_guard": {
+          "_src": "B4-1 本批设计：反击伤害 = 持有者 atk × 0.8。消费端 = 事件 on_taken 上的内容动词 `aeth_on_taken`（它只读**规则表里这个字段**，不认任何机制名/状态名）",
+          "cap": 1,
+          "reflect_atk_mult": 0.8
+        }
+      },
+      "judge": "① 施放者先掉 int(max_hp × 0.08)；② effects.riposte_guard 到期 = 现在 + mech_val(180)；③ 这段里**每一次**承伤之后，攻击者挨一发 int(持有者 atk × 0.8) 的伤害（真推时间轴后逐值复算；攻击者缺失/已死 ⇒ 不反击）；④ mech_val 刻后再挨打 ⇒ 不再反击。",
+      "src": "B4-1 本批设计（真源待补：02_狂战士_v2.md 11–20 段）"
+    },
+    "blood_sweep": {
+      "status": "on",
+      "route": "engine",
+      "actions": [
+        {
+          "action": "aeth_self_cut"
+        }
+      ],
+      "state": "",
+      "turns": "none",
+      "self_dmg_pct": {
+        "value": 0.1,
+        "src": "B4-1 本批设计「自伤 10% —— 一把斧子抡过全场」（自伤口径同 破势：max_hp 比例，保底 1 血）"
+      },
+      "rules": {},
+      "mech_val_meaning": "★ 本条机制**不落任何状态**、也没有时长 ⇒ `turns: \"none\"`；域里那个 `mech_val: 1` 只是过引擎 `effects_from_skill` 那道 `if mech and mval` 门的哨兵值（0 会让整条机制进不了机制路），不是设计数。伤害与范围都在技能自己的字段上（`power 1.4` + `aoe: true` ⇒ 引擎 `_deal_aoe` 逐目标独立结算）。",
+      "judge": "① 施放者先掉 int(max_hp × 0.10)（现算复算）；② **不给任何目标挂状态**（effects 一条都不写）；③ 命中时走引擎的 AOE 支（`_deal_aoe`：对敌侧每个存活目标各算一次完整伤害）—— 单人一场（只有一个敌人）时与单体技的差别只在**伤害倍率**，多人场才看得出「扫」；判据用两个怪构造出来。",
+      "src": "B4-1 本批设计（真源待补：02_狂战士_v2.md 11–20 段）"
+    },
+    "pin_down": {
+      "status": "on",
+      "route": "engine",
+      "actions": [
+        {
+          "action": "interrupt"
+        },
+        {
+          "action": "aeth_pin_down"
+        }
+      ],
+      "state": "pinned",
+      "turns": "mech_val",
+      "rules": {
+        "pinned": {
+          "_src": "B4-1 本批设计「截断对面正在念的那一手，并让它 100 刻里慢 20%」⇒ 面板乘区 op=mul mult=0.8 on spd。★ 这是**游侠那条轴**（改对方的行动序）；与刺客的「断势」区分：断势走 打断 + 破绽（承伤 ×1.35），箭止走 打断 + 减速（面板 spd ×0.8），两条机制的乘区与消费端都不同",
+          "cap": 1,
+          "cleanse": true,
+          "panel": {
+            "stat": "spd",
+            "op": "mul",
+            "mult": 0.8
+          }
+        }
+      },
+      "judge": "① 目标正在出招窗口里 ⇒ 那一手被清掉（引擎 `interrupt` 动词 + 它那句「出招被打断」）；② 目标挂 `pinned`，到期 = 现在 + mech_val(100)、规则里的 panel(spd×0.8) ⇒ `actor_stats()['spd']` 变成 int(spd×0.8)；③ 100 刻后回到原值（它下一次行动的到点时刻因此比「不放这一手」晚）。",
+      "src": "B4-1 本批设计 · 01_骑士_v2.md §一「A1 打断 骑士没有打断技能（刻意的）—— 断人是刺客/游侠的活」"
+    },
+    "silence_lock": {
+      "status": "on",
+      "route": "engine",
+      "actions": [
+        {
+          "action": "aeth_silence_lock"
+        }
+      ],
+      "state": "silenced",
+      "turns": "mech_val",
+      "mode": "no_skill",
+      "rules": {
+        "silenced": {
+          "_src": "B4-1 本批设计「对面这 100 刻里用不出技能（只能普攻或防御）」⇒ 引擎的**控制**语义：条目带 `mode`，由 `battle.py` 的行动前检查消费（`mode=no_skill` + action=skill ⇒ 技能转普攻）。★ 与「静默」这个名字同源的是**法师自己的失败态**（念不完被打断）—— 他把这一手还给对面。cleanse=true ⇒ 引擎的净化动词也认它",
+          "cap": 1,
+          "cleanse": true
+        }
+      },
+      "judge": "① 目标 effects.silenced 挂上（到期 = 现在 + mech_val(100)）；② 这 100 刻里它若选技能出手 ⇒ 引擎的行动前检查改判成普攻并出一句「被沉默」（`mode=no_skill`）；③ 到期后它重新放得出技能；④ 净罪（`cleanse`）能摘掉它（判据 = 条目带不带 `mode`）。",
+      "src": "B4-1 本批设计 · 02_数值宪法/02_战斗机制.md §〇·五（控制 = 剥夺一次行动机会）"
+    },
+    "frost_veil": {
+      "status": "on",
+      "route": "engine",
+      "actions": [
+        {
+          "action": "aeth_frost_veil"
+        }
+      ],
+      "state": "frost_shell",
+      "turns": "mech_val",
+      "rules": {
+        "frost_shell": {
+          "_src": "B4-1 本批设计「240 刻承伤 −35%，但你的法术也轻 20%」⇒ 一条状态同时吃两个消费端：`reduce_taken`（承伤乘区，`aeth_mitigate` 读）与 `panel`（面板乘区，`stats._apply_effects` 读）。这条是**有代价的防御**：法师的防御必须动到他自己那根轴（输出），不然就成了骑士",
+          "cap": 1,
+          "reduce_taken": 0.35,
+          "join_key": "reduce_taken",
+          "panel": {
+            "stat": "matk",
+            "op": "mul",
+            "mult": 0.8
+          }
+        }
+      },
+      "judge": "① 施放后 effects.frost_shell 到期 = 现在 + mech_val(240)；② 这段里打他的伤害 ×0.65（taken_calc 乘区，逐值复算）；③ 同一段里 `actor_stats()['matk']` 变成 int(matk × 0.8)（他自己那发也真的轻了 —— 这是这条技能的代价，判据两头都要钉）。",
+      "src": "B4-1 本批设计（真源待补：04_法师_v2.md 11–20 段）"
+    },
+    "night_watch": {
+      "status": "on",
+      "route": "engine",
+      "actions": [
+        {
+          "action": "aeth_night_watch"
+        }
+      ],
+      "state": "night_lamp",
+      "turns": "mech_val",
+      "rules": {
+        "night_lamp": {
+          "_src": "B4-1 本批设计「250 刻里自身承伤 −35%，治疗量 +25%」⇒ reduce_taken（承伤乘区）与 panel(heal_pow ×1.25，F8 的基数) 两个消费端。★ 与 庇护/晨祷 的区别：那两条在单人场里收件人也是自己，但语义是「替别人挡」；这一条是她**把灯挪到自己跟前**—— 修女的自保",
+          "cap": 1,
+          "reduce_taken": 0.35,
+          "join_key": "reduce_taken",
+          "panel": {
+            "stat": "heal_pow",
+            "op": "mul",
+            "mult": 1.25
+          }
+        }
+      },
+      "judge": "① effects.night_lamp 到期 = 现在 + mech_val(250)；② 这段里打她的伤害 ×0.65（逐值复算）；③ 同一段里 F8 治疗量（`heal_pow`）涨 25%（走引擎同一条治疗链现算，与安神曲的每刻回血一起可核）。",
+      "src": "B4-1 本批设计（真源待补：05_修女_v2.md 11–20 段）"
+    },
+    "bleed": {
+      "status": "on",
+      "route": "engine",
+      "actions": [
+        {
+          "action": "aeth_bleed"
+        }
+      ],
+      "state": "bleeding",
+      "turns": "mech_val",
+      "rules": {
+        "bleeding": {
+          "_src": "B4-1 本批设计「300 刻里持续失血（0.04 倍攻击/层 · 每 30 刻跳一次 · 最多 3 层 · 目标见底时翻倍）」⇒ 引擎的周期声明 `period`（dir=damage · interval 30 · atk 0.04 ⇒ 每一跳每层 = 持刀那一刻的施法者 atk × 0.04，快照由引擎 `note_dot_source` 记）· `double_low_hp_pct 0.30` 是引擎现成的那一档「低血翻倍」· cap 3（这条**叠层**，与破绽的「只刷新不叠加」相反）。★ 真源 00_重做总纲_v2.md §五·五 已经把 DoT 分给刺客（「只在节奏来源本来就是时间的他身上加」）—— 本批落的是真源早就写明、但一直没人落的那一条。★ 数值账（10 级 atk 82 复算）：1 层全程 = 10 跳 × 0.04 × 82 ≈ 33；叠满 3 层全程 ≈ 98 ⇒ 加上起手那一发 0.8×82 ≈ 66，一条完整循环 ≈ 164 ≈ 2.0× 攻击（比 断势 1.2 重、比 影袭 3.0 轻；**要三手 + 300 刻才拿到**）",
+          "cap": 3,
+          "period": {
+            "dir": "damage",
+            "interval": 30,
+            "turns": 0,
+            "atk": 0.04,
+            "double_low_hp_pct": 0.3
+          }
+        }
+      },
+      "judge": "① 命中后目标 effects.bleeding 挂上（stacks 1；再割一刀 ⇒ 2、3，上限 3 —— 只叠到 cap，不越界）；② 到期 = 现在 + mech_val(300)（时长只此一处；period.turns=0 = 不按跳数清层）；③ 真推时间轴 ⇒ 每 **30** 刻跳一次、每跳掉 int(atk_快照 × 0.04 × 层数)（逐值复算，`dot_tick` 由引擎跳）；④ 目标当前生命 < 上限的 30% 时那一跳**翻倍**；⑤ 300 刻后条目消失、不再掉血。",
+      "src": "B4-1 本批设计 · 00_重做总纲_v2.md §五·五（刺客的 DoT）· 02_数值宪法/02_战斗机制.md §一 C2"
+    },
+    "sidestep": {
+      "status": "on",
+      "route": "engine",
+      "actions": [
+        {
+          "action": "aeth_sidestep"
+        }
+      ],
+      "state": "sidestep_veil",
+      "turns": "mech_val",
+      "rules": {
+        "sidestep_veil": {
+          "_src": "B4-1 本批设计「180 刻里只做一件事：让他的手落空（闪避 ×1.6）」⇒ 面板乘区 op=mul mult=1.6 on eva（F2 的分子分母之一）。★ 与四个「减伤」类防御（骑士盾/断后、法师霜障、修女守夜）**不同轴**：它不改承伤乘区，改的是「打不打得到」—— 刺客没有格挡、res 又低，他自己那根轴就是 eva 与速度",
+          "cap": 1,
+          "panel": {
+            "stat": "eva",
+            "op": "mul",
+            "mult": 1.6
+          }
+        }
+      },
+      "judge": "① effects.sidestep_veil 到期 = 现在 + mech_val(180)；② 这段里 `actor_stats()['eva']` 变成 int(eva × 1.6)（逐值复算）；③ 命中判定因此变低（F2 的 `hit/(hit+eva)` 现算对账）；④ 承伤乘区**一个字段都不写**（这条不动减伤）。",
+      "src": "B4-1 本批设计（真源待补：06_刺客_v2.md 11–20 段）"
+    },
+    "block_oath": {
+      "status": "pending",
+      "route": "",
+      "why": "**登记未接**（本批 6 个被动里唯一没接的一个）—— 缺口是**两个**，缺一个都落不了：① 引擎没有「格挡成功」这个事件：`on_taken` 只在**承伤后**触发，ctx 里只有 `dmg/real/source`，认不出这一下有没有被格挡（格挡判定在 `landing` 里，没有单独上报）；② 职业核心资源（RES_OATH）这层今天根本没人接 —— `skills` 域的 `res_gain` 全仓**没有任何消费端**（引擎只消费 `res_cost`，且要求 actor.effects 里先有那个条目）⇒ 就算拿到格挡信号，也没有「+8 守誓」这条渠道可写（与 §一⑤ 那笔资源账同一处）。↳ 两处都在别的批次的地盘上；本批按纪律**登记**，不静默兜底成别的行为。",
+      "why_short": "缺「格挡成功」事件 + 缺资源渠道 —— 两处都不在技能层",
+      "judge": "（无 —— pending：与接线前一字不差，什么也不发生；探针钉着它「仍然是 pending」而不是假生效）",
+      "src": "B4-1 本批设计（真源待补：01_骑士_v2.md §二 的账本那一行「格挡成功 +12」）"
+    },
+    "blood_brave": {
+      "status": "on",
+      "route": "trigger",
+      "trigger": "dmg_calc",
+      "verb": "aeth_on_dmg_calc",
+      "hp_below": {
+        "value": 0.5,
+        "src": "02_狂战士_v2.md §一「血量掉到 50% 以下，攻击 ×1.25（被动『血勇』—— 不用点，自动生效）」"
+      },
+      "dmg_mult": {
+        "value": 1.25,
+        "src": "同上（真源白纸黑字给了这一个数）"
+      },
+      "rules": {},
+      "judge": "① 施放者血量比例 < 0.5 时出手 ⇒ 落地伤害 = 同种子「不带被动」那一发的 1.25 倍（`dmg_calc` 乘区，逐值复算）；② 血量 ≥ 0.5 ⇒ 乘区不写（与接线前一字不差）—— 这一条**按出手那一刻现算**，不挂状态，所以治疗回到线上之后自动不再生效（没有过期态可留）。",
+      "src": "02_狂战士_v2.md §一/§二/§四"
+    },
+    "hawk_eye": {
+      "status": "on",
+      "route": "trigger",
+      "trigger": "battle_start",
+      "verb": "aeth_on_start",
+      "rules": {
+        "hawk_eye_hit": {
+          "_src": "B4-1 本批设计「命中 +12%」⇒ panel op=mul mult=1.12 on hit（F2 对冲式判定率的那一半）",
+          "cap": 1,
+          "panel": {
+            "stat": "hit",
+            "op": "mul",
+            "mult": 1.12
+          }
+        },
+        "hawk_eye_crit": {
+          "_src": "B4-1 本批设计「暴击 +8」⇒ panel op=add mult=8 on crit（**点数**，与 F3 的刻度同一个量纲：不是率）",
+          "cap": 1,
+          "panel": {
+            "stat": "crit",
+            "op": "add",
+            "mult": 8
+          }
+        }
+      },
+      "judge": "① 开战（`battle_start` 整场一次）后 effects 里多出 `hawk_eye_hit` / `hawk_eye_crit` 两条常驻态；② `actor_stats()['hit']` = int(hit × 1.12)、`['crit']` = crit + 8（逐值复算）；③ 两条都**没有到期时刻**（整场常驻，不写 expire）；④ 没装配那两张表 ⇒ 一条都不写（与接线前一字不差）。",
+      "src": "B4-1 本批设计（真源待补：03_游侠_v2.md 11–20 段）"
+    },
+    "starred": {
+      "status": "on",
+      "route": "trigger",
+      "trigger": "battle_start",
+      "verb": "aeth_on_start",
+      "rules": {
+        "starlit": {
+          "_src": "B4-1 本批设计「法术攻击 +12%」⇒ panel op=mul mult=1.12 on matk（他第二根时间轴的发动机）",
+          "cap": 1,
+          "panel": {
+            "stat": "matk",
+            "op": "mul",
+            "mult": 1.12
+          }
+        }
+      },
+      "judge": "① 开战后 effects 里多出 `starlit` 常驻态；② `actor_stats()['matk']` = int(matk × 1.12)（逐值复算）；③ 没有到期时刻；④ 没装配 ⇒ 一条都不写。",
+      "src": "B4-1 本批设计（真源待补：04_法师_v2.md 11–20 段）"
+    },
+    "comfort": {
+      "status": "on",
+      "route": "trigger",
+      "trigger": "battle_start",
+      "verb": "aeth_on_start",
+      "rules": {
+        "soothed": {
+          "_src": "B4-1 本批设计「治疗量 +12%」⇒ panel op=mul mult=1.12 on heal_pow（F8 的基数）",
+          "cap": 1,
+          "panel": {
+            "stat": "heal_pow",
+            "op": "mul",
+            "mult": 1.12
+          }
+        }
+      },
+      "judge": "① 开战后 effects 里多出 `soothed` 常驻态；② F8 治疗量（`heal_pow`）= int(heal_pow × 1.12)（走引擎同一条治疗链现算）；③ 没有到期时刻；④ 没装配 ⇒ 一条都不写。",
+      "src": "B4-1 本批设计（真源待补：05_修女_v2.md 11–20 段）"
+    },
+    "keen_edge": {
+      "status": "on",
+      "route": "trigger",
+      "trigger": "battle_start",
+      "verb": "aeth_on_start",
+      "rules": {
+        "whetted": {
+          "_src": "B4-1 本批设计「暴击伤害 +30%」⇒ panel op=add mult=30 on critdmg（F4 的加成值，点数：50 = +50%）",
+          "cap": 1,
+          "panel": {
+            "stat": "critdmg",
+            "op": "add",
+            "mult": 30
+          }
+        }
+      },
+      "judge": "① 开战后 effects 里多出 `whetted` 常驻态；② `actor_stats()['critdmg']` = critdmg + 30 ⇒ F4 暴击乘区从 ×1.5 抬到 ×1.8（逐值复算）；③ 没有到期时刻；④ 没装配 ⇒ 一条都不写。",
+      "src": "B4-1 本批设计（真源待补：06_刺客_v2.md 11–20 段）"
     }
   }
 }
