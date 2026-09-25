@@ -113,7 +113,14 @@ def _foot(p: dict) -> dict:
 
 
 def today(p: dict) -> int:
-    return int(p.get("day") or 0)
+    """「今天是第几个游戏日」—— 日期戳的**唯一口**：现算（`calendar.day_now`）。
+
+    ★ B4-9：原先读的是档上那格 `p["day"]`，可它只是 `tick()` 的跨日标记（只有几个入口在刷）
+      ⇒ 那些路之外记下的日期戳要么是 0、要么是上一回 tick 那天的旧值。形参 `p` 留着 ——
+      调用方一律传档（口径统一，且以后真要按档算也是在这儿改一处）。
+    """
+    from . import calendar as CAL                  # 本地 import：免得装载期成环
+    return CAL.day_now()
 
 
 def has(p: dict, bk: str, rid: str) -> bool:
@@ -343,7 +350,9 @@ def progress(p: dict) -> dict:
 
 def foot(p: dict) -> dict:
     f = _foot(p)
-    days = sorted(set(int(d) for d in f["nodes"].values()))
+    # ★ B4-9：**0 = 不知道是哪天记的**（B4-9 之前、还没 tick 过那些路写下的日期戳）——
+    #   它不算一个游戏日。全都不知道 ⇒ 至少 1（他确实玩过一天）。
+    days = sorted({int(d or 0) for d in f["nodes"].values() if int(d or 0) > 0})
     return {"nodes": dict(f["nodes"]), "kills": f["kills"], "reads": f["reads"],
             "gathers": f["gathers"], "visits": dict(f["visits"]),
             "interrupts": f["interrupts"], "clears": f["clears"], "days": max(1, len(days))}

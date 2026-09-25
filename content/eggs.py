@@ -112,7 +112,7 @@ def ctx(p: dict, st: dict | None = None) -> dict:
         "kill": {k for k in CX.book("monster") if CX.kills_of(p, k) > 0},
         "hour": st["hour_name"],
         "weather": st["weather_name"],
-        "day": int(p.get("day") or 0),
+        "day": CAL.day_now(),                     # ★ B4-9：日期戳现算（别读档上那格）
         "level": int(p.get("level") or 1),
     }
 
@@ -157,6 +157,6 @@ def scan(p: dict, st: dict | None = None) -> list:
         if eid in book:
             continue
         if fn[eid](cur):
-            book[eid] = {"day": int(p.get("day") or 0)}
+            book[eid] = {"day": CAL.day_now()}      # ★ B4-9：日期戳现算（别读档上那格）
             new.append(eid)
     return new

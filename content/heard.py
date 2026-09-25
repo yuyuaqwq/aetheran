@@ -25,7 +25,12 @@ def _h(p: dict) -> dict:
 
 
 def today(p: dict) -> int:
-    return int(p.get("day") or 0)
+    """「今天是第几个游戏日」—— 与 `codex.today` **同一个口**（现算，不读档上那格）。
+
+    ★ B4-9：理由见 `calendar.day_now` 的注释（档上那格只是 tick 的跨日标记）。
+    """
+    from . import calendar as CAL                  # 本地 import：免得装载期成环
+    return CAL.day_now()
 
 
 def note(p: dict, dlg_id: str, group: str, idx: int) -> bool:

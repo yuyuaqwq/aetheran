@@ -174,6 +174,6 @@ def scan(p: dict, st: dict | None = None) -> list:
         if tid in h:
             continue
         if fn[tid](cur):
-            h[tid] = {"day": int(p.get("day") or 0)}
+            h[tid] = {"day": CAL.day_now()}       # ★ B4-9：日期戳现算（别读档上那格）
             new.append(tid)
     return new

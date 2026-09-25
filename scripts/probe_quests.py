@@ -58,6 +58,7 @@ B3-13 加的那一组（支线另外 6 条的条件 · 悬赏「指定的」落�
       ·「途径存在」（`cook.quality` 那一品阶的食材真有出产渠道）；最后**每条真做一次再真交一次**
       （强化 ×3 / 下锅 ×3 / 跟老陶搭话 ×3 / 跟三个人搭话 / 用稀有食材下锅 ×1）。
   ㉛ ★ 悬赏「指定的」：24 §二 那两句（`打掉**指定的**普通 / 精英 / 头目怪` +「每天轮换挑一只」）
+      ★ B4-9：轮换看的「第几个游戏日」= `calendar.day_now()`（现算那根钟）⇒ 用例**拨钟造日**
       都在 ⇒ 三档条件都必须带 `daily`；轮换**可复现**（同一日同档两次同结果 · 跨日必换 ·
       探针自己按「该档按 id 排序取第 (游戏日-1)%n+1 只」算一遍与实现比）；**宽口径已被拦住**
       （打掉同档的**另一只**不顶用 —— 这是判据加强的那一半）；认不出的档 ⇒ 没满足（fail-closed）。
@@ -106,6 +107,21 @@ TX = st.domain("texts")
 
 #: 域里的**条目**（`_meta` 那类私有键不算条目 —— 与 content/cmds_quest.py::_quests 同口径）
 QE = {k: v for k, v in Q.items() if not str(k).startswith("_")}
+
+#: ★ B4-9：`_daily_pick` 的「今天是第几个游戏日」走 `calendar.day_now()`（**现算**那根钟）
+#:   ⇒ 「第 N 日」要**拨钟**来造，不是往档上写一个 `day`（那格只是 `tick()` 的跨日标记；
+#:   B4-9 起日期戳一律现算 —— 见 `content/calendar.py::day_now` 与 §4 的 K70）。
+from content import calendar as CAL_Q                                   # noqa: E402
+from content import facade as FC_Q                                      # noqa: E402
+
+_FC_SAVED = dict(FC_Q.HANDLES)
+_DAY_SECS = CAL_Q.scale_seconds()
+
+
+def _at_day(d, h=6.0):
+    """把假钟拨到「第 d 个游戏日 · 昼（6 点）」—— 轮换与日期戳看的就是这根钟。"""
+    FC_Q.bind_host(clock=lambda _e=(float(d) + h / 24.0) * _DAY_SECS: _e)
+
 
 fails, notes = [], []
 CHECKS = [0]
@@ -886,7 +902,14 @@ for _kind, _k, _shape, _fix in _DRIVE:
     _p2 = _player(level=_lv)
     _p2.update({k: v for k, v in _fix.items() if k != "flags"})
     _p2["flags"] = _flags
+    #: ★ B4-9：条件里带 `daily`（当天点名的那一只）看的是**那根钟** —— 档上写了「第 N 日」
+    #:   就顺带拨钟（判据没变：那一天的规格仍由探针自己算）。这一档用完拨回真钟。
+    _day_fix = int(_fix.get("day") or 0)
+    if _day_fix:
+        _at_day(_day_fix)
     _pay = _drive(CQ.quest_deliver, _p2, "交 %d" % _n)
+    if _day_fix:
+        FC_Q.bind_host(**_FC_SAVED)
     _want = {p: _beat_of(_x, p) for p in ("STORY", "PROGRESS", "DELIVER")}
     if _want["STORY"] not in _acc:
         _drive3.append((_k, "接", _acc[:2]))
@@ -1557,9 +1580,11 @@ for _role in sorted(set(_roles)):
         continue
     for _d in range(1, 3 * len(_pool) + 2):
         _spec = _pool[(_d - 1) % len(_pool)]
-        _a = CQ._daily_pick(_role, {"day": _d})
-        _b = CQ._daily_pick(_role, {"day": _d})                       # 同一日再来一次
-        _n1 = CQ._daily_pick(_role, {"day": _d + 1})                  # 跨日
+        _at_day(_d)                                                   # ★ B4-9：造「第 d 日」= 拨钟
+        _a = CQ._daily_pick(_role, {})
+        _b = CQ._daily_pick(_role, {})                                # 同一日再来一次
+        _at_day(_d + 1)                                               # ★ 跨日：钟推一个游戏日
+        _n1 = CQ._daily_pick(_role, {})
         if _a != _spec or _b != _spec:
             _rot_bad.append("档 %s 第 %d 日：实现 %s/%s ≠ 规格 %s" % (_role, _d, _a, _b, _spec))
         if _n1 == _a:
@@ -1569,12 +1594,14 @@ for _role in sorted(set(_roles)):
                       % (_role, len(_pool), len(_pool),
                          "/".join(_mon_name(m) for m in _pool), len(_pool) + 1, _mon_name(_pool[0])))
 # fail-closed：认不出的档
-if CQ._daily_pick("no_such_role", {"day": 2}) != "" \
-        or CQ._req_ok({"day": 2}, {"kind": "kill", "role": "no_such_role", "daily": True}) \
-        or CQ._req_ok({"day": 2}, {"kind": "kill", "daily": True}):
+_at_day(2)
+if CQ._daily_pick("no_such_role", {}) != "" \
+        or CQ._req_ok({}, {"kind": "kill", "role": "no_such_role", "daily": True}) \
+        or CQ._req_ok({}, {"kind": "kill", "daily": True}):
     _rot_bad.append("认不出的档 / 没写档：没 fail-closed（应当一律没满足）")
 # ★ 判据加强的那一半：只认**当天点名的那一只** —— 同档的另一只不算
 _ROT_D = 3
+_at_day(_ROT_D)                                                        # ★ B4-9：下面这几档都在第 3 日
 _bx = QE.get("q_bounty_normal") or {}
 _bpick = _pick_of("normal", _ROT_D)
 _bother = next((k for k in sorted(_role_ids_of("normal")) if k != _bpick), "")
@@ -1601,13 +1628,14 @@ _pay2 = _drive(CQ.quest_deliver, _player(level=1, day=_ROT_D,
 if not any(ln.startswith("交了") for ln in _pay2):
     _rot_bad.append("打了点名的那只却交不掉：%s" % _pay2[:3])
 (ok if not _rot_bad and len(_roles) == 3 else bad)(
-    "★ 悬赏「指定的」= 每天轮换挑一只（可复现 · 跨日必换 · 探针自己算规格一致 · "
+    "★ 悬赏「指定的」= 每天轮换挑一只（可复现 · 跨日必换〔拨钟造日〕· 探针自己算规格一致 · "
     "**打同档另一只不算** · 认不出的档 fail-closed · 真跑拦得住也交得掉；坏 %s）" % (_rot_bad or "无"))
 for _ln in _rot_lines:
     print("      %s" % _ln)
 print("      真跑：没做到 →「%s」｜打了「%s」→「%s」"
       % (_lack_line[:40], _mon_name(_bpick),
          next((ln for ln in _pay2 if ln.startswith("交了")), "?")))
+FC_Q.bind_host(**_FC_SAVED)                                            # ★ B4-9：拨回真钟
 
 for n in notes:
     print("  · " + n)

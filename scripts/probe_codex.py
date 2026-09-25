@@ -388,6 +388,48 @@ for _rid in sorted(read_ids):
 chk("★ 12 条「读的」旧物：谱里那一行逐字取自 14 号文档（问号行 hint · 认出后 known）",
     not _line_bad, "%s" % (_line_bad[:2] or "%d 条都对" % len(read_ids)))
 
+# ⑭ ★ B4-9：日期戳走「此刻」那一个口 —— `记录` 里的「N 个游戏日」不许把
+#   「不知道哪天」（档上那格还是 0）算成一天。实测（真机 + 假钟）：全新角色同一分钟里
+#   `往北` → `采集` → `往东` ⇒ `记录` 报「2 个游戏日」（其中一个就是那个 0）。
+from content import calendar as CAL2                                   # noqa: E402
+from content import facade as FAC2                                     # noqa: E402
+
+_HANDLES = dict(FAC2.HANDLES)                                          # 动完这根钟要还原
+_FIX = 100 * CAL2.scale_seconds() + (12.0 / 24.0) * CAL2.scale_seconds()
+FAC2.bind_host(clock=lambda: _FIX)
+_D0 = CAL2.day_now()
+_p14 = {"loc": "windmill_town", "node": "wt_gate_n", "foot": {}}       # 全新档：day 那格还没 tick 过
+CM.note_visit(_p14, "windmill_town", "wt_gate_n")
+CM.note_visit(_p14, "belt_north", "bn_bone")
+chk("★ 全新档（`day` 那格还没 tick 过）：日期戳**不是 0** —— 记下来的是此刻那一天（%s）" % _D0,
+    set(int(d) for d in CM.foot(_p14)["nodes"].values()) == {_D0}
+    and CM.foot(_p14)["days"] == 1, CM.foot(_p14))
+FAC2.bind_host(clock=lambda: _FIX + CAL2.scale_seconds())              # 钟推过一整个游戏日
+CM.note_visit(_p14, "belt_east", "be_birch")
+chk("★ 钟推过一个游戏日再走一个新节点 ⇒ 「2 个游戏日」（跨日真数得出来）",
+    CM.foot(_p14)["days"] == 2, CM.foot(_p14))
+_p14b = {"loc": "windmill_town", "node": "wt_gate_n", "foot": {
+    "nodes": {"windmill_town:wt_gate_n": 0, "belt_north:bn_bone": 0}}}  # B4-9 之前留下的老档
+chk("★ 老档里那些「0 = 不知道哪天」不算一个游戏日（全都不知道 ⇒ 至少 1）",
+    CM.foot(_p14b)["days"] == 1, CM.foot(_p14b))
+FAC2.bind_host(**_HANDLES)                                             # 还原（含 db_path 与真钟）
+
+#: 静态守卫：**玩家档上那一格** `p["day"]` 只许 `calendar.tick()` 读（它是跨日标记，
+#: 采集次数靠它归零）—— 日期戳一律走 `calendar.day_now()`（`codex.today` / `heard.today`
+#: 都转发到它）。★ 只认**变量名 `p` 的那一份**：`flags.ev["day"]` / 称号记录里的 `day`
+#: / `seen["day"]` 是别的字段，各有各的用处（宽了会一片假红 —— K46 那类）。
+_DAY_RE = _re.compile(r"""p\.get\(['"]day['"]\)|p\[['"]day['"]\]""")
+_day_hits = []
+for _name in sorted(os.listdir(os.path.join(str(REPO), "content"))):
+    if not _name.endswith(".py"):
+        continue
+    _src = open(os.path.join(str(REPO), "content", _name), encoding="utf-8").read()
+    for _i, _line in enumerate(_src.splitlines(), 1):
+        if _DAY_RE.search(_line):
+            _day_hits.append("%s:%d %s" % (_name, _i, _line.strip()[:46]))
+chk("★ 读**玩家档上那一格** `p[day]` 的只剩 `calendar.tick()` —— 日期戳全走 `day_now()`",
+    [x for x in _day_hits if not x.startswith("calendar.py")] == [], str(_day_hits))
+
 print()
 print("按谱：%s" % " · ".join("%s %d" % (LABEL[b], len(BOOK[b])) for b in BOOKS))
 print("旧物谱：读的 %d · 捡的 %d" % (len(read_ids), len(pick_ids)))
