@@ -1065,8 +1065,12 @@ async def poi_effect_lines(env, sink, uid, p, pid, rec, verb, player=None):
 
       · `need` —— 写了就只认那一个动词。三个隐藏点写的是 `need: "search"` ⇒ 归「搜查」
         （那条线在 `cmds_gather`）：本口**不越权**代它消费，也不替它出「去搜」的提示 ——
-        那三条 `effect.loot` 指的池子在 drop_pools 域里**根本不存在**（悬空引用），
-        出提示等于把玩家引到死路上。⇒ 报告里挂 P-28 待拍板（乙）。
+        隐藏点的**产出**归不归 `pois.effect.loot` 还没拍板（台账 P-28 乙），而原先那三条
+        `effect.loot` 指的池子（`dp_hidden_camp` / `dp_hidden_birch` / `dp_hidden_shoal`）
+        在 `drop_pools` 域里**根本不存在**（悬空引用）⇒ 出提示等于把玩家引到死路上。
+        ★ B3-28 ②（2026-09-25）：三条悬空引用**已摘掉**（选择与理由见 `_notes.md`；
+          真源今天给不出这三张池的条目 / 权重，照形状补池就得编数）；判据补在 `probe_pois` ⑬
+          （凡写 `effect.loot` 必须在 `drop_pools` 里查得到 —— 悬空当场红）。
       · `rest: true` —— 歇脚回血。**不抄第二份**：整支委托 `cmds_gather.rest`
         （同一个「上限的 20% · 封顶」口径 —— 那边改了这儿跟着变）。
       · `buff` —— 短时增益。**带数值的**（`stat` ∈ `POI_BUFF_STATS` + `pct` + `duration` 秒）

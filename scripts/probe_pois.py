@@ -521,6 +521,36 @@ chk("★ 判不了门槛的那 %d 条（%s）：点名行出得来、且**照旧
     bool(_unk) and not _unk_bad, "%s" % _unk_bad[:2])
 
 print()
+print("⑬ 隐藏点的产出引用 —— `effect.loot` 不许悬空（B3-28 ②）")
+#   背景（台账 P-28 乙 的原话）：三个隐藏点原先各挂一条 `effect.loot` 指
+#   `dp_hidden_camp` / `dp_hidden_birch` / `dp_hidden_shoal`，而这三张池在 `drop_pools` 域里
+#   **根本不存在**（全仓引用只有 pois 这一处 = 悬空引用）；而本节原先只核「隐藏点都有 effect」
+#   ⇒ 放它过。台账当时写的正是：「定下来再补『effect.loot 必须在 drop_pools 里』这一条」。
+#   ★ B3-28 ② 的处置 = **摘掉那三条引用**（二选一里的哪一个 + 理由见工作树 `_notes.md`：
+#     真源今天给不出这三张池的条目 / 权重，照 `dp_*` 形状补池就得**编数**；而产出线到底归
+#     `pois.effect.loot` 还是归 `gathering`（搜查 / 攀爬那条线）本身还没拍板）。
+_dp13 = st.domain("drop_pools") or {}
+_loot_refs13 = [(k, str((v.get("effect") or {}).get("loot")))
+                for k, v in sorted(po.items())
+                if isinstance(v.get("effect"), dict) and (v.get("effect") or {}).get("loot")]
+_dangling13 = [(k, L) for k, L in _loot_refs13 if L not in _dp13]
+chk("★ 掉落的池引用**不悬空**：`pois.effect.loot` 凡写了，池必须在 drop_pools 域里查得到"
+    "（引用 %d 处 · 悬空 %d 处）" % (len(_loot_refs13), len(_dangling13)),
+    not _dangling13, "%s" % _dangling13)
+_hid13 = {k: v for k, v in po.items() if v.get("kind") == "隐藏点"}
+chk("★ 三个隐藏点都**显式写了 `effect.need`**（产出口归哪条线不许靠默认「谁都能碰」）· 今天三条同线：%s"
+    % " · ".join("%s→%s" % (po[k].get("name"), (po[k].get("effect") or {}).get("need"))
+                 for k in sorted(_hid13)),
+    _hid13 and all(str((v.get("effect") or {}).get("need") or "") for v in _hid13.values())
+    and len({str((v.get("effect") or {}).get("need")) for v in _hid13.values()}) == 1,
+    "%s" % {k: (v.get("effect") or {}) for k, v in _hid13.items()})
+#   ▲ 这一条记的是**本批的处置**：三条悬空引用今天**一条都不挂**（= 摘干净了）。
+#     哪天攀爬 / 搜查接线 + 真源给出这三张池的条目与权重，就**连同工作树 `_notes.md` 一起**把
+#     本节改成「引用数 = 真源点名的那几个池，且逐个在 drop_pools 里」（判据只加强，不削弱）。
+chk("★ 隐藏点今天**一条 `effect.loot` 都不挂**（B3-28 ② · 摘干净的登记值 = 0）",
+    not _loot_refs13, "%s" % _loot_refs13)
+
+print()
 print("按类别计数：")
 for kd in KINDS:
     n = [k for k, v in po.items() if v.get("kind") == kd]

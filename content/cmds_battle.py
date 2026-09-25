@@ -160,7 +160,7 @@ def _meet(p, uid):
     return pick, ms, affixes, T("COMBAT_MEET", name=ms[pick[0]].get("name", pick[0]))
 
 
-def _run_hand(p, pick, ms, affixes=(), hand=None, action=None, skill=None, party=None):
+def _run_hand(p, pick, ms, affixes=(), hand=None, action=None, skill=None, party=None, uid=None):
     """打这一场：**先推到你的决策点**（快的对方先动），你出一手，再自动打完。
 
     返回 `(单场状态, 结果, 日志, 玩家战后血量)` —— 单场状态给「后撤」那种要先看时刻的
@@ -168,10 +168,11 @@ def _run_hand(p, pick, ms, affixes=(), hand=None, action=None, skill=None, party
     ★ B3-24：这一场打几只由词条说话（群居那条让池子里多站两只，第二只半血）；
       没词条 ⇒ `([mid], [None])` = 与接线前逐字相同。
     ★ B3-25：`party` = 这一场的队伍人数（调用方**进战那一刻现算**；单人 = 1、不知道 = None）。
+    ★ B3-28 ①：`uid` 透传给战斗——面板栈的键带上「人」那一维（不撞同职业同级的别人）。
     """
     _ids, _hm = AFFIX.spawn_plan(pick[0], list(affixes))
     b = CB.build(p, _ids, ms, party=party, affixes=list(affixes), hp_mults=_hm,
-                 override=(hand.override if hand is not None else None))
+                 override=(hand.override if hand is not None else None), uid=uid)
     logs: list = []
     if hand is not None or action:
         from ext_combat.battle import schedule as SCH
@@ -280,7 +281,7 @@ async def _open_and_hand(env, p, uid, player, head, hand=None, action=None, skil
     seen = CX.note_kill(p, pick[0])
     _b, res, logs, hp_after = _run_hand(p, pick, ms, affixes=affixes, hand=hand,
                                         action=action, skill=skill,
-                                        party=_party_now(env, p, uid))
+                                        party=_party_now(env, p, uid), uid=uid)
     for line in _fmt(logs):
         yield line
     async for line in _settle(env, p, uid, pick, ms, res, logs, hp_after, seen, player,
@@ -321,7 +322,7 @@ async def attack(env, sink, uid, player):
     #   与 B3-17 接线之前逐字相同；它只对「团队内容」那几只怪生效（Boss 的面板按人数缩放）。
     _ids, _hm = AFFIX.spawn_plan(pick[0], list(affixes))
     res, logs, hp_after = CB.run_auto(p, _ids, ms, party=_party_now(env, p, uid),
-                                      affixes=list(affixes), hp_mults=_hm)
+                                      affixes=list(affixes), hp_mults=_hm, uid=uid)
     for line in _fmt(logs):
         yield line
     async for line in _settle(env, p, uid, pick, ms, res, logs, hp_after, seen, player,
@@ -393,7 +394,7 @@ async def retreat(env, sink, uid, player):
     hand = BA.Hand("retreat", p=p)
     _ids, _hm = AFFIX.spawn_plan(pick[0], list(affixes))
     b = CB.build(p, _ids, ms, party=_party_now(env, p, uid), affixes=list(affixes),
-                 hp_mults=_hm, override=hand.override)
+                 hp_mults=_hm, override=hand.override, uid=uid)
     logs: list = []
     SCH.advance(b, logs)                       # 推到你的决策点（快的对方该动的先动）
     caster = b.focus()
@@ -602,7 +603,7 @@ async def swap_weapon(env, sink, uid, player):
     # ★ 「你换上了…」由**这一手落地那一刻**说出来（`hand.lines` 走 B 段那条路）——
     #   不在抬头处重复一遍（换手本身就是这一手，报两次是两句话一件事）。
     seen = CX.note_kill(p, pick[0])
-    _b, res, logs, hp_after = _run_hand(p, pick, ms, affixes=affixes, hand=hand)
+    _b, res, logs, hp_after = _run_hand(p, pick, ms, affixes=affixes, hand=hand, uid=uid)
     for line in _fmt(logs):
         yield line
     async for line in _settle(env, p, uid, pick, ms, res, logs, hp_after, seen, player,
