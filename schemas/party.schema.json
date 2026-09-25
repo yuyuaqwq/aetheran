@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "★ 组队口径域（B3-25）。真源在包：字段与口径照 aetheran-plan/00_总纲/03_主要玩法.md §4.7（组队 1–4 人 · 同地图玩家可一起进）· 06_第一阶段垂直切片/17_组队与策略配合_v1.md（§一/§二/§四/§五）· 06_第一阶段垂直切片/04_指令总表.md §十。★ 「按人数缩放的面板倍数」**不在本域** —— 它唯一来源是 scripts/rebuild_monsters.py::PARTY_SCALE → monsters.mods.party_scale（消费端 content/combat.party_scale_of）；本域只声明『有效人数档 = 1..max_members』，探针跨域对账三边（本域上限 == monsters 那张表的最大档 == 表里的键集合）。★ 消费端 content/party.py（唯一出口）—— 取值全从本域来，代码不写死任何数。",
+  "title": "阿斯特兰 · 组队口径（party 域）",
+  "description": "一条记录 pt_rules：队伍上限 / 同一处的门槛（同图 · 同节点）/ 队长归属 / 入队是否要『同意』/ 邀请有效期（刻）。",
+  "type": "object",
+  "minProperties": 1,
+  "$defs": {
+    "rule": {
+      "type": "object",
+      "required": [
+        "max_members",
+        "same_map",
+        "same_node",
+        "captain_is_founder",
+        "join_needs_accept",
+        "invite_ttl_ticks",
+        "src"
+      ],
+      "properties": {
+        "max_members": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 8,
+          "description": "队伍上限（真源 03_ §4.7「1–4 人」⇒ 4）。★ 上限同时是「面板倍数表必须有数的那几档」的上界：1..max_members 每档都得有数（探针跨域对账）。"
+        },
+        "same_map": {
+          "type": "boolean",
+          "description": "同一处的门槛：true = 「同一张图」（真源 03_ §4.7「同地图玩家可一起进」）。"
+        },
+        "same_node": {
+          "type": "boolean",
+          "description": "更严的那一档（同一个节点/站）：真源没写 ⇒ false（不采纳）。改成 true 就自动生效（判定全读本域，代码不写死）。"
+        },
+        "captain_is_founder": {
+          "type": "boolean",
+          "description": "队长 = 发起人（建队那一下的人）。★ 真源待补行。"
+        },
+        "join_needs_accept": {
+          "type": "boolean",
+          "description": "入队要一个『同意』动作（本人在邀请有效期内自己敲）—— 抽不了弹窗的文字游戏就用它表达「同意」。★ 真源待补行。"
+        },
+        "invite_ttl_ticks": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "邀请有效期（刻；1 刻 = 1 游戏秒 —— 与档上的账、战斗窗口同一个时间尺）。43200 刻 = 半个游戏日。★ 真源待补行。"
+        },
+        "src": {
+          "type": "string",
+          "description": "这一条记录的出处（哪几处真源写了、哪几格是拍板的）。"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "patternProperties": {
+    "^_": {
+      "type": "object",
+      "description": "元信息（`_src` 那种）—— 消费端一律跳过 `_` 开头的键。"
+    },
+    "^pt_[a-z0-9_]+$": {
+      "$ref": "#/$defs/rule"
+    }
+  },
+  "additionalProperties": false,
+  "x-primary": "rule"
+}

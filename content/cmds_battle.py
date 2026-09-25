@@ -52,6 +52,24 @@ from . import combat as CB
 from . import cmds_gear as CG
 from . import loot as LT
 from . import affix as AFFIX        # ★ B3-24：精英词条（遭遇抽词条 / 名字与那一行走 texts 槽位）
+from . import party as PT           # ★ B3-25：队伍（进战那一刻现算真实人数 —— 唯一来源）
+
+
+def _party_now(env, p, uid):
+    """★ B3-25：这一场的人数 —— **进战那一刻现算**（在队 + 同节点 + 活人，含自己）。
+
+    ★ 三种答案分得清清楚楚（fail-closed 在两边都接得住）：
+      · 我没队 ⇒ **1**（单人那条老路：与 B3-17 接线之前逐字相同，连存档都不用读）；
+      · 我在队里 ⇒ 现算「此刻真站在一起的人」（`content/party.present_count`）；
+      · 我在队里但**存档读不出来** ⇒ **None** = 「不知道几个人」——
+        `content/combat.party_scale_of` 拿到 None 就**不缩放**（走设计值），
+        绝不因为「不知道」而悄悄把团队内容（Boss）削弱。
+    """
+    try:
+        rows = PT.rows_of(getattr(env, "group_id", ""))
+    except PT.PartyError:
+        rows = None
+    return PT.present_count(p, uid, rows)
 
 
 def _flags(p):
@@ -142,16 +160,17 @@ def _meet(p, uid):
     return pick, ms, affixes, T("COMBAT_MEET", name=ms[pick[0]].get("name", pick[0]))
 
 
-def _run_hand(p, pick, ms, affixes=(), hand=None, action=None, skill=None):
+def _run_hand(p, pick, ms, affixes=(), hand=None, action=None, skill=None, party=None):
     """打这一场：**先推到你的决策点**（快的对方先动），你出一手，再自动打完。
 
     返回 `(单场状态, 结果, 日志, 玩家战后血量)` —— 单场状态给「后撤」那种要先看时刻的
     条件判定用（`hand` 为空 = 纯自动那一支，与 B2-2 逐字相同）。
     ★ B3-24：这一场打几只由词条说话（群居那条让池子里多站两只，第二只半血）；
       没词条 ⇒ `([mid], [None])` = 与接线前逐字相同。
+    ★ B3-25：`party` = 这一场的队伍人数（调用方**进战那一刻现算**；单人 = 1、不知道 = None）。
     """
     _ids, _hm = AFFIX.spawn_plan(pick[0], list(affixes))
-    b = CB.build(p, _ids, ms, party=1, affixes=list(affixes), hp_mults=_hm,
+    b = CB.build(p, _ids, ms, party=party, affixes=list(affixes), hp_mults=_hm,
                  override=(hand.override if hand is not None else None))
     logs: list = []
     if hand is not None or action:
@@ -260,7 +279,8 @@ async def _open_and_hand(env, p, uid, player, head, hand=None, action=None, skil
         yield head
     seen = CX.note_kill(p, pick[0])
     _b, res, logs, hp_after = _run_hand(p, pick, ms, affixes=affixes, hand=hand,
-                                        action=action, skill=skill)
+                                        action=action, skill=skill,
+                                        party=_party_now(env, p, uid))
     for line in _fmt(logs):
         yield line
     async for line in _settle(env, p, uid, pick, ms, res, logs, hp_after, seen, player,
@@ -290,11 +310,11 @@ async def attack(env, sink, uid, player):
     for line in encounter_lines(ms[pick[0]], p):
         yield line
     seen = CX.note_kill(p, pick[0])            # ★ 打过一次就进谱（输了也算「见过」）
-    # ★ B3-17 单人口径：今天的『攻击』只有单人这一条路（组队命令还没接线）⇒ 人数 = 1；
-    #   它只对「团队内容」那几只怪生效（Boss 单人 hp ÷2 —— 真源 `12_怪物面板…` §一④ /
-    #   `17_组队与策略配合_v1` §五 / `22_旧哨塔_逐间设计_v1` §三④）。组队接线那批把真实人数传进来。
+    # ★ B3-25：人数 = **进战那一刻现算**（在队 + 同节点 + 活人，含自己）——单人 = 1，
+    #   与 B3-17 接线之前逐字相同；它只对「团队内容」那几只怪生效（Boss 的面板按人数缩放）。
     _ids, _hm = AFFIX.spawn_plan(pick[0], list(affixes))
-    res, logs, hp_after = CB.run_auto(p, _ids, ms, party=1, affixes=list(affixes), hp_mults=_hm)
+    res, logs, hp_after = CB.run_auto(p, _ids, ms, party=_party_now(env, p, uid),
+                                      affixes=list(affixes), hp_mults=_hm)
     for line in _fmt(logs):
         yield line
     async for line in _settle(env, p, uid, pick, ms, res, logs, hp_after, seen, player,
@@ -359,7 +379,8 @@ async def retreat(env, sink, uid, player):
     from ext_combat.battle.actors import actor_alive
     hand = BA.Hand("retreat", p=p)
     _ids, _hm = AFFIX.spawn_plan(pick[0], list(affixes))
-    b = CB.build(p, _ids, ms, party=1, affixes=list(affixes), hp_mults=_hm, override=hand.override)
+    b = CB.build(p, _ids, ms, party=_party_now(env, p, uid), affixes=list(affixes),
+                 hp_mults=_hm, override=hand.override)
     logs: list = []
     SCH.advance(b, logs)                       # 推到你的决策点（快的对方该动的先动）
     caster = b.focus()

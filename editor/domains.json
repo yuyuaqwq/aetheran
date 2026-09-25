@@ -89,6 +89,15 @@
     "owner": "package",
     "tier": "portable"
   },
+  "party": {
+    "label": "组队口径",
+    "kind": "data",
+    "schema": "schemas/party.schema.json",
+    "primary": "rule",
+    "icon": "🤝",
+    "owner": "package",
+    "tier": "portable"
+  },
   "dialogues": {
     "label": "对话树",
     "kind": "data",

@@ -412,6 +412,19 @@ _want1 = int(round(float(_BH["hp"]) * 0.5))
 (ok if int(_a4.get("max_hp")) == int(_BH["hp"]) and int(_an.get("max_hp")) == int(_BH["hp"]) else bad)(
     "★ 4 人档 / 不传人数（= 不知道 ⇒ 设计值）都是**原值**（%s / %s vs 面板 %s）"
     % (_a4.get("max_hp"), _an.get("max_hp"), _BH["hp"]))
+# ★ B3-25：四档都真造一遍 —— 拿生成器那张表（唯一来源）现算期望值，逐档比；
+#   并钉「只动血」与「严格递增」（单人最狠、人越多每多一个人加得越少）。
+_lad_got = [(n, int(CB.monster_actor(_BOSS, MON[_BOSS], party=n).get("max_hp"))) for n in (1, 2, 3, 4)]
+_lad_want = [(n, int(round(float(_BH["hp"]) * float(_RBM.PARTY_SCALE[str(n)]["hp"])))) for n in (1, 2, 3, 4)]
+_lad_more = [(n, int(CB.monster_actor(_BOSS, MON[_BOSS], party=n).get("atk"))) for n in (1, 2, 3, 4)]
+(ok if _lad_got == _lad_want else bad)(
+    "★ B3-25 四档真造一遍：逐档 = 面板 × 生成器那张表（%s）"
+    % " · ".join("%d人 %s" % (n, hp) for n, hp in _lad_got))
+(ok if all(hp >= 1 for _n, hp in _lad_got)
+    and all(_lad_got[i][1] < _lad_got[i + 1][1] for i in range(3))
+    and len({a for _n, a in _lad_more}) == 1 else bad)(
+    "★ 四档严格递增（%s）· **只动血那一项**（四档 atk 逐档同值 = %s）"
+    % (" < ".join(str(hp) for _n, hp in _lad_got), _lad_more[0][1]))
 _drift = [k for k, m in MON.items() if k != _BOSS
           and int(CB.monster_actor(k, m, party=1).get("max_hp"))
           != int(CB.monster_actor(k, m).get("max_hp"))]
@@ -436,8 +449,19 @@ try:                       # ③ 要缩的面板键不在 panel 里 ⇒ 抛（�
     _FC.append("面板键对不上没抛")
 except KeyError:
     pass
-(ok if not _FC else bad)("★ fail-closed 三条（非法键 / 非正整数人数 / 面板键对不上 —— 都当场抛；"
-                         "「不知道几个人」= 不缩放）　%s" % ("全对" if not _FC else "红：%s" % _FC))
+try:                       # ④ ★ B3-25：人数超过表里最大档 ⇒ 抛（队伍上限就是表里最大那一档）
+    CB.party_scale_of({"mods": {"party_scale": {"1": {"hp": 0.5}}}}, 5)
+    _FC.append("party 超过最大档没抛")
+except ValueError:
+    pass
+try:                       # ④ 之二：真表（Boss）也不许编第 5 档
+    CB.party_scale_of(MON[_BOSS], 5)
+    _FC.append("真表 party=5 没抛")
+except ValueError:
+    pass
+(ok if not _FC else bad)("★ fail-closed 四条（非法键 / 非正整数人数 / **超过表里最大档** / "
+                         "面板键对不上 —— 都当场抛；「不知道几个人」= 不缩放）　%s"
+                         % ("全对" if not _FC else "红：%s" % _FC))
 
 _BST = []
 for _lv in (18, 19, 20):
@@ -462,16 +486,26 @@ for _lv in (18, 19, 20):
 print("     · ★ 但**单人仍然全败**（%s）⇒ 「÷2」这条口径落了、也没落错，可它**没达到**"
       " `17_ §五`「单人能过」 / `22_ §三④`「P1 单人也能过」那句 —— 见 `_notes.md` §二·1（附实测对照）"
       % " · ".join("lv%d %d/96" % (lv, b[0]) for lv, _a, b in _BST))
-# ③ 三头对账：生成器那张表 ↔ schema 的键形状 ↔ 域里那一格（单人口径只有**一个**来源）
+# ③ 三头对账：生成器那张表 ↔ schema 的键形状 ↔ 域里那一格（按人数缩放只有**一个**来源）
+#   ★ B3-25：从「表里只有 1 人档」加强成「四档阶梯 + 两边锚点不许动」——
+#     1 人 = 真源写死的 ÷2 · 4 人 = 设计值 ×1 · 2/3 人按递减排法（真源待补行，见 _notes.md）；
+#     档位集合还与 party 域那张口径表**跨域**对账（上限 == 表里最大档 == 键集合）。
 _PS_SCHEMA = _io.open(os.path.join(REPO, "schemas", "monsters.schema.json"), encoding="utf-8").read()
 _PS_TBL = (MON[_BOSS].get("mods") or {}).get("party_scale") or {}
+_PS_NEEDLE = "party" + "_scale"
+_PS_KEYS = sorted(int(k) for k in _RBM.PARTY_SCALE)
+_PS_VALS = [float(_RBM.PARTY_SCALE[str(n)]["hp"]) for n in _PS_KEYS]
+_PJ = (st.domain("party") or {}).get("pt_rules") or {}
 _PS_OK = (_PS_TBL == {n: dict(v) for n, v in _RBM.PARTY_SCALE.items()}
-          and set(_RBM.PARTY_SCALE) == {"1"}
-          and '"party_scale"' in _PS_SCHEMA and "^[1-9][0-9]*$" in _PS_SCHEMA
-          and abs(float(_RBM.PARTY_SCALE["1"]["hp"]) - 0.5) < 1e-9)
+          and _PS_KEYS == list(range(1, int(_PJ.get("max_members") or 0) + 1))
+          and all(set(v) == {"hp"} for v in _RBM.PARTY_SCALE.values())
+          and all(_PS_VALS[i] < _PS_VALS[i + 1] for i in range(len(_PS_VALS) - 1))
+          and abs(_PS_VALS[0] - 0.5) < 1e-9 and abs(_PS_VALS[-1] - 1.0) < 1e-9
+          and _PS_NEEDLE in _PS_SCHEMA and "^[1-9][0-9]*$" in _PS_SCHEMA)
 (ok if _PS_OK else bad)(
-    "★ 单人档三头对账：生成器 `RBM.PARTY_SCALE` == 域 `mods.party_scale` == schema 那一格"
-    "（键形状 `^[1-9][0-9]*$`）· 值 = 文档给的 0.5（%s）" % _PS_TBL)
+    "★ B3-25 三头对账：生成器 `RBM.PARTY_SCALE` == 域 `mods.party_scale` == schema 那一格"
+    "（键形状 `^[1-9][0-9]*$`）· 四档阶梯只收 hp、递减排法、两边锚点"
+    "（1 人 ÷2 / 4 人 设计值）· 档位集合 == party 域的上限（%s）" % _PS_TBL)
 
 print()
 print("结果：%s" % ("全绿 ✓" if not fails else "有红 ✗"))

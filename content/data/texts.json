@@ -4391,5 +4391,227 @@
     ],
     "category": "战斗",
     "desc": "集火 · 单人（点名那只在 monsters 域里认得出来）"
+  },
+  "SYS_PARTY_HEAD": {
+    "value": "【队伍】{n}/{max} 人 · 队长：{cap}",
+    "params": [
+      "n",
+      "max",
+      "cap"
+    ],
+    "category": "系统",
+    "desc": "B3-25 组队 · 抬头"
+  },
+  "SYS_PARTY_ROW": {
+    "value": "· {name}（{level} 级）｜ 生命 {hp}/{hpmax} ｜ 现在在 {where}",
+    "params": [
+      "name",
+      "level",
+      "hp",
+      "hpmax",
+      "where"
+    ],
+    "category": "系统",
+    "desc": "B3-25 组队 · 逐人一行"
+  },
+  "SYS_PARTY_TAIL": {
+    "value": "（打『邀请 <名字>』拉人 —— 他得自己打『同意』才算入队；打『离队』退出。）",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-25 组队 · 尾注"
+  },
+  "SYS_PARTY_MAKE": {
+    "value": "你起了个队（队长：你）—— 上限 {max} 人。",
+    "params": [
+      "max"
+    ],
+    "category": "系统",
+    "desc": "B3-25 组队 · 建队那一下"
+  },
+  "SYS_PARTY_PEND": {
+    "value": "有一封邀请：{cap} 邀你入队（还剩 {left} 刻）—— 打『同意』答应。",
+    "params": [
+      "cap",
+      "left"
+    ],
+    "category": "系统",
+    "desc": "B3-25 组队 · 待答的邀请"
+  },
+  "SYS_PARTY_JOINED": {
+    "value": "你已经在队里了 —— 队长：{cap}。",
+    "params": [
+      "cap"
+    ],
+    "category": "系统",
+    "desc": "B3-25 组队 · 已经在队里"
+  },
+  "SYS_PARTY_OFF": {
+    "value": "队伍读不出来 —— 存档库没接上。",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-25 组队 · 库没接上（fail-closed）"
+  },
+  "SYS_PARTY_STALE": {
+    "value": "（{cap} 那支队已经不在了 —— 你这一格名字消掉了。）",
+    "params": [
+      "cap"
+    ],
+    "category": "系统",
+    "desc": "B3-25 组队 · 队长没了自愈"
+  },
+  "SYS_PARTY_INV_ASK": {
+    "value": "打『邀请 <名字>』—— 名字写清楚点。",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-25 邀请 · 没带名字"
+  },
+  "SYS_PARTY_INV_NOBODY": {
+    "value": "这个群里没有叫「{name}」的人（他得先在群里说过话）。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "B3-25 邀请 · 查无此人"
+  },
+  "SYS_PARTY_INV_SELF": {
+    "value": "你自己就是队长 —— 不用邀自己。",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-25 邀请 · 邀自己"
+  },
+  "SYS_PARTY_INV_NOTCAP": {
+    "value": "只有队长能拉人 —— 跟{cap}说一声。",
+    "params": [
+      "cap"
+    ],
+    "category": "系统",
+    "desc": "B3-25 邀请 · 不是队长"
+  },
+  "SYS_PARTY_INV_NOCLS": {
+    "value": "「{name}」还没定下职业（建号没走完）—— 队伍收不了他。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "B3-25 邀请 · 还没建号（fail-closed）"
+  },
+  "SYS_PARTY_INV_MEMBER": {
+    "value": "「{name}」已经在队里了。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "B3-25 邀请 · 已在本队"
+  },
+  "SYS_PARTY_INV_OTHER": {
+    "value": "「{name}」在别人的队里 —— 让他先打『离队』。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "B3-25 邀请 · 已在别的队"
+  },
+  "SYS_PARTY_INV_FULL": {
+    "value": "队里已经 {max} 个人了 —— 装不下了。",
+    "params": [
+      "max"
+    ],
+    "category": "系统",
+    "desc": "B3-25 邀请 · 满员"
+  },
+  "SYS_PARTY_INV_FAR": {
+    "value": "「{name}」不在这儿 —— 他在{where}。同一张图的人才能进同一支队。",
+    "params": [
+      "name",
+      "where"
+    ],
+    "category": "系统",
+    "desc": "B3-25 邀请 · 不同图（03_ §4.7 同地图）"
+  },
+  "SYS_PARTY_INV_AGAIN": {
+    "value": "已经邀过「{name}」了 —— 等他自己打『同意』。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "B3-25 邀请 · 重复邀请"
+  },
+  "SYS_PARTY_INV_OK": {
+    "value": "跟「{name}」说过了 —— {ttl} 刻内他自己打『同意』就算入队。",
+    "params": [
+      "name",
+      "ttl"
+    ],
+    "category": "系统",
+    "desc": "B3-25 邀请 · 发出去了"
+  },
+  "SYS_PARTY_ACC_NONE": {
+    "value": "没有人邀你。",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-25 同意 · 没这封邀请"
+  },
+  "SYS_PARTY_ACC_EXPIRED": {
+    "value": "{cap} 那封邀请过期了 —— 让他再邀一次。",
+    "params": [
+      "cap"
+    ],
+    "category": "系统",
+    "desc": "B3-25 同意 · 邀请过期"
+  },
+  "SYS_PARTY_ACC_FULL": {
+    "value": "{cap} 那支队满了（{max} 人）。",
+    "params": [
+      "cap",
+      "max"
+    ],
+    "category": "系统",
+    "desc": "B3-25 同意 · 满员"
+  },
+  "SYS_PARTY_ACC_FAR": {
+    "value": "{cap} 现在在{where} —— 不在一处，进不了队。",
+    "params": [
+      "cap",
+      "where"
+    ],
+    "category": "系统",
+    "desc": "B3-25 同意 · 不在同一处"
+  },
+  "SYS_PARTY_ACC_OK": {
+    "value": "入队了：{cap} 的队，现在 {n} 人。",
+    "params": [
+      "cap",
+      "n"
+    ],
+    "category": "系统",
+    "desc": "B3-25 同意 · 入队那一下"
+  },
+  "SYS_PARTY_LV_NONE": {
+    "value": "你没在队里。",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-25 离队 · 没队"
+  },
+  "SYS_PARTY_LV_MEMBER": {
+    "value": "你退出了 {cap} 的队。",
+    "params": [
+      "cap"
+    ],
+    "category": "系统",
+    "desc": "B3-25 离队 · 队员退"
+  },
+  "SYS_PARTY_LV_CAPTAIN": {
+    "value": "你把队散了 —— 队里的人（{list}）得自己再找队。",
+    "params": [
+      "list"
+    ],
+    "category": "系统",
+    "desc": "B3-25 离队 · 队长散队"
+  },
+  "SYS_PARTY_LV_SOLO": {
+    "value": "你把队散了。",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-25 离队 · 队长散队（队里就自己一个）"
   }
 }

@@ -353,13 +353,14 @@ chk("★ `14_ §四` 那个 hp 与 `12_ §一④` 正文那句 hp 是**同一个
     "14 说 %s" % _hp_doc14)
 
 print()
-print("── ★ B3-17 ⑮ 单人档（`mods.party_scale`）：生成器那张表 == 域 == 只有团队内容带")
+print("── ★ B3-17/B3-25 ⑮ 按人数缩放档（`mods.party_scale`）：生成器那张表 == 域 == 只有团队内容带"
+      " —— ★ B3-25 从「只有 1 人档」加强成「四档阶梯」")
 _ps = {k: (v.get("mods") or {}).get("party_scale") for k, v in mo.items()}
 _have = {k: v for k, v in _ps.items() if v}
 chk("★ 带 `party_scale` 的只有生成器点名的那几只（%s）"
     % " · ".join(mo[k]["name"] for k in sorted(_have)),
     sorted(_have) == sorted(RB.PARTY_SCALE_ON), "%s" % sorted(_have))
-chk("★ 域里的单人档 == 生成器唯一来源那张表（%s）"
+chk("★ 域里的表 == 生成器唯一来源那张表（%s）"
     % " · ".join("%s 人 → %s" % (n, "+".join("%s×%s" % kv for kv in sorted(v.items())))
                  for n, v in sorted(RB.PARTY_SCALE.items())),
     all(_have.get(k) == {n: dict(v) for n, v in RB.PARTY_SCALE.items()} for k in RB.PARTY_SCALE_ON)
@@ -369,8 +370,26 @@ _doc_half = "按 ÷2 看" in D12 and "Boss 血按 ÷2 看" in _io.open(
 chk("★ 那个 ÷2 是文档给的数（12_ §一④「单人挑战时按 ÷2 看」· 17_ §五「Boss 血按 ÷2 看」）"
     "⇒ 表里 = 0.5（不手打、不猜）",
     _doc_half and all(abs(float(RB.PARTY_SCALE["1"]["hp"]) - 0.5) < 1e-9 for _ in (0,)), "hp×0.5")
-chk("★ 文档**没给数**的人数（2 / 3 人）表里不写 ⇒ 查不到就按设计值走（fail-closed 在 `combat.party_scale_of`）",
-    set(RB.PARTY_SCALE) == {"1"}, "%s" % sorted(RB.PARTY_SCALE))
+# ★ B3-25：四档阶梯 —— 判据从「1 人档之外**不写**」改成三条**更严**的：
+#   ⓵ 档位集合 == party 域声明的「有效人数档 = 1..上限」（上限 = 真源 03_ §4.7「1–4 人」）
+#      ⇒ 跨域对账「上限 == 表里最大档 == 键集合」；⓶ 只收 hp 一项（真源两处字面只说「血」）；
+#   ⓷ 递减排法：两边锚点不动（1 人 = 真源 ÷2 · 4 人 = 设计值 ×1），中间严格递增且增量递减。
+_pj = (st.domain("party") or {}).get("pt_rules") or {}
+_pmx = int(_pj.get("max_members") or 0)
+_grades = sorted(int(k) for k in RB.PARTY_SCALE)
+chk("★ 档位 == party 域声明的「有效人数档 = 1..上限」（上限 %s ⇒ 表里 %s）—— 跨域："
+    "上限 == 表里最大档 == 键集合" % (_pmx, _grades),
+    bool(_pmx) and _grades == list(range(1, _pmx + 1))
+    and all(sorted(int(k) for k in _have[k]) == _grades for k in _have), "%s" % _have)
+chk("★ 只收 hp 一项（真源两处字面只说「**血**按 ÷2 看」）—— 每档的键集合都恰好是 {hp}",
+    all(set(v) == {"hp"} for v in RB.PARTY_SCALE.values()), "%s" % RB.PARTY_SCALE)
+_lad = [float(RB.PARTY_SCALE[str(n)]["hp"]) for n in _grades]
+_deltas = [round(_lad[i + 1] - _lad[i], 6) for i in range(len(_lad) - 1)]
+chk("★ 递减排法：%s 严格递增 · 增量递减（%s）· 4 人档 = 设计值 ×1 · 1 人档 = 真源 ÷2"
+    % (" < ".join(str(x) for x in _lad), " > ".join(str(x) for x in _deltas)),
+    all(_lad[i] < _lad[i + 1] for i in range(len(_lad) - 1))
+    and all(_deltas[i] > _deltas[i + 1] for i in range(len(_deltas) - 1))
+    and abs(_lad[-1] - 1.0) < 1e-9 and abs(_lad[0] - 0.5) < 1e-9, "%s" % _lad)
 
 # ⑬ ★ B3-18：**常数三头对账** —— 反解用的 K_def/K_rate 必须来自公式表 `$const`
 #   （引擎真读的那一份），而 panel_build 那份副本也必须同值。任何一头漂了 ⇒ 三把尺。
