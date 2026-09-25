@@ -1861,7 +1861,7 @@
     "set_id": "set_northwall"
   },
   "i_set_northwall_shard": {
-    "name": "刻字的石片",
+    "name": "北墙根的碎石",
     "icon": "🪨",
     "kind": "饰品",
     "quality": "稀有",
@@ -1921,13 +1921,6 @@
     "effect": {
       "hp_pct": 0.3
     }
-  },
-  "i_item_horn_half": {
-    "name": "半截号角",
-    "icon": "🎺",
-    "kind": "道具",
-    "price": 0,
-    "desc": "旧哨塔的号角只剩一半。它不响。"
   },
   "i_material_iron_chip": {
     "name": "铁屑",
@@ -2139,5 +2132,14 @@
       "seconds": 900
     },
     "from_recipe": "rc_cook_yi_guo_dun"
+  },
+  "i_token_underwater_steps": {
+    "name": "石阶缺的那一级",
+    "icon": "🪨",
+    "kind": "信物",
+    "quality": "遗物",
+    "price": 0,
+    "lore": "退潮才看得见，一级一级往下，通到水里。台阶很整齐 —— 是有人修的。",
+    "desc": "浅滩钓上来的那块。退潮的时候，水底下那截石阶少了一级。"
   }
 }

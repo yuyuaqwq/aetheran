@@ -124,6 +124,29 @@
             "type": "string"
           },
           "description": "该怪可出的精英词条（Boss 为空）"
+        },
+        "encounter_lines": {
+          "type": "array",
+          "description": "★ 战内台词（B3-4 装备事件）：打这只怪时它先开口的话 —— [{need, text}]。need 的形状与 dialogues 域同（holding=<物品 id> 等，判定走同一口 cmds_talk._pick_indexed）；第一条满足的胜出。",
+          "items": {
+            "type": "object",
+            "required": [
+              "need",
+              "text"
+            ],
+            "properties": {
+              "need": {
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "text": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
         }
       },
       "additionalProperties": false

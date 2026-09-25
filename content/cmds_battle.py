@@ -16,7 +16,7 @@ from __future__ import annotations
 from .cmds_ast import (
     _data, _p, _save, _map_of, _name_of_node, T, CHAPEL, exp_need,
     exp_of_kill, add_exp)
-from .cmds_talk import _arg
+from .cmds_talk import _arg, _pick_indexed
 from .cmds_codex import new_lines
 from . import codex as CX
 from . import combat as CB
@@ -28,6 +28,17 @@ def _flags(p):
     f = dict(p.get("flags") or {})
     p["flags"] = f
     return f
+
+
+def encounter_lines(monster, p):
+    """怪身上的战内台词（B3-4 装备事件）—— 它**先开口**的那几句。
+
+    条目的形状与 dialogues 域同（`need` 条件择优），判定也走**同一口**
+    `cmds_talk._pick_indexed`（holding 那一支读的就是档上的背包）—— 不另写一套求值器。
+    没有这一格 / 一条都不满足 ⇒ 空列表（fail-closed，不兜底）。
+    """
+    idx, text = _pick_indexed((monster or {}).get("encounter_lines"), p)
+    return str(text).split("\n") if text else []
 
 
 def _note_battle(p, enemy, logs, res):
@@ -74,6 +85,9 @@ async def attack(env, sink, uid, player):
         yield "这一带暂时没有遇到什么。"
         return
     yield "⚠️ 遭遇：%s" % ms[pick[0]].get("name", pick[0])
+    # ★ B3-4：怪身上挂着「先开口」的台词时，它先说话（数据驱动 —— 本文件不写文案）
+    for line in encounter_lines(ms[pick[0]], p):
+        yield line
     seen = CX.note_kill(p, pick[0])            # ★ 打过一次就进谱（输了也算「见过」）
     res, logs, hp_after = CB.run_auto(p, pick, ms)
     for line in _fmt(logs):
