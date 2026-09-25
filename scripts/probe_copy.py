@@ -193,8 +193,21 @@ def main():
     import re as _re                                                       # noqa: E402
     _lit = _re.compile(r'["\']([A-Z][A-Z0-9_]{3,})["\']')
     ref_lit = set()          # ★ 只给「每条都被引用」那条用（不是 T(…) 直调，别混进 ④）
+    #   · 槽位名**由模板拼出来**的也算引用：形如 `"QUEST_MAIN%02d_%s" % (order, part)`
+    #     —— 键在那份文本里搜不到字面量，但它确实是代码算出来的那个键。
+    _spec = _re.compile(r"%[-+ #0-9.]*[a-zA-Z]")
+    _tl = _re.compile(r'["\']([A-Za-z][A-Za-z0-9_%]{4,})["\']')
+    _tpl_rx = []
     for p in files:
-        ref_lit |= set(_lit.findall(p.read_text(encoding="utf-8")))
+        txt = p.read_text(encoding="utf-8")
+        for lit in _lit.findall(txt):
+            ref_lit.add(lit)
+        for lit in _tl.findall(txt):
+            if not _spec.search(lit):
+                continue
+            chunks = [c for c in _spec.split(lit) if c]
+            if chunks:
+                _tpl_rx.append(_re.compile("^" + ".*".join(_re.escape(c) for c in chunks) + ".*$"))
     print("  · 内联中文文案：%s" % (" · ".join("%s %d" % (k, v) for k, v in sorted(counts.items()) if v) or "一处都没有"))
     if inv:
         for k, v in sorted(counts.items(), key=lambda x: (-x[1], x[0])):
@@ -326,12 +339,16 @@ def main():
     rows = RS.parse_doc()
     notx = [r["key"] for r in rows if r["key"] not in tx]
     diff = [r["key"] for r in rows if r["key"] in tx and tx[r["key"]]["value"] != r["value"]]
-    unused = [r["key"] for r in rows if r["key"] not in ref and r["key"] not in ref_lit and r["key"] not in data_ref]
+    def _by_tpl(k):
+        return any(rx.match(k) for rx in _tpl_rx)
+    unused = [r["key"] for r in rows
+              if r["key"] not in ref and r["key"] not in ref_lit and r["key"] not in data_ref
+              and not _by_tpl(r["key"])]
     chk("★ 口径表 %d 条都落在 texts 里" % len(rows), not notx, "%s" % notx[:6])
     chk("★ 口径表与 texts 逐字一致（防两处口径）", not diff, "%s" % diff[:6])
-    chk("★ 口径表每条都被引用（代码 T(\"…\") / 代码字面量 / **数据里取件**）"
-        "（T() %d · 字面量 %d · 数据 %d）" % (len(ref), len(ref_lit), len(data_ref)),
-        not unused, "%s" % unused[:6])
+    chk("★ 口径表每条都被引用（代码 `T(\"…\")` / 代码字面量 / **模板拼出来** / **数据里取件**）"
+        "（T() %d · 字面量 %d · 模板 %d · 数据 %d）"
+        % (len(ref), len(ref_lit), len(_tpl_rx), len(data_ref)), not unused, "%s" % unused[:6])
 
     # ⑥ 真跑实现体：产出的行里不许有取不到文案的标记
     from content import cmds_ast as CA                                    # noqa: E402
