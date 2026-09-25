@@ -242,14 +242,16 @@ for _r in _R1:
     _arch = _v["archetype"]
     if _v["lv"] != _lv or _v["role"] != _tier:
         _bad_a.append("%s 档/级 域=%s/%s 档=%s/%s" % (_name, _v["role"], _v["lv"], _tier, _lv))
+    _v1 = RB.panel_of_v1(_lv, _tier, _arch)
     for _i, (_dk, _pk) in enumerate(_COLS, 4):          # hp 在第 3 列（下标 3），其余从下标 4 起
-        if int(_r[_i]) != int(_v["panel"][_pk]):
-            _bad_a.append("%s.%s 域=%s 档=%s" % (_name, _pk, _v["panel"][_pk], _r[_i]))
+        if int(_r[_i]) != int(_v1[_pk]):
+            _bad_a.append("%s.%s v1算=%s 档=%s" % (_name, _pk, _v1[_pk], _r[_i]))
     if int(_r[3]) != RB.panel_of_v1(_lv, _tier, _arch)["hp"]:
         _bad_hp_v1.append("%s 档=%s 旧口径算=%s" % (_name, _r[3], RB.panel_of_v1(_lv, _tier, _arch)["hp"]))
     if int(_v["panel"]["hp"]) != RB.panel_of(_lv, _tier, _arch)["hp"]:
         _bad_hp_now.append(_name)
-chk("★ 除 hp 外的列（atk/def/spd/hit/eva/crit + 档 + 级）**逐只一致**（%d 行 × 8 格）" % len(_R1),
+chk("★ §一 的非 hp 列（atk/def/spd/hit/eva/crit）**逐只 == 上一版口径复算**（`RB.panel_of_v1`）"
+    "⇒ 那张表**整个**是 v1 快照（★ B3-18 换口径后域不再是 v1 ⇒ 该跟表对的是 v1，不是域）",
     not _bad_a, " · ".join(_bad_a[:4]))
 chk("★ §一 的 hp 列**逐只 == 上一版口径复算**（`RB.panel_of_v1`）⇒ 它是那一版的快照，**不是手打偏的**",
     not _bad_hp_v1, " · ".join(_bad_hp_v1[:3]))
@@ -341,11 +343,11 @@ chk("★ 阶段卡的数**逐项**对得上（列阵 atk×1.3 / def+60 / 8 次 �
 _hp_doc14 = _num(D14, r"旧誓哨兵（Lv19）：hp (\d+)", int)
 _ar = RB.ARCH[boss[0]["archetype"]] if boss else {}
 _rel = [k for k, m in (("hp", _ar.get("hp")), ("atk", _ar.get("atk")),
-                       ("def", _ar.get("dfn")), ("spd", _ar.get("spd"))) if m and abs(m - 1.0) > 1e-9]
+                       ("def", _ar.get("def")), ("spd", _ar.get("spd"))) if m and abs(m - 1.0) > 1e-9]
 print("     · ★ 已经登记的**真源两处打架**（不当判据 · 只登记）：14_ §四 写 Boss「不用原型偏移」"
       "（hp 7340 · atk 32.6 · def 62.5 · spd 102 = 域那一套 ÷原型偏移 %s），而 12_ §一 表那行的数"
       "是**带原型偏移**的（域今天也是带偏移的）⇒ 见 _notes.md §四·2"
-      % ("/".join("%s×%s" % (k, _ar[k]) for k in ("hp", "atk", "dfn", "spd")) if _rel else "无"))
+      % ("/".join("%s×%s" % (k, _ar[k]) for k in ("hp", "atk", "def", "spd")) if _rel else "无"))
 chk("★ `14_ §四` 那个 hp 与 `12_ §一④` 正文那句 hp 是**同一个数**（两处互相印证，只是都跟表打架）",
     _hp_doc14 is not None and ("hp %s" % _hp_doc14) in D12.split("## 二、")[0],
     "14 说 %s" % _hp_doc14)
@@ -369,6 +371,61 @@ chk("★ 那个 ÷2 是文档给的数（12_ §一④「单人挑战时按 ÷2 �
     _doc_half and all(abs(float(RB.PARTY_SCALE["1"]["hp"]) - 0.5) < 1e-9 for _ in (0,)), "hp×0.5")
 chk("★ 文档**没给数**的人数（2 / 3 人）表里不写 ⇒ 查不到就按设计值走（fail-closed 在 `combat.party_scale_of`）",
     set(RB.PARTY_SCALE) == {"1"}, "%s" % sorted(RB.PARTY_SCALE))
+
+# ⑬ ★ B3-18：**常数三头对账** —— 反解用的 K_def/K_rate 必须来自公式表 `$const`
+#   （引擎真读的那一份），而 panel_build 那份副本也必须同值。任何一头漂了 ⇒ 三把尺。
+import io as _io2                                                         # noqa: E402
+import json as _json2                                                     # noqa: E402
+_C = _json2.loads(_io2.open(str(REPO / "content" / "rules" / "formula_table.json"),
+                            encoding="utf-8").read())["$const"]
+chk("★ 反解常数 = 公式表 $const（K_def=%s / K_rate=%s）· 与 panel_build 那份副本同值"
+    % (_C["K_def"], _C["K_rate"]),
+    RB.K_DEF == int(_C["K_def"]) and RB.K_RATE == int(_C["K_rate"])
+    and RB.K_DEF == _PB.K_DEF and RB.K_RATE == _PB.K_RATE)
+
+# ⑭ ★ B3-18：**档位单调** —— 「普通 < 精英 < 头目 < 层主 < boss」逐项成立。
+#   ★ 2026-09-25 鱼鱼拍板分两条（`_notes.md` §三）：
+#     def/spd：**跨原型全空间**（8 原型 × 5 档 × 6 锚点）—— 任意原型的高一档 > 任意原型的低一档；
+#             原表的病灶正在这里（lv9 石滩螃蟹 def 29 > 精英伐木工 def 20）。
+#     hp/atk ：只要**基准阶梯**（杂兵）严格；原型保 14 号原表全幅（δ=1）——
+#             跨族倒挂是设计的一部分（群居血薄，它一次来 3–4 只）。
+_mono_bad = RB.check_monotone(verbose=False)
+chk("★ 档位单调（def/spd 跨原型全空间 + hp/atk 基准阶梯 · 8 原型 × 5 档 × %d 锚点）："
+    "任意原型的高一档 > 任意原型的低一档（def/spd）· 基准高档 > 基准低档（hp/atk）"
+    % len(RB.ANCHORS), not _mono_bad, " · ".join(_mono_bad[:3]))
+
+# ⑮ ★ B3-18：**交换余量**（打得过的预算）—— n_them/n_me 是「它杀我要几下 / 我要打它几下」之比。
+#   实机扫描（`scripts/balance_sweep.py` 的层主扫描）测得「单刷能赢」的边界 ≈ 1.0–1.2，
+#   这条钉 **≥ 1.05**；★ 按**域里真实存在的那 17 只**逐只算（hp/atk 保了原型全幅之后，
+#   基准值本身不再是「那只怪」）—— 精细验收仍归 probe_combat ④（真跑 36 局）。
+#   Boss 反过来必须 < 0.8（它是 4 人队内容 ⇒ 单人必倒地）。
+_g = {}
+for _name, _tier, _lv, _arch in RB.MOS:
+    _g[_name] = (RB.TIERS[_tier]["n_them"] / RB.design_ttk(_tier, _arch)[0], _tier)
+_solo = {k: v[0] for k, v in _g.items() if v[1] != "boss"}
+_boss_g = next(v[0] for v in _g.values() if v[1] == "boss")
+chk("★ 16 只非 Boss 的交换余量 ≥ 1.05（最小 %.2f：%s）"
+    % (min(_solo.values()), min(_solo, key=_solo.get)),
+    all(v >= 1.05 for v in _solo.values()))
+chk("★ Boss 的交换余量 < 0.8（%.2f —— 单人必倒地，4 人队才打得完）"
+    % _boss_g, _boss_g < 0.8)
+
+# ⑯ ★ B3-18：**单源** —— 档位/原型两张表只在 `content/rules/monster_tiers.json` 里，
+#   代码不许再抄第二份（`ARCH`/`TIERS` 必须是那个文件的对象本身，不是重建的副本）。
+_tj = _json2.loads(_io2.open(str(REPO / "content" / "rules" / "monster_tiers.json"),
+                             encoding="utf-8").read())
+chk("★ 档位/原型表唯一来源 = content/rules/monster_tiers.json（%d 档 × %d 原型）"
+    % (len(_tj["tiers"]), len(_tj["arch"])),
+    RB.TIERS == _tj["tiers"] and RB.ARCH == _tj["arch"]
+    and set(RB.TIERS) == set(RB.TIER_ORDER) and set(RB.ARCH) == set(ARCHS))
+
+print()
+print("  · 档位 × 原型的 δ（保序压幅）：%s"
+      % " · ".join("%s %.3f" % (k, v) for k, v in sorted(RB.delta_of().items())))
+print("  · 交换余量 g = n_them/n_me（基准）：%s"
+      % " · ".join("%s %.2f" % (t, RB.TIERS[t]["n_them"] / RB.TIERS[t]["n_me"]) for t in RB.TIER_ORDER))
+print("  · 交换余量（17 只实际）：最小 %.2f（%s）· 最大 %.2f"
+      % (min(v[0] for v in _g.values()), min(_g, key=lambda k: _g[k][0]), max(v[0] for v in _g.values())))
 
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))

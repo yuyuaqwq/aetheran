@@ -311,15 +311,16 @@ for _cid in sorted(_BASIS):
 
 print()
 print("── ★ B3-14 ③ 配平：四档基准怪 × 该等级**中位职业** × 16 场，实测出手次数 vs 设计次数")
-#   设计次数 = `TIERS[档].hp_n × ARCH[原型].hp`（怪 hp 就是照它反推的）
-#   口径真源：`12_怪物面板与精英词条池_v1.md` §一
+#   设计次数 = `rebuild_monsters.design_ttk(档, 原型)`（★ B3-18 起怪 hp/atk 都由这对 TTK 反解，
+#   所以设计值的**唯一出口**是那个函数 —— 原先在这里手写 `TIERS[档].hp_n × ARCH[原型].hp`
+#   是第二把尺，档位表一改就对不上）。
 _TIERS = (("ms_wild_dog", "普通"), ("ms_bitten_lumberjack", "精英"),
           ("ms_sunken_corpse", "头目"), ("ms_bone_warden", "层主"))
 _BAL_BAD, _BAL_ROWS = [], []
 for _mid, _tier in _TIERS:
     _m = MON[_mid]
     _lv = int(_m.get("lv", 1))
-    _design = _RBM.TIERS[_tier]["hp_n"] * _RBM.ARCH[_m["archetype"]]["hp"]
+    _design = _RBM.design_ttk(_tier, _m["archetype"])[0]
     _med = sorted(_BASIS, key=lambda c: _RBM.per_hit_of(_lv, c))[3]      # 六取中位（第 4 个）
     _acts = []
     for _s in range(16):

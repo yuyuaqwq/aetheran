@@ -162,14 +162,14 @@ def main():
             tk = sorted(r["ticks"] for r in seed_rows)
             rows.append({"monster": "syn_normal_%d" % _L, "name": "同级基准怪", "tier": "普通",
                          "arch": "杂兵", "lv": _L, "hp": MON["syn_normal_%d" % _L]["panel"]["hp"],
-                         "design": 4.0, "who": _med, "plv": _L, "n": 16, "win": wins,
+                         "design": RBM.design_ttk("普通", "杂兵")[0], "who": _med, "plv": _L, "n": 16, "win": wins,
                          "alloc": a.alloc,
                          "outcomes": {"victory": wins, "defeat": 16 - wins},
                          "acts_med": ac[8], "acts_min": ac[0], "acts_max": ac[-1],
                          "ticks_med": round(tk[8], 1)})
             r = rows[-1]
-            print("lv%-3d 同级基准怪 hp=%-6d（设计 4 次行动 / 3–5 次）｜中位职业 %-14s 胜 %2d/16 出手 med=%-3d [%d..%d] 刻 med=%.0f"
-                  % (_L, r["hp"], _med, wins, r["acts_med"], r["acts_min"], r["acts_max"], r["ticks_med"]),
+            print("lv%-3d 同级基准怪 hp=%-6d（设计 %.1f 次行动 · 普通档 3–5 次）｜中位职业 %-14s 胜 %2d/16 出手 med=%-3d [%d..%d] 刻 med=%.0f"
+                  % (_L, r["hp"], r["design"], _med, wins, r["acts_med"], r["acts_min"], r["acts_max"], r["ticks_med"]),
                   flush=True)
         if a.out:
             with open(a.out, "w", encoding="utf-8", newline="\n") as f:
@@ -182,7 +182,7 @@ def main():
         m = MON[mid]
         lv = int(m.get("lv", 1) or 1)
         tier = m.get("role"); arch = m.get("archetype")
-        design = RBM.TIERS[tier]["hp_n"] * RBM.ARCH[arch]["hp"]
+        design = RBM.design_ttk(tier, arch)[0]        # ★ B3-18：设计值的唯一出口（原先是手写算式 = 第二把尺）
         hp = m["panel"]["hp"]
         combos = []
         if party_classes:

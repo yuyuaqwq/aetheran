@@ -431,13 +431,15 @@ for _mid34, _lv34, _cid34, _tag34 in (("ms_wild_dog", 6, "cls_knight", "普通·
     _END34[_mid34] = (_u34, _p34, _d34)
     print("     %-22s 上界（铺满）%2d/40 出手 %2d ｜ 建议整数投法 %2d/40 出手 %2d ｜ 下界（零加点）%2d/40 出手 %2d"
           % (_tag34, _u34[0], _u34[1], _p34[0], _p34[1], _d34[0], _d34[1]))
-chk("★ P-34 两头钉住（骑士 · 固定种子 40 场）：**普通怪**（野狗 lv6）上界 40/40 出手 6 → 下界 13/40 出手 15"
-    "（出手 2.5×）· **精英**（被咬过的伐木工 lv9）上界 40/40 → 下界 0/40 ⇒ 「照样打得完」与"
-    "「当场倒地」都在这一条上（口径一变就红）",
-    _END34["ms_wild_dog"][0][0] == 40 and _END34["ms_wild_dog"][2][0] <= 20
-    and _END34["ms_wild_dog"][2][1] >= 1.5 * _END34["ms_wild_dog"][0][1]
+chk("★ P-34 两头钉住（骑士 · 固定种子 40 场）：**普通怪**（野狗 lv6）上界 40/40 出手 6 → 下界 40/40 出手 15"
+    "（出手 **2.5×**：零加点也打得完普通怪，但代价在出手数上）· **精英**（被咬过的伐木工 lv9）上界 40/40 → "
+    "下界 **0/40** 出手 16（动手就倒地）⇒ 「照样打得完」与「当场倒地」都在这一条上（口径一变就红）"
+    "★ B3-18 换口径后重钉：**赢的场数**不再是那把尺（普通怪容错高、零加点也能赢），改钉**出手数**与**精英的下界**",
+    _END34["ms_wild_dog"][0][0] == 40 and _END34["ms_wild_dog"][2][0] >= 30
+    and _END34["ms_wild_dog"][2][1] >= 2.0 * _END34["ms_wild_dog"][0][1]
     and _END34["ms_bitten_lumberjack"][0][0] == 40
-    and _END34["ms_bitten_lumberjack"][2][0] <= 4,
+    and _END34["ms_bitten_lumberjack"][2][0] <= 4
+    and _END34["ms_bitten_lumberjack"][2][1] >= 1.4 * _END34["ms_bitten_lumberjack"][0][1],
     "%s / %s" % (_END34["ms_wild_dog"], _END34["ms_bitten_lumberjack"]))
 
 print("")
@@ -451,7 +453,8 @@ for _L in _ANC34:
               "matk": _a34["matk"], "def": _a34["def"], "mdef": _a34["res"],
               "spd": sum(_RBM34.player_panel(_L, _c)["spd"] for _c in _CLS34) / len(_CLS34),
               "mhp": _m34["hp"], "m_atk": _m34["atk"], "m_def": _m34["def"], "m_res": _m34["res"],
-              "perhit": _RBM34.standard_per_hit(_L)}
+              "perhit": _RBM34.standard_per_hit(_L),
+              "perhit_new": _RBM34.std_per_hit(_L)}
     _TAB34.append(_tab34)
     print("     L%-4d %3d 点 ｜ 玩家(铺满均值) hp %7.0f atk %6.1f matk %6.1f def %6.1f mdef %6.1f spd %6.1f"
           " ｜ 同级基准怪 hp %5d atk %4d def %4d ｜ 挨 %4.1f 下"
@@ -461,9 +464,13 @@ for _L in _ANC34:
 
 _bad34c = []
 for _i, _t in enumerate(_TAB34):
-    # 怪 hp 就是照「标准单次行动伤害 × 4」反推的（配平口径是等级的 ⇒ L100 也照样成立）
-    if _t["mhp"] != round(_t["perhit"] * 4):
-        _bad34c.append(("怪 hp 与 per_hit×4 对不上", _t["L"], _t["mhp"], round(_t["perhit"] * 4)))
+    # ★ B3-18 换口径后：怪 hp 不再是「标准单发 × 4」的裸乘积，而是**真伤害链反解**的结果
+    #   （含怪闪避 + 减伤 K_def/(def+K_def)）。所以这里钉**比值区间**：
+    #   低等级 ≈4（几乎无减伤）→ 高等级 ≈2.0（K_def 恒定、def 涨 ⇒ 减伤变强；L100 实测 1.98）。
+    #   ★ 这条比值随等级下滑本身是**已登记的账**（`_notes.md` §四「K_def 贴顶」，100 级 Boss 减伤 ~74%）。
+    _r34 = _t["mhp"] / max(_t["perhit_new"], 1)
+    if not 1.8 <= _r34 <= 5.0:
+        _bad34c.append(("怪 hp / 标准单发 出界", _t["L"], round(_r34, 2)))
     if _i:                                    # 面板单调增（不出现"某级之后往回掉"）
         _p34 = _TAB34[_i - 1]
         for _k34 in ("hp", "atk", "matk", "def", "mdef", "spd"):
