@@ -81,6 +81,63 @@ chk("③ 原硬编码那句表达式整句消失（`min(float(st.get(\"dodge\", 
 chk("③ 读点走的是声明 API（`_F.dodge_cap()`）", "_F.dodge_cap()" in _src)
 
 print()
+print("══ ④ 引擎不带玩家可见文案（E2b）：没声明就 fail-closed，声明了就用声明的那句")
+import asyncio                                            # noqa: E402
+from saintess_engine.command import guards as G           # noqa: E402
+from saintess_engine.config import EngineNotConfigured    # noqa: E402
+
+
+class _NoDecl:                                            # 没声明任何文案的命令基类
+    def _uid(self, event):
+        return ("g", "u")
+
+    def _player(self, gid, uid):
+        return None
+
+    def _in_any_battle(self, gid, uid):
+        return False
+
+
+class _Decl(_NoDecl):
+    register_hint = "【阿斯特兰】先给自己起个名字 —— 敲「开始」。"
+    battle_none_hint = "【阿斯特兰】这地方现在没什么好打的。"
+
+
+async def _run(owner, deco):
+    out = []
+    async def _cmd(self, event):
+        yield "下游"
+    async for x in deco(_cmd)(owner, _EV):
+        out.append(x)
+    return out
+
+
+class _Ev:                                                # 只带 plain_result 的最小事件桩
+    def plain_result(self, text):
+        return text
+
+
+_EV = _Ev()
+_raised = None
+try:
+    asyncio.run(_run(_NoDecl(), G.require_player()))
+except EngineNotConfigured as e:
+    _raised = str(e)
+chk("④ 没声明守卫文案 ⇒ 当场抛 `EngineNotConfigured`（不静默编一句玩家文案）",
+    bool(_raised), (_raised or "")[:60])
+_hit = asyncio.run(_run(_Decl(), G.require_player()))
+chk("④ 声明了 ⇒ 用声明的那句（逐字）", _hit == [_Decl.register_hint], repr(_hit))
+_hit2 = asyncio.run(_run(_Decl(), G.require_battle()))
+chk("④ 战斗守卫同理", _hit2 == [_Decl.battle_none_hint], repr(_hit2))
+_eng_txt = ""
+for _f in ("command/guards.py", "command/tips.py", "host/runtime.py"):
+    _eng_txt += io.open(os.path.join(ENG, "saintess_engine", _f), encoding="utf-8").read()
+chk("④ 引擎源码里不再有那几句玩家文案（只在注释里留了「搬去哪」的说明）",
+    not any(k in _eng_txt for k in ('= "你还没有角色！"', '= "你附近没有敌人！"',
+                                    '= "未找到你的角色档', '= "你现在不在战斗中。"',
+                                    '= "看看『帮助』了解更多"')))
+
+print()
 print("══ 汇总")
 print("  通过 %d · 失败 %d" % (len(_pass), len(_fail)))
 if _fail:
