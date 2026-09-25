@@ -857,7 +857,7 @@
     "require": [
       {
         "kind": "item",
-        "item": "i_junk_boot",
+        "item": "i_token_underwater_steps",
         "n": 1
       }
     ],

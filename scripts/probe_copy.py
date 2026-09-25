@@ -159,6 +159,14 @@ def main():
         counts[p.name] = len(hits)
         for k in keys:
             ref.setdefault(k, []).append(p.name)
+    # ★ 槽位键**以字符串字面量出现**也算「被代码引用」（不限于 `T("…")` 直调）：
+    #   例（B3-5「异动」）：`slot = "SYS_EV_ROW_NEW" if 新开 else "SYS_EV_ROW"` 之后再 `T(slot, …)`
+    #   —— 静态只认 `T("…")` 会把它误判成「写了等于没写」。
+    import re as _re                                                       # noqa: E402
+    _lit = _re.compile(r'["\']([A-Z][A-Z0-9_]{3,})["\']')
+    ref_lit = set()          # ★ 只给「每条都被引用」那条用（不是 T(…) 直调，别混进 ④）
+    for p in files:
+        ref_lit |= set(_lit.findall(p.read_text(encoding="utf-8")))
     print("  · 内联中文文案：%s" % (" · ".join("%s %d" % (k, v) for k, v in sorted(counts.items()) if v) or "一处都没有"))
     if inv:
         for k, v in sorted(counts.items(), key=lambda x: (-x[1], x[0])):
@@ -215,13 +223,38 @@ def main():
     # ⑤ 口径表：在 texts 里 · 逐字一致 · 被代码引用
     import rebuild_syscopy as RS                                          # noqa: E402
 
+    # ⑤ ★ 数据里取件也算「被引用」：文案可以从**数据**来 —— 域里那一格写的就是槽位名
+    #    （B3-5 起：事件的 4 条表征 + 场地那条挂在 `events.json` 的 `text` 上，代码只 `T(数据取到的键)`）。
+    #    只扫**字符串值**（不是整份 JSON 文本）⇒ 注释里提一句不会算数。
+    data_ref = set()
+    _ddir = os.path.join(str(REPO), "content", "data")
+    for _fn in sorted(os.listdir(_ddir)):
+        if not _fn.endswith(".json"):
+            continue
+        try:
+            with open(os.path.join(_ddir, _fn), encoding="utf-8") as _f:
+                _obj = json.load(_f)
+        except Exception:                                             # noqa: BLE001 —— 坏文件由别处报
+            continue
+        _stack = [_obj]
+        while _stack:
+            _v = _stack.pop()
+            if isinstance(_v, dict):
+                _stack.extend(_v.values())
+            elif isinstance(_v, list):
+                _stack.extend(_v)
+            elif isinstance(_v, str) and _v in tx:
+                data_ref.add(_v)
+
     rows = RS.parse_doc()
     notx = [r["key"] for r in rows if r["key"] not in tx]
     diff = [r["key"] for r in rows if r["key"] in tx and tx[r["key"]]["value"] != r["value"]]
-    unused = [r["key"] for r in rows if r["key"] not in ref]
+    unused = [r["key"] for r in rows if r["key"] not in ref and r["key"] not in ref_lit and r["key"] not in data_ref]
     chk("★ 口径表 %d 条都落在 texts 里" % len(rows), not notx, "%s" % notx[:6])
     chk("★ 口径表与 texts 逐字一致（防两处口径）", not diff, "%s" % diff[:6])
-    chk("★ 口径表每条都被代码引用（防「写了等于没写」）", not unused, "%s" % unused[:6])
+    chk("★ 口径表每条都被引用（代码 T(\"…\") / 代码字面量 / **数据里取件**）"
+        "（T() %d · 字面量 %d · 数据 %d）" % (len(ref), len(ref_lit), len(data_ref)),
+        not unused, "%s" % unused[:6])
 
     # ⑥ 真跑实现体：产出的行里不许有取不到文案的标记
     from content import cmds_ast as CA                                    # noqa: E402

@@ -22,7 +22,7 @@
       指定矿        → 物品说明里写着「采矿产」的那件（唯一）
       旧铁          → 名字就是「旧铁」的那件（唯一）
       常见鱼 / 稀有鱼 → 垂钓池里**带 `when` 时辰限制**的是稀有鱼、不带的是常见鱼
-      不是鱼的东西  → 浅滩那个垂钓点池里**不叫 i_fish_*** 的那件（唯一）
+      不是鱼的东西  → 浅滩那个垂钓点池里**不叫 i_fish_*** 的**信物**那件（B3-4 之后池里有两个「不是鱼」的）
       「有故事」的旧物 → **codex 旧物谱里、认它的人包含接活那位** 的那件（柯尔 → unid_common）
       旧哨塔附近 / 骨田 / 三条带最深处 → maps 域按名字 / 按 `roles.exit == 深处` 找（不手打节点 id）
     数量的中文数词从「内容」列解析（三种 → 3），解析不出就是 1。
@@ -220,8 +220,14 @@ def _fish_by_when(ga):
     return rare, common
 
 
-def _not_fish_in_shoal(ga, maps):
-    """「浅滩」那个垂钓点池里不叫鱼的那件（唯一）。"""
+def _not_fish_in_shoal(ga, maps, it):
+    """「浅滩」那个垂钓点池里**不是鱼**的那件 —— 取**信物**那件。
+
+    ★ 池里现在有两个「不是鱼」的：先是垃圾 `i_junk_boot`（旧靴子），B3-4 又按 `30 §三 行 6` / P-15 ①
+      做出来一个**信物**（`i_token_underwater_steps` · 石阶缺的那一级 = 隐藏线那一角）。
+      设计原文那句「在浅滩钓到一个不是鱼的东西」要的是**信物**那件 ⇒ 按 kind 取，别只靠「唯一」：
+      B3-4 落域那天这条启发式当场 fail-closed（两个 id）—— 这正是「唯一」不够用的证据。
+    """
     nodes = [(mid, n) for mid, m in maps.items() for n in (m.get("nodes") or [])]
     _mid, shoal = [(mid, n) for mid, n in nodes if n.get("name") == "浅滩"][0]
     cands = set()
@@ -231,6 +237,9 @@ def _not_fish_in_shoal(ga, maps):
                 o = str(e.get("out"))
                 if not o.startswith("i_fish_"):
                     cands.add(o)
+    tok = sorted(c for c in cands if (it.get(c) or {}).get("kind") == "信物")
+    if len(tok) == 1:
+        return tok[0]
     return _only(cands, "浅滩垂钓池里不是鱼的那件")
 
 
@@ -282,7 +291,7 @@ def build_require(qid, prose, ctx):
         return [{"kind": "item", "item": _only(ins, "「客栈的招牌」要的鱼"), "n": n}]
     if qid == "q_trade_06":
         # 「在浅滩钓到一个不是鱼的东西」→ 浅滩垂钓池里不是鱼的那件
-        return [{"kind": "item", "item": _not_fish_in_shoal(ga, maps), "n": n}]
+        return [{"kind": "item", "item": _not_fish_in_shoal(ga, maps, it), "n": n}]
     if qid == "q_trade_07":
         # 「修好一件『有故事』的旧装备」→ 旧物谱里**认它的人包含接活这位（柯尔）**的那件
         #   （形状只有 visit/kill/item 三型：「修好」这个动作没有条件形状 ⇒ 见报告遗留）

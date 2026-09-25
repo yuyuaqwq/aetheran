@@ -2373,5 +2373,73 @@
     "params": [],
     "category": "系统",
     "desc": "副业 · 标记 · 可接"
+  },
+  "SYS_EV_HEAD": {
+    "value": "【今天的动静】",
+    "params": [],
+    "category": "世界动静",
+    "desc": "事件 · 异动的头行（29 §七⑦）"
+  },
+  "SYS_EV_NONE": {
+    "value": "镇上没什么新鲜事。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "事件 · 今天没有动静（29 §七⑦）"
+  },
+  "SYS_EV_ROW": {
+    "value": "· {name} —— {text}",
+    "params": [
+      "name",
+      "text"
+    ],
+    "category": "世界动静",
+    "desc": "事件 · 一行一条（29 §七⑦）"
+  },
+  "SYS_EV_ROW_NEW": {
+    "value": "· {name} —— {text}（今天新开的）",
+    "params": [
+      "name",
+      "text"
+    ],
+    "category": "世界动静",
+    "desc": "事件 · 限时到点自己开（29 §六）"
+  },
+  "SYS_EV_GONE": {
+    "value": "· {name} —— 收了。",
+    "params": [
+      "name"
+    ],
+    "category": "世界动静",
+    "desc": "事件 · 限时到点自己收（29 §六）"
+  },
+  "SYS_EV_CARAVAN": {
+    "value": "北口还空着，跟着车来的那两个人没在镇上。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "事件 · 商队未到（29 §五 第 1 行）"
+  },
+  "SYS_EV_CARAVAN_ARRIVED": {
+    "value": "北口和客栈多了两个外面来的人。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "事件 · 商队到了（29 §五 第 2 行）"
+  },
+  "SYS_EV_MARKET": {
+    "value": "挂板墙那边比平时挤，板上多了一张新贴的纸。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "事件 · 集日（29 §五 第 3 行）"
+  },
+  "SYS_EV_MARKET_CROWD": {
+    "value": "板子跟前凑着几个人，比平时挤 —— 上面新贴了一张纸。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "事件 · 集日 · 场地那条（29 §五 第 3 行）"
+  },
+  "SYS_EV_FIRST_SNOW": {
+    "value": "天阴着，看那样子，头一场雪说下就下。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "事件 · 初雪前（29 §五 第 4 行）"
   }
 }

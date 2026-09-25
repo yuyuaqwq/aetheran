@@ -19,15 +19,14 @@
       "i_junk_bone",
       "i_junk_boot",
       "i_material_fungus",
+      "i_material_hard_bone",
       "i_material_herb_common",
       "i_material_herb_rare",
       "i_material_iron_chip",
+      "i_material_iron_scrap",
       "i_material_old_iron"
     ],
-    "material_unreachable": [
-      "i_material_hard_bone",
-      "i_material_iron_scrap"
-    ],
+    "material_unreachable": [],
     "note": "四本谱的条目与文案由 scripts/rebuild_codex.py 从源文档解析 —— 别手改本文件",
     "source": [
       "00_总纲/14_图鉴四谱口径_v1.md",
