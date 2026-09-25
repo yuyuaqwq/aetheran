@@ -2294,5 +2294,21 @@
     ],
     "category": "系统",
     "desc": "挂板墙 · 支线一行（带编号 —— 不带就接不了）"
+  },
+  "SYS_CODEX_RELIC_SEEN": {
+    "value": "看出来了：{line}",
+    "params": [
+      "line"
+    ],
+    "category": "系统",
+    "desc": "旧物谱 · 端详看出的那一层（物证句）"
+  },
+  "SYS_CODEX_RELIC_NOHOLD": {
+    "value": "背包里没有叫「{input}」的旧东西。打『背包』看看。",
+    "params": [
+      "input"
+    ],
+    "category": "系统",
+    "desc": "旧物谱 · 端详 · 手上没有这一件"
   }
 }

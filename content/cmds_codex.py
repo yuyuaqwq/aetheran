@@ -119,8 +119,7 @@ async def codex_relic(env, sink, uid, player):
         if CX.studied(p, k):                       # ★ P-8：自己看出的那一层，跟在后面（★ 另起一行，不并进问号那行）
             ev = CX.evidence(k)
             if ev:
-                # ★ 槽位借「观察」的「看得见：X」—— 旧物谱自己那一句（SYS_CODEX_RELIC_SEEN）待文案那批补
-                rows.append(T("SYS_LOOK_SEES", list=ev))
+                rows.append(T("SYS_CODEX_RELIC_SEEN", line=ev))
     async for line in _one_book(p, "relic", rows):
         yield line
 
@@ -171,16 +170,14 @@ async def relic_study(env, sink, uid, player):
         return
     rid = _study_hit(p, want)
     if not rid:
-        # ★ 槽位是**借的**：这句在 texts 域里的原文是「背包里没有叫「X」的装备」——
-        #   严格该有一条旧物自己的（SYS_CODEX_RELIC_NOHOLD）。先借现成的，别为此新造一句。
-        yield T("SYS_ENHANCE_NOITEM", input=want)
+        yield T("SYS_CODEX_RELIC_NOHOLD", input=want)      # 手上没有这一件（fail-closed，不编、不落档）
         return
     if CX.study(p, rid):                           # ★ 只头一回落档
         if player is not None:
             player.update(p)
         _save(env)
     yield T("SYS_READ_HEAD", name=CX.held_name(rid))
-    yield T("SYS_LOOK_SEES", list=CX.evidence(rid))
+    yield T("SYS_CODEX_RELIC_SEEN", line=CX.evidence(rid))
     if not CX.known(p, rid):                       # 另一半还在人那儿
         yield T("SYS_CODEX_RELIC_ASK_HINT")
 

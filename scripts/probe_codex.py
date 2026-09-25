@@ -13,6 +13,7 @@
   ⑧ ★ 认出行为：名单外的人不给认 · 名单里的人把问号换掉（不认第二遍）
   ⑨ ★ 六条指令都接在 content.cmds_codex 上，且实现体真的存在
   ⑩ 图鉴用到的文案槽位都在 texts 域
+  ⑪ ★ P-8 行为：自己看（端详）—— 看过 ≠ 认出来 · 不可逆 · 手上没有不给看 · 物证句来自实物域
 
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_codex.py
 """
@@ -203,6 +204,89 @@ slots |= {"SYS_FOOT_HEAD", "SYS_FOOT_MORE", "SYS_FOOT_BOOKS", "SYS_FOOT_EMPTY",
           "SYS_CODEX_FULL", "SYS_CODEX_TODO"}
 miss_slot = sorted(s for s in slots if s not in TX)
 chk("★ 图鉴/记录的文案槽位都在 texts 域（%d 个）" % len(slots), not miss_slot, miss_slot)
+
+# ⑪ ★ P-8：旧物谱的**另一条路** —— 自己看（`端详 <旧物>`），不靠 NPC 也能往前挪一格
+#    判据是**行为**（不是结构）：看过 ≠ 认出来 · 不可逆 · 幂等 · 手上没有不给看 · 物证句来自实物域
+import asyncio                                                        # noqa: E402
+import copy as _copy                                                  # noqa: E402
+
+from content import cmds_codex as CC                                  # noqa: E402
+
+
+class _E(object):               # 「端详」只要 env.text（真取参数）与 env.save（落档）
+    def __init__(self, text):
+        self.text = text
+        self.saved = 0
+
+    def save(self):
+        self.saved += 1
+
+
+def _run(text, p, fn=None):
+    out = []
+
+    async def _go():
+        async for line in (fn or CC.relic_study)(_E(text), None, "u_study", p):
+            out.append(line)
+
+    asyncio.run(_go())
+    return out
+
+
+EV_ITEM = str((IT.get("i_horn_half") or {}).get("lore") or "")        # 信物：物证在 items 域
+EV_POOL = str((DP.get("unid_common") or {}).get("hint") or "")        # 未鉴定：物证挂在池表上
+chk("物证句取得到（信物那条走 items · 未鉴定那条走池表）",
+    bool(EV_ITEM) and bool(EV_POOL), "%s / %s" % (EV_ITEM[:14], EV_POOL[:14]))
+chk("★ 物证句就是实物域那一句（不是代码里编的）",
+    CM.evidence("i_horn_half") == EV_ITEM and CM.evidence("unid_common") == EV_POOL)
+chk("★ 手上没有 / 看不出所以然 ⇒ 回空串（fail-closed）",
+    CM.evidence("poi_named_birch") == "" and CM.evidence("不存在的 id") == "")
+
+p3 = {"day": 2, "loc": "windmill_town", "node": "wt_gate_n",
+      "bag": {"i_horn_half": 1, "unid_common": 1}, "books": {}, "foot": {}}
+CM.sync_bag(p3)
+chk("★ 自己看：看出一层就落档（studied 那一格）",
+    CM.study(p3, "i_horn_half") and CM.studied(p3, "i_horn_half"))
+chk("★ 不可逆 · 幂等：第二遍不再动档", not CM.study(p3, "i_horn_half"))
+chk("★ 看过 ≠ 认出来：known 一个字没动 · 那个人照样能认出它",
+    not CM.known(p3, "i_horn_half") and "i_horn_half" in CM.revealable(p3, "npc_durin"),
+    CM.revealable(p3, "npc_durin"))
+chk("★ 两格都在时互不抵消（问人之后 studied 不被打回）",
+    CM.reveal(p3, "i_horn_half") and CM.known(p3, "i_horn_half") and CM.studied(p3, "i_horn_half"))
+chk("★ 没进过谱的 id 不落档（study 认谱）", not CM.study({"books": {"relic": {}}}, "i_horn_half"))
+
+p4 = {"day": 2, "loc": "windmill_town", "node": "wt_gate_n",
+      "bag": {"i_horn_half": 1}, "books": {}, "foot": {}}
+CM.sync_bag(p4)
+bare = _run("旧物谱", p4)
+seen = _run("端详 半截号角", p4)
+snap1 = _copy.deepcopy(p4["books"])
+after = _run("旧物谱", p4)
+again = _run("端详 半截号角", p4)
+chk("★ 没看过时，旧物谱那条只有问号行（没有「看出来的」那行）",
+    any(TX["SYS_CODEX_RELIC_UNKNOWN"]["value"].split("{")[0] in x for x in bare)
+    and not any(EV_ITEM in x for x in bare), bare)
+chk("★ 自己看那一句**走槽位**（= texts 里 SYS_CODEX_RELIC_SEEN 填上物证句）",
+    TX["SYS_CODEX_RELIC_SEEN"]["value"].replace("{line}", EV_ITEM) in seen, seen)
+chk("★ 看完之后旧物谱多出那一行 · 问号行照旧（没认出来）",
+    any(EV_ITEM in x for x in after)
+    and any(TX["SYS_CODEX_RELIC_UNKNOWN"]["value"].split("{")[0] in x for x in after)
+    and not any(str(BOOK["relic"]["i_horn_half"].get("known") or "") in x for x in after)
+    and ((snap1.get("relic") or {}).get("i_horn_half") or {}).get("known") is False, after)
+chk("★ 第二遍看：回话一字不差 · 档上不动", again == seen and p4["books"] == snap1,
+    "回话%s / 档%s" % ("同" if again == seen else "不同", "同" if p4["books"] == snap1 else "不同"))
+chk("★ 自己看不漏「来处」：看完仍然提醒他问人（尾注还在）",
+    TX["SYS_CODEX_RELIC_ASK_HINT"]["value"] in seen, seen)
+nohold = _run("端详 镇口的石头", p4)
+chk("★ 手上没有这一件 ⇒ 走自己的槽位（SYS_CODEX_RELIC_NOHOLD）· 不落档",
+    TX["SYS_CODEX_RELIC_NOHOLD"]["value"].replace("{input}", "镇口的石头") in nohold
+    and "poi_named_birch" not in (p4.get("books") or {}).get("relic", {}), nohold)
+p5 = {"day": 2, "loc": "windmill_town", "node": "wt_gate_n",
+      "bag": {"unid_common": 1}, "books": {}, "foot": {}}
+CM.sync_bag(p5)
+seen5 = _run("端详 一块看不出用途的旧东西", p5)
+chk("★ 未鉴定那两件（物证挂池表）也看得出", len(seen5) > 1 and seen5[1].endswith(EV_POOL)
+    and ((p5["books"].get("relic") or {}).get("unid_common") or {}).get("studied") is True, seen5)
 
 print()
 print("按谱：%s" % " · ".join("%s %d" % (LABEL[b], len(BOOK[b])) for b in BOOKS))
