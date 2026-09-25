@@ -352,6 +352,33 @@ chk("★ 非装备真跑「强化 %s（%s）」：拒掉（不出强化结果、
     bool(_l2) and not (_p2.get("enhance") or {}) and any(_pname in ln for ln in _l2),
     "%s / enhance=%s" % (_l2[:1], _p2.get("enhance")))
 
+# ⑭ ★ P-6「配方域的四个数」里**菜品那两个** —— 原先只有生成器管（`rebuild_recipes` 落盘时会抛），
+#   探针一条都不判 ⇒ 生成物被手编 / 文档漂了没人抓（台账 P-6 那四个数：费 · 率 · 增益档 · 卖价；
+#   费与率 ⑤ 已判，这里补后两个）。**现解析真源那份口径** + 从 items 现算，不拿域里的值自证。
+_spec = io.open(os.path.join(PLAN, "00_总纲", "13_配方域口径_v1.md"),
+                encoding="utf-8", newline="").read()
+_tier = {q: int(v) for q, v in zip(("普通", "精制", "稀有"),
+                                   _RBR.grab(r"菜品增益 = 普通 (\d+) / 精制 (\d+) / 稀有 (\d+)",
+                                             _spec, "菜品增益档位"))}
+_sell_mult = float(_RBR.grab(r"菜品卖价 = 食材市价合计 × ([\d.]+)", _spec, "菜品卖价公式"))
+_bad_tier, _bad_sell = [], []
+for _rid, _v in sorted(cooks.items()):
+    _ins = _v.get("inputs") or []
+    _top = max(_ins, key=lambda e: _RBR.QUAL_RANK.get((IT.get(e["id"]) or {}).get("quality") or "普通", 0))
+    _tq = (IT.get(_top["id"]) or {}).get("quality") or "普通"
+    _wpct = _tier.get(_tq)
+    if int((_v.get("buff") or {}).get("pct") or 0) != _wpct:
+        _bad_tier.append((_v.get("name"), _tq, _wpct, (_v.get("buff") or {}).get("pct")))
+    _mats = sum(float((IT.get(e["id"]) or {}).get("price") or 0) * int(e.get("n") or 0) for e in _ins)
+    _wp = _RBR.round_half_up(_mats * _sell_mult)          # ★ 取整口径走生成器那一支（别自己写一份 round）
+    _gp = (IT.get(_v.get("out")) or {}).get("price")
+    if _gp != _wp:
+        _bad_sell.append((_v.get("name"), _gp, _wp))
+chk("★ 菜品增益 = 最贵那样食材的品阶（普通 %d / 精制 %d / 稀有 %d %% · 源：13_配方域口径 §二）"
+    % (_tier["普通"], _tier["精制"], _tier["稀有"]), not _bad_tier, "%s" % (_bad_tier or "无"))
+chk("★ 菜品卖价 = 食材市价合计 × %s 四舍五入（按 items 市价复算 · 8 道菜）" % _sell_mult,
+    not _bad_sell, "%s" % (_bad_sell or "无"))
+
 print()
 print("结果：%s" % ("全绿 ✓" if not fails else "有红 ✗（%d）" % len(fails)))
 sys.exit(1 if fails else 0)

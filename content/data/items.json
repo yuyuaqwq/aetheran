@@ -2278,7 +2278,7 @@
     }
   },
   "i_material_iron_chip": {
-    "name": "铁屑",
+    "name": "铁渣",
     "icon": "🔩",
     "kind": "材料",
     "kind_key": "material",
