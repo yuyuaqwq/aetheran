@@ -172,8 +172,11 @@ from content import cmds_quest as CQ                                        # no
 
 _QREW = int((st.domain("quests") or {})["q_main_01"]["reward_exp"])
 _Q = dict(CA.DEFAULT_PLAYER)
+# ★ B4-2（P-25 §①）：主线现在也走 `require`（主 1 = 「问玛莎」那一步）⇒ 这一条要把那笔账做上，
+#   否则「交 1」会走「还没做完」那支（本判据钉的是「交活升级走 add_exp」，账得先齐）。
 _Q.update({"level": 1, "exp": int(CA.exp_need(1)) - _QREW, "uid": "u_up",
-           "flags": {"quests_active": ["q_main_01"], "quests_done": []}})
+           "flags": {"quests_active": ["q_main_01"], "quests_done": [],
+                     "talked": {"dlg_masha": 1}}})
 
 
 def _drive_text(fn, p, text, uid="u_up"):

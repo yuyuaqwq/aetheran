@@ -38,6 +38,13 @@
     "min_level": 1,
     "need": null,
     "objective": "观察镇口那屏 → 看见石头上刻着字 → 试着读（读不懂）→ 问玛莎",
+    "require": [
+      {
+        "kind": "talk",
+        "npc": "npc_masha",
+        "n": 1
+      }
+    ],
     "reward_exp": 13,
     "reward_gold": 10,
     "teach": "「观察」指令",
@@ -57,6 +64,28 @@
     "min_level": 2,
     "need": "q_main_01",
     "objective": "去白烛堂侧屋找莉安（她只说「……守着。」）→ 问老陶（他说不清）→ 回玛莎处接第一个正式委托",
+    "require": [
+      {
+        "kind": "visit",
+        "map": "windmill_town",
+        "node": "wt_chapel"
+      },
+      {
+        "kind": "talk",
+        "npc": "npc_lian",
+        "n": 1
+      },
+      {
+        "kind": "talk",
+        "npc": "npc_laotao",
+        "n": 1
+      },
+      {
+        "kind": "talk",
+        "npc": "npc_masha",
+        "n": 1
+      }
+    ],
     "reward_exp": 52,
     "reward_gold": 20,
     "teach": "对话与「提示」指令 · 世界里的沉默的人",
@@ -74,6 +103,20 @@
     "min_level": 3,
     "need": "q_main_02",
     "objective": "玛莎给三张委托（三条带各一张）→ 各完成一次（打怪/采集/送信）→ 回来交活",
+    "require": [
+      {
+        "kind": "visit",
+        "map": "belt_east"
+      },
+      {
+        "kind": "visit",
+        "map": "belt_north"
+      },
+      {
+        "kind": "visit",
+        "map": "belt_west"
+      }
+    ],
     "reward_exp": 118,
     "reward_gold": 30,
     "teach": "三条带的地形 · 遇敌 · 采集 · 撤退",
@@ -95,6 +138,28 @@
     "min_level": 5,
     "need": "q_main_03",
     "objective": "去北带骨田 → 打游荡的骸骨 → 用「挖掘」挖出一个旧铁件 → 拿给柯尔",
+    "require": [
+      {
+        "kind": "visit",
+        "map": "belt_north",
+        "node": "bn_bone"
+      },
+      {
+        "kind": "kill",
+        "monster": "ms_bone_wanderer",
+        "n": 1
+      },
+      {
+        "kind": "item",
+        "item": "i_material_old_iron",
+        "n": 1
+      },
+      {
+        "kind": "talk",
+        "npc": "npc_cole",
+        "n": 1
+      }
+    ],
     "reward_exp": 330,
     "reward_gold": 50,
     "teach": "行动序 · 挖掘",
@@ -112,6 +177,18 @@
     "min_level": 7,
     "need": "q_main_04",
     "objective": "去拾荒营地 → 打拾荒人（精英·资源战）→ 读他留下的字条",
+    "require": [
+      {
+        "kind": "visit",
+        "map": "belt_north",
+        "node": "bn_camp"
+      },
+      {
+        "kind": "kill",
+        "monster": "ms_pick_scavenger",
+        "n": 1
+      }
+    ],
     "reward_exp": 646,
     "reward_gold": 70,
     "teach": "资源战（拉长到 12 次行动以上）",
@@ -129,6 +206,17 @@
     "min_level": 10,
     "need": "q_main_05",
     "objective": "走到旧哨塔下 → 门推不开 → 观察 → 「门闩在里面」→ 观察塔身（看到二层缺口，爬上去）→ 进一层",
+    "require": [
+      {
+        "kind": "visit",
+        "map": "belt_north",
+        "node": "bn_tower"
+      },
+      {
+        "kind": "visit",
+        "map": "old_watchtower"
+      }
+    ],
     "reward_exp": 1320,
     "reward_gold": 100,
     "teach": "副本是什么 · 副本指令（进塔/下一层/撤退）",
@@ -148,6 +236,28 @@
     "min_level": 12,
     "need": "q_main_06",
     "objective": "副本一层（打断 · 被咬过的伐木工）→ 二层（射程 · 野狗；霸体 · 守兵）→ 水房那页纸 + 墙上的划痕",
+    "require": [
+      {
+        "kind": "kill",
+        "monster": "ms_bitten_lumberjack",
+        "n": 1
+      },
+      {
+        "kind": "kill",
+        "monster": "ms_wild_dog",
+        "n": 1
+      },
+      {
+        "kind": "kill",
+        "monster": "ms_tower_guard",
+        "n": 1
+      },
+      {
+        "kind": "visit",
+        "map": "old_watchtower",
+        "node": "tower_water_room"
+      }
+    ],
     "reward_exp": 1900,
     "reward_gold": 120,
     "teach": "打断 · 射程 · 霸体",
@@ -165,6 +275,23 @@
     "min_level": 14,
     "need": "q_main_07",
     "objective": "三层层主（印记 · 守塔的骨架）→ 拿「半截号角」→ 回镇问谁能修 → 问艾德（他回避）",
+    "require": [
+      {
+        "kind": "kill",
+        "monster": "ms_bone_warden",
+        "n": 1
+      },
+      {
+        "kind": "item",
+        "item": "i_horn_half",
+        "n": 1
+      },
+      {
+        "kind": "talk",
+        "npc": "npc_ed",
+        "n": 1
+      }
+    ],
     "reward_exp": 2587,
     "reward_gold": 140,
     "teach": "印记 · 层主（Boss 预演）",
@@ -182,6 +309,13 @@
     "min_level": 16,
     "need": "q_main_08",
     "objective": "格雷主动找你（他从前不主动）→ 他讲塔原来是谁守的（但不说最后那一仗）→ 他指名塔顶",
+    "require": [
+      {
+        "kind": "talk",
+        "npc": "npc_grey",
+        "n": 1
+      }
+    ],
     "reward_exp": 3379,
     "reward_gold": 160,
     "teach": "Boss 战预习（读循环 · 打断 · 霸体 · 阶段）",
@@ -201,6 +335,18 @@
     "min_level": 17,
     "need": "q_main_09",
     "objective": "去北墙根找哈根 → 他第一次说完整一句 → 「你来之前，有别人也问过。」",
+    "require": [
+      {
+        "kind": "visit",
+        "map": "windmill_town",
+        "node": "wt_wall"
+      },
+      {
+        "kind": "talk",
+        "npc": "npc_hagen",
+        "n": 1
+      }
+    ],
     "reward_exp": 3814,
     "reward_gold": 170,
     "teach": "「多问一句」的价值",
@@ -218,6 +364,23 @@
     "min_level": 18,
     "need": "q_main_10",
     "objective": "把白桦树上的刻名与号角室的碑上名单对比 → 发现三个重名 → 拿给莉安看",
+    "require": [
+      {
+        "kind": "visit",
+        "map": "belt_east",
+        "node": "be_birch"
+      },
+      {
+        "kind": "visit",
+        "map": "old_watchtower",
+        "node": "tower_horn_room"
+      },
+      {
+        "kind": "talk",
+        "npc": "npc_lian",
+        "n": 1
+      }
+    ],
     "reward_exp": 4276,
     "reward_gold": 180,
     "teach": "读东西的连贯性（第一处与第二处拼起来）",
@@ -235,6 +398,23 @@
     "min_level": 19,
     "need": "q_main_11",
     "objective": "上塔顶 → 打旧誓哨兵（四阶段）→ 打完「观察」北边 → 回镇（哈根在镇口等着）",
+    "require": [
+      {
+        "kind": "visit",
+        "map": "old_watchtower",
+        "node": "tower_top"
+      },
+      {
+        "kind": "kill",
+        "monster": "ms_boss_oath_sentry",
+        "n": 1
+      },
+      {
+        "kind": "talk",
+        "npc": "npc_hagen",
+        "n": 1
+      }
+    ],
     "reward_exp": 4765,
     "reward_gold": 190,
     "teach": "综合（六课全用上）",

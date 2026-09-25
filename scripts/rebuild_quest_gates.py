@@ -42,7 +42,10 @@ SLICE = os.path.join(PLAN, "06_第一阶段垂直切片")
 OUTLINE = os.path.join(PLAN, "00_总纲")
 QFILE = os.path.join(REPO, "content", "data", "quests.json")
 MFILE = os.path.join(REPO, "content", "data", "monsters.json")
+ENGINE = os.environ.get("GWEN_ENGINE", "C:/Users/yuyu/framework-engine")
 sys.path.insert(0, REPO)
+sys.path.insert(0, ENGINE)      # ★ B4-2：`content.cmds_ast` 要引擎（`cmds_ast → eggs → 引擎声明算子`）
+                                #   —— 照探针的老规矩走 `GWEN_ENGINE`（不设就用那个默认路径）
 
 from content.cmds_ast import exp_need                              # noqa: E402  ★ 曲线唯一口
 
@@ -67,6 +70,9 @@ _RANGE05 = re.compile(r"按目标档位：普通\s*\**\s*(\d+)[–\-~](\d+)\s*\*
 _ROW_TIER = re.compile(r"^\|\s*([^|*]+?)\s*\|\s*\*\*([^|*]+?)\*\*\s*\|")
 #: 15 §二 彩蛋条件表的一行：`| 2 | egg_stone_corner | hold=… & where=… | 依据…q_side_13… |`
 _ROW_EGG = re.compile(r"^\|\s*\d+\s*\|\s*(egg_[a-z_]+)\s*\|\s*([^|]+?)\s*\|\s*([^|]*?)\s*\|\s*$")
+#: 24 §一 主线块的抬头 / 字段行（B4-2：主线条件要从「步骤」行现取）
+_BLK24 = re.compile(r"^###\s*主\s*(\d+)\s*·\s*(.+?)\s*$")
+_FLD24 = re.compile(r"^(步骤|交付|教|★\s*认知推进|钩子)\s+(.*)$")
 
 
 def _section(path, start, stop_prefix):
@@ -193,6 +199,201 @@ def parse_egg_gates():
         raise SystemExit("15 §二 里一条「<任务>「<名字>」的交待就是彩蛋 <n>」都没解析出来 —— "
                          "文档换说法了？先裁决再落数据")
     return out
+
+
+# ── 一-c、主线那 12 条的**形状语法**（B4-2 · 解 P-25 §①「接了就交」）─────────
+#   真源 = `24_任务线_v1.md §一` 每一块的「步骤」行（①…②…③… · 可能跨行写）。
+#   口径：**每一步里能落到现成条件形状上的那个目标**都落一条条件 —— 形状只用域里现成的
+#         那几种（visit / kill / item / talk），**不加新形状**（新形状要单独立项 + 鱼鱼点头）。
+#   落不了的那几步（「观察」「试着读」「读他留下的字条」这类档上**没有账**的动作）不硬凑：
+#   缺口逐条登记在工作树 `_notes.md`，由主线搬进真源。
+#   ★ 规则里的 `token` 必须是**那一条自己的「步骤」行里出现过**的词（不看隔壁条 —— 串台当场抛）；
+#     token → 域里的 id 一律现查（npcs / maps / monsters / items），代码里一个 id 都不写死。
+_MAIN_RULES = {
+    # 主 1「① 观察镇口那屏 → 看见石头上刻着字  ② 试着读（读不懂）  ③ 问玛莎」
+    #   · 落得了的只有「问玛莎」那一步（观察 / 试读两条：档上没有账）
+    "q_main_01": [("talk", "玛莎", "③ 问玛莎")],
+    # 主 2「① 去白烛堂侧屋找莉安 → ② 问老陶  ③ 回玛莎处接第一个正式委托」
+    "q_main_02": [("visit", "白烛堂", "① 去白烛堂侧屋找莉安"),
+                  ("talk", "莉安", "① 找莉安（她只说「……守着。」）"),
+                  ("talk", "老陶", "② 问老陶（他说不清）"),
+                  ("talk", "玛莎", "③ 回玛莎处接第一个正式委托")],
+    # 主 3「① 玛莎给三张委托（三条带各一张）  ② 各完成一次（打怪/采集/送信）③ 回来交活」
+    #   · 「各完成一次」的**完成物**文档没点名（打谁 / 采什么 / 送给谁都没写）⇒ 落的是
+    #     「三条带各走一趟」：与交付行文同一件事（「骨田、白桦林、浅滩，哪儿都还欠着一趟」）
+    "q_main_03": [("belts", "三条带", "① 三条带各一张 ② 各完成一次")],
+    # 主 4「① 去北带骨田  ② 打游荡的骸骨  ③ 用「挖掘」挖出一个旧铁件  ④ 拿给柯尔」
+    "q_main_04": [("visit", "骨田", "① 去北带骨田"),
+                  ("kill", "游荡的骸骨", "② 打游荡的骸骨（A3 行动序）"),
+                  ("item", "旧铁件", "③ 用「挖掘」挖出一个旧铁件"),
+                  ("talk", "柯尔", "④ 把铁件拿给柯尔")],
+    # 主 5「① 去拾荒营地  ② 打拾荒人（精英）③ 读他留下的字条」
+    #   · 「读字条」那一步落不了：字条是 poi（可读物），域里没有「读过某物」的条件形状
+    "q_main_05": [("visit", "拾荒营地", "① 去拾荒营地"),
+                  ("kill", "拾荒人", "② 打拾荒人（精英 · B1 资源战）")],
+    # 主 6「① 走到旧哨塔下  ② 门推不开 → 观察 → 「门闩在里面」  ③ …→ 进一层」
+    #   · 「门推不开 / 观察门口」两拍没有账；「进一层」落成**进过塔**（图级 visit，不挑节点
+    #     —— 那一步说的是「图」，不是某一站）
+    "q_main_06": [("visit", "旧哨塔下", "① 走到旧哨塔下"),
+                  ("map", "旧哨塔", "③ 观察塔身…→ 进一层")],
+    # 主 7「① 副本一层（A1 打断 · 伐木工）② 二层（D1 射程 · 野狗；A2 霸体 · 守兵）③ 水房那页纸」
+    "q_main_07": [("kill", "伐木工", "① 副本一层（A1 打断 · 伐木工）"),
+                  ("kill", "野狗", "② 二层（D1 射程 · 野狗）"),
+                  ("kill", "守兵", "② 二层（A2 霸体 · 守兵）"),
+                  ("visit", "水房", "③ 水房那页纸 + 墙上的划痕")],
+    # 主 8「① 三层层主（C1 印记 · 守塔的骨架）② 拿「半截号角」③ 回镇问谁能修 ④ 问艾德」
+    "q_main_08": [("kill", "守塔的骨架", "① 三层层主（C1 印记 · 守塔的骨架）"),
+                  ("item", "半截号角", "② 拿「半截号角」"),
+                  ("talk", "艾德", "④ 问艾德（他回避这个话题）")],
+    # 主 9「① 格雷主动找你  ② 他讲塔原来是谁守的  ③ 他指名塔顶」
+    #   · 三拍都是「跟格雷说上话」（「他主动找你」这个**别人发起**的动作档上没有账）
+    "q_main_09": [("talk", "格雷", "② 他讲塔原来是谁守的（但不说最后那一仗）")],
+    # 主 10「① 去北墙根找哈根  ② 他第一次说完整一句  ③ 「你来之前，有别人也问过。」」
+    "q_main_10": [("visit", "北墙根", "① 去北墙根找哈根"),
+                  ("talk", "哈根", "② 他第一次说完整一句")],
+    # 主 11「① 把白桦树上的刻名与号角室的碑上名单对比  ② 发现三个重名  ③ 拿给莉安看」
+    #   · 「对比 / 读出三个重名」那两拍是**读**（没有形状）⇒ 落「两处都到过 + 拿给莉安看」
+    "q_main_11": [("visit", "白桦", "① 把白桦树上的刻名…对比"),
+                  ("visit", "号角室", "① 与号角室的碑上名单对比"),
+                  ("talk", "莉安", "③ 拿给莉安看")],
+    # 主 12「① 上塔顶  ② 打旧誓哨兵（四阶段）③ 打完「观察」北边  ④ 回镇（哈根在镇口等着）」
+    "q_main_12": [("visit", "塔顶", "① 上塔顶"),
+                  ("kill", "旧誓哨兵", "② 打旧誓哨兵（四阶段）"),
+                  ("talk", "哈根", "④ 回镇（哈根在镇口等着）")],
+}
+
+
+def parse_main24():
+    """24 §一 → {编号: {"name","步骤","交付","钩子"}}（**步骤行跨行时把续行接上** —— B4-2）。
+
+    为什么要有这一手：§一 的「步骤」是**多行**写的（`①…②…` 一行、`③…` 另起一行缩进写），
+    只读第一行会把「③ 水房那页纸」「④ 问艾德」「③ 拿给莉安看」这类末步整条丢掉。
+    续行的判法：上一行是个字段行、这一行不是空行 / 不是代码围栏 / 不是新字段 ⇒ 接上去。
+    """
+    lines = _read(os.path.join(SLICE, "24_任务线_v1.md")).split("\n")
+    out, cur, last = {}, None, None
+    for ln in lines:
+        m = _BLK24.match(ln)
+        if m:
+            cur = out[int(m.group(1))] = {"name": m.group(2).split("（")[0].strip(), "raw": []}
+            last = None
+            continue
+        if cur is None:
+            continue
+        if ln.startswith("## ") or ln.startswith("---"):
+            cur, last = None, None
+            continue
+        cur["raw"].append(ln)
+        f = _FLD24.match(ln.strip())
+        if f:
+            last = f.group(1).replace("★ ", "★")
+            cur[last] = f.group(2).strip()
+            continue
+        if last and ln.strip() and not ln.lstrip().startswith("```"):
+            cur[last] = (cur[last] + " " + ln.strip()).strip()
+    if len(out) != 12:
+        raise SystemExit("24 §一 解析出 %d 条主线（应 12）—— 文档改结构了？" % len(out))
+    return out
+
+
+def _npc_of_ex(npcs, token):
+    """中文名 → npc id（域里必须正好一条 · **且挂了对话树** —— 没对话树就没有「搭话」这本账）。"""
+    qid = _npc_of(npcs, token)
+    if not str((npcs.get(qid) or {}).get("dialogue") or ""):
+        raise SystemExit("「%s」（%s）没挂对话树 —— 「搭话」那本账落不下来" % (token, qid))
+    return qid
+
+
+def _spot_of(maps, token, scope="node"):
+    """站名 / 图名 → (map_id, node_id)。
+
+    · `scope="node"`（默认，给 `visit` 用）：**节点名精确** → 节点名**包含** token（唯一）
+      → 图名包含 token（唯一）；找不到节点就落成**图级**（node 空 —— 「这张图哪儿都算」）。
+      （「白桦树上的刻名」这种文档写法要的就是 `白桦林` 那个节点 ⇒ 包含匹配兜住它。）
+    · `scope="map"`（给「进一层」那种**只说到图**的步骤用）：只认**图名**包含 token（唯一）。
+      （不认节点 —— 否则「旧哨塔」会被 `旧哨塔下` 那个节点抢走。）
+    """
+    if scope == "map":
+        hm = [m for m, mv in maps.items()
+              if not str(m).startswith("_") and token in str(mv.get("name") or "")]
+        if len(hm) != 1:
+            raise SystemExit("「%s」在地图域里匹配到 %d 张图" % (token, len(hm)))
+        return hm[0], ""
+    nodes = [(m, n.get("id")) for m, mv in maps.items() if not str(m).startswith("_")
+             for n in (mv.get("nodes") or []) if str(n.get("name")) == token]
+    if len(nodes) == 1:
+        return nodes[0][0], str(nodes[0][1])
+    if len(nodes) > 1:
+        raise SystemExit("「%s」在地图域里匹配到 %d 个节点" % (token, len(nodes)))
+    part = [(m, n.get("id")) for m, mv in maps.items() if not str(m).startswith("_")
+            for n in (mv.get("nodes") or []) if token in str(n.get("name") or "")]
+    if len(part) == 1:
+        return part[0][0], str(part[0][1])
+    if len(part) > 1:
+        raise SystemExit("「%s」在地图域里匹配到 %d 个节点" % (token, len(part)))
+    hm = [m for m, mv in maps.items() if not str(m).startswith("_") and token in str(mv.get("name") or "")]
+    if len(hm) != 1:
+        raise SystemExit("「%s」在地图域里匹配到 %d 张图" % (token, len(hm)))
+    return hm[0], ""
+
+
+def _mon_of(monsters, token):
+    """怪名 → 怪 id（**精确**优先；否则「token 在怪名里」的唯一候选 —— 多个当场抛）。"""
+    ex = [k for k, v in monsters.items() if not str(k).startswith("_") and v.get("name") == token]
+    if len(ex) == 1:
+        return ex[0]
+    hit = [k for k, v in monsters.items() if not str(k).startswith("_") and token in str(v.get("name") or "")]
+    if len(hit) != 1:
+        raise SystemExit("「%s」在 monsters 域里匹配到 %d 只" % (token, len(hit)))
+    return hit[0]
+
+
+def _item_of(items, token):
+    """物名 → 物品 id（文档写「旧铁件」、域里叫「旧铁」这种 ⇒ 取**最长**的那个包含匹配，要唯一）。"""
+    hit = [k for k, v in items.items() if not str(k).startswith("_")
+           and str(v.get("name") or "") and str(v["name"]) in token]
+    if not hit:
+        raise SystemExit("「%s」在 items 域里找不到任何一种东西" % token)
+    best = max(len(str(items[k].get("name"))) for k in hit)
+    top = [k for k in hit if len(str(items[k].get("name"))) == best]
+    if len(top) != 1:
+        raise SystemExit("「%s」在 items 域里匹配到多个：%s" % (token, top))
+    return top[0]
+
+
+def _belts(maps):
+    """「三条带」= 地图名里带「带」字的那三张（现取 · 不是三张就当场抛）。"""
+    out = sorted(k for k, v in maps.items() if not str(k).startswith("_") and "带" in str(v.get("name") or ""))
+    if len(out) != 3:
+        raise SystemExit("「三条带」在地图域里对不上（%s）" % out)
+    return out
+
+
+def main_require(qid, rules, steps, npcs, maps, monsters, items):
+    """按规则从「步骤」行现取 → `require`（token 不在这一条的步骤里 / 认不出 ⇒ 当场抛）。"""
+    flat = steps.replace(" ", "")
+    reqs = []
+    for shape, token, why in rules:
+        if token not in flat:
+            raise SystemExit("%s：规则里的「%s」（%s）不在本条「步骤」行里 —— 文档换写法了？先裁决"
+                             % (qid, token, why))
+        if shape == "talk":
+            reqs.append({"kind": "talk", "npc": _npc_of_ex(npcs, token), "n": 1})
+        elif shape in ("visit", "map"):
+            mp, nd = _spot_of(maps, token, "map" if shape == "map" else "node")
+            reqs.append({"kind": "visit", "map": mp} if not nd
+                        else {"kind": "visit", "map": mp, "node": nd})
+        elif shape == "belts":
+            reqs += [{"kind": "visit", "map": mp} for mp in _belts(maps)]
+        elif shape == "kill":
+            reqs.append({"kind": "kill", "monster": _mon_of(monsters, token), "n": 1})
+        elif shape == "item":
+            reqs.append({"kind": "item", "item": _item_of(items, token), "n": 1})
+        else:
+            raise SystemExit("%s 的规则 shape「%s」没有对应的条件造法" % (qid, shape))
+    if not reqs:
+        raise SystemExit("%s 一条条件都造不出来" % qid)
+    return reqs
 
 
 # ── 一-b、支线那 6 条的**形状语法**（B3-13）──────────────────────────
@@ -415,11 +616,15 @@ def apply_to_text(text, planned):
 
 
 def main(dry=False):
-    monsters = {k: v for k, v in json.load(io.open(MFILE, encoding="utf-8")).items()
+    def _dom(name):
+        return {k: v for k, v in json.load(io.open(os.path.join(REPO, "content", "data", name),
+                                                   encoding="utf-8")).items()
                 if not str(k).startswith("_")}
-    npcs = {k: v for k, v in json.load(io.open(os.path.join(REPO, "content", "data", "npcs.json"),
-                                               encoding="utf-8")).items()
-            if not str(k).startswith("_")}
+
+    monsters = _dom("monsters.json")
+    npcs = _dom("npcs.json")
+    maps = _dom("maps.json")                                  # ★ B4-2：主线条件要按站名/图名现查
+    items = _dom("items.json")                                # ★ B4-2：物名 → 物品 id（旧铁件 → 旧铁）
     old_text = _read(QFILE)                                   # ★ newline="" ⇒ 原样（全 LF）
     dom = json.loads(old_text)
     num, den = parse_exp_ratio()
@@ -429,6 +634,7 @@ def main(dry=False):
     daily = parse_bounty_daily()                              # ★ B3-13：悬赏「指定的」= 每天轮换
     side_rows = parse_side_rows()                             # ★ B3-13：支线表的「步骤」列
     by_name = {r["name"]: r for r in side_rows.values()}
+    main_doc = parse_main24()                                 # ★ B4-2：§一 每块的「步骤」行
 
     planned = {}
     print("真源：经验 = 同级升级需求的 %d/%d（05 §一 ＝ 24 §二）· 报酬区间 %s" % (num, den, rng))
@@ -491,6 +697,26 @@ def main(dry=False):
         if v.get("require") != req:
             planned.setdefault(qid, {})["require"] = req
             planned[qid]["why"] = "%s ⇒ %s" % (rule["why"], json.dumps(req, ensure_ascii=False))
+
+    # ④ ★ B4-2（P-25 §①）：主线 12 条 —— **按 24 §一 的「步骤」行逐步记账**
+    #   改前 `_obj_ok` 对主线只看 `level >= min_level` ⇒ 1 级接 1 级主线，一句「交 1」就过，
+    #   目标那几步一步都不用做。现在每一步**能落到现成形状上**的都落一条条件（形状见 §一-c）。
+    main_ids = {k for k, v in dom.items() if v.get("chain") == "main"}
+    if set(_MAIN_RULES) != main_ids:
+        raise SystemExit("主线规则表与域里的主线对不上：规则 %s vs 域 %s"
+                         % (sorted(_MAIN_RULES), sorted(main_ids)))
+    for qid, rule in sorted(_MAIN_RULES.items()):
+        v = dom[qid]
+        blk = main_doc.get(int(v.get("order") or 0))
+        if not blk:
+            raise SystemExit("%s（编号 %s）在 24 §一 里找不到那一块" % (qid, v.get("order")))
+        if blk["name"] != str(v.get("name") or ""):
+            raise SystemExit("%s 的名字「%s」≠ 24 §一 的「%s」" % (qid, v.get("name"), blk["name"]))
+        req = main_require(qid, rule, blk.get("步骤") or "", npcs, maps, monsters, items)
+        if v.get("require") != req:
+            planned.setdefault(qid, {})["require"] = req
+            planned[qid]["why"] = "24 §一 主%s「%s」的步骤 ⇒ %s" % (
+                v.get("order"), blk["name"], json.dumps(req, ensure_ascii=False))
 
     if not planned:
         print("★ 无需改动（域里已经是真源算出来的那一族）—— 幂等 ✓")

@@ -23,6 +23,8 @@ B3-6c 加的那一组（主线三段行文归位 texts · 解 P-17 甲案）：
       「交付」栏的锚 · 不许提别的条才有的人 / 怪（串台哨兵）
   ㉑ ★ 真跑「接 <编号>」/「交 <编号>」各 12 遍：槽位里的字必须**逐字**出现在屏上
       （取不到文案的标记一个都不许有）—— 槽位 → 玩家眼睛的闭环
+      ★ B4-2 加严：另加「等级够 + 目标那几步一步没做」那档 —— 必须拦住，且「还差…」要把
+      缺的**每一条**都点出来（条数 = 条件条数）
   ㉒ 归位总账（**不判红** · 两条批一起算）：quests 域 41 条 · 真源 = texts 123 条槽位 ·
       域里那三个内嵌字段 0 处
 
@@ -59,6 +61,15 @@ B3-13 加的那一组（支线另外 6 条的条件 · 悬赏「指定的」落�
       都在 ⇒ 三档条件都必须带 `daily`；轮换**可复现**（同一日同档两次同结果 · 跨日必换 ·
       探针自己按「该档按 id 排序取第 (游戏日-1)%n+1 只」算一遍与实现比）；**宽口径已被拦住**
       （打掉同档的**另一只**不顶用 —— 这是判据加强的那一半）；认不出的档 ⇒ 没满足（fail-closed）。
+
+B4-2 加的那一组（P-25 §① 主线收口 · P-37 曲线唯一口）：
+  ⑧-b ★ P-37：本探针原先**手打了一份 `lv*lv*40`**（K59「曲线别在第三处再手打一个」的第 4 处）——
+      B3-19 顺手改走 `cmds_ast.exp_need`；这一批把它钉成机器可验：探针用的那个口**就是**包内
+      唯一口（对象同一）· 本文件里手打的曲线式子 **0 处**（守卫的式子拼出来写，免得撞自己）
+  ㉜ ★ 主线 12 条**逐步记账**（条件真源 = `24 §一` 每块的「步骤」行，含**续行**）：每条都写了
+      `require`（一条不落）· 每条条件的**目标**（人 / 站 / 图 / 怪 / 物）在本条自己的「步骤」
+      行里点了名（探针现解析；不是从别条串台凑的）· **缺一步矩阵**（逐条少做那一件 ⇒ 拦住）·
+      万事俱备 ⇒ 交得掉 + 奖励入档 + `flags.quests[<id>]` 的 `step == 条件条数`
 
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_quests.py
 """
@@ -152,6 +163,20 @@ for k, v in QE.items():
         if v["reward_exp"] != e or v["reward_gold"] != g:
             recalc.append(k)
 (ok if not recalc else bad)("★ 主线奖励可复算（奖励 = 等级函数，不手打；坏 %s）" % (recalc or "无"))
+
+# ⑧-b ★ P-37（K59 同族：「曲线别在第三处再手打一个」）—— 本探针原先就是**第 4 处**（手打了一份
+#   `lv*lv*40`），B3-19 顺手改走 `exp_need`；这一批把它**钉成机器可验**的两条：
+#     ① 探针用的那个口**就是**包内唯一口（对象同一 —— 不是本地第二份实现）
+#     ② 本文件里手打的曲线式子 **0 处**（式子拼出来写，免得守卫撞自己）
+import content.cmds_ast as _CA8                                          # noqa: E402
+_MUL8 = chr(42)
+_src8 = io.open(os.path.join(REPO, "scripts", "probe_quests.py"), encoding="utf-8").read()
+_hand8 = [x for x in ("lv" + _MUL8 + " lv", "lvl" + _MUL8 + " lvl",
+                      "level" + _MUL8 + " level", _MUL8 + " 40")
+          if x in _src8]
+(ok if (exp_need is _CA8.exp_need and not _hand8) else bad)(
+    "★ P-37：经验曲线只有包内一个口 —— 探针用的就是 `cmds_ast.exp_need`（同一对象：%s）· "
+    "本文件里手打的曲线式子 0 处（实得 %s）" % (exp_need is _CA8.exp_need, _hand8 or "无"))
 
 # ⑨ 交付文案不为空（三段式的第三段）
 #   ★ B3-6c / B3-8：取口就是 code 里那个映射（`cmds_quest._slot_of` / `_beat` · 不另写镜像表）——
@@ -362,9 +387,10 @@ for qid in sorted(new_ids, key=lambda x: QE[x]["order"]):
 # ⑮-b（备注 · 不判红）★ P-25 §② 的活口：**没写 require 的支线今天交不掉**
 #      （`_obj_ok` 对没写 require 的支线去看 `flags.side_<名字>` —— 那个键仓库里没有任何地方写）
 #      ★ B3-11：逐条真跑 + 逐条原因在 ㉘（这里只报个数，别在这儿下结论）
+#      ★ B4-2：主线那一半已收口（12 条都写了 `require` ⇒ 判据在 ㉜）；这几条支线仍缺**内容 / 形状**
 dead = sorted(k for k, v in QE.items() if v["kind"] == "支线" and not v.get("require"))
-notes.append("P-25 §②（未收口）：今天仍有 %d 条支线**交不掉** —— %s（逐条真跑与原因见 ㉘）"
-             % (len(dead), dead))
+notes.append("P-25 §②（未收口）：今天仍有 %d 条支线**交不掉** —— %s（逐条真跑与原因见 ㉘；"
+             "主线那一半 B4-2 已收口 —— 12 条都写了 require，见 ㉜）" % (len(dead), dead))
 
 # ⑯ ★ 三条带最深处各有采集点（「去三条带最深处各采一次」这个动作真做得了）
 deep = RP._deepest_nodes(MAPS)
@@ -467,24 +493,35 @@ _FLD = _re.compile(r"^(步骤|交付|教|★\s*认知推进|钩子)\s+(.*)$")
 
 
 def _parse_main24():
-    """24 §一 → {order: {name, 步骤, 交付, 教, ★认知推进, 钩子, raw}}（解析不出就当场抛）。"""
+    """24 §一 → {order: {name, 步骤, 交付, 教, ★认知推进, 钩子, raw}}（解析不出就当场抛）。
+
+    ★ B4-2：**字段会跨行写**（`①…②…` 一行、`③…` 另起一行缩进写 —— 主 2 / 3 / 4 / 7 / 8 /
+      9 / 10 / 11 / 12 都这样）⇒ 上一行是字段行、这一行不是空行 / 不是围栏 / 不是新字段，
+      就当成它的**续行**接上去。只读第一行会把「③ 水房那页纸」「④ 问艾德」「③ 拿给莉安看」
+      这类末步整条丢掉（主线条件正是按这几步落的）。
+    """
     if not os.path.exists(DOC24):
         raise SystemExit("24 号文档不在：%s" % DOC24)
-    out, cur = {}, None
+    out, cur, last = {}, None, None
     for ln in _io.open(DOC24, encoding="utf-8", newline="").read().split("\n"):
         m = _BLK.match(ln)
         if m:
             cur = out[int(m.group(1))] = {"name": m.group(2).split("（")[0].strip(), "raw": []}
+            last = None
             continue
         if cur is None:
             continue
         if ln.startswith("## ") or ln.startswith("---"):
-            cur = None                    # §一 结束 / 下一节 —— 别把支线表吃进最后一块
+            cur, last = None, None        # §一 结束 / 下一节 —— 别把支线表吃进最后一块
             continue
         cur["raw"].append(ln)
         f = _FLD.match(ln.strip())
         if f:
-            cur[f.group(1).replace("★ ", "★")] = f.group(2).strip()
+            last = f.group(1).replace("★ ", "★")
+            cur[last] = f.group(2).strip()
+            continue
+        if last and ln.strip() and not ln.lstrip().startswith("```"):
+            cur[last] = (cur[last] + " " + ln.strip()).strip()
     return out
 
 
@@ -548,30 +585,9 @@ for _ln in recon_lines:
     print("      %s" % _ln)
 
 # ㉑ ★ 真跑「接 <编号>」/「交 <编号>」：槽位里的字必须**原样**出现在屏上（槽位 → 玩家眼睛的闭环）
-drive_bad, drive_lines = [], []
-for _n in range(1, 13):
-    _k, _x = mainq[_n]
-    _lv = int(_x["min_level"])
-    _acc = _drive(CQ.quest_accept, _player(level=_lv), "接 %d" % _n)
-    # 「没做完」的档：等级压到这条线之下（主 1 的门槛就是 1 ⇒ 用 0 —— 别拿 1 当「不够」）
-    _nod = _drive(CQ.quest_deliver, _player(level=max(0, _lv - 1), flags={"quests_active": [_k]}),
-                  "交 %d" % _n)
-    _pay = _drive(CQ.quest_deliver, _player(level=_lv, flags={"quests_active": [_k]}), "交 %d" % _n)
-    _want = {p: _beat_of(_x, p) for p in ("STORY", "PROGRESS", "DELIVER")}
-    if _want["STORY"] not in _acc:
-        drive_bad.append((_n, "接", _acc[:2]))
-    if not any(ln.startswith("还没做完") and _want["PROGRESS"] in ln for ln in _nod):
-        drive_bad.append((_n, "交(没做完)", _nod[:2]))
-    if _want["DELIVER"] not in _pay:
-        drive_bad.append((_n, "交", _pay[:3]))
-    if any(MISSING in ln for ln in _acc + _nod + _pay):
-        drive_bad.append((_n, "取不到文案", ""))
-    drive_lines.append("主%-2d 接「%s…」｜ 没做完「%s…」｜ 交「%s…」"
-                       % (_n, _want["STORY"][:12], _want["PROGRESS"][:10], _want["DELIVER"][:12]))
-(ok if not drive_bad else bad)(
-    "★ 主线 12 条真跑：接 / 交(没做完) / 交 各一遍，槽位里的字逐字在屏上（坏 %s）" % (drive_bad or "无"))
-for _ln in drive_lines:
-    print("      %s" % _ln)
+#   ★ B4-2（P-25 §①）：这一块的**执行**挪到下面（`_sat_player` 定义之后就开跑 —— 见 §㉑ 那一段）。
+#     为什么：主线这一批开始有 `require` 了，「交得掉」那一拍得先把条件那条账做上，
+#     而造档口 `_sat_player` 在本文件后半段才定义（它要读 recipes / npcs 那几个域）。
 
 # ㉒ 归位总账（**不判红** —— 数字登记 · 判据在 ㉓–㉖）
 _lane = {}
@@ -968,11 +984,17 @@ def _kills_rec(r, n, day=1):
     return ({mid: {"day": day, "kills": n}} if mid else {})
 
 
-def _sat_player(x, qid, day=1):
-    """造一个**满足这条 require** 的档（每一型各按自己的账造 —— 不猜）。"""
+def _sat_player(x, qid, day=1, skip=None):
+    """造一个**满足这条 require** 的档（每一型各按自己的账造 —— 不猜）。
+
+    ★ B4-2：`skip=<第几条>` ⇒ **故意少做那一条**（其余照做）—— 主线的「缺一步交不掉」矩阵
+      就靠它逐条复现（不许靠「整体不满足」糊过去）。
+    """
     p = _player(level=max(1, int(x["min_level"])))
     foot, bag, mon, enh, talked, cooked = {}, {}, {}, {}, {}, {}
-    for r in CQ._require_of(x):
+    for _i, r in enumerate(CQ._require_of(x)):
+        if skip is not None and _i == skip:
+            continue
         k = r.get("kind")
         if k == "visit":
             foot["%s:%s" % (r.get("map"), r.get("node"))] = 1
@@ -1021,6 +1043,158 @@ def _satiated(qid):
     return p
 
 
+# ══════════════════════════════════════════════════════════════
+# ㉑ ★ 真跑「接 <编号>」/「交 <编号>」：槽位里的字必须**原样**出现在屏上（槽位 → 玩家眼睛的闭环）
+#   ★ B4-2：这一块的**执行**挪到这儿（原在 ⑲ 那一段后面）—— 「交得掉」那一拍必须先造出
+#     满足 `require` 的档，而造档口 `_sat_player` 在上面才定义（它要读 recipes / npcs 那几个域）。
+#   ★ 顺手加严（P-25 §①）：**等级够了、目标那几步一步没做**也必须拦住，且「还差…」得把
+#     缺的**每一条**都点出来（条数 = 未满足的条件条数）—— 「1 级接 1 级主线，一句『交 1』就过」
+#     这条路当场钉死。
+drive_bad, drive_lines = [], []
+for _n in range(1, 13):
+    _k, _x = mainq[_n]
+    _lv = int(_x["min_level"])
+    _want = {p: _beat_of(_x, p) for p in ("STORY", "PROGRESS", "DELIVER")}
+    _reqs = CQ._require_of(_x)
+    _acc = _drive(CQ.quest_accept, _player(level=_lv), "接 %d" % _n)
+    # ① 等级不够那档（老口径）：压到门槛之下（主 1 的门槛就是 1 ⇒ 用 0 —— 别拿 1 当「不够」）
+    _nod = _drive(CQ.quest_deliver, _player(level=max(0, _lv - 1), flags={"quests_active": [_k]}),
+                  "交 %d" % _n)
+    # ② ★「接了就交」那档：等级够了、目标那几步一步没做
+    _idle = _player(level=_lv, flags={"quests_active": [_k]})
+    _idle_out = _drive(CQ.quest_deliver, _idle, "交 %d" % _n)
+    # ③ 万事俱备那档：条件逐条做上（账走 `_sat_player`）
+    _full = _sat_player(_x, _k)
+    _pay = _drive(CQ.quest_deliver, _full, "交 %d" % _n)
+    if _want["STORY"] not in _acc:
+        drive_bad.append((_n, "接", _acc[:2]))
+    if not any(ln.startswith("还没做完") and _want["PROGRESS"] in ln for ln in _nod):
+        drive_bad.append((_n, "交(没做完)", _nod[:2]))
+    if not any(ln.startswith("还没做完") for ln in _idle_out) \
+            or _k in ((_idle.get("flags") or {}).get("quests_done") or []):
+        drive_bad.append((_n, "★ 接了就交（等级够 + 一步没做，竟然交掉了）", _idle_out[:3]))
+    _lack21 = [ln for ln in _idle_out if "还差" in ln]
+    if len(_lack21) != len(_reqs):
+        drive_bad.append((_n, "「还差…」说了 %d 条（条件 %d 条）" % (len(_lack21), len(_reqs)),
+                          _idle_out[:4]))
+    if _want["DELIVER"] not in _pay:
+        drive_bad.append((_n, "交", _pay[:3]))
+    if any(MISSING in ln for ln in _acc + _nod + _idle_out + _pay):
+        drive_bad.append((_n, "取不到文案", ""))
+    drive_lines.append("主%-2d 接「%s…」｜ 没做完「%s…」｜ 接了就交「拦住 · 还差 %d 条」｜ 交「%s…」"
+                       % (_n, _want["STORY"][:12], _want["PROGRESS"][:10], len(_lack21),
+                          _want["DELIVER"][:12]))
+(ok if not drive_bad else bad)(
+    "★ 主线 12 条真跑四拍：接 / 交(没做完) / 交(等级够但一步没做 · 拦住) / 交(万事俱备) —— "
+    "槽位里的字逐字在屏上（坏 %s）" % (drive_bad or "无"))
+for _ln in drive_lines:
+    print("      %s" % _ln)
+
+# ══════════════════════════════════════════════════════════════
+# ㉜ ★ B4-2（P-25 §①）：主线**逐步记账** —— 条件从 24 §一 的「步骤」行来 · 缺一步交不掉
+#   改前 `_obj_ok` 对主线只看 `level >= min_level`（1 级接 1 级主线，一句「交 1」就过，
+#   「观察 → 看见石头上的字 → 试着读 → 问玛莎」一步都不用做）。四条判据：
+#     ① 12 条主线**每一条都写了 `require`**（一条不落）
+#     ② 每条条件的**目标**（人 / 站 / 图 / 怪 / 物）在**本条自己的**「步骤」行里点了名
+#        （探针现解析 24 §一，含续行；与 ⑳ 的锚判据同款：最长公共片段 ≥ 2 字）
+#        —— 条件是从这一条的文档推出来的，不是从别条串台凑的
+#     ③ 「缺一步」矩阵：对每条条件各造一个**只差这一条**的档 ⇒ 必须拦住
+#        （逐条证明「每一步都要做」；不许拿「整体没做」糊过去）
+#     ④ 「万事俱备」那档：交得掉 + 奖励入档 + `flags.quests[<id>]` 写下 `done` 与
+#        `step == 条件条数`（那就是「逐步记账」那本账）
+_main_bad, _main_lines = [], []
+
+
+def _tg_names(r):
+    """条件指向的东西在**域里**的名字（给文档锚用；认不出的回空串，那种要人工看一眼）。"""
+    k = r.get("kind")
+    if k == "visit":
+        mp, nd = str(r.get("map") or ""), str(r.get("node") or "")
+        if nd:
+            for n in ((MAPS.get(mp) or {}).get("nodes") or []):
+                if str(n.get("id")) == nd:
+                    return [str(n.get("name") or nd)]
+            return [nd]
+        return [str((MAPS.get(mp) or {}).get("name") or mp)]
+    if k == "kill":
+        return [str((MON.get(str(r.get("monster") or "")) or {}).get("name") or r.get("monster"))]
+    if k == "item":
+        return [str((ITEMS.get(str(r.get("item") or "")) or {}).get("name") or r.get("item"))]
+    if k == "talk":
+        return [str((NPCS.get(str(r.get("npc") or "")) or {}).get("name") or r.get("npc"))]
+    return []
+
+
+def _belts_ctx():
+    """「三条带」= 地图名里带「带」字的那几张（与生成器各写各的 —— 两边都从 maps 域现取）。"""
+    return sorted(k for k, v in MAPS.items()
+                  if not str(k).startswith("_") and "带" in str(v.get("name") or ""))
+
+
+for _n in sorted(mainq):
+    _k, _x = mainq[_n]
+    _reqs = CQ._require_of(_x)
+    _steps = _re.sub(r"\s+", "", str((doc24.get(_n) or {}).get("步骤") or ""))
+    if not _steps:
+        _main_bad.append("主%d：24 §一 那块解析不出「步骤」（续行接上之后还是空）" % _n)
+    if not _reqs:
+        _main_bad.append("主%d「%s」没写 require —— 还是「接了就交」" % (_n, _x["name"]))
+        continue
+    # ② 文档锚（逐条）
+    _beltvis = [str(r.get("map")) for r in _reqs
+                if r.get("kind") == "visit" and not r.get("node")]
+    if len(_beltvis) >= 2:
+        _belts = _belts_ctx()
+        if "三条带" not in _steps or _beltvis != _belts:
+            _main_bad.append("主%d：图级条件 %s 与文档那句「三条带」对不上（域里 %s）"
+                             % (_n, _beltvis, _belts))
+    else:
+        for _r in _reqs:
+            for _nm in _tg_names(_r):
+                if len(_common(_nm, _steps)) < 2:
+                    _main_bad.append("主%d 的条件 %s 指向「%s」—— 本条「步骤」行里找不到它的名字"
+                                     % (_n, json.dumps(_r, ensure_ascii=False), _nm))
+    # ③ 「缺一步」矩阵：逐条少做那一件 ⇒ 必须拦住
+    for _i, _r in enumerate(_reqs):
+        _near = _sat_player(_x, _k, skip=_i)
+        _out = _drive(CQ.quest_deliver, _near, "交 %d" % _n)
+        if any(ln.startswith("交了") for ln in _out) \
+                or _k in ((_near.get("flags") or {}).get("quests_done") or []):
+            _main_bad.append("主%d：缺第 %d 条（%s）竟然也交得掉"
+                             % (_n, _i + 1, json.dumps(_r, ensure_ascii=False)))
+        elif not any(ln.startswith("还没做完") for ln in _out):
+            _main_bad.append("主%d：缺第 %d 条时没说「还没做完」：%s" % (_n, _i + 1, _out[:2]))
+    # ④ 万事俱备 ⇒ 交得掉 + 奖励入档 + 逐步记账那本账
+    _full = _sat_player(_x, _k)
+    _exp0, _gold0 = int(_full.get("exp") or 0), int(_full.get("gold") or 0)
+    _pay = _drive(CQ.quest_deliver, _full, "交 %d" % _n)
+    _rec = (((_full.get("flags") or {}).get("quests") or {}).get(_k) or {})
+    if not any(ln.startswith("交了") for ln in _pay) \
+            or _k not in ((_full.get("flags") or {}).get("quests_done") or []):
+        _main_bad.append("主%d「%s」万事俱备却交不掉：%s" % (_n, _x["name"], _pay[:3]))
+    if _rec.get("done") is not True:
+        _main_bad.append("主%d：交掉了但 flags.quests[%s].done 不是 true（%s）" % (_n, _k, _rec))
+    if int(_rec.get("step") or -1) != len(_reqs):
+        _main_bad.append("主%d：flags.quests[%s].step = %s ≠ 条件条数 %d"
+                         % (_n, _k, _rec.get("step"), len(_reqs)))
+    _de, _dg = int(_full.get("exp") or 0) - _exp0, int(_full.get("gold") or 0) - _gold0
+    if _de != int(_x["reward_exp"]) or _dg != int(_x["reward_gold"]):
+        _main_bad.append("主%d：奖励没照单入档（经验 %+d 应是 +%d · 铜板 %+d 应是 +%d）"
+                         % (_n, _de, _x["reward_exp"], _dg, _x["reward_gold"]))
+    if any(MISSING in ln for ln in _pay):
+        _main_bad.append("主%d：有取不到文案的行" % _n)
+    _main_lines.append("主%-2d %-7s 条件 %d 条（%s）→ 缺一条：拦住 · 全满足：交了 "
+                       "（step %s/%d · 经验 +%d 铜板 +%d）"
+                       % (_n, _x["name"], len(_reqs),
+                          "/".join(str(r.get("kind")) for r in _reqs),
+                          _rec.get("step"), len(_reqs), _x["reward_exp"], _x["reward_gold"]))
+(ok if len(mainq) == 12 and not _main_bad else bad)(
+    "★ 主线 12 条**逐步记账**：每条都写了 require · 每条条件都有本条「步骤」行的锚 · "
+    "**缺一步交不掉**（逐条矩阵）· 万事俱备交得掉且 flags.quests 写下 step=条件条数（坏 %s）"
+    % (_main_bad or "无"))
+for _ln in _main_lines:
+    print("      %s" % _ln)
+
 _m_bad, _m_lines, _can, _cant = [], [], [], []
 for _k, _x in sorted(side_q.items(), key=lambda kv: kv[1]["order"]):
     _n, _lv = int(_x["order"]), int(_x["min_level"])
@@ -1059,6 +1233,28 @@ if set(_cant) != set(_DEAD_SIDE):
     "一变就红；坏 %s）" % (len(_can), len(_cant), _m_bad or "无"))
 for _ln in _m_lines:
     print("      %s" % _ln)
+
+# ── ★ B4-2（P-25 §② 的根因**钉死**）：`flags.side_<名字>` 这条路今天**只有读端、没有写端**
+#   （所以那 5 条才交不掉：它看的不是「做没做」，是一个没人写的键）。
+#   静态守卫：`"side_"` 这个**字符串字面量**在 `content/*.py` 里只许出现 **1 处**，且那处
+#   必须在 `_obj_ok` 里（读端）—— 谁哪天给它补了个写端（绕过 `require` 的第二种活法）当场红。
+#   （注释 / 文档串里那种带反引号的写法不算 —— 这一条只认**字面量**。）
+import glob as _glob                                                      # noqa: E402
+
+_sw_hits, _sw_bad = [], []
+for _p in sorted(_glob.glob(os.path.join(REPO, "content", "*.py"))):
+    _src = io.open(_p, encoding="utf-8").read().split("\n")
+    for _i, _ln in enumerate(_src):
+        if '"side_"' not in _ln:
+            continue
+        _fn = next((_s.split("(")[0].replace("def ", "").strip()
+                    for _s in reversed(_src[:_i]) if _s.startswith("def ")), "?")
+        _sw_hits.append((os.path.basename(_p), _i + 1, _fn, _ln.strip()[:56]))
+if len(_sw_hits) != 1 or _sw_hits[0][2] != "_obj_ok":
+    _sw_bad.append(_sw_hits)
+(ok if not _sw_bad else bad)(
+    "★ P-25 §② 的根因钉死：`\"side_\"` 字面量在 content/*.py 里只有**读端 1 处**（`_obj_ok`）"
+    " —— 实测 %s（多一处 = 有人给这条死路写了第二个口）" % (_sw_hits or "无"))
 
 # ── ㉙ ★ 支线条件的**另一处真源**：`15_彩蛋域口径_v1 §二` 那句「<任务>「<名字>」的交待就是彩蛋 <n>」
 #   那条彩蛋的条件（`hold` → 手上有 · `where` → 去过）就是那个任务的交付条件（`read` 是彩蛋自己的
