@@ -3393,3 +3393,424 @@ P-6 复核结论：四个数（费 / 率 / 增益档 / 卖价）**逐条一致**
   真源给出 N 之后把生成器改成解析真源那一行即可 —— 判据 `probe_weather ④` 会当场核「域 == 口径表」。
 * ⏸ **本批没碰**：配方域（P-6 复核结论 = 已一致）· 称号/任务/塔那两条老账（只读复核，见 §三）·
   `content/data/weather.json` 的四个权重。
+
+---
+
+# §B4-4 · 技能自己的两段耗时接进引擎耗时模型（`b4-4-time-engine` · 基 `597c174` · ★ 只读设计）
+
+> **一句话**：引擎的耗时模型只认**动作类别**（`"skill"` → 80/50），技能 dict 里自己声明的
+> `cast.base` / `recover.base` **今天一个都没人读**。这一批的纪律是**引擎一行不改**，
+> 只交三样：① 字段级设计案（§一）② 两态验证方案 + 30 条逐条对账表（§二）③ 一个**如实红着**
+> 的探针（`scripts/probe_timing.py` · §四）。**没有改任何实现**（见 §五 文件清单）。
+
+## §一 字段级设计案
+
+### 1.0 先说结论：接点**已经在注入面里了**（E5 `segment_plan_fn`）
+
+| 事实 | 取证（`framework-engine`） |
+|---|---|
+| hook 名**已声明** | `saintess_engine/config.py:80` —— `"segment_plan_fn": None`，注释即契约：`fn(actor, action, entry) -> dict \| None`；「**不配 = 不存在 ⇒ 引擎连问都不问**，落回既有『行动类别基准』路径」 |
+| 契约**已写文档** | `docs/engine-wiki/reference/skill-dimensions.md §2`（两段耗时三形态表 + 引擎侧落点 + 「配了但返回 None ⇒ 落回类别」） |
+| 调用点**全仓为零** | `grep -rn segment_plan_fn framework-engine` → 只有上面两处（声明 + 文档），**没有第三个** |
+| 形状守卫也**备好了但零调用** | `saintess_engine/_validators.py:49 segment_of(value, label)` —— 四形态守卫（`None` / str / 数值 / `{"base": n}`），已挂 `__all__`，**无调用方** |
+
+⇒ 这一刀**不新增注入面、不新增 hook 名**：只把已声明的那一个接上。这是「判据只加强」最强的形态 ——
+引擎的**公开契约一个字不改**，只是让它名副其实。
+
+### 1.1 引擎侧要改的文件与函数签名（`framework-engine` · 本批只写不落）
+
+**文件 A：`extends/ext_combat/battle/schedule.py`（唯一一个文件）**
+
+**(a) 新增 `_plan_fn()` —— 取那个 hook，★ 不 fail-closed：**
+```python
+def _plan_fn():
+    """内容侧两段耗时的**声明供体**（E5）。未装配 = 不存在 ⇒ 返回 None（**不抛**）。
+
+    ★ 与 `time_model_fn` / `action_base_fn` / `recover_model_fn` / `recover_base_fn`
+      那四条 fail-closed 的面**不一样**：那四条是「引擎算不出数」⇒ 必须炸；
+      这一条补的是**特例**（技能自己声明的那两段），兜底路径（类别基准）本来就在 ⇒
+      未装配不是配置错，是**设计如此**（hook 契约原文如此）。
+    """
+    return _cfg.get_hook("segment_plan_fn")
+```
+
+**(b) 新增 `segment_time(battle, actor, decl, kind="cast") -> float` —— ★「一段耗时」的唯一实现：**
+```python
+def segment_time(battle, actor, decl, kind="cast") -> float:
+    """一段耗时（游戏秒）。decl 四形态（`_validators.segment_of` 那份形状）：
+
+    | decl          | 语义           | 吃速度 | 基准从哪来（**模型由 kind 选**）                    |
+    |---------------|----------------|--------|-----------------------------------------------------|
+    | `str`         | **行动类别名** | ✅     | cast→`action_base_of(decl)` · recover→`recover_base_of(decl)` |
+    | `{"base": n}` | **基准秒**     | ✅     | 同上，模型 = `time_model_fn` / `recover_model_fn`   |
+    | 数值           | **绝对秒**     | ❌     | 直接返回（绕过速度模型）                            |
+    | `None`        | 未声明         | ✅     | `DEFAULT_ACTION`（**今天口径，逐字不变**）          |
+
+    ★ `kind` 必须分两段、不许共用一个模型：引擎今天就是**两条独立的面**
+      （`time_model_fn` / `recover_model_fn`），第二段允许是**另一个形状**
+      （「第二段不吃速度」那类内容侧选择）—— 共用等于把内容侧的选择权收回引擎。
+    """
+```
+> 为什么 `{"base": n}` 这个分支是**非加不可**的：今天 `_segment_seconds` 只认 str / 数值，
+> `{"base": 200}` 会掉进 `float({...})` → `TypeError`；而技能 dict 里那两段**一律是** `{"base": n}`。
+
+**(c) `_segment_seconds(battle, actor, decl)` —— 签名与全部调点一字不改，函数体降成一行转发：**
+```python
+def _segment_seconds(battle, actor, decl) -> float:
+    """一段耗时（游戏秒）——`decl` = str（行动类别，过内容侧形状）/ `{"base": n}`（基准秒）/
+       数值（绝对秒）。★ 实现只有一处（`segment_time`）：**落地与到点从此同源**。"""
+    return segment_time(battle, actor, decl, "cast")
+```
+
+**(d) 新增 `resolve_segments(battle, actor, action, entry=None) -> tuple`：**
+```python
+def resolve_segments(battle, actor, action, entry=None):
+    """一次行动的两段**声明** `(cast_decl, recover_decl)`。
+
+    ① `segment_plan_fn` 未装配 ⇒ `(action, None)` —— **连问都不问**（今天口径）
+    ② 装配了但回 `None` / 非 dict ⇒ 同上（普攻 / 怪技 / 本次不声明）
+    ③ 回执 `{"cast": decl, "recover": decl}`：**逐段独立** —— 缺的那段落回 `action` 类别
+    ④ 形状过 `_validators.segment_of(..., "segment_plan.cast" / "segment_plan.recover")`
+       ⇒ 坏声明**当场抛**（点名 label），不静默兜底
+
+    ★ **纯函数约束**（要同时写进内容侧那份供体的注释）：只许依赖 `(actor, action, entry)`，
+      不得读 `battle._now`、不得有副作用 —— 它被 A 段（排落地时刻）与 ct 段各问一次，
+      两次必须同值，否则「登记的动作 ≠ 落地的动作」。
+    """
+```
+
+**(e) `pending_begin(battle, ctx, cast=None, recover=None, pre_logs=None)` —— 签名一字不改**，
+做的事也不改（它拿到的仍是**声明**，只是声明现在可以是 `{"base": n}`）。解析**不放这里**，
+放调用方 `Battle.act`（见 1.2）—— 这样 `pending_begin` 的契约 / 槽内字段 / JSON 安全性零变化。
+
+> ★ 顺带一条**口头契约与实现不符**（本批探针 ⑥ 已量到、写进 §三·D2）：
+> `pending_begin` 的 docstring 写「`cast=None` → 第一段按 `ctx.action` 类别」，
+> 而实现落的是 `DEFAULT_ACTION`（`"attack"`）。今天 `Battle.act` 永远显式传 `cast=action`
+> ⇒ 这条缝**没人踩到**；接线后若走 `None` 分支（覆盖路径回执 `cast=None` 那条），
+> 两条口径就分叉。**接线前先把 docstring 与实现对成一个**（本批没动，引擎零改动）。
+
+**(f) `_after_act(...)` —— 加一个关键字参数 `plan`：**
+```python
+def _after_act(battle, actor, action, recover_base=None, plan=None):
+    """行动后推进 actor.ct（第一段 + 第二段）。
+
+    `plan` = `(cast_decl, recover_decl)`（E5 回执 · 三形态声明）；`None` ⇒ 按 `action`
+             类别查**各自的表**（今天口径，**逐字不变**）。
+    `recover_base` = 老契约「**基准值**」（覆盖路径在用：`human_act` 的
+             `_after_act(self, caster, _cast, _rec)`）—— 语义一字不改，内部规成 `{"base": x}`
+             （`segment_time` 走 `recover_model_fn(spd, x)` ≡ 今天的 `recover_time(spd, x)`）。
+    """
+    if plan is not None:
+        cast_decl, rec_decl = plan
+    else:
+        cast_decl = action
+        rec_decl = {"base": float(recover_base)} if recover_base is not None else action
+    actor["ct"] = (float(battle._now)
+                   + segment_time(battle, actor, cast_decl, "cast")
+                   + segment_time(battle, actor, rec_decl, "recover"))
+```
+**逐字等价自证**（三条老调点，`plan=None`）：
+
+| 老调点 | 今天 | 改后 | 判 |
+|---|---|---|---|
+| `_after_act(b, a, "attack")` | `action_time(spd, action_base_of("attack")) + recover_time(spd, recover_base_of("attack"))` | `segment_time("attack","cast") + segment_time("attack","recover")`（str → 各自表） | 同值 |
+| `_after_act(b, a, "skill", 0.25)` | `_rb = 0.25` ⇒ `recover_time(spd, 0.25)` | `{"base": 0.25}` ⇒ `recover_model_fn(spd, 0.25)` | 同值 |
+| `_after_act(b, a, "attack", None)` | 第一行 | 第一行 | 同值 |
+
+**文件 B：`extends/ext_combat/battle/battle.py`（三处调用点）**
+
+**(b1) `Battle.act`（今天 519–525 行）—— A 段**解析一次**，显式喂 `pending_begin`，并存进 ctx 供 ct 段复用：**
+```python
+# 非内置动作（override 回执）优先；否则问技能自己的声明（E5）
+if _consumed:
+    _cast, _rec = getattr(ctx, "_override_cast", None), getattr(ctx, "_override_recover", None)
+else:
+    _cast, _rec = schedule.resolve_segments(self, actor, action, ctx.info)
+ctx._plan = (_cast, _rec)                    # ct 段复用（B 段用不上：落地已排好）
+schedule.pending_begin(self, ctx, cast=_cast, recover=_rec, pre_logs=pre_logs)
+```
+★ 解析点必须在**控制消费那一循环之后**（`action = ctx.action` 那一行之后，今天就在那儿）——
+  被沉默改成普攻那条，`action` 已是 `"attack"` ⇒ 声明自然落回类别。
+
+**(b2) `Battle.human_act`（今天 297–314 行）—— ct 段透传 plan（**只改非 override 那支**）：**
+```python
+else:
+    _after_act(self, caster, ctx.action, plan=getattr(ctx, "_plan", None))
+```
+（override 那支 `_after_act(self, caster, _cast, _rec)` **一个字不改** ⇒ 优先级①天然保持）
+
+**(b3) `Battle.actor_auto`（今天 428–429 行）—— 同上，但**加一道守卫**：**
+```python
+_pl = getattr(ctx, "_plan", None) if str(ctx.action) == str(action) else None
+_after_act(self, caster, action, plan=_pl)
+```
+★ 守卫的理由（**既有的缝，本刀不碰**）：`actor_auto` 传给 `_after_act` 的是**控制改写前**的局部
+  `action`，而 `Battle.act` 里 `ctx.action` 已被改写 ⇒ 被沉默的自动 actor 今天按「技能 80/50」推 ct。
+  不守卫的话，plan（按改写后的 `attack` 解析）会把这个**既有偏差**顺手修掉 —— 那是**行为改动**，
+  得单独立条（§三·D1）。本刀要求它逐字相同。
+
+### 1.2 内容侧接法
+
+**文件 C：`content/apply.py`** —— 新增一个供体 + `install_engine()` 的 `config.mount(...)` 里挂一行：
+```python
+#: 行动类别名「技能」—— 与 `content/rules/action_base.json` 的键同源，不新造词
+_SEG_SKILL = "skill"
+
+
+def _segment_plan(actor, action, entry):
+    """`segment_plan_fn` 供体（E5）：**技能 dict 自己声明的那两段**。
+
+    只在「行动类别 = 技能」且 `entry` 是技能 dict 时声明；其余一律 `None`
+    （引擎落回 `action_base.json` 的类别基准）——「不传技能 = 与今天逐字相同」的落点就是它。
+
+    ★ **原样透传**（只剥 `None` 段），不在内容侧判形状：形状守卫是引擎那**一个**口
+      （`_validators.segment_of`），内容侧再判一遍就是**双源**
+      （`schemas/skills.schema.json` 的 `anyOf` 已经声明了三形态）。
+    """
+    if action != _SEG_SKILL or not isinstance(entry, dict):
+        return None
+    out = {}
+    for _k in ("cast", "recover"):
+        _v = entry.get(_k)
+        if _v is not None:
+            out[_k] = _v
+    return out or None
+
+
+# install_engine() 里：
+    config.mount(
+        ...
+        segment_plan_fn=_segment_plan,      # ★ B4-4：技能自己那两段（不挂 = 与今天逐字相同）
+        ...
+    )
+```
+
+**文件 D：`content/rules/action_base.json` —— 一个字不改。** 它今天那句 `note` 已经写明了正确口径：
+> 「这两张表只给「用类别名写的动作」兜底，**技能自己写了 cast/recover 的就用技能自己的**」
+
+这一刀就是把这句话**落成代码**。7 个类别值（`attack` 60/40 · `skill` 80/50 · `defend` 40/30 ·
+`item` 50/40 · `move` 30/20 · `interrupt` 30/30 · `swap` 50/40 · `default` 80/50）**全部继续有效**：
+它们是普攻 / 防御 / 用物 / 打断 / 换手 / 走位这六类**非技能**动作的兜底，也正是退化形状的数值来源。
+
+**文件 E：`content/data/skills.json` —— 一条不改**（30 条的两段已经是真源抄下来的：引燃 200/40 等）。
+
+### 1.3 优先级（三条，钉死）
+
+```text
+① 覆盖路径  Battle.action_override 回执的 _override_cast / _override_recover（调用方内联给的两段，最具体）
+② 技能声明  segment_plan_fn 回执（★ 本刀新接的那一条）
+③ 类别基准  content/rules/action_base.json（兜底；也是今天**唯一**那一条）
+```
+**逐段独立生效**：`plan` 只声明 `cast` 没声明 `recover` ⇒ `cast` 走 ②、`recover` 走 ③（不整条退化）。
+
+### 1.4 退化形状「不传技能 = 与今天逐字相同」的四条证明
+
+```text
+① hook 未装配      ⇒ _plan_fn() 回 None ⇒ resolve_segments 回 (action, None) ⇒
+                     pending_begin(cast=action) 与今天**逐字同参**（探针 ③ 现算钉着）
+② 装配了但回 None  ⇒ 同上 —— 普攻（ctx.info=None）与怪技（monster_skill_fn 回的 dict
+                     没有 cast/recover 键）走的就是这一条
+③ _after_act plan=None ⇒ 三条老算式逐字不变（§1.1(f) 那张等价表）
+④ recover_base 老契约不动 ⇒ 覆盖路径（打断/用物/换手/退不开那四手）行为零变化
+★ 第五条：落地时刻与 ct 段**共用同一份 plan**（A 段解析一次、存 ctx）⇒
+  「登记的动作 ≠ 落地的动作」这类缝不可能从这条路上长出来。
+```
+
+## §二 两态验证方案 + 30 条逐条对账表
+
+（探针在 §四；本节数字全部来自 `scripts/probe_timing.py` 实跑 · Python 3.12）
+
+### 2.1 两态定义
+
+| 态 | 装配 | 判据（探针组号） |
+|---|---|---|
+| **态 A（不接 · 今天）** | `segment_plan_fn` 不挂 | **③ 全绿**（`entry=None` ≡ 类别两段）· **②的现算列**就是今天的基线（存 `%LOCALAPPDATA%/Temp/b4_4_stateA.txt`） |
+| **态 B（接了）** | `content/apply.py` 挂上（文件 C）+ 引擎侧 §1.1 落地 | **② 转绿**（30/30 现算 == 设计）· **④ 转绿**（供体挂了 + 引擎真问了）· **⑦ 五个「态 A → 态 B」全部等值** · **③ 一格不许动** |
+
+### 2.2 反证（negative control）
+
+摘掉 `content/apply.py` 那行 mount ⇒ ② **当场回红 30/30**（本批实测就是这一态，见 2.4）⇒ ② 不是恒绿的假绿。
+
+### 2.3 逐条对账表（30 条 · 实跑）
+
+量法（两个数的口径都写死，可复算）：
+```text
+设计值 = time_model_fn(spd, cast.base) + recover_model_fn(spd, recover.base)
+现算值 = 真引擎跑：pending_begin(cast=action) 量 cast_done_at − now；
+        _after_act(actor, action) 量 ct − now（调用点与 Battle.act / human_act 逐字一致）
+spd    = 10 级 + content/data/classes.json::suggest_alloc + 裸装（stats.actor_spd 现算）
+         = 刺客 162 · 狂战 128 · 游侠 176 · 骑士 109 · 法师 111 · 修女 114
+         （与真源 03_职业与技能/*_v2.md 的 10 级行逐值对上）
+```
+
+| 技能 id | 名 | 职业 | spd | cast/recv | 第一段·设计 | 第一段·现算 | 两段·设计 | 两段·现算 | 差 |
+|---|---|---|---|---|---|---|---|---|---|
+| `SKILL_SHD_backstep` | 后撤 | assassin | 162 | 30/20 | 23.6 | 62.9 | 39.3 | 102.1 | +62.9 |
+| `SKILL_SHD_blade` | 短刃 | assassin | 162 | 60/30 | 47.1 | 62.9 | 70.7 | 102.1 | +31.4 |
+| `SKILL_SHD_findgap` | 寻隙 | assassin | 162 | 20/20 | 15.7 | 62.9 | 31.4 | 102.1 | +70.7 |
+| `SKILL_SHD_sever` | 断势 | assassin | 162 | 30/30 | 23.6 | 62.9 | 47.1 | 102.1 | +55.0 |
+| `SKILL_SHD_shadowstrike` | 影袭 | assassin | 162 | 70/50 | 55.0 | 62.9 | 94.3 | 102.1 | +7.9 |
+| `SKILL_BSK_cleave` | 横劈 | berserker | 128 | 60/0 | 53.0 | 70.7 | 53.0 | 114.9 | +61.9 |
+| `SKILL_BSK_immolate` | 焚身 | berserker | 128 | 90/80 | 79.5 | 70.7 | 150.3 | 114.9 | −35.4 |
+| `SKILL_BSK_rampage` | 狂斩 | berserker | 128 | 60/60 | 53.0 | 70.7 | 106.1 | 114.9 | +8.8 |
+| `SKILL_BSK_sunder` | 破势 | berserker | 128 | 40/40 | 35.4 | 70.7 | 70.7 | 114.9 | +44.2 |
+| `SKILL_KNT_oathslash` | 守誓斩 | knight | 109 | 50/50 | 47.9 | 76.6 | 95.8 | 124.5 | +28.7 |
+| `SKILL_KNT_oathwall` | 盾墙 | knight | 109 | 40/20 | 38.3 | 76.6 | 57.5 | 124.5 | +67.0 |
+| `SKILL_KNT_slash` | 横剑 | knight | 109 | 60/0 | 57.5 | 76.6 | 57.5 | 124.5 | +67.0 |
+| `SKILL_KNT_standfast` | 不退 | knight | 109 | 80/80 | 76.6 | 76.6 | 153.3 | 124.5 | −28.7 |
+| `SKILL_KNT_taunt` | 挑战咆哮 | knight | 109 | 40/40 | 38.3 | 76.6 | 76.6 | 124.5 | +47.9 |
+| `SKILL_MAG_fallenstar` | 垂星 | mage | 111 | 240/50 | 227.8 | 75.9 | 275.3 | 123.4 | −151.9 |
+| `SKILL_MAG_flameprint` | 焰痕 | mage | 111 | 80/30 | 75.9 | 75.9 | 104.4 | 123.4 | +19.0 |
+| `SKILL_MAG_iceshard` | 冰棱 | mage | 111 | 40/20 | 38.0 | 75.9 | 56.9 | 123.4 | +66.4 |
+| `SKILL_MAG_ignite` | 引燃 | mage | 111 | 200/40 | 189.8 | 75.9 | 227.8 | 123.4 | −104.4 |
+| `SKILL_MAG_stardust` | 星屑 | mage | 111 | 40/20 | 38.0 | 75.9 | 56.9 | 123.4 | +66.4 |
+| `SKILL_PRS_absolve` | 净罪 | priest | 114 | 50/30 | 46.8 | 74.9 | 74.9 | 121.8 | +46.8 |
+| `SKILL_PRS_aegis` | 庇护 | priest | 114 | 40/30 | 37.5 | 74.9 | 65.6 | 121.8 | +56.2 |
+| `SKILL_PRS_lullaby` | 安神曲 | priest | 114 | 60/30 | 56.2 | 74.9 | 84.3 | 121.8 | +37.5 |
+| `SKILL_PRS_matins` | 晨祷 | priest | 114 | 100/60 | 93.7 | 74.9 | 149.9 | 121.8 | −28.1 |
+| `SKILL_PRS_staff` | 圣杖 | priest | 114 | 60/20 | 56.2 | 74.9 | 74.9 | 121.8 | +46.8 |
+| `SKILL_RNG_aimshot` | 点射 | ranger | 176 | 30/20 | 22.6 | 60.3 | 37.7 | 98.0 | +60.3 |
+| `SKILL_RNG_backstep` | 后撤 | ranger | 176 | 30/20 | 22.6 | 60.3 | 37.7 | 98.0 | +60.3 |
+| `SKILL_RNG_quickstep` | 抢拍 | ranger | 176 | 30/30 | 22.6 | 60.3 | 45.2 | 98.0 | +52.8 |
+| `SKILL_RNG_shortbow` | 短弓 | ranger | 176 | 60/10 | 45.2 | 60.3 | 52.8 | 98.0 | +45.2 |
+| `SKILL_RNG_snipe` | 狙击 | ranger | 176 | 80/40 | 60.3 | 60.3 | 90.5 | 98.0 | +7.5 |
+| `SKILL_RNG_volley` | 连射 | ranger | 176 | 120/60 | 90.5 | 60.3 | 135.7 | 98.0 | −37.7 |
+
+### 2.4 实跑结论（本批 · 探针如实红着）
+
+```text
+② 30/30 条「现算 ≠ 设计值」—— 例：引燃 设计 227.8 / 现算 123.4（差 −104.4）
+                                 垂星 设计 275.3 / 现算 123.4（差 −151.9）
+                                 断势 设计  47.1 / 现算 102.1（差  +55.0）
+                                 不退 设计 153.3 / 现算 124.5（差  −28.7）
+④ 供体没挂 + 引擎一次都没问 `segment_plan_fn`（全仓零调用点）
+③ 全绿 · 引擎仓 `git status --porcelain` 空
+⇒ 与波九 B3-27 顺带挖出的实测（227.8 → ~123 · 275.3 → ~123 · 47.1 → ~102 · 153.3 → ~125）**逐值复现**
+```
+
+## §三 影响面清单
+
+### A. 会动的探针 / 门禁（逐条核过）
+
+| 探针 | 会不会动 | 为什么 |
+|---|---|---|
+| `scripts/probe_skills.py` | **不动** | ⑤ 只打印 hook 状态（少一行 `segment_plan_fn` 的信息，不红）；⑥ 那条判据**直接调** `time_model_fn(111, 200)`，不走引擎路 |
+| `scripts/probe_mech.py` | ⑤ 不动 / 端到端**时刻会动** | ⑤ 传的是 `info={}` ⇒ 供体回 `None` ⇒ 逐字不变；端到端那几条 `human_act("skill", …)` 的**落地时刻**会变（盾墙 76.6 → 38.3 刻）—— 「端到端 vs 定向」的相对关系不变，但「正好在这一刻到期」那类状态要重看（那正是它 §三·5 提醒过的坑） |
+| `scripts/probe_cmds.py` ⑭ | **不动** | 打断那一手走**覆盖路径**（`Hand` → `action_override`，优先级①）；「把对方推进前摇」的怪那一手是 `attack`（怪没有 ai/auto_act，也没有 cast/recover） |
+| `scripts/probe_instance.py` ③ | **不动** | 超时替挂机的人花掉的是**防御**（类别 `defend`） |
+| `scripts/probe_combat.py` ⑤ / `balance_*.py` | **不动** | 全走 `auto_run` → `actor_auto`；包内**没有任何 actor 带 `ai`**（`grep '"ai"' content/` 空）⇒ 自动战斗全程普攻（类别）⇒ **配平表不用重跑**（这条很重要） |
+| `scripts/e2e_drive.py` | **不动** | 五个用例走「攻击 / 属性 / 状态」，没有技能那一手 |
+| `scripts/probe_timing.py` | **新** | 本批新增 |
+
+### B. e2e 节奏会怎么变（玩家的 `技能 <名>` 那条路）
+
+* 引燃 `123.4 → 227.8`（**+85%**）· 垂星 `123.4 → 275.3`（**+123%**）· 冰棱/星屑 `123.4 → 56.9`（−54%）
+  · 断势 `102.1 → 47.1`（−54%）· 不退 `124.5 → 153.3`（+23%）· 连射 `98.0 → 135.7`（+38%）
+* 真源那句「一次行动 94.9 刻（法师 lv10 · 详案）」是**类别 attack** 的账 ⇒ 接线后**技能与普攻第一次分开算**：
+  法师一轮 ≈ 3 次普攻（285 刻）里塞一发引燃（227.8）就变成 ≈ 4 次行动一轮 —— 这正是「四档被压成一档」要还的账。
+* 敌我节奏第一次**不对称**（怪技窗口仍 80 刻）⇒ 「读条期被打断 / 被 AoE 全吃」的博弈第一次有地基，
+  但也就意味着玩家的长招**真亏**（真源 04 §六 的设计意图）。
+* 45 秒输入窗（B3-26）与刻无关 ⇒ 窗口本身不动，但**一个窗里能行动几次**会变。
+
+### C. 霸体 / 打断窗口随之后续要重算的地方
+
+1. `content/battle_acts.py::_interrupt` 的 `broke` 判据（目标 `charging` 在窗口内）—— 窗口长度**本来就该是**
+   目标技能自己的 cast；真源 04 §六「引燃 200 刻（法师 spd 111 → 第一段 189.8 刻）比刺客 0–160 刻的
+   打断窗口长」第一次**可测**（今天两边都是 80 刻的同一档）。
+2. `content/mech.py` 里断势那套「破绽 200 刻」的**相对长度**要重审：数值不变，但相对引燃 227.8 刻的整轮变短了。
+3. 霸体（`ctx.unstoppable`）今天**无实战触发点**（怪不会打断玩家）⇒ 这条**不变**；一旦怪能打断，
+   「霸体覆盖整段前摇」的代价在 227.8 刻的长招上会被放大。
+4. 「后撤能不能跑掉」（B3-23 的判据 = 对方是否正押着一手）—— 判据不变，但**玩家自己**押着的窗口变长
+   ⇒ 失败频率与回话里的刻数（`COMBAT_INT_PUSH` 那类）都会变。
+5. `probe_instance` 的「超时替挂机的人花掉一手」—— 防御类别，不动；若将来改成「花掉它够得着的那一手」，
+   这里就要用技能自己的两段。
+
+### D. 另立条（本刀不碰 · 登记）
+
+* **D1** `actor_auto` 的局部 `action`（控制改写前）与 `ctx.action`（改写后）分叉 ⇒ 被沉默的自动 actor
+  今天按「技能 80/50」推 ct。§1.1(b3) 的守卫就是为它留的；要修得单独立条（属**行为改动**）。
+* **D2** `pending_begin(cast=None)` 落 `DEFAULT_ACTION`，与它 docstring 的「按 `ctx.action`」不符
+  （探针 ⑥ 量到：骑士 `attack` 57.5 / `skill` 76.6）。接线前先把 docstring 与实现对成一个。
+* **D3** ★ **普攻不吃本职业 basic 技能的两段**：`攻击` 那条路 `action="attack"`、`ctx.info=None`
+  ⇒ 30 条里那 6 条 `basic: true`（横剑 60/0 · 短弓 60/10 · 星屑 40/20 …）的 cast/recover 落不了地，
+  六职业普攻后摇今天一律 40 刻。要接得让 `actions.do_attack` 把 `resolve_basic_skill` 那份 dict 写进 ctx
+  （引擎侧改动）⇒ **行为改动**（40 → 0/10/20）⇒ 单独立条，**不许混进 B4-4**。
+* **D4** 真源跟账：`03_职业与技能/*_v2.md` 的「一次行动（F6）」那六列是**类别 attack** 的账；
+  接线后要跟真源确认口径（`attack` 类别 / 还是「平均一次行动」），免得拿技能耗时去对那张表。
+* **D5** 引擎 `_HOOKS` 里还有别家「声明了没实现」：本刀只查了 `segment_plan_fn`；
+  `_validators.segment_of` / `layer_of` 同样**零调用**（`layer_of` 补的是 `int(info.get("reach") or 3)`
+  遇 `"near"` 抛裸 `ValueError` 那处旧伤）。建议主线排一次「注入面清单 ↔ 调用点」的对账。
+
+### E. 明确不会动的地方（写明白免得误判）
+
+* `content/rules/action_base.json` · `content/data/skills.json` —— 一个数不改。
+* 七类**非技能**动作（普攻 / 防御 / 用物 / 打断 / 换手 / 走位 / 逃）全部走 ③ 兜底 ⇒ 逐字不变。
+* 怪技 · 怪物面板 · 掉落 · 遇敌 · 配平表（见 §三·A 那一条：包内 actor 无 `ai`）。
+* 引擎仓：**零改动**。
+
+## §四 探针与判据（`scripts/probe_timing.py` · 实跑）
+
+七组：① 形状档（域 → 供体）② **现算档**（逐条对账 · 今天红）③ **退化档**（`entry=None` 一格不动）
+④ **装配档**（供体在不在 + 引擎有没有消费它 · 今天红）⑤ 反证档（引擎仓零改动）
+⑥ 顺带量到的缝（登记用，不算红）⑦ 两态对照。红只可能来自 ②④ —— 都是「没接」，不是「接了算错」。
+
+```text
+探针：技能自己声明的两段耗时（B4-4 · 只读设计）
+  hook：time_model_fn=True · recover_model_fn=True · action_base_fn=True · recover_base_fn=True · **segment_plan_fn=False**
+
+── ① 形状档：30 条技能的两段声明（`{"base": 数值 ≥ 0}`）
+  ✓ 30 条技能 cast/recover 形状全合法（30 条技能 × 2 段）
+
+── ② 现算档：`pending_begin` / `_after_act` 真跑 vs 技能自己那两段
+    （30 行见 §二 2.3 —— 逐条 ✗）
+  ✗ 逐条对账：30/30 条「现算 ≠ 设计值」—— 技能自己的 cast/recover 没有被读 （例：后撤 设计 39.3 刻 · 现算 102.1 刻）
+
+── ③ 退化档：`entry=None`（普攻/怪技那条路）—— 一个数都不许动
+  ✓ 不传技能 ⇒ 第一段 = `action_base_of('skill')`、两段 = 类别两段（30 条逐条相同）
+
+── ④ 装配档：内容侧供体 + 引擎侧调用点
+  ✗ 内容侧**没挂** `segment_plan_fn` —— 设计案 §一·1.2 的接法（`content/apply.py`）未落地 ⇒ 引擎即便接了也无处问
+  ✗ 引擎侧**一次都没问** `segment_plan_fn` —— 该 hook 在 `saintess_engine/config.py` 的 `_HOOKS`（第 80 行）里已声明，但**全仓零调用点**（`pending_begin` / `_segment_seconds` / `_after_act` 拿到的都是类别字符串）⇒ 这正是本设计案要接的那一刀
+
+── ⑤ 反证档
+  ✓ 引擎仓零改动（`git status --porcelain` 空）
+  · 本探针的红只可能来自两点：② 逐条对账 / ④ 引擎侧真问了 —— 都是「没接」，不是「接了算错」；
+    接线后这两条必须转绿，③（退化）不许动一格（判据只加强）。
+
+── ⑥ 顺带量到的缝（登记进 `_notes.md` §三·影响面，不算红）
+  · `pending_begin(cast=None)` 落 `DEFAULT_ACTION`（attack 57.5 刻），**不是** docstring 写的「None = 第一段按 `ctx.action` 类别」（skill 是 76.6 刻）—— 今天 `Battle.act` 永远显式传 `cast=action`，这条缝没人踩到；**接线时若走 None 分支，得先把这个口头契约与实现对齐**
+  · 怪技（`ms_skill_*`）与普攻都不带 cast/recover ⇒ 退化档就是它们那条路（今天不变，见 ③）
+
+── ⑦ 两态对照（态 A = 不接 ⇒ 现算列；态 B = 接了 ⇒ 必须挪到设计列）
+    mage     引燃     spd=111 | cast/base+rec/base   200+40    | 态A  123.4 刻 → 态B  227.8 刻 | ✗ 待接线（差 -104.4）
+    mage     垂星     spd=111 | cast/base+rec/base   240+50    | 态A  123.4 刻 → 态B  275.3 刻 | ✗ 待接线（差 -151.9）
+    assassin 断势     spd=162 | cast/base+rec/base    30+30    | 态A  102.1 刻 → 态B   47.1 刻 | ✗ 待接线（差 +55.0）
+    knight   不退     spd=109 | cast/base+rec/base    80+80    | 态A  124.5 刻 → 态B  153.3 刻 | ✗ 待接线（差 -28.7）
+    ranger   抢拍     spd=176 | cast/base+rec/base    30+30    | 态A   98.0 刻 → 态B   45.2 刻 | ✗ 待接线（差 +52.8）
+    · 态 B 那一列的数值就是本设计案 §一 的判据；接线后 **表里现算列必须逐条搬到它上面**，
+      `entry=None`（普攻/怪技）那一列（③）一格都不许动。
+
+结果：有红（3 条红）
+```
+
+## §五 改动文件清单（显式）
+
+```text
+scripts/probe_timing.py         新（探针草案 · 本批唯一新增文件）
+_notes.md                       追加本节（§B4-4）
+—— framework-engine（引擎仓）：**零改动**（git status --porcelain 空 · 设计案只落在本节文字里）
+—— aetheran-plan（真源）：**一行没碰**
+—— content/：一个文件没动（§1.2 的接法（文件 C/D/E）是**待落地的设计**，本批只出案）
+```
+
+## §六 可复现命令
+
+```bash
+# 探针（Python 3.12；3.11 会假红）
+GWEN_ENGINE=C:/Users/yuyu/framework-engine \
+  "C:/Users/yuyu/AppData/Local/Programs/Python/Python312/python.exe" scripts/probe_timing.py
+#   今天：exit 1（②④ 如实红着 · 30/30 + 2 条）     接线后：exit 0
+
+git -C C:/Users/yuyu/framework-engine status --porcelain     # 空（零改动自证）
+```
+
