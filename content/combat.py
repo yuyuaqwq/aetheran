@@ -114,7 +114,7 @@ def player_actor(player: dict, stack_prefix: str = "aetheran", *,
     a.setdefault("mp", 0)
     a.setdefault("max_mp", int(a.get("max_mp") or 0))
     # ★ 技能表必给（缺了引擎会挑默认技 —— 实测挑成了「圣光治愈」，双方打不死）
-    a["skills"] = list(player.get("skills") or _default_skills(cls))
+    a["skills"] = list(player.get("skills") or _default_skills(cls, lv))
     # ★ B3-27：机制层的两个注入点（引擎给内容侧的位）—— 出手瞬间（act_cast）与承伤乘区
     #   （taken_calc）。只有「这一条技能真带 route=cast 的 mech / 身上真有减免态」时才动手，
     #   其余一律一个字段都不写 ⇒ 不挂 = 与接线前逐字相同。
@@ -122,8 +122,21 @@ def player_actor(player: dict, stack_prefix: str = "aetheran", *,
     return a
 
 
-def _default_skills(cls_id: str):
-    """本职业的技能 id（从 skills 域按 owner_class 挑，按 lv 升序）。"""
+def _default_skills(cls_id: str, level=1):
+    """本职业**此刻解锁**的技能 id（按 `(解锁等级, id)` 升序）—— 与 `技能` 那一条同源。
+
+    ★ B4-1 两处收口（原先这一支是「本职业全部技能，不分等级、不分主动被动」——
+      30 条全 lv=1 时看不出差别，11–20 那 18 条一进来就露）：
+
+      ① **按解锁等级挑**：`skills.lv <= 等级`（域里的 `lv` 就是解锁等级，真源
+         `02_技能体系规划_v1.md §四`）。这一支原先**不看等级**，而 `cmds_skill._of_class`
+         看等级 —— 两处口径不同，玩家会在「技能」页看见 5 条、打起来却拿到 7 条
+         （文档里那句「与 `combat._default_skills` 同一支、同一序」当时是**没兑现的**）。
+      ② **被动不进球场**：`kind_key == "passive"` 的那些是常驻的（开战时由事件总线挂上，
+         见 `content/mech.py`），**不是能"放"出来的技** —— 放进 actor 的技能表，引擎/AI
+         就会把它当一手来使（那一手什么也不产生，白费一次行动）。判据先看 `kind_key`
+         （ASCII 机器键，由 `scripts/rebuild_skills.py` 算出来），不认中文类别名。
+    """
     import json
     import os
     p = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "skills.json")
@@ -132,7 +145,11 @@ def _default_skills(cls_id: str):
             sk = json.load(f)
     except OSError:
         return []
-    mine = [(v.get("lv", 1), k) for k, v in sk.items() if v.get("owner_class") == cls_id]
+    lv = int(level or 1)
+    mine = [(int(v.get("lv") or 1), k) for k, v in sk.items()
+            if v.get("owner_class") == cls_id
+            and int(v.get("lv") or 1) <= lv
+            and v.get("kind_key") != "passive"]
     mine.sort()
     return [k for _, k in mine]
 

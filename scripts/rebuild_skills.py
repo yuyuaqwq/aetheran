@@ -28,6 +28,14 @@ skills 域 30 条技能原先只有 `power`（倍率基数），**没有 `exprs`
 ② `exprs` —— 倍率公式，由 `power` × 通道基准**算出来**：`atk*2.2` / `matk*1.4`。
    带 `exprs` 之后引擎走**表达式分支**（`_skill_seg_damage`），不再按 kind 兜底取 matk。
 
+③ `kind_key` —— 技能类别（`主动` / `被动`）的 **ASCII 机器键**（`active` / `passive`），
+   紧跟 `kind` 后面落一条（B4-1）。为什么要有它（K48 / K51 / P-20 同族）：
+   - 代码里**不许拿中文枚举当机器键**（`probe_copy` ⑮ 必须 0 处）—— 而「这条技能是不是被动」
+     正是代码要判的一件事（被动不进战斗技能表、不许当技能放）；
+   - 与 `items.kind_key` / `monsters.role_key` / `recipes.kind_key` 同一形状：中文 `kind`
+     留给玩家看，ASCII `kind_key` 给代码比；
+   - 映射表 `KIND_KEY` 是唯一来源（解析的是域里那份中文枚举）；域里出现表外的类别 ⇒ **当场抛**。
+
 ★ 幂等：连跑两次数据不变。`--dry` 只打印不写盘。
 
 用法：python scripts/rebuild_skills.py [--dry]
@@ -62,6 +70,11 @@ def _channel(rec: dict) -> str:
 
 #: 治疗类机制（不产生伤害，走治疗通道；倍率含义 = 治疗倍率）
 HEAL_MECHS = ("hot",)
+
+#: ★ B4-1：技能类别（域里那份中文枚举）→ ASCII 机器键。代码只比 `kind_key`，
+#:   一个中文字都不比（`probe_copy` ⑮ 钉着「中文枚举当机器键」必须 0 处）。
+#:   新类别（若以后有「天赋」之类）要先补这张表 —— 表外取值当场抛，不静默当主动。
+KIND_KEY = {"主动": "active", "被动": "passive"}
 
 #: 六职业的**普攻**（真源 = `03_职业与技能/02_技能体系规划_v1.md` §五「普攻 + 第一条主动」：
 #:   普攻 = 本职业那条零消耗、无冷却的起手技）。原先 `basic_skill_of` 按 power 升序取
@@ -98,6 +111,29 @@ def channel_of(rec: dict) -> str:
     return _channel(rec)
 
 
+def kind_key_of(rec: dict) -> str:
+    """技能类别 → ASCII 机器键（`KIND_KEY` 是唯一来源；表外取值当场抛，不静默兜底）。"""
+    k = rec.get("kind")
+    if k not in KIND_KEY:
+        raise KeyError("技能 %r 的 `kind` = %r 不在 KIND_KEY 表里（有的：%s）—— "
+                       "新类别要先补表（表在 scripts/rebuild_skills.py）"
+                       % (rec.get("name") or rec.get("desc") or "?", k, " · ".join(sorted(KIND_KEY))))
+    return KIND_KEY[k]
+
+
+def _place_after(rec: dict, anchor: str, key: str, value) -> None:
+    """把 `key` 插在 `anchor` 后面（就地改）—— 机器键紧挨着它对应的中文枚举。"""
+    out = {}
+    for k, v in rec.items():
+        out[k] = v
+        if k == anchor:
+            out[key] = value
+    if key not in out:
+        out[key] = value
+    rec.clear()
+    rec.update(out)
+
+
 def exprs_of(rec: dict) -> list:
     """倍率公式：`<基准>*<power>`（治疗/增益不做伤害 ⇒ 不算这条）。"""
     ch = channel_of(rec)
@@ -116,6 +152,13 @@ def fix(mos: dict, kinds: dict, dry: bool = False) -> int:
         want_kind = kinds[ch]
         want_exprs = exprs_of(rec)
         want_basic = sid in BASIC
+        want_kk = kind_key_of(rec)
+        if rec.get("kind_key") != want_kk:
+            if "kind_key" in rec:
+                rec["kind_key"] = want_kk
+            else:
+                _place_after(rec, "kind", "kind_key", want_kk)
+            n += 1
         if rec.get("kind_override") != want_kind:
             rec["kind_override"] = want_kind
             n += 1

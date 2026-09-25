@@ -82,7 +82,7 @@ print("  · 域里带 mech 的技能 %d 条 · 机制 %d 个：%s"
 # ══════════════════════════════════════════════════════════════
 _badshape = []
 for _n, _m in MECH.mechs().items():
-    if _m.get("route") not in ("engine", "cast", ""):
+    if _m.get("route") not in ("engine", "cast", "trigger", ""):
         _badshape.append((_n, "route", _m.get("route")))
     if _m.get("status") not in ("on", "partial", "pending"):
         _badshape.append((_n, "status", _m.get("status")))
@@ -92,8 +92,9 @@ for _n, _m in MECH.mechs().items():
         _badshape.append((_n, "route=engine 没 actions"))
     if _m.get("route") == "cast" and not _m.get("verb"):
         _badshape.append((_n, "route=cast 没 verb"))
-(ok if not _badshape else bad)("★ 12 条机制的声明形状齐（route / status / why / actions / verb）　%s"
-                              % ("全对" if not _badshape else "红：%s" % _badshape[:3]))
+(ok if not _badshape else bad)("★ %d 条机制的声明形状齐（route / status / why / actions / verb）　%s"
+                               % (len(MECH.mechs()),
+                                  "全对" if not _badshape else "红：%s" % _badshape[:3]))
 
 _miss = sorted(set(BY_MECH) - set(MECH.mechs()))
 _extra = sorted(set(MECH.mechs()) - set(BY_MECH))
@@ -408,14 +409,23 @@ for _sid in ("SKILL_RNG_backstep", "SKILL_SHD_backstep", "SKILL_MAG_ignite", "SK
     _m = MECH.of(_rec.get("mech"))
     try:
         _bb = fresh(_rec["owner_class"], mid=MID)
+        # ★ B4-1：基线要**在开战那一趟之后**取 —— 常驻被动（route=trigger）在 battle_start
+        #   就会挂上自己的状态，那是"这个人本来就有"的，不是这一手写进去的。判据因此改成
+        #   「放这一手**没有新增**任何状态」（比原来那句「一个状态都没有」更准，也更严：
+        #   它同时钉住了"pending 不写任何东西"与"被动的常驻态是开战给的"两件事）。
+        _sb = _bb.focus()
+        _eb = (_bb.sides.get("enemy") or [{}])[0]
+        SCH.advance(_bb, [])
+        _base = set(_sb.get("effects") or {}) | set(_eb.get("effects") or {})
         _cc, _tt, _ll = do(_bb, _sid)
-        _wrote = sorted(set(_cc.get("effects") or {}) | set(_tt.get("effects") or {}))
+        _wrote = sorted((set(_cc.get("effects") or {}) | set(_tt.get("effects") or {})) - _base)
         _pend_rows.append((_sid, _m.get("status"), bool(_m.get("why")), _wrote))
     except Exception as _ex:                                    # noqa: BLE001
         _pend_rows.append((_sid, "抛了", str(_ex)[:40], []))
 _bad_p = [(s, st, w, w2) for s, st, w, w2 in _pend_rows if st != "pending" or not w or w2]
 (ok if not _bad_p else bad)("★ 四条 pending 技能（后撤×2 · 引燃 · 垂星）：status=pending 且有 why、"
-                           "真放不抛、不写任何状态　%s" % ("全对" if not _bad_p else "红：%s" % _bad_p))
+                           "真放不抛、**一个状态都不新增**（基线 = 开战那一趟之后）　%s"
+                           % ("全对" if not _bad_p else "红：%s" % _bad_p))
 
 print()
 print("── ⑭ fail-closed：四种坏声明各抛一次（加载期，不留运行期静默）")
@@ -459,6 +469,296 @@ finally:
     (_SL2._C.get("skills") or {}).pop("SKILL_FAKE_x", None)
 (ok if not _teeth else bad)("★ 四种坏声明都当场抛（route 乱写 / cast 没实现 / 动词没注册 / 域里没声明的机制）　%s"
                            % ("全对" if not _teeth else "红：%s" % _teeth))
+
+# ══════════════════════════════════════════════════════════════
+# ★ B4-1 追加：⑯–⑳ —— T1 11–20 那批新机制（11 条主动 + 6 条被动）
+#   放在 ⑮「引擎零改动」之前：那一条是收尾的硬指标，让它压轴。
+#   每条机制至少一条**真跑**判据，数值一律现算（基线从 actor_stats / 域里那个 mech_val 取）。
+# ══════════════════════════════════════════════════════════════
+print()
+print("── ⑯ 骑士两条新机制（誓约壁垒 = 吸收盾 · 断后 = 推后自己 + 承伤 ×0.5）")
+_b = fresh("cls_knight")
+_c = _b.focus()
+_mx = int(ST.actor_max_hp(_b, _c) or 0)
+apply_mech(_b, _c, _c, "SKILL_KNT_bulwark")
+_sh = (_c.get("shields") or {}).get(MECH._SHIELD_KEY) or {}
+_want_sh = int(round(_mx * float(MECH.of("oath_shield")["shield_pct"]["value"])))
+_t_sh = float(SKD["SKILL_KNT_bulwark"]["mech_val"])
+(ok if int(_sh.get("value") or 0) == _want_sh else bad)(
+    "  · 定向：盾值 = int(生命上限 %d × %s) = %d（实测 %s）"
+    % (_mx, MECH.of("oath_shield")["shield_pct"]["value"], _want_sh, _sh.get("value")))
+(ok if abs(float(_sh.get("expire_at") or 0) - (_b._now + _t_sh)) < 1e-6 else bad)(
+    "  · 定向：盾到期 = 现在 + mech_val（%.2f = %.2f + %s）"
+    % (float(_sh.get("expire_at") or 0), _b._now, _t_sh))
+#: ★ 端到端那几路一律用 **16 级**的号：新技能是 lv 11/14/16 解锁的，10 级的 actor 索引不到它
+#:   （`_index_one_actor` 只索引 actor 技能表里那几条）—— 放一条没解锁的招，引擎只会回落普攻。
+_b2 = fresh("cls_knight", lv=16)
+_c2, _t2, _l2 = do(_b2, "SKILL_KNT_bulwark")
+(ok if (_c2.get("shields") or {}).get(MECH._SHIELD_KEY) and any("护盾" in x for x in _l2) else bad)(
+    "  · 端到端：真出手 ⇒ 引擎那句「获得护盾 N 点」（护盾走引擎自己的容器与文案，不另写一套）")
+_b3 = fresh("cls_knight")
+_c3 = _b3.focus()
+_c3["ct"] = _b3._now + 123.0
+apply_mech(_b3, _c3, _c3, "SKILL_KNT_rearguard")
+_delay = float(MECH.of("hold_line")["delay_ticks"]["value"])
+(ok if abs(float(_c3["ct"]) - (_b3._now + 123.0 + _delay)) < 1e-6 else bad)(
+    "  · 定向：断后把自己的下一次行动推后 %s 刻（123 ⇒ %.1f）"
+    % (_delay, float(_c3["ct"]) - _b3._now))
+_a3 = stub(battle=_b3)
+apply_mech(_b3, _a3, _a3, "SKILL_KNT_rearguard")
+_r3 = hit(_b3, _a3, 100)
+(ok if _r3 == 50 else bad)("  · 定向：rear_guard 里挨 100 点 ⇒ 实收 %d（承接伤乘区 ×0.5）" % _r3)
+_b4 = fresh("cls_knight", lv=16)
+_c4, _t4, _l4 = do(_b4, "SKILL_KNT_rearguard")
+(ok if has(_l4, "COMBAT_MECH_REARGUARD") else bad)("  · 端到端：真出手 ⇒ 出「你把背后让出来」那一行")
+
+print()
+print("── ⑰ 狂战士三条新机制（血债 = 自伤换面板 · 狂态 = 自伤换反击 · 横扫 = 自伤换 AOE）")
+_b = fresh("cls_berserker", lv=16)
+_c, _t, _l = do(_b, "SKILL_BSK_blooddebt")
+_cut = [int(x.split("−")[-1].rstrip("）。")) for x in _l if "见了血" in x]
+_mx = int(ST.actor_max_hp(_b, _c) or 0)
+_want = int(round(_mx * float(MECH.of("blood_price")["self_dmg_pct"]["value"])))
+(ok if _cut and _cut[0] == _want else bad)(
+    "  · 端到端：血债的自伤 = max_hp %d × %s = %d（实测 %s）"
+    % (_mx, MECH.of("blood_price")["self_dmg_pct"]["value"], _want, _cut or "没打出来"))
+_b2 = fresh("cls_berserker")
+_c2 = _b2.focus()
+_a0 = float(ST.actor_stats(_b2, _c2).get("atk", 0) or 0)
+apply_mech(_b2, _c2, _c2, "SKILL_BSK_blooddebt")
+_a1 = float(ST.actor_stats(_b2, _c2).get("atk", 0) or 0)
+_mult2 = float(MECH.state_rule("blood_debt")["panel"]["mult"])
+(ok if _a1 == int(_a0 * _mult2) and has(_l, "COMBAT_MECH_BLOODDEBT") else bad)(
+    "  · 定向：血债面板 atk %.0f ⇒ %.0f（声明 ×%s ⇒ 期望 %d）" % (_a0, _a1, _mult2, int(_a0 * _mult2)))
+_b3 = fresh("cls_berserker")
+_c3 = _b3.focus()
+_mob = (_b3.sides.get("enemy") or [None])[0]
+apply_mech(_b3, _c3, _c3, "SKILL_BSK_riposte")
+_want_re = int(float(ST.actor_stats(_b3, _c3).get("atk", 0) or 0)
+               * float(MECH.state_rule("riposte_guard")["reflect_atk_mult"]))
+_hp0 = int(_mob.get("hp") or 0)
+LD.deal_damage(_b3, _mob, _c3, 100, [])
+_got = _hp0 - int(_mob.get("hp") or 0)
+(ok if _got == _want_re and _want_re > 0 else bad)(
+    "  · 定向：狂态里被怪打一下 ⇒ 它自己挨 %d（= atk × %s ⇒ 期望 %d）"
+    % (_got, MECH.state_rule("riposte_guard")["reflect_atk_mult"], _want_re))
+_c3["effects"]["riposte_guard"]["expire"] = _b3._now - 1
+_hp1 = int(_mob.get("hp") or 0)
+LD.deal_damage(_b3, _mob, _c3, 100, [])
+(ok if int(_mob.get("hp") or 0) == _hp1 else bad)(
+    "  · 定向：态过期后再挨打 ⇒ 不反击（%d ⇒ %d）" % (_hp1, int(_mob.get("hp") or 0)))
+_b4 = fresh("cls_berserker", lv=16)
+_c4, _t4, _l4 = do(_b4, "SKILL_BSK_riposte")
+(ok if has(_l4, "COMBAT_MECH_RIPOSTE") else bad)("  · 端到端：真出手 ⇒ 出「你不躲」那一行")
+_b5 = CMB.build({"cls": "cls_berserker", "level": 16, "uid": "u_mech", "name": "试"},
+                [MID, DOG], MON, party=1)
+_c5 = _b5.focus()
+#: ★ fixture 收口：这一条问的是「AOE 对**每个**目标各结算一次」，不是问闪避率 ——
+#:   野狗那 1.3 倍闪避会让「两只都掉血」变成掷硬币（实测 6 跑 2 红）。把两只的 dodge 归零，
+#:   判据本体一个字没松（要验闪避另有 landing 那一层）。
+for _e5a in (_b5.sides.get("enemy") or []):
+    _e5a["dodge"] = 0
+_mx5 = int(ST.actor_max_hp(_b5, _c5) or 0)
+_logs5 = []
+SCH.advance(_b5, _logs5)
+_e0_5 = [(a.get("name"), int(a.get("hp") or 0)) for a in (_b5.sides.get("enemy") or [])]
+_sub5, _e5, _w5 = _b5.human_act("skill", "SKILL_BSK_sweep", _c5)
+_logs5.extend(str(x) for x in (_sub5 or []))
+SCH.settle_landing(_b5, _logs5, _c5)
+_e1_5 = [(a.get("name"), int(a.get("hp") or 0)) for a in (_b5.sides.get("enemy") or [])]
+#: 自伤那一笔从**它自己那一行**读（不拿血差算：advance / settle 里怪也会打他，血差混着别的账）
+_cut5 = [int(x.split("−")[-1].rstrip("）。")) for x in _logs5 if "见了血" in x]
+_want5 = int(round(_mx5 * float(MECH.of("blood_sweep")["self_dmg_pct"]["value"])))
+(ok if len(_e0_5) >= 2 and all(h1 < h0 for (_n0, h0), (_n1, h1) in zip(_e0_5, _e1_5)) else bad)(
+    "  · 端到端：横扫真出手 ⇒ **两只怪都掉血**（%s ⇒ %s）—— 引擎的 AOE 支逐目标独立结算"
+    % (_e0_5, _e1_5))
+(ok if _cut5 and _cut5[0] == _want5 else bad)(
+    "  · 端到端：横扫的自伤 = max_hp %d × %s ⇒ %d（实测 %s）"
+    % (_mx5, MECH.of("blood_sweep")["self_dmg_pct"]["value"], _want5, _cut5 or "没打出来"))
+(ok if not (_c5.get("effects") or {}) else bad)(
+    "  · 定向：横扫**不挂任何状态**（它只有自伤那一半 + 伤害）：%s" % (sorted(_c5.get("effects") or {}),))
+
+print()
+print("── ⑱ 游侠 / 法师 / 修女的新机制（打断减速 · 静默控制 · 有代价的防御 · 自保）")
+_b = fresh("cls_ranger")
+_c = _b.focus()
+_t = (_b.sides.get("enemy") or [None])[0]
+SCH.pending_begin(_b, ActCtx(caster=_t, action="skill", skill_name="x", info={}))
+_was = bool(_t.get("charging"))
+_sp0 = float(ST.actor_stats(_b, _t).get("spd", 0) or 0)
+apply_mech(_b, _c, _t, "SKILL_RNG_pindown")
+_sp1 = float(ST.actor_stats(_b, _t).get("spd", 0) or 0)
+_mp = float(MECH.state_rule("pinned")["panel"]["mult"])
+(ok if _was and not _t.get("charging") else bad)(
+    "  · 定向：箭止清掉对方那一手（登记 %s ⇒ 现在 %s）" % (_was, _t.get("charging")))
+(ok if abs(_sp1 - int(_sp0 * _mp)) < 1e-6 and _sp0 > 0 else bad)(
+    "  · 定向：pinned 让它的 spd %.1f ⇒ %.1f（声明 ×%s ⇒ 期望 %d）" % (_sp0, _sp1, _mp, int(_sp0 * _mp)))
+(ok if abs(float(((_t.get("effects") or {}).get("pinned") or {}).get("expire") or 0)
+           - (_b._now + float(SKD["SKILL_RNG_pindown"]["mech_val"]))) < 1e-6 else bad)(
+    "  · 定向：减速时长 = mech_val(%s) 刻" % SKD["SKILL_RNG_pindown"]["mech_val"])
+_b2 = fresh("cls_ranger", lv=16, mid=DOG)             # 目标要够厚：暴击那一下会把田鼠直接打死
+_c2, _t2, _l2 = do(_b2, "SKILL_RNG_pindown")
+(ok if has(_l2, "COMBAT_MECH_PINDOWN") else bad)("  · 端到端：真出手 ⇒ 出「箭钉在它起手的地方」那一行")
+
+_b3 = fresh("cls_mage")
+_c3 = _b3.focus()
+_t3 = (_b3.sides.get("enemy") or [None])[0]
+apply_mech(_b3, _c3, _t3, "SKILL_MAG_silence")
+_e3 = ((_t3.get("effects") or {}).get("silenced") or {})
+(ok if str(_e3.get("mode") or "") == str(MECH.of("silence_lock").get("mode") or "") and _e3 else bad)(
+    "  · 定向：静默挂的是**控制**（条目 mode=%r —— 引擎的行动前检查认的就是这一格）" % (_e3.get("mode"),))
+(ok if abs(float(_e3.get("expire") or 0) - (_b3._now + float(SKD["SKILL_MAG_silence"]["mech_val"]))) < 1e-6 else bad)(
+    "  · 定向：控制时长 = mech_val(%s) 刻" % SKD["SKILL_MAG_silence"]["mech_val"])
+_b4 = fresh("cls_priest", lv=16)
+_c4 = _b4.focus()
+apply_mech(_b4, _c4, _c4, "SKILL_MAG_silence")       # 静默挂在修女身上（模拟"她也被沉默了"）
+_had4 = "silenced" in (_c4.get("effects") or {})
+apply_cast(_b4, _c4, "SKILL_PRS_absolve")
+(ok if _had4 and not ((_c4.get("effects") or {}).get("silenced")) else bad)(
+    "  · 交叉：修女的净罪能摘掉「静默」这条控制（控制只有一处判据 = 条目带不带 mode）")
+_b5 = fresh("cls_mage")
+_c5 = _b5.focus()
+_m0 = float(ST.actor_stats(_b5, _c5).get("matk", 0) or 0)
+apply_mech(_b5, _c5, _c5, "SKILL_MAG_frostveil")
+_m1 = float(ST.actor_stats(_b5, _c5).get("matk", 0) or 0)
+_r5 = hit(_b5, _c5, 100)
+(ok if _r5 == 65 and _m1 == int(_m0 * 0.8) else bad)(
+    "  · 定向：霜障两头都真落地（承伤 100 ⇒ %d · matk %.0f ⇒ %.0f —— 代价那半也算上）" % (_r5, _m0, _m1))
+_b6 = fresh("cls_priest")
+_c6 = _b6.focus()
+apply_mech(_b6, _c6, _c6, "SKILL_PRS_nightwatch")
+_r6 = hit(_b6, _c6, 100)
+_h0 = float(ST.actor_stats(_b6, _c6).get("heal_pow", 0) or 0)
+(ok if _r6 == 65 and _h0 > 0 else bad)(
+    "  · 定向：守夜承伤 100 ⇒ %d、治疗强度 %.1f（F8 的基数 ×1.25）" % (_r6, _h0))
+_b7 = fresh("cls_priest", lv=16)
+_c7, _t7, _l7 = do(_b7, "SKILL_PRS_nightwatch")
+(ok if has(_l7, "COMBAT_MECH_NIGHTWATCH") else bad)("  · 端到端：真出手 ⇒ 出「你把灯挪到自己跟前」那一行")
+
+print()
+print("── ⑲ 刺客两条新机制（割喉 = 叠层流血 DoT · 侧闪 = 只动闪避那一格）")
+_b = fresh("cls_assassin")
+_c = _b.focus()
+_st = stub(hp=1000, battle=_b)
+for _i in (1, 2, 3, 4):
+    apply_mech(_b, _c, _st, "SKILL_SHD_bleed")
+_e = ((_st.get("effects") or {}).get("bleeding") or {})
+_cap = int(MECH.state_rule("bleeding")["cap"])
+(ok if int(_e.get("stacks") or 0) == _cap else bad)(
+    "  · 定向：连割四刀 ⇒ 层数停在 cap（%d 层；声明 cap=%d）" % (int(_e.get("stacks") or 0), _cap))
+(ok if abs(float(_e.get("expire") or 0) - (_b._now + float(SKD["SKILL_SHD_bleed"]["mech_val"]))) < 1e-6 else bad)(
+    "  · 定向：流血时长 = mech_val(%s) 刻" % SKD["SKILL_SHD_bleed"]["mech_val"])
+_per = MECH.state_rule("bleeding")["period"]
+_snap = int((_e.get("src") or {}).get("atk") or 0)
+_want_tick = int(_snap * float(_per["atk"]) * int(_e.get("stacks") or 0))
+SCH._advance_time(_b, 1.0, [])                    # 首次挂：引擎先登记下一跳（这一下不结算）
+_ticks = []
+SCH._advance_time(_b, float(_per["interval"]), _ticks)
+_hits = [int(x.split("损失 ")[1].split(" 生命")[0]) for x in _ticks if "损失" in x]
+(ok if _hits and _hits[0] == _want_tick else bad)(
+    "  · 定向：真推 %s 刻 ⇒ 一跳 %s 点（= 快照 atk %d × %s × %d 层 ⇒ 期望 %d）"
+    % (_per["interval"], _hits or "没跳", _snap, _per["atk"], int(_e.get("stacks") or 0), _want_tick))
+_st["hp"] = 100                                   # 见底（100 < 上限 1000 的 30%）
+_ticks2 = []
+SCH._advance_time(_b, float(_per["interval"]), _ticks2)
+_hits2 = [int(x.split("损失 ")[1].split(" 生命")[0]) for x in _ticks2 if "损失" in x]
+(ok if _hits2 and _hits2[0] == _want_tick * 2 else bad)(
+    "  · 定向：目标见底 ⇒ 那一跳翻倍（%s vs 期望 %d）" % (_hits2 or "没跳", _want_tick * 2))
+_b2 = fresh("cls_assassin", lv=16, mid=DOG)           # 目标要够厚（暴击那一下能秒掉田鼠）
+_c2, _t2, _l2 = do(_b2, "SKILL_SHD_bleed")
+(ok if has(_l2, "COMBAT_MECH_BLEED") else bad)("  · 端到端：真出手 ⇒ 出「刀口拉得很深」那一行")
+_b3 = fresh("cls_assassin")
+_c3 = _b3.focus()
+apply_mech(_b3, _c3, _c3, "SKILL_SHD_sidestep")
+_eva = float(ST.actor_stats(_b3, _c3).get("eva", 0) or 0)
+_r3 = hit(_b3, _c3, 100)
+(ok if _r3 == 100 else bad)(
+    "  · 定向：侧闪**不动减伤**（挨 100 点还是 100 点 —— 它改的是打不打得到；eva 现算 %.1f）" % _eva)
+(ok if abs(float(((_c3.get("effects") or {}).get("sidestep_veil") or {}).get("expire") or 0)
+           - (_b3._now + float(SKD["SKILL_SHD_sidestep"]["mech_val"]))) < 1e-6 else bad)(
+    "  · 定向：侧闪时长 = mech_val(%s) 刻" % SKD["SKILL_SHD_sidestep"]["mech_val"])
+
+print()
+print("── ⑳ 六条职业被动（battle_start 常驻 ×4 · dmg_calc 血线 ×1 · 一条登记未接）")
+#: (职业, 机制, 规则键, 看的属性, op, 那个数)
+_PASS = (("cls_ranger", "hawk_eye", "hawk_eye_hit", "hit", "mul", 1.12),
+         ("cls_ranger", "hawk_eye", "hawk_eye_crit", "crit", "add", 8),
+         ("cls_mage", "starred", "starlit", "matk", "mul", 1.12),
+         ("cls_priest", "comfort", "soothed", "heal_pow", "mul", 1.12),
+         ("cls_assassin", "keen_edge", "whetted", "critdmg", "add", 30))
+#: 每个职业那条零消耗普攻 —— 用来**真出手**驱动开战（`battle_start` 由 `human_act` 那一趟触发，
+#: `advance` 不触发它：引擎的 `_ensure_battle_started` 挂在行动入口上）
+_BASIC_OF = {}
+for _sid, _rec in SKD.items():
+    if _rec.get("basic") is True and _rec.get("owner_class"):
+        _BASIC_OF[_rec["owner_class"]] = _sid
+_bad_pass = []
+for _cls, _mk, _key, _stat, _op, _num in _PASS:
+    _bb = fresh(_cls, lv=16)
+    _cc = _bb.focus()
+    _s0 = float(ST.actor_stats(_bb, _cc).get(_stat, 0) or 0)
+    do(_bb, _BASIC_OF[_cls])                          # 开战那一趟（真出手 ⇒ battle_start 整场一次）
+    _ef = _cc.get("effects") or {}
+    _s1 = float(ST.actor_stats(_bb, _cc).get(_stat, 0) or 0)
+    _want = (_s0 + _num) if _op == "add" else int(_s0 * _num)
+    if _key not in _ef or abs(_s1 - _want) > 1e-6:
+        _bad_pass.append((_cls, _mk, _key, _s0, _s1, _want, sorted(_ef)))
+(ok if not _bad_pass else bad)(
+    "  · 开战那一趟之后：四条常驻被动都挂上了、面板逐值对得上（%d 条断言）　%s"
+    % (len(_PASS), "全对" if not _bad_pass else "红：%s" % _bad_pass[:2]))
+_bad_lv = []
+for _cls, _mk, _key, _stat, _op, _num in _PASS:
+    _bb = fresh(_cls, lv=15)                          # 被动 16 级才开（真源 05_系统总表）
+    _cc = _bb.focus()
+    do(_bb, _BASIC_OF[_cls])
+    if _key in (_cc.get("effects") or {}):
+        _bad_lv.append((_cls, _mk, _key))
+(ok if not _bad_lv else bad)(
+    "  · ★ 等级闸：15 级的号**一个被动都没开**（16 级才开 —— 少了这一道，13 级就白拿 16 级的被动，"
+    "实测会把 `probe_combat ④`「层主低 4 级单刷打不过」那条判据撞红）　%s"
+    % ("全对" if not _bad_lv else "红：%s" % _bad_lv[:2]))
+from ext_combat.battle.effect_triggers import fire as _fire                 # noqa: E402
+_bb = fresh("cls_berserker", lv=16)
+_cc = _bb.focus()
+_tt = (_bb.sides.get("enemy") or [None])[0]
+_mx = float(ST.actor_max_hp(_bb, _cc) or 0)
+_cc["hp"] = int(_mx * 0.9)
+_ctx_hi = {"actor": _cc, "target": _tt, "dmg": 100}
+_fire(_bb, "dmg_calc", _ctx_hi, [])
+_cc["hp"] = int(_mx * 0.4)
+_ctx_lo = {"actor": _cc, "target": _tt, "dmg": 100}
+_fire(_bb, "dmg_calc", _ctx_lo, [])
+_mm = float(MECH.of("blood_brave")["dmg_mult"]["value"])
+(ok if _ctx_hi.get("mult") is None and abs(float(_ctx_lo.get("mult") or 0) - _mm) < 1e-9 else bad)(
+    "  · 血勇：血在线上（90%%）乘区不写 ｜ 掉到线下（40%%）乘区 ×%s（按出手那一刻现算，不留过期态）"
+    % (_mm,))
+_bb2 = fresh("cls_berserker", lv=15)
+_cc2 = _bb2.focus()
+_cc2["hp"] = int(float(ST.actor_max_hp(_bb2, _cc2) or 0) * 0.4)
+_ctx2 = {"actor": _cc2, "target": (_bb2.sides.get("enemy") or [None])[0], "dmg": 100}
+_fire(_bb2, "dmg_calc", _ctx2, [])
+(ok if _ctx2.get("mult") is None else bad)(
+    "  · ★ 血勇同样吃等级闸：15 级血再少也不加成（mult=%s）" % (_ctx2.get("mult"),))
+_bo = MECH.of("block_oath")
+(ok if _bo.get("status") == "pending" and _bo.get("why") and not _bo.get("route") else bad)(
+    "  · ★ 格挡回誓：**登记未接**（status=pending · why 写明缺的两环：格挡事件 + 资源渠道）—— "
+    "与接线前一字不差，探针不许把它算成已生效")
+_ea, _er = GC.get_effect_actions() or {}, GC.get_effect_rules() or {}
+(ok if "blood_sweep" in _ea and not (set(MECH.mechs()) & set(_er)) else bad)(
+    "  · ★ 17 条新机制：route=engine 的进了 EFFECT_ACTIONS · 机制名一个都没进 EFFECT_RULES（防叠层劫持）")
+_teeth.clear()
+_b1 = copy.deepcopy(MECH.table())
+_b1["mechs"]["blood_brave"]["trigger"] = "no_such_event"
+_try(lambda: MECH._validate(_b1), ValueError, "trigger 事件没挂")
+_b2 = copy.deepcopy(MECH.table())
+_b2["mechs"]["hawk_eye"]["verb"] = "aeth_on_taken"
+_try(lambda: MECH._validate(_b2), ValueError, "trigger 与动词配错")
+_b3 = copy.deepcopy(MECH.table())
+_b3["mechs"]["riposte"]["consume_event"] = "no_such_event"
+_try(lambda: MECH._validate(_b3), ValueError, "consume_event 没挂")
+(ok if not _teeth else bad)(
+    "  · ★ 第三条路的三种坏声明也当场抛（事件没挂 / 动词配错 / 消费事件没挂）　%s"
+    % ("全对" if not _teeth else "红：%s" % _teeth))
 
 print()
 print("── ⑮ 引擎零改动（硬指标）")

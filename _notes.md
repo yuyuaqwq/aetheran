@@ -2648,3 +2648,330 @@ e2e ：scripts/e2e_drive.py 三趟都走通、无 Traceback
   两条 POI 与改前逐字相同（**没自造映射**）。
 * 重现 / 反证那两个脚本与输出是**临时件**（`%LOCALAPPDATA%/Temp/b3_28_*`），未进包；
   上面已把关键输出**逐字抄**在 §B3-28 ① 里。
+
+# §B4-1 · T1 技能补齐（11–20 级 · 18 条）—— 2026-09-25 · 分支 `b4-1-skills-t1` · 基 `bb41b46`
+
+本批只碰这些文件：`content/data/skills.json` · `content/rules/skill_mech.json` · `content/mech.py` ·
+`content/data/texts.json` · `content/combat.py` · `content/cmds_battle.py` ·
+`schemas/skills.schema.json` · `scripts/rebuild_skills.py` · `scripts/probe_skills.py` ·
+`scripts/probe_mech.py` · `scripts/probe_cmds.py` · 本文件。
+**引擎 `C:/Users/yuyu/framework-engine` 零改动**（`git status` 空）· **真源 `C:/Users/yuyu/aetheran-plan` 一行没碰**。
+
+> ⚠ **基座挪了一格（请核）**：立项时说「基 = `597c174`（波九合入后的 master）」，但 `597c174` 上
+> **基线就是 4 条红**（`probe_cmds` / `probe_instance` / `probe_party` / `probe_tower`：`content.party`
+> 在、但没有 `instance.members_of` 要的那个口）。主线随后在 `bb41b46` 补上了这个跨批契约
+> （`fix(包): 合入后补齐 B3-25 × B3-26 的跨批契约 —— content/party.py 补 members_of`）。
+> 本批开工前把分支 **fast-forward 到 `bb41b46`**（没有新增提交、没有改写历史），基线因此才是全绿 ——
+> 详见 §十「基线」那一段。若主线要按「基 `597c174`」记账，那这一格请你们裁决。
+
+## §〇 一句话
+
+六职业各补齐 **11–20 段**：`42 主动 + 6 被动 = 48 条`（T1 满编）——新补 **12 条主动 + 6 条职业被动 = 18 条**。
+其中 **17 条带机制**（11 条主动 + 6 条被动：`on 16 · pending 1`），机制层为「常驻被动」开了**第三条路**
+（`route=trigger` · 事件总线那一面）；**1 条（骑士「格挡回誓」）按纪律登记未接**（缺「格挡成功」事件 + 缺资源渠道）。
+数值全部可复算、判据全部真跑。
+
+## §一 18 条清单（设计在这里，判据在 §四）
+
+**一句话设计口径**：11–15 段那条 = **第二种花法**（把职业资源换成第二种收益）+ **对付自己失败态的一手**；
+16–20 段那条 = **职业被动**（`05_系统总表与阶段开放_v1.md`「职业被动 P1 六条（16–20 级开）」）。
+六条**互不同轴**（禁同构）：吸收盾 / 行动序换硬度 / 自伤换面板 / 自伤换反击 / 自伤换 AOE / 打断减速 /
+控制 / 有代价的防御 / 自保 / 资源换伤害 / 血线乘区 / 流血 DoT / 闪避乘区。
+
+| 职业 | 技能（id） | lv | 定位（他这根轴） | 数值账（10 级基准复算） | 机制 |
+|---|---|---|---|---|---|
+| 骑士 | **誓约壁垒** `SKILL_KNT_bulwark` | 11 | 第二种花法：守誓 → **吸收盾**（与「守誓斩=伤害」「不退=全队减伤」并列的第三条花法） | 花 40 守誓 → 盾 = 生命上限 ×25%（462 ⇒ 116）· 300 刻 | `oath_shield`（on · 走引擎 `shield` 动词） |
+| 骑士 | **断后** `SKILL_KNT_rearguard` | 14 | 防御/位移：**用行动序换硬度**（CTB 里「位移」的等价物） | 自己的下一次行动推后 60 刻 → 150 刻承伤 ×0.5 | `hold_line`（on · 写 `ct` + 承伤乘区） |
+| 骑士 | **格挡回誓** `SKILL_KNT_blockoath` | 16 | 被动：格挡转速（格挡成功额外 +8 守誓 —— 与账本 +12 并成 +20，一次格挡顶三次受击） | —— | `block_oath`（**pending**：见 §六①） |
+| 狂战士 | **血债** `SKILL_BSK_blooddebt` | 11 | 第二种花法：血 → **面板增益**（前面三条都是「血换一发」，这条是「血换一段」） | 自伤 max_hp ×10%（27）→ 200 刻 atk ×1.25（107 ⇒ 133.8） | `blood_price`（on） |
+| 狂战士 | **狂态** `SKILL_BSK_riposte` | 14 | 防御（以攻代守）：**受击反击**（他不躲，他让对面也付账 —— G3 反噬的另一面） | 自伤 8%（21.7）→ 180 刻内每次承伤，攻击者挨 0.8×atk（85.6） | `riposte`（on · `on_taken` 消费） |
+| 狂战士 | **横扫** `SKILL_BSK_sweep` | 16 | 唯一的多目标招（六职业里没人有 AOE） | 自伤 10%（27）· 1.4×atk（149.8）**逐目标独立结算** | `blood_sweep`（on · 引擎 `_deal_aoe`） |
+| 狂战士 | **血勇** `SKILL_BSK_bloodbrave` | 16 | 被动：**血线乘区**（真源 §一 白纸黑字那一句） | 生命 < 50% ⇒ 伤害 ×1.25（现算，不留过期态） | `blood_brave`（on · `dmg_calc` 乘区） |
+| 游侠 | **箭止** `SKILL_RNG_pindown` | 11 | 第二种花法：准星 → **打断 + 减速**（真源 01_骑士_v2 §一「断人是刺客/游侠的活」） | 花 2 层准星 · 1.0×atk · 目标 spd ×0.8（100 刻） | `pin_down`（on · 引擎 `interrupt` + 面板） |
+| 游侠 | **鹰眼** `SKILL_RNG_hawkeye` | 16 | 被动：他是「次数堆」的职业 ⇒ 提升次数的乘区（对得准 + 打得穿） | hit ×1.12 · crit +8（点数） | `hawk_eye`（on · `battle_start`） |
+| 法师 | **静默** `SKILL_MAG_silence` | 11 | 第二种花法：印记 → **控制**（把他的失败态还给对面：念不完 ⇒ 你也别想放技能） | 花 3 层印记 · 0.9×matk · 100 刻 `mode=no_skill` | `silence_lock`（on · 引擎的控制那一格） |
+| 法师 | **霜障** `SKILL_MAG_frostveil` | 14 | 防御：**有代价**（承伤降、自己的法术也降 —— 防御必须动到他自己那根轴，不然就成了骑士） | 花 3 层印记 · 240 刻 承伤 ×0.65、matk ×0.8 | `frost_veil`（on · 一条状态吃两个消费端） |
+| 法师 | **枕星** `SKILL_MAG_starred` | 16 | 被动：第二条时间轴的发动机 | matk ×1.12 | `starred`（on · `battle_start`） |
+| 修女 | **戒律** `SKILL_PRS_discipline` | 11 | 第二种花法：祷言 → **伤害**（与「攒 3 层开晨祷」形成真选择） | 花 2 层祷言 · 2.2×matk（58.5 ⇒ 128.7） | 无（纯伤害，走 `exprs`） |
+| 修女 | **守夜** `SKILL_PRS_nightwatch` | 14 | 防御（自保）：把灯挪到自己跟前（单人场里她终于有自保；与庇护/晨祷的「替别人挡」区别开） | 250 刻 承伤 ×0.65 · heal_pow ×1.25 | `night_watch`（on） |
+| 修女 | **抚慰** `SKILL_PRS_comfort` | 16 | 被动：她那条链的基数 | heal_pow ×1.12（F8） | `comfort`（on · `battle_start`） |
+| 刺客 | **割喉** `SKILL_SHD_bleed` | 11 | 第二种花法：**流血 DoT**（真源 `00_重做总纲_v2.md §五·五` 早把 DoT 分给刺客，一直没人落） | 0.8×atk 起手 + 300 刻每 30 刻一跳 0.04×atk/层（3 层全程 ≈ 98 ⇒ 一条循环 ≈ 164 ≈ 2.0×atk）· 目标见底（<30%）那一跳翻倍 | `bleed`（on · 引擎 `period` + 快照） |
+| 刺客 | **侧闪** `SKILL_SHD_sidestep` | 14 | 防御：**只动闪避那一格**（不改承伤乘区 —— 与四个减伤类防御不同轴） | 180 刻 eva ×1.6 | `sidestep`（on） |
+| 刺客 | **刃熟** `SKILL_SHD_keenedge` | 16 | 被动：他的暴击轴 | critdmg +30（F4：×1.5 ⇒ ×1.8） | `keen_edge`（on · `battle_start`） |
+
+**每职业条数（到 20 级）**：骑士 7+1 · 狂战士 7+1 · 游侠 7+1 · 法师 7+1 · 修女 7+1 · 刺客 7+1 = **48 条**
+（42 主动 + 6 被动 —— 与真源 `02_技能体系规划_v1.md §二`「T1 基础 48」· `05_系统总表`「P1 = T1 48 条」逐字对上）。
+**原先那 30 条一条没动**（含 `lv=1` 那个现状，见 §二①）。
+
+## §二 三条落域口径（本批自定，写清）
+
+### ① 等级段：新 18 条带解锁等级，旧 30 条不动
+
+```text
+新 12 主动：lv 11 / 14（进阶段）· 狂战士第 3 条 lv 16（他原先只有 4 条，要多补一条才够 7）
+新 6 被动：lv 16（真源 05_系统总表「职业被动 P1 六条（16–20 级开）」）
+旧 30 条：仍是 lv=1 —— **不动已落地的数据**（真源 02_ §五「现状：30 条只覆盖到第 10 级」说的就是它）
+```
+⇒ 11–20 段靠 `skills.lv` **逐级放行**，没有一处手写门槛（`SYS_SKILL_LOCKED` 那几句就是它）。
+
+### ② 解锁口径收口（★ 本批修掉的一处真 bug）
+
+```text
+`combat._default_skills(cls)` 原先 = 「本职业**全部**技能，不看等级、不分主动被动」
+`cmds_skill._of_class(cls, level)` = 「按 `skills.lv <= 等级` 挑」
+两份文档都写着「两处同一支、同一序」—— 但代码里**不是**（30 条全 lv=1 时看不出来）。
+本批把它兑现成一句话：**能放的 = 此刻解锁的那一班**（`_default_skills(cls, level)` 过滤 lv + 排除被动）。
+★ 顺带一条：被动**不进战斗技能表**（它开战时由事件总线挂上，不是「放」出来的）——
+  放进 actor 的技能表，引擎/AI 会把它当一手来使（那一手什么也不产生，白费一次行动）。
+  判据先看 ASCII `kind_key`（见 ③），中文类别名代码里一个都不比。
+```
+
+### ③ `kind_key`（ASCII 机器键，K48 / K51 / P-20 同族）
+
+```text
+域里多一格 `kind_key`：主动 → `active` · 被动 → `passive`（映射表唯一来源 = `rebuild_skills.KIND_KEY`，
+由生成器算出、别手改；域里出现表外的类别**当场抛**）。中文 `kind` 是玩家看得见的类别名，保留。
+为什么非要有它：「这条技能是不是被动」正是代码要判的一件事（战斗技能表 / 放技能那道门），
+而代码里**不许拿中文枚举当机器键**（`probe_copy` ⑮ 必须 0 处）⇒ 与 items.kind_key / monsters.role_key 同一形状。
+```
+
+## §三 机制层：第三条路 + 17 条新声明
+
+**表还是那一张**（唯一真源 `content/rules/skill_mech.json`，出口还是 `content/mech.py`）：12 → **29 条机制**。
+
+### ① 新增一条路：`route=trigger`（常驻被动 · 事件总线那一面）
+
+```text
+engine  引擎那条名词路（`effects_from_skill` → EFFECT_ACTIONS → 动词）—— 11 条新的主动走它
+trigger 挂 actor 身上的触发器（被动不是被"放"出来的）—— 6 条被动走它
+        battle_start  整场一次：挂常驻态（鹰眼 / 枕星 / 抚慰 / 刃熟）
+        dmg_calc      攻击方乘区：按出手那一刻的血线现算（血勇）
+        on_taken      承伤后：反击兑现（狂态 —— 它自己声明 route=engine 挂态，用 `consume_event: on_taken` 认领这一格）
+事件名 ↔ 动词名只有一处（`mech._TRIGGER_VERBS`），`player_triggers()` **从它生成**挂载面 ⇒
+表里声明的与挂上去的**逐名相等**（多挂一个空跑 / 少挂一个永不触发，装配期就抛）。
+```
+**为什么用事件总线而不是挂状态**：血勇要的是「血少才加」，挂态就得有人回收它（被治疗回到线上怎么办、
+战斗开局血就低怎么办）——现算没有过期态可留，也不会有第二个真源（`_notes` 里那句
+「数值修正钩子：dmg_calc = 攻击者视角条件乘区」，引擎文档把这条路的用法写得很清楚）。
+
+### ② 11 条主动的新动词（全部 `@EF.register_action`，内容侧扩展面，引擎零改动）
+
+| 动词 | 干什么 | 复用的引擎件 |
+|---|---|---|
+| `aeth_self_cut` | **付血**（按机制表 `self_dmg_pct` 扣 max_hp，保底留 1 血）—— 血债/狂态/横扫 三条共用 | `LD.deal_damage`（不走引擎的 damage 动词：自伤不吃乘区） |
+| `aeth_oath_shield` | 盾值 = 生命上限 × 表里那个比例；时长 = 域里 `mech_val` | 引擎 `shield` 动词（护盾容器 + 它那句「获得护盾 N 点」） |
+| `aeth_hold_line` | `ct += delay_ticks` + 挂 `rear_guard`（承伤 ×0.5） | 与 `aeth_advance_ct`（抢拍）对称 |
+| `aeth_blood_price` / `aeth_riposte` / `aeth_pin_down` / `aeth_sidestep` | 挂各自那条态（时长取 `mech_val`） | 引擎的面板快照态（`stats._apply_effects`） |
+| `aeth_silence_lock` | 写一条**控制**（条目带 `mode: no_skill`） | 引擎 `battle.py` 的行动前检查（`mode` 那一格） |
+| `aeth_frost_veil` / `aeth_night_watch` | 挂一条**同时声明两个消费端**的态（承伤乘区 + 面板） | `aeth_mitigate`（承伤）+ `stats._apply_effects`（面板） |
+| `aeth_bleed` | 叠层流血（`cap` 取规则表；到期 = `mech_val`；快照交给引擎） | 引擎的 `period` + `note_dot_source`（DoT 的账全在引擎里） |
+| `aeth_on_start` / `aeth_on_dmg_calc` / `aeth_on_taken` | 常驻被动那条路的三个动词 | 引擎的事件总线（`battle_start` / `dmg_calc` / `on_taken`） |
+
+### ③ 数值只认两处（不手打第二遍）
+
+```text
+① `skills` 域的 `mech_val`（域里唯一那一处）⇒ 表里写 `"turns": "mech_val"` 去取
+② 真源文字里的常数 / 本批设计的常数 ⇒ 落在表里它自己的 `{"value": …, "src": …}` 上（逐条注明出处）
+★ 一条新纪律（本批立的）：**文案里出现的数与规则表里那个数不许各写一遍** ——
+  割喉那句「每 {intv} 刻」的 `intv` 是从规则表的 `period.interval` **现读**再塞进槽位的。
+```
+
+## §四 判据（只加强，没放宽一处）
+
+### ① 改动/新增的判据
+
+| 位置 | 改了什么 | 为什么 |
+|---|---|---|
+| `probe_skills` ⑧（新增 6 条） | T1 满编账：48 条 = 42 主动 + 6 被动 · 每职业 7+1 · kind_key 双向对账 + 逐条可复算 · 被动六条的字段形状（power 0 / 无 exprs / cd·mp 0 / lv 16）· 12 条新主动的 lv 落在 11–16 · 旧 30 条仍 lv=1 · **战斗技能表按等级挑且被动不进** · **16 级「技能页里能放的那班」与战斗技能表逐条同序** · **被动真敲「技能 X」⇒ 出一句放不出来** | 「满编」与「被动不进球场」这两件事原先**没有任何判据** |
+| `probe_mech` ⑯⑰⑱⑲⑳（新增 5 节 · 38 条断言） | 17 条新机制逐条真跑（定向 + 端到端）：盾值/时长逐值复算 · 推后刻数 · 自伤与面板 · 反击逐值 + 过期不反击 · AOE 两只怪都掉血 · 打断清窗口 + 减速 · 控制的 `mode` 那格 · 交叉（净罪能摘静默）· 流血层数封顶 + 真推 30 刻一跳 + 见底翻倍 · 侧闪不动减伤 · 四条常驻被动挂上与面板逐值 · **等级闸（15 级一个都不开）** · 血勇乘区（线上不写/线下 ×1.25）· block_oath 仍是 pending · 三条路的坏声明各抛一次 | 新机制不能只靠「表里有」——要真跑 |
+| `probe_mech` ① | 形状档的 route 取值加 `trigger` | 第三条路 |
+| `probe_mech` ⑬ | 四条 pending 技能的判据：从「一个状态都没有」改成「**相对开战那一刻的基线不新增任何状态**」 | 被动在 `battle_start` 就挂态了，原来那句会把它误判成 pending 技能写的 |
+| `probe_cmds` ⑨ | 骑士 3 级档「技能」抬头：`known/locked` 从「域里全部 / 0」改成**按等级现算**；没到等级的必须出「到 N 级才能学」那一行 | 3 级的号拿不到 11/14/16 那几条 |
+| `probe_cmds` ⑩ | 原判据「今天没有 lv>1 的技能（48 条全 lv=1）—— 11–20 那 12 条补进来之后这一条会翻红，那时按新数据改它」⇒ 换成**满编账**（1 级解锁==lv≤1 的那些 · 20 级 8 条 · 域里 48 = 42+6 · 每条 lv∈[1,20]）+「11–20 段那 18 条真带解锁等级」 | 那一条本来就是**临时的现状描述**（它自己写着"到时候改它"），本批兑现 |
+| `probe_skills` ②⑦ 的两句标签 | 「30 条技能 …」改成计数现算 | 标签漂了（判据本体没动） |
+
+### ② 判据为什么钉得住（举三条）
+
+```text
+· 盾值：`int(生命上限 × 0.25)` 现算 vs 容器里那一格（换等级就换数，看不出手打）
+· 反击：真推 `LD.deal_damage(…, 怪, 玩家)` ⇒ 看怪掉的那一段；再过期一次 ⇒ 一分不掉
+· 流血：连割四刀 ⇒ 层数停在 cap；真推进 30 刻 ⇒ 一跳 == 快照 atk × 0.04 × 层数；见底 ⇒ 恰好翻倍
+```
+
+## §五 「不装配 = 与接线前一字不差」（第三条路也守）
+
+```text
+两条老的装配点照旧：engine 路清 `EFFECT_ACTIONS` / cast 路拿掉玩家触发器（probe_mech ④ 钉着）。
+第三条路的两道门：① 那两张表没挂（`EFFECT_RULES` 空）⇒ 三个 trigger 动词**直接返回**；
+                  ② 某条规则不在表里 ⇒ 跳过那一条（不写半个字段）。
+反证：`probe_mech` ④ 用刺客/修女跑「清表」那一趟 —— 常驻被动也一条都不挂（`_states` 仍为空）。
+```
+
+## §六 覆盖与诚实清单（不许当成已完）
+
+**① 骑士「格挡回誓」= 登记未接（本批 6 个被动里唯一没接的）** —— 缺口是**两个**，缺一个都落不了：
+
+```text
+(1) 引擎没有「格挡成功」这个事件：`on_taken` 只在**承伤后**触发，ctx 里只有 dmg/real/source，
+    认不出这一下有没有被格挡（格挡判定在 landing 里，没有单独上报）；
+(2) 职业核心资源（RES_OATH）这层今天根本没人接 —— `skills` 域的 `res_gain` **全仓没有消费端**
+    （引擎只消费 `res_cost`，且要求 actor.effects 里先有那个条目）⇒ 就算拿到格挡信号，
+    也没有「+8 守誓」这条渠道可写。
+```
+两处都不在技能层的地盘上，按纪律**登记**（表里 `status: pending` + `why` 写清）—— 探针钉着它「仍然是 pending」。
+
+**② 资源账：六职业的资源（守誓/准星/印记/祷言）今天**都没接**（本批没碰，但新技能的 `res_cost` 与它们同命）**
+
+```text
+现状：`res_cost` 只在「actor.effects 里已经有那个条目」时才拦（引擎 `_skill_usable`），
+      而没有任何东西会写那个条目 ⇒ 今天所有 `res_cost` 都不生效（守誓斩/不退/引燃/垂星 早就这样）。
+本批的 4 条新技能也带 `res_cost`（誓约壁垒 40 守誓 · 箭止 2 准星 · 静默/霜障 3 印记 · 戒律 2 祷言）——
+**声明是真源口径，闸门等他接上那天自动生效**（引擎那条判据是现成的，不用改）。
+★ 今天的直接后果（点名一条最明显的）：修女的**戒律**本该「祷言攒满才放得出来」（花 2 层），
+  而祷言这东西今天攒不出来 ⇒ 她可以每 8 刻（cd）放一次 2.2×matk；这不是这条技能的设计，
+  是资源渠道没接的账（接上那天它自己就有闸了）。
+↳ 要接得动的形状（照引擎 `examples/minimal-game` 的最小实现）：一张「事件 → 资源加/减」的渠道表
+  + 一个内容侧 `res_gain` 动词（普攻命中 / 受击 / 格挡三个触发点），属**另一批**的活。
+  ↳ 这也是「格挡回誓」缺的第二环；两处一起接最省。
+```
+
+**③ 游侠的 `打断` 指令还没对上名字**：`content/battle_acts.interrupt_action_of` 取的是 `mech == "interrupt"`
+的技能（今天只有刺客的「断势」）。本批给游侠补的「箭止」走的是 `pin_down`（打断 + 减速，与破绽不同轴）——
+所以游侠敲 `打断` 仍走那句通用文案。要不要让它认 `pin_down`，等真源把「打断动作（名称随职业）」
+那张表定下来（`04_指令总表 §五` 那一行）—— 本批**没动** `battle_acts.py`。
+
+**④ 技能自己的 `cast` / `recover` 引擎仍然没用**（B3-27 §十① 那一条，本批 18 条同命）：
+引擎拿的是**类别**（`"skill"` ⇒ 80+50 刻），域里写的 40/60/200… 只是设计值。所以「静默 100 刻」这类
+**时长类**机制有效，「前摇更长的引燃」这类**耗时类**设计今天落不了（属引擎提案，与本批无关）。
+
+**⑤ 单人场看不见的那一半**（与 B3-27 同一笔账）：被动/机制里凡是「全队」的都只在单人下作用于自己
+（狂态反击、守夜、霜障 都是自己那半）。
+
+## §七 真源待补行（给主线搬进 `aetheran-plan`；本分支一行没碰）
+
+**① 六份职业详案各补一节「11–20 段技能表 + 职业被动」**（`03_职业与技能/01_骑士_v2.md` … `06_刺客_v2.md`）：
+本批已把 18 条落到域里（§一 那张表就是设计），请按它把六份详案补上（名字/数值/机制与域里逐字一致），
+并把 `03_职业与技能/02_技能体系规划_v1.md §五` 的「现状/要做」改成「已做」。
+
+**② 19 条文案槽位**（归属 `00_总纲/17_文案收口口径_v1.md` 那张槽位表 —— 本批**直接落进 `texts` 域**，
+与 B3-27 那 14 条同一处置；合入时由主线搬）：
+
+| 键 | 文案 | 参数 |
+|---|---|---|
+| COMBAT_MECH_REARGUARD | 你把背后让出来 —— 这半拍晚一步（下一次出手推后 {ticks} 刻），换来 {turns} 刻里落上来的东西轻 {pct}%。 | ticks,turns,pct |
+| COMBAT_MECH_BLOODDEBT | 你割开自己一道口子 —— 接下来 {turns} 刻，你的刀重 {pct}%。 | turns,pct |
+| COMBAT_MECH_RIPOSTE | 你不躲 —— {turns} 刻里谁碰你一下，就得挨你一刀（{pct}% 的攻击）。 | turns,pct |
+| COMBAT_MECH_PINDOWN | 箭钉在它起手的地方 —— 【{name}】{turns} 刻里慢 {pct}%。 | name,turns,pct |
+| COMBAT_MECH_SILENCE | 一声闷雷压下去 —— 【{name}】这 {turns} 刻里用不出技能。 | name,turns |
+| COMBAT_MECH_FROSTVEIL | 霜从你脚底结上来 —— {turns} 刻里落上来的东西轻 {pct}%，你自己的法术也轻 {cost}%。 | turns,pct,cost |
+| COMBAT_MECH_NIGHTWATCH | 你把灯挪到自己跟前 —— {turns} 刻里落上来的东西轻 {pct}%，手上的暖多 {gain}%。 | turns,pct,gain |
+| COMBAT_MECH_BLEED | 刀口拉得很深 —— 【{name}】{turns} 刻里每 {intv} 刻失一次血（{stacks} 层）。 | intv,name,stacks,turns |
+| COMBAT_MECH_SIDESTEP | 你侧过半个身子 —— {turns} 刻里闪避涨 {pct}%。 | turns,pct |
+| COMBAT_MECH_TRANCE | 它的爪子撞在你的刀口上 —— 它自己挨了 {n} 点。 | n |
+
+（誓约壁垒**不用新槽位**：它走引擎 `shield` 动词自带的「🛡️ {name} 获得护盾 {value} 点！」那一句。）
+
+**③ 18 条技能描述槽位**（`skills.desc` 传的是槽位名，与原先那 30 条同形）——
+**今天 30+18 条全是悬空的**（`SKILL_*_desc` 不在 `texts` 里、也没有代码读它）。两条路选一条，请拍板：
+
+```text
+甲案（推荐）把 `SKILL_<CLS>_<id>_desc` 收进 17_文案收口口径_v1.md，并给 `rebuild_syscopy.KEY_RE`
+      加一个 `SKILL` 前缀（现在那个正则只认 SCENE/READ/NPC/COMBAT/ITEM/SYS/…）—— 48 条一次补齐；
+乙案 承认 `desc` 这一格**没有消费端**，从 schema/域里摘掉（现在就摘，免得下一个人以为它有文案）。
+本批按「与已有 30 条同形」落了（甲案的写法），但**没有**手编这 18 条文案（加槽位要走真源文档）。
+```
+
+**④ `05_系统总表与阶段开放_v1.md` 的「职业被动 P1 六条（16–20 级开）」** 已对上（六条都在 lv 16）——
+不用改，列在这里是给复核用。
+
+## §八 改动文件清单（显式 · 合入时的冲突面）
+
+| 文件 | 改了什么 | 冲突面注意 |
+|---|---|---|
+| `content/data/skills.json` | +18 条（12 主动 + 6 被动）· 48 条各 +1 行 `kind_key`（生成器写的） | 与任何也在改 skills 域的分支**逐条对账**；原有 30 条只多一行 `kind_key`，其它字一个没动 |
+| `content/rules/skill_mech.json` | 12 → 29 条机制（+17：11 主动 + 6 被动） | 新机制键名与别批不冲突（`oath_shield`/`hold_line`/`blood_price`/`riposte`/`blood_sweep`/`pin_down`/`silence_lock`/`frost_veil`/`night_watch`/`bleed`/`sidestep`/`block_oath`/`blood_brave`/`hawk_eye`/`starred`/`comfort`/`keen_edge`） |
+| `content/mech.py` | ③ 动词 + 2 个公共小件（`_self_cut`/`_grant`）· `route=trigger` 的路与校验 · `player_triggers()` 从 `_TRIGGER_VERBS` 生成 | `aeth_sunder` 的自伤那半截**改成调 `_self_cut`**（同一份实现，行为不变 —— probe_mech ⑥ 仍绿） |
+| `content/data/texts.json` | +10 条 `COMBAT_MECH_*`（654 → 664） | 与别批的 texts 并集取键（同键零打架） |
+| `content/combat.py` | `_default_skills(cls, level)`：按解锁等级挑 + 排除被动 | 这是**行为改动**（低级别的技能表可能变小，因为 11+ 那批本来就不该有） |
+| `content/cmds_battle.py` | `skill_cast` 第五道门：被动 ⇒ `COMBAT_SKILL_BAD` | 与 B3-26/27/28 都改过这个文件（取两边） |
+| `content/cmds_skill.py` | **只改了一段注释**（把「看到什么 = 打起来放什么」补成「能放的那半才对应战斗技能表；被动只列给人看」） | 零行为改动（探针 ②③ 不受影响：docstring 不算内联文案） |
+| `schemas/skills.schema.json` | +`kind_key`（enum active/passive，进 required） | 与框架回退副本无关（那份 additionalProperties:true） |
+| `scripts/rebuild_skills.py` | +`KIND_KEY` 与 `kind_key` 落法（`_place_after` 紧跟 `kind`） | 与 B3-14 那版兼容（幂等：连跑两次 0 格） |
+| `scripts/probe_skills.py` | +⑧（6 条）· 两句标签改计数 | |
+| `scripts/probe_mech.py` | +⑯–⑳（30 条）· ①⑥⑬ 三处按新数据改 | ⑬ 那条是**加强**（基线化） |
+| `scripts/probe_cmds.py` | ⑨⑩ 两处按新数据改 | ⑩ 那条是兑现它自己写好的「到时候改它」 |
+
+## §九 可复现命令
+
+```bash
+# 0) 基线：本分支的基（若按立项时那个基，会是 4 条红 —— 见抬头的提醒）
+git -C C:/Users/yuyu/ast-wt/b59 log --oneline -2
+
+# 1) 全量探针（32 条）
+cd C:/Users/yuyu/ast-wt/b59
+export GWEN_ENGINE=C:/Users/yuyu/framework-engine
+for f in scripts/probe_*.py; do
+  C:/Users/yuyu/AppData/Local/Programs/Python/Python312/python.exe "$f" > /dev/null 2>&1 \
+    && echo "OK $f" || echo "FAIL $f"
+done
+
+# 2) 生成器（幂等 · 连跑两次 0 格）
+python scripts/rebuild_skills.py     # 已写盘：48 条技能 · 改动 0 格
+python scripts/rebuild_syscopy.py    # 无新增 —— 数据不变
+
+# 3) 端到端（新技能真出手）
+AST_E2E_SEED='{"cls":"cls_knight","level":11,"race":"human","loc":"belt_north","node":"bn_bone","hp":300}' \
+  python scripts/e2e_drive.py "技能" "属性"
+AST_E2E_SEED='{"cls":"cls_assassin","level":16,"race":"human","loc":"belt_north","node":"bn_bone","hp":300}' \
+  python scripts/e2e_drive.py "技能" "攻击"
+```
+
+## §十 门禁实跑（逐字）
+
+```text
+==== 基线（分支 ff 到 bb41b46 之后，改动之前）====
+TOTAL pass=32 fail=0        ← 全量 32 条探针（立项时说「全量 30 条」，实际是 32）
+
+==== 本批改动之后 ====
+TOTAL pass=32 fail=0        ← run1 32/32 · run3 32/32（run2 那次 probe_mech 红过一次，
+                              原因是一条 fixture 的闪避掷硬币 —— 已按「fixture 收口」修掉，
+                              见本节最后一段；probe_mech 随后连跑 6 趟全绿）
+probe_mech       结果：全绿 ✓（15 节 + B4-1 追加 5 节 = 20 节）
+probe_cmds       结果：全绿 ✓（新增两条满编账 + 3 级档等级段）
+probe_skills     结论： 全过 ✅（新增 ⑧ 六条）
+probe_combat     结果：全绿 ✓
+                      本批（B4-1）      基线（主干 master，同参数同种子）
+   单刷 lv13 ⇒ 胜  0/36（0%）             0/36（0%）     ← 关键：本批不许把它顶起来
+   单刷 lv14 ⇒ 胜  6/36（17%）            6/36（17%）
+   单刷 lv15 ⇒ 胜 23/36（64%）           23/36（64%）
+   单刷 lv16 ⇒ 胜 34/36（94%）           32/36（89%）   ← +2（16 级那几条主动在这一档能用了）
+   单刷 lv17 ⇒ 胜 34/36（94%）           34/36（94%）   ← 判据要求 ≥ 30/36 ✓
+   （基线 = 主干工作树 `C:/Users/yuyu/aetheran-package`（= 本分支的基 `bb41b46`）上跑同一份 probe_combat）
+e2e  三趟都走通、无 Traceback：
+   · 观察 / 往东 / 观察 / 返回
+   · 骑士 11 级：「技能」页 = 誓约壁垒（已会）· 断后「到 14 级才能学」· 格挡回誓「到 16 级才能学」
+   · 刺客 16 级：真打一场，收尾「打完了 · 金币 +18 · 经验 +36」
+生成器：rebuild_skills 连跑两次都是「改动 0 格」· rebuild_syscopy「无新增（幂等）」
+引擎  ：framework-engine git status 空（零改动）
+真源  ：aetheran-plan git status 空（一行没碰）
+```
+
+★ 中途撞红过一条、**没有放宽判据**：`probe_combat ④`「层主低 4 级（13）单刷打不过」原先要求 `== 0`，
+本批第一版把**职业被动在 16 级才开**这件事漏了（被动挂进了 13 级的号）⇒ 3/36。修法是给
+`_passive_mech` 补**解锁等级**那一闸（`int(rec["lv"]) <= actor["level"]`），改完回到 0/36。
+判据一个字没动，并且另加了 `probe_mech ⑳` 的「15 级一个被动都不开」把它钉死。
+
+★ 另一条**不改判据、只收口 fixture** 的：`probe_mech ⑰` 的「横扫两只怪都掉血」——
+野狗那 1.3 倍闪避让这条断言变成掷硬币（实测 6 跑 2 红）。做法是把这两只的 `dodge` 归零
+（这一条问的是「AOE 对每个目标各结算一次」，不是问闪避率），断言本体一个字没松。
+
+## §十一 复核要点（给下一位）
+
+```text
+1) 先核基座那一格（抬头 ⚠）：本分支的基是 `bb41b46`（不是立项时的 `597c174`）—— 理由在抬头。
+2) 「满编」看 probe_skills ⑧ 与 probe_cmds ⑩：48 条 = 42 主动 + 6 被动，每职业 7+1，旧 30 条 lv=1 未动。
+3) 「被动不进球场」看 probe_skills ⑧ 后两条 + `combat._default_skills` 的注释（那处是本批的行为改动）。
+4) 「新机制真跑」看 probe_mech ⑯–⑳；数值一律现算（要把哪一条的系数改掉，探针会跟着红）。
+5) 没做完的三笔在 §六：格挡回誓（两个缺口）· 资源渠道（六职业同命）· 打断指令的命名。
+6) 真源待补在 §七（含 `SKILL_*_desc` 那两条路的甲/乙案，请拍板）。
+```
