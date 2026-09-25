@@ -1,0 +1,85 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "阿斯特兰 · 世界事件（events 域）—— 三尺度：世界 / 限时 / 每日",
+  "description": "本域由 scripts/rebuild_events.py 从 06_第一阶段垂直切片/29_世界事件_设计_v1.md §五 解析生成（触发串与四个数全在文档里）。判定口 = content/calendar.py（event_on / events_now，走 clock.wall + day_key）；维护门落档 = content/timed_events.py。★ 事件只是「当前是否成立」的一个布尔，谁也不存历史（历史那一格由 flags 记）。",
+  "type": "object",
+  "patternProperties": {
+    "^_": {
+      "type": "object",
+      "description": "私有键（_meta 那类）—— 与编辑器/装载器同口径：不是条目"
+    },
+    "^ev_[a-z0-9_]+$": {
+      "type": "object",
+      "required": ["no", "name", "scale", "scale_key", "period", "text", "where", "effects", "source"],
+      "properties": {
+        "no": {"type": "integer", "minimum": 1, "description": "29 文档 §五 表里的行号"},
+        "name": {"type": "string", "description": "中文名（玩家看得到 · 照抄 29 §五）"},
+        "scale": {
+          "type": "string",
+          "enum": ["世界", "限时", "每日"],
+          "description": "世界=跟主线进度的开关 · 限时=到点开合的周期 · 每日=每天重来（29 §二）"
+        },
+        "scale_key": {
+          "type": "string",
+          "enum": ["world", "timed", "daily"],
+          "description": "★ ASCII 机器键（P-20 家族：中文枚举不当筛选键；照 quests.chain / gathering.verb 的作法）"
+        },
+        "period": {
+          "type": "object",
+          "description": "窗的形状（键一律由 29 §五 的触发串解析而来）",
+          "properties": {
+            "from_main": {"type": "string", "description": "主线 id：过了就成立"},
+            "until_main": {"type": "string", "description": "★ 镜像键：没过才成立（一对互补开关的另一面）"},
+            "every_days": {"type": "integer", "minimum": 1, "description": "每多少游戏日一次"},
+            "from_day": {"type": "integer", "minimum": 0, "description": "从第几个游戏日起"},
+            "last_days": {"type": "integer", "minimum": 1, "description": "持续几个游戏日"},
+            "daily": {"type": "boolean", "description": "每天成立（键按天重置）"}
+          },
+          "additionalProperties": false
+        },
+        "text": {"type": "string", "description": "表征文案槽位（真源 = texts 域；代码只传槽位）"},
+        "where": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "在哪张图生效（空 = 全图）"
+        },
+        "effects": {
+          "type": "object",
+          "description": "效果栏 —— 每个键都要有消费端（未接的键必须登记在 _meta.effect_keys 里，探针点名）",
+          "properties": {
+            "crowd": {
+              "type": "object",
+              "description": "哪一站聚人 + 临时在场的 npc + 那一下的文案槽位（消费端 = cmds_ast._npcs_here / event_lines）",
+              "properties": {
+                "node": {"type": "string", "description": "节点 id（挂到哪儿聚人）"},
+                "npcs": {"type": "array", "items": {"type": "string"}},
+                "text": {"type": "string"}
+              },
+              "additionalProperties": false
+            },
+            "weather_mul": {
+              "type": "object",
+              "description": "天气加权（消费端 = calendar.weather_weights）",
+              "additionalProperties": {"type": "integer", "minimum": 1}
+            },
+            "encounter_mul": {
+              "type": "object",
+              "description": "遇敌候选加权（消费端 = combat.pick_encounter；没给 = 零变化）",
+              "additionalProperties": {"type": "integer", "minimum": 0}
+            },
+            "price_mul": {
+              "type": "object",
+              "description": "★ 未接（没有铺子 / 价目表）—— 谁写进来，probe_events 会点名「这份数据今天没人读」",
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": false
+        },
+        "look": {"type": "string", "description": "照抄 29 §五 的「玩家可见的表征」那一栏（可追溯）"},
+        "source": {"type": "string", "description": "出处（§五 第几行 + 触发串）"}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

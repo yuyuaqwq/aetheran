@@ -237,7 +237,7 @@ def _mark_done(p, k, step):
 
 async def guild(env, sink, uid, player):
     p = _p(player)
-    here = _npcs_here(p["loc"], p["node"])
+    here = _npcs_here(p["loc"], p["node"], p=p)
     yield T("SYS_GUILD_HEAD")
     yield T("SYS_GUILD_DESK")
     yield T("SYS_GUILD_HOW")
@@ -268,7 +268,7 @@ async def board(env, sink, uid, player):
         else:
             yield "  " + T("SYS_BOARD_NEXT", order=v["order"])
     side = [v for v in qs.values() if v["chain"] == "side" and v["giver"] in
-            [k for k, _ in _npcs_here(p["loc"], p["node"])]]
+            [k for k, _ in _npcs_here(p["loc"], p["node"], p=p)]]
     if side:
         yield T("SYS_BOARD_SIDE_HEAD")
         for v in side[:3]:

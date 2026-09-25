@@ -18,6 +18,7 @@ from .cmds_ast import (
     exp_of_kill, add_exp)
 from .cmds_talk import _arg, _pick_indexed
 from .cmds_codex import new_lines
+from . import calendar as CAL
 from . import codex as CX
 from . import combat as CB
 from . import loot as LT
@@ -63,9 +64,15 @@ def _wake_in_chapel(p):
 
 
 def _encounter(p, uid, seed=None):
-    """按当前位置与等级挑一个遭遇。"""
+    """按当前位置与等级挑一个遭遇。
+
+    ★ B3-5：遇敌权重那一层挂上来了 —— 现在开场的事件给了 `encounter_mul` 就按它加权；
+      **没给 / 没有事件 = 与改前逐字相同**（同一个种子挑出同一只）。
+    """
     ms = _data("monsters")
-    return CB.pick_encounter(ms, p["loc"], p["node"], int(p.get("level", 1)), seed=seed)
+    mul = CAL.encounter_mul(p=p)
+    return CB.pick_encounter(ms, p["loc"], p["node"], int(p.get("level", 1)),
+                             seed=seed, mul=mul or None)
 
 
 def _fmt(logs, limit=12):
