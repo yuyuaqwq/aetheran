@@ -4728,5 +4728,21 @@
     "params": [],
     "category": "战斗",
     "desc": "机制 · 免疫窗生效（晨祷 —— 承伤乘区压到地板）"
+  },
+  "COMBAT_ELEM_IMMUNE": {
+    "value": "💠 免疫 —— 【{name}】不吃这一手，伤害一点没落上去。",
+    "params": [
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "P-1 元素样例：承伤方对该元素免疫（引擎 battle.landing.element_immune 那条日志走这个槽位）"
+  },
+  "COMBAT_ELEM_WEAK": {
+    "value": "⚡ 弱点 —— 【{name}】怕这一手，伤落得更实。",
+    "params": [
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "P-1 元素样例：承伤方对该元素有弱点（引擎 battle.landing.element_weak 那条日志走这个槽位）"
   }
 }

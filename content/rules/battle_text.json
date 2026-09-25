@@ -1,0 +1,8 @@
+{
+  "_note": "引擎战斗日志槽位 → texts 域槽位名（P-1）。只声明**要覆盖**的那几条：没声明的 key ⇒ 引擎兜底模板原样输出（引擎 `render_or` 的语义：未注入与表里缺该 key 两条路径逐字节相同）⇒ 只声明 2 条 = 其余几百条战斗日志与接线前一字不差。",
+  "_src": "槽位名 = `ext_combat/battle/landing.py` 里 `render_via(battle, \"…\")` 的第一参（逐字抄，别改）",
+  "slots": {
+    "battle.landing.element_immune": "COMBAT_ELEM_IMMUNE",
+    "battle.landing.element_weak": "COMBAT_ELEM_WEAK"
+  }
+}

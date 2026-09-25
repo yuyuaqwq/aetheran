@@ -124,6 +124,15 @@ def install_engine():
     # ★ 跨域对账（装配期 fail-closed）：域里每条技能声明的机制都得在表里 ——
     #   不认得的当场抛并点名是哪条技能（绝不静默空放）。
     _MECH.check_domain()
+    # ★ P-1（元素通道）：两样都在装配期对账，答不上来当场抛 ——
+    #   ① 域里每个 `element` 码都得在 `content/rules/elements.json` 里声明过
+    #      （没声明过 ⇒ 引擎那条线静默按「无元素」走；这就是「元素表看着有、代码没消费」
+    #       的常驻判据）；同一条也顺带核样例挂在**真有的**怪上；
+    #   ② 战斗日志槽位声明的槽位都得在 texts 域里取得到（缺了**不兜一句自造的话**）。
+    from . import battle_text as _BT
+    from . import elements as _ELE
+    _ELE.check_domain()
+    _BT.check_slots()
     _MOUNTED = True
 
 
