@@ -430,6 +430,14 @@
           1,
           1
         ]
+      },
+      {
+        "out": "i_token_underwater_steps",
+        "w": 10,
+        "n": [
+          1,
+          1
+        ]
       }
     ],
     "time": "夜",

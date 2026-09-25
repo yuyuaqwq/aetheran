@@ -335,6 +335,14 @@
       "af_disarm",
       "af_vampiric",
       "af_hoarder"
+    ],
+    "encounter_lines": [
+      {
+        "need": {
+          "holding": "i_set_scavenger_blade"
+        },
+        "text": "（他盯着你手上那把刀，往后退了半步，又站住了）「……那把刀。」「第一个拿它的是我哥。他下去了，没上来。」「刀回来了。他没回来。」（他吐了一口，把手里的东西攥紧了）"
+      }
     ]
   },
   "ms_bitten_lumberjack": {
