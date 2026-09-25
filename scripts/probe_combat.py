@@ -208,22 +208,35 @@ _actor_bad = [k for k, m in MON.items()
                   or a.get("is_boss") != (m.get("role") == "boss"))(CB.monster_actor(k, m))]
 (ok if not _actor_bad else bad)("★ 怪 actor：`role` 照旧透传域里那个档位名 · `is_boss` 与 `role == \"boss\"` "
                                 "逐只相同（%d 只；例外 %s）" % (len(MON), _actor_bad or "无"))
-_pool = {k for k, m in MON.items() if m.get("role_key") in _PICK_RK}
+# ★ B3-7（副本内容）合入后：**档位白名单删掉了** —— 遇敌唯一的门改成 `habitat`
+#   （原先只放 普通/精英/头目 ⇒ 层主 / Boss 永远打不上）。所以候选闸的定义随之改成
+#   「挂了 habitat 的怪」，判据换成两条更贴意图的：野外/村镇不许混进 层主/Boss；塔里真挑得出。
+_pool = {k for k, m in MON.items() if (m.get("habitat") or {}).get("maps")}
 _pool_old = {k for k, m in MON.items() if _RBM.ROLE_KEY.get(m.get("role")) in _PICK_RK}
-(ok if _pool == _pool_old else bad)("★ 遇敌候选闸换键前后**同一批**（%d 只 · 差集 %s）"
-                                   % (len(_pool), sorted(_pool ^ _pool_old) or "无"))
+(ok if _pool and len(_pool) >= len(_pool_old) else bad)("★ 遇敌候选闸（挂 habitat 的怪 %d 只）⊇ 旧白名单那批（%d 只）"
+                                                       % (len(_pool), len(_pool_old)))
 _MP2 = st.domain("maps") or {}
 _seen = set()
+_seen_out = set()          # 野外 / 村镇
+_seen_in = set()           # 副本（旧哨塔）
+_DUNGEON = "old_watchtower"
 for _loc, _mv in sorted(_MP2.items()):
     for _n in (_mv.get("nodes") or []):
         for _lv in (1, 5, 10, 15, 19):
             for _s in range(6):
-                _seen.update(CB.pick_encounter(MON, _loc, _n.get("id"), _lv, seed=_s))
+                _got = CB.pick_encounter(MON, _loc, _n.get("id"), _lv, seed=_s)
+                _seen.update(_got)
+                (_seen_in if _loc == _DUNGEON else _seen_out).update(_got)
 (ok if _seen and _seen <= _pool else bad)("★ 真挑 6×5×%d 把：挑出来的（%d 只）全在候选闸里" % (len(_MP2), len(_seen)))
-_stranger = sorted(_seen - _pool)
-(ok if not _stranger else bad)("★ 层主 / 世界 Boss 一只都没混进随机遇敌（%s）" % (_stranger or "无"))
 if not _seen <= _pool:                                          # 真红了就把话补全（不然只有一句）
-    bad("  混进来的：%s" % _stranger)
+    bad("  混进来的：%s" % sorted(_seen - _pool))
+_BIG = sorted(k for k, m in MON.items() if m.get("role_key") in ("warden", "boss"))
+_big_out = sorted(set(_BIG) & _seen_out)
+_big_in = sorted(set(_BIG) & _seen_in)
+(ok if not _big_out else bad)("★ 层主 / 世界 Boss（%d 只）在**野外与村镇**一只都不混进来（%s）"
+                              % (len(_BIG), _big_out or "无"))
+(ok if _big_in == _BIG else bad)("★ 塔内那几只真挑得出来（%s / 共 %d）—— 白名单删掉后这才打得上了"
+                                 % (_big_in, len(_BIG)))
 
 # ⑯ ★ B3-6b-2d-keys-2：打钱分档（`cmds_battle`）换 ASCII `role_key` 之后**逐档对得上**
 #   普通 3×lv · 精英 8×lv · 头目/层主/Boss 20×lv —— 与旧写法（中文那三组）在 17 只怪上逐只同值。

@@ -388,9 +388,10 @@ def build(dry=False):
             "min_level": min_level, "need": None,
             "objective": e21[1], "require": req,
             "reward_exp": reward_exp, "reward_gold": reward_gold,
-            "story": "「%s」——接活时该说什么（待写）" % name,
-            "progress_text": "（进行中：%s）" % e21[1],
-            "deliver_text": _strip_star(e21[2]),
+            # ★ `story` / `progress_text` / `deliver_text` 三个内嵌字段**不再由本脚本写**：
+            #   B3-6c（主线）与 B3-8（支线 / 生活 / 悬赏）已把这三种行文迁进 texts 真源
+            #   （槽位 `QUEST_<CHAIN>%02d_{STORY,PROGRESS,DELIVER}`，代码走 `content/cmds_quest.py`
+            #   的 `_slot_of` 按 chain + order 取）。写回来就等于把两处口径又立起来（探针 ㉓ 会当场红）。
             "teach": "", "insight": "", "hook": _strip_star(e21[2]),
             "unlock": [],
         }
