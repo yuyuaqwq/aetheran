@@ -489,7 +489,9 @@ async def go_to(env, sink, uid, player):
     _save(env)
     yield T("SYS_MOVE_TO", name=_name_of_node(loc, hit))
     poi_here = [v for v in _data("pois").values() if v.get("map") == loc and v.get("subarea") == hit]
-    npc_here = [v for v in _data("npcs").values() if v.get("map") == loc and v.get("subarea") == hit]
+    # ★ B3-15：走唯一一口 —— 出场条件（时辰 / 天气）现看。改前这一条自己扫域、不判条件，
+    #   白天的「去 北墙根」照样把只在该在昏/夜的哈根列出来（与「观察」「问路」两处口径不一致）。
+    npc_here = [v for _k, v in _npcs_here(loc, hit)]
     if poi_here:
         yield T("SYS_LOOK_SEES", list=" · ".join("『%s』%s" % (v.get("name"), v.get("icon", "")) for v in poi_here))
     if npc_here:
