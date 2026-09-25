@@ -197,7 +197,7 @@
     "owner_class": "cls_knight",
     "lv_band": "P1",
     "mech": "block_oath",
-    "note": "格挡成功时额外 +8 守誓（与账本的 +12 并成 +20）",
+    "note": "举盾的时机抓得准 —— 挡下来的那一下会轻一截，并且额外回你几点守誓",
     "tier": 1,
     "kind_override": "增益"
   },
@@ -711,16 +711,19 @@
     "lv_band": "P1",
     "element": "ELE_FIRE",
     "res_cost": {
-      "RES_MARK": 99
+      "RES_MARK": 1
     },
     "mech": "mark_burst",
     "mech_val": 0.35,
-    "note": "把攒下的印记一次引爆：基础一记，每多一层再添三分 —— 前摇很长，容易被人截住",
+    "note": "把攒下的印记一次引爆：先得有一层才放得出来，放完清空 —— 前摇很长，容易被人截住",
     "tier": 1,
     "kind_override": "魔法",
     "exprs": [
       "matk*1"
-    ]
+    ],
+    "consume_all": {
+      "key": "RES_MARK"
+    }
   },
   "SKILL_MAG_fallenstar": {
     "name": "垂星",
@@ -741,7 +744,7 @@
     "lv_band": "P1",
     "element": "ELE_ARCANE",
     "res_cost": {
-      "RES_MARK": 99
+      "RES_MARK": 3
     },
     "mech": "mark_burst",
     "mech_val": 0.8,
@@ -750,7 +753,10 @@
     "kind_override": "魔法",
     "exprs": [
       "matk*0.8"
-    ]
+    ],
+    "consume_all": {
+      "key": "RES_MARK"
+    }
   },
   "SKILL_MAG_silence": {
     "name": "静默",

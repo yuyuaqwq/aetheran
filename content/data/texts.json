@@ -4849,5 +4849,33 @@
     ],
     "category": "战斗",
     "desc": "战斗 · 持续伤害每跳一行（引擎 `battle.schedule.dot_tick` 那一口；★ 收掉引擎兜底里的 {key} 机器键）"
+  },
+  "COMBAT_MECH_BLOCK": {
+    "value": "🛡️ 举盾挡下 —— 这一下轻了 {n} 点，守誓 +{oath}（现在 {cur}）。",
+    "params": [
+      "cur",
+      "n",
+      "oath"
+    ],
+    "category": "战斗",
+    "desc": "战斗 · 骑士被动「格挡回誓」掷中那一下（真源 F10 减免 + 账本回誓）"
+  },
+  "COMBAT_SKILL_CD": {
+    "value": "⏳ 【{name}】这一手还在缓 —— 再等 {left} 刻。",
+    "params": [
+      "left",
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "战斗 · 技能冷却中（顶掉引擎那句坏格式符的兜底）"
+  },
+  "COMBAT_RES_LACK": {
+    "value": "⚡ 这一手你还没攒够 —— 需要 {rv} 点，现在只有 {cur} 点。",
+    "params": [
+      "cur",
+      "rv"
+    ],
+    "category": "战斗",
+    "desc": "战斗 · 资源不足（顶掉引擎那句坏格式符的兜底；★ 不显示资源机器键，玩家自己那一条资源不用点名）"
   }
 }

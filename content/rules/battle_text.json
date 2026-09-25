@@ -1,9 +1,11 @@
 {
-  "_note": "引擎战斗日志槽位 → texts 域槽位名（P-1）。只声明**要覆盖**的那几条：没声明的 key ⇒ 引擎兜底模板原样输出（引擎 `render_or` 的语义：未注入与表里缺该 key 两条路径逐字节相同）⇒ 只声明 2 条 = 其余几百条战斗日志与接线前一字不差。",
+  "_note": "引擎战斗日志槽位 → texts 域槽位名（P-1）。只声明**要覆盖**的那几条：没声明的 key ⇒ 引擎兜底模板原样输出（引擎 `render_or` 的语义：未注入与表里缺该 key 两条路径逐字节相同）⇒ 只声明 2 条 = 其余几百条战斗日志与接线前一字不差。  ★ 2026-09-25：又补两条 —— 引擎那两句兜底模板的格式符是坏的（`{left::.1f}` / `{rv::g}` 不是合法 Python 格式，`render_or` 渲染失败就**原样把带花括号的模板漏给玩家**；`resource_lack` 那句还会漏出资源机器键 `RES_OATH`）⇒ 声明成自己的文案顶掉。",
   "_src": "槽位名 = `ext_combat/battle/landing.py` 里 `render_via(battle, \"…\")` 的第一参（逐字抄，别改）",
   "slots": {
     "battle.landing.element_immune": "COMBAT_ELEM_IMMUNE",
     "battle.landing.element_weak": "COMBAT_ELEM_WEAK",
-    "battle.schedule.dot_tick": "COMBAT_DOT_TICK"
+    "battle.schedule.dot_tick": "COMBAT_DOT_TICK",
+    "battle.actions.skill_cd": "COMBAT_SKILL_CD",
+    "battle.actions.resource_lack": "COMBAT_RES_LACK"
   }
 }

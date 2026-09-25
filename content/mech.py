@@ -53,6 +53,7 @@ from __future__ import annotations
 
 import json
 import os
+import random
 import types
 
 from ext_combat.battle import effects as EF
@@ -62,6 +63,7 @@ from ext_combat.battle.actors import actor_alive, hostile_sides
 from ext_combat.battle.state_effects import state_def
 
 from .cmds_ast import T
+from . import resources as RES
 
 _RULES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "rules", "skill_mech.json")
 
@@ -77,6 +79,7 @@ _TRIGGER_VERBS: dict = {
     "battle_start": "aeth_on_start",        # 整场一次：常驻态（面板型被动）
     "dmg_calc": "aeth_on_dmg_calc",         # 攻击方乘区：按出手那一刻的血线现算（血勇）
     "on_taken": "aeth_on_taken",            # 承伤后：反击类（狂态）
+    "taken_calc": "aeth_block_roll",        # 承伤乘区：格挡（骑士「格挡回誓」）
 }
 
 #: 盾容器里那一格的 key（同一个来源反复开 = 同源叠厚，引擎 `act_shield` 的语义）
@@ -611,18 +614,66 @@ def aeth_on_cast(battle, caster, target, params, logs):
     fn(battle, caster, info, m, logs)
 
 
+@EF.register_action("aeth_block_roll")
+def aeth_block_roll(battle, caster, target, params, logs):
+    """格挡（骑士被动「格挡回誓」）：掷一次 → 中了就按**真源 F10** 打折 + 回守誓。
+
+    ★ 为什么掷骰在内容侧：引擎那条 `block` 通道**只算减免、不发事件**（`landing` 里滚完就完了），
+      而这条被动要的是「**格挡成功**」这个信号；真源 `02_数值宪法/01_属性字典` F10 自己写着
+      「触发率**另配**（走被动/装备，不在这里定）」⇒ 掷骰放内容侧、减免照走真源那条公式。
+    ★ 数字全部来自声明：概率在机制表（`block_chance`）· 减免走 `formula_table.json` 的
+      `F10_block_mit`（**求值，不重写**）· 回誓在 `resources.json` 的渠道表（`on_block`）+
+      本机制自己那半（`oath_bonus`）。
+    ★ fail-closed：资源表没挂 / 被动没到等级 ⇒ 一个字段都不写（与接线前一字不差）。
+    """
+    if not RES.table():
+        return
+    if _passive_mech(caster) != "block_oath":       # 不是这个职业的被动 / 等级没到 ⇒ 不格挡
+        return
+    m = of("block_oath")
+    chance = _num(m, "block_chance")
+    ctx = getattr(battle, "_fire_ctx", None)
+    if chance <= 0 or not isinstance(ctx, dict):
+        return
+    if random.random() >= chance:
+        return
+    # 减免：真源 F10（从声明式公式表求值 —— 代码里不重写那条公式）
+    from . import apply as _AP
+    try:
+        blk = float(ST.actor_stats(battle, caster).get("block", 0) or 0)
+        mit = float(_AP._table().eval("F10_block_mit", {"block": blk}))
+    except Exception:                                   # noqa: BLE001
+        mit = 0.0
+    if mit > 0:
+        cur = ctx.get("mult")
+        ctx["mult"] = (1.0 if cur is None else float(cur)) * (1.0 - mit)
+    # 回誓：账本那条（渠道表）+ 这条被动自己那半
+    key = RES.res_of_class(str(caster.get("class_name") or ""))
+    oath = int(RES.gain_of(key, "on_block")) + int(_num(m, "oath_bonus"))
+    got = RES.add(battle, caster, key, oath, logs) if key and oath else 0
+    try:
+        _dmg = float(ctx.get("dmg") or 0)
+    except Exception:                                   # noqa: BLE001
+        _dmg = 0.0
+    logs.append(T("COMBAT_MECH_BLOCK", n=int(_dmg * mit), oath=oath, cur=got))
+
+
 def player_triggers() -> dict:
     """玩家 actor 要挂的注入点（引擎的事件总线 + 承伤乘区 + B4-1 的常驻被动那条路）。
 
     ★ 挂载面**从 `_TRIGGER_VERBS` 生成**（不手写字面量）：表里声明了几个事件、这里就挂几个，
       多挂一个（空跑）少挂一个（接了永不触发）都在 `_validate` 里当场抛。
+    ★ 职业资源那几条（`resources.json`）由 `content/resources.py::triggers()` 合并进来 ——
+      同一个事件允许多个动作（例：`taken_calc` 上「减伤乘区」与「格挡」各一个），引擎按序跑。
     """
     out = {
         "act_cast": [{"action": "aeth_on_cast"}],
         "taken_calc": [{"action": "aeth_mitigate"}],
     }
     for ev, verb in _TRIGGER_VERBS.items():
-        out[ev] = [{"action": verb}]
+        out.setdefault(ev, []).append({"action": verb})      # ★ 追加，不覆盖（taken_calc 上有两个）
+    for ev, acts in (RES.triggers() or {}).items():          # 职业资源渠道（B4-1 那批的声明）
+        out.setdefault(ev, []).extend(acts)                  # ★ 同一个事件允许多个动作（引擎按序跑）
     return out
 
 

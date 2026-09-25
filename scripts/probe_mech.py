@@ -342,6 +342,12 @@ _r2 = hit(_b, _a, 100)
 (ok if _r <= 1 and _r2 == 100 else bad)(
     "  · 窗内挨 100 点 ⇒ 真扣 %d 点（引擎乘区地板 max(1,…)）｜ 窗过期 ⇒ 恢复 %d 点" % (_r, _r2))
 _b2 = fresh("cls_priest")
+#: ★ 资源闸门（③ 资源渠道）上了之后：晨祷要 3 层祷言 ⇒ fixture 得先把资源垫上
+#:   （这不是放宽判据 —— 引擎的资源预检本来就该拦；探针给足资源才是「这一手放得出来」的场景）
+#:   ★ 顺序要求：`battle_start` 那一趟会把资源**摆回 0**（开战就该是 0）⇒ 先把开门那一趟推掉，
+#:     再垫资源；反过来的话垫的会被开门冲掉。
+_b2._ensure_battle_started([])
+_b2.focus().setdefault("effects", {})["RES_LITANY"] = {"stacks": 3, "expire": None}
 _c2, _t2, _l2 = do(_b2, "SKILL_PRS_matins")
 (ok if has(_l2, "COMBAT_MECH_MATINS") else bad)("  · 端到端：真出手 ⇒ 出「光落下来」那一行")
 
@@ -415,6 +421,9 @@ for _sid in ("SKILL_RNG_backstep", "SKILL_SHD_backstep", "SKILL_MAG_ignite", "SK
         #   它同时钉住了"pending 不写任何东西"与"被动的常驻态是开战给的"两件事）。
         _sb = _bb.focus()
         _eb = (_bb.sides.get("enemy") or [{}])[0]
+        #: ★ 基线要取在**开战那一趟之后**：职业资源渠道接上之后，`battle_start` 会把资源条目摆成 0
+        #:   （那就是「一个状态都不新增」的基线；不先推开战，资源条目会被算成 pending 写的新状态）
+        _bb._ensure_battle_started([])
         SCH.advance(_bb, [])
         _base = set(_sb.get("effects") or {}) | set(_eb.get("effects") or {})
         _cc, _tt, _ll = do(_bb, _sid)
@@ -493,6 +502,8 @@ _t_sh = float(SKD["SKILL_KNT_bulwark"]["mech_val"])
 #: ★ 端到端那几路一律用 **16 级**的号：新技能是 lv 11/14/16 解锁的，10 级的 actor 索引不到它
 #:   （`_index_one_actor` 只索引 actor 技能表里那几条）—— 放一条没解锁的招，引擎只会回落普攻。
 _b2 = fresh("cls_knight", lv=16)
+_b2._ensure_battle_started([])                        # 先推开门（它会把资源摆 0），再垫
+_b2.focus().setdefault("effects", {})["RES_OATH"] = {"stacks": 40, "expire": None}   # 誓约壁垒要 40 守誓
 _c2, _t2, _l2 = do(_b2, "SKILL_KNT_bulwark")
 (ok if (_c2.get("shields") or {}).get(MECH._SHIELD_KEY) and any("护盾" in x for x in _l2) else bad)(
     "  · 端到端：真出手 ⇒ 引擎那句「获得护盾 N 点」（护盾走引擎自己的容器与文案，不另写一套）")
@@ -611,6 +622,8 @@ _mp = float(MECH.state_rule("pinned")["panel"]["mult"])
            - (_b._now + float(SKD["SKILL_RNG_pindown"]["mech_val"]))) < 1e-6 else bad)(
     "  · 定向：减速时长 = mech_val(%s) 刻" % SKD["SKILL_RNG_pindown"]["mech_val"])
 _b2 = fresh("cls_ranger", lv=16, mid=DOG)             # 目标要够厚：暴击那一下会把田鼠直接打死
+_b2._ensure_battle_started([])                        # 先推开门（它会把资源摆 0），再垫
+_b2.focus().setdefault("effects", {})["RES_AIM"] = {"stacks": 2, "expire": None}     # 箭止要 2 层准星
 _c2, _t2, _l2 = do(_b2, "SKILL_RNG_pindown")
 (ok if has(_l2, "COMBAT_MECH_PINDOWN") else bad)("  · 端到端：真出手 ⇒ 出「箭钉在它起手的地方」那一行")
 
@@ -761,9 +774,14 @@ _fire(_bb2, "dmg_calc", _ctx2, [])
 (ok if _ctx2.get("mult") is None else bad)(
     "  · ★ 血勇同样吃等级闸：15 级血再少也不加成（mult=%s）" % (_ctx2.get("mult"),))
 _bo = MECH.of("block_oath")
-(ok if _bo.get("status") == "pending" and _bo.get("why") and not _bo.get("route") else bad)(
-    "  · ★ 格挡回誓：**登记未接**（status=pending · why 写明缺的两环：格挡事件 + 资源渠道）—— "
-    "与接线前一字不差，探针不许把它算成已生效")
+_bo_ok = (_bo.get("status") == "on" and _bo.get("route") == "trigger"
+          and _bo.get("trigger") == "taken_calc" and _bo.get("verb") == "aeth_block_roll"
+          and not EF.missing_actions([_bo.get("verb")])
+          and float((_bo.get("block_chance") or {}).get("value") or 0) > 0
+          and float((_bo.get("oath_bonus") or {}).get("value") or 0) > 0)
+(ok if _bo_ok else bad)(
+    "  · ★ 格挡回誓：**已接线**（status=on · route=trigger · trigger=taken_calc · 动词已注册 · "
+    "概率与回誓都是声明）—— 掷骰/减免/回誓的逐值判据在 `probe_resources` ⑥（接之前这里是 pending）")
 _ea, _er = GC.get_effect_actions() or {}, GC.get_effect_rules() or {}
 (ok if "blood_sweep" in _ea and not (set(MECH.mechs()) & set(_er)) else bad)(
     "  · ★ 17 条新机制：route=engine 的进了 EFFECT_ACTIONS · 机制名一个都没进 EFFECT_RULES（防叠层劫持）")

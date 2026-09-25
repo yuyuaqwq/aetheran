@@ -296,6 +296,34 @@ chk("⑨-a 那行**不含**状态机器键（%r）—— 引擎兜底会把它�
     % "bleeding",
     bool(_dot_lines) and not any("bleeding" in x for x in _dot_lines))
 
+#: ★ 2026-09-25（③ 资源渠道那一批顺带挖出来的）：引擎另两句兜底模板的**格式符是坏的**
+#:   （`{left::.1f}` / `{rv::g}` 不是合法 Python 格式 ⇒ `render_or` 渲染失败就把带花括号的模板
+#:   **原样**吐给玩家；`resource_lack` 那句还会漏出资源机器键）。这里各驱动一次，把两条槽位
+#:   钉成「真被请求过」，并把「渲染出来的句子里没有花括号 / 没有机器键」写死。
+_bc = CB.build({"cls": "cls_knight", "level": 16, "name": "探", "uid": "u_slot"}, [MID], MON, uid="u_slot")
+_cc = _bc.focus()
+SCH.advance(_bc, [])
+_lg_s = []
+_cc.setdefault("effects", {})["RES_OATH"] = {"stacks": 0, "expire": None}
+_sub_a, _ea, _wa = _bc.human_act("skill", "SKILL_KNT_bulwark", _cc)          # 誓约壁垒要 40 守誓 ⇒ 资源不足那句
+_lg_s += [str(x) for x in (_sub_a or [])]
+SCH.settle_landing(_bc, _lg_s, _cc)
+#: 冷却那句：本包技能的耗时刻数（≈110）都比 cd 长 ⇒ 真打里几乎到不了这一句（这就是它一直没人发现坏了的原因）。
+#: 这里用**文档化的预检口**直调一次（`_skill_usable(…, logs=…)` 是引擎自己的判据口），把那条槽位钉成「真被请求过」。
+from ext_combat.battle.actions import _skill_usable as _usable_e               # noqa: E402
+_cc["cooldown"] = {"盾墙": _bc._now + 99999}
+_usable_e(_bc, _cc, SK.skill_info("cls_knight", "盾墙"), logs=_lg_s)
+_lack_pre = str(_tx[BT.slots()["battle.actions.resource_lack"]]["value"]).split("{")[0]
+_cd_pre = str(_tx[BT.slots()["battle.actions.skill_cd"]]["value"]).split("{")[0]
+_lack = [x for x in _lg_s if _lack_pre in x]
+_cdl = [x for x in _lg_s if _cd_pre in x]
+chk("⑨-b 资源不足那行**走槽位**（不让引擎那句坏格式符漏给玩家）：%s" % (_lack[:1] or "（没出）"),
+    bool(_lack))
+chk("⑨-b 冷却那行**走槽位**：%s" % (_cdl[:1] or "（没出）"), bool(_cdl))
+chk("⑨-b 两句都**不含花括号 / 机器键**（引擎兜底实测会漏 `{rv::g}` 与 `RES_OATH`）",
+    bool(_lack) and bool(_cdl)
+    and all(("{" not in x and "}" not in x and "RES_" not in x) for x in (_lack + _cdl)))
+
 _unused = BT.battle_text().unused()
 chk("⑨ 声明的槽位（%d 条）都被引擎真请求过（unused = %r）" % (len(BT.slots()), _unused), _unused == ())
 

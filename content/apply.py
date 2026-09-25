@@ -133,6 +133,11 @@ def install_engine():
     from . import elements as _ELE
     _ELE.check_domain()
     _BT.check_slots()
+    # ★ 职业资源渠道（B4-1 那批只写了 `res_gain` / `res_cost` 声明，这里是它的消费端）：
+    #   装配期核「域里每条技能声明的资源码都在 resources.json 里」+「一个职业只挂一条资源」——
+    #   答不上来当场抛（认不得的资源不许静默不涨）。数据表本身由 `content/resources.py` 现读。
+    from . import resources as _RES
+    _RES.check_domain()
     _MOUNTED = True
 
 
