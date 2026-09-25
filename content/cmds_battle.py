@@ -281,6 +281,13 @@ async def attack(env, sink, uid, player):
     if _line:
         yield _line
         return
+    # ★ B3-26：这一敲要不要走「场」（多人轮流制）那道 —— 单人 / 没场 ⇒ False，
+    #   接着往下走**今天这条老路**（一个字不变；判据见 `scripts/probe_instance.py` ⑤）。
+    from . import instance as INST
+    if INST.route_needed(env, uid):
+        async for line in INST.take_turn(env, p, uid, player, action="attack"):
+            yield line
+        return
     pick, ms, affixes, _mline = _meet(p, uid)
     if not pick:
         yield T("COMBAT_NONE")
@@ -323,6 +330,12 @@ async def interrupt(env, sink, uid, player):
     act = BA.interrupt_action_of(p)
     head = T("COMBAT_INT_HEAD", skill=act.get("name", "")) if act else T("COMBAT_INT_PLAIN")
     hand = BA.Hand("interrupt", p=p)
+    # ★ B3-26：在场里 ⇒ 走「场」那道（打断要「花掉你这一手」，得先轮到你）
+    from . import instance as INST
+    if INST.route_needed(env, uid):
+        async for line in INST.take_turn(env, p, uid, player, head=head, hand=hand):
+            yield line
+        return
     async for line in _open_and_hand(env, p, uid, player, head, hand=hand):
         yield line
 
@@ -432,9 +445,15 @@ async def skill_cast(env, sink, uid, player):
         yield T("SYS_SKILL_TOO_LOW", name=rec.get("name", sid), lv=lv,
                 gap=lv - int(p.get("level") or 1))
         return
-    async for line in _open_and_hand(env, p, uid, player,
-                                     T("COMBAT_SKILL_HEAD", name=rec.get("name", sid)),
-                                     action="skill", skill=sid):
+    _head = T("COMBAT_SKILL_HEAD", name=rec.get("name", sid))
+    # ★ B3-26：在场里 ⇒ 走「场」那道（放技能要「花掉你这一手」，得先轮到你）
+    from . import instance as INST
+    if INST.route_needed(env, uid):
+        async for line in INST.take_turn(env, p, uid, player, head=_head,
+                                         action="skill", skill=sid):
+            yield line
+        return
+    async for line in _open_and_hand(env, p, uid, player, _head, action="skill", skill=sid):
         yield line
 
 
@@ -464,8 +483,14 @@ async def battle_item(env, sink, uid, player):
         yield T("COMBAT_ITEM_BAD", name=want)
         return
     hand = BA.Hand("item", p=p, item=iid)
-    async for line in _open_and_hand(env, p, uid, player,
-                                     T("COMBAT_ITEM_HEAD", name=rec.get("name", iid)), hand=hand):
+    _head = T("COMBAT_ITEM_HEAD", name=rec.get("name", iid))
+    # ★ B3-26：在场里 ⇒ 走「场」那道（用物要「花掉你这一手」，得先轮到你）
+    from . import instance as INST
+    if INST.route_needed(env, uid):
+        async for line in INST.take_turn(env, p, uid, player, head=_head, hand=hand):
+            yield line
+        return
+    async for line in _open_and_hand(env, p, uid, player, _head, hand=hand):
         yield line
 
 
@@ -578,6 +603,12 @@ async def defend(env, sink, uid, player):
     _mx, _line = hp_cap_or_line(p)
     if _line:
         yield _line
+        return
+    # ★ B3-26：在场里 ⇒ 走「场」那道（防御也是「你这一手」；超时保底就是它）
+    from . import instance as INST
+    if INST.route_needed(env, uid):
+        async for line in INST.take_turn(env, p, uid, player, action="defend"):
+            yield line
         return
     async for line in _open_and_hand(env, p, uid, player, "", action="defend"):
         yield line
