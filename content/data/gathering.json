@@ -27,6 +27,42 @@
     "desc": "墙根背风，长的东西比别处早。娜娜说过这个位置。",
     "times_per_day": 3
   },
+  "gt_wt_search_wall": {
+    "name": "哈根身后的墙根",
+    "map": "windmill_town",
+    "subarea": "wt_wall",
+    "kind": "搜查",
+    "verb": "search",
+    "pool": [
+      {
+        "out": "i_set_northwall_amulet",
+        "w": 10
+      },
+      {
+        "out": "i_junk_bone",
+        "w": 40,
+        "n": [
+          1,
+          2
+        ]
+      },
+      {
+        "out": "i_material_old_iron",
+        "w": 26,
+        "n": [
+          1,
+          1
+        ]
+      },
+      {
+        "out": "unid_common",
+        "w": 5
+      }
+    ],
+    "time": null,
+    "desc": "他背对着你坐着，没回头。墙根下那块土比别处松 —— 他守了很多年，也没动过它。",
+    "times_per_day": 3
+  },
   "gt_bn_herb_1": {
     "name": "碑缝里的草",
     "map": "belt_north",
@@ -81,6 +117,18 @@
           1,
           3
         ]
+      },
+      {
+        "out": "i_material_iron_scrap",
+        "w": 30,
+        "n": [
+          1,
+          2
+        ]
+      },
+      {
+        "out": "i_set_northwall_shard",
+        "w": 15
       }
     ],
     "time": null,
@@ -113,11 +161,91 @@
           1,
           2
         ]
+      },
+      {
+        "out": "i_material_iron_scrap",
+        "w": 35,
+        "n": [
+          1,
+          2
+        ]
       }
     ],
     "time": null,
     "desc": "营地边上有一块土的颜色不一样。他们埋过什么。",
     "times_per_day": 1
+  },
+  "gt_bn_search_camp": {
+    "name": "营地边上的暗格",
+    "map": "belt_north",
+    "subarea": "bn_camp",
+    "kind": "搜查",
+    "verb": "search",
+    "pool": [
+      {
+        "out": "i_set_scavenger_cloak",
+        "w": 10
+      },
+      {
+        "out": "i_junk_bone",
+        "w": 40,
+        "n": [
+          1,
+          2
+        ]
+      },
+      {
+        "out": "i_material_old_iron",
+        "w": 26,
+        "n": [
+          1,
+          1
+        ]
+      },
+      {
+        "out": "unid_common",
+        "w": 5
+      }
+    ],
+    "time": null,
+    "desc": "角落里那块布底下不是土。拾荒人把东西存在这儿 —— 他自己大概也忘了。",
+    "times_per_day": 3
+  },
+  "gt_bn_search_bone": {
+    "name": "骨田里那根钩子",
+    "map": "belt_north",
+    "subarea": "bn_bone",
+    "kind": "搜查",
+    "verb": "search",
+    "pool": [
+      {
+        "out": "i_set_scavenger_hook",
+        "w": 10
+      },
+      {
+        "out": "i_junk_bone",
+        "w": 40,
+        "n": [
+          1,
+          1
+        ]
+      },
+      {
+        "out": "i_material_old_iron",
+        "w": 26,
+        "n": [
+          1,
+          1
+        ]
+      },
+      {
+        "out": "unid_common",
+        "w": 5
+      }
+    ],
+    "time": null,
+    "desc": "土里横着一根钩子，柄上缠着布。拾荒人拿它从底下往外掏东西 —— 他不说掏的是什么。",
+    "times_per_day": 3
   },
   "gt_bn_herb_2": {
     "name": "塔下的白茅",
@@ -202,6 +330,46 @@
     "time": null,
     "desc": "名字、记号、还有几个看不出是什么的。有一个刻得特别深。",
     "times_per_day": 3
+  },
+  "gt_be_dig_1": {
+    "name": "伐木棚后头",
+    "map": "belt_east",
+    "subarea": "be_shed",
+    "kind": "挖掘",
+    "verb": "dig",
+    "pool": [
+      {
+        "out": "i_material_iron_scrap",
+        "w": 45,
+        "n": [
+          1,
+          3
+        ]
+      },
+      {
+        "out": "i_material_old_iron",
+        "w": 20,
+        "n": [
+          1,
+          1
+        ]
+      },
+      {
+        "out": "i_junk_bone",
+        "w": 20,
+        "n": [
+          1,
+          2
+        ]
+      },
+      {
+        "out": "unid_common",
+        "w": 15
+      }
+    ],
+    "time": null,
+    "desc": "棚子后面那片土被刨过。崩掉的斧刃、弯了的铁钉 —— 都堆在这儿，没人捡。",
+    "times_per_day": 1
   },
   "gt_bw_fish_1": {
     "name": "渡口石阶下",
@@ -300,6 +468,42 @@
     "desc": "退潮露出来的地方，什么都可能有。昨天有人在这儿捡到过东西。",
     "times_per_day": 3
   },
+  "gt_bw_search_ferry": {
+    "name": "石阶上那盏灯",
+    "map": "belt_west",
+    "subarea": "bw_old_ferry",
+    "kind": "搜查",
+    "verb": "search",
+    "pool": [
+      {
+        "out": "i_set_northwall_lantern",
+        "w": 10
+      },
+      {
+        "out": "i_junk_bone",
+        "w": 40,
+        "n": [
+          1,
+          2
+        ]
+      },
+      {
+        "out": "unid_common",
+        "w": 26
+      },
+      {
+        "out": "i_junk_boot",
+        "w": 5,
+        "n": [
+          1,
+          1
+        ]
+      }
+    ],
+    "time": null,
+    "desc": "石阶最上面一级放着盏灯。灯油还没干 —— 放灯的人刚走，或者待会儿会回来。",
+    "times_per_day": 3
+  },
   "gt_tw_search_1": {
     "name": "储藏室的架子",
     "map": "old_watchtower",
@@ -358,6 +562,78 @@
     ],
     "time": null,
     "desc": "草垫还是整的。有人每天来整理，整理了很多年。",
+    "times_per_day": 3
+  },
+  "gt_tw_search_3": {
+    "name": "塔顶的箱子",
+    "map": "old_watchtower",
+    "subarea": "tower_top",
+    "kind": "搜查",
+    "verb": "search",
+    "pool": [
+      {
+        "out": "i_set_sentry_cape",
+        "w": 10
+      },
+      {
+        "out": "i_material_old_iron",
+        "w": 40,
+        "n": [
+          1,
+          2
+        ]
+      },
+      {
+        "out": "i_junk_bone",
+        "w": 26,
+        "n": [
+          1,
+          2
+        ]
+      },
+      {
+        "out": "unid_rare",
+        "w": 5
+      }
+    ],
+    "time": null,
+    "desc": "箱盖开着一半，里面那件东西叠得很整齐 —— 像有人替谁收着，等一个不会回来的人。",
+    "times_per_day": 3
+  },
+  "gt_tw_search_4": {
+    "name": "号角室墙上的钩子",
+    "map": "old_watchtower",
+    "subarea": "tower_horn_room",
+    "kind": "搜查",
+    "verb": "search",
+    "pool": [
+      {
+        "out": "i_set_sentry_horn",
+        "w": 10
+      },
+      {
+        "out": "i_junk_bone",
+        "w": 40,
+        "n": [
+          1,
+          2
+        ]
+      },
+      {
+        "out": "i_potion_minor",
+        "w": 26,
+        "n": [
+          1,
+          2
+        ]
+      },
+      {
+        "out": "unid_rare",
+        "w": 5
+      }
+    ],
+    "time": null,
+    "desc": "钩子空着。号角不在钩上 —— 它在屋子最里面，落了一层灰，铜锈从裂口里长出来。",
     "times_per_day": 3
   }
 }
