@@ -1191,7 +1191,8 @@
   },
   "codex_relic": {
     "patterns": [
-      "^旧物谱$"
+      "^旧物谱$",
+      "^图鉴\\s*旧物$"
     ],
     "category": "图鉴与记录",
     "desc": "旧物谱",
@@ -1201,6 +1202,26 @@
     "guard_desc": "随时",
     "bind": {
       "handler": "content.cmds_codex:codex_relic",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
+  },
+  "relic_study": {
+    "patterns": [
+      "^端详(?:\\s*(.+))?$",
+      "^细看(?:\\s*(.+))?$"
+    ],
+    "category": "图鉴与记录",
+    "desc": "自己上手看一件旧物（只看出一层 —— 来处仍要问人）",
+    "usage": "端详 <旧物>",
+    "visible": true,
+    "order": 72,
+    "guard_desc": "手上有这件旧物",
+    "bind": {
+      "handler": "content.cmds_codex:relic_study",
       "call": "run",
       "args": [
         "uid",

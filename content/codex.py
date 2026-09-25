@@ -13,6 +13,12 @@
     books = {"material": {...}, "flavor": {...}, "monster": {...}, "relic": {...}}
     foot  = {"nodes": {"<loc>:<node>": 第几个游戏日}, "kills": n, "reads": n, "gathers": n}
 
+★ 旧物谱一条记**两格**（都是一次性的判断，落档后不可逆 · 都由本模块写）：
+    known   —— 「问对人」认出来了（`known` / `reveal` / `revealable`：真名 + 来处那段）
+    studied —— 「自己上手看过」了（`studied` / `study`：只看出物证那一层，P-8）
+  两格**各给一半、不互相替代**：自己看不出「来处」（那要有人认得），
+  问过人也不会替你省掉「这一件本身看得出来什么」。物证句的唯一来源见 `evidence()`。
+
 ★ `codex` 那个平表（id → True）是 loot 的「第一次见到」集合 —— 本模块**不碰**它（两处各管一头）。
 """
 from __future__ import annotations
@@ -117,6 +123,12 @@ def count(p: dict, bk: str) -> int:
 def known(p: dict, rid: str) -> bool:
     rec = _books(p).get("relic", {}).get(rid) or {}
     return bool(rec.get("known"))
+
+
+def studied(p: dict, rid: str) -> bool:
+    """自己上手看过没有（★ 与 `known` 分开：看过 = 看出物证那一层，认出来 = 有人给了来处）。"""
+    rec = _books(p).get("relic", {}).get(rid) or {}
+    return bool(rec.get("studied"))
 
 
 def unknowns(p: dict) -> list:
@@ -237,6 +249,51 @@ def reveal(p: dict, rid: str) -> bool:
     if not rec or rec.get("known"):
         return False
     rec["known"] = True
+    return True
+
+
+# ══════════════════════════════════════════════════════════════
+# 自己看（P-8）—— 没有 NPC 也能往前挪一格的那条路
+# ══════════════════════════════════════════════════════════════
+def _held(rid: str) -> dict:
+    """这一件的**实物记录**（items 域；`unid_*` 那种挂在池表上的走 loot 一个口）。"""
+    from . import loot as LT                       # 本地 import：避免包装载期的环
+    return dict(LT.rec_of(str(rid)) or {})
+
+
+def held_name(rid: str) -> str:
+    """手上这一件**手上的**名字（实物域写的那个 —— 玩家在背包里看见的就是它）。
+
+    兜底回谱里的名字（别给裸 id）。
+    """
+    return str(_held(rid).get("name") or name_of("relic", str(rid)))
+
+
+def evidence(rid: str) -> str:
+    """自己上手能坐实的那一层（**物证句**）—— ★ 唯一来源：实物域写得出的那一句。
+
+    取法（两级，都只在实物域里找）：`lore`（信物 / 遗物那类：「断口往里卷。不是用坏的 ——
+    是被人掰断的。」）→ 兜底池表的 `hint`（未鉴定的那两件挂在 `drop_pools` 上：
+    「硬的。有点锈。埋在下面很久了。」）。
+
+    为什么是它们：这两句写的都是「这件东西**本身**看得出来什么」，推不出「它从哪儿来」——
+    来处那一段永远在 codex 的 `known` 里、只能问对人（`reveal`）。
+    两处都没有就回空串（fail-closed：**不编一句**）—— 调用方据此对他说「手上没有这一件」。
+    """
+    h = _held(rid)
+    return str(h.get("lore") or h.get("hint") or "")
+
+
+def study(p: dict, rid: str) -> bool:
+    """自己上手看一遍 → 落档（返回这一遍是不是**头一回**看）。
+
+    ★ 不可逆 · 幂等：看过就是看过 —— 第二遍不再动档（也不会第二次「落档」）；
+      看过的**不是**认出来（`known` 那一格一个字不动）。
+    """
+    rec = _books(p).get("relic", {}).get(str(rid))
+    if not rec or rec.get("studied"):
+        return False
+    rec["studied"] = True
     return True
 
 

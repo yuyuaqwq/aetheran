@@ -4,11 +4,13 @@
 六条指令（04_指令总表 §八）：图鉴 · 材料谱 · 风味谱 · 怪物谱 · 旧物谱 · 记录。
 口径与文案真源：`00_总纲/14_图鉴四谱口径_v1.md`（条目在 codex 域 · 框架话在 texts 域）。
 
-★ 这一组**不写档**（只看不改）—— 记录发生在采集/战斗/读书/走路那些地方（content/codex.py）。
+★ 这一组原先**只看不改**（记录发生在采集/战斗/读书/走路那些地方 —— `content/codex.py`）；
+  P-8 起多了一条会落档的：`端详 <旧物>` —— 不靠 NPC 也能看出旧物的**一层**（见 `relic_study`）。
 """
 from __future__ import annotations
 
 from .cmds_ast import _p, _save, T
+from .cmds_talk import _arg
 from . import codex as CX
 
 #: 空谱时那句话（每个谱自己一句 —— 文案在 texts 域）
@@ -114,8 +116,73 @@ async def codex_relic(env, sink, uid, player):
                           known=CX.line_of("relic", k, "known")))
         else:
             rows.append(T("SYS_CODEX_RELIC_UNKNOWN", hint=CX.line_of("relic", k, "hint")))
+        if CX.studied(p, k):                       # ★ P-8：自己看出的那一层，跟在后面（★ 另起一行，不并进问号那行）
+            ev = CX.evidence(k)
+            if ev:
+                # ★ 槽位借「观察」的「看得见：X」—— 旧物谱自己那一句（SYS_CODEX_RELIC_SEEN）待文案那批补
+                rows.append(T("SYS_LOOK_SEES", list=ev))
     async for line in _one_book(p, "relic", rows):
         yield line
+
+
+# ══════════════════════════════════════════════════════════════
+# 自己看（P-8）—— 不靠 NPC 的那一条路
+# ══════════════════════════════════════════════════════════════
+def _studiable(p) -> list:
+    """他手上**能自己看**的那几件（在旧物谱里 ∧ 在背包里 ∧ 实物域写着物证句）—— 谱里的顺序。"""
+    bag = p.get("bag") or {}
+    return [k for k in CX.book("relic")
+            if CX.has(p, "relic", k) and k in bag and CX.evidence(k)]
+
+
+def _study_hit(p, want: str):
+    """按名字认他手上那一件（★ 认的是**手上**的名字 —— 玩家在背包里看见的就是它）；认不出回 None。"""
+    for rid in _studiable(p):
+        names = (CX.held_name(rid), CX.name_of("relic", rid))
+        if want in names or (len(want) >= 2 and any(want in n for n in names)):
+            return rid
+    return None
+
+
+async def relic_study(env, sink, uid, player):
+    """`端详 <旧物>` —— 自己上手看久一点，看出一层（★ P-8：没有那个 NPC 也能往前挪一格）。
+
+    口径（**两条路各给一半，不互相替代**）：
+      · **自己看只给一层**：手上这一件**本身**看得出的硬事实 —— 物证句
+        （`codex.evidence`：实物域那句 `lore`「断口往里卷。不是用坏的 —— 是被人掰断的。」，
+        未鉴定那类兜底池表的 `hint`）。能坐实「是什么做的 / 坏在哪 / 谁动过手」，
+        但**推不出它在哪儿被人动的手**。
+      · **「来处」那一层仍然只能问人**：谁、在哪、为什么（codex 的 `known`）——
+        自己看多少遍都不给；看完仍然提醒他「拿去问对人」（`SYS_CODEX_RELIC_ASK_HINT`）。
+      · 看过就**落档**（`books.relic[<id>].studied`），**不可逆 · 幂等**：第二遍看回同一句，
+        档上不再动（落的是「你看过了」，不是「你知道了」—— `known` 那一格一个字不动）。
+
+    为什么有它：原先只有「拿去问人」这一条路 ⇒ 那个 NPC 不在（或玩家还没走到他那儿），
+    这件旧物就永远是问号 —— 玩家会觉得卡住了。
+
+    没点名 → 先把旧物谱摆出来（照「烹饪」那一手）；名字对不上 → 走 fail-closed 的现成槽位。
+    """
+    p = _p(player)
+    _sync_bag(p, player, env)
+    want = _arg(env)
+    if not want:
+        async for line in codex_relic(env, sink, uid, player):
+            yield line
+        return
+    rid = _study_hit(p, want)
+    if not rid:
+        # ★ 槽位是**借的**：这句在 texts 域里的原文是「背包里没有叫「X」的装备」——
+        #   严格该有一条旧物自己的（SYS_CODEX_RELIC_NOHOLD）。先借现成的，别为此新造一句。
+        yield T("SYS_ENHANCE_NOITEM", input=want)
+        return
+    if CX.study(p, rid):                           # ★ 只头一回落档
+        if player is not None:
+            player.update(p)
+        _save(env)
+    yield T("SYS_READ_HEAD", name=CX.held_name(rid))
+    yield T("SYS_LOOK_SEES", list=CX.evidence(rid))
+    if not CX.known(p, rid):                       # 另一半还在人那儿
+        yield T("SYS_CODEX_RELIC_ASK_HINT")
 
 
 async def footprint(env, sink, uid, player):
