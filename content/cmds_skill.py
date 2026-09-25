@@ -133,6 +133,9 @@ async def skill_learn(env, sink, uid, player):
     if not cls:
         yield T("SYS_SKILL_NOCLS")
         return
+    if not want:                       # ★ B4-10：没带技能名就照实说
+        yield T("SYS_SKILL_LEARN_ASK")
+        return
 
     sk = _skills()
     sid, rec = _by_name(sk, want)

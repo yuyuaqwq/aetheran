@@ -23,16 +23,17 @@
   · 数值一律从域 / 面板现算（不手打）
   · 落档只经 `player.update(p)` + `_save(env)`；出档一律 `_p()`（默认档不当草稿纸，K57）
 
-取参：`_warg()` —— 参跟着**声明自己的 patterns** 走
+取参：`content/argv.py` —— 全包**一个口**（B4-10）
 ----------------------------------------------
+参怎么切跟着**声明自己的 patterns** 走（`arg_of(env)` 用 `env.key` 找那一条）——
 `^存放\\s*(.+)$` 这种「词与参数之间不要求空白」的写法，`split()` 那一套会把「存放铁屑」取空。
-这里取 pattern 的**字面量前缀**（最长命中的那条），从原文里剥掉它 —— 参不手写镜像表。
 ★ 方向的真源是声明自己的 `usage`（`存放 <参数>` 那句的第一个词）：命中词是它的**子串**
   （`存` ⊆ `存放`）⇒ 同一个方向；否则是反方向。代码里一个中文都不写（中文是数据）。
 """
 from __future__ import annotations
 
 from .cmds_ast import _data, _p, _save, T, name_with_title, _cls_label
+from . import argv as AV
 from .cmds_quest import _done, _mine, _quests, _shadow, _unmet
 from .cmds_recipe import _have, _take
 from .cmds_gear import affix_lines, stat_label
@@ -44,8 +45,7 @@ from . import loot as LT
 from . import panel_build as PB
 from . import titles as TT
 
-#: 声明表的唯一读口（取参 / 给玩家看的那几个词都在声明里，代码不另抄一份）
-_DECL_CACHE: dict = {}
+#: 声明表的唯一读口 = `content/argv.py`（取参 / 给玩家看的那几个词都在声明里，代码不另抄一份）
 
 #: 客栈：`存放 / 取出` 的守卫是「在客栈」（`03_风车镇_指令与回复` 一）—— 风车镇那个节点
 STASH_NODE = "wt_inn"
@@ -58,49 +58,11 @@ PANEL_ROWS = (
     ("heal_pow", "HEAL_POW"),
 )
 
-#: 正则里的元字符（`_lit_prefix` 扫到它就停 —— 前缀是「连着写的那几个字」）
-_META = "\\[](){}.*+?|$^"
-
-
-def _decl(key: str) -> dict:
-    """一条声明（`commands` 域里的那一条）—— 取参 / 呈现都读它，不另抄。"""
-    if key not in _DECL_CACHE:
-        _DECL_CACHE[key] = (_data("commands") or {}).get(key) or {}
-    return _DECL_CACHE[key]
-
-
 def _usage(key: str) -> str:
     """这条指令**玩家看见的那个词**（`usage` 的第一个词 —— 如 `存放`）。"""
-    return str(_decl(key).get("usage") or "").split(" ")[0].strip()
+    return str(AV.decl(key).get("usage") or "").split(" ")[0].strip()
 
 
-def _lit_prefix(pat: str) -> str:
-    """`^存放\\s*(.+)$` → `存放`：取 `^` 之后**连着写的字面量**，遇元字符就停。"""
-    s = str(pat or "")
-    i = 1 if s.startswith("^") else 0
-    out = []
-    while i < len(s) and s[i] not in _META:
-        out.append(s[i])
-        i += 1
-    return "".join(out)
-
-
-def _hit_prefix(key: str, raw: str) -> str:
-    """原文命中了哪条 pattern 的**字面量前缀**（最长的一条）—— 一条都没命中给空串。"""
-    best = ""
-    for pat in (_decl(key).get("patterns") or []):
-        pre = _lit_prefix(pat)
-        if pre and raw.startswith(pre) and len(pre) > len(best):
-            best = pre
-    return best
-
-
-def _warg(key: str, env) -> str:
-    """按声明取参：命中哪条 pattern，就用它的字面量前缀把参剥出来（词与参之间可以有空白，
-    也可以没有 —— 与声明同形）。"""
-    raw = (getattr(env, "text", "") or "").strip()
-    pre = _hit_prefix(key, raw)
-    return raw[len(pre):].strip() if pre else ""
 
 
 def _split_n(arg: str):
@@ -166,7 +128,7 @@ async def board_show(env, sink, uid, player):
       （真源 `03 §一` 写的是「在公会」，那一栏是**声明里的 guard_desc**，包内没有守卫执行面）。
     """
     p = _p(player)
-    want, _n = _split_n(_warg("board_show", env))
+    want, _n = _split_n(AV.arg_of(env, "board_show"))
     qs = _quests()
     hit = None
     for k in sorted(qs, key=lambda kk: (qs[kk].get("order") or 0, kk)):
@@ -247,7 +209,7 @@ async def item_show(env, sink, uid, player):
     ★ 词条那一支走 `cmds_gear.affix_lines`（装备面板用的同一个口）—— 不另写一份「+N」的拼法。
     """
     p = _p(player)
-    want, _n = _split_n(_warg("item_show", env))
+    want, _n = _split_n(AV.arg_of(env, "item_show"))
     iid, rec = _bag_hit(p, want)
     if not iid:
         yield T("SYS_GEAR_IN_BAG", name=want)
@@ -285,7 +247,10 @@ async def item_drop(env, sink, uid, player):
     ★ 数量缺省 1；写了数字就按数字（多过手里的按手里的算 —— 与 `_take` 同一口径）。
     """
     p = _p(player)
-    name, n = _split_n(_warg("item_drop", env))
+    name, n = _split_n(AV.arg_of(env, "item_drop"))
+    if not name:                       # ★ B4-10：没带东西就照实说
+        yield T("SYS_DROP_ASK")
+        return
     iid, rec = _bag_hit(p, name)
     have = int((p.get("bag") or {}).get(iid) or 0) if iid else 0
     if not iid or have <= 0:
@@ -310,7 +275,10 @@ async def item_sell(env, sink, uid, player):
     ★ 铺子在镇上（`05 §六`「铺子：镇上 3 家」）—— 在野外卖不了，这里照实说一句。
     """
     p = _p(player)
-    name, n = _split_n(_warg("item_sell", env))
+    name, n = _split_n(AV.arg_of(env, "item_sell"))
+    if not name:                       # ★ B4-10：没带东西就照实说
+        yield T("SYS_SELL_ASK")
+        return
     iid, rec = _bag_hit(p, name)
     have = int((p.get("bag") or {}).get(iid) or 0) if iid else 0
     if not iid or have <= 0:
@@ -411,7 +379,7 @@ async def stash(env, sink, uid, player):
     if str(p.get("node") or "") != STASH_NODE:
         yield T("SYS_STASH_AWAY")
         return
-    hit = _hit_prefix("stash", raw)
+    hit = AV.hit_prefix("stash", raw)
     into = bool(hit) and hit in _usage("stash")
     name, n = _split_n(raw[len(hit):].strip() if hit else "")
     if not name:

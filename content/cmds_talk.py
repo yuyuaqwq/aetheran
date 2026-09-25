@@ -23,6 +23,7 @@
 from __future__ import annotations
 
 from .cmds_ast import _data, _p, _save, _map_of, _name_of_node, T, _texts, _npcs_here
+from . import argv as AV
 from .cmds_ast import egg_lines, title_lines
 from . import calendar as CAL
 from . import codex as CX
@@ -30,10 +31,14 @@ from . import heard as HD
 
 
 def _arg(env, default=""):
-    """从玩家原文取参数：`搭话 哈根` → `哈根`。"""
-    t = (getattr(env, "text", "") or "").strip()
-    parts = t.split(None, 1)
-    return parts[1].strip() if len(parts) > 1 else default
+    """从玩家原文取参数（**唯一口** = `content/argv.py`）：`搭话 哈根` → `哈根`。
+
+    ★ B4-10：原先按第一个空白切 ⇒ `装铁剑` 这种「别名与参**连写**」会被取空
+      （声明里 `^装\\s*(.+)$` 本来就允许连写）。现在跟着**该指令自己的声明**剥前缀
+      （最长命中的那条），连写与带空白两种写法取到同一个参；
+      裸指令名（`装备`）取到空串 = 「没带参」（原先会拿第二个字当参）。
+    """
+    return AV.arg_of(env, default=default)
 
 
 def _pick_indexed(lines, p, st=None):

@@ -1936,6 +1936,99 @@ except Exception as exc:                                                  # noqa
     chk("★ B3-23 战斗那六条跑得起来（真宿主契约）", False,
         "%s: %s" % (type(exc).__name__, exc))
 
+
+# ══════════════════════════════════════════════════════════════
+# ★ B4-10：取参**一个口**（`content/argv.py`）—— 别名与参连写 + 裸指令名
+# ══════════════════════════════════════════════════════════════
+print("⑮ ★ B4-10：参跟着该指令**自己的声明**走 —— 连写也取得到参 · 裸指令名照实说")
+try:
+    from content import argv as AV15                                    # noqa: E402
+    _IT15 = st.domain("items") or {}
+    _SK15 = st.domain("skills") or {}
+    _W15 = "i_weapon_knight_wall_common"
+    _M15 = "i_material_iron_scrap"
+    _L15 = max((int(v.get("lv") or 1), k, v) for k, v in _SK15.items()
+               if v.get("owner_class") == "cls_knight")
+    _L15N, _L15LV = _L15[2].get("name"), int(_L15[2].get("lv") or 1)
+    _LV15 = 5
+    chk("★ 三条 fixture 都在域里（%s / %s / %s 要到 %d 级）"
+        % (_W15, _M15, _L15N, _L15LV),
+        _W15 in _IT15 and _M15 in _IT15 and bool(_L15N) and _L15LV > _LV15)
+
+    def _usage15(key):
+        """玩家看见的那个词（`usage` 第一个词）—— 从声明取，不手写。"""
+        return str((AV15.decl(key).get("usage") or "")).split(" ")[0]
+
+    _SEED15 = {"cls": "cls_knight", "race": "human", "name": "试炼者", "level": _LV15,
+               "exp": 0, "gold": 0, "hp": 116, "loc": "windmill_town", "node": "wt_gate_n",
+               "prev": [], "bag": {_W15: 1, _M15: 2}, "equipped": {}, "codex": {}, "flags": {}}
+
+    def _say15(seed, text):
+        """真宿主真敲一条（造档起手 · 钟钉死）—— 与别处同形，不新建形状。"""
+        _db15 = os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp",
+                             "ast_probe_cmds_b410.db")
+        try:
+            os.remove(_db15)
+        except OSError:
+            pass
+        _ad15 = _Ad([], seed=dict(seed))
+        _h15 = Host(_ad15, str(REPO), inject={"db_path": _db15, "clock": lambda: _FIXED})
+        _h15.boot()
+        _ad15.out.clear()
+        _h15.handle({"uid": "u_c", "group_id": "g_c", "text": text})
+        return list(_ad15.out), (_ad15.saved or {})
+
+    # ── 一、别名与参**连写** == 主词 + 空白（回话与档上副作用逐字相同）
+    _B15 = []
+    for _k15, _sp15, _nm15 in (("equip", "装", _IT15[_W15].get("name")),
+                               ("item_drop", "丢", _IT15[_M15].get("name")),
+                               ("item_sell", "卖", _IT15[_M15].get("name")),
+                               ("skill_learn", "学", _L15N)):
+        _a_o15, _a_s15 = _say15(_SEED15, "%s %s" % (_usage15(_k15), _nm15))
+        _b_o15, _b_s15 = _say15(_SEED15, "%s%s" % (_sp15, _nm15))
+        if not _a_o15 or _b_o15 != _a_o15 or _b_s15 != _a_s15:
+            _B15.append((_k15, _nm15, _b_o15[:2], _a_o15[:2]))
+    chk("★ 别名与参**连写**（装/丢/卖/学 + 名字，不给空白）取到同一个参：回话与档上副作用"
+        "与「主词 + 空白」逐字相同（原先连写取到空参 ⇒ 回带空引号的错话）",
+        not _B15, "%s" % _B15[:2])
+
+    # ── 二、裸指令名 ⇒ 各自那一句 ASK（逐字对账 texts）· 档一个字不动
+    _BARE15 = (("equip", "SYS_GEAR_EQUIP_ASK"), ("item_drop", "SYS_DROP_ASK"),
+               ("item_sell", "SYS_SELL_ASK"), ("skill_learn", "SYS_SKILL_LEARN_ASK"))
+    _bb15 = []
+    for _k15, _slot15 in _BARE15:
+        _o15, _s15 = _say15(_SEED15, _usage15(_k15))
+        if _o15 != [_r(_slot15)] or _s15 != dict(_SEED15):
+            _bb15.append((_k15, _o15[:2], [k for k in (_s15 or {}) if
+                                           _s15.get(k) != _SEED15.get(k)]))
+    chk("★ 裸指令名（%s —— 帮助里就写着这几个词）各自回那一句 ASK，且**档一个字不动**"
+        "（原先回「背包里没有『』」这类空引号错话）"
+        % " · ".join(_usage15(k) for k, _s in _BARE15),
+        not _bb15, "%s" % _bb15[:2])
+
+    # ── 三、覆盖面（静态）：凡带「单字别名」的声明，别名与参连写都要取得到参
+    _one15 = []
+    for _k15, _d15 in sorted(DECL.items()):
+        if not (_d15 or {}).get("visible", True):
+            continue
+        _al15 = [p for p in (_d15.get("patterns") or []) if len(AV15.lit_prefix(p)) == 1]
+        if not _al15:
+            continue
+        _e15 = type("_E15", (object,), {"text": "x", "key": _k15})()
+        _e15.text = AV15.lit_prefix(_al15[0]) + "某个名字"
+        _got15 = AV15.arg_of(_e15)
+        if _got15 != "某个名字":
+            _one15.append((_k15, AV15.lit_prefix(_al15[0]), _got15))
+    chk("★ 覆盖面：凡带「单字别名」的声明都按**自己声明的**前缀剥参（%d 条）——"
+        " 别名与参连写取得到参，取不到就红（K64 ① 那一族）"
+        % len([1 for _k, _d in DECL.items()
+               if (_d or {}).get("visible", True)
+               and any(len(AV15.lit_prefix(p)) == 1 for p in (_d.get("patterns") or []))]),
+        not _one15, "%s" % _one15[:3])
+except Exception as exc:                                                  # noqa: BLE001
+    chk("★ B4-10 取参那个口跑得起来（真宿主契约）", False,
+        "%s: %s" % (type(exc).__name__, exc))
+
 print("")
 print("结果：全绿 ✓" if ok else "结果：有红 ✗")
 sys.exit(0 if ok else 1)

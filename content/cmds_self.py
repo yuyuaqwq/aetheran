@@ -30,6 +30,7 @@ import json
 import os
 
 from .cmds_ast import _data, _p, _save, T
+from . import argv as AV
 from .cmds_places import TOWN, _at, _func_node, _node_name
 from . import calendar as CAL
 
@@ -49,11 +50,6 @@ def _day() -> int:
     return int(CAL.state().get("game_day") or 0)
 
 
-def _arg(env, key: str) -> str:
-    """取参：`改名 张三` → `张三`（与声明里那个 `(?:\\s+(.+))?` 同形 —— 不带参就是空串）。"""
-    raw = (getattr(env, "text", "") or "").strip()
-    parts = raw.split(None, 1)
-    return parts[1].strip() if len(parts) > 1 else ""
 
 
 async def register(env, sink, uid, player):
@@ -121,7 +117,7 @@ async def rename(env, sink, uid, player):
       真源表里没有机器可读的上下限，代码不编一个（记进 `_notes.md` 待补）。
     """
     p = _p(player)
-    want = _arg(env, "rename")
+    want = AV.arg_of(env)
     f = _flags(p)
     if f.get("renamed"):
         yield T("SYS_RENAME_USED")

@@ -670,6 +670,8 @@ def main():
         ("装备(不是能穿的)", CGR.equip, "装备 %s" % _its.get(_plain, {}).get("name", ""),
          {"bag": {_plain: 1}}),
         ("装备(背包里没有)", CGR.equip, "装备 不存在的东西", {"cls": "cls_knight"}),
+        # ★ B4-10：裸指令名 = 「没带东西」那一档（原先回「背包里没有『』」—— 空引号）
+        ("装备(没带东西·裸名)", CGR.equip, "装备", {"cls": "cls_knight", "bag": {_wpn: 1}}),
         ("卸下(身上那件)", CGR.unequip, "卸下 %s" % _its.get(_wpn, {}).get("name", ""),
          {"cls": "cls_knight", "equipped": {"weapon": _wpn}}),
         ("卸下(没点名·列身上)", CGR.unequip, "卸下",
@@ -691,6 +693,8 @@ def main():
         ("学习(不是本职业)", CSK.skill_learn, "学习 冰棱", {"cls": "cls_knight", "level": 1}),
         ("学习(没这条)", CSK.skill_learn, "学习 没有这条技能", {"cls": "cls_knight"}),
         ("学习(还没择业)", CSK.skill_learn, "学习 横剑", {}),
+        ("学习(没带东西·裸名)", CSK.skill_learn, "学习",
+         {"cls": "cls_knight", "level": 1}),
         # ★ B3-12（这一批新接的 8 条）：每一支都真跑一遍 —— ⑥ 的「不缺文案 / 不漏机器键」
         #   与 ⑬ 的「默认档不被就地改」从此**自动**罩到它们身上
         ("看(单子)", CMO.board_show, "看 1", {"level": 3}),
@@ -711,12 +715,15 @@ def main():
         ("丢弃(超过手里的)", CMO.item_drop, "丢弃 %s 9" % _its.get(_wpn, {}).get("name", ""),
          {"bag": {_wpn: 2}}),
         ("丢弃(没有这件)", CMO.item_drop, "丢弃 不存在的东西", {}),
+        ("丢弃(没带东西·裸名)", CMO.item_drop, "丢弃", {"bag": {_wpn: 1}}),
         ("卖出(有价的)", CMO.item_sell, "卖出 %s" % (_its.get(_pric, {}).get("name", "") or "药水"),
          {"loc": "windmill_town", "bag": {_pric: 2}} if _pric else {}),
         ("卖出(域里没价)", CMO.item_sell, "卖出 %s" % _its.get(_nopric, {}).get("name", ""),
          {"loc": "windmill_town", "bag": {_nopric: 1}}),
         ("卖出(人在野外)", CMO.item_sell, "卖出 %s" % (_its.get(_pric, {}).get("name", "") or "药水"),
          {"loc": "belt_north", "node": "bn_bone", "bag": {_pric: 1}} if _pric else {}),
+        ("卖出(没带东西·裸名)", CMO.item_sell, "卖出",
+         {"loc": "windmill_town", "bag": {_pric: 1}} if _pric else {}),
         ("整理背包(空)", CMO.bag_sort, "", {"bag": {}}),
         ("整理背包(满)", CMO.bag_sort, "", _rich()),
         ("存放(不在客栈)", CMO.stash, "存放 %s" % _its.get(_wpn, {}).get("name", ""),

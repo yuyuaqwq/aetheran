@@ -4991,5 +4991,29 @@
     ],
     "category": "系统",
     "desc": "B4-7 建号第二步 · 定过之后再看（裸『职业』）"
+  },
+  "SYS_GEAR_EQUIP_ASK": {
+    "value": "装哪一件？打『装备 <东西>』。",
+    "params": [],
+    "category": "系统",
+    "desc": "B4-10 装备 · 没带东西（裸「装备」/ 别名与参都空）"
+  },
+  "SYS_DROP_ASK": {
+    "value": "丢哪一件？打『丢弃 <东西>』。",
+    "params": [],
+    "category": "系统",
+    "desc": "B4-10 丢弃 · 没带东西"
+  },
+  "SYS_SELL_ASK": {
+    "value": "卖哪一件？打『卖出 <东西>』。",
+    "params": [],
+    "category": "系统",
+    "desc": "B4-10 卖出 · 没带东西"
+  },
+  "SYS_SKILL_LEARN_ASK": {
+    "value": "学哪一条？打『学习 <技能名>』。",
+    "params": [],
+    "category": "系统",
+    "desc": "B4-10 学习 · 没带技能名"
   }
 }

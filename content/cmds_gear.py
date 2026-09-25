@@ -239,6 +239,9 @@ async def equip(env, sink, uid, player):
     """
     p = _p(player)
     want = _arg(env)
+    if not want:                       # ★ B4-10：没带东西就照实说
+        yield T("SYS_GEAR_EQUIP_ASK")
+        return
     iid, rec = _in_bag(p, want, need_slot=True)
     if not iid:
         yield _not_there(p, want)
