@@ -29,11 +29,19 @@ import threading
 import time
 
 __all__ = ["bind", "db_path", "clock", "init_db", "lock", "connect",
-           "get_player", "update_player", "get_player_groups", "all_players"]
+           "get_player", "update_player", "get_player_groups", "all_players",
+           "meta_key", "group_get", "group_set", "group_del"]
 
 #: 存档表名（★ 带包前缀，理由见模块开头）；列 = 存档那一行的形状
 TBL = "aetheran_players"
 COLS = ("group_id", "uid", "data", "updated_at")
+#: ★ B3-26：**按群存的共同档**（「场」这种不是单玩家档的数据）—— 与上面那张同一个库
+TBL_META = "aetheran_meta"
+META_COLS = ("k", "v")
+
+#: 共同档的键形状：`<scope>:<group_id>`（scope = 谁在用，如 `instance`；
+#: 分隔符只有这一处定义 —— 键里的两截都不许再含它，否则会撞别人的行）
+META_SEP = ":"
 
 _H = {"db_path": None, "clock": None, "log": None, "tlog": None,
       "attach_tlog": None, "grant_reward": None}
@@ -81,11 +89,12 @@ def connect():
         k TEXT PRIMARY KEY, v TEXT)""")
     # ★ `IF NOT EXISTS` 撞上同名的**别人的**表时会**静默跳过**（2026-09-25 换包上线实测：
     #   奥兰迪亚的 `players` 在同一个库里 ⇒ 每次查询都 `no such column: data`）⇒ 当场核列、不对就抛。
-    got = {r["name"] for r in c.execute("PRAGMA table_info(%s)" % TBL)}
-    if got != set(COLS):
-        c.close()
-        raise RuntimeError("%s：存档表 %s 的列不对（期望 %s，实际 %s）—— 撞上同名的别的表了？"
-                           % (__name__, TBL, sorted(COLS), sorted(got)))
+    for _t, _cols in ((TBL, COLS), (TBL_META, META_COLS)):
+        got = {r["name"] for r in c.execute("PRAGMA table_info(%s)" % _t)}
+        if got != set(_cols):
+            c.close()
+            raise RuntimeError("%s：存档表 %s 的列不对（期望 %s，实际 %s）—— 撞上同名的别的表了？"
+                               % (__name__, _t, sorted(_cols), sorted(got)))
     return c
 
 
@@ -189,6 +198,72 @@ def all_players(group_id=None):
             d = {}
         out.append({"group_id": r["group_id"], "uid": r["uid"], "data": d})
     return out
+
+
+# ── 按群存的共同档（★ B3-26：多人在场时的「场」这类数据） ─────────
+def meta_key(scope, group_id) -> str:
+    """共同档的键 `<scope>:<group_id>` —— 形状只有这一处，别在调用方拼。"""
+    s = str(scope or "").strip()
+    if not s or META_SEP in s:
+        raise ValueError("scope 必须是非空且不含 %r 的简单词：%r" % (META_SEP, scope))
+    return "%s%s%s" % (s, META_SEP, str(group_id or ""))
+
+
+def group_get(scope, group_id):
+    """读一条按群存的共同档（没写过 → None）。
+
+    ★ fail-closed 两档（与 `get_player` 有意不同，理由在下面）：
+      · 行不在 = **没写过** ⇒ None（调用方按「没有这一场」处理）；
+      · 行在、但值不是 JSON 对象 = **写坏了** ⇒ 当场抛 —— 静默回 None 会让
+        「这一场」凭空消失（打到一半的战斗被当成没开过），宁可喊出来。
+    """
+    with _LOCK:
+        c = connect()
+        try:
+            row = c.execute("SELECT v FROM %s WHERE k=?" % TBL_META,
+                            (meta_key(scope, group_id),)).fetchone()
+        finally:
+            c.close()
+    if not row:
+        return None
+    try:
+        v = json.loads(row["v"])
+    except Exception as e:                                   # noqa: BLE001
+        raise RuntimeError("%s：共同档 %s 读不出来（数据坏了，不当成「没有」）：%s"
+                           % (__name__, meta_key(scope, group_id), e))
+    if not isinstance(v, dict):
+        raise RuntimeError("%s：共同档 %s 不是一个对象（%r）"
+                           % (__name__, meta_key(scope, group_id), type(v).__name__))
+    return v
+
+
+def group_set(scope, group_id, value) -> bool:
+    """写一条按群存的共同档（整条覆盖；值必须是 JSON 对象）。"""
+    if not isinstance(value, dict):
+        raise ValueError("共同档只存对象（不是对象就别塞）：%r" % (type(value).__name__,))
+    blob = json.dumps(value, ensure_ascii=False, separators=(",", ":"), default=str)
+    with _LOCK:
+        c = connect()
+        try:
+            c.execute("INSERT INTO %s(k, v) VALUES(?,?) "
+                      "ON CONFLICT(k) DO UPDATE SET v=excluded.v" % TBL_META,
+                      (meta_key(scope, group_id), blob))
+            c.commit()
+        finally:
+            c.close()
+    return True
+
+
+def group_del(scope, group_id) -> bool:
+    """删一条按群存的共同档（没写过也回 True —— 幂等）。"""
+    with _LOCK:
+        c = connect()
+        try:
+            c.execute("DELETE FROM %s WHERE k=?" % TBL_META, (meta_key(scope, group_id),))
+            c.commit()
+        finally:
+            c.close()
+    return True
 
 
 def player_handles():

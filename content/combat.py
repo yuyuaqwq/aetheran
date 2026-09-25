@@ -228,7 +228,7 @@ def _affix_hooks(battle: Battle) -> None:
 
 
 def build(player: dict, monster_ids, monsters: dict, *, party: int | None = None,
-          override=None, affixes=None, hp_mults=None) -> Battle:
+          override=None, affixes=None, hp_mults=None, players=None) -> Battle:
     """组一场战斗：玩家 1 人 vs 指定的怪。
 
     `party` = 队伍人数（★ B3-25 起由 `cmds_battle._party_now` **进战那一刻现算**：
@@ -240,8 +240,22 @@ def build(player: dict, monster_ids, monsters: dict, *, party: int | None = None
     ★ B3-24（精英词条的落点，全部可选；**不传 = 与接线前逐字相同**）：
       · `affixes` —— 这一场敌人的精英词条 id（`affix.roll` 抽出来的那一组）；
       · `hp_mults` —— 与 `monster_ids` 等长的「每只的生命倍数」（群居的第二只半血）。
+
+    ★ B3-26（多人轮流制那一批）：`players` = 这一场**进场的那几份玩家档**（每人一份，
+      按入队序）—— 每份都走同一个 `player_actor`，`sides["player"]` 就是这一串
+      （引擎每边本来就是列表，引擎零改动）。**不传 = 与改前逐字相同**（只放 `player` 一个）。
+      每份档上的 `uid` 必须各不相同（引擎靠它找「该谁动」与落账）—— 由调用方保证。
     """
-    ps = [player_actor(player)]
+    if players is not None:
+        _pl = list(players)
+        if not _pl:
+            raise ValueError("players 给了但是空的（要单人就不要传这个参数）：%r" % (players,))
+        _uids = [str(x.get("uid") or "") for x in _pl]
+        if any(not u for u in _uids) or len(set(_uids)) != len(_uids):
+            raise ValueError("players 里每份档都得带**各不相同**的 uid：%r" % (_uids,))
+        ps = [player_actor(x) for x in _pl]
+    else:
+        ps = [player_actor(player)]
     es = []
     for i, mid in enumerate(monster_ids):
         m = monsters.get(mid)
