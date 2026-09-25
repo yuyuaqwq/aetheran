@@ -98,6 +98,15 @@
     "owner": "package",
     "tier": "portable"
   },
+  "monster_affixes": {
+    "label": "精英词条",
+    "kind": "data",
+    "schema": "schemas/monster_affixes.schema.json",
+    "primary": "affix",
+    "icon": "†",
+    "owner": "package",
+    "tier": "portable"
+  },
   "monsters": {
     "label": "怪物",
     "kind": "data",

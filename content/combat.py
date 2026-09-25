@@ -18,6 +18,7 @@ from ext_combat.battle.actors import make_actor
 
 from . import panel_build as PB
 from . import alloc as ALLOC          # ★ P-34：档上那份加点只走它（`of_record`）
+from . import affix as AFFIX          # ★ B3-24：精英词条（面板乘 / 先手 / 开场盾 / 血量阈值）
 
 PLAYER_SIDE = "player"
 ENEMY_SIDE = "enemy"
@@ -111,7 +112,8 @@ def _default_skills(cls_id: str):
     return [k for _, k in mine]
 
 
-def monster_actor(mid: str, m: dict, *, party: int | None = None) -> dict:
+def monster_actor(mid: str, m: dict, *, party: int | None = None, affixes=None,
+                  hp_mult: float | None = None) -> dict:
     """怪数据（monsters 域）→ 战斗 actor。
 
     ★ B3-14：**域里那套键名要翻成引擎消费端那一套**（键名契约 —— 照域里的名字传，
@@ -138,6 +140,11 @@ def monster_actor(mid: str, m: dict, *, party: int | None = None) -> dict:
         if _k not in panel:
             raise KeyError("party_scale 要缩的面板键不在 panel 里（键名对不上不静默）：%s.%s" % (mid, _k))
         panel[_k] = int(round(float(panel[_k]) * _v))
+    # ★ B3-24：精英词条的面板乘（改数值那一类）—— 同样加在**域那一套键名**上、换名之前；
+    #   键名对不上由 `affix.apply_panel` 当场抛（与 party_scale 同一条 fail-closed 纪律）。
+    panel = AFFIX.apply_panel(panel, affixes, mid)
+    if hp_mult is not None:                        # 群居：第二只半血（每只单独给倍数）
+        panel["hp"] = max(1, int(round(float(panel["hp"]) * float(hp_mult))))
     panel["max_hp"] = panel.pop("hp", panel.get("max_hp"))
     panel["mdef"] = panel.pop("res", panel.get("mdef"))
     panel["dodge"] = PB.rate_of(panel.pop("eva", 0))
@@ -151,19 +158,73 @@ def monster_actor(mid: str, m: dict, *, party: int | None = None) -> dict:
     #   缺了档位名 ⇒ 拿机器键顶上（两个都不在 ⇒ 空串，两条路在引擎那边都是「不是 boss」）。
     a["role"] = m.get("role") or m.get("role_key") or ""
     a["is_boss"] = (m.get("role_key") == "boss")   # 原先比 `a["role"] == "boss"`（那一档的值恰好是 ASCII）
+    # ★ B3-24：精英词条 —— 名字（`† 硬壳的田鼠 †`，走 texts 槽位）与开场盾（引擎 shields 容器）。
+    #   没有词条 ⇒ 名字原样、盾字典为空（= 与接线前逐字相同）。
+    if affixes:
+        a["name"] = AFFIX.display_name(str(m.get("name", mid)), affixes)
+        # 开场盾按**生命上限**算 ⇒ 上限取不到就不给盾（fail-closed：不拿 1 / 100 垫上）
+        _mx = a.get("max_hp")
+        if not isinstance(_mx, (int, float)) or isinstance(_mx, bool) or float(_mx) <= 0:
+            raise ValueError("精英词条要发开场盾，但 actor 没有可用的生命上限：%s" % (mid,))
+        a["shields"] = AFFIX.shields_of(affixes, int(_mx))
+        a["_affixes"] = list(affixes)              # 阈值那类词条要在 `build` 里挂导演钩子
     if m.get("skills"):
         a["skills"] = list(m["skills"])
     return a
 
 
+def _affix_hooks(battle: Battle) -> None:
+    """★ B3-24：把「血量阈值」那类词条挂成**战斗导演钩子**（引擎的 `Battle.script_hook` 注入点）。
+
+    引擎在自动 actor 每一动之前调它（`callable(battle, actor, logs) -> bool`），返回 False =
+    不拦这一动。这里只做一件事：词条声明的阈值一越过，就按声明改面板（原地的 actor 字段 ——
+    引擎每次结算都现读 `actor_stats`，所以改了就真生效）。
+
+    ★ `once` 那条必须自己守：钩子**每一动都会被调**，不守就会一路上乘（实测 12 → 60）。
+    """
+    defs = []
+    for a in battle.sides.get(ENEMY_SIDE, []):
+        for aid, th in AFFIX.thresholds_of(a.get("_affixes")):
+            defs.append((a, aid, th))
+    if not defs:
+        return
+
+    def hook(b, actor, logs):
+        for target, aid, th in defs:
+            if actor is not target:
+                continue
+            # 上限取不到 = 这一动什么都不改（fail-closed：不猜一个数当分母）
+            _mx_raw = target.get("max_hp")
+            _mx = float(_mx_raw) if _mx_raw else 0.0
+            if _mx <= 0:
+                return False
+            hp_now = float(target.get("hp") or 0)
+            if hp_now / _mx > float(th.get("hp_below", 0) or 0):
+                continue
+            mark = "_afx_" + str(aid)
+            if th.get("once") and target.get(mark):
+                continue
+            target[mark] = True
+            mult = float(th.get("atk_mult", 1) or 1)
+            target["atk"] = int(round(float(target.get("atk", 0) or 0) * mult))
+            return False
+        return False
+
+    battle.script_hook = hook
+
+
 def build(player: dict, monster_ids, monsters: dict, *, party: int | None = None,
-          override=None) -> Battle:
+          override=None, affixes=None, hp_mults=None) -> Battle:
     """组一场战斗：玩家 1 人 vs 指定的怪。
 
     `party` = 队伍人数（今天只有单人，所以调用方一律传 1；组队接线那批把真实人数传进来）——
     它只影响「团队内容」那几只怪的面板（`mods.party_scale`），别的怪一格不动。
     `override` = **非内置动作**的回调（引擎 `Battle.action_override` 那一个注入面）——
     B3-23 那几手（打断 / 用物 / 换手）走它；不传 = 与改前逐字相同（引擎不认识任何游戏词）。
+
+    ★ B3-24（精英词条的落点，全部可选；**不传 = 与接线前逐字相同**）：
+      · `affixes` —— 这一场敌人的精英词条 id（`affix.roll` 抽出来的那一组）；
+      · `hp_mults` —— 与 `monster_ids` 等长的「每只的生命倍数」（群居的第二只半血）。
     """
     ps = [player_actor(player)]
     es = []
@@ -171,17 +232,25 @@ def build(player: dict, monster_ids, monsters: dict, *, party: int | None = None
         m = monsters.get(mid)
         if not m:
             continue
-        a = monster_actor(mid, m, party=party)
+        hm = (list(hp_mults)[i] if hp_mults and i < len(hp_mults) else None)
+        a = monster_actor(mid, m, party=party, affixes=affixes, hp_mult=hm)
         es.append(a)
-    return Battle("monster", sides={PLAYER_SIDE: ps, ENEMY_SIDE: es}, action_override=override)
+    b = Battle("monster", sides={PLAYER_SIDE: ps, ENEMY_SIDE: es}, action_override=override)
+    # ★ B3-24 两条词条通道要**在 Battle 造好之后**落（引擎构造期会给全体播种初始 ct）：
+    ct = AFFIX.opening_ct(affixes)
+    if ct is not None:
+        for a in es:                               # 潜伏：第一动排在所有行动之前（先手）
+            a["ct"] = float(ct)
+    _affix_hooks(b)                                # 狂暴（血量阈值）→ 导演钩子
+    return b
 
 
 def run_auto(player: dict, monster_ids, monsters: dict, *, seed: int | None = None,
-             party: int | None = None):
+             party: int | None = None, affixes=None, hp_mults=None):
     """★ 第一版主路径：自动打完，返回 (结果, 日志行, 玩家战后血量)。"""
     if seed is not None:
         random.seed(seed)                       # 可复现（探针用）
-    b = build(player, monster_ids, monsters, party=party)
+    b = build(player, monster_ids, monsters, party=party, affixes=affixes, hp_mults=hp_mults)
     logs: list = []
     b.auto_run(logs)
     pa = b.sides[PLAYER_SIDE][0]

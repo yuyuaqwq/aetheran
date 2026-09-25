@@ -428,5 +428,305 @@ print("  · 交换余量（17 只实际）：最小 %.2f（%s）· 最大 %.2f"
       % (min(v[0] for v in _g.values()), min(_g, key=lambda k: _g[k][0]), max(v[0] for v in _g.values())))
 
 print()
+print("── ★ B3-24 精英词条（`monster_affixes` 域 + 消费端 `content/affix.py`）")
+# 真源：09_精英怪机制_v1.md（§二 规则 / §三 四类 / §四 配平）· 12_ §二（每只怪 3 条候选）
+DOC09 = os.path.join(DOC_DIR, "09_精英怪机制_v1.md")
+D09 = _io.open(DOC09, encoding="utf-8").read()
+import asyncio                                                          # noqa: E402
+from content import affix as _AF                                        # noqa: E402
+from content import combat as _CB                                       # noqa: E402
+from content import cmds_ast as _CA                                      # noqa: E402
+from content import calendar as _CAL                                    # noqa: E402
+import content.cmds_battle as _CBAT                                     # noqa: E402
+
+
+class _E:                      # 「观察 / 攻击」只要 env.save()（落档是处理器的责任）
+    text = ""
+
+    def save(self):
+        pass
+
+
+AFA = {k: v for k, v in (st.domain("monster_affixes") or {}).items() if not str(k).startswith("_")}
+ER = _AF.rules()
+K4 = ("stat", "behavior", "mechanic", "loot")
+ids = {a for m2 in mo.values() for a in (m2.get("elite_pool") or [])}     # elite_pool 引用到的 id 全集
+_day = _CAL.state()["game_day"]                                           # 今天（预告 / 遭遇同一把种子）
+_PL = {"name": "试炼者", "cls": "cls_knight", "level": 10, "alloc": {}, "skills": []}
+
+# ⑰ 悬空 id：monsters.elite_pool 引用的 id 必须**全都有定义**（今天 0 个悬空 —— B3-17 §4.2 的账）
+_dang = sorted(ids - set(AFA))
+chk("★ elite_pool 引用的 %d 个 id **全都有定义**（悬空 %d 个：%s）"
+    % (len(ids), len(_dang), _dang or "无"), not _dang)
+chk("★ 定义条数 ≥ 引用条数（多出来的是 09_ §三 有、§二 没有怪在用的那几条：%s）"
+    % sorted(set(AFA) - ids),
+    len(AFA) >= len(ids) and set(AFA) >= ids, "%d 条定义 / %d 个引用" % (len(AFA), len(ids)))
+
+# ⑰b 形状（四类 / PE 表 / status 两态各有必填）
+_bad_sh = []
+for _aid, _r in AFA.items():
+    if _r.get("class_key") not in K4:
+        _bad_sh.append("%s 类不在四类里" % _aid)
+    if int(_r.get("pe", -1)) != int(ER["pe_by_class_key"][_r.get("class_key", "stat")]):
+        _bad_sh.append("%s pe=%s ≠ 表 %s" % (_aid, _r.get("pe"), ER["pe_by_class_key"].get(_r.get("class_key"))))
+    if _r.get("status") not in (_AF.ST_ON, _AF.ST_PENDING):
+        _bad_sh.append("%s status=%s" % (_aid, _r.get("status")))
+    if _r.get("status") == _AF.ST_ON and not isinstance(_r.get("mods"), dict):
+        _bad_sh.append("%s on 但没 mods" % _aid)
+    if _r.get("status") == _AF.ST_PENDING and not _r.get("why"):
+        _bad_sh.append("%s pending 但没 why" % _aid)
+    if not (_r.get("axis") and all(_re2.match(r"^[a-z_]+$", str(x)) for x in _r["axis"])):
+        _bad_sh.append("%s axis 不是 ASCII 非空表" % _aid)
+    if not (_r.get("name") and _r.get("line") and _r.get("src")):
+        _bad_sh.append("%s 缺 name/line/src" % _aid)
+chk("★ 每条词条：四类之一 · PE == rules 的类表 · status 两态各自必填齐（on 要 mods / pending 要 why）· axis 是 ASCII",
+    not _bad_sh, " · ".join(_bad_sh[:4]))
+_rk = {k: len([1 for r in AFA.values() if r["class_key"] == k]) for k in K4}
+print("     · 四类分布：%s ｜ on %d / pending %d"
+      % (" · ".join("%s %d" % (k, n) for k, n in _rk.items()),
+         len([1 for r in AFA.values() if r["status"] == _AF.ST_ON]),
+         len([1 for r in AFA.values() if r["status"] == _AF.ST_PENDING])))
+
+# ⑱ ★ 三头对账：`09_` 文档（现解析）↔ `content/rules/elite.json` ↔ 域里每条的 pe
+_pe_doc = {m.group(1): int(m.group(2)) for m in _re2.finditer(r"(改数值|改行为|改机制)\s*每条 \+(\d+) PE", D09)}
+_pe_key = {"改数值": "stat", "改行为": "behavior", "改机制": "mechanic"}
+chk("★ PE 表三头一致（09_ §四 现解析 %s ↔ rules.pe_by_class_key ↔ 逐条 pe）"
+    % " · ".join("%s=%s" % (k, v) for k, v in sorted(_pe_doc.items())),
+    len(_pe_doc) == 3 and all(ER["pe_by_class_key"][_pe_key[k]] == v for k, v in _pe_doc.items()))
+chk("★ §四 的掉落那条**不进难度预算**（文档原话「不影响难度，单独算收益」⇒ rules = 0）",
+    "改掉落" in D09 and "不影响难度" in D09 and int(ER["pe_by_class_key"]["loot"]) == 0)
+_cap_doc = _re2.search(r"单只精英的词条 PE ≤ (\d+)", D09)
+chk("★ PE 上限 = 文档那个数（09_ §四「单只精英的词条 PE ≤ %s」）"
+    % (_cap_doc.group(1) if _cap_doc else "（没解析出）"),
+    bool(_cap_doc) and int(ER["pe_cap"]["value"]) == int(_cap_doc.group(1)))
+# 条数档位：文档那行是 `1–5 级：**1 条**　6–10 级：**1–2 条**　11–15 级：**2 条**　16–20 级：**2–3 条**`
+_bands_doc = []
+for _m in _re2.finditer(r"(\d+)–(\d+) 级：\*\*(\d+)(?:–(\d+))? 条\*\*", D09):
+    _bands_doc.append((int(_m.group(1)), int(_m.group(2)), int(_m.group(3)), int(_m.group(4) or _m.group(3))))
+_bands = [(int(b["min_lv"]), int(b["max_lv"]), int(b["n_min"]), int(b["n_max"]))
+          for b in ER["count_by_level"]["bands"]]
+chk("★ 条数档位四段与文档逐段一致（%s）"
+    % " · ".join("%d–%d 级 %d–%d 条" % b for b in _bands), _bands_doc == _bands,
+    "文档 %s / rules %s" % (_bands_doc, _bands))
+_rates_doc = {t: int(v) for t, v in _re2.findall(r"(第一节点|中间|深处/隐藏点)[^\d%]{0,6}(\d+)%", D09)}
+chk("★ 概率三档与文档一致（%s）"
+    % " · ".join("%s %s%%" % kv for kv in sorted(_rates_doc.items())),
+    _rates_doc == {"第一节点": 8, "中间": 12, "深处/隐藏点": 20}
+    and [round(ER["rate"]["by_node_index"][k] * 100) for k in ("first", "middle", "last")] == [8, 12, 20],
+    "文档 %s" % _rates_doc)
+_sp_doc = _re2.search(r"群居\s*一次来 (\d+) 只（第二只半血）", D09)
+chk("★ 群居那两格与文档一致（09_ §三「一次来 %s 只（第二只半血）」）"
+    % (_sp_doc.group(1) if _sp_doc else "?"),
+    bool(_sp_doc) and int(ER["spawn"]["n"]) == int(_sp_doc.group(1))
+    and float(ER["spawn"]["hp_mult"]) == 0.5 and int(ER["spawn"]["half_hp_index"]) == 1)
+chk("★ 节点档位名单里的 role 都在 maps 域真出现过（不新造深度字段）",
+    all(any(n.get("role") == _r for m2 in MP.values() for n in (m2.get("nodes") or []))
+        for _r in ER["rate"]["eligible_node_roles"]), "%s" % ER["rate"]["eligible_node_roles"])
+
+# ⑲ 抽词条：可复现 + 档位条数 + PE ≤ 24 + 同轴不叠 + 池子里的 on 都抽得到
+_roll_bad, _seen_pick, _n_band_bad, _pe_bad, _ax_bad = [], set(), [], [], []
+for _k, _m in mo.items():
+    _pool = _m.get("elite_pool") or []
+    if not _pool:
+        continue
+    for _s in range(120):
+        _got = _AF.roll(_pool, _s, int(_m.get("lv", 1)))
+        if _got != _AF.roll(_pool, _s, int(_m.get("lv", 1))):
+            _roll_bad.append("%s seed=%s 两次不同" % (_k, _s))
+        _seen_pick |= set(_got)
+        _nmin, _nmax = _AF.band_of(int(_m.get("lv", 1)))
+        _avail = len(_AF.rollable(_pool))
+        if not (min(_nmin, _avail) <= len(_got) <= _nmax):
+            _n_band_bad.append("%s 抽了 %d 条（档位 %d–%d / 可挑 %d）" % (_k, len(_got), _nmin, _nmax, _avail))
+        if _AF.pe_of(_got) > int(ER["pe_cap"]["value"]):
+            _pe_bad.append("%s %s PE=%d" % (_k, _got, _AF.pe_of(_got)))
+        _axs: list = []
+        for _a in _got:
+            for _x in _AF.rec_of(_a)["axis"]:
+                if _x in _axs:
+                    _ax_bad.append("%s 轴 %s 重了" % (_k, _x))
+                _axs.append(_x)
+chk("★ 抽词条**可复现**（同一种子两次同结果 · 17 只 × 120 种子）", not _roll_bad, " · ".join(_roll_bad[:3]))
+chk("★ 条数落在 09_ §二 的等级档位里（可挑的比档位少时按可挑的算 —— 不拿没接线的凑数）",
+    not _n_band_bad, " · ".join(_n_band_bad[:3]))
+chk("★ PE 累计 ≤ 上限（%d）" % int(ER["pe_cap"]["value"]), not _pe_bad, " · ".join(_pe_bad[:3]))
+chk("★ **同轴不叠**（一次抽到的各条 axis 两两不相交）", not _ax_bad, " · ".join(_ax_bad[:3]))
+_must = {a for _m in mo.values() for a in _AF.rollable(_m.get("elite_pool") or [])}
+chk("★ 池子里每一条 `on` 词条都真抽得到（%d 条：%s）"
+    % (len(_must), " · ".join(sorted(_must))),
+    _must <= _seen_pick, "抽不到的：%s" % sorted(_must - _seen_pick))
+
+# ⑳ ★ 面板差异**可复算**：带/不带那条词条各造一个 actor，逐键核声明的倍数
+_pan_bad, _pan_n = [], 0
+for _k, _m in mo.items():
+    _pool = _m.get("elite_pool") or []
+    if not _pool:
+        continue
+    for _a in _AF.rollable(_pool):
+        for _ch, _decl in (_AF.rec_of(_a).get("mods") or {}).items():
+            if _ch != _AF.CH_PANEL:
+                continue
+            _pan_n += 1
+            _base = dict(_m["panel"])
+            _want = dict(_base)
+            for _kk, _vv in _decl.items():                    # 复算：域键 × 声明倍数（取整口径同消费端）
+                _want[_kk] = int(round(float(_want[_kk]) * float(_vv)))
+            _got = _AF.apply_panel(_base, [_a], _k)
+            if _got != _want:
+                _pan_bad.append("%s+%s 算=%s 得=%s" % (_k, _a, _want, _got))
+            _a_actor = _CB.monster_actor(_k, _m, affixes=[_a])          # 真进 actor 那一步
+            _b_actor = _CB.monster_actor(_k, _m)                        # 不带词条 = 原样（接线前那一份）
+            _eng = {"hp": "max_hp", "def": "def", "spd": "spd", "atk": "atk", "res": "mdef"}
+            for _kk in ("hp", "def", "spd", "atk", "res"):
+                if abs(float(_b_actor[_eng[_kk]]) - float(_base[_kk])) > 0.5:
+                    _pan_bad.append("不带词条的 actor %s=%s ≠ 域 %s" % (_kk, _b_actor[_eng[_kk]], _base[_kk]))
+            for _kk, _vv in _decl.items():
+                if abs(float(_a_actor[_eng[_kk]]) - float(_want[_kk])) > 0.5:
+                    _pan_bad.append("actor %s %s=%s ≠ 复算 %s" % (_a, _kk, _a_actor[_eng[_kk]], _want[_kk]))
+chk("★ 面板差异**可复算**（%d 条面板词条 × %d 只怪：域键复算 == 消费端结果 == 引擎 actor 那一格）"
+    % (_pan_n, len([1 for m2 in mo.values() if m2.get("elite_pool")])), not _pan_bad,
+    " · ".join(_pan_bad[:4]))
+
+# ㉑ ★ 四条通道**真跑一场**：群居多只+半血 · 护盾开场盾 · 潜伏先手 · 狂暴阈值（一次性）
+_ee = [k for k, v in mo.items() if "af_swarm" in _AF.rollable(v.get("elite_pool") or [])]
+_k22 = sorted(_ee, key=lambda k: int(mo[k]["lv"]))[0]
+_ids2, _hms2 = _AF.spawn_plan(_k22, ["af_swarm"])
+_b2 = _CB.build(_PL, _ids2, mo, party=1, affixes=["af_swarm"], hp_mults=_hms2)
+_es = _b2.sides["enemy"]
+chk("★ 群居：一次来 %d 只（%s）· 第二只是第一只的 %s 倍血（%s vs %s）"
+    % (len(_es), mo[_k22]["name"], ER["spawn"]["hp_mult"],
+       _es[1]["max_hp"] if len(_es) > 1 else "?",
+       int(round(int(mo[_k22]["panel"]["hp"]) * float(ER["spawn"]["hp_mult"])))),
+    len(_es) == int(ER["spawn"]["n"])
+    and int(_es[1]["max_hp"]) == int(round(int(mo[_k22]["panel"]["hp"]) * float(ER["spawn"]["hp_mult"])))
+    and int(_es[0]["max_hp"]) == int(mo[_k22]["panel"]["hp"]))
+_sk = next(k for k, v in mo.items() if "af_shield" in _AF.rollable(v.get("elite_pool") or []))
+_b3 = _CB.build(_PL, [_sk], mo, party=1, affixes=["af_shield"])
+_a3 = _b3.sides["enemy"][0]
+_sh_want = max(1, int(round(_a3["max_hp"] * float(ER["shield_pct_of_hp"]["value"]))))
+_sh_got = _a3["shields"].get("af_shield", {}).get("value")
+sh_want_ok = _a3["shields"] == {"af_shield": {"value": _sh_want}}
+_lg3: list = []
+_b3.auto_run(_lg3)
+chk("★ 护盾：开场就有一层壳（值 = 生命上限 %s%% = %s）且**真吸收**（日志里出现吸收行；打完盾被吃光 ⇒ 容器里没了）"
+    % (round(float(ER["shield_pct_of_hp"]["value"]) * 100), _sh_got),
+    sh_want_ok and any("护盾吸收" in str(x) for x in _lg3))
+_am = next(k for k, v in mo.items() if "af_ambush" in _AF.rollable(v.get("elite_pool") or []))
+_b4 = _CB.build(_PL, [_am], mo, party=1, affixes=["af_ambush"])
+_a4 = _b4.sides["enemy"][0]
+_ct0 = float(_a4.get("ct", -1))
+_lg4: list = []
+_b4.auto_run(_lg4)
+_first = next((x for x in _lg4 if "——" in str(x)), "")
+_b6 = _CB.build(_PL, [_am], mo, party=1)                                  # 对照：不带潜伏
+_ct_plain = float(_b6.sides["enemy"][0].get("ct", -1))
+chk("★ 潜伏：它抢在玩家前面动手（构建后 ct：带潜伏 %s / 对照组 %s；第一动 = 「%s」）"
+    % (_ct0, round(_ct_plain, 3), str(_first).strip()[:24]),
+    _ct0 == 0.0 and _ct_plain > 0 and mo[_am]["name"] in str(_first))
+_fr = next(k for k, v in mo.items() if "af_frenzy" in _AF.rollable(v.get("elite_pool") or []))
+_b5 = _CB.build(_PL, [_fr], mo, party=1, affixes=["af_frenzy"])
+_a5 = _b5.sides["enemy"][0]
+_atk0 = _a5["atk"]
+_fr_decl = _AF.thresholds_of(["af_frenzy"])[0][1]
+_a5["hp"] = int(_a5["max_hp"] * float(_fr_decl["hp_below"]) * 0.8)         # 手动跌破阈值
+_b5.script_hook(_b5, _a5, [])                                            # 第一次越过 ⇒ 改
+_atk1 = _a5["atk"]
+_b5.script_hook(_b5, _a5, [])                                            # 再调两次（钩子每一动都会被调）
+_b5.script_hook(_b5, _a5, [])
+chk("★ 狂暴：血量跌破 %s%% 后 atk ×%s，且**只改一次**（%s → %s → %s；不守 `once` 会一路上乘）"
+    % (round(float(_fr_decl["hp_below"]) * 100), _fr_decl["atk_mult"], _atk0, _atk1, _a5["atk"]),
+    _atk1 == int(round(_atk0 * float(_fr_decl["atk_mult"]))) and _a5["atk"] == _atk1)
+
+# ㉑b 掉落：材料倍数（09_ §四 按 PE 等比上调 + 富饶「材料翻倍」）
+_dm = ER["material_drop_mult"]
+_rows = [{"id": "x", "n": 3, "kind_key": "material"}, {"id": "y", "n": 3, "kind_key": "gear"}]
+_pe12 = _AF.pe_of(["af_shield"])
+_fu = float(AFA["af_bountiful"]["mods"]["drops"]["mult"])
+_base_pe = float(_dm["base"]) + _pe12 * float(_dm["per_pe"])
+_want_n = max(1, int(round(3 * _base_pe * _fu)))
+_got_rows = _AF.scale_drops(_rows, ["af_shield", "af_bountiful"])
+_bare = _AF.scale_drops(_rows, [])
+chk("★ 材料倍数 = (1 + PE×%s) × 富饶的 %s（PE %d → 按 PE 那半 %s；材料 3 份 × %s × %s = %s；"
+    "非材料那格不动；没词条 = 原样）"
+    % (round(float(_dm["per_pe"]), 5), _fu, _pe12, round(_base_pe, 4), round(_base_pe, 4), _fu,
+       _got_rows[0]["n"]),
+    _got_rows[0]["n"] == _want_n and _got_rows[1]["n"] == 3 and _bare == _rows)
+
+# ㉒ ★ 观察那行**逐字走 texts 槽位**，且与「攻击」的遭遇是**同一个东西**
+_tx = st.domain("texts")
+_line_ok, _same_ok, _hit_n = True, True, 0
+for _loc, _nd in (("belt_north", "bn_bone"), ("belt_north", "bn_camp"), ("belt_north", "bn_tower"),
+                  ("belt_east", "be_birch"), ("belt_east", "be_dogs"), ("belt_east", "be_shed"),
+                  ("belt_west", "bw_shoal"), ("belt_west", "bw_ferry"), ("belt_west", "bw_old_ferry")):
+    _el = _AF.elite_of(mo, _loc, _nd, "u_probe", _day, 10)
+    if not _el:
+        continue
+    _hit_n += 1
+    _want_line = str(_tx["COMBAT_ELITE_SPAWN"]["value"]) \
+        .replace("{affix}", str(ER["label"]["sep"]).join(str(AFA[a]["name"]) for a in _el[1])) \
+        .replace("{name}", str(mo[_el[0]]["name"])) \
+        .replace("{hint}", _AF.hint_of(_el[1]))
+    _got_line = _AF.elite_line(str(mo[_el[0]]["name"]), _el[1])
+    if _got_line != _want_line:
+        _line_ok = False
+    _p = dict(_CA.DEFAULT_PLAYER)
+    _p.update({"loc": _loc, "node": _nd, "race": "human", "cls": "cls_knight", "level": 10,
+               "alloc": {}, "skills": [], "name": "试炼者"})
+    _out: list = []
+
+    async def _go(_p=_p, _loc=_loc, _nd=_nd):
+        async for _l in _CA.look(_E(), None, "u_probe", _p):
+            _out.append(_l)
+    asyncio.run(_go())
+    if _got_line not in _out:
+        _line_ok = False
+chk("★ 观察那行**逐字** = texts 槽位 COMBAT_ELITE_SPAWN 的渲染（今天这 %d 格里有精英的 %d 格都核）"
+    % (9, _hit_n), _line_ok and _hit_n >= 0, "命中 %d 格" % _hit_n)
+_el_n = None
+_found_uid = None
+for _i in range(400):                       # 换 uid 找一个「今天这一格真有精英」的档（种子含 uid）
+    for _loc, _nd in (("belt_north", "bn_bone"), ("belt_north", "bn_camp"), ("belt_north", "bn_tower"),
+                      ("belt_east", "be_birch"), ("belt_east", "be_dogs"), ("belt_east", "be_shed"),
+                      ("belt_west", "bw_shoal"), ("belt_west", "bw_ferry"), ("belt_west", "bw_old_ferry")):
+        _e2 = _AF.elite_of(mo, _loc, _nd, "u%03d" % _i, _day, 10)
+        if _e2:
+            _el_n, _found_uid, _f_loc, _f_nd = _e2, "u%03d" % _i, _loc, _nd
+            break
+    if _el_n:
+        break
+_at: list = []
+_lk_out: list = []
+if _el_n:
+    _pl2 = dict(_CA.DEFAULT_PLAYER)
+    _pl2.update({"loc": _f_loc, "node": _f_nd, "race": "human", "cls": "cls_knight",
+                 "level": 10, "alloc": {}, "skills": [], "name": "试炼者", "hp": 9999})
+    _pl2["flags"] = dict(_pl2.get("flags") or {})
+
+    async def _go3():                       # ★ 先「观察」再「攻击」= 玩家真实顺序
+        async for _l in _CA.look(_E(), None, _found_uid, _pl2):
+            _lk_out.append(_l)
+    asyncio.run(_go3())
+    _want2 = _AF.elite_line(str(mo[_el_n[0]]["name"]), _el_n[1])
+
+    async def _go2():
+        async for _l in _CBAT.attack(_E(), None, _found_uid, _pl2):
+            _at.append(_l)
+    asyncio.run(_go2())
+    _same_ok = (_want2 in _at) and (_want2 in _lk_out)
+chk("★ 「观察能提前看到」是**真的**：同一 uid/图/节点/日 ⇒ 观察那行就是遭遇那一行"
+    "（找出来的那一档：%s/%s uid=%s → %s）"
+    % (_f_loc if _el_n else "—", _f_nd if _el_n else "—", _found_uid, _el_n[1] if _el_n else "—"),
+    bool(_el_n) and _same_ok, "遭遇前两行：%s" % str(_at[:2])[:70])
+
+# ㉓ ★ 覆盖快照（**只许变长**）：有池子的怪里，池子至少含一条 `on` 的只数
+_cov = _AF.coverage(mo)
+print("     · 覆盖率 %d/%d 只（池子里一条都没接线的：%s —— 逐条理由见 _notes.md §四）"
+      % (len(_cov["ok"]), _cov["total"], " · ".join("%s(%s)" % (k, "·".join(_AF.rec_of(a)["name"]
+                                                                    for a in mo[k]["elite_pool"]))
+                                                   for k in _cov["bad"]) or "无"))
+chk("★ 覆盖快照只许变长：池子里至少有一条 `on` 词条的怪 ≥ 15 只（今天 %d 只）"
+    % len(_cov["ok"]), len(_cov["ok"]) >= 15, "%s" % _cov["bad"])
+
+print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
 sys.exit(0 if ok else 1)

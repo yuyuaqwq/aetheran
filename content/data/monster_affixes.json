@@ -1,0 +1,287 @@
+{
+  "_src": {
+    "真源": "aetheran-plan/06_第一阶段垂直切片/09_精英怪机制_v1.md §三（四类词条口径）· §五（教学轴举例）· 12_怪物面板与精英词条池_v1.md §二（每只怪 3 条候选）",
+    "口径表": "content/rules/elite.json（PE / 条数档位 / 概率 / 盾值 —— 数只在那里）",
+    "id 来源": "19 个 id 全部来自 monsters 域的 `elite_pool`（16 只怪 × 3 条）；`af_huge`（巨化）是 09_ §三 定义过、§二 没有怪在用的那一条，一并定义齐（见 _notes.md §四·1）",
+    "class_key": "stat 改数值 · behavior 改行为 · mechanic 改机制 · loot 改掉落（ASCII 机器键；中文类名在真源 §三 的小标题里）",
+    "status": "on = 本批已接线（`mods` 里的通道有消费端，运行时真生效）· pending = 定义齐、消费端未接线（`why` 写明缺哪一环）—— 抽词条时**只从 on 里挑**（fail-closed：绝不发一条只有名字没有效果的词条给玩家）",
+    "axis": "同轴不叠（09_ §六①「两条都改 def 的只能出一条」）—— 一次抽词条里各条的 axis 两两不相交；运行时按这里的值判，不在代码里写轴名"
+  },
+  "af_hard_shell": {
+    "name": "硬壳",
+    "class_key": "stat",
+    "pe": 4,
+    "axis": [
+      "def"
+    ],
+    "line": "背上的壳反着光 —— 硬砍没用，得找缝。",
+    "status": "on",
+    "src": "09_ §三 3.1「硬壳 def +50% → 逼玩家用「穿透 / 破甲」而不是硬砍」（打样句见 25_ §打样 7）",
+    "mods": {
+      "panel": {
+        "def": 1.5
+      }
+    }
+  },
+  "af_huge": {
+    "name": "巨化",
+    "class_key": "stat",
+    "pe": 4,
+    "axis": [
+      "hp"
+    ],
+    "line": "比同类大一圈 —— 得打久一点。",
+    "status": "on",
+    "src": "09_ §三 3.1「巨化 hp +80% → 战斗变长，考验续航」· §四「巨化（hp +80%）已经到顶，不做 hp ×3 那种纯拖时间的东西」",
+    "mods": {
+      "panel": {
+        "hp": 1.8
+      }
+    }
+  },
+  "af_swift": {
+    "name": "迅捷",
+    "class_key": "stat",
+    "pe": 4,
+    "axis": [
+      "spd"
+    ],
+    "line": "它比你快 —— 先落手的是它。",
+    "status": "on",
+    "src": "09_ §三 3.1「迅捷 spd +30% → 它先动，逼玩家考虑「打断」与「抢拍」」",
+    "mods": {
+      "panel": {
+        "spd": 1.3
+      }
+    }
+  },
+  "af_puny": {
+    "name": "瘦小",
+    "class_key": "stat",
+    "pe": 4,
+    "axis": [
+      "hp",
+      "spd"
+    ],
+    "line": "小得可怜，也快得吓人 —— 打一下就碎，但它落手次数多。",
+    "status": "on",
+    "src": "09_ §三 3.1「瘦小 hp −30% · spd +40% → 打一下就死，但它可能先打你两下」",
+    "mods": {
+      "panel": {
+        "hp": 0.7,
+        "spd": 1.4
+      }
+    }
+  },
+  "af_swarm": {
+    "name": "群居",
+    "class_key": "behavior",
+    "pe": 8,
+    "axis": [
+      "spawn"
+    ],
+    "line": "它身后还有两只 —— 第二只只剩半条命。",
+    "status": "on",
+    "src": "09_ §三 3.2「群居 一次来 3 只（第二只半血）→ 逼玩家用 AOE / 换目标」（只数与半血那两格在 rules/elite.json 的 spawn）",
+    "mods": {
+      "spawn": {}
+    }
+  },
+  "af_ambush": {
+    "name": "潜伏",
+    "class_key": "behavior",
+    "pe": 8,
+    "axis": [
+      "tempo"
+    ],
+    "line": "你还没看清，它已经动了。",
+    "status": "on",
+    "src": "09_ §三 3.2「潜伏 战斗开始时它先动一次 → 逼玩家准备「起手防御」」—— 首版读法 = 它的第一手排在所有行动之前（CTB 先手）；真源若要「额外多动一次」需插队机制，见 _notes.md §四",
+    "mods": {
+      "opening": {
+        "ct": 0
+      }
+    }
+  },
+  "af_frenzy": {
+    "name": "狂暴",
+    "class_key": "behavior",
+    "pe": 8,
+    "axis": [
+      "atk"
+    ],
+    "line": "血掉过半以后，它下手更重。",
+    "status": "on",
+    "src": "09_ §三 3.2「狂暴 血 <50% 时 atk ×1.3 → 逼玩家「压血线，不要留尾」」",
+    "mods": {
+      "threshold": {
+        "hp_below": 0.5,
+        "atk_mult": 1.3,
+        "once": true
+      }
+    }
+  },
+  "af_shield": {
+    "name": "护盾",
+    "class_key": "mechanic",
+    "pe": 12,
+    "axis": [
+      "shell"
+    ],
+    "line": "外头罩着一层壳 —— 先打破它，才伤得到它。",
+    "status": "on",
+    "src": "09_ §三 3.3「护盾 开场有一层壳（要打破才掉血）→ 逼玩家算输出节奏」· 盾值（真源未给数）见 rules/elite.json 的 shield_pct_of_hp，登记为真源待补行",
+    "mods": {
+      "shields": {}
+    }
+  },
+  "af_bountiful": {
+    "name": "富饶",
+    "class_key": "loot",
+    "pe": 0,
+    "axis": [
+      "loot"
+    ],
+    "line": "它身上有东西在发光。",
+    "status": "on",
+    "src": "09_ §三 3.4「富饶 材料翻倍 → 「打它有好处」的直观理由」· 打样句直接取自 09_ §二 表达那一行「掉落预告（「它身上有东西在发光」）」",
+    "mods": {
+      "drops": {
+        "kind_key": "material",
+        "mult": 2
+      }
+    }
+  },
+  "af_plague": {
+    "name": "带毒",
+    "class_key": "mechanic",
+    "pe": 12,
+    "axis": [
+      "dot"
+    ],
+    "line": "它伤过的地方，会一直烂下去。",
+    "status": "pending",
+    "src": "09_ §三 3.3「带毒 它的攻击挂 DoT → 逼玩家带解毒 / 速战」",
+    "why": "DoT 要「状态规则表（EFFECT_RULES）+ 名词→动词表（EFFECT_ACTIONS）」，本包两张表都还没建（引擎 `game_config.get_effect_rules()` 现回空表）⇒ 挂了也是**静默空放**。属机制层那一批（要内容侧声明表 + 拍板），本批不接线。"
+  },
+  "af_home_guard": {
+    "name": "守家",
+    "class_key": "behavior",
+    "pe": 8,
+    "axis": [
+      "reinforce"
+    ],
+    "line": "血快到尽头时，它会喊人。",
+    "status": "pending",
+    "src": "09_ §三 3.2「守家 血量 <30% 时会召援 → 逼玩家「速杀」」",
+    "why": "召援 = 战斗中途往阵营里**加 actor**（引擎 `sides` 容器）—— 要上层导演（`Battle.script_hook` 那条路）真加人并保证调度捡得到，属于「Boss 阶段卡消费」同一条线（b44 §5 未做项），本批只把阈值通道打通（狂暴那条已接线）。"
+  },
+  "af_pursuit": {
+    "name": "追猎",
+    "class_key": "behavior",
+    "pe": 8,
+    "axis": [
+      "tempo"
+    ],
+    "line": "它盯着你 —— 躲不开。",
+    "status": "pending",
+    "src": "★ 真源**没有定义**（09_ §三 无此条；§五 教学轴只说「站位轴｜† 追猎的野狗 † —— 它贴脸，逼你学距离」）—— 上面这句是本包的首版读法，登记为真源待补行（见 _notes.md §一）",
+    "why": "「贴脸 / 距离」要有场上位置或射程规则（本作战斗是 CTB 无站位轴），落不了 ⇒ 先不接线；等真源补一行效果口径。"
+  },
+  "af_disarm": {
+    "name": "缴械",
+    "class_key": "mechanic",
+    "pe": 12,
+    "axis": [
+      "debuff"
+    ],
+    "line": "跟它打，你的手会越来越软。",
+    "status": "pending",
+    "src": "09_ §三 3.3「缴械 debuff：你的 atk −20%（300 刻）→ 逼玩家考虑换手顺序」",
+    "why": "要给**玩家**挂面板减益（atk −20% / 300 刻）—— 走效果规则表那条路（同带毒），本包未建表 ⇒ 不接线（挂了会被静默跳过）。"
+  },
+  "af_vampiric": {
+    "name": "吸血",
+    "class_key": "mechanic",
+    "pe": 12,
+    "axis": [
+      "leech"
+    ],
+    "line": "它每撕一下，自己就壮一分。",
+    "status": "pending",
+    "src": "★ 真源**没有定义**（只在 §五 教学轴出现：「资源轴｜† 吸血的拾荒人 † —— 它会吸，逼你速杀」）—— 语义缺的是「吸多少」，且引擎触发总线上只有固定量 / 按生命比例的 `heal`，**没有「按这一下打出的伤害比例吸」** ⇒ 真源的语义落不了（不是缺个数），本批不接线。",
+    "why": "要按伤害比例吸血：需给触发动作传事件数值（引擎 `_fire_ctx` 里有 dmg，但 heal 动词只认 value/pct/missing_pct）⇒ 属机制层；真源也未给比例。"
+  },
+  "af_hoarder": {
+    "name": "藏东西",
+    "class_key": "loot",
+    "pe": 0,
+    "axis": [
+      "loot"
+    ],
+    "line": "它守着什么东西 —— 打完别急着走。",
+    "status": "pending",
+    "src": "09_ §三 3.4「藏东西 打完会在原地留一个可挖点 → 奖励探索（与「挖掘」指令咬合）」",
+    "why": "要在**这一格上留一个可挖点**（地图/POI 是静态数据，得改成档上的临时点位）+ 让「挖掘」那条指令认它 —— 跨两张数据域 + 另一条指令线，本批不动。"
+  },
+  "af_thorns": {
+    "name": "反伤",
+    "class_key": "mechanic",
+    "pe": 12,
+    "axis": [
+      "reflect"
+    ],
+    "line": "砍它的人，自己也会疼。",
+    "status": "pending",
+    "src": "09_ §三 3.3「反伤 挨打时反弹 15% 伤害 → 逼玩家「低伤高频率」或换目标」",
+    "why": "引擎确实有反伤位（`on_taken` + `damage` 动词的 `on=caster`：注释原话「反伤打攻击者」），但那个动词只认**固定值 / 按目标生命比例** —— 「反弹 15% 的**已受伤量**」给不出正确数（给个数就是错数）⇒ 不接线。"
+  },
+  "af_fire_ward": {
+    "name": "元素护体",
+    "class_key": "mechanic",
+    "pe": 12,
+    "axis": [
+      "resist"
+    ],
+    "line": "火在它身上烧不起来。",
+    "status": "pending",
+    "src": "★ 真源**两处打架**：`12_ §二` 把它给了 11 级树精（写成「元素护体（火抗）」），而 `09_ §八` 说「元素词条」是 **41–60 阶段**才开的东西；`09_ §三` 没有它。本批按 §二 的池子保留这条定义（见 _notes.md §四·2），效果口径（火抗 = 哪个键、几点）待真源补。",
+    "why": "本作元素抗性口径未定（`res` 是法抗、没有火/冰分轴；元素免疫要在承伤侧读 `element_immune` 表）——先不猜。"
+  },
+  "af_rare_breed": {
+    "name": "稀有种",
+    "class_key": "loot",
+    "pe": 0,
+    "axis": [
+      "loot"
+    ],
+    "line": "这一只不太一样 —— 它身上有你没见过的。",
+    "status": "pending",
+    "src": "09_ §三 3.4「稀有种 掉一件专属（本词条专属）→ 值得刷的那一只」",
+    "why": "要一件**本词条专属**的掉落物（新物品 + 新池条目）—— items 域与 drop_pools 域都还没到能挂专属件的那一步（精制装备那一层是 `dp_elite_gear`），本批不新造物品。"
+  },
+  "af_stealth_interrupt": {
+    "name": "潜行断你",
+    "class_key": "mechanic",
+    "pe": 12,
+    "axis": [
+      "interrupt"
+    ],
+    "line": "它出手的那一下，会截断你的蓄力。",
+    "status": "pending",
+    "src": "★ 真源**没有定义**（09_ §三 的「打断」那条口径近似；§五 教学轴写「打断轴｜† 打断的林鸦 † —— 它读条断你，逼你学会先断它」）—— 本批按 §五 的读法给定义，登记为真源待补行。",
+    "why": "引擎确有 `interrupt` 动词，但它清的是目标**正在出招的窗口**（`actor.charging`）；今天这一版战斗是顺序制自动打完（没人同时在读条）⇒ 触发不到，挂了等于没挂。"
+  },
+  "af_interrupt": {
+    "name": "打断",
+    "class_key": "mechanic",
+    "pe": 12,
+    "axis": [
+      "interrupt"
+    ],
+    "line": "你蓄力蓄到一半，会被它截断。",
+    "status": "pending",
+    "src": "09_ §三 3.3「打断 它会打断你的蓄力（本作独有）→ 教 A1/A4 机制最狠的一课」",
+    "why": "同 `af_stealth_interrupt`：引擎 `interrupt` 动词要「对方正在出招（charging）」这个窗口，顺序制自动战斗里不存在 ⇒ 等轮流制/读条那一批（B2-2b）接线。"
+  }
+}

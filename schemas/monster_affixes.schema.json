@@ -1,0 +1,104 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "★ 精英怪词条域（B3-24）。真源在包：字段与四类口径照 aetheran-plan/06_第一阶段垂直切片/09_精英怪机制_v1.md §三（四类）· §四（PE）· §二（每只怪 3 条候选 = monsters.elite_pool）。★ 数不在代码里：PE 表 / 条数档位 / 概率 / 盾值全部在 content/rules/elite.json（本 schema 只钉形状与枚举）。★ `status` 是这一批的关键字段：on = 有消费端（运行时真生效）· pending = 定义齐但没接线（必须写 `why`）——`content/affix.roll()` 只从 on 里抽，绝不给玩家发只有名字的词条。",
+  "title": "阿斯特兰 · 精英词条表（monster_affixes 域）",
+  "description": "20 条：19 条来自 monsters 域 elite_pool 引用到的 id + af_huge（09_ §三 定义过、§二 没有怪在用）。四类：stat 改数值 / behavior 改行为 / mechanic 改机制 / loot 改掉落。",
+  "type": "object",
+  "minProperties": 2,
+  "patternProperties": {
+    "^_": {
+      "type": "object",
+      "$comment": "元信息（`_src` 那种）—— 消费端一律跳过 `_` 开头的键。"
+    },
+    "^af_[a-z_]+$": {
+      "type": "object",
+      "required": [
+        "name",
+        "class_key",
+        "pe",
+        "axis",
+        "line",
+        "status",
+        "src"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "词条名（前缀词）—— 进 texts 槽位 COMBAT_ELITE_SPAWN 的 {affix}：`† 硬壳的田鼠 †`"
+        },
+        "class_key": {
+          "type": "string",
+          "enum": [
+            "stat",
+            "behavior",
+            "mechanic",
+            "loot"
+          ],
+          "description": "★ ASCII 机器键（代码只认它）。中文类名在真源 09_ §三 的小标题里：stat=改数值 · behavior=改行为 · mechanic=改机制 · loot=改掉落（K48 / P-20：中文枚举不当机器键）。"
+        },
+        "pe": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 24,
+          "description": "难度预算（09_ §四：数值 +4 / 行为 +8 / 机制 +12；掉落不影响难度 = 0，收益另算）。必须 == content/rules/elite.json 的 pe_by_class_key[class_key]（probe_monsters 三头对账）。"
+        },
+        "axis": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z_]+$"
+          },
+          "description": "同轴不叠（09_ §六①）：一次抽到的各条 axis 必须两两不相交（两条都改 def 的只能出一条）。"
+        },
+        "line": {
+          "type": "string",
+          "description": "给玩家看的那**一行**（观察预告 / 遭遇行都读它）。腔调照 25_文案规格：短句、具体、不解释设计。"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "on",
+            "pending"
+          ],
+          "description": "on = 本批已接线（必须带 `mods`）· pending = 定义齐、消费端未接线（必须带 `why`）。"
+        },
+        "src": {
+          "type": "string",
+          "description": "真源出处（哪一份文档的哪一节）—— 真源没有的那几条在这儿写明「本包首版读法 · 待真源补」。"
+        },
+        "why": {
+          "type": "string",
+          "description": "pending 必填：缺哪一环（哪张表 / 哪条线还没接）。"
+        },
+        "mods": {
+          "type": "object",
+          "description": "已接线的机器效果（通道见 content/rules/elite.json 的 fx.channels：panel 面板乘 · spawn 多只 · opening.ct 先手 · threshold 血量阈值 · shields 开场盾 · drops 掉落倍数）。值里只有倍数与阈值，别的数（盾值 / 掉率）在 rules/elite.json。",
+          "additionalProperties": {
+            "type": "object"
+          }
+        }
+      },
+      "if": {
+        "properties": {
+          "status": {
+            "const": "pending"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "why"
+        ]
+      },
+      "else": {
+        "required": [
+          "mods"
+        ]
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

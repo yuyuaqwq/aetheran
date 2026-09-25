@@ -51,6 +51,7 @@ from . import battle_acts as BA
 from . import combat as CB
 from . import cmds_gear as CG
 from . import loot as LT
+from . import affix as AFFIX        # ★ B3-24：精英词条（遭遇抽词条 / 名字与那一行走 texts 槽位）
 
 
 def _flags(p):
@@ -120,16 +121,38 @@ def _fmt(logs, limit=12):
 def _meet(p, uid):
     """遇敌那一步 —— 返回 `(pick, monsters)`；`pick` 空 = 这一带没有能打的东西。"""
     ms = _data("monsters")
-    return _encounter(p, uid), ms
+def _meet(p, uid):
+    """遇敌那一步 —— 返回 `(pick, monsters, affixes, 开场那行)`；`pick` 空 = 这一带没有能打的东西。
+
+    ★ B3-24：这一格今天出精英 ⇒ 遭遇就是它（怪与词条都由 `affix.elite_of` 现算；
+      「观察」读的是**同一个口**（同一 uid / 图 / 节点 / 游戏日 ⇒ 同一个种子）——
+      所以观察那行是真预告，不是另抽一次。词条池里一条都没接线 ⇒ 回 `[]`（不出精英）。
+    """
+    ms = _data("monsters")
+    pick = _encounter(p, uid)
+    affixes = []
+    _el = AFFIX.elite_of(ms, p["loc"], p["node"], uid,
+                         CAL.state().get("game_day"), int(p.get("level", 1) or 1))
+    if _el:
+        pick, affixes = [_el[0]], list(_el[1])
+    if not pick:
+        return [], ms, [], ""
+    if affixes:                                    # 精英：名字行 + 一句话效果（逐字走 texts 槽位）
+        return pick, ms, affixes, AFFIX.elite_line(str(ms[pick[0]].get("name", pick[0])), affixes)
+    return pick, ms, affixes, T("COMBAT_MEET", name=ms[pick[0]].get("name", pick[0]))
 
 
-def _run_hand(p, pick, ms, hand=None, action=None, skill=None):
+def _run_hand(p, pick, ms, affixes=(), hand=None, action=None, skill=None):
     """打这一场：**先推到你的决策点**（快的对方先动），你出一手，再自动打完。
 
     返回 `(单场状态, 结果, 日志, 玩家战后血量)` —— 单场状态给「后撤」那种要先看时刻的
     条件判定用（`hand` 为空 = 纯自动那一支，与 B2-2 逐字相同）。
+    ★ B3-24：这一场打几只由词条说话（群居那条让池子里多站两只，第二只半血）；
+      没词条 ⇒ `([mid], [None])` = 与接线前逐字相同。
     """
-    b = CB.build(p, pick, ms, party=1, override=(hand.override if hand is not None else None))
+    _ids, _hm = AFFIX.spawn_plan(pick[0], list(affixes))
+    b = CB.build(p, _ids, ms, party=1, affixes=list(affixes), hp_mults=_hm,
+                 override=(hand.override if hand is not None else None))
     logs: list = []
     if hand is not None or action:
         from ext_combat.battle import schedule as SCH
@@ -152,8 +175,11 @@ def _run_hand(p, pick, ms, hand=None, action=None, skill=None):
     return b, b.result, [str(x) for x in logs], int(pa.get("hp", 0))
 
 
-async def _settle(env, p, uid, pick, ms, res, logs, hp_after, seen, player):
-    """这一场的落账（攻击 / 六条战斗指令**共用**：钱 / 经验 / 掉落 / 死亡 / 战斗日志）。"""
+async def _settle(env, p, uid, pick, ms, res, logs, hp_after, seen, player, affixes=()):
+    """这一场的落账（攻击 / 六条战斗指令**共用**：钱 / 经验 / 掉落 / 死亡 / 战斗日志）。
+
+    ★ B3-24：战斗日志里那格怪名用**精英显示名**（带 `† … †`）；没词条时 = 原样名。
+    """
     yield "━" * 12
     if res == "victory":
         yield "✔ 打完了。"
@@ -174,10 +200,12 @@ async def _settle(env, p, uid, pick, ms, res, logs, hp_after, seen, player):
         for pool_id in (m.get("drops") or []):
             drops.extend(LT.roll_pool(pool_id, level=lv,
                                      rnd=__import__("random").Random("%s:%s" % (uid, pick[0]))))
+        # ★ B3-24：掉落按词条 PE 等比上调 + 富饶那条的「材料翻倍」（倍数在 rules/elite.json）
+        drops = AFFIX.scale_drops(drops, affixes)
         if drops:
             LT.add_to_bag(p, drops)
         new = CX.note_items(p, [d["id"] for d in drops]) if drops else []
-        _note_battle(p, m.get("name", pick[0]), logs, res)
+        _note_battle(p, _ename, logs, res)
         if player is not None:
             player.update(p)
         _save(env)
@@ -207,7 +235,7 @@ async def _settle(env, p, uid, pick, ms, res, logs, hp_after, seen, player):
         else:
             yield "（战斗结束：%s）" % res
             p["hp"] = max(1, hp_after)
-        _note_battle(p, ms[pick[0]].get("name", pick[0]), logs, res)
+        _note_battle(p, _ename, logs, res)
         if player is not None:
             player.update(p)
         _save(env)
@@ -219,20 +247,22 @@ async def _open_and_hand(env, p, uid, player, head, hand=None, action=None, skil
     `head` 是这一手要说的那句话（已经渲染好的槽位行）；没遇敌 ⇒ 换成
     `COMBAT_NEED_FOE` 那一句，**什么都不动**（fail-closed，不白打一场）。
     """
-    pick, ms = _meet(p, uid)
+    pick, ms, affixes, _mline = _meet(p, uid)
     if not pick:
         yield T("COMBAT_NEED_FOE")
         return
-    yield T("COMBAT_MEET", name=ms[pick[0]].get("name", pick[0]))
+    yield _mline
     for line in encounter_lines(ms[pick[0]], p):
         yield line
     if head:
         yield head
     seen = CX.note_kill(p, pick[0])
-    _b, res, logs, hp_after = _run_hand(p, pick, ms, hand=hand, action=action, skill=skill)
+    _b, res, logs, hp_after = _run_hand(p, pick, ms, affixes=affixes, hand=hand,
+                                        action=action, skill=skill)
     for line in _fmt(logs):
         yield line
-    async for line in _settle(env, p, uid, pick, ms, res, logs, hp_after, seen, player):
+    async for line in _settle(env, p, uid, pick, ms, res, logs, hp_after, seen, player,
+                                  affixes=affixes):
         yield line
 
 
@@ -249,11 +279,11 @@ async def attack(env, sink, uid, player):
     if _line:
         yield _line
         return
-    pick, ms = _meet(p, uid)
+    pick, ms, affixes, _mline = _meet(p, uid)
     if not pick:
         yield T("COMBAT_NONE")
         return
-    yield T("COMBAT_MEET", name=ms[pick[0]].get("name", pick[0]))
+    yield _mline
     # ★ B3-4：怪身上挂着「先开口」的台词时，它先说话（数据驱动 —— 本文件不写文案）
     for line in encounter_lines(ms[pick[0]], p):
         yield line
@@ -261,10 +291,12 @@ async def attack(env, sink, uid, player):
     # ★ B3-17 单人口径：今天的『攻击』只有单人这一条路（组队命令还没接线）⇒ 人数 = 1；
     #   它只对「团队内容」那几只怪生效（Boss 单人 hp ÷2 —— 真源 `12_怪物面板…` §一④ /
     #   `17_组队与策略配合_v1` §五 / `22_旧哨塔_逐间设计_v1` §三④）。组队接线那批把真实人数传进来。
-    res, logs, hp_after = CB.run_auto(p, pick, ms, party=1)
+    _ids, _hm = AFFIX.spawn_plan(pick[0], list(affixes))
+    res, logs, hp_after = CB.run_auto(p, _ids, ms, party=1, affixes=list(affixes), hp_mults=_hm)
     for line in _fmt(logs):
         yield line
-    async for line in _settle(env, p, uid, pick, ms, res, logs, hp_after, seen, player):
+    async for line in _settle(env, p, uid, pick, ms, res, logs, hp_after, seen, player,
+                                  affixes=affixes):
         yield line
 
 
@@ -313,18 +345,19 @@ async def retreat(env, sink, uid, player):
     if _line:
         yield _line
         return
-    pick, ms = _meet(p, uid)
+    pick, ms, affixes, _mline = _meet(p, uid)
     if not pick:
         yield T("COMBAT_NEED_FOE")
         return
-    yield T("COMBAT_MEET", name=ms[pick[0]].get("name", pick[0]))
+    yield _mline
     for line in encounter_lines(ms[pick[0]], p):
         yield line
     yield T("COMBAT_RETREAT_HEAD")
     from ext_combat.battle import schedule as SCH
     from ext_combat.battle.actors import actor_alive
     hand = BA.Hand("retreat", p=p)
-    b = CB.build(p, pick, ms, party=1, override=hand.override)
+    _ids, _hm = AFFIX.spawn_plan(pick[0], list(affixes))
+    b = CB.build(p, _ids, ms, party=1, affixes=list(affixes), hp_mults=_hm, override=hand.override)
     logs: list = []
     SCH.advance(b, logs)                       # 推到你的决策点（快的对方该动的先动）
     caster = b.focus()
@@ -502,7 +535,7 @@ async def swap_weapon(env, sink, uid, player):
     p = _p(p)                                  # ★ 上限/现血按新的 equipped 重新派生（P-27）
     ok = T("COMBAT_SWAP_OK", icon=rec.get("icon", ""), name=rec.get("name", iid),
            kind=rec.get("kind", ""))
-    pick, ms = _meet(p, uid)
+    pick, ms, affixes, _mline = _meet(p, uid)
     if not pick:
         # 这一带没有能打的东西 ⇒ 手换上了，没处花（不硬开一场）
         if player is not None:
@@ -515,16 +548,17 @@ async def swap_weapon(env, sink, uid, player):
         yield T("COMBAT_SWAP_ASK", list=" · ".join(
             "『%s』" % (CG._item(k) or {}).get("name", k) for k in cand[1:]))
     hand = BA.Hand("swap", p=p, lines=[ok])
-    yield T("COMBAT_MEET", name=ms[pick[0]].get("name", pick[0]))
+    yield _mline
     for line in encounter_lines(ms[pick[0]], p):
         yield line
     # ★ 「你换上了…」由**这一手落地那一刻**说出来（`hand.lines` 走 B 段那条路）——
     #   不在抬头处重复一遍（换手本身就是这一手，报两次是两句话一件事）。
     seen = CX.note_kill(p, pick[0])
-    _b, res, logs, hp_after = _run_hand(p, pick, ms, hand=hand)
+    _b, res, logs, hp_after = _run_hand(p, pick, ms, affixes=affixes, hand=hand)
     for line in _fmt(logs):
         yield line
-    async for line in _settle(env, p, uid, pick, ms, res, logs, hp_after, seen, player):
+    async for line in _settle(env, p, uid, pick, ms, res, logs, hp_after, seen, player,
+                                  affixes=affixes):
         yield line
 
 

@@ -2100,3 +2100,203 @@ scripts/_b53_bind.py           新（给六条挂 bind；幂等，合入后可�
 ```
 
 **引擎仓零改动**（`git -C C:/Users/yuyu/framework-engine status --porcelain` 为空）。
+
+# B3-24 · 精英怪词条池变成真玩法（`b3-24-elite-affix`）
+
+> 工作树 `C:/Users/yuyu/ast-wt/b54` · 基线 `ff782f2` · 引擎零改动（`framework-engine` 工作区空）·
+> 真源只读（`aetheran-plan` 一字未动）。数字全部来自**实跑**（命令见 §七）。
+
+## §〇 一句话
+
+B3-17 §4.2 登记的那笔账（`monsters.elite_pool` 里 19 个 `af_*` **全仓库没有定义**）本批结清：
+建 `monster_affixes` 域（19 条引用 id 全有定义 + 1 条 `af_huge` 补全 = **20 条**，四类分齐），
+遭遇生成**真按词条走**（面板乘 / 多只 / 先手 / 开场盾 / 血量阈值 / 材料倍数六条通道），
+「观察」**能预告**（读到的就是接下来真遇到的那一只 —— 同一个种子，不是另抽一次）。
+
+## §一 要补的真源行（`aetheran-plan` 只读，本批没动它）
+
+| # | 差什么 | 本批怎么办的 | 该写进哪份真源 |
+|---|---|---|---|
+| 1 | **护盾的盾值**：`09_ §三.3.3` 只给语义「开场有一层壳（要打破才掉血）」，**没给数** | 首版取「**自身生命上限的 20%**」（随等级/面板自动缩放，满足等级扩展约束）—— 写在 `content/rules/elite.json` 的 `shield_pct_of_hp`，带 `_src` 说明 | `09_精英怪机制_v1.md` §三.3.3 补一格数（或 §四 配平里给） |
+| 2 | **`追猎` 的定义**：`09_ §三` 没有它；只有 `§五` 一句「站位轴｜† 追猎的野狗 † —— 它贴脸，逼你学距离」 | 按 §五 那半句写了 `line`（「它盯着你 —— 躲不开。」），**status=pending 不接线**（本作 CTB 无站位轴，落不了） | `09_ §三.3.2` 补一条效果口径 |
+| 3 | **`吸血` 的定义与数**：`09_ §三` 没有它；`§五` 只说「它会吸，逼你速杀」 | `line` 按 §五 写；**pending** —— 真源缺的是「吸多少」，而引擎触发总线上只有固定量 / 按生命比例的 `heal`，**没有「按这一下打出的伤害比例吸」**（缺的是词，不只是数） | `09_ §三.3.3` 补 |
+| 4 | **`潜行断你` 的定义**：`09_ §三` 没有它；`§五` 说「打断轴｜† 打断的林鸦 † —— 它读条断你」 | `line` 按 §五 写；**pending**（同「打断」：顺序制自动战斗里没有读条窗口） | `09_ §三.3.3` 补（或并入「打断」那条） |
+| 5 | **`元素护体（火抗）` 的归属两处打架**：`12_ §二` 把它给了 11 级树精，而 `09_ §八` 说「元素词条」是 **41–60 阶段**才开的东西 | 按 `12_ §二` 的池子保留定义（不删 id），`line` 取自 §五 属性轴；**pending**（本作元素抗性口径未定） | 裁一次：要么 `12_ §二` 换掉那格，要么 `09_ §八` 允许提前 |
+| 6 | **名字里带「的」的怪，模板读起来别扭**：`COMBAT_ELITE_SPAWN` 是 `† {affix}的{name} †`，遇上「游荡的骸骨」就成 `† 硬壳的游荡的骸骨 †` | 照文档模板原样跑（不打补丁）；**建议**真源把模板改成 `† {affix}·{name} †` 或给怪一个不带「的」的精英名 | `00_总纲/17_文案收口口径_v1.md`（槽位表那一行的值） |
+| 7 | **`09_ §二` 自己两处打架**：规则表写「第一节点 **8%**」（精英会出在第一节点），`§六②` 的风险对策又写「精英**不出现**在新手带第一个节点」 | 判据按**规则表**立（8/12/20 三档），对策那条登记在此不落 | `09_ §二` 收口一句 |
+
+★ 另外两条**已接线但没接全**的（属包内待办，不是真源问题）：见 §五。
+
+## §二 词条表（20 条 · 四类齐 · 数全在 `content/rules/elite.json`）
+
+`on` = 本批已接线（运行时真生效）· `pending` = 定义齐、消费端未接线（`why` 写在域里）。
+
+| id | 名 | 类 | PE | 轴 | 状态 | 一句话（玩家看的那行） | 机器效果 |
+|---|---|---|---|---|---|---|---|
+| `af_hard_shell` | 硬壳 | stat | 4 | def | **on** | 背上的壳反着光 —— 硬砍没用，得找缝。 | 面板 def ×1.5 |
+| `af_huge` | 巨化 | stat | 4 | hp | **on** | 比同类大一圈 —— 得打久一点。 | 面板 hp ×1.8 |
+| `af_swift` | 迅捷 | stat | 4 | spd | **on** | 它比你快 —— 先落手的是它。 | 面板 spd ×1.3 |
+| `af_puny` | 瘦小 | stat | 4 | hp,spd | **on** | 小得可怜，也快得吓人 —— 打一下就碎，但它落手次数多。 | 面板 hp ×0.7 · spd ×1.4 |
+| `af_swarm` | 群居 | behavior | 8 | spawn | **on** | 它身后还有两只 —— 第二只只剩半条命。 | 一次来 3 只（第 2 只 hp×0.5） |
+| `af_ambush` | 潜伏 | behavior | 8 | tempo | **on** | 你还没看清，它已经动了。 | 构建后 ct=0（第一动排在所有人之前） |
+| `af_frenzy` | 狂暴 | behavior | 8 | atk | **on** | 血掉过半以后，它下手更重。 | hp<50% 时 atk×1.3（`once` 只改一次） |
+| `af_shield` | 护盾 | mechanic | 12 | shell | **on** | 外头罩着一层壳 —— 先打破它，才伤得到它。 | 开场 `shields` = 生命上限 ×20% |
+| `af_bountiful` | 富饶 | loot | 0 | loot | **on** | 它身上有东西在发光。 | 材料 ×2（叠在 PE 基线上） |
+| `af_plague` | 带毒 | mechanic | 12 | dot | pending | 它伤过的地方，会一直烂下去。 | 要 DoT 表（EFFECT_RULES/EFFECT_ACTIONS） |
+| `af_home_guard` | 守家 | behavior | 8 | reinforce | pending | 血快到尽头时，它会喊人。 | 要中途往 `sides` 加 actor（上层导演） |
+| `af_pursuit` | 追猎 | behavior | 8 | tempo | pending | 它盯着你 —— 躲不开。 | 真源无定义 + 无站位轴 |
+| `af_disarm` | 缴械 | mechanic | 12 | debuff | pending | 跟它打，你的手会越来越软。 | 要给玩家挂面板减益（同 DoT 那条路） |
+| `af_vampiric` | 吸血 | mechanic | 12 | leech | pending | 它每撕一下，自己就壮一分。 | 没有「按伤害比例吸」的触发动词 + 真源没数 |
+| `af_hoarder` | 藏东西 | loot | 0 | loot | pending | 它守着什么东西 —— 打完别急着走。 | 要「原地留可挖点」（跨地图态 + 挖掘指令） |
+| `af_thorns` | 反伤 | mechanic | 12 | reflect | pending | 砍它的人，自己也会疼。 | 引擎反伤位只认固定值/按生命比例（「反弹 15% 已受伤量」给不出正确数） |
+| `af_fire_ward` | 元素护体 | mechanic | 12 | resist | pending | 火在它身上烧不起来。 | 元素抗性口径未定 + 归属待裁（§一·5） |
+| `af_rare_breed` | 稀有种 | loot | 0 | loot | pending | 这一只不太一样 —— 它身上有你没见过的。 | 要一件专属掉落物（items/drop_pools 生成物，本批不新造） |
+| `af_stealth_interrupt` | 潜行断你 | mechanic | 12 | interrupt | pending | 它出手的那一下，会截断你的蓄力。 | 引擎 interrupt 要「对方正在读条」的窗口 |
+| `af_interrupt` | 打断 | mechanic | 12 | interrupt | pending | 你蓄力蓄到一半，会被它截断。 | 同上（等 B2-2b 轮流制） |
+
+分布：`stat 4 · behavior 5 · mechanic 8 · loot 3`；`on 9 / pending 11`（含只定义不发出去的 `af_huge`）。
+PE 表（数值 4 / 行为 8 / 机制 12 / 掉落不计难度）与上限 24 都**从 `09_ §四` 现解析后对账**（探针 ⑱）。
+
+## §三 消费端怎么接的（六条通道 · 引擎零改动）
+
+```text
+① 面板乘      affix.apply_panel（域键名上乘，键不在 panel 里 ⇒ 抛）→ combat.monster_actor
+② 多只        affix.spawn_plan（(ids, 每只生命倍数)）→ cmds_battle.attack → combat.build(hp_mults=)
+③ 先手        affix.opening_ct → combat.build 里 Battle 造好之后 a["ct"] = 0
+④ 血量阈值    affix.thresholds_of → combat._affix_hooks（挂引擎 `Battle.script_hook`）
+⑤ 开场盾      affix.shields_of → combat.monster_actor 写 a["shields"]（引擎 shields 容器）
+⑥ 材料倍数    affix.scale_drops（1 + PE/48 的基线 × 富饶的 ×2）→ cmds_battle.attack
+```
+
+**抽词条**（`affix.roll`）：固定种子可复现 · 只从 `status=="on"` 里挑（**未接线的一条都不发**）·
+条数照 `09_ §二` 等级档位 · **同轴不叠**（axis 两两不相交）· PE 累计 ≤ 24。
+
+**遭遇与预告是同一个东西**（这条是「观察能提前看到」能成立的关键）：
+
+```text
+elite_of(monsters, loc, node, uid, game_day, level)          # 唯一一口
+  seed = sha1("affix|uid|loc|node|game_day")                 # ★ 不用内置 hash（每进程加盐 ⇒ 预告会骗人）
+  概率 = rules.rate（节点 role 在名单里 + 节点序号：首 8% / 中 12% / 末 20%）
+  候选 = habitat 说得上话的怪（与 combat.pick_encounter 同一套规则）→ 按等级就近取前 3 → 挑一只 → 抽词条
+  查不到概率的档位（塔门/塔内/塔顶/镇上/镇口）⇒ None = 不刷（fail-closed，不兜底成某个数）
+观察（cmds_ast.look）读它 → 出那一行；攻击（cmds_battle.attack）也读它 → 这一场就是它
+```
+
+**名字与那一行**：逐字走 texts 槽位 `COMBAT_ELITE_SPAWN`（`† {affix}的{name} †` + hint 那一行，
+真源 = `25_文案规格与打样_v1.md` §打样 7）—— 代码里**一个新汉字都没加**
+（`probe_copy` 的逐文件预算一格没动：apply 1 / cmds_battle 11 / cmds_recipe 2 / combat 1 / loot 3）。
+
+## §四 判据（`scripts/probe_monsters.py` 追加一节，17 条；只加强，旧判据一行没改）
+
+```text
+悬空 id      elite_pool 引用的 19 个 id 全都有定义（悬空 0）· 定义条数 ≥ 引用条数
+形状         每条：四类之一 · PE == rules 类表 · on 必有 mods / pending 必有 why · axis 是 ASCII · name/line/src
+三头对账     09_ §四/§二 现解析 ↔ rules/elite.json（PE 表 · 上限 24 · 条数四段 · 概率三档 · 群居 3 只半血）
+             · 节点 role 名单都在 maps 域真出现过（不新造深度字段）
+抽词条       可复现（同种子两次同结果 · 17 只 × 120 种子）· 条数在档位里 · PE ≤ 24 · 同轴不叠
+             · 池子里每一条 on 都真抽得到
+面板复算     9 条面板词条 × 16 只怪：域键复算 == apply_panel 结果 == 引擎 actor 那一格；不带词条 = 原样
+四条通道真跑 群居 3 只 + 第二只半血 · 护盾值 == 生命上限 20% 且日志真有吸收行 · 潜伏 ct=0 且第一动就是它
+             （对照组 ct>0）· 狂暴 atk×1.3 且只改一次（连调钩子三次）
+材料倍数     (1 + PE×1/48) × 富饶 ×2 · 非材料那格不动 · 没词条 = 原样
+观察那行     逐字 == texts 槽位渲染 + 真调 look 的产出里逐字命中（今天有精英的那几格都核）
+预告 == 遭遇 同一 uid/图/节点/日：观察那行 == 攻击遭遇那行（换 uid 找出一个真有精英的档再核）
+覆盖快照     池子里至少有一条 on 的怪 ≥ 15 只（只许变长）
+```
+
+## §五 覆盖与「接了但没接全」（诚实清单）
+
+| 项 | 现状 | 理由 |
+|---|---|---|
+| 怪 × 池子覆盖 | **15/16** 只有池子的怪，池子里至少有一条 `on` | 缺的那只是 **`拾荒人`**（池子 = 缴械·吸血·藏东西）—— 三条**全**落在「效果规则表 / 按伤害比例吸血 / 可挖点」上，本批没那三张表 ⇒ fail-closed：它今天**不出精英**（宁可不出，也不发一条只有名字的词条） |
+| 名义条数 vs 实到条数 | 等级档位要 2 条、池子里只有 1 条 `on` 时**只发 1 条** | 不拿未接线的凑数（例：`守塔的骨架` 池里只有 `af_shield` 一条 on） |
+| 精英概率只在**野外 / 深处**两档生效 | 塔门 / 塔内 / 塔顶 = 不刷 | 塔内逐间配比是 `22_旧哨塔_逐间设计_v1.md` 那条线（另有固定配比），本批不越界；`rules.rate._eligible_note` 写明 |
+| `精制装备掉率 ×(1+PE/60)` | **未接** | 它落在**掉落池权重**那一层（`LT.roll_pool` 的 `_pick`），加权重参数会动掉落域那条线；本批只接材料那半（`09_ §四` 那两个数里的一个） |
+| 「可以潜行绕开 · 可以逃跑」 | **未接** | `09_ §六②` 的对策，要指令层（潜行 / 逃生）；今天 `flee` 还是「第一版还没接轮流制」 |
+| 等级 / 游戏日一变，同一格的精英可能换 | 有意如此 | 种子含 uid/loc/node/day，候选挑怪按等级 ⇒ 打一场升级后回同一格，预告可能变（词条条数本就按等级分档）；属于「有意的」 |
+
+## §六 改动文件清单（显式 · ★ 冲突面那两条写清「改了哪一段」）
+
+```text
+新文件
+  content/data/monster_affixes.json     20 条词条（唯一数据源；`_src` 写在文件头）
+  content/rules/elite.json              口径：PE 表 / 上限 / 条数档位 / 概率 / 盾值 / 材料倍数 / 分隔符
+  content/affix.py                      消费端：roll / apply_panel / spawn_plan / opening_ct /
+                                        shields_of / thresholds_of / scale_drops / display_name /
+                                        elite_line / elite_of / coverage（引擎零改动）
+  schemas/monster_affixes.schema.json   域形状（四类 enum · status 两态各自必填：if/then）
+改文件（逐段）
+  game.json                             `domains` 数组加 "monster_affixes"（maps 与 monsters 之间）
+  editor/domains.json                   同上加一条域声明（label 精英词条 · schema 指向新 schema）
+  content/cmds_ast.py                   ★ 冲突面：① 顶部 import 那一组末尾 +1 行（from . import affix）；
+                                        ② look() 里 event_lines 那三行之后、yield T("SYS_LOOK_HINT") 之前
+                                           插 7 行（精英预告）。别的分支一个字没动
+  content/combat.py                     ★ 冲突面：① 顶部 import +1 行；② monster_actor 签名 +
+                                        affixes= / hp_mult=，函数体 +5 行（面板乘 + 半血）与末尾 if affixes:
+                                        块；③ 新增模块级 _affix_hooks(battle)（在 monster_actor 与 build
+                                        之间）；④ build / run_auto 各 +2 个关键字参数 + build 尾部三条通道
+                                        （Battle 造好之后）
+  content/cmds_battle.py                attack()：遭遇抽词条（_encounter 之后 +7 行）· 遭遇那行分两支 ·
+                                        多只（run_auto 之前 +3 行）· run_auto 传参 · 掉落倍数（roll_pool 之后
+                                        +2 行）· _note_battle 用带前缀的名字（两处）· 顶部 import +1 行
+  scripts/probe_monsters.py             末尾追加一节（⑰–㉓，17 条判据 + 覆盖快照打印）；旧的 ①–⑯ 一行没改
+没碰
+  引擎仓（工作区空）· 真源仓（一字未动）· content/data/monsters.json（elite_pool 本来就在）·
+  content/data/texts.json（没加槽位 —— 借现成槽位 COMBAT_ELITE_SPAWN）· 别的批次文件
+```
+
+## §七 可复现命令
+
+```bash
+export GWEN_ENGINE=C:/Users/yuyu/framework-engine
+export AST_PLAN=C:/Users/yuyu/aetheran-plan
+PY=C:/Users/yuyu/AppData/Local/Programs/Python/Python312/python.exe
+
+# 7.1 该域（新增的那一节在最后）
+$PY scripts/probe_monsters.py
+# 7.2 全量 28
+for f in scripts/probe_*.py; do $PY "$f" || echo "红 $f"; done
+# 7.3 「观察预告 == 遭遇」逐字（真宿主 · 假钟把游戏日钉在 day6 / day4）
+AST_E2E_EPOCH=46800 AST_E2E_SEED='{"name":"试炼者","race":"human","cls":"cls_knight","level":10,
+  "alloc":{"STR":9.6,"VIT":9.6,"WIL":9.6},"loc":"belt_north","node":"bn_tower","bag":{},"equipped":{},
+  "flags":{},"codex":{}}' $PY scripts/e2e_drive.py "观察"
+#   → † 硬壳的游荡的骸骨 † / 背上的壳反着光 —— 硬砍没用，得找缝。
+#   同一格 + 同一 epoch + "攻击" → 打的就是这一只（逐字同一行）
+AST_E2E_EPOCH=32400 AST_E2E_SEED='（loc=belt_east / node=be_birch）' $PY scripts/e2e_drive.py "观察" "攻击"
+#   → † 潜伏的林鸦 † … 日志第一动是它（先手）
+# 7.4 旧的两个 e2e 用例（B3-17 §6.4 原文）—— 结果与那一批逐字一致（塔内层主胜 / 塔顶单人倒地）
+```
+
+## §八 门禁实跑（逐字）
+
+```text
+28 个 scripts/probe_*.py：全绿（本批跑了两遍）
+  probe_monsters 新增 17 条判据全 ✓：
+    悬空 0 · 四类分布 stat4/behavior5/mechanic8/loot3 · on 9 / pending 11 · 抽词条可复现 ·
+    面板复算 9×16 · 群居 3 只（第二只 33 vs 33）· 护盾 102 真吸收 · 潜伏 ct 0.0 / 对照组 60.921 ·
+    狂暴 7→9→9 · 材料 3 份 → 8 · 观察逐字命中 3 格 ·
+    预告==遭遇（belt_west/bw_old_ferry uid=u000 → ['af_hard_shell']）· 覆盖 15/16
+  probe_copy：每个文件的「内联中文文案」条数与接线前**一模一样**（apply 1 / cmds_battle 11 /
+    cmds_recipe 2 / combat 1 / loot 3）⇒ 本批一个新汉字都没写进代码
+e2e_drive：塔内层主（骑士 17 · 号角室）胜 · 塔顶 Boss（狂战士 20 · 塔顶）单人倒地（与 B3-17 一致）
+           · belt_north/bn_tower day6 观察预告 == 遭遇（† 硬壳的游荡的骸骨 †）
+           · belt_east/be_birch day4 潜伏先手（日志第一动就是它）
+```
+
+★ **static guard 那一次红**：`probe_panel` ④ 静态守卫的 pattern 是
+`["'](?:hp_max|max_hp)["'][^\n]{0,20}?\bor\s+\d`（「不许写死生命上限」）。我最初写的
+`int(a.get("max_hp", 1) or 1)` 与 `int(target.get("max_hp", 1) or 1)` 命中了它 ——
+**这不是要放宽判据，而是那个写法本来就是「猜一个 1 垫上」**；改成显式 fail-closed
+（上限取不到 ⇒ 抛 / 这一动不动）之后两处都不再匹配（第二处顺带拆成两行）。
+教训：这条静态守卫不只拦「写死 100」，也拦「随手拿 1 兜底」——写法要一次到位。
+
+## §九 复核要点
+
+1. `elite_of` 是**唯一**的「这一格今天出什么精英」口（观察与攻击都读它）；要改就改它一处 ——
+   改完 `probe_monsters` 最后两条（观察逐字 / 预告==遭遇）会自动跟着核。
+2. 种子用 **sha1**，不要换回内置 `hash()`（每进程加盐 ⇒ 同一格子两次运行给出不同预告）。
+3. `apply_panel` 与 `party_scale_of` 是**同一把 fail-closed 尺**（键名对不上就抛）——
+   加新词条只要写 `mods.panel` 的键，`content/rules/elite.json` 的 `panel_keys` 就是白名单。
+4. `_affix_hooks` 的 `once` 守卫是必需的：引擎每一动都会调一次钩子（不守就是 12→16→21→…→60）。
+5. 只从 `status=="on"` 抽词条 = 本批的 fail-closed 主线：**宁可这只怪今天不出精英，也不发一条
+   只有名字没有效果的词条**（`拾荒人` 就是这条的结果）。
