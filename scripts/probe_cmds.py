@@ -560,7 +560,13 @@ try:
                    if v.get("owner_class") == "cls_knight")
     _KNT9N = [v.get("name") for _l, _k, v in _KNT9]
     _KNT9LAB = _CL9["cls_knight"]["name"]
+    # ★ B3-19（本批加）：档上要**够门槛**才穿得上 —— 这两把都是精制武器（`req` = 力量 9 ·
+    #   门槛级 7；值见 `scripts/rebuild_item_reqs.py`）⇒ 起手档给一个真会加点的档
+    #   （3 级 = 14 点，力量 9 ≥ 9）。这不是放宽判据：是让 fixture 符合游戏规则
+    #   （一个 0 加点的档本来就穿不上精制装备）。
+    _ALLOC9 = {"STR": 9}
     _SEED9 = {"cls": "cls_knight", "race": "human", "level": 3, "hp": 100, "gold": 30,
+              "alloc": dict(_ALLOC9),
               "bag": {_W1: 1, _W2: 1}, "equipped": {}, "codex": {}, "flags": {},
               "loc": "belt_north", "node": "bn_bone"}
     _cap0_9 = int(PB.hp_cap(CA9._p(dict(_SEED9))))
@@ -636,8 +642,9 @@ try:
         os.remove(_db9b)
     except OSError:
         pass
-    _ad9b = _Ad([], seed={"cls": "cls_knight", "race": "human", "level": 1, "hp": 100,
-                          "bag": {_W1: 1}, "equipped": {}, "codex": {}, "flags": {}})
+    _ad9b = _Ad([], seed={"cls": "cls_knight", "race": "human", "level": 3, "hp": 100,
+                          "alloc": dict(_ALLOC9), "bag": {_W1: 1},
+                          "equipped": {}, "codex": {}, "flags": {}})
     _host9b = Host(_ad9b, str(REPO), inject={"db_path": _db9b, "clock": time.time})
     _host9b.boot()
 
@@ -1146,6 +1153,88 @@ try:
         not _leak12, "%s" % _leak12[:3])
 except Exception as exc:                                              # noqa: BLE001
     chk("★ B3-12 那 8 条真敲跑得起来（真宿主契约）", False,
+        "%s: %s" % (type(exc).__name__, exc))
+
+print("⑬ ★ B3-19（真敲）：`装备` 的**属性门槛** —— 不够 ⇒ 穿不上 + 一行提示（档不动）· 够了 ⇒ 穿上")
+#   真源：主线 2026-09-25 裁决（门槛 = 家族 × 品质 × 建议加点曲线 · 值不手打）。
+#   四档真敲：
+#     ① 加点不够 ⇒ `SYS_GEAR_REQ` 那一行（槽位 + 三个数逐字对账）· **档逐格没动**
+#     ② 加点够了 ⇒ 穿上那一句 + 真进 `equipped`
+#     ③ 无门槛件（普通品阶）：0 加点也穿得上（门槛不是「一律要有加点」）
+#     ④ 旧档（身上那件、点数为 0）：照「已经穿在身上了」说 —— 不报门槛、不强制脱
+try:
+    import sys as _s13
+    _s13.path.insert(0, str(Path(__file__).resolve().parent))
+    import rebuild_item_reqs as _RIR13                                       # noqa: E402
+    _CL13 = {k: v for k, v in (st.domain("classes") or {}).items()
+             if not str(k).startswith("_")}
+    _IT13 = st.domain("items") or {}
+    _EQ13 = {k: v for k, v in _IT13.items() if v.get("slot")}
+    _W13 = next(k for k in sorted(_EQ13)
+                if _EQ13[k].get("req") and _RIR13.family_of(k).startswith("weapon_"))
+    _R13 = _EQ13[_W13]["req"]
+    _A13, _V13 = _R13["attr"], int(_R13["v"])
+    _C13 = _RIR13.ref_class_for_item(_CL13, _W13, _A13)                      # 武器 ⇒ 它自己那个职业
+    _F13 = next(k for k in sorted(_EQ13)
+                if not _EQ13[k].get("req")
+                and _RIR13.family_of(k).split("_")[1] == _C13[4:])           # 同职业的无门槛件（普通）
+    # ★ 同一家族的四个品阶**共用一个名字**（真源：装备的全名 = 名字 + 路线）⇒ 每个起手档里只放一件，
+    #   否则 `装备 <名字>` 会命中背包里排序在前的那一件（那是既有口径，不是本批的事）。
+    _BASE13 = {"cls": _C13, "race": "human", "level": _R13["level"], "hp": 100, "gold": 30,
+               "bag": {_W13: 1}, "equipped": {}, "codex": {}, "flags": {}}
+
+    def _run13(seed, text):
+        """一个起手档 + 一条指令：真宿主真敲一遍（uid 必须叫 `u_c` —— `_Ad.load_player` 只认它）。"""
+        _db13 = os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp",
+                             "ast_probe_cmds_req.db")
+        try:
+            os.remove(_db13)
+        except OSError:
+            pass
+        _ad13 = _Ad([], seed=dict(seed))
+        _h13 = Host(_ad13, str(REPO), inject={"db_path": _db13, "clock": time.time})
+        _h13.boot()
+        _ad13.out.clear()
+        _h13.handle({"uid": "u_c", "group_id": "g_c", "text": text})
+        return list(_ad13.out), (_ad13.saved or {})
+
+    _b13 = []
+    _want13 = _r("SYS_GEAR_REQ", name=_IT13[_W13]["name"], attr=_r("SYS_STAT_%s" % _A13),
+                 need=_V13, have=0, gap=_V13)
+    _o_lack, _s_lack = _run13(dict(_BASE13, alloc={}), "装备 %s" % _IT13[_W13]["name"])
+    if _o_lack != [_want13]:
+        _b13.append(("加点不够回的不是那一行", _o_lack, _want13))
+    if _s_lack != dict(_BASE13, alloc={}):          # ★ 一个字都没动（handler 早早 return，没 save）
+        _b13.append(("加点不够却动了档", _s_lack))
+    _o_enuf, _s_enuf = _run13(dict(_BASE13, alloc={_A13: _V13}), "装备 %s" % _IT13[_W13]["name"])
+    if _o_enuf[:1] != [_r("SYS_GEAR_EQUIP_OK", icon=_IT13[_W13].get("icon", ""),
+                          name=_IT13[_W13]["name"], kind=_IT13[_W13].get("kind", ""))] \
+            or _s_enuf.get("equipped") != {_IT13[_W13]["slot"]: _W13} \
+            or (_s_enuf.get("bag") or {}):
+        _b13.append(("加点够了却没穿上 / 没摘背包", _o_enuf[:1], _s_enuf.get("equipped"),
+                     _s_enuf.get("bag")))
+    _o_free, _s_free = _run13({"cls": _C13, "race": "human", "level": 1, "hp": 100, "gold": 30,
+                               "bag": {_F13: 1}, "equipped": {}, "codex": {}, "flags": {},
+                               "alloc": {}}, "装备 %s" % _IT13[_F13]["name"])
+    if _o_free[:1] != [_r("SYS_GEAR_EQUIP_OK", icon=_IT13[_F13].get("icon", ""),
+                          name=_IT13[_F13]["name"], kind=_IT13[_F13].get("kind", ""))] \
+            or _s_free.get("equipped") != {_IT13[_F13]["slot"]: _F13}:
+        _b13.append(("无门槛件 0 加点穿不上", _o_free[:1], _s_free.get("equipped")))
+    _OLD13 = dict(_BASE13, alloc={}, bag={}, equipped={_IT13[_W13]["slot"]: _W13})
+    _o_old, _s_old = _run13(_OLD13, "装备 %s" % _IT13[_W13]["name"])
+    if _o_old != [_r("SYS_GEAR_WORN", name=_IT13[_W13]["name"])] \
+            or _s_old.get("equipped") != {_IT13[_W13]["slot"]: _W13}:
+        _b13.append(("旧档报了门槛 / 被强制脱", _o_old, _s_old.get("equipped")))
+    chk("★ 四档真敲（%s · 要 %s %s）：不够「%s」（档逐格没动）· 够了穿上 · 无门槛件 0 加点也穿得上 · "
+        "旧档不报门槛" % (_W13, _A13, _V13, _want13), not _b13, "%s" % _b13[:2])
+    chk("★ 门槛那两句里没有物品 id、也没有取不到文案（%d 行逐行扫）"
+        % len(_o_lack + _o_enuf + _o_free + _o_old),
+        not [ln[:40] for ln in _o_lack + _o_enuf + _o_free + _o_old
+             if _W13 in ln or _F13 in ln or "[MISSING TEXT" in ln],
+        "%s" % [ln[:40] for ln in _o_lack + _o_enuf + _o_free + _o_old
+                if _W13 in ln or "[MISSING TEXT" in ln][:2])
+except Exception as exc:                                              # noqa: BLE001
+    chk("★ B3-19 那四档真敲跑得起来（真宿主契约）", False,
         "%s: %s" % (type(exc).__name__, exc))
 
 print("")

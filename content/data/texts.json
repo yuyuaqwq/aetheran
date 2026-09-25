@@ -3179,6 +3179,18 @@
     "category": "系统",
     "desc": "装备 · 穿上"
   },
+  "SYS_GEAR_REQ": {
+    "value": "『{name}』要 {attr} {need} 才穿得上 —— 你现在 {have}，还差 {gap} 点。",
+    "params": [
+      "attr",
+      "gap",
+      "have",
+      "name",
+      "need"
+    ],
+    "category": "系统",
+    "desc": "装备 · 属性门槛没到（B3-19 · fail-closed 的那一行）"
+  },
   "SYS_GEAR_SWAP_OUT": {
     "value": "换下的『{name}』收回了背包。",
     "params": [

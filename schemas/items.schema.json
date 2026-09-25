@@ -93,6 +93,38 @@
             "additionalProperties": false
           }
         },
+        "req": {
+          "type": "object",
+          "$comment": "★ B3-19 装备属性门槛（家族 × 品质 × 建议加点曲线）—— 值由 scripts/rebuild_item_reqs.py 算出来，别手改。**没有这一格 = 无门槛**（普通品阶 / 头盔 / 稳靴 / 饰品 / 套装：显式无门槛，见该脚本的 FAMILY_FREE）。不满足 ⇒ 穿不上（content/cmds_gear.py 的 equip，fail-closed，报还差几点）。",
+          "required": [
+            "attr",
+            "v",
+            "level"
+          ],
+          "properties": {
+            "attr": {
+              "enum": [
+                "STR",
+                "AGI",
+                "VIT",
+                "INT",
+                "WIL"
+              ],
+              "$comment": "五维加点里的那一维（不是面板二级属性）—— 玩家侧「加了多少点」就是这一格的数"
+            },
+            "v": {
+              "type": "integer",
+              "minimum": 1,
+              "$comment": "门槛值 = round(品质倍数 × alloc_of(门槛级, 参考职业)[attr])，下限 1"
+            },
+            "level": {
+              "type": "integer",
+              "minimum": 1,
+              "$comment": "门槛级 = 该品阶在域里的获取起点（那一档来源的怪的最低等级）：精制 7 · 稀有 10 · 遗物 17"
+            }
+          },
+          "additionalProperties": false
+        },
         "set_id": {
           "type": "string",
           "description": "套装 id（套装件才有）"
