@@ -1638,6 +1638,53 @@
     "category": "系统",
     "desc": "触摸 · 摸到一样"
   },
+  "SYS_POI_BUFF": {
+    "value": "{name}：{buff} 撑着（{minutes} 分钟）。",
+    "params": [
+      "buff",
+      "minutes",
+      "name"
+    ],
+    "category": "系统",
+    "desc": "POI · 短时增益落到身上（P-28）"
+  },
+  "SYS_POI_BLESS": {
+    "value": "{name}：生命 +{add}（{hp}/{max}）。",
+    "params": [
+      "add",
+      "hp",
+      "max",
+      "name"
+    ],
+    "category": "系统",
+    "desc": "POI · buff 只写了名字（安全默认 = 上限的 20% 回血 · P-28 甲）"
+  },
+  "SYS_POI_BUFF_BAD": {
+    "value": "（{name}的增益写得不认得：{keys}。）",
+    "params": [
+      "keys",
+      "name"
+    ],
+    "category": "系统",
+    "desc": "POI · buff 写了数值但认不出（fail-closed）"
+  },
+  "SYS_POI_TALK_MISSING": {
+    "value": "（{name}边的话还没写下来。）",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "POI · effect.talk 指的是不存在的对话（fail-closed）"
+  },
+  "SYS_POI_EFFECT_TODO": {
+    "value": "（{name}：{keys} 还没接上。）",
+    "params": [
+      "keys",
+      "name"
+    ],
+    "category": "系统",
+    "desc": "POI · 认不出的 effect 键（fail-closed）"
+  },
   "SYS_READ_NONE": {
     "value": "这里没有能读的东西。",
     "params": [],
@@ -1921,6 +1968,40 @@
     "category": "系统",
     "desc": "交活 · 条件没满足"
   },
+  "SYS_JOB_REQ_VISIT": {
+    "value": "还差：得先去一趟「{place}」。",
+    "params": [
+      "place"
+    ],
+    "category": "系统",
+    "desc": "交活 · 前置没做（没去过那一站）"
+  },
+  "SYS_JOB_REQ_KILL": {
+    "value": "还差：「{monster}」得打掉 {n} 只（你打过 {have} 只）。",
+    "params": [
+      "monster",
+      "n",
+      "have"
+    ],
+    "category": "系统",
+    "desc": "交活 · 前置没做（怪没打够）"
+  },
+  "SYS_JOB_REQ_ITEM": {
+    "value": "还差：「{item}」×{n}（你手上有 {have}）。",
+    "params": [
+      "item",
+      "n",
+      "have"
+    ],
+    "category": "系统",
+    "desc": "交活 · 前置没做（东西没到手）"
+  },
+  "SYS_JOB_REQ_UNKNOWN": {
+    "value": "（这条的前置条件取不出来，先交不了。）",
+    "params": [],
+    "category": "系统",
+    "desc": "交活 · 前置条件写得不认得（fail-closed）"
+  },
   "SYS_JOB_DELIVERED": {
     "value": "交了：{name}",
     "params": [
@@ -2203,5 +2284,15 @@
     ],
     "category": "系统",
     "desc": "建号 · 没说选哪个"
+  },
+  "SYS_BOARD_SIDE_ROW": {
+    "value": "{order} {name} —— {objective}",
+    "params": [
+      "order",
+      "name",
+      "objective"
+    ],
+    "category": "系统",
+    "desc": "挂板墙 · 支线一行（带编号 —— 不带就接不了）"
   }
 }

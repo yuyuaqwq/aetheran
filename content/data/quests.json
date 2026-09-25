@@ -279,6 +279,11 @@
     "min_level": 1,
     "need": null,
     "objective": "找一块旧铁 → 带给他",
+    "require": {
+      "kind": "item",
+      "item": "i_material_old_iron",
+      "n": 1
+    },
     "reward_exp": 100,
     "reward_gold": 30,
     "story": "「他自己的锤子」——接活时该说什么（待写）",
@@ -299,6 +304,23 @@
     "min_level": 1,
     "need": null,
     "objective": "采齐三种指定药草各 3 份",
+    "require": [
+      {
+        "kind": "item",
+        "item": "i_material_herb_common",
+        "n": 3
+      },
+      {
+        "kind": "item",
+        "item": "i_material_herb_rare",
+        "n": 3
+      },
+      {
+        "kind": "item",
+        "item": "i_material_fungus",
+        "n": 3
+      }
+    ],
     "reward_exp": 100,
     "reward_gold": 30,
     "story": "「娜娜的药单」——接活时该说什么（待写）",
@@ -319,6 +341,11 @@
     "min_level": 1,
     "need": null,
     "objective": "雨天去采稀有的菌",
+    "require": {
+      "kind": "item",
+      "item": "i_material_fungus",
+      "n": 1
+    },
     "reward_exp": 100,
     "reward_gold": 30,
     "story": "「雨后的东西」——接活时该说什么（待写）",
@@ -399,6 +426,11 @@
     "min_level": 1,
     "need": null,
     "objective": "把饭送到北墙根",
+    "require": {
+      "kind": "visit",
+      "map": "windmill_town",
+      "node": "wt_wall"
+    },
     "reward_exp": 100,
     "reward_gold": 30,
     "story": "「给哈根送饭」——接活时该说什么（待写）",
@@ -519,6 +551,11 @@
     "min_level": 1,
     "need": null,
     "objective": "带小满走到塔下（他不进去）",
+    "require": {
+      "kind": "visit",
+      "map": "belt_north",
+      "node": "bn_tower"
+    },
     "reward_exp": 100,
     "reward_gold": 30,
     "story": "「带他看塔」——接活时该说什么（待写）",
@@ -539,6 +576,11 @@
     "min_level": 1,
     "need": null,
     "objective": "找一块能配上的旧铁",
+    "require": {
+      "kind": "item",
+      "item": "i_material_old_iron",
+      "n": 1
+    },
     "reward_exp": 100,
     "reward_gold": 30,
     "story": "「他的断剑」——接活时该说什么（待写）",

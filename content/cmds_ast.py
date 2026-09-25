@@ -611,7 +611,162 @@ async def money(env, sink, uid, player):
 
 
 # ══════════════════════════════════════════════════════════════
-# 三、可读物（触摸）
+# 三、POI 的 effect（P-28）—— 原先「数据写了没人读」的那一个字段，唯一消费端在这一处
+# ══════════════════════════════════════════════════════════════
+#: ★ P-28：`effect.buff` 带数值时落进**现成容器** `food_buff`（形状 `{stat, pct, until}`）。
+#:   stat 只认这三档 —— 与 `gear.BUFF_KEY` 是同一个词表（菜那套），别另开一份。
+POI_BUFF_STATS = ("atk", "def", "hp")
+
+#: ★ P-28 甲（**待拍板**）：`effect.buff` **只写了名字、没写数值**时的安全默认 ——
+#:   回生命上限的这一成数（与 `cmds_gather.rest` 的歇脚同一个 20% · 封顶）。
+#:   为什么不猜别的：`buff_shrine_blessing` 全仓没有定义处，文档（`05 §二`）只有
+#:   「神龛（短时增益）」一句 —— 给什么属性、多少，谁都没写。⇒ 按最保守的那一档落地，
+#:   让「摸了什么都不发生」变成「摸了有回血」；数值一旦定下来，往 pois 的 effect 里补
+#:   `stat` / `pct`（见 `_poi_buff_spec`）就**自动变成真增益，这一行不用改**。
+POI_BLESS_HEAL_PCT = 0.2
+
+
+def _poi_verb_ok(rec, verb) -> bool:
+    """这条 POI 的 effect 归不归**现在这个动词**（`need` 缺省 = 谁都能碰；写了就只认那一个）。"""
+    need = (rec.get("effect") or {}).get("need")
+    return (not need) or str(need) == str(verb)
+
+
+def _poi_buff_spec(eff):
+    """`effect.buff` 的数值 → `(面板键, 百分比)`；**没写数值给 None**（不猜属性、不猜数）。"""
+    key = str(eff.get("stat") or "")
+    if key not in POI_BUFF_STATS:
+        return None
+    try:
+        pct = int(eff.get("pct") or 0)
+    except (TypeError, ValueError):
+        return None
+    return (key, pct) if pct > 0 else None
+
+
+def _poi_heal_gain(p, eff):
+    """`effect` 里「回多少」的那两个词（与 items 域同一套：`hp` 固定 · `hp_pct` 上限的几成）。
+
+    返回 `(有没有写, 回多少)` —— 没写 = `(False, 0)`：**不猜**，由上头的安全默认那一档接管。
+    """
+    hit, gain = False, 0
+    if "hp" in eff:
+        hit, gain = True, gain + int(eff.get("hp") or 0)
+    if "hp_pct" in eff:
+        mx = int(p.get("hp_max") or 100)
+        hit, gain = True, gain + int(round(mx * float(eff.get("hp_pct") or 0)))
+    return hit, max(0, gain)
+
+
+async def poi_effect_lines(env, sink, uid, p, pid, rec, verb, player=None):
+    """★ P-28：POI `effect` 的**唯一**消费端 —— 原先这一个字段谁都没读（数据写了白写）。
+
+    「触摸（`verb='touch'`）」与「读（`verb='read'`）」都从这一处过。四条口径，
+    **数据里没写的一律不猜**：
+
+      · `need` —— 写了就只认那一个动词。三个隐藏点写的是 `need: "search"` ⇒ 归「搜查」
+        （那条线在 `cmds_gather`）：本口**不越权**代它消费，也不替它出「去搜」的提示 ——
+        那三条 `effect.loot` 指的池子在 drop_pools 域里**根本不存在**（悬空引用），
+        出提示等于把玩家引到死路上。⇒ 报告里挂 P-28 待拍板（乙）。
+      · `rest: true` —— 歇脚回血。**不抄第二份**：整支委托 `cmds_gather.rest`
+        （同一个「上限的 20% · 封顶」口径 —— 那边改了这儿跟着变）。
+      · `buff` —— 短时增益。**带数值的**（`stat` ∈ atk/def/hp + `pct` + `duration` 秒）
+        写进**现成容器 `food_buff`**（`cmds_recipe.item_use` 写的就是它、`gear.food_buff`
+        一直在读它 → 进引擎面板最后一层 `mul`）⇒ 不新建容器、不动读者、不碰面板。
+        **只写了名字没写数值的**（今天的神龛就是这一档）不瞎猜属性与数值 —— 走数据里
+        写着的 `hp` / `hp_pct`（与药水同一个词表）；连这个都没写，就按安全默认
+        `POI_BLESS_HEAL_PCT`（上限的 20% 回血 · 与歇脚同一个数）落地，口径写在报告里
+        （P-28 甲 待拍板）。
+      · `talk` —— 按 id 去 dialogues 域找那条对话，**找到**就说它的第一句（择优逻辑
+        只有一处：`cmds_talk._pick_indexed`）；**找不到**就明说没这条（fail-closed ——
+        今天三条篝火都是这一档：`talk_campfire_*` 全仓没有定义处）。
+      · 其余键 —— 出一行点名的 fail-closed 行（`SYS_POI_EFFECT_TODO`）；`buff` 写了数值
+        但认不出的（属性不在 atk/def/hp 里 · `pct` 不是正数）同样点名（`SYS_POI_BUFF_BAD`）
+        —— 两种情况都不静默吞掉。
+
+    动了档就在这一口里落（`player.update` + `_save`）—— 与别处同一个口。
+    """
+    eff = rec.get("effect")
+    if not isinstance(eff, dict) or not eff:
+        return
+    if not _poi_verb_ok(rec, verb):
+        return
+    name = rec.get("name") or pid
+    dirty = False
+    consumed = {"need"}                  # ★ 认下的键（收尾时「没认下的」点名 —— 不静默吞）
+
+    if eff.get("rest"):
+        from . import cmds_gather as CG           # 本地 import：免得包装载期成环
+        async for line in CG.rest(env, sink, uid, player):
+            yield line
+        consumed.add("rest")
+        # ★ 歇脚那一支写的是 `player`（它自己有一套 `_p`）—— 把血回填进外层这份拷贝：
+        #   同一趟里后面那句 `player.update(p)` 会拿旧血把它盖回去（实测踩到过）。
+        if player is not None and "hp" in player:
+            p["hp"] = player["hp"]
+
+    spec = _poi_buff_spec(eff) if eff.get("buff") else None
+    if spec:
+        from . import facade
+        key, pct = spec
+        secs = int(eff.get("duration") or 0)
+        p["food_buff"] = {"stat": key, "pct": pct, "until": float(facade.clock()) + secs}
+        dirty = True
+        consumed.update(("buff", "stat", "stat_name", "pct", "duration"))
+        yield T("SYS_POI_BUFF", name=name,
+                buff="%s +%d%%" % (eff.get("stat_name") or key, pct), minutes=secs // 60)
+    else:
+        wrote, gain = _poi_heal_gain(p, eff)
+        if eff.get("buff") or wrote:
+            mx = int(p.get("hp_max") or 100)
+            bad = []
+            if eff.get("buff") and not wrote:
+                # ★ 只写了名字、没写数值（今天的神龛就是这一档）—— **不猜属性也不猜数**：
+                #   按安全默认「回生命上限的 POI_BLESS_HEAL_PCT」落地（与歇脚同一个数）。
+                #   真写了数值但认不出的那几个子键点名（fail-closed：别让它看着像生效了）。
+                gain = max(1, int(mx * POI_BLESS_HEAL_PCT))
+                bad = [k for k in ("stat", "stat_name", "pct") if k in eff]
+            hp0 = int(p.get("hp") or mx)
+            hp = min(mx, hp0 + gain)              # ★ 封顶：不许超过上限（与药水同一口径）
+            p["hp"] = hp
+            dirty = True
+            consumed.update(("buff", "duration", "hp", "hp_pct"))
+            if bad:
+                yield T("SYS_POI_BUFF_BAD", name=name, keys=" · ".join(bad))
+            yield T("SYS_POI_BLESS", name=name, add=max(0, hp - hp0), hp=hp, max=mx)
+
+    if eff.get("talk"):
+        dlg = _data("dialogues").get(str(eff.get("talk"))) or {}
+        nodes = dlg.get("nodes") or {}
+        said = ""
+        if nodes:
+            from . import cmds_talk as CT         # 择优那一支只有一处，不抄第二份
+            st = CAL.state()
+            for nn in ("main", "hidden", "meet", "daily", "idle"):
+                if nn in nodes:
+                    _idx, said = CT._pick_indexed(nodes[nn].get("texts"), p, st)
+                    if said:
+                        break
+        if said:
+            consumed.add("talk")
+            for one in str(said).split("\n"):
+                yield one
+        else:
+            consumed.add("talk")
+            yield T("SYS_POI_TALK_MISSING", name=name)
+
+    unknown = [k for k in eff if k not in consumed]
+    if unknown:
+        yield T("SYS_POI_EFFECT_TODO", name=name, keys=" · ".join(sorted(unknown)))
+
+    if dirty:
+        if player is not None:
+            player.update(p)
+        _save(env)
+
+
+# ══════════════════════════════════════════════════════════════
+# 四、可读物（触摸）
 # ══════════════════════════════════════════════════════════════
 async def touch(env, sink, uid, player):
     p = _p(player)
@@ -628,6 +783,9 @@ async def touch(env, sink, uid, player):
             yield "「%s」" % T(rt)
         if v.get("into_codex") and CX.note_read(p, pid):     # ★ 读到就进旧物谱（先一行问号）
             got.append(pid)
+        # ★ P-28：上手那一下的 effect 走唯一消费端（原先 `effect` 谁都读 —— 摸了等于没摸）
+        async for line in poi_effect_lines(env, sink, uid, p, pid, v, "touch", player=player):
+            yield line
     if got:
         if player is not None:
             player.update(p)
@@ -651,6 +809,9 @@ async def read_thing(env, sink, uid, player):
     k, v = here[0]
     yield T("SYS_READ_HEAD", name=v.get("name"))
     yield T(v["read_text"])
+    # ★ P-28：可读物身上的 effect 也走同一个消费端（「读」与「触摸」不分家）
+    async for line in poi_effect_lines(env, sink, uid, p, k, v, "read", player=player):
+        yield line
     if v.get("into_codex") and CX.note_read(p, k):
         if player is not None:
             player.update(p)
