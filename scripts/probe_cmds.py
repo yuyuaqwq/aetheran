@@ -911,6 +911,11 @@ try:
         if _q.get("insight"):
             out.append(_r("SYS_JOB_INSIGHT", insight=_q["insight"]))
         out.append(_r("SYS_BSHOW_REWARD", exp=_q["reward_exp"], gold=_q["reward_gold"]))
+        # ★ B3-13 合入之后：有些条目带 `require`（前置条件）⇒ 单子全文里会多出「还差…」那几行。
+        #   期望值走**同一个口** `_CQ12._unmet`（前置条件那部分由域里的 require + 这份起手档现算），
+        #   不手写镜像串 —— 本块钉的仍然是「单子全文与域 + texts 一致」。
+        #   （缩进两格是呈现口径：`cmds_more.board_show` 也是这么拼的，见它 `yield "  " + line`）
+        out.extend("  " + _ln for _ln in _CQ12._unmet(_SEED12, _q))
         return out
 
     _g1 = _say12("看 1")
