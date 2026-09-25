@@ -183,6 +183,15 @@ print("  · 旧哨塔逐间候选（按 habitat 算）："
       + " · ".join("%s=%s" % (n.get("name"),
                               "+".join(mo[k]["name"] for k in cands(TOWER, str(n.get("id")))) or "（无）")
                    for n in ((MP.get(TOWER) or {}).get("nodes") or [])))
+# ⑪ ★ B3-14：普攻口径那一把尺**两处同值**（本文件只读 JSON ⇒ 那份是副本）
+#   `rebuild_monsters.K_RATE`（数值→率）必须 == `content/panel_build.K_RATE`（战斗侧真用的那个），
+#   否则怪 hp 的反推式与实机伤害各按各的尺算 ⇒ 击杀行动数系统性偏（B3-14 实测差 ~30%）。
+sys.path.insert(0, str(REPO))
+from content import panel_build as _PB                                    # noqa: E402
+chk("★ 数值→率那把尺两处同值（rebuild_monsters.K_RATE=%s == panel_build.K_RATE=%s）"
+    % (RB.K_RATE, _PB.K_RATE), RB.K_RATE == _PB.K_RATE)
+chk("★ 暴击期望系数与 `_budget.py` 同值（1 + 率 × 0.5）", RB.CRIT_EXP == 0.5)
+
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
 sys.exit(0 if ok else 1)

@@ -23,6 +23,22 @@ KEYMAP = {
 }
 INT_KEYS = ("max_hp", "max_mp")
 
+#: ★ B3-14：**引擎把这两个当「率」读**（不是数值）——
+#:   `ext_combat/battle/actions.py` 的 `random.random() < st["crit"]`、
+#:   `landing.py:_roll_dodge` 的 `min(st["dodge"], 0.40)`。
+#:   所以宪法键 `crit` / `eva`（**数值**，rating）必须率化后再进面板 ——
+#:   原先只率化了 crit：`eva` 原样传（骑士 10、刺客 20）⇒ 引擎按率读、cap 到 0.40
+#:   ⇒ **六职业恒定 40% 闪避**（数值差异全被 cap 吃掉）；怪物那边 `dodge` 干脆没接线。
+RATE_KEYS = ("crit", "eva")
+
+
+def rate_of(rating: float) -> float:
+    """数值 → 率（宪法 F3 形状 `r/(r+K_rate)`）。**玩家与怪共用这一把尺**。"""
+    r = float(rating or 0)
+    if r <= 0:
+        return 0.0
+    return r / (r + K_RATE)
+
 _REGISTRY: dict = {}          # 栈 id → decl（panel_layers_fn 的供体）
 
 
@@ -71,14 +87,15 @@ def panel_of(cls_id: str, level: int, alloc: dict | None = None) -> dict:
 
 
 def to_engine(p: dict) -> dict:
-    """宪法键名 → 引擎键名；crit 数值 → 率（引擎的 crit 是率）。
+    """宪法键名 → 引擎键名；crit / eva（数值）→ 率（引擎把这两个当率读）。
 
-    闪避不做率化：宪法 F2 是 hit/(hit+eva) 对冲式，落点在战斗侧（下一刀）。
+    闪避的率化在这儿只服务**没有面板栈**的调用点（`panel_of` 那些直接读数的地方）；
+    战斗侧走 `build_actor` 的 `rate` 层（同一把尺 `rate_of`）。
     """
     out = {}
     for k, v in p.items():
-        if k == "crit":
-            out["crit"] = v / (v + K_RATE)
+        if k in RATE_KEYS:
+            out[KEYMAP.get(k, k)] = rate_of(v)
             continue
         if k == "critdmg":
             out["crit_dmg"] = v
@@ -89,7 +106,8 @@ def to_engine(p: dict) -> dict:
 
 
 def _layers_of(cls_id: str, level: int, alloc: dict | None):
-    """三层**数值**键（不含 crit）：职业基础 / 成长 / 加点。crit 单独走 set 层（率化）。"""
+    """三层**数值**键（不含 crit / eva）：职业基础 / 成长 / 加点。
+    `crit` / `eva` 是非线性率（F3），三层相加无意义 ⇒ 单独走 `set` 层（率化）。"""
     c = cls_rec(cls_id)
     base = dict(c["base"])
     grow = {k: v * (level - 1) for k, v in c["growth"].items()}
@@ -97,7 +115,7 @@ def _layers_of(cls_id: str, level: int, alloc: dict | None):
     for stat, n in (alloc or {}).items():
         for k, v in (c["conv"].get(stat) or {}).items():
             attr[k] = attr.get(k, 0) + v * n
-    drop = ("crit",)
+    drop = RATE_KEYS
     # ★ 不再往层里塞等级：引擎 `stats.actor_stats` 已把 `level` 统一带出
     #   （真源 = actor["level"]，玩家与怪一视同仁）—— 内容侧只给面板属性。
     return (to_engine({k: v for k, v in base.items() if k not in drop}),
@@ -118,13 +136,20 @@ def build_actor(cls_id: str, level: int, alloc: dict | None = None,
     gear_e = {KEYMAP.get(k, k): v for k, v in (equipment or {}).items()}
 
     p = panel_of(cls_id, level, alloc)
-    crit_rate = p["crit"] / (p["crit"] + K_RATE)       # 宪法 F3：数值 → 率（引擎的 crit 是率）
+    # ★ B3-14：crit / eva 两条**数值 → 率**。率化的输入 = 面板三层 + **装备那一份**
+    #   （装备词条里 `crit` / `eva` 是真有的：items 域 17 件带 crit、5 件带 eva）。
+    #   原先只率化 crit 且**没带装备**（gear 的 crit 写在 add 层、随后被 set 层盖掉 ⇒ 白穿）；
+    #   eva 干脆没率化 ⇒ 引擎按率读 10/20、cap 到 0.40 ⇒ 六职业恒定 40% 闪避。
+    rate_vals = {
+        "crit": rate_of(p.get("crit", 0) + float(gear_e.get("crit", 0) or 0)),
+        "dodge": rate_of(p.get("eva", 0) + float(gear_e.get("dodge", 0) or 0)),
+    }
 
     sid = "%s.%s@%d" % (stack_prefix, cls_id, level)
     keys = sorted(set(base_e) | set(grow_e) | set(attr_e) | set(gear_e))
     _REGISTRY[sid] = {
         "version": 1,
-        "base": {"mode": "value", "value": {k: 0 for k in keys + ["crit"]}},
+        "base": {"mode": "value", "value": {k: 0 for k in keys + ["crit", "dodge"]}},
         "layers": [
             {"id": "prof_base", "src": T("SYS_PANEL_PROF_BASE"), "group": "base", "mode": "add",
              "keys": keys, "values": {k: base_e.get(k, 0) for k in keys}},
@@ -134,9 +159,9 @@ def build_actor(cls_id: str, level: int, alloc: dict | None = None,
              "keys": keys, "values": {k: attr_e.get(k, 0) for k in keys}},
             {"id": "gear", "src": T("SYS_PANEL_GEAR"), "group": "gear", "mode": "add",
              "keys": keys, "values": {k: gear_e.get(k, 0) for k in keys}},
-            # crit 是非线性率（F3），三层相加无意义 ⇒ 内容侧算好后用 set 层一次性写入
-            {"id": "crit_rate", "src": T("SYS_PANEL_CRIT_RATE"), "group": "rate", "mode": "set",
-             "keys": ["crit"], "values": {"crit": crit_rate}},
+            # crit / eva 是非线性率（F3），三层相加无意义 ⇒ 内容侧算好后用 set 层一次性写入
+            {"id": "rate", "src": T("SYS_PANEL_CRIT_RATE"), "group": "rate", "mode": "set",
+             "keys": ["crit", "dodge"], "values": dict(rate_vals)},
         ] + ([{"id": "food", "src": T("SYS_PANEL_FOOD"), "group": "buff", "mode": "mul",
                "keys": sorted(buffs), "values": dict(buffs)}] if buffs else []),
         "emit": {"int_keys": [k for k in INT_KEYS if k in keys], "round": 4},

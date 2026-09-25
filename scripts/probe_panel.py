@@ -266,5 +266,38 @@ except Exception as exc:                                            # noqa: BLE0
         "%s: %s" % (type(exc).__name__, exc))
 
 print("")
+print("── ⑥ ★ B3-14：`crit` / `eva` 两条**数值 → 率**（引擎把这两个当率读）")
+#   引擎 `landing._roll_dodge` 读的是 `min(dodge, 0.40)`、暴击读的是 `random.random() < crit`
+#   ⇒ 面板上必须是**率**。原先只率化了 crit：`eva` 原样传（骑士 10 / 刺客 20）⇒ 引擎 cap 到
+#   0.40 ⇒ **六职业恒定 40% 闪避**（数值差异全被吃掉）。装备带的 crit / eva 也被 `set` 层盖掉。
+_RATE_ROWS = []
+for _cid in sorted((st.domain("classes") or {})):
+    if str(_cid).startswith("_"):
+        continue
+    _a6 = panel_build.build_actor(_cid, 10, (st.domain("classes")[_cid] or {}).get("suggest_alloc"))
+    _s6 = actor_stats(None, _a6)
+    _RATE_ROWS.append((_cid, float(_s6.get("crit", 0)), float(_s6.get("dodge", 0)),
+                       float(panel_build.panel_of(_cid, 10, (st.domain("classes")[_cid] or {}).get("suggest_alloc"))["eva"])))
+chk("六职业的 crit / dodge 都是**率**（crit ∈ [0, 0.75] · dodge ∈ [0, 0.40]）",
+    all(0.0 <= c <= 0.75 and 0.0 <= d <= 0.40 for _, c, d, _ in _RATE_ROWS),
+    " · ".join("%s crit=%.4f dodge=%.4f" % (c.split("_")[-1], cr, dg) for c, cr, dg, _ in _RATE_ROWS))
+_dg = {c: d for c, _, d, _ in _RATE_ROWS}
+chk("★ dodge 跟着 `eva` 数值走（刺客 > 骑士 —— 原先两边都是 0.40，差异被 cap 吃掉）",
+    _dg["cls_assassin"] > _dg["cls_knight"] > 0, "刺客 %.4f > 骑士 %.4f" % (_dg["cls_assassin"], _dg["cls_knight"]))
+
+_CRIT_ITEM = next((k for k in sorted(_ITS)
+                   if any(a.get("stat") == "crit" for a in (_ITS[k].get("affixes") or []))), "")
+if not _CRIT_ITEM:
+    chk("items 域里有带 crit 词条的装备（找不到 ⇒ 这条测不了）", False, _CRIT_ITEM)
+else:
+    _cv = int(next(a.get("v") for a in _ITS[_CRIT_ITEM]["affixes"] if a.get("stat") == "crit"))
+    from content import gear as _GB                                       # noqa: E402
+    _gear6 = _GB.gear_stats({"equipped": {_ITS[_CRIT_ITEM]["slot"]: _CRIT_ITEM}, "enhance": {}})
+    _c0 = float(actor_stats(None, panel_build.build_actor("cls_knight", 1, None))["crit"])
+    _c1 = float(actor_stats(None, panel_build.build_actor("cls_knight", 1, None, _gear6))["crit"])
+    chk("★ 穿一件带 crit 词条的装（%s · +%s）⇒ 暴击率真涨（%.4f → %.4f）—— 原先 gear 那份被 set 层盖掉"
+        % (_ITS[_CRIT_ITEM]["name"], _cv, _c0, _c1), _c1 > _c0)
+
+print("")
 print("===== %s =====" % ("★ P-27 三处一致 + 反证都过 ✅" if not fails else "P-27 有红 ❌ %s" % fails))
 sys.exit(0 if ok else 1)

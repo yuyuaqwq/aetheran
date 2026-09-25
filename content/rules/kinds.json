@@ -1,0 +1,8 @@
+{
+  "_note": "引擎 `kinds` 词表 —— 经 `config.mount(kinds=…)` 注入（引擎 `game_config.kind_of(name)` 读它）。键 = 引擎侧那 5 个语义名（`ext_combat/battle/actions.py` 比的是 `_kind(\"phys\")` / `_kind(\"heal\")` / `_kind(\"buff\")` / `_kind(\"true\")`）；值 = **本包的域内用词**，也就是 `skills` 域 `kind_override` 那 5 个值。★ 不挂这份表时 `kind_of()` 一律回空串 ⇒ 伤害分段全落 `magi`（吃 matk 不吃 atk）、治疗/增益技落进伤害支 —— 2026-09-25 B3-14 实测过。",
+  "phys": "物理",
+  "magi": "魔法",
+  "true": "真伤",
+  "heal": "治疗",
+  "buff": "增益"
+}
