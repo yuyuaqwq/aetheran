@@ -48,6 +48,53 @@ def T(key: str, **slots):
     return s
 
 
+# ── 「待槽位」两处（★ P-50 / P-68 · 2026-09-26 本波 w-h-ux）────────────────────
+#: 真源已经点名了这两处玩家可见的位置、**句子还没写成真源行**（因此 texts 域里也没有那条槽位）：
+#:   · `cls_edge`    建号第二步那一眼 —— 真源 `06_第一阶段垂直切片/18_建号与新手引导_v1.md §一 第 2 步`
+#:                   「显示 职业名 · 节奏来源一句话 · **优势 / 弱点** · 一句自述」；
+#:   · `origin_home` 「出身」那一屏 —— 真源 `06_第一阶段垂直切片/04_指令总表.md §三` 的 `出身` 那一行
+#:                   （本波裁：那一行加「家乡与寿数」，见本分支 `_notes.md §真源行`）。
+#: 口径（fail-closed · **两态都绿**）：
+#:   · 域里那一格 + texts 里那条槽位**都在** ⇒ 这一行出；
+#:   · 缺任何一头（今天就是这一态）⇒ **少这一行** —— 不补替身、也不印 `[MISSING TEXT]`；
+#:   · **半截**（加了域没加槽位 / 加了槽位没加域）⇒ 探针当场红（`probe_class ⑭` / `probe_races ⑫`）。
+#: 键名写在这张表里、**不是** `T("…")` 直调：`probe_copy ④` 查的是「代码 `T()` 引用的键都在 texts
+#:   里」，而待槽位**本来就不在** —— 直调会把那一条判据打红。走这张表，由上面那两条判据把
+#:   「还缺哪一头」逐条印出来；真源行落地 + 主线跑 `scripts/rebuild_syscopy.py` 之后自动开始出。
+PENDING_SLOTS = {
+    "cls_edge": "SYS_CLS_EDGE",          # P-50 · 优势 · {adv} ｜ 弱点 · {weak}（classes.adv / classes.weak）
+    "origin_home": "SYS_ORIGIN_HOME",    # P-68 · 家乡 · {home} ｜ 寿数 · {life}（races.home / races.lifespan）
+}
+
+
+def _pending_line(slot, **slots):
+    """待槽位那一行：texts 里真有这条槽位才给（缺 = `None` —— 不编、也不印 MISSING 标记）。"""
+    if slot not in _texts():
+        return None
+    return T(slot, **slots)
+
+
+def _cls_edge_line(rec):
+    """建号第二栏（优势 / 弱点）那一行 —— 域里**两句都在** 且 texts 里有槽位才给，否则 `None`。
+
+    ★ 半截也不算数：只写了优势没写弱点（或反过来）⇒ 少这一行（宁可少一行，不许只印半句）。
+    """
+    adv = str((rec or {}).get("adv") or "").strip()
+    weak = str((rec or {}).get("weak") or "").strip()
+    if not (adv and weak):
+        return None
+    return _pending_line(PENDING_SLOTS["cls_edge"], adv=adv, weak=weak)
+
+
+def _origin_home_line(rec):
+    """「出身」那一屏的家乡与寿数那一行（★ P-68）—— 两格都在 且 有槽位才给，否则 `None`。"""
+    home = str((rec or {}).get("home") or "").strip()
+    life = str((rec or {}).get("lifespan") or "").strip()
+    if not (home and life):
+        return None
+    return _pending_line(PENDING_SLOTS["origin_home"], home=home, life=life)
+
+
 def _scene_line(loc, node, m=None):
     """观察那一段场景 —— 节点级 SCENE_<节点>（近景）→ 退 SCENE_<地图>（这张图的第一眼）。
 
@@ -85,6 +132,16 @@ DEFAULT_PLAYER = {
 
 #: ★ 复活点（`00_总纲/03_主要玩法 §4.9`「回白烛堂」）—— 风车镇的节点 id（探针核它是真节点）
 CHAPEL = (TOWN, "wt_chapel")
+
+#: ★ P-69（2026-09-26 · 本波 w-h-ux 裁）：建号是这四步，**第 4 步「出身」并进第 1 步**。
+#:   真源 `06_第一阶段垂直切片/18_建号与新手引导_v1.md §一` 把第 4 步写成**单独一步**
+#:   （「这一步只给一个选项（确认）」）—— 本路裁：**不拆**。依据两条：
+#:     ① 那一步的**内容**（那句「为什么来」）本来就在第 1 步里：六族菜单每一行末尾带的就是它，
+#:        定族那一下（`SYS_RACE_DONE`）再念一次 —— 拆出去等于把同一句话问两遍；
+#:     ② 「只给一个确认」的一屏是纯点击：**少一屏就少一个放弃点**（建号这段每多一步都在掉人）。
+#:   跟着来的两件事：`04_指令总表 §三` 的 `出身`（守卫「随时」）是**回看口**、不是建号那一步；
+#:   `18 §六` 的实现状态那一行记成「已裁：并进第 1 步」。判据 = `scripts/probe_race.py ⑨`。
+BUILD_STEPS = ("race", "class", "name", "town")
 
 
 def exp_need(level):
@@ -362,14 +419,25 @@ def class_menu(p) -> list:
                      star=_cls_star(p, v), icon=v.get("icon", ""), name=v.get("name", k),
                      role=v.get("role", ""), desc=v.get("desc", "")))
         out.append(T("SYS_CLS_MECH", mech=v.get("mech", "")))
+        edge = _cls_edge_line(v)        # ★ P-50：优势 / 弱点那一栏（真源行没落 ⇒ 今天不印）
+        if edge:
+            out.append(edge)
     out.append(T("SYS_CLS_HOW"))
     return out
 
 
 def _cls_page(rec) -> list:
-    """定过之后再「职业」那一眼 —— 名字 · 定位 · 一句自述 · 节奏（与菜单同一句话，不另写一份）。"""
-    return [T("SYS_CLS_VIEW", icon=rec.get("icon", ""), name=rec.get("name", ""),
-              role=rec.get("role", ""), desc=rec.get("desc", ""), mech=rec.get("mech", ""))]
+    """定过之后再「职业」那一眼 —— 名字 · 定位 · 一句自述 · 节奏（与菜单同一句话，不另写一份）。
+
+    ★ P-50：优势 / 弱点那一栏也是**同一行**（`_cls_edge_line` 一个口）—— 定完还想再读一遍
+      那句话的玩家不用回头翻聊天记录。真源行没落 ⇒ 今天这一行同样不印。
+    """
+    out = [T("SYS_CLS_VIEW", icon=rec.get("icon", ""), name=rec.get("name", ""),
+             role=rec.get("role", ""), desc=rec.get("desc", ""), mech=rec.get("mech", ""))]
+    edge = _cls_edge_line(rec)
+    if edge:
+        out.append(edge)
+    return out
 
 
 async def be_class(env, sink, uid, player):
@@ -891,6 +959,15 @@ async def status(env, sink, uid, player):
 
 
 async def origin(env, sink, uid, player):
+    """`出身` —— 你从哪儿来的（`04_指令总表 §三` · 守卫「随时」）。
+
+    ★ P-69：「出身」是**回看口**（建号那一步并进第 1 步了，见 `BUILD_STEPS`）。
+    ★ P-68（2026-09-26 · 本波 w-h-ux 裁）：**家乡与寿数放进这一屏，一行**（第三行）——
+      真源 `04 §三` 那一行本波裁成「族 · 那句「为什么来」· **家乡与寿数**」，`races.home` /
+      `races.lifespan` 两格（六族都有）就从这儿见光。位置就这一处：别处不再放第二遍
+      （`观察` 是「眼下这一站」、`状态` 是「这一会话的数字」，两处都不带族谱那一层）。
+      槽位 `SYS_ORIGIN_HOME` 的真源行还没落 ⇒ **今天不印这一行**（`_origin_home_line` 回 None）。
+    """
     p = _p(player)
     if not p.get("race"):
         yield T("SYS_ORIGIN_NONE")
@@ -899,6 +976,9 @@ async def origin(env, sink, uid, player):
     yield T("SYS_ORIGIN_WHO", name=rs.get("name") or _race_label(p.get("race")))
     yield T("SYS_ORIGIN_WHY",
             why=rs.get("line") or rs.get("why") or T("SYS_ORIGIN_WHY_TODO"))  # ★ P-10：域里的字段叫 line（原来读 why，永远给「还没写」）
+    home = _origin_home_line(rs)          # ★ P-68：家乡 · 寿数（待槽位 ⇒ 今天不印）
+    if home:
+        yield home
 
 
 def _bag_rows(p) -> list:

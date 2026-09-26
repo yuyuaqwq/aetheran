@@ -2,7 +2,9 @@
 """探针：dialogues 域（14 位 · need 条件择优 · 与 npcs 双向对账 · 一屏 400 字）。
 
 ★ P-12 那条（对话层的**取句顺序**）也钉在这里（⑧）：层序 `meet → daily → main → hidden → idle`
-  +「熟了才轮到 daily」+「说过的句子让位」+ `start` 白写字段登记（与 P-60 同族）。
+  +「熟了才轮到 daily」+「说过的句子让位」；★ P-62（本波 w-h-ux）：`dialogues.<树>.start` **已撤**
+  —— 域里一棵树都不许再有它，`schemas/dialogues.schema.json` 也一起清（谁加回来当场红）；① 那条
+  覆盖改成「每棵树都有节点 · 且有层序排头那一层」。
   ★ 台账 P-12 已经 ✅（2026-09-25 包 `4815bdb` 落的那三件）—— 本探针只**钉住**它，不改行为。
 
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_dialogues.py
@@ -47,9 +49,17 @@ n_nodes = sum(len(v["nodes"]) for v in dl.values())
 n_texts = sum(len(nd["texts"]) for v in dl.values() for nd in v["nodes"].values())
 print("      %d 位 · %d 节点 · %d 条台词" % (len(dl), n_nodes, n_texts))
 
-# ① start 节点存在
-bad1 = [k for k, v in dl.items() if v.get("start") not in v.get("nodes", {})]
-chk("每棵树的 start 节点都存在", not bad1, " · ".join(bad1))
+# ① ★ P-62（2026-09-26 · 本波 w-h-ux · **裁决：删字段**）：原先这条查的是「`start` 指的那个节点存在」。
+#   `start` 撤掉之后，同一份覆盖换成**树本身立得住**：节点非空 + 层序排头那一层必须在。
+#   为什么能这么换：那一格 14 处**全是 `"meet"`**，而 `meet` 就是取句层序的排头
+#   （`content/cmds_talk.LAYERS[0]`）—— 一个**恒真的常量**换成一条**真的约束**。
+from content import cmds_talk as CT0                                       # noqa: E402
+
+_head_layer = CT0.LAYERS[0]
+bad1 = [k for k, v in dl.items()
+        if not (v.get("nodes") or {}) or _head_layer not in (v.get("nodes") or {})]
+chk("每棵树都有节点 · 且有层序排头那一层（%s —— 取句顺序的唯一口 `cmds_talk.LAYERS`）" % _head_layer,
+    not bad1, " · ".join(bad1))
 
 # ② ★ 与 npcs 双向对账
 a = {v["dialogue"] for v in np_.values()}
@@ -105,9 +115,10 @@ print("  · 四层分布：daily %d 位 · main %d 位 · hidden %d 位" % (
 #         （原先那条顺序会把主线剧透给刚认识的人）
 #      ④ 说过的句子让位给还没说过的层：daily 听过 ⇒ main ⇒ hidden ⇒ idle；
 #         全会说过才回到层序上第一档（daily）—— 兜底句不许把 main / hidden 永久遮住
-#      ⑤ `start` 字段：每棵树的 `start` == 层序排头（`"meet"`）· 且 `content/*.py` 里
-#         **一处读取都没有** —— **白写字段**（与 P-60 同族）在这里**登记**；哪天有人读它当场红
-#         （读了 = 多出第二个取句口径，要重新裁决）
+#      ⑤ `start` 字段：★ **已撤**（P-62 · 2026-09-26 · 本波 w-h-ux）—— 域里一棵树都不许再有它，
+#         连 `schemas/dialogues.schema.json` 一起清（`required` / `properties` 两处）。
+#         依据：包内 0 读端（取句顺序的唯一口是 `cmds_talk.LAYERS`）· 那一格恒 = 排头 ⇒ 死数据；
+#         谁加回来当场红（加了 = 又开一个「白写字段」的口，且与 `LAYERS` 形成第二口径）。
 import glob as _glob8                                                       # noqa: E402
 import io as _io8                                                           # noqa: E402
 
@@ -146,22 +157,28 @@ for _n, _h, _want in ((3, (), "daily"),                     # 熟了 ⇒ daily�
     if _ly != _want:
         bad8.append("搭 %d 次 · 听过 %s ⇒ 出的却是「%s」层（应当是 %s）"
                     % (_n, list(_h), _ly, _want))
-_starts = sorted({str(v.get("start")) for v in dl.values()})
-if _starts != ["meet"]:
-    bad8.append("每棵树的 start 不全是「meet」：%s" % _starts)
+_starts = sorted({str(v.get("start")) for v in dl.values() if "start" in v})
+if _starts:
+    bad8.append("域里又出现了 `start`：%s（P-62 已裁删字段 —— 取句顺序只认 `cmds_talk.LAYERS`）"
+                % _starts)
+try:
+    _sch8 = (REPO / "schemas" / "dialogues.schema.json").read_text(encoding="utf-8")
+    if '"start"' in _sch8:
+        bad8.append("`schemas/dialogues.schema.json` 里还留着 `start`（要删就连 schema 一起清）")
+except OSError:                                                          # noqa: BLE001
+    bad8.append("schema 读不到：schemas/dialogues.schema.json")
 _start_read = []
 for _pp in sorted(_glob8.glob(os.path.join(str(REPO), "content", "*.py"))):
     for _i8, _l8 in enumerate(_io8.open(_pp, encoding="utf-8").read().split("\n")):
         if '.get("start")' in _l8 or '["start"]' in _l8:
             _start_read.append((os.path.basename(_pp), _i8 + 1))
 if _start_read:
-    bad8.append("content/*.py 里有人读 `start` 了（白写字段被读了 = 多出第二个取句口径）：%s"
-                % _start_read)
+    bad8.append("content/*.py 里有人读 `start` 了（那一格已经撤掉）：%s" % _start_read)
 chk("★ P-12 取句顺序（层序 %s · 熟门槛 %s）：不熟只有 meet · 熟了轮到 daily（不是剧透的 main）· "
-    "说过的让位给没说的 · `start` 白写（已登记）"
+    "说过的让位给没说的 · `start` **已撤**（域 + schema 都不许再有 · 谁加回来就红）"
     % (" → ".join(CT.LAYERS), CT.FAMILIAR_TALKS), not bad8, "；".join(bad8))
 print("      假树五层真调 `_pick_layer`：搭 0/2 次 ⇒ meet ｜ 搭 3 次 ⇒ daily ｜ daily 听过 ⇒ main "
-      "⇒ hidden ⇒ idle ⇒ 全说过回 daily ｜ 14 棵树的 start = %s（无人读 · 白写登记）" % _starts)
+      "⇒ hidden ⇒ idle ⇒ 全说过回 daily ｜ 14 棵树都有层序排头那一层、`start` 已撤（域里 0 处）")
 
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))

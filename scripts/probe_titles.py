@@ -18,6 +18,8 @@
   ⑫ 可达性（信息行 + 一条底线）：今天能拿到 ≥5 个（不让前置换掉整层玩法）
   ⑬ ★ P-13（本波 w5）：称号 7「拾荒人的朋友」指谁 —— 条件那两条任务同一个 NPC 给的 ·
      「拾荒人」在 npcs 域 0 名（在 monsters 是精英、在 quests 是主线名）⇒ 只登记、不改数据
+  ⑭ ★ P-67（2026-09-26 · 本波 w-h-ux · **裁决：名字不自解释**）：名字钉住「拾荒人的朋友」·
+     十个名字形状上就是绰号（≤8 字 · 不带括号 / 逗号 / 句号）· 解释在后半句（真造档跑出那一行）
 
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_titles.py
 """
@@ -446,6 +448,47 @@ for tid in BOOK:
 # 这条盯的是「别让前置把整层长期目标捂死」，不是「必须全能拿到」。
 chk("★ 今天就能拿到的 ≥ 5 个（不让前置换掉整层玩法）", len(live) >= 5,
     "%d 个：%s" % (len(live), live))
+
+# ⑭ ★ P-67（2026-09-26 · 本波 w-h-ux · **裁决：称号名「不自解释」**）
+#   老账问的是「称号名『拾荒人的朋友』要不要自解释」。本路裁：**不要** —— **绰号就要像绰号**。
+#   依据三条：
+#     ① `21 §一` 的原则是「**称号本身就是剧情**」：名字负责**让人记住**（短、像人嘴里说出来的），
+#        说明负责**说清**（就是 `SYS_TITLE_ROW` 那个破折号后面那半句）。两件事两处各干一件；
+#        名字里塞解释 = 把一句描述当绰号，玩家念不出来、也记不住。
+#     ② 「指谁」这件事 P-13 已经解决在**后半个句子里**（`how` 那一句点名「小满」，数据驱动 ——
+#        本探针 ⑬ 钉着）⇒ 名字一个字不用动。
+#     ③ 形状就是这条裁决的机器版：十个名字**都 ≤8 字**、**不带括号 / 逗号 / 句号 / 破折号**
+#        （形状上就是绰号）。谁哪天写一个「骨田那个小孩的朋友」进来 —— 先红。
+_PICK14 = next((k for k, v in BOOK.items() if v.get("no") == 7), None)
+_R14 = BOOK.get(_PICK14) or {}
+chk("★ P-67 名字钉住：称号 7 = 「%s」（一个字不动 —— 改名字要同批改 21 §一 与 16 §二 两处，"
+    "`rebuild_titles` 会拿两处对账）" % _R14.get("name"),
+    _R14.get("name") == "拾荒人的朋友" and _R14.get("how") == "完成小满的两条支线（还石头 · 带他看塔）",
+    "%r / %r" % (_R14.get("name"), _R14.get("how")))
+_BADCH14 = ("（", "(", "）", ")", "，", ",", "。", "——", "·", "：", ":")
+_bad14 = [(k, v.get("name")) for k, v in BOOK.items()
+          if len(str(v.get("name") or "")) > 8 or any(c in str(v.get("name") or "") for c in _BADCH14)]
+chk("★ P-67 十个名字**形状上就是绰号**（都 ≤8 字 · 不带括号 / 逗号 / 句号 / 破折号 —— "
+    "名字里塞解释 = 把一句描述当绰号）：%s"
+    % " · ".join("%d %s" % (v["no"], v["name"]) for _k, v in sorted(BOOK.items(),
+                                                                   key=lambda kv: kv[1].get("no") or 0)),
+    not _bad14, "%s" % _bad14)
+_p14, _err14 = None, ""
+try:
+    _p14, _stx14 = profile_for(_PICK14)               # ⑤ 那个造档器：造一个刚好满足称号 7 的档
+    TT.scan(_p14, _stx14)
+except Exception as _e14:                                                # noqa: BLE001
+    _p14 = None
+    _err14 = "%s: %s" % (type(_e14).__name__, _e14)
+_hit14 = [x for x in TT.got(_p14 or {}) if x[0] == _PICK14]
+_TPL14 = (TX.get("SYS_TITLE_ROW") or {}).get("value") or ""
+_row14 = ("✦ %s —— %s" % (_hit14[0][1], _hit14[0][2])) if _hit14 else ""
+_want14 = _TPL14.replace("{name}", str(_R14.get("name") or "")).replace(
+    "{how}", str(_R14.get("how") or ""))
+chk("★ P-67 解释在**后半句**（拿称号 7 的档真跑 → 玩家看到的那一行 = 「%s」）："
+    "名字负责记住 · 破折号后面那半句负责说清谁（小满）—— 这就是「不自解释」的分工" % _want14,
+    bool(_hit14) and _row14 == _want14 and "小满" in _want14,
+    "%r%s" % (_row14, ("（造档失败：%s）" % _err14) if _err14 else ""))
 
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))

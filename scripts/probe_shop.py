@@ -33,6 +33,11 @@
      当场红（买价 == 收价）；摘掉 `item_buy` 的 bind ⇒ ⑥⑦ 红
   ⑮ ★ P-16：**物价倍数**（世界事件效果栏 `price_mul`）真接在买价上 —— 注入一条假事件 ⇒
      面板那一行与『购买』扣的钱**同一眼同一个价**（都 ×1.25）、收价一个字不动；拿掉 ⇒ 回原价
+  ⑯ ★ P-70（2026-09-26 · 本波 w-h-ux · **裁决：修理「本轮不做」**）：四个消耗口逐口取证
+     （药水 / 强化 / 住店 ✅ · 修理 ❌）·「不做」的机器可见理由 = items 域零耐久字段 ·
+     声明里不许再拿「修装备」当卖点 · 真源 `05 §七` 那一行跟账登记
+  ⑰ ★ P-71（同一波 · **裁决：住店那一句复用现成槽位，不新开**）：真敲那一行逐字 ==
+     `SYS_SHOP_POOR` 渲染 · texts 里没有住店专用的欠钱槽位 · 静态只有一处读它 · 两态真调
 
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_shop.py
 """
@@ -417,6 +422,135 @@ def main():
         ok("覆盖面：`购买` / `药铺` 两条 handler 都**真调** town_gate（守卫一个口）")
     else:
         bad("这两条没走 town_gate：%s" % miss)
+
+    # ⑯ ★ P-70（2026-09-26 · 本波 w-h-ux · **裁决：「修理」本轮不做**）
+    #   真源 `05_玩法数值口径_v1.md §七` 把钱算四个去处（药水 · 修理 · 强化 · 住店），
+    #   而「修理」这一口**没有任何域存它**（items 域没有耐久字段）⇒ 本路裁：**本轮不做**
+    #   —— 它**不是漏做**，是**另一批**（要做先有耐久设计：耐久怎么掉 · 修理费按什么 ·
+    #   修不好怎么办）。这一条判据干三件事，免得下一轮又把它当成「欠着的第四口」：
+    #     ① 已落的那三个口逐口当场取证（药水 / 强化 / 住店）
+    #     ② 「不做」要有**机器可见**的理由：items 域不许有耐久字段（谁加了就先红 —— 提醒回来设计）
+    #     ③ 声明里不许再拿「修装备」当卖点（`smith.desc` 已回正 —— 与 P-52「声明回正」同款）
+    _ITEMS16 = _load("content/data/items.json")
+    _DURW16 = ("durability", "dur", "耐久", "wear", "repair", "修理", "损耗")
+    _keys16 = sorted({k for v in _ITEMS16.values() if isinstance(v, dict) for k in v})
+    _dur16 = sorted({k for k in _keys16 if any(w in str(k).lower() for w in _DURW16)})
+    _inn16 = _load("content/rules/inn.json")
+    _fee16 = _inn16.get("fee")
+    _ok16 = {
+        "药水": bool((decl.get("item_buy") or {}).get("bind"))
+                and bool((decl.get("herbalist") or {}).get("bind")),
+        "强化": bool((decl.get("enhance") or {}).get("bind"))
+                and bool((decl.get("smith") or {}).get("bind")),
+        "住店": bool((decl.get("inn") or {}).get("bind"))
+                and isinstance(_fee16, int) and not isinstance(_fee16, bool) and _fee16 >= 1,
+    }
+    if all(_ok16.values()):
+        ok("★ P-70 四个消耗口逐口状态：药水 ✅（购买 + 药铺两条都有 bind）· 强化 ✅（强化 + 铁匠铺）· "
+           "住店 ✅（fee=%s 从 `content/rules/inn.json` 现读）· 修理 ❌ **本轮不做**" % _fee16)
+    else:
+        bad("★ P-70 已落的那三个口有掉链子的：%s" % _ok16)
+    if not _dur16:
+        ok("★ P-70 「修理本轮不做」的**机器可见理由**：items 域没有任何耐久字段"
+           "（%d 条记录 · %d 个键 · 黑名单「%s」零命中）—— 真做是**新形状**（另立一批），"
+           "不是本波漏做" % (len(_ITEMS16), len(_keys16), " / ".join(_DURW16)))
+    else:
+        bad("★ P-70 items 域里出现了耐久字段 %s —— 有人开始做修理了：先把真源 `05 §七` 那一行"
+            "改成「修理」的落地口径（耐久怎么掉 · 修理费按什么），再把本探针改成真敲 `修理` 的判据"
+            % _dur16)
+    _repair16 = sorted(k for k, v in decl.items()
+                       if any(w in (str((v or {}).get("desc") or "")
+                                    + str((v or {}).get("usage") or ""))
+                              for w in ("修装备", "修理")))
+    if not _repair16:
+        ok("★ P-70 声明里不再拿「修装备」当卖点（`smith.desc` 已回正为只写「强化」—— "
+           "与 P-52「声明回正」同款：声明 ≡ 实现）")
+    else:
+        bad("★ P-70 声明里还写着「修装备 / 修理」：%s —— 那是本波**裁过不做**的那一口，"
+            "回正成「强化」（真源 `04 §七` 那一格的跟账见本分支 `_notes.md §八`）" % _repair16)
+    # 真源那一侧（登记 · 两态互锁的另一半）：`05 §七`「钱到哪去」那一行跟没跟账
+    _D0516 = os.path.join(PLAN, "06_第一阶段垂直切片", "05_玩法数值口径_v1.md")
+    _L16 = []
+    if os.path.exists(_D0516):
+        with io.open(_D0516, encoding="utf-8") as _fh16:
+            _L16 = [_ln.strip() for _ln in _fh16 if "钱到哪去" in _ln]
+    _ln16 = _L16[0] if _L16 else ""
+    print("  · 登记（P-70）：真源 `05 §七`「钱到哪去」那一行 = %s" % (_ln16[:84] or "（没解析到）"))
+    print("      %s —— 本路裁「修理：本轮不做」的真源行见本分支 `_notes.md §八`；"
+          % ("**已跟账**" if "不做" in _ln16 else "**还没跟账**（今天仍把「修理」列在四个去处里）"))
+    print("      真源跟账后，「修理不做」就从「待跟账的裁决」转成正式口径（本探针那两条跟着转正）。")
+
+    # ⑰ ★ P-71（2026-09-26 · 本波 w-h-ux · **裁决：住店那一句复用现成槽位，不新开**）
+    #   老账问的是「住店费（钱不够）要不要一个**专门**的槽位」。本路裁 —— **不新开**：复用
+    #   `SYS_SHOP_POOR`。依据三条：
+    #     ① **同一件事同一句话**：钱不够就是钱不够。差额 `{lack}` 本来就是现算的
+    #        —— 住店要的「带上价钱」那半本来就有，没有一句是住店独有的。
+    #     ② 多开一条槽位就多一条要跟账的真源行（17 号口径表 + texts），换来的是**零**玩家差别
+    #        （两句都是「铜板不够 —— 还差 N 个。」）—— 少一处文案就少一处以后会打架的地方。
+    #     ③ 同族先例：`SYS_MINE_RANK` / `SYS_REST_HEAL` / `SYS_LOOK_WHO` 那几格本来就是两处共用一个
+    #        槽位（B3-16b 的登记里写的是「借现成槽位，不新增」）。
+    #   判据四条（下面）：真敲那一行逐字 == 同一格 · texts 里没有住店专用的欠钱槽位 ·
+    #   静态只有一处读它 · **两态**（临时改那一格的值 ⇒ 住店那句跟着变 = 真是同一格）。
+    from content import cmds_ast as _CA17                                      # noqa: E402
+    from content.cmds_more import STASH_NODE as _STASH17                       # noqa: E402
+
+    _POOR17 = "SYS_SHOP_POOR"
+    _inn17 = sorted(k for k in texts if str(k).startswith("SYS_INN_"))
+    _poor17 = [k for k in _inn17
+               if ("POOR" in str(k).upper() or "NOGOLD" in str(k).upper()
+                   or "钱不够" in str((texts.get(k) or {}).get("value") or ""))]
+    if not _poor17:
+        ok("★ P-71 texts 域里**没有**住店专用的「钱不够」槽位（住店那几张只有 %s —— "
+           "共用 `%s` 这一格）" % (" / ".join(_inn17), _POOR17))
+    else:
+        bad("★ P-71 texts 域里冒出了住店专用的欠钱槽位 %s —— 本路裁过「复用 `%s`，不新开」："
+            "真要新开，先改 `18_铺子买卖口径_v1.md` 与 17 号口径表（并把这一条判据改成两格逐字对）"
+            % (_poor17, _POOR17))
+    _src17 = io.open(os.path.join(REPO, "content", "cmds_places.py"), encoding="utf-8").read()
+    _n17 = _src17.count('"%s"' % _POOR17)
+    if _n17 == 1:
+        ok("★ P-71 静态：`content/cmds_places.py`（客栈那一支）里读的欠钱槽位**只有一处** —— "
+           "`%s`（与『购买』同一格，一个字都不另写）" % _POOR17)
+    else:
+        bad("★ P-71 `cmds_places.py` 里 `%s` 出现 %d 次（应当恰好 1 处 —— 客栈那一支）"
+            % (_POOR17, _n17))
+    _fee17 = int(_fee16 or 0)
+    _ad17 = Ad()
+    _host17 = Host(_ad17, REPO, inject={"db_path": ":memory:", "clock": lambda: FIXED})
+    _host17.boot()
+    _u17 = UID + "_p71"
+    _gold17 = max(0, _fee17 - 3)
+    _ad17.saved[_u17] = {"race": "human", "cls": "cls_knight", "name": "试",
+                         "loc": TOWN, "node": _STASH17, "prev": [], "flags": {},
+                         "hp": 1, "gold": _gold17}
+    _out17 = drive(_ad17, _host17, "客栈", _u17)
+    _want17 = T(_POOR17, lack=_fee17 - _gold17)
+    if _want17 in _out17:
+        ok("★ P-71 真敲『客栈』（人在客栈那一站 + 有伤 + 钱不够）：那一行**逐字 ==** "
+           "`%s` 渲染（%r）—— 住店与『购买』共用同一句话" % (_POOR17, _want17))
+    else:
+        bad("★ P-71 住店钱不够那一行不是 `%s`：%s" % (_POOR17, (_out17 or [])[:3]))
+    if _ad17.saved[_u17].get("gold") == _gold17 and int(_ad17.saved[_u17].get("hp") or 0) == 1:
+        ok("★ P-71 那一趟**档一个字不动**（fail-closed：不睡 / 不回血 / 不扣钱）")
+    else:
+        bad("★ P-71 欠钱那一趟动了档：%s" % {k: _ad17.saved[_u17].get(k) for k in ("gold", "hp")})
+    _live17 = _CA17._texts()
+    _had17 = _live17.get(_POOR17)
+    _live17[_POOR17] = {"value": "[P]{lack}", "params": ["lack"], "category": "系统",
+                        "desc": "（probe_shop 临时注入 —— 用完即撤）"}
+    try:
+        _out17b = drive(_ad17, _host17, "客栈", _u17)
+        _same17 = "[P]%d" % (_fee17 - _gold17) in _out17b
+    finally:
+        if _had17 is None:
+            _live17.pop(_POOR17, None)
+        else:
+            _live17[_POOR17] = _had17
+    if _same17 and _want17 in drive(_ad17, _host17, "客栈", _u17):
+        ok("★ P-71 两态真调：临时改掉 `%s` 那一格 ⇒ 住店那一行**跟着变**（= 真是同一格，"
+           "不是碰巧同字）；撤掉注入 ⇒ 回到原句" % _POOR17)
+    else:
+        bad("★ P-71 两态不过：改掉那一格之后住店那句没跟着变（住店可能自己写了一句）")
 
     print()
     print("----")
