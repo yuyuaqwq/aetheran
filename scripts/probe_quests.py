@@ -78,6 +78,10 @@ B4-27 加的那一组（P-25 §② 再收一条：支 7 白烛堂的灯）：
       「交不掉」钉住名单 5 → **4**（名单只许变短，变了当场红）。
       ★ 前半截「送灯油」**没落**：items 域里没有「灯油」这件东西 ⇒ 缺口登记在 `_notes.md`。
 
+B4-27 加的那一组（P-53 见习证门）：㉝（四拍，见文件尾部那一节）。**判据没有一条放宽** ——
+既有夹具里「手拼最小档直接接活」的十几处只是照**新守卫**补上 `flags.card`（探针 / probe_copy /
+probe_cmds 各自补），原来钉的那些分支一条都没少。
+
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_quests.py
 """
 from __future__ import annotations
@@ -480,7 +484,7 @@ print("  · 打样：%s" % " ｜ ".join("%s → %s" % (lb, (trade_out[lb][0][:30
 # ⑱ ★ 生活任务端到端走得通（接 → 交 · 条件拦住 → 补齐 → 交掉）
 qid = doc_new8[0][0]
 order = QE[qid]["order"]
-p1 = _player(level=5)
+p1 = _player(level=5, flags={"card": 1})      # ★ B4-27：接活那道门要证（起手档补上，判据没放宽）
 acc = _drive(CQ.quest_accept, p1, "接 %d" % order)
 blocked = _drive(CQ.quest_deliver, dict(p1), "交 %d" % order)
 reqs = QE[qid].get("require") or []
@@ -901,7 +905,7 @@ for _kind, _k, _shape, _fix in _DRIVE:
     _x = QE[_k]
     _n = int(_x["order"])
     _lv = int(_x["min_level"])
-    _acc = _drive(CQ.quest_accept, _player(level=_lv), "接 %d" % _n)
+    _acc = _drive(CQ.quest_accept, _player(level=_lv, flags={"card": 1}), "接 %d" % _n)
     _nod = _drive(CQ.quest_deliver, _player(level=_lv, flags={"quests_active": [_k]}), "交 %d" % _n)
     _flags = {"quests_active": [_k]}
     _flags.update({k: v for k, v in _fix.items() if k == "flags"}.get("flags", {}) or {})
@@ -1085,7 +1089,7 @@ for _n in range(1, 13):
     _lv = int(_x["min_level"])
     _want = {p: _beat_of(_x, p) for p in ("STORY", "PROGRESS", "DELIVER")}
     _reqs = CQ._require_of(_x)
-    _acc = _drive(CQ.quest_accept, _player(level=_lv), "接 %d" % _n)
+    _acc = _drive(CQ.quest_accept, _player(level=_lv, flags={"card": 1}), "接 %d" % _n)
     # ① 等级不够那档（老口径）：压到门槛之下（主 1 的门槛就是 1 ⇒ 用 0 —— 别拿 1 当「不够」）
     _nod = _drive(CQ.quest_deliver, _player(level=max(0, _lv - 1), flags={"quests_active": [_k]}),
                   "交 %d" % _n)
@@ -1227,7 +1231,7 @@ for _ln in _main_lines:
 _m_bad, _m_lines, _can, _cant = [], [], [], []
 for _k, _x in sorted(side_q.items(), key=lambda kv: kv[1]["order"]):
     _n, _lv = int(_x["order"]), int(_x["min_level"])
-    _accp = _player(level=_lv)
+    _accp = _player(level=_lv, flags={"card": 1})        # ★ B4-27：接活要证
     _acc = _drive(CQ.quest_accept, _accp, "接 %d" % _n)
     if _k not in ((_accp.get("flags") or {}).get("quests_active") or []):
         _m_bad.append((_k, "接都接不下", _acc[:2]))
@@ -1434,7 +1438,7 @@ def _act_enhance(x):
     iid, rec = _GEAR
     if not iid:
         return None, [], "items 域里没有能强化的装备"
-    p = _player(level=1, gold=9999,
+    p = _player(level=1, gold=9999, flags={"card": 1},
                 bag={iid: 1, "i_material_iron_scrap": 9, "i_material_hard_bone": 9})
     out = []
     for _ in range(int(CQ._require_of(x)[0]["n"])):
@@ -1455,7 +1459,7 @@ def _act_cook(x):
     bag = {}
     for e in (rg.get("inputs") or []):
         bag[str(e.get("id"))] = int(e.get("n") or 1) * n
-    p = _player(level=1, bag=bag)
+    p = _player(level=1, bag=bag, flags={"card": 1})
     out = []
     for _ in range(n):
         out += _drive(CR.cook, p, "烹饪 %s" % rg.get("name"))
@@ -1472,10 +1476,12 @@ def _act_talk(x):
     spot = _stand(npc, fl)
     if not spot:
         return None, [], "找不到「%s」此刻在场的节点" % who
-    p = _player(level=9)
+    p = _player(level=9, flags={"card": 1})
     p.update({"loc": spot[0], "node": spot[1]})
     if fl:
-        p["flags"] = dict(fl)
+        # ★ B4-27：那一位有出场条件（事件）时**并进去**，不是整格换掉 ——
+        #   否则刚补上的 `flags.card`（接活那道门要的）会被这一行冲掉。
+        p["flags"] = dict(p.get("flags") or {}, **fl)
     out = []
     for _ in range(n):
         out += _drive(CT.talk, p, "搭话 %s" % who)
@@ -1485,7 +1491,7 @@ def _act_talk(x):
 def _act_ask(x):
     """真做：真的跟 N 个**不同的人**搭话（走同一个 `talk` 实现体 —— 账按对话树记）。"""
     n = int(CQ._require_of(x)[0].get("n") or 1)
-    p = _player(level=9)
+    p = _player(level=9, flags={"card": 1})
     out, hit = [], []
     for npc, v in sorted(NPCS.items(), key=lambda kv: kv[0]):
         if len(hit) >= n or not v.get("dialogue"):
@@ -1651,6 +1657,72 @@ print("      真跑：没做到 →「%s」｜打了「%s」→「%s」"
       % (_lack_line[:40], _mon_name(_bpick),
          next((ln for ln in _pay2 if ln.startswith("交了")), "?")))
 FC_Q.bind_host(**_FC_SAVED)                                            # ★ B4-9：拨回真钟
+
+# ══════════════════════════════════════════════════════════════
+# ㉝ ★ B4-27 ②（P-53）：「接 <编号>」那道门 —— **先办见习证**
+#      口径 = `06_第一阶段垂直切片/04_指令总表 §二` 的守卫「**已登记 · 未接**」
+#        （`03_风车镇 §一` 只写「等级够 · 未接」—— 两份真源打架 ⇒ 按**命令表真源**落，
+#         与台账 P-53「我的倾向：加」一致；理由写在 `content/cmds_quest.quest_accept` 抬头）。
+#      改前 `quest_accept` **一眼都不看** `flags.card`（那个证只有『评级』读）⇒ 办证白办、
+#        「公会 → 登记（见习证）→ 悬赏 → 接活」断在最后一节。
+#      判据四拍（都真敲）：① 无证档**四条链各试一条**都拦 + **档一个字不动**
+#                           ② 有证档接得下（档上真写下 quests_active）
+#                           ③ 顺序钉子：手上真有这条委托的档（无证）回「已经接了」——
+#                              不许被回一句「你没有证」的假话
+#                           ④ 这道门**只管「接」**：交活 / 我的委托 在无证档上照旧
+# ══════════════════════════════════════════════════════════════
+_CARD_Q = (TX.get("SYS_JOB_NEED_CARD") or {}).get("value") or ""
+_BACK_Q = (TX.get("SYS_JOB_ALREADY") or {}).get("value") or ""
+_card_bad, _card_lines = [], []
+if not _CARD_Q:
+    _card_bad.append(("槽位 SYS_JOB_NEED_CARD 取不到文案", ""))
+
+# ① 无证档：四条链各一条 —— 都拦，且档一个字不动（`flags` 仍是空表：没接、也没塞别的东西）
+for _kind, _qid, _n in (("主线", "q_main_01", 1), ("支线", "q_side_07", 19),
+                        ("生活", "q_trade_01", 31), ("悬赏", "q_bounty_normal", 101)):
+    _p0 = _player(level=9)                       # 等级够 ⇒ 门挡的不是等级
+    _o0 = _drive(CQ.quest_accept, _p0, "接 %d" % _n)
+    if _o0 != [_CARD_Q]:
+        _card_bad.append(("无证 · " + _kind, _o0[:3]))
+    if (_p0.get("flags") or {}) != {}:
+        _card_bad.append(("无证 · %s 竟然动了档" % _kind, _p0.get("flags")))
+    _card_lines.append("无证 · %-4s 编号 %-3d ⇒ 「%s」· 档原样"
+                       % (_kind, _n, (_o0[0][:20] if _o0 else "?")))
+
+# ② 有证档（`登记` 写的就是这一格）：接得下 + 档上真写下来
+_p_c1 = _player(level=9, flags={"card": 1})
+_o_c1 = _drive(CQ.quest_accept, _p_c1, "接 1")
+if not any(ln.startswith("接下") for ln in _o_c1) \
+        or "q_main_01" not in ((_p_c1.get("flags") or {}).get("quests_active") or []):
+    _card_bad.append(("有证 · 接不下", _o_c1[:3]))
+_card_lines.append("有证 ⇒ 「%s」· 档上 quests_active=%s"
+                   % (next((ln for ln in _o_c1 if ln.startswith("接下")), "?"),
+                      (_p_c1.get("flags") or {}).get("quests_active")))
+
+# ③ 顺序钉子：这条单子**自己**的状态优先（手上真有它 ⇒ 不许回「你没有证」）
+_p_c2 = _player(level=9, flags={"quests_active": ["q_main_01"]})
+_o_c2 = _drive(CQ.quest_accept, _p_c2, "接 1")
+if _o_c2 != [_BACK_Q]:
+    _card_bad.append(("无证 + 已经接过（应当回「已经接了」）", _o_c2[:3]))
+_card_lines.append("无证 + 已经接过 ⇒ 「%s」" % (_o_c2[0][:20] if _o_c2 else "?"))
+
+# ④ 门只管「接」那一件事：交活与『我的委托』在无证档上照旧（没人被这道门连累）
+_p_c3 = _player(level=9, flags={"quests_active": ["q_main_01"],
+                                "talked": {CQ._dlg_of("npc_masha"): 1}})
+_o_c3 = _drive(CQ.quest_deliver, _p_c3, "交 1")
+if not any(ln.startswith("交了") for ln in _o_c3):
+    _card_bad.append(("无证 · 交活被连累", _o_c3[:3]))
+_o_c4 = _drive(CQ.quest_mine, _player(level=9, flags={"quests_active": ["q_main_01"]}), "")
+if not _o_c4 or any(MISSING in ln for ln in _o_c4):
+    _card_bad.append(("无证 · 我的委托", _o_c4[:3]))
+_card_lines.append("无证 ⇒ 交活「%s」· 我的委托 %s 行照旧"
+                   % (next((ln for ln in _o_c3 if ln.startswith("交了")), "?"), len(_o_c4)))
+(ok if not _card_bad else bad)(
+    "★ B4-27（P-53）「接 <编号>」的守卫「已登记 · 未接」：无证档**四条链都拦**且档原样 · "
+    "有证档接得下 · 「已经接过」优先于这道门 · 交活 / 我的委托 不受连累（坏 %s）"
+    % (_card_bad or "无"))
+for _ln in _card_lines:
+    print("      %s" % _ln)
 
 for n in notes:
     print("  · " + n)

@@ -1027,7 +1027,7 @@ try:
     _SEED12 = {"cls": "cls_knight", "race": "human", "level": 3, "exp": 0, "hp": 100,
                "gold": 30, "loc": "windmill_town", "node": "wt_inn", "prev": [],
                "bag": {_POT12: 2, _SCRAP12: 5, _BONE12: 3, _WPN12: 1}, "equipped": {},
-               "codex": {}, "flags": {}}
+               "codex": {}, "flags": {"card": 1}}          # ★ B4-27：接活那道门要证
     _db12 = os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp", "ast_probe_cmds_more.db")
     try:
         os.remove(_db12)
