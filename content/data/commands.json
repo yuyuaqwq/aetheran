@@ -1330,7 +1330,7 @@
     "usage": "强化 <参数>",
     "visible": true,
     "order": 61,
-    "guard_desc": "有材料",
+    "guard_desc": "在铁匠铺且材料够",
     "bind": {
       "handler": "content.cmds_recipe:enhance",
       "call": "run",
