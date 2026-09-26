@@ -10,10 +10,13 @@
 
 判据（一条都不许松）
   ① 口径表 `content/rules/shop.json` 的四个系数 == 真源 `00_…内容总纲_v1.md §六` 现解析值（逐字）
+     · ★ P-55：**固定加价那一格**（`buy_markup`）必须在且是 ≥1 的数（缺格 / 烂值当场红 ——
+       没有它买价就退回等于收价，「低买高卖」那条路又开了）
   ② 那一站从域里现取：`funcs` 带 `herb` 的人只有一位 ⇒ 他所在的节点既是药铺那一站、
      也是 maps 里真有的一站（站名从 maps 来）
   ③ 货架 = items 域里 `kind_key == tool` 且**有价**的那些（现算集合）· 每件价 = 基础价 × 品阶系数
-     （没写 `quality` 按默认档）· 逐件对账 · 买价 ≥ 收价
+     × 固定加价（没写 `quality` 按默认档）· 逐件对账 · ★ **买价 > 收价**（P-55：不许有
+     「卖回去再买回来」不亏的路）
   ④ 真宿主三档真敲：野外 ⇒ 只回「这几处都在镇上」；镇上没走到那一站 ⇒ 指路（站名从 maps 现取）；
      站到了 ⇒ 面板四段逐行对账（抬头 / 人在 / 每件一行 / 钱袋那一行）
   ⑤ 面板是**只读**的：敲『药铺』前后档逐字相同
@@ -24,8 +27,10 @@
   ⑩ 没带参（裸 `购买` / `买`）⇒ `SYS_SHOP_ASK` 且档一字不动（K71 第 2 条）
   ⑪ 连写取参（K71）：`购买药水` == `购买 药水`（回话与档上副作用逐字相同）
   ⑫ 静态守卫：全 `content/*.py` 里读铺子口径表的只有 `content/shop.py` 一处 ·
-     「基础价 × 品阶系数」那条算法也只许在它那里 · 代码里不许出现货架 id
+     「基础价 × 品阶系数 × 固定加价」那条算法也只许在它那里 · 代码里不许出现货架 id
   ⑬ 覆盖面：两条 handler 都**真调** `town_gate`（与 `probe_cmds ⑰` 同一套口径）
+  ⑭ ★ 撤改验证（跑之前手工核过一遍 · 写在这儿给下一轮）：`buy_markup` 改回 1 ⇒ ① 与 ③
+     当场红（买价 == 收价）；摘掉 `item_buy` 的 bind ⇒ ⑥⑦ 红
 
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_shop.py
 """
@@ -122,6 +127,13 @@ def main():
     else:
         bad("口径表与真源对不上：表 %r / 真源 %r" % (rules.get("quality_mult"), want))
 
+    # ── ①之二 ★ P-55：固定加价那一格（真源没给数 ⇒ 表是唯一真源，缺格当场红）
+    mk = rules.get("buy_markup")
+    if isinstance(mk, bool) or not isinstance(mk, (int, float)) or mk < 1:
+        bad("口径表缺「固定加价」那一格或不是 ≥1 的数：%r（买价会退回等于收价 —— P-55 那毛病）" % (mk,))
+    else:
+        ok("★ 固定加价那一格（P-55）：买价 = 收价 × 品阶系数 × %s（普通档 = 「收价 × %s」）" % (mk, mk))
+
     # ── ② 那一站从域里现取
     func = rules.get("station_func")
     spots = {}
@@ -160,15 +172,22 @@ def main():
     else:
         bad("货架对不上：探针 %s / 域里 %s" % (got_ids, want_ids))
     wrong = []
+    flat = []
     for g in got:
         q = str(g["rec"].get("quality") or rules.get("quality_default"))
-        exp = int(round(float(g["rec"]["price"]) * float(rules["quality_mult"][q])))
-        if g["gold"] != exp or g["gold"] < int(g["rec"]["price"]):
+        exp = int(round(float(g["rec"]["price"]) * float(rules["quality_mult"][q]) * float(mk)))
+        if g["gold"] != exp:
             wrong.append((g["id"], g["gold"], exp))
+        if g["gold"] <= int(g["rec"]["price"]):          # ★ P-55：收价能原价买回来 = 开了刷钱的路
+            flat.append((g["id"], g["gold"], int(g["rec"]["price"])))
     if got and not wrong:
-        ok("每件价 = 基础价 × 品阶系数（取整），且买价 ≥ 收价")
+        ok("每件价 = 收价 × 品阶系数 × 加价（取整）—— 逐件对账 %d 件" % len(got))
     else:
         bad("价对不上：%s" % wrong)
+    if got and not flat:
+        ok("★ 每件都是**买比卖贵**（买价 > 收价 —— P-55 要堵的那条路今天不存在）")
+    else:
+        bad("这几件买价 ≤ 收价（原价买得回来 ⇒ 能刷钱）：%s" % flat)
 
     # ── ④ 真宿主三档（野外 / 镇上错站 / 站到了）
     db = os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp", "ast_probe_shop.db")
@@ -305,13 +324,15 @@ def main():
         bad("连写取参不一致：%s / %s · %r / %r" % (a_lines[:1], b_lines[:1], a_state, b_state))
 
     # ── ⑫ 静态守卫（价与货架只许在一处算 · 代码里不许写死货架 id）
-    algo, literals, readers = [], [], []
+    algo, literals, readers, marks = [], [], [], []
     for fn in sorted(os.listdir(os.path.join(REPO, "content"))):
         if not fn.endswith(".py"):
             continue
         src = io.open(os.path.join(REPO, "content", fn), encoding="utf-8").read()
         if "quality_mult" in src and fn != "shop.py":
             algo.append(fn)
+        if "buy_markup" in src and fn != "shop.py":
+            marks.append(fn)
         if re.search("i_potion", src):
             literals.append(fn)
         if "shop.json" in src:
@@ -320,6 +341,10 @@ def main():
         ok("静态：品阶系数（`quality_mult`）只在 content/shop.py 被读 —— 别处不算第二遍价")
     else:
         bad("这几个文件也在算品阶系数：%s" % algo)
+    if not marks:
+        ok("静态：固定加价（`buy_markup`）也只在 content/shop.py 被读（第二遍价 = 第二个源）")
+    else:
+        bad("这几个文件也在读加价那一格：%s" % marks)
     if not literals:
         ok("静态：代码里没有货架 id 字面量（货架全从 items 域现取）")
     else:

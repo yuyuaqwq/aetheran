@@ -7,7 +7,12 @@
   · `06_第一阶段垂直切片/03_风车镇_指令与回复 §一` —— `药铺`（在镇上 · 买药）
   · `06_第一阶段垂直切片/04_指令总表 §物品` —— `购买 <物品>`（别名 买 · 守卫 在铺子且钱够）
   · `06_第一阶段垂直切片/05_玩法数值口径 §六` —— 「铺子｜镇上 3 家；价 = 基础价 × 品阶系数」
-口径：`00_总纲/18_铺子买卖口径_v1.md`
+★ P-55 那一格（本批加的）：**固定加价** `buy_markup` —— 真源 05 §六 只给了方向
+  （「价 = 基础价 × 品阶系数」），这一格真源**没给数** ⇒ 乙档保守取：
+  台账 ⏸ P-55 的倾向（「例：买价 = 收价 × 2」）+ 本路作业书同一句 ⇒ 普通档（系数 1.00）
+  下正好就是「买价 = 收价 × 2」，「卖给铺子的东西能原价买回来」那个怪现象从此堵上；
+  收价一个字不动（B3-12 落的『卖出』= `items.price`）。要调只改下面这一格 + 重跑本脚本。
+口径：`00_总纲/18_铺子买卖口径_v1.md`（B4-15 那四条 + 加价与物价倍率两格 · 待主线落）
 落点：`content/rules/shop.json`（`content/shop.py` 只读它；代码里不写数、不写价、不写 id）
 
 规矩：LF 落盘 · 原序 · 末尾一个换行 · 连跑两次数据不变（幂等自检）· `--dry` 一个字节都不写
@@ -38,6 +43,9 @@ QUAL_ORDER = ("普通", "精制", "稀有", "遗物")
 STOCK_KIND = "tool"
 #: 药铺那一站 = npcs 域里 `funcs` 带这个词的那个人所在节点（口径 §三）
 STATION_FUNC = "herb"
+#: ★ 铺子的固定加价（P-55）：买价 = 基础价 × 品阶系数 × 这一格。
+#:   真源没给这个数（05 §六 只有方向）⇒ 口径来源与理由见本文件头注（台账 ⏸ P-55 的倾向）。
+BUY_MARKUP = 2
 
 
 def die(msg):
@@ -75,7 +83,8 @@ def shelf(coeffs, items):
         q = str(rec.get("quality") or "普通")
         if q not in coeffs:
             die("%s 的 quality 不在四档里：%r" % (iid, q))
-        rows.append((iid, str(rec.get("name") or ""), int(round(float(base) * coeffs[q]))))
+        rows.append((iid, str(rec.get("name") or ""),
+                     int(round(float(base) * coeffs[q] * BUY_MARKUP)), int(base)))
     if not rows:
         die("货架是空的 —— items 域里没有 kind_key == %r 的条目" % STOCK_KIND)
     return rows
@@ -102,11 +111,13 @@ def build(coeffs, items, npcs):
                     " · 03_风车镇_指令与回复 §一（`药铺` 在镇上 · 买药）"
                     " · 04_指令总表 §物品（`购买 <物品>` 别名 买 · 守卫 在铺子且钱够）"
                     " · 05_玩法数值口径 §六（铺子｜价 = 基础价 × 品阶系数）",
-            "口径": "aetheran-plan/00_总纲/18_铺子买卖口径_v1.md（本批的四条 + 待拍板那一条）",
-            "生成": "scripts/rebuild_shop.py（四个系数从 00 总纲 §六 现解析，本文件不手打）",
+            "口径": "aetheran-plan/00_总纲/18_铺子买卖口径_v1.md（B4-15 那四条 + P-55 落的加价那一格）",
+            "生成": "scripts/rebuild_shop.py（四个系数从 00 总纲 §六 现解析；`buy_markup` 那一格"
+                    "真源没给数，取值理由写在脚本头注里 —— 本文件不手打）",
         },
         "quality_mult": {q: coeffs[q] for q in QUAL_ORDER},
         "quality_default": "普通",
+        "buy_markup": BUY_MARKUP,
         "stock_kind": STOCK_KIND,
         "station_func": STATION_FUNC,
     }
@@ -127,9 +138,10 @@ def main(argv):
     rows = shelf(coeffs, items)
     print("品阶系数（源：%s §六）：%s" % (os.path.basename(DOC),
                                       " / ".join("%s %.2f" % (q, coeffs[q]) for q in QUAL_ORDER)))
+    print("固定加价（P-55 · 真源没给数 ⇒ 台账倾向取）：买价 = 收价 × 品阶系数 × %d" % BUY_MARKUP)
     print("药铺那一站：%s（npcs.funcs 带 %r 的人所在节点）" % (obj["station_func"], STATION_FUNC))
-    for iid, name, gold in rows:
-        print("  柜上：%-18s %s  —— %d 铜板" % (iid, name, gold))
+    for iid, name, gold, base in rows:
+        print("  柜上：%-18s %s  —— %d 铜板（收价 %d × %d）" % (iid, name, gold, base, BUY_MARKUP))
     old = None
     if os.path.exists(OUT):
         try:
