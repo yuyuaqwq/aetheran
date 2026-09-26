@@ -5704,6 +5704,14 @@
     "category": "系统",
     "desc": "观察 · 这一格今天那只精英怪的**表头**（那条名字走 COMBAT_ELITE_SPAWN · 本波补）"
   },
+  "SYS_LOOK_FOE_ROOM": {
+    "value": "{name}",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "观察 · 副本房间里「遇敌」那一栏的名字行（塔内不刷精英 ⇒ 名字不走 COMBAT_ELITE_SPAWN；这一只与『攻击』真正遭遇的是同一次抽 · fxa / P2 试玩 #2）"
+  },
   "SYS_TALK_HOW_MANY": {
     "value": "想搭话就打『搭话 <名字>』—— {list} 都行。",
     "params": [

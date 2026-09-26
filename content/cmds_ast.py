@@ -784,6 +784,14 @@ async def look(env, sink, uid, player):
         #   现在先出一行表头（`SYS_LOOK_FOE`），怪那一行照旧走 `COMBAT_ELITE_SPAWN`。
         yield T("SYS_LOOK_FOE")
         yield AFFIX.elite_line(str((_data("monsters")[_el[0]] or {}).get("name", _el[0])), _el[1])
+    # ★ fxa（P2 试玩 #2）：**副本房间里也把「遇敌」写在屏幕上** —— 塔内不刷精英（见
+    #   `rules/elite.json` 的 `eligible_node_roles`），上面那一支在塔里一格都不出，玩家按
+    #   『下一层』那句去「打它」却看不见目标。这一栏与『攻击』**同一次抽**（名字从
+    #   `cmds_battle.foe_here` 来）⇒ 看见的就是会开打的那只。本地 import：`cmds_tower`
+    #   要 import 本模块（模块级 import 会成环）。
+    from .cmds_tower import foe_lines_here
+    for _foe in foe_lines_here(p, uid):
+        yield _foe
     yield T("SYS_LOOK_HINT")
     for line in egg_lines(p, player, env):      # ★ B3-1：看四周那一下可能把两件事连起来
         yield line
@@ -1017,17 +1025,21 @@ async def go_back(env, sink, uid, player):
 
 
 async def go_to(env, sink, uid, player):
-    """    _lock = _in_fight(env, uid)
-    if _lock:
-        yield _lock
-        return
-`去 <地方>` —— 在同一张图里走到另一个节点。
+    """`去 <地方>` —— 在同一张图里走到另一个节点。
 
     ★ 为什么需要它：玩家到了镇上（风车镇是 star 拓扑 11 个节点），若只能在
       「北口 / 东口 / 西口」之间跳，北墙根（哈根）、白烛堂（艾德/莉安）这些地方
       **永远走不到** —— 而 NPC 在那儿。
     规则：目标必须是**当前节点的邻居**（不是任意节点）—— 跨图要先出门。
     """
+    # ★ fxa（P2 试玩 #2/#3）：这一条原先**漏在外面** —— 上一波补的那三行闸被写进了
+    #   docstring 里（成了死字），于是「场在跑」的时候 `去 <房间>` 照旧走得动：野外那一场
+    #   会跟着玩家跨图跨层（P2 原文：拾荒营地打「拾荒人」→ 进塔 → 去 楼梯前 → `攻击`
+    #   ⇒「第 3 手 …… 拾荒人 229/244」），副本里也成了「说的那只 ≠ 打的那只」的来源。
+    _lock = _in_fight(env, uid)
+    if _lock:
+        yield _lock
+        return
     p = _p(player)
     want = AV.arg_of(env)        # ★ B4-11：跟着自己的声明剥参（连写也算）
     raw = (getattr(env, "text", "") or "").strip()
@@ -1067,6 +1079,14 @@ async def go_to(env, sink, uid, player):
             return
         yield T("SYS_MOVE_NOSUCH", name=want)
         yield T("SYS_MOVE_CAN", list=" · ".join("『%s』" % _name_of_node(loc, x) for x in nb))
+        return
+    # ★ fxa（P2 试玩 #3）：副本里**本层尽头那一间往外走**走的是同一道守卫闸（『下一层』
+    #   那一句的同一个门）—— 原先只有楼梯那一句拦，`去 <上一层第一间>` 照通（那一步就是
+    #   上楼，等于把整层守卫绕过去）。拦下时位置与历史一个字不动。别的图这一步恒为空串。
+    from .cmds_tower import step_guard_line
+    _step = step_guard_line(p, uid, hit)
+    if _step:
+        yield _step
         return
     p["prev"] = (p.get("prev") or [])[-8:] + [(loc, node)]
     p["node"] = hit

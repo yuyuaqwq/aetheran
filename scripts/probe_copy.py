@@ -215,6 +215,19 @@ def _drive(fn, p, text=""):
     return out
 
 
+def _clear_field():
+    """把这一格里还留着的那一场清掉（`instance` 作用域 · 键 = `<群>#<uid>`）。
+
+    ★ fxa：本探针的用例表共用同一个 uid（`_E.group_id = g_copy` / `uid = u_copy`），
+      其中 `攻击(野外)` 那一条**真开一场**（一条 `攻击` 只推一手 ⇒ 结果没落下、场留在库里）；
+      而「场在跑 ⇒ 世界级移动一律拦下」（`SYS_MOVE_IN_FIGHT`）是本波新落的闸 ——
+      ⇒ 后面那些验「走路」的用例（⑫ / ⑫-b）得先有一个「手上没有仗」的前提，
+      不然判的是另一件事（拦下那一支另有 ⑫-c 一条正例 + 反证）。与 `probe_tower` 同名小件同款。
+    """
+    from content import instance as _INST
+    return _INST.clear(_INST.key_of("g_copy", "u_copy", ["u_copy"]))
+
+
 def _node_names(st, loc):
     m = (st.domain("maps") or {}).get(loc) or {}
     return [n.get("name") for n in (m.get("nodes") or [])]
@@ -1098,6 +1111,12 @@ def main():
             and _GBP.food_buff(_p_cls) == _want_mult and _GBP.food_buff(_p_no) == _want_mult,
             "%s / %s ｜ 乘数 %s" % (_shCls[-1:], _shNo[-1:], _GBP.food_buff(_p_cls)))
 
+    # ★ fxa：上面那张用例表里 `攻击(野外)` 那一条**真开了一场**（一条 `攻击` 只推一手 ⇒
+    #   这一场留在库里），而本波起「场在跑」会拦住世界级移动（`SYS_MOVE_IN_FIGHT`）——
+    #   ⇒ 下面这几节验的是「走路 / 脚下这一站 / 出镇守卫」的行为，**前提**是手上没有没打完
+    #   的一场：先把这一场清掉（拦下那一支另有 ⑫-c 一条正例 + 反证，不是把判据放宽）。
+    _clear_field()
+
     # ⑩ B3-10 ①：`去 <脚下这一站>` —— 回的是「到了」，不是「过不去」
     here_out = _drive(CA.go_to, _player(loc="windmill_town", node="wt_gate_n"), "去 %s" % cur)
     here_want = tx["SYS_MOVE_HERE"]["value"].replace("{name}", cur)
@@ -1185,6 +1204,34 @@ def main():
             back_bad.append((_from_lab, _got[:1], (_pp.get("loc"), _pp.get("node"))))
     chk("★ P-52：『进镇』从野外回镇**不受影响**（%d 处起手都真落到北口）" % len(_WILDS),
         not back_bad, "%s" % back_bad[:3])
+
+    # ⑫-c ★ fxa（P2/P4 试玩 #1 —— 「一场没结就走不了」那一道闸的判据）：移动族那四条
+    #   （往北 / 往东 / 往西 / 进镇）在**手上还有一场没打完**时一律拦下：只那一句、
+    #   位置与历史一个字不动；那一场收掉之后（= 『逃跑』跑成 / 打完那一条路的终态）
+    #   同一步真放行（反证：这一句不是「一律不许出门」）。
+    #   ★ 为什么这一条补在这儿：这道闸原先**一支探针都没罩**（`SYS_MOVE_IN_FIGHT` 只出现在
+    #     content 里）—— 本波顺手把它钉上（覆盖面与判据一起加，K61）。
+    _lock = tx["SYS_MOVE_IN_FIGHT"]["value"]
+    _drive(CBL.attack, _player(loc="belt_north", node="bn_bone", cls="cls_knight", level=3,
+                               hp=80, bag={}, codex={}, flags={}), "")
+    _fight_bad = []
+    for _lab, _loc, _node, _out_slot, _fn in _EXITS:
+        _pp = _player(loc=_loc, node=_node, prev=[])
+        _got = _drive(_fn, _pp, "")
+        if (not _got) or _got[0] != _lock \
+                or (_pp.get("loc"), _pp.get("node")) != (_loc, _node) or _pp.get("prev"):
+            _fight_bad.append((_lab, _got[:1] or ["(空)"], (_pp.get("loc"), _pp.get("node"))))
+    chk("★ fxa：手上还有一场没打完 ⇒ 『往北 / 往东 / 往西 / 进镇』一律拦下"
+        "（只那一句 · 位置与历史一个字不动）", not _fight_bad, "%s" % (_fight_bad[:2],))
+    _clear_field()                     # 反证：这一场收掉（脱身 / 打完之后的终态）
+    _free_bad = []
+    for _lab, _loc, _node, _out_slot, _fn in _OUTS:
+        _pp = _player(loc="windmill_town", node="wt_gate_n", prev=[])
+        _got = _drive(_fn, _pp, "")
+        if _lock in _got or (_pp.get("loc"), _pp.get("node")) != (_loc, _node):
+            _free_bad.append((_lab, _got[:1], (_pp.get("loc"), _pp.get("node"))))
+    chk("★ 反证：这一场收掉之后（脱身 / 打完）⇒ 同一步真放行（那三条各自真出门）",
+        not _free_bad, "%s" % (_free_bad[:2],))
 
 
     # ── ⑲ ★ fix3-⑥⑦：机器味 / 开发词上屏（三处点名）+「扫面」的语境 ─────────────
