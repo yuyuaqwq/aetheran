@@ -11,12 +11,26 @@
 """
 
 
+def slot_key(name):
+    """槽位键的**唯一写法**：`SCENE_<名字大写>` —— 节点级与地图级共用这一处（P-19）。
+
+    为什么收成一个口：`SCENE_OLD_WATCHTOWER`（地图级 —— 地图 id `old_watchtower`）与
+      `SCENE_TOWER_GATE`（节点级 —— 那一间房的 id `tower_gate`）是**同一处**（旧哨塔门口），
+      两条键的写法一模一样，原先却各写一份 `"SCENE_%s" % str(x).upper()`：
+      谁哪天动了一处（加前缀 / 换分隔符），另一处就对不上（K65 那族「同一件事两处口径」）。
+      现在 `node_key` / `map_key` 都只是本函数的**转发** —— 两个入口的名字不变，调用方一字不用改。
+    """
+    return "SCENE_%s" % str(name).upper()
+
+
 def node_key(node):
-    return "SCENE_%s" % str(node).upper()
+    """节点级槽位：`SCENE_<节点 id 大写>`（站在拾荒营地 → `SCENE_BN_CAMP`）。"""
+    return slot_key(node)
 
 
 def map_key(loc):
-    return "SCENE_%s" % str(loc).upper()
+    """地图级槽位：`SCENE_<地图 id 大写>`（踏进骨田 → `SCENE_BELT_NORTH`）。"""
+    return slot_key(loc)
 
 
 def resolve_map(texts, loc):
