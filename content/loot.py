@@ -193,14 +193,29 @@ def open_unid(unid_id: str, *, rnd: random.Random | None = None) -> dict:
     return r
 
 
+def appraisers_of(unid_id: str) -> tuple:
+    """这一件**谁能鉴定**（`unid_id`）—— **唯一的一口**：域里那份「谁认得出这一门」。
+
+    来处：`drop_pools[].identify_by`（真源 `27_掉落的惊喜感与未鉴定_v1.md §六` 的 `appraiser`
+    那一格 —— 骨田那件写的就是 `["npc_durin", "npc_cole"]`），填的是谁，逐条见
+    `00_总纲/14_图鉴四谱口径_v1.md §五` 旧物谱那三行「谁认得出」那一列。
+
+    ★ 读端只许这一个口：`help_text_of`（他认不认得这一门）与「拿给人看 ⇒ 当场开出来」
+      那一支（`cmds_talk._identify_lines`）都走它 —— 别在调用方再 `pools().get(...)` 读一遍
+      `identify_by`（K65 / P-31 同族：谁再自己扫一遍域，口径迟早分叉）。
+      名单为空 = **谁也鉴定不了**（fail-closed：不猜、不退回「随便谁都能开」）。
+    """
+    return tuple(str(x) for x in ((pools().get(str(unid_id)) or {}).get("identify_by") or []))
+
+
 def help_text_of(uid_id: str, npc_id: str) -> str | None:
     """谁认得出这个（杜林认锻造物 / 莉安认铭文 / 柯尔只认铁 / 艾德认教会器物）。
 
     ★ B4-19：三句话都走 texts 槽位（原先这里是三句内联 —— 文案真源只有 texts 域）。
+    ★ 「认得这一门的那个人」的判据 = `appraisers_of()`（域里的 `identify_by`，唯一一口）。
     """
     from .cmds_ast import T                    # ★ B4-19：本地 import（免得包装载期成环）
-    u = pools().get(uid_id) or {}
-    if npc_id in (u.get("identify_by") or []):
+    if npc_id in appraisers_of(uid_id):
         return T("TALK_IDENTIFY_KNOWN")
     if npc_id == "npc_durin":
         return T("TALK_IDENTIFY_NONE")

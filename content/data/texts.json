@@ -5875,5 +5875,21 @@
     "params": [],
     "category": "系统",
     "desc": "fix5-nav · 进镇尾注第二句 —— 站名归站点之后的出门口径（真源 17_文案收口口径 里 SYS_TOWN_ENTER_HINT 那条的**待改行**见本分支 _notes.md）"
+  },
+  "SYS_UNID_OPENED": {
+    "value": "★ {who}把它看明白了 —— 原来是：",
+    "params": [
+      "who"
+    ],
+    "category": "系统",
+    "desc": "未鉴定 · 识货的人当场把它鉴定出来那一行（真源 27 §3.3/§3.5「拿给人看 ⇒ 开出了什么」）"
+  },
+  "SYS_UNID_STORY": {
+    "value": "  （{story}）",
+    "params": [
+      "story"
+    ],
+    "category": "系统",
+    "desc": "未鉴定 · 那一件自带的「一段话」（域里信物/线索那两条写着；27 §3.4 那两类是内容不是数值）"
   }
 }
