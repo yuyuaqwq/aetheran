@@ -3162,7 +3162,7 @@
     "desc": "建号 · 选好了（含「为什么来」）"
   },
   "SYS_RACE_TALENT": {
-    "value": "天赋 · {name}：{effect}",
+    "value": "天赋 · {name}：{effect}（已生效）",
     "params": [
       "name",
       "effect"
@@ -3171,7 +3171,7 @@
     "desc": "建号 · 天赋一行"
   },
   "SYS_RACE_COST": {
-    "value": "代价 · {name}：{effect}",
+    "value": "代价 · {name}：{effect}（已生效）",
     "params": [
       "name",
       "effect"
