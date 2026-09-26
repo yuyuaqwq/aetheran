@@ -5,8 +5,9 @@
 ------------------------------------------------------------
   · 三处要读同一份口径：`cmds_places.herbalist`（药铺面板）· `cmds_more.item_buy`（购买）
     · `scripts/probe_shop.py`（逐行对账）—— 放下面的模块会被另外两处 import 成环；
-  · **代码里没有价、没有 id、没有节点名**：四个品阶系数在 `content/rules/shop.json`
-    （`scripts/rebuild_shop.py` 从真源 `06_…/00_第一阶段内容总纲_v1.md §六` 现解析进来的），
+  · **代码里没有价、没有 id、没有节点名**：四个品阶系数 + 固定加价在 `content/rules/shop.json`
+    （`scripts/rebuild_shop.py` 从真源 `06_…/00_第一阶段内容总纲_v1.md §六` 现解析进来的；
+    加价那一格真源没给数 —— 取值理由与出处写在那个脚本的头注里），
     货架由 items 域的 `kind_key` 现取，那一站由 npcs 域的 `funcs` 现取；
   · 只 import 基座 `cmds_ast`（TOWN / _data）与 `content/town.py`，**不被它们 import**
     ⇒ 谁都能用、怎么排 import 都不成环。
@@ -48,23 +49,37 @@ def station(loc: str = TOWN) -> str:
 
 
 def price_of(rec: dict) -> int:
-    """买价 = 域里的基础价 × 品阶系数（真源 05 §六），取整到 1。
+    """买价 = 域里的基础价 × 品阶系数 × 固定加价（真源 05 §六 + 口径表那一格），取整到 1。
 
     品阶取条目的 `quality`；没写的一律按「普通」（`quality_default`，口径 §二②）。
     认不出的品阶 ⇒ **当场喊**（fail-closed，不静默当 0 —— K68）。
+    ★ P-55：加价那一格（`buy_markup`）真源没给数（05 §六 只给「价 = 基础价 × 品阶系数」）⇒
+      台账的倾向是「例：买价 = 收价 × 2」；普通档系数 1.00 ⇒ 正好是「买价 = 收价 × 2」
+      （收价 = `items.price`，B3-12 落的那一路，一个字不动）。缺格 / 烂值 = 抛（fail-closed：
+      没有它买价就退回等于收价，「低买高卖」那条路又开了）。
+    ★ 买价**永远 ≥ 收价**：算完再核一遍（口径 / 数据错了当场喊，不静默放一条刷钱的路过去）。
     """
     r = rules()
     mult = r.get("quality_mult") or {}
+    mark = r.get("buy_markup")
+    if isinstance(mark, bool) or not isinstance(mark, (int, float)) or mark < 1:
+        raise RuntimeError("铺子口径表缺「固定加价」或不是 ≥1 的数：%r（%s）" % (mark, RULES))
     q = str((rec or {}).get("quality") or r.get("quality_default") or "")
     if q not in mult:
         raise RuntimeError("品阶 %r 不在铺子口径表里（%s）" % (q, sorted(mult)))
-    return int(round(float((rec or {}).get("price") or 0) * float(mult[q])))
+    base = float((rec or {}).get("price") or 0)
+    gold = int(round(base * float(mult[q]) * float(mark)))
+    if gold < int(base):
+        raise RuntimeError("买价 %d 比收价 %d 还低 —— 铺子被刷了（口径 / 数据错了）"
+                           % (gold, int(base)))
+    return gold
 
 
 def goods() -> list:
     """柜上有什么 —— `[{"id", "rec", "gold"}, …]`（按 items 域自己的顺序，不重排）。
 
     货架 = 域里 `kind_key == stock_kind` 且**有价**的那些（口径 §二①）。
+    `gold` = 买价（基础价 × 品阶系数 × 固定加价 —— 与『购买』扣的是同一个数）。
     """
     kind = str(rules().get("stock_kind") or "")
     out = []
