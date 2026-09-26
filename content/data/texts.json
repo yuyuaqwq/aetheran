@@ -5102,6 +5102,15 @@
     "category": "战斗",
     "desc": "机制 · 静默（控制：mode=no_skill）"
   },
+  "COMBAT_MECH_DAZE": {
+    "value": "星砸在【{name}】头上 —— 它晕了 {turns} 刻，下一手什么都做不了。",
+    "params": [
+      "name",
+      "turns"
+    ],
+    "category": "战斗",
+    "desc": "机制 · 砸晕（垂星的第二格：控制 mode=skip —— 整手作废）"
+  },
   "COMBAT_MECH_FROSTVEIL": {
     "value": "霜从你脚底结上来 —— {turns} 刻里落上来的东西轻 {pct}%，你自己的法术也轻 {cost}%。",
     "params": [
@@ -6229,5 +6238,23 @@
     "params": [],
     "category": "系统",
     "desc": "方向词（往北/往东/往西）在野外的拦话（fxres）：原先回的是「这几处都在镇上 —— 出了镇就找不到了。」（那是给『去 <铺子>』用的），问往东答镇上铺子 —— 答非所问（试玩三家报）。"
+  },
+  "COMBAT_MECH_HP_GATE": {
+    "value": "你还没攒够这点血 —— 【{name}】要 {need} 点才付得起，你现在只剩 {cur} 点。",
+    "params": [
+      "name",
+      "need",
+      "cur"
+    ],
+    "category": "战斗",
+    "desc": "机制 · 出手前的血线门（狂斩：「不能把自己打死 —— 血 < 12% 时这一手不可用」，02_狂战士_v2 §二）· 真源槽位行见 fxmech/_notes.md §真源行"
+  },
+  "COMBAT_MECH_ONCE": {
+    "value": "这一场你已经放过了 —— 【{name}】一场只出一次手。",
+    "params": [
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "机制 · 每场一次（焚身：「一场战斗最多一次」，02_狂战士_v2 §三）· 真源槽位行见 fxmech/_notes.md §真源行"
   }
 }

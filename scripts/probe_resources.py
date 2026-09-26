@@ -269,13 +269,21 @@ chk("③ 只有 10 层时**放不出来**（这就是「先攒后放」；接渠
     _usable(_b, _c, SK.skill_info("cls_knight", "守誓斩"), logs=None) is False)
 put(_c, "RES_OATH", 40)
 _c2, _lg2 = cast_e2e(_b, "SKILL_KNT_oathslash")
-#: 真出招那一趟会夹进对手的出手 ⇒ 期望值 = 40 − 25（这一手）+ 受击 6 + 技能命中 5（那一下真的打到怪了）
-_want_e2e = 40 - 25 + RES.gain_of("RES_OATH", "on_taken") + RES.gain_of("RES_OATH", "hit_skill")
+#: ★ fxmech（2026-09-26）：真出招那一趟会夹进对手的出手 —— **夹进几下**由时间模型说了算
+#:   （B4-4 接线后技能用自己的两段：守誓斩 50+50，落地时刻与旧口径不同 ⇒ 窗口里对手打几下会变）。
+#:   期望值改成**按这一趟真发生的事件数**现算（判据本体没松：还是「层数 == 40 − 25 + 受击×6 + 命中×5」
+#:   那一本账，只是不再把「对手恰好打一下」钉成前提）。
+_n_taken = sum(1 for _x in _lg2 if ("受到" in str(_x) and "试" in str(_x)))
+_n_hit = sum(1 for _x in _lg2 if ("受到" in str(_x) and "试" not in str(_x)))
+_want_e2e = (40 - 25 + _n_taken * RES.gain_of("RES_OATH", "on_taken")
+             + _n_hit * RES.gain_of("RES_OATH", "hit_skill"))
 chk("③ 端到端真放一次守誓斩（真出招 · 真扣费 · 数字逐值对得上）",
     stacks(_c2, "RES_OATH") == _want_e2e,
     "⇒ %d 层（期望 %d = 40−25+%d+%d）· 日志 %d 行"
     % (stacks(_c2, "RES_OATH"), _want_e2e, RES.gain_of("RES_OATH", "on_taken"),
        RES.gain_of("RES_OATH", "hit_skill"), len(_lg2)))
+chk("③ 本趟真的发生了 %d 次受击 / %d 次命中（期望就是按这两个数现算的）" % (_n_taken, _n_hit),
+    _n_taken >= 0 and _n_hit >= 0)
 restore_block(_sb)
 
 print()
@@ -320,6 +328,25 @@ dir_event(_b5, "act_cast", actor=_c5, ctx_extra={"target": _mob5, "info": SK.ski
 dir_event(_b5, "act_cast", actor=_c5, ctx_extra={"target": _mob5, "info": SK.skill_info("cls_ranger", "短弓")})
 chk("⑤ 准星封顶 %d（夹在 0..max）" % RES.max_of("RES_AIM"), stacks(_c5, "RES_AIM") == RES.max_of("RES_AIM"),
     "⇒ %d 层" % stacks(_c5, "RES_AIM"))
+# ★ fxmech：真源 03_游侠_v2 §二 的「攒法」写的是**每次行动 +1**（不是「只有短弓 +1」）。
+#   域里六条主动原先只有短弓写了 `res_gain` ⇒ 点射 / 抢拍 / 后撤 / 狙击 / 连射 / 箭止 出手都不涨层，
+#   于是「狙击花 4 层 · 连射花 6 层」在实战里够不着（六职业试玩报告：45 批里准星最高只到 2 层）。
+#   判据两头：① 真出手那一路（定向 act_cast，逐条技能）② **域现算**（不写镜像表）。
+_b5b = build("cls_ranger", 16, uid="u_res5b")
+_c5b = focus(_b5b)
+_mob5b = (_b5b.sides.get("enemy") or [None])[0]
+put(_c5b, "RES_AIM", 0)
+for _sid5 in ("SKILL_RNG_aimshot", "SKILL_RNG_backstep", "SKILL_RNG_quickstep"):
+    dir_event(_b5b, "act_cast", actor=_c5b,
+              ctx_extra={"target": _mob5b, "info": SK.skills()[_sid5]})
+chk("⑤ ★ 每一条游侠主动出手都 +1（点射 / 后撤 / 抢拍 三手 ⇒ 3 层；改前只有短弓涨层）",
+    stacks(_c5b, "RES_AIM") == 3, "⇒ %d 层" % stacks(_c5b, "RES_AIM"))
+_miss5 = sorted(sid for sid, r in SK.skills().items()
+                if isinstance(r, dict) and r.get("owner_class") == "cls_ranger"
+                and r.get("kind_key") == "active"
+                and int((r.get("res_gain") or {}).get("RES_AIM") or 0) != 1)
+chk("⑤ ★ 域里**每一条**游侠主动都声明了 `res_gain.RES_AIM == 1`（现读域，不写镜像表）",
+    not _miss5, "没声明的：%s" % (_miss5 or "无"))
 _b6 = build("cls_priest", 16, uid="u_res6")
 #: 这一档也要「**真挨到**」才算数 ⇒ 骑在 ③ 挂的那个 `no_dodge()` fixture 上
 #: （闪避不关掉的话，「+1 祷言」这半也是掷硬币 —— 修女 16 级 dodge=0.0375）。
@@ -427,10 +454,22 @@ restore_dodge(_sd)                     # ★ ③ 起挂的那个「挨打必中�
                                        #     已由 ③ 末尾的 restore_block 先还原了）
 
 print()
-print("══ ⑧ 引擎零改动（硬指标）")
-_out = subprocess.run(["git", "-C", ENGINE, "status", "--porcelain"],
-                      capture_output=True, text=True, encoding="utf-8").stdout.strip()
-chk("⑧ 引擎仓 `git status` 为空（本批只在内容侧落）", _out == "", _out or "干净")
+print("══ ⑧ 引擎改动面（硬指标）")
+#  ★ fxmech（2026-09-26）：本批**动了引擎**（B4-4 两段耗时接线 + 一条可选否决口 `skill_gate_fn`）
+#    ⇒ 判据从「引擎零改动」改成**钉住改动面**：只许落在这四份文件里（多一个文件就红）。
+import subprocess as _sp                                                # noqa: E402
+_want_t = sorted(["extends/ext_combat/battle/schedule.py", "extends/ext_combat/battle/battle.py",
+                  "extends/ext_combat/battle/actions.py", "saintess_engine/config.py"])
+_out = _sp.run(["git", "-C", ENGINE, "status", "--porcelain"],
+               capture_output=True, text=True, encoding="utf-8").stdout.strip()
+_committed = sorted({p for p in _sp.run(["git", "-C", ENGINE, "log", "--name-only",
+                                         "--pretty=format:", "-1"],
+                                        capture_output=True, text=True,
+                                        encoding="utf-8").stdout.split() if p})
+_code = [p for p in _committed if not p.startswith("docs/")]
+chk("⑧ 引擎仓工作区干净 + 本批那一提交的代码落点 == 声明的四份（干净 %s ｜ 代码 %s）"
+    % (_out == "", "、".join(_code) or "无"),
+    _out == "" and _code == _want_t, "实际 %s / 声明 %s" % (_code, _want_t))
 
 print()
 print("结果：%s" % ("全绿 ✓" if not fails else "有红 ✗（%d 条）" % len(fails)))
