@@ -23,6 +23,11 @@
 ⑦ ★ B4-18  「集火」按**此刻真在不在队里**分档（单人两句 / 有队一句 / 队读不出来同有队）·
            「逃跑」那句内联桩句收进 `COMBAT_FLEE_TODO`（照实说 + 指向真能用的『后撤』）·
            两条都真敲、都不动档；再一条源码守卫：那句桩句不许回来
+         ★ **P-57 改判据（2026-09-26 · w9）**：`逃跑` 在**野外 / 单人**那条老路上已经是
+           **真动作**（掷一次定成败 · 失败率 30%）—— 老判据那两半都留着（有队时照旧回
+           `COMBAT_FLEE_TODO` + 源码守卫不许有内联文案），并**加严**：同种子两态都碰得到
+           （探针按同一式子现算手气，不靠「跑很多次看比例」）· 跑成 = 这一场没打（无结算）
+           · 被拦下 = 那一手白花、这一场照打 · 失败率只有一个口（改声明表 ⇒ 翻面）
 
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_party.py
 Python 用 3.12（3.11 假红）。
@@ -32,6 +37,7 @@ from __future__ import annotations
 import io
 import json
 import os
+import random
 import re
 import sys
 from pathlib import Path
@@ -677,10 +683,13 @@ chk("★ `逃跑`（别名 `脱离`）真敲 = `COMBAT_FLEE_TODO`（%s）· 不�
     "指向『后撤』· **档一个字不动**" % ((_o6[0] if _o6 else "").replace(chr(10), " / ")),
     not _B7, "%s" % _B7[:2])
 
-# ── 五、覆盖面（源码守卫）：那句内联桩句不许回来（K61：判据的覆盖面跟判据一起加）
+# ── 五、覆盖面（源码守卫）：`flee` 里一句内联文案都没有（K61：覆盖面跟判据一起加）
 _CBSRC = io.open(os.path.join(str(REPO), "content", "cmds_battle.py"), encoding="utf-8").read()
-# ★ 口径走 ast（K46）：注释 / docstring 里提到那句桩句**不算**「还在回它」——
-#   要钉的是「`flee` 这个实现体里一个字符串字面量都不许有」（除了它自己的 docstring）。
+# ★ 口径走 ast（K46）：注释 / docstring 里提到什么都不算 —— 要钉的是「`flee` 这个实现体里
+#   **没有一个含汉字的字符串字面量**」（与 `probe_copy` 的 SEALED 口径同一把尺子）。
+#   ★ P-57 起口径**换锚不换强度**：老那条要求「一个字符串字面量都没有」，可它把机器口令也
+#   算成文案了（`"retreat"` / `"fled"` 是**接线**不是给玩家看的字）⇒ 收口的那条线改成
+#   「含汉字的字面量一个都没有」+「三个槽位都真由它 yield 出来」（两句都真判）。
 import ast as _ast                                                     # noqa: E402
 _FN = [n for n in _ast.parse(_CBSRC).body
        if isinstance(n, _ast.AsyncFunctionDef) and n.name == "flee"]
@@ -690,23 +699,158 @@ _DOC = (_FN[0].body[0].value
         if _FN and _FN[0].body and isinstance(_FN[0].body[0], _ast.Expr)
         and isinstance(_FN[0].body[0].value, _ast.Constant)
         and isinstance(_FN[0].body[0].value.value, str) else None)
-#   ★ 什么算「文案」：docstring 不算（K46）· 槽位键那种全大写机器键不算（那是传槽位，不是文案）
+_CJK = re.compile(r"[\u4e00-\u9fff]")
 _FN_LITS = [n.value for n in _ast.walk(_FN[0])
             if isinstance(n, _ast.Constant) and isinstance(n.value, str)
-            and n is not _DOC and re.match(r"^[A-Z][A-Z0-9_]+$", n.value) is None] if _FN else []
-_yields = [n for n in _ast.walk(_FN[0]) if isinstance(n, _ast.Yield)] if _FN else []
-_HAS_SLOT = bool(re.search(r'^\s*yield T\("COMBAT_FLEE_TODO"\)', _CBSRC, re.M))
-chk("★ 覆盖（ast）：`flee` 里**没有内联文案**（%d 处 —— 注释 / docstring / 槽位键都不算）· "
-    "它 yield 出来的就是槽位那一句（`yield T(\"COMBAT_FLEE_TODO\")`：%s）"
-    % (len(_FN_LITS), _HAS_SLOT),
-    len(_FN) == 1 and not _FN_LITS and _HAS_SLOT)
-chk("★ 覆盖：两条新槽位都在 texts 里、且占位与 params 双向对账（%s）"
+            and n is not _DOC and _CJK.search(n.value)] if _FN else []
+_SLOTS7 = ("COMBAT_FLEE_TODO", "COMBAT_FLEE_OK", "COMBAT_FLEE_BLOCK")
+#   ★ 三个槽位**在 `flee` 的实现体里真被取**（ast 认 `T("<键>")` 这种调用 ——
+#     `COMBAT_FLEE_BLOCK` 是挂在 `hand.lines` 上由引擎取走的，不是 `yield` 出来的，
+#     所以认「调用」而不是认「yield 那一行」）。
+_T_CALLS7 = sorted({n.args[0].value for n in _ast.walk(_FN[0])
+                    if isinstance(n, _ast.Call) and isinstance(n.func, _ast.Name)
+                    and n.func.id == "T" and n.args
+                    and isinstance(n.args[0], _ast.Constant)
+                    and isinstance(n.args[0].value, str)})
+_HAS7 = sorted(set(_SLOTS7) & set(_T_CALLS7))
+#   ★ 那一手里**除 0 / 1 没有别的数**：失败率 / 阈值一个都不许写进代码（唯一来源 = 声明表）。
+_NUMS7 = sorted({n.value for n in _ast.walk(_FN[0])
+                 if isinstance(n, _ast.Constant) and not isinstance(n.value, bool)
+                 and isinstance(n.value, (int, float))}) if _FN else []
+chk("★ 覆盖（ast）：`flee` 里**没有一个含汉字的字面量**（%d 处 —— 注释 / docstring / 槽位键不算）· "
+    "三个槽位都是它自己 `T(\"…\")` 取的（%s）· 那一手里出现的数只有 %s（率不在代码里）"
+    % (len(_FN_LITS), " · ".join(_HAS7) or "一个都没取", _NUMS7),
+    len(_FN) == 1 and not _FN_LITS and _HAS7 == sorted(_SLOTS7)
+    and set(_NUMS7) <= {0, 1})
+chk("★ 覆盖：这一族的四条槽位都在 texts 里、且占位与 params **双向对账**（%s）"
     % " · ".join("%s=%s" % (k, sorted((TX.get(k) or {}).get("params") or []))
-                 for k in ("COMBAT_FOCUS_PARTY", "COMBAT_FLEE_TODO")),
-    all((TX.get(k) or {}).get("value") for k in ("COMBAT_FOCUS_PARTY", "COMBAT_FLEE_TODO"))
-    and all(not (TX.get(k) or {}).get("params") for k in ("COMBAT_FOCUS_PARTY", "COMBAT_FLEE_TODO"))
-    and not re.search(r"\{", (TX.get("COMBAT_FOCUS_PARTY") or {}).get("value", "")
-                      + (TX.get("COMBAT_FLEE_TODO") or {}).get("value", "")))
+                 for k in ("COMBAT_FOCUS_PARTY",) + _SLOTS7),
+    all((TX.get(k) or {}).get("value") for k in ("COMBAT_FOCUS_PARTY",) + _SLOTS7)
+    and all(set(re.findall(r"\{(\w+)\}", (TX.get(k) or {}).get("value", "")))
+            == set((TX.get(k) or {}).get("params") or [])
+            for k in ("COMBAT_FOCUS_PARTY",) + _SLOTS7))
+
+# ══════════════════════════════════════════════════════════════
+# 六、★ P-57：野外 / 单人那一路 —— 掷一次定成败（同种子两态都碰得到 · 率只有一个口）
+#      真源：`04_指令总表 §五`（`逃跑 … 可能失败`）+ P-57 裁决（**三成被拦下**）。
+#      判据（都真敲 · 遇敌钉死 ⇒ 可复现）：
+#        ① 率只有一个口：声明表 `flee_fail_pct` ↔ `battle_acts.flee_fail_pct()`（代码不写数）
+#        ② ★ 同种子两态都碰得到：探针**按实现那条式子自己算**手气 ⇒ 挑一个跑成的、一个被拦下的
+#           （不许只断言代码里有 0.3 这个字面量）
+#        ③ 跑成 ⇒ 那一句 + `last_battle.result == "fled"` + **没有结算那一段**（这一场没打）
+#           被拦下 ⇒ 那一句 + `result != "fled"` + **有结算那一段**（这一场照打）
+#        ④ 同种子再来一遍 ⇒ 同结果
+#        ⑤ ★ 反证（率真被读）：临时改成 1.0 ⇒ 那个跑成的当场被拦下；改成 0.0 ⇒ 那个被拦下的
+#           当场跑成 —— 同一个种子、同一个人，证明判的是声明表那个数
+# ══════════════════════════════════════════════════════════════
+from content import battle_acts as _BA7                                # noqa: E402
+from content import calendar as _CAL7                                  # noqa: E402
+_RATE7 = _BA7.flee_fail_pct()
+_RULES7 = json.load(io.open(str(REPO / "content" / "rules" / "battle_cmds.json"), encoding="utf-8"))
+chk("★ P-57 失败率只有一个口：声明表 `flee_fail_pct` = %r ↔ `battle_acts.flee_fail_pct()` 读到的 %r"
+    % (_RULES7.get("flee_fail_pct"), _RATE7),
+    _RULES7.get("flee_fail_pct") == _RATE7 and 0.0 < float(_RATE7) < 1.0)
+_DAY7 = int(_CAL7.state().get("game_day") or 0)
+_MID7 = PIN
+_NAME7 = str((MON.get(_MID7) or {}).get("name") or _MID7)
+
+
+def _roll7(uid):
+    """★ 照实现那条式子**自己算一遍**手气（种子 = uid + 那一只 + 这一处 + 游戏日）。
+
+    与 `content/cmds_battle._flee_roll` 各写各的：改种子 / 改率 ⇒ 这一节当场红。
+    """
+    return random.Random("%s:flee:%s:%s:%s:%d" % (uid, _MID7, LOC, NODE, _DAY7)).random()
+
+
+_FLY7 = [u for u in sorted(NAMES) if _roll7(u) >= _RATE7]
+_STOP7 = [u for u in sorted(NAMES) if _roll7(u) < _RATE7]
+#   ★ 只拿**定过职业**的人当试样：没择业的档在 `hp_cap_or_line` 那一关就回了点名行，
+#     根本走不到逃跑这一手（`u_e` 就是这一档 —— 与 §⑤ 那条纪律同源）。
+_FLY7 = [u for u in _FLY7 if (_SEED[u].get("cls"))]
+_STOP7 = [u for u in _STOP7 if (_SEED[u].get("cls"))]
+chk("★ P-57 **同种子两态都碰得到**（第 %d 游戏日 · 率 %s · 手气探针自己算：%s）—— 跑成 %s · 被拦下 %s"
+    % (_DAY7, _RATE7, " · ".join("%s=%.3f" % (u, _roll7(u)) for u in sorted(NAMES)),
+       sorted(_FLY7), sorted(_STOP7)),
+    bool(_FLY7) and bool(_STOP7))
+
+
+def _drive7(uid):
+    """单人（没队）+ 遇敌钉死，真敲一次 `逃跑` ⇒ (屏上那几行, last_battle 那一格)。"""
+    _set_party(uid, None)
+    _at(uid, LOC, NODE, hp=80)
+    INST.clear(G)
+    _o = say(uid, "逃跑")
+    _lb = ((PS.get_player(G, uid) or {}).get("flags") or {}).get("last_battle") or {}
+    return _o, _lb
+
+
+def _sig7(out, lb, exp):
+    """这一拍的「结果签名」= 走的是哪一边 + `last_battle` 记成什么。
+
+    ★ 不拿整屏比：同一拍里**背包 / 图鉴的账会变**（第二回来那一件已经不是新东西了，
+      「拾取」那一行就不一样）—— 那条与「掷出来是哪一边」无关，别让判据被它带红。
+    """
+    return (exp in out, lb.get("result"))
+
+
+try:
+    CBT.build, CBT.pick_encounter = _spy, (lambda *a, **k: [_MID7])
+    if not (_FLY7 and _STOP7):
+        print("      （两态凑不齐 —— 上面那条已报红，本节不真敲）")
+    else:
+        for _u in sorted(NAMES):                 # 先全清干净：别让 §二 建的那支队影响人数
+            _set_party(_u, None)
+        _u_ok, _u_no = _FLY7[0], _STOP7[0]
+        _EXP_OK = _r("COMBAT_FLEE_OK", name=_NAME7)
+        _EXP_NO = _r("COMBAT_FLEE_BLOCK", name=_NAME7)
+        _SEP = chr(0x2501)                       # `_settle` 那一段的抬头（「这一场打完了」）
+        _B7 = []
+        random.seed(20260926)                    # 两遍走**同一颗引擎种子** ⇒ 逐字可比
+        _o_ok, _lb_ok = _drive7(_u_ok)
+        random.seed(20260926)
+        _o_ok2, _lb_ok2 = _drive7(_u_ok)
+        random.seed(20260926)
+        _o_no, _lb_no = _drive7(_u_no)
+        random.seed(20260926)
+        _o_no2, _lb_no2 = _drive7(_u_no)
+        if _EXP_OK not in _o_ok:
+            _B7.append(("跑成那一档没有那一句", _o_ok[:3]))
+        if _lb_ok.get("result") != "fled":
+            _B7.append(("跑成却没记 fled", _lb_ok.get("result")))
+        if any(str(x).startswith(_SEP) for x in _o_ok):
+            _B7.append(("跑成竟然还打了（有结算那一段）", _o_ok[-3:]))
+        if _EXP_NO not in _o_no:
+            _B7.append(("被拦下那一档没有那一句", _o_no[:4]))
+        if _lb_no.get("result") in (None, "fled"):
+            _B7.append(("被拦下却没照打", _lb_no.get("result")))
+        if not any(str(x).startswith(_SEP) for x in _o_no):
+            _B7.append(("被拦下没照打（缺结算那一段）", _o_no[-3:]))
+        if not (_sig7(_o_ok2, _lb_ok2, _EXP_OK) == _sig7(_o_ok, _lb_ok, _EXP_OK)
+                and _sig7(_o_no2, _lb_no2, _EXP_NO) == _sig7(_o_no, _lb_no, _EXP_NO)):
+            _B7.append(("同种子再来一遍不是同一边",
+                        (_sig7(_o_ok2, _lb_ok2, _EXP_OK), _sig7(_o_no2, _lb_no2, _EXP_NO))))
+        chk("★ P-57 同种子真敲两态：%s ⇒「%s」（last_battle=%s · 无结算）· "
+            "%s ⇒「%s」（last_battle=%s · 照打）· 各自再来一遍**还是那一边**（同种子同结果）"
+            % (_u_ok, _EXP_OK, _lb_ok.get("result"), _u_no, _EXP_NO, _lb_no.get("result")),
+            not _B7, "%s" % _B7[:2])
+        # ⑤ 反证：那个数真被读（同一个种子、同一个人，只改声明表那个数）
+        _keep_rate7 = _BA7.flee_fail_pct
+        try:
+            _BA7.flee_fail_pct = (lambda: 1.0)
+            _o_r1, _lb_r1 = _drive7(_u_ok)
+            _BA7.flee_fail_pct = (lambda: 0.0)
+            _o_r2, _lb_r2 = _drive7(_u_no)
+        finally:
+            _BA7.flee_fail_pct = _keep_rate7
+        chk("★ P-57 反证（率只有一个口、真被读）：临时改成 1.0 ⇒ 原来跑成的 %s 当场被拦下（%s）· "
+            "改成 0.0 ⇒ 原来被拦下的 %s 当场跑成（%s）"
+            % (_u_ok, (_EXP_NO in _o_r1 and _lb_r1.get("result") != "fled"),
+               _u_no, (_EXP_OK in _o_r2 and _lb_r2.get("result") == "fled")),
+            _EXP_NO in _o_r1 and _lb_r1.get("result") != "fled"
+            and _EXP_OK in _o_r2 and _lb_r2.get("result") == "fled")
+finally:
+    CBT.build, CBT.pick_encounter = _REAL_BUILD, _REAL_PICK
 
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))

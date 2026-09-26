@@ -2456,6 +2456,23 @@
     "category": "系统",
     "desc": "悬赏 · 尾注"
   },
+  "SYS_BOARD_BOUNTY_HEAD": {
+    "value": "悬赏三档常年挂在公会上：",
+    "params": [],
+    "category": "系统",
+    "desc": "P-61 悬赏板 · 三档悬赏那一栏的抬头"
+  },
+  "SYS_BOARD_BOUNTY_ROW": {
+    "value": "悬赏 {order} · {name}{mark}  等级 {level}+",
+    "params": [
+      "order",
+      "name",
+      "mark",
+      "level"
+    ],
+    "category": "系统",
+    "desc": "P-61 悬赏板 · 三档悬赏各一行"
+  },
   "SYS_JOB_ASK": {
     "value": "接哪一条？打『悬赏』看板上有什么。",
     "params": [],
@@ -4403,6 +4420,22 @@
     "params": [],
     "category": "战斗",
     "desc": "B4-18 逃跑 · 尚未落地"
+  },
+  "COMBAT_FLEE_OK": {
+    "value": "你转身就跑，把 {name} 甩在了后头 —— 这一场没打。",
+    "params": [
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "P-57 逃跑 · 跑成了（这一场没打）"
+  },
+  "COMBAT_FLEE_BLOCK": {
+    "value": "{name} 先一步拦住了退路 —— 没跑成，这一手白花，这一场照打。",
+    "params": [
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "P-57 逃跑 · 被拦下（这一手白花 · 照打）"
   },
   "SYS_PARTY_HEAD": {
     "value": "【队伍】{n}/{max} 人 · 队长：{cap}",

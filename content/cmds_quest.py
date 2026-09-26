@@ -577,7 +577,11 @@ async def guild(env, sink, uid, player):
 
 
 async def board(env, sink, uid, player):
-    """`悬赏` —— 挂板墙上的单子（声明里的 `guard_desc` = 在公会）。★ B4-12：补上守卫。"""
+    """`悬赏` —— 挂板墙上的单子（声明里的 `guard_desc` = 在公会）。★ B4-12：补上守卫。
+
+    ★ P-61：板子列三样 —— 下一条主线 · **三档每日悬赏**（101/102/103，常年挂在公会上）·
+    在场那位手上的支线（不带编号玩家接不了，B3-6 起一直带）。
+    """
     p = _p(player)
     line = town_gate(p, _func_node("board"))
     if line:
@@ -605,6 +609,20 @@ async def board(env, sink, uid, player):
             yield "  " + T("SYS_BOARD_DELIVER", order=v["order"])
         else:
             yield "  " + T("SYS_BOARD_NEXT", order=v["order"])
+    # ★ P-61：三档**每日悬赏**常年挂在公会上 —— 板上把它们列出来（玩家不必先知道编号）。
+    #   口径 = `24_任务线_v1 §二`（悬赏板 · 玛莎 · 无限循环的日常内容）+ `03_风车镇 §一`
+    #   （`悬赏` → 看板 → **三行列表**）⇒ **一档一行**（普通 / 精英 / 头目，各带自己的
+    #   `min_level`）。写法与主线那一行同形（编号 · 名字 · 标记 · 等级）；那一行的**编号**
+    #   就是『接 <编号>』认的同一个 `order` —— 「列出来 → 接得上」这条接线由探针钉着
+    #   （`probe_quests` ㊱）。不列怪名：「指定的」是哪一只仍然由『看 <编号>』点名。
+    bounty = sorted([(k, v) for k, v in qs.items() if v["chain"] == "bounty"],
+                    key=lambda kv: kv[1]["order"])
+    if bounty:
+        yield T("SYS_BOARD_BOUNTY_HEAD")
+        for qid, v in bounty:
+            mark = T("SYS_BOARD_ACTIVE") if qid in active else ""
+            yield "  " + T("SYS_BOARD_BOUNTY_ROW", order=v["order"], name=v["name"],
+                           mark=mark, level=v["min_level"])
     side = [v for v in qs.values() if v["chain"] == "side" and v["giver"] in
             [k for k, _ in _npcs_here(p["loc"], p["node"], p=p)]]
     if side:
