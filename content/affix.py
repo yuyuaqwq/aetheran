@@ -194,6 +194,28 @@ def thresholds_of(aids) -> list:
     return [(aid, m) for aid, m in _mods(aids, CH_THRESHOLD)]
 
 
+def reward_of(aids) -> dict:
+    """★ P3 BUG-3（本波 f4）：精英那一场的**钱 / 经验 / 掉落轮数** —— 三格都在 `rules/elite.json::reward`。
+
+    病根：原先 `_settle` 里那一档比的是**怪自己的 `role_key`**（`elite` / `chief` …），
+    而词条精英（`† 群居的田鼠 †`）`role_key` 仍是 `normal` ⇒ 打 3 只精英与打 1 只普通怪
+    钱/经验一字不差 —— 精英成了纯亏（真源 `09_ §六③` 明写「精英奖励只多 40–50%」）。
+    ⇒ 这一格由**词条在不在**说话（`affixes` 非空 = 这一场是精英），不看 `role_key`
+    （`role_key` 那一档照旧管**精英档怪**，两条路各管各的）。
+
+    没词条 ⇒ 全 1（= 与接线前逐字相同）。
+    """
+    if not aids:
+        return {"gold_mult": 1.0, "exp_mult": 1.0, "drop_rounds": 1}
+    r = rules().get("reward")
+    if not isinstance(r, dict):
+        raise AffixError("精英口径表缺 `reward` 那一块：%s"
+                         % os.path.join(_RULES_DIR, "elite.json"))
+    return {"gold_mult": float(r["gold_mult"]),
+            "exp_mult": float(r["exp_mult"]),
+            "drop_rounds": int(r["drop_rounds"])}
+
+
 def spawn_plan(mid: str, aids) -> tuple:
     """多只（改行为 群居）：`([怪 id...], [每只的生命倍数])` —— 没有就打一只（倍数全 None）。"""
     got = _mods(aids, CH_SPAWN)

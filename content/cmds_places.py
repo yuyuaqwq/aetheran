@@ -8,7 +8,7 @@
 | `教堂` | 镇上那位带 `heal` 职能的人所在的那一站（`npcs.funcs`） | 节点名（`maps`）· 在场的人（`npcs` + 出场条件） |
 | `客栈` | 与箱子同一站（`cmds_more.STASH_NODE` —— 一个节点只写一份） | 同上 |
 | `商队` | 世界级（`scale_key == "world"`）且落在镇上的事件 | `events` 域那两条的 `text` 槽位 |
-| `旧货` | 不指人：**域里有价**的东西就是它肯收的（与『卖出』同一口） | `items.price` · `codex` 旧物谱 |
+| `旧货` | 不指人：**收价 > 0** 的东西就是它肯收的（与『卖出』同一个口：`content/shop.py::sell_price_of`） | `items.price` + 装备收价那一格 · `codex` 旧物谱 |
 
 四条纪律（同包内各处）
 --------------------
@@ -215,8 +215,10 @@ async def herbalist(env, sink, uid, player):
 async def junk_shop(env, sink, uid, player):
     """`旧货` —— 卖旧东西 · 看旧物谱。
 
-    ★ 「它肯收什么」不另立一张存货表：**域里有价**（`items.price`）的就是铺子收的 ——
-      与『卖出』认的是同一个字段（指令那边也只认这一格）。列出来的价 = 那一格 × 件数。
+    ★ 「它肯收什么」不另立一张存货表：**收价 > 0** 的就是铺子收的 —— 与『卖出』认的是
+      **同一个口** `content/shop.py::sell_price_of`（材料 / 旧物 = `items.price`；
+      ★ P3 BUG-4：装备按品阶 × 等级档现算 —— 原先装备一个价都没有，这一页也就永远
+      不列它）。列出来的价 = 那一口 × 件数。
     ★ 旧物谱那一行走**影子档**读（`cmds_quest._shadow`）：codex 的读口会把缺的格子补齐，
       在真档上调它等于「看一眼旧货铺」就往玩家档里塞空容器（K57 那族）。
     """
@@ -233,8 +235,8 @@ async def junk_shop(env, sink, uid, player):
     rows = []
     for iid in sorted((p.get("bag") or {})):
         rec = LT.rec_of(iid)
-        price = rec.get("price")
-        if not isinstance(price, (int, float)) or isinstance(price, bool) or price <= 0:
+        price = SH.sell_price_of(rec)          # ★ P3 BUG-4：与『卖出』同一个口
+        if price <= 0:
             continue
         n = int((p.get("bag") or {}).get(iid) or 0)
         rows.append((LT.label_of(iid), n, int(price) * n))   # ★ B4-20：重名的缀品阶

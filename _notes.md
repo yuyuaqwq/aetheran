@@ -6572,3 +6572,290 @@ scripts/probe_cmds.py    B3-23 那一节（加）：`flee_fail_pct` 也走同一
 
 ★ 本波的立场（与红线一致）：**没有为了让自己那一栏好看而去动这两条判据、也没有手编 P-50 那两句**。
 本波那一支的 40 条绿是**本波自己的**（含新加/改写的 3 支：`probe_party` / `probe_quests` / `probe_cmds`）。
+
+---
+
+# f4 · 战斗 / 掉落 / 强化 —— 四个真人试玩报告那一批（分支 `fix4-combat`）
+
+> 输入：`AppData/Local/Temp/qa/p{1..4}/REPORT.md`（四位真人玩家各跑完一轮 · 只用『帮助』里列出的词）。
+> 本波负责其中的 **P1 BUG-8 · P2 体验（`自动`）· P3 BUG-1/2/3/4 · P1 BUG-9 ① / P2 BUG④ / P4 E-11（战斗那一条）**。
+> 基线：`fix4-combat` 从 `master 13179a6` 切出，切出时全量 **44 支 44 绿**。
+
+## §〇 一句话
+
+六条**真错**当场修掉（掉落种子 · 强化门禁 · 精英奖励 · 满血吃药 · 装备卖出价 · `自动` 错话术），
+**一条设计级缺口（战斗「一场一指令」）本轮只做两件小事**：① 把界面上的承诺改诚实（帮助表尾巴一句），
+② 给出可执行的分段化方案（§三，**不重写战斗**）。
+
+## §一 真源行（要补进 `aetheran-plan` 的 · 本波只登记，**一个字没改真源仓**）
+
+`aetheran-plan` 是**只读**的 ⇒ 下面五行由**主线**落进对应文档；本包这一侧的表现（`content/rules/*.json`
+与 texts 域）已经按这些行落好了 —— 落文档时**逐字**抄下面 `值` 那一栏，`rebuild_*` 才不会撞「两处口径」。
+
+### 1. 数值口径 A：**装备的收价**（P3 BUG-4）→ `06_第一阶段垂直切片/05_玩法数值口径_v1.md §七`
+
+```text
+真源现状（那一行原文）：「钱从哪来      悬赏 + 卖材料 + 卖旧物（**不靠卖装备**）」
+★ 只给了**取向**、没给数 —— 而实现侧原先的口径是「域里没写 price 的收不了」，
+  装备（`i_set_scavenger_blade` 那一类掉出来的）域里一个价都没有 ⇒ **打到的装备永远卖不掉**
+  （实测：三把同名短刃堆在背包里，`旧货` 回「这东西没价」）。
+本包首版取值（照上面那条取向取**小价**：装备能变现，但绝不成「钱的来源」）：
+  收价 = 品阶（普通 6 · 精制 15 · 稀有 36 · 遗物 80）×（等级档：1–5 ×1 · 6–10 ×1.5 · 11–15 ×2.5 · 16–20 ×4）
+  等级那一格 = `items.req.level`（穿戴门槛，域里现成那一格，不新造字段）
+  量级自检：普通档 1 级 = 6 铜板 < 一瓶伤药买价 24 ⇒ 「不靠卖装备」这条取向成立
+  材料 / 旧物那一格**一个字不动**（照旧 = `items.price`，B3-12 落的那一路）
+落点：`content/rules/shop.json::sell_gear`（**生成器** `scripts/rebuild_shop.py` 落 · 幂等）
+唯一一口：`content/shop.py::sell_price_of`（『卖出』与『旧货』共用 —— 两处不会各算一遍）
+```
+
+### 2. 数值口径 B：**词条精英的钱 / 经验 / 掉落轮数**（P3 BUG-3）→ `06_第一阶段垂直切片/09_精英怪机制_v1.md §四`
+
+```text
+真源现状：§四 只写了「奖励 掉率与材料量按 PE 等比上调」（材料那一半已接线），
+          §六③ 写「精英奖励只多 40–50%」—— **钱 / 经验那两格没有一处给数**。
+病根（实测）：`† 群居的田鼠 †`（3 只）奖励与打 1 只普通田鼠**一字不差**：
+          钱 +9 / 经验 +9 / 拾取：铁渣 ×2 —— 因为 `_settle` 那一档比的是**怪自己的 `role_key`**
+          （田鼠 = `normal`），而词条精英的 `role_key` 不变 ⇒ 那条路对它永远不触发（精英纯亏）。
+本包首版取值（按 §六③ 的**顶格** + 任务口径「风险 ×3 ⇒ 收益不低于 ×1.5」）：
+  钱 ×1.5 · 经验 ×1.5 · 掉落池**多跑一轮**（2 轮；每轮一份种子）
+  自检：普通 田鼠 lv3 ⇒ 钱 9 / 经验 9；精英 ⇒ 钱 14 / 经验 14（= round(9×1.5)）· 掉落 2 轮
+  「多 40–50%」这条没越：1.5 = 那一段的**上沿**；材料那半仍走 `material_drop_mult`（按 PE 等比）
+落点：`content/rules/elite.json::reward` · 消费端 `content/affix.py::reward_of` + `cmds_battle._settle`
+```
+
+### 3. 文案槽位 A：`SYS_USE_FULL`（P1 BUG-8）→ `00_总纲/17_文案收口口径_v1.md` 的槽位表（新开一节）
+
+```text
+| SYS_USE_FULL | 你身上一点伤都没有 —— {name}先留着。 | name | 系统 | 使用 · 满血（不消耗） |
+```
+
+### 4. 文案槽位 B：`SYS_HELP_BATTLE_NOTE`（P1 BUG-9 ① / P4 E-11）→ 同一份槽位表
+
+```text
+| SYS_HELP_BATTLE_NOTE | （战斗：一条指令打完整场 —— 你敲的那一手是这一场的第一手，之后自动打完；全部过程打「战斗日志」看。） | - | 系统 | 帮助 · 战斗那一栏的诚实说明（一敲就是一场 —— 战斗分回合那批落地后**撤掉这一行**） |
+```
+
+### 5. 声明口径：`强化` 的守卫那一格 → `06_第一阶段垂直切片/04_指令总表.md §七`
+
+```text
+真源现状（那一行原文）：「| `强化 <装备>` | 有材料 | 强化 |」—— 守卫只写了「有材料」，
+          而 P3 玩家实测：人站在**骨田（野外）**敲 `强化 <装备>` 照样把报价与缺料摊出来
+          （同一批里 `铁匠铺` 却正确拦下）⇒ 规则不一致。本波把实现侧收成「必须在铁匠铺那一站」
+          （走唯一执行面 `cmds_ast.town_gate`，那一站从 `npcs.funcs` 的 `smith` 现取）。
+⚠️ **声明侧（`content/data/commands.json::enhance.guard_desc`）本波没动** —— 它现在是「有材料」＝
+   与 04 那一行**逐字一致**；真源改成「在铁匠铺且材料够」之后，跟着改那一格并把它数进
+   `probe_cmds ⑰` 的地点覆盖面（`_LOCWORDS17` 那一族）。
+   （本波只在 `scripts/probe_fix4_combat.py` 里打了一行**登记**，没硬锁 —— 与 `probe_shop ⑯`
+     对 `05 §七` 那行的做法同一个形状。）
+```
+
+## §二 逐条处置（修了什么 / 真源行 / 判据 / 反证）
+
+| # | 报告 | 处置 | 落点 | 判据（`scripts/probe_fix4_combat.py`） |
+|---|---|---|---|---|
+| 1 | **P3 BUG-1** 掉落对同一玩家永远一样 | **修** | `cmds_battle.drop_seed()` + `_settle`（计数格 `flags.drops_seen[怪]`） | ① 1a 两态（老式子 8 次全同 / 新式子 ≥2 种）· 1b 真跑 20 场（计数走到 20 · 序列 ≥2 种 · **「硬骨」真刷得出来**）· 1c 静态（老种子字面量没了） |
+| 2 | **P3 BUG-2** `强化` 没有地点门禁 | **修** | `cmds_recipe.enhance` 顶部 `town_gate(p, _func_node("smith"))`（空参那一支也拦） | ② 真宿主三档（野外 / 错站 / 站对了）· 档逐字不动 · 反证 = ast 扫 `enhance` 真调 `town_gate` |
+| 3 | **P3 BUG-3** 精英奖励 = 普通 | **修** | `rules/elite.json::reward` + `affix.reward_of` + `_settle`（**四个** `_settle` 调用点全透词条 —— `后撤`/`逃跑` 那两处原先漏了，同一个精英两种价） | ③ 三档（没词条全 1 / 有词条读表 / **表缺 ⇒ 抛**）· 3b 同种子两臂逐数对账（9/9 → 14/14）· 掉落多一轮（真跑 8 场 7 场 ≥2 件）· 反证 = 田鼠 `role_key == normal`（光靠它永远不触发）· 3c 静态 ast（`_settle` 4 个调用点都带 `affixes=`） |
+| 4 | **P1 BUG-8** 满血吃药照扣 | **修** | `cmds_recipe.item_use`（满血 ⇒ 回 `SYS_USE_FULL`、**不 `_take`**） | ④-a 满血（药一件没少 · 档逐字不动）· ④-b 半血两态（药真扣 · 血真回）· 反证 = 那一行在 `_take` **之前** |
+| 5 | **P3 BUG-4** 装备不能卖 | **修** | `shop.sell_price_of` + `rules/shop.json::sell_gear` + `cmds_more.item_sell` + `cmds_places.junk_shop` | ⑤ 真卖一件（价 = 表现算）· 逐件对账（97 件装备全 > 0 · 5 件非装备仍 0）· 量级 < 一瓶药 · 反证 = 拿掉那一块 ⇒ **抛** / 老口径给 0 |
+| 6 | **P2 体验** `自动` 空回话 | **修** | `cmds_battle.auto_battle`（没敌人 ⇒ 战斗族那一句） | ⑥ 两态（`自动` = 与 `打断` 同一句 · `攻击` 那一句**一字没动**） |
+| 7 | **P1 BUG-9 ① / P4 E-11** 一敲就是一场、界面却像逐回合 | **只做 ①：界面改诚实**（② 方案见 §三） | `cmds_ast.help_cmd` 尾巴一句 + `SYS_HELP_BATTLE_NOTE` | ⑦ 真敲 `帮助` ⇒ 末行逐字 == 槽位渲染 · 反证 = 那行**没带来一个新『』词**（帮助里列的指令一条没多、一条没少） |
+
+**没做的（与理由）**
+
+* **战斗分回合**（把它变成真·逐手出招）：**本轮不重写** —— 那不是「修 bug」而是「换玩法骨架」，
+  且它对**每一条**战斗指令、`战斗日志`、组队那条线、以及全部战斗配平探针都有影响。
+  本轮只把界面承诺改诚实（上表第 7 条），方案见 §三。
+* **`攻击 田鼠` 不吃参数**（P3 体验）：那是**声明**问题（`04 §五` 那条的 patterns 只认「攻击」），
+  改它要动 `content/data/commands.json` 的触发词 ⇒ 与真源表逐字对账的那几条探针（`probe_cmds ②`）
+  一起动 —— 不属本波那六条，登记给主线（`攻击` 现在回的是通用兜底句，能敲通，不至于卡死）。
+* **掉落行写「拾取：」与 `拾取` 命令撞名**（P3 体验）：改的是一句**玩家可见文案**
+  （`COMBAT_DROP_ROW`），而那一格是 `17_文案收口口径` 里已有的真源行 ⇒ 要改先改真源，本波不越权。
+* **死亡掉经验那句「10%」与实际扣款不一致**（P3 BUG-7）：`SYS_DEATH_QUEST_LOSS` 同属已有真源行，
+  且口径涉及「扣到 0 为止」要不要写进句子 ⇒ 登记给主线，本波不动。
+
+## §三 ★ 战斗「一场一指令」分段化方案（**本轮不重写** —— 给主线的可执行方案）
+
+### 3.0 现状（一句话 + 逐件取证）
+
+```text
+今天：`攻击`/`防御`/`打断`/`技能 <名>`/`换武器`/`自动` 六条**各等于「打完整场」** ——
+      它们共用 `content/cmds_battle._open_and_hand()`：
+        _meet()（遇敌）→ `schedule.advance()`（推到你的决策点）→ `human_act()`（你这一手）
+        → `b.auto_run()`（**之后全自动打完**）→ `_settle()`（落账）
+⇒ 玩家在一条指令里把命丢掉：中途**没法吃药、没法跑**（`防御` 只能是「开场那一手」）。
+⇒ `帮助` 那 11 条战斗词读起来是逐回合出招，实际只有「第一手」有区别（P1 BUG-9 / P2 BUG④ / P4 E-11）。
+```
+
+### 3.1 好消息：**分段推进的骨架已经有一个了**（不是从零开始）
+
+```text
+`content/instance.py`（B3-26 · 547 行）本来就是**「一场跨多条指令」**那一层：
+  · 「场」 = members / pick / affixes / `battle`（引擎 `Battle.to_state()` 的存档态）/
+            logs / turn / turn_time —— 存在**按群的一张表**里（`persistence.group_get/group_set`）
+  · `route_needed(env, uid)` —— 这一条指令要不要走「场」
+  · `take_turn(...)` —— 真走：轮到谁 / 没轮到 ⇒ 等待提示 / 轮到 ⇒ 收下这一手 / 超时 ⇒ 自动防御
+  · 引擎**零改动**：一场跨多条指令靠引擎自己的 `serialize.to_state / from_state` 往返
+              （面板 / ct / 待发槽 / 效果都随档走）；「谁该动」= 存活者里 ct 最小者
+  · 六条战斗指令**已经在同一行**接它（`cmds_battle.attack/interrupt/defend/skill/…` 各自的
+    `INST.route_needed` 那一支）
+⇒ 现在这条路**只对「有队的人」开**（`members_of` 单人回 `[uid]` ⇒ `route_needed` 回 False，
+  直接走单人那条老路）。**分段化 = 把这扇门对单人打开**。
+```
+
+### 3.2 要改什么（四刀 · 全部在内容侧 · 引擎零改动）
+
+```text
+① 「场」的键从「群」放宽到「群或单人」          `content/instance.py`
+   —— 存储那一层本来就是 `persistence.group_get/group_set(group_id)`；单人没有群 ⇒
+      键取 `"solo:" + uid`（**同一个存储面、只是键换了一个**，不新开表）。
+   —— 代价：`route_needed` 单人从 False 变 True ⇒ `probe_instance ⑤`（单人路径逐字基线）
+      **从「逐字相同」改成「分段化之后的新基线」**（这一条要跟账 —— 见 §四）。
+
+② 单人那一场的「窗口」不设倒计时                      `content/rules/instance.json`
+   —— 多人那 45 秒是「等别人出手」；单人没有「别人」⇒ 无限期停在你的决策点，
+      等**下一条战斗指令**（`防御` / `技能 <名>` / `换武器` / 用物 / `后撤` / `逃跑` / `攻击`）。
+   —— 今天场里那个 `turn_time` 超时自动防御那一支对单人**不启用**（加了反而变成
+      「你半天不动 = 被代打」，与本意相反）。
+
+③ 结算与收尾挪到晚一步                        `content/cmds_battle._settle` / `instance._finish`
+   —— `_settle`（钱 / 经验 / 掉落 / 死亡 / 战斗日志）现在在**每条指令**跑完就打；
+      分段化之后它只能在**这一场真结束**（result 有值）那一次跑一次。
+      实现上是把 `_settle` 的调用点从 `_open_and_hand` 挪到「场结束」那一支
+      （`instance._finish` 已经在那儿了 —— 多人那条路就是这么做的）。
+
+④ 界面把「这一手」与「这一场」分开说             `texts` 槽位 + `SYS_HELP_BATTLE_NOTE`
+   —— 每条战斗指令的回话从「✔ 打完了。」变成「（这一手落了 —— 战斗还在继续 · 敲『攻击』/『防御』…）」；
+      打完那一场才出 `COMBAT_DONE` 与结算。**这一条是本波那句 `SYS_HELP_BATTLE_NOTE`
+      撤掉的条件**（界面上的承诺一旦与现状一致，那句忠告就多余了）。
+```
+
+### 3.3 成本（按「一个人一轮」估 · 本包现有的速度）
+
+```text
+① 键那一刀           0.5 天   （`instance.py` 里那三四行 + `probe_instance` 基线重锚）
+② 单人窗口           0.5 天   （`route_needed` 的判据 + `rules/instance.json` 那一格 + 判据）
+③ 结算挪位           1   天   （最险的一刀：`_settle` 现在被 6 条指令共用，
+                              挪错 = 掉落/经验重复发或漏发 ⇒ 要有「一场只结一次」的锁与判据）
+④ 文案与手感         1   天   （6 条指令的回话分「一手 / 一场」两态 + 那 11 条帮助词 + 撤忠告句）
+⑤ 配平重跑 + 全量探针 1   天   （战斗时长变了 —— 玩家能中途吃药/后撤 ⇒ 现有战斗配平要重跑：
+                              `scripts/balance_*.py` 那三支 + `probe_combat` / `probe_monsters`）
+———————————————————————————————————————————————
+合计                 4 天（一个人）≈ **1 周**（含一轮返工与真机试玩验证）
+```
+
+### 3.4 风险（三条 · 每条都给了退路）
+
+```text
+⚠️ ① 「一场只结一次」的账：今天 `_settle` 是**每条指令**都跑一遍（因为每条都是一场）。
+      分段化之后它变成「场结束时跑一次」—— 中间任何一条路（超时 / 掉线 / `撤退` / 换地图）
+      漏掉收尾 ⇒ **钱 / 经验 / 掉落凭空消失**。退路：`_settle` 的入口加一个
+      `flags.last_settled = <场 id>` 幂等键（重复调用直接 no-op），并把「这一场到底结了没有」
+      做成 `probe_fix4_combat` 的同族判据（两态：一场结一次 / 同一场敲十手只结一次）。
+
+⚠️ ② 战斗难度与手感整体上移：中途能吃药/后撤 ⇒ **所有现存战斗都变简单**；
+      Boss / 层主那几场的「拖时间」设计（`09_ §四` 纪律「只加怎么打不加打多久」）也要重新过一遍。
+      退路：那一批**同时**落一条配平门禁（同类战斗的平均手数 / 存活率），
+      不许「玩法变了、数没重跑」（`scripts/balance_frontier.py` 现成的口径）。
+
+⚠️ ③ 与组队那条线打架：单人也要「场」之后，`instance.py` 那张表**同时**跑单人与多人 ——
+      两个玩家在同一群里各打自己的野怪会共用一个 `group_id` 键空间。
+      退路：键严格遵守 §3.2①（`solo:<uid>` vs `<group_id>`），并给 `route_needed`
+      加一条判据：**同群的两个人各自单人开一场 ⇒ 两张场互不干扰**（今天多人那条路
+      已经按「名单」分场，单人键与它天然不撞）。
+```
+
+### 3.5 这一波**只做**的两件小事（已落）
+
+```text
+① `SYS_HELP_BATTLE_NOTE`（帮助表尾巴那句「一敲就是一场」）—— 界面上的承诺改诚实（§一·4）
+② 本方案（§三）—— 交给主线排期，本波**不动战斗骨架一行**
+```
+
+## §四 门禁与基线的正规推进（动了哪几支判据 · 为什么不是「改判据迁就改动」）
+
+```text
+1) scripts/probe_instance.py ⑤ 的**冻结基线**（`scripts/_baseline_instance_solo.json`）：
+   第三次刷新（前两次是 B4-8 与 P-51，同样是**有意**的口径变更 —— 那一节的注释里跟账）。
+   理由：掉落种子加了「这一次数」这一维 ⇒ 同一段单人脚本里的**两次 `攻击`**
+   不再掉同一件。新旧两份 `--dump` 逐行 diff（**只有那三行掉落行 + `bag` 那一格变了**）：
+     旧（`3ee9148` 那棵树）：row0 `拾取：🦴 硬骨 ×2` · row2 `拾取：🦴 硬骨 ×2` · row3 `拾取：🦴 硬骨 ×2`
+     新：                    row0 `拾取：🔩 铁渣 ×2` · row2 `拾取：🔩 铁渣 ×2` · row3 `拾取：🧪 伤药 ×1`
+   ★ 那份旧基线**自己就写着 P3 BUG-1 的铁证**（三次战斗全掉同一件）—— 这不是「判据失效」，
+     是「判据抓到了要改的东西，改完必须换锚」。新锚之外另加常驻判据（`probe_fix4_combat` ①）。
+   ★ **不是放宽**：`probe_fix4_combat ①` 判的是「序列**真的会变** + 强化材料刷得出来」，
+     比原来那条（只对「逐字相同」）**更贴口径**。
+
+2) scripts/probe_sources.py `battle_try()`：那份「预扫谁打这只怪会出这件」的种子**镜子**
+   原来自己拼 `uid:怪 id`（与生产端同形的时代还能用）⇒ 改成调**生产端那一口**
+   `cmds_battle.drop_seed(uid, 怪, 0, 0)`（唯一一口，代码里不再有第二处拼种子）。
+   ★ 原来那条判据（「每件东西都有出产渠道」）标准**没变**：32 个可达节点 · 739 条产出口，改后仍全绿。
+
+3) scripts/probe_pick.py / scripts/probe_recipes.py / scripts/probe_quests.py：
+   这三支里有**真敲 `强化`** 的档 ⇒ 跟着地点门禁，把那些档的脚下从 `wt_gate_n` 挪到
+   **铁匠铺那一站**（节点从 `npcs.funcs` 的 `smith` **现取**，不手写 id）。
+   判据本身一条没删（`probe_pick` 25/25 · `probe_recipes` 全绿 · `probe_quests` 45 条全绿）。
+
+4) scripts/probe_cmds.py：
+   · `卖出` 那一档从「装备 ⇒ 不收」改成「装备 ⇒ 按收价表现算的价**真收到**」（回话 + 钱 + 背包三处对账）；
+   · `旧货` 那一档**加了一档**（包里一件装备）+ 逐件镜像改走 `sell_price_of`（收价唯一一口）
+     与 `loot.label_of`（名字那一口）—— 判据是**加强**（多了一档），不是放宽。
+
+5) content/data/texts.json：新增两条槽位（§一·3 / §一·4）。
+   ★ 这两条**不在** `17_文案收口口径` 里 ⇒ `rebuild_syscopy` 不会动它们（那个生成器只**新增**
+     文档里有、表里没有的槽位；已存在的必须逐字相同）。真源行一落，重跑生成器应当报「无新增」
+     （两条已存在且一致）—— 这也是它们「落对了」的检查。
+```
+
+## §五 可复现命令（本波）
+
+```bash
+WT=C:/Users/yuyu/ast-wt/f4
+PY=C:/Users/yuyu/AppData/Local/Programs/Python/Python312/python.exe
+
+# ① 生成器（改了 rebuild_shop.py：+ 装备收价那一块）—— 幂等自检
+cd $WT && GWEN_ENGINE=C:/Users/yuyu/framework-engine "$PY" scripts/rebuild_shop.py      # 连跑两次：第二次应报「无变化」
+
+# ② 本波那一支（新 · 第 45 支）
+GWEN_ENGINE=C:/Users/yuyu/framework-engine "$PY" scripts/probe_fix4_combat.py
+
+# ③ 被本波碰到判据的那几支（逐个）
+for f in probe_cmds probe_pick probe_quests probe_recipes probe_sources probe_instance probe_shop probe_drops probe_monsters probe_combat probe_texts probe_copy; do
+  GWEN_ENGINE=C:/Users/yuyu/framework-engine "$PY" scripts/$f.py >/dev/null 2>&1 && echo "$f PASS" || echo "$f FAIL"
+done
+
+# ④ 基线重锚（**只有在有意改掉落口径时才跑** —— 跑之前先把差异 diff 出来跟账）
+GWEN_ENGINE=C:/Users/yuyu/framework-engine "$PY" scripts/probe_instance.py --dump > scripts/_baseline_instance_solo.json
+
+# ⑤ 全量（45 支）
+bash C:/Users/yuyu/AppData/Local/Temp/w10/gorun.sh $WT f4-final
+```
+
+## §六 改动文件清单（显式 · 本波）
+
+```text
+content/cmds_battle.py      drop_seed()（唯一一口）· _settle（gold/exp ×精英倍数 · 掉落按次数+轮 ·
+                            同名合并）· auto_battle（没敌人那一句）
+content/cmds_recipe.py      enhance（地点门禁）· item_use（满血不吃药）
+content/cmds_more.py        item_sell（收价走 shop.sell_price_of）
+content/cmds_places.py      junk_shop（收价同一个口）
+content/cmds_ast.py         help_cmd（尾巴那一句诚实说明）
+content/affix.py            reward_of()
+content/shop.py             sell_price_of()
+content/rules/elite.json    + reward（钱 ×1.5 · 经验 ×1.5 · 掉落 2 轮）
+content/rules/shop.json     + sell_gear（生成器落盘）
+content/data/texts.json     + SYS_USE_FULL · + SYS_HELP_BATTLE_NOTE
+scripts/rebuild_shop.py     + 装备收价那一块（SELL_GEAR_* 三个常量 + 落进 shop.json）
+scripts/probe_fix4_combat.py  **新**（第 45 支 · ①–⑦ 七节）
+scripts/probe_instance.py   ⑤ 的基线跟账注释（第三次刷新）
+scripts/_baseline_instance_solo.json  重锚（有意口径变更 · diff 已跟账）
+scripts/probe_sources.py    battle_try 的种子镜子改走生产端那一口
+scripts/probe_pick.py       两处真敲 `强化` 的档挪到铁匠铺那一站（+ FORGE 从域里现取）
+scripts/probe_recipes.py    mk() / 非装备那一档挪到铁匠铺那一站
+scripts/probe_quests.py     _act_enhance 的档挪到铁匠铺那一站
+scripts/probe_cmds.py       `卖出` 装备那一档换锚（收价表现算）· `旧货` 加一档（装备）
+_notes.md                   本文件
+```
+
+★ 一句话交给主线：**六条真错都带「正例 + 反证」落进 `probe_fix4_combat`（45 支全绿）；
+战斗分段化没动骨架一行（只把界面说诚实 + 方案在 §三），它值 1 周、要单开一批、配平必须跟着重跑。**

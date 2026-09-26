@@ -194,6 +194,15 @@ async def smith(env, sink, uid, player):
 # ══════════════════════════════════════════════════════════════
 async def enhance(env, sink, uid, player):
     p = _p(player)
+    # ★ P3 BUG-2（本波 f4）：**地点门禁** —— 强化是铁匠铺的服务，本该与『铁匠铺』同口径。
+    #   原先这一条一句都不判脚下 ⇒ 人站在骨田（野外）敲 `强化 <装备>` 照样把报价与缺料
+    #   摊出来（同一批里『铁匠铺』却正确拦下 —— 规则不一致）。守卫走唯一执行面
+    #   `cmds_ast.town_gate`，那一站从 `npcs.funcs` 的 `smith` 现取（不写死节点 id；
+    #   与 `cmds_recipe.smith` 逐字同一条口）。空参那一支（报价表）也一并拦 —— 它就是那张表。
+    line = town_gate(p, _func_node("smith"))
+    if line:
+        yield line
+        return
     want = _arg(env)
     if not want:
         yield T("SYS_ENHANCE_SHOP")
@@ -337,6 +346,12 @@ async def item_use(env, sink, uid, player):
             yield _line
             return
         hp0 = int(p.get("hp") or mx)
+        # ★ P1 BUG-8（本波 f4）：**满血不吃药** —— 原先 `使用 伤药`（112/112）照样把药吃掉、
+        #   只回一句「生命 +0（112/112）」：24 铜板一次，新手钱很少（实测同一档踩了两次）。
+        #   现在满血 ⇒ 照实说一句、**道具一件不动**（不扣、不落档）；缺那一句就退回现在这毛病。
+        if hp0 >= mx:
+            yield T("SYS_USE_FULL", name=rec.get("name", iid))
+            return
         hp = min(mx, hp0 + gain)                 # ★ 回血封顶：不许超过上限
         p["hp"] = hp
         _take(p, iid, 1)                         # ★ 用了就消耗（减到 0 由 _take 摘掉条目）

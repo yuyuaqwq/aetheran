@@ -271,8 +271,11 @@ def gather_try(iid, s, levels=()):
 def battle_try(iid, s):
     """真跑战斗：站到那只怪的栖息地真节点上敲「攻击」，扫人 × 场次，直到该 id 真进背包。
 
-    · 掉落那一步是 `uid:怪 id` 恒定 ⇒ 先按**生产函数**挑出「这个人打这只怪会出这件」的人，
-      再拿真 handler 打一场验它（不是对表：验的是「真进背包」）。
+    · 掉落那一步的种子走**生产端那一口** `content/cmds_battle.drop_seed(uid, 怪, 第几次, 轮)`
+      —— ★ P3 BUG-1（本波 f4）之前这里是**自己拼的一份**（`uid:怪 id`），与生产端同形的时代
+      还可以，但那种子不含次数 ⇒ 同一只怪对同一个人每次都掉同一件；现在生产端多了「第几次」
+      与「第几轮」两维 ⇒ 这份镜子必须跟生产端**同一口**（自己拼一份就是两处口径，K48 同族）。
+      下面每一次真打都是**新档**（`_fresh`）⇒ 那一只的「第几次」每次都是 0、轮 0 ⇒ 与预扫同种子。
     · 遇敌那一挑**不跟人走**（`pick_encounter(seed=None)` 是真随机）⇒ 同一人多打几场，
       场次封顶 40。
     """
@@ -287,7 +290,7 @@ def battle_try(iid, s):
     for i in range(400):
         uid = "u_srcb%03d" % i
         drops = LT.roll_pool(s["pool"], level=lv,
-                             rnd=random.Random("%s:%s" % (uid, s["where"])))
+                             rnd=random.Random(CB.drop_seed(uid, s["where"], 0, 0)))
         if any(d["id"] == iid for d in drops):
             uids.append(uid)
         if len(uids) >= 3:
@@ -296,7 +299,8 @@ def battle_try(iid, s):
     for uid in uids:
         for _ in range(BATTLE_ATT):
             p = _fresh(spot[0], spot[1], lv)
-            # ★ 别给 uid 加后缀：`attack` 的掉落种子是 `uid:怪 id`，加了后缀就与上面那次抽签错位
+            # ★ 别给 uid 加后缀：`attack` 的掉落种子由 `drop_seed(uid, 怪, 第几次, 轮)` 现算，
+            #   加了后缀就与上面那次抽签错位
             run_ag(CB.attack(None, None, uid, p))
             tries += 1
             if _hit(p, iid):

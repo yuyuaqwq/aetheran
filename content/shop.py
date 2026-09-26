@@ -81,6 +81,47 @@ def price_of(rec: dict, p=None, mul=None) -> int:
     return gold
 
 
+def sell_price_of(rec: dict, iid: str = "") -> int:
+    """★ P3 BUG-4（本波 f4）：**铺子收一件东西给多少** —— 唯一一口（『卖出』与『旧货』都走它）。
+
+    三档，fail-closed：
+      · 域里写了 `price`（> 0）⇒ **就是它**（B3-12 落的那一路，一个字不动）；
+      · 域里没写价、但**是装备**（有域里那个 `slot` —— 六格 ASCII）⇒ 按 `sell_gear` 现算：
+        基础价（品阶）× 等级档（`items.req.level`，读口 = `loot._req_level`，不另取一格）；
+      · 其余（信物 / 线索 / 没价的东西）⇒ **0** = 不收（调用方回 `SYS_SELL_NOPRICE`）。
+
+    病根（P3 BUG-4 · 玩出来的真话）：`拾荒者的短刃` 这类**掉出来的装备**域里一个价都没有
+    ⇒ 收价恒 0 ⇒ 铺子永远回「这东西没价」，打到的多余装备只能占背包（实测三把同名剑）。
+    ★ 与真源的关系：`05 §七` 写的是「钱从哪来：悬赏 + 卖材料 + 卖旧物（**不靠卖装备**）」——
+    那是**取向**（装备不是钱的来源），不是「装备不能卖」；本表的取值就照那条取向取**小价**
+    （见 `sell_gear` 的 `_src`，另登记为真源待补行 · 本分支 `_notes.md`）。
+    """
+    r = rules()
+    if iid:
+        rec = rec or LT.rec_of(str(iid))
+    base = (rec or {}).get("price")
+    if isinstance(base, (int, float)) and not isinstance(base, bool) and base > 0:
+        return int(base)
+    g = r.get("sell_gear")
+    if not isinstance(g, dict):
+        raise RuntimeError("铺子口径表缺 `sell_gear` 那一块：%s（跑 scripts/rebuild_shop.py）" % RULES)
+    if not str((rec or {}).get(str(g.get("slot_field") or "")) or ""):
+        return 0                                     # 不是装备 ⇒ 不收（不编一口价出来）
+    q = str((rec or {}).get("quality") or r.get("quality_default") or "")
+    by_q = g.get("base_by_quality") or {}
+    if q not in by_q:
+        raise RuntimeError("品阶 %r 不在收价表里（%s）" % (q, sorted(by_q)))
+    lv = LT._req_level(rec or {})                    # 等级那一格：唯一读口（P-60）
+    mul = None
+    for band in (g.get("level_mult_by_band") or []):
+        if int(band.get("min_lv") or 0) <= lv <= int(band.get("max_lv") or 0):
+            mul = float(band.get("mul") or 0)
+            break
+    if mul is None:
+        raise RuntimeError("等级 %d 不在收价表的档里（%s）" % (lv, g.get("level_mult_by_band")))
+    return max(1, int(round(float(by_q[q]) * mul)))
+
+
 def goods(p=None) -> list:
     """柜上有什么 —— `[{"id", "rec", "gold"}, …]`（按 items 域自己的顺序，不重排）。
 
