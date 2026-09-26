@@ -194,20 +194,45 @@ def sync_bag(p: dict) -> list:
     return out
 
 
-def note_kill(p: dict, mid: str) -> bool:
-    """打过一只怪（★ 输了也算见过 —— 见过就是见过，由调用方决定记不记）。"""
+def note_seen(p: dict, mid: str) -> bool:
+    """遇上一只怪 → **进谱**（返回这一条是不是头一回进来）。
+
+    ★ 真源 `00_总纲/14_图鉴四谱口径_v1.md §一`：「怪物 —— 打过一次（输了也算「见过」——
+      见过就是见过）」⇒ **交上手就进谱**，逃跑 / 战死照样进（这一段一个字没变）。
+
+    ★ 与 `note_kill` 的分工（试玩报告 P1 BUG-1 / P3 F3「逃跑也算打掉」）：
+      进谱（见过）与**击杀数**是两回事 —— 改前两个口径共用 `note_kill` 一处、而且是在
+      **开打之前**就记一笔 ⇒ 一场没打完（逃跑 / 阵亡）也算「打掉过一只」，委托 / 彩蛋 /
+      称号那些 `kill` 条件全部跟着错（零击杀白交悬赏）。现在：
+        · 进谱（见没见过）= 本函数，**在开打那一下**记，`kills` 从 0 起；
+        · 击杀（打掉过几只）= `note_kill`，只在**真打掉**那一下记（`_settle` 的 `victory`）。
+    """
     mark_here(p)
     b = _books(p)
     if mid not in book("monster"):
         return False
-    rec = b["monster"].get(mid)
-    if rec:
-        rec["kills"] = int(rec.get("kills") or 0) + 1
-        _foot(p)["kills"] += 1
+    if b["monster"].get(mid) is None:
+        b["monster"][mid] = {"day": today(p), "kills": 0}     # ★ 见过 ≠ 打掉过（击杀从 0 起）
+        return True
+    return False
+
+
+def note_kill(p: dict, mid: str) -> bool:
+    """**真打掉**一只怪 → 记一次击杀（返回这一条是不是头一回进谱）。
+
+    `books.monster[<怪>].kills` 就是「打掉过几只」—— 委托 / 彩蛋 / 称号的 `kill` 条件
+    读的都是这一格（`kills_of`），所以它**只许在真打掉那一下加**（见 `note_seen` 抬头）。
+    """
+    first = note_seen(p, mid)
+    b = _books(p)
+    if mid not in book("monster"):
         return False
-    b["monster"][mid] = {"day": today(p), "kills": 1}
+    rec = b["monster"].get(mid)
+    if rec is None:
+        return False
+    rec["kills"] = int(rec.get("kills") or 0) + 1
     _foot(p)["kills"] += 1
-    return True
+    return first
 
 
 def note_read(p: dict, poi_id: str) -> bool:

@@ -344,11 +344,16 @@ async def _settle(env, p, uid, pick, ms, res, logs, hp_after, seen, player, affi
     """这一场的落账（攻击 / 六条战斗指令**共用**：钱 / 经验 / 掉落 / 死亡 / 战斗日志）。
 
     ★ B3-24：战斗日志里那格怪名用**精英显示名**（带 `† … †`）；没词条时 = 原样名。
+
+    ★ 试玩 P1 BUG-1（本波 fxb）：**击杀只在真打掉这一下记** —— 进谱那半截（「见过」）
+      已经由开打前的 `CX.note_seen` 记过了（真源 `14 §一`：输了也算见过）；
+      逃跑 / 战死这一支**一格击杀都不加**（改前两者共用一次记账 ⇒ 零击杀白交悬赏）。
     """
     # ★ B3-24：这一场记进日志时用的怪名（精英带 `† … †`；没词条 = 原样名）
     _ename = AFFIX.display_name(str(ms[pick[0]].get("name", pick[0])), list(affixes))
     yield "━" * 12
     if res == "victory":
+        CX.note_kill(p, pick[0])                   # ★ 真打掉一只 ⇒ 才记这一笔击杀
         yield T("COMBAT_DONE")
         # 掉钱（第一版：按怪等级给，普通 3×lv / 精英 8×lv / 头目·层主·Boss 20×lv）
         # ★ B3-6b-2d-keys-2：分档比 ASCII `role_key`（原先比中文枚举「精英 / 头目 / 层主 / boss」）
@@ -457,7 +462,7 @@ async def _open_and_hand(env, p, uid, player, head, hand=None, action=None, skil
         yield line
     if head:
         yield head
-    seen = CX.note_kill(p, pick[0])
+    seen = CX.note_seen(p, pick[0])
     _b, res, logs, hp_after = _run_hand(p, pick, ms, affixes=affixes, hand=hand,
                                         action=action, skill=skill,
                                         party=_party_now(env, p, uid), uid=uid)
@@ -496,7 +501,7 @@ async def attack(env, sink, uid, player):
     # ★ B3-4：怪身上挂着「先开口」的台词时，它先说话（数据驱动 —— 本文件不写文案）
     for line in encounter_lines(ms[pick[0]], p):
         yield line
-    seen = CX.note_kill(p, pick[0])            # ★ 打过一次就进谱（输了也算「见过」）
+    seen = CX.note_seen(p, pick[0])    # ★ 交上手就进谱（输了也算「见过」—— 14 §一）；击杀在结算那一下记
     # ★ B3-25：人数 = **进战那一刻现算**（在队 + 同节点 + 活人，含自己）——单人 = 1，
     #   与 B3-17 接线之前逐字相同；它只对「团队内容」那几只怪生效（Boss 的面板按人数缩放）。
     _ids, _hm = AFFIX.spawn_plan(pick[0], list(affixes))
@@ -618,7 +623,7 @@ async def retreat(env, sink, uid, player):
     if caster is not None and b.result is None:
         _sub, _ended, _who = b.human_act("retreat", None, caster)
         logs.extend(str(x) for x in (_sub or []))
-    seen = CX.note_kill(p, pick[0])
+    seen = CX.note_seen(p, pick[0])
     b.auto_run(logs)
     pa = (b.sides.get(CB.PLAYER_SIDE) or [{}])[0]
     for line in _fmt([str(x) for x in logs]):
@@ -866,7 +871,7 @@ async def swap_weapon(env, sink, uid, player):
         yield line
     # ★ 「你换上了…」由**这一手落地那一刻**说出来（`hand.lines` 走 B 段那条路）——
     #   不在抬头处重复一遍（换手本身就是这一手，报两次是两句话一件事）。
-    seen = CX.note_kill(p, pick[0])
+    seen = CX.note_seen(p, pick[0])
     _b, res, logs, hp_after = _run_hand(p, pick, ms, affixes=affixes, hand=hand, uid=uid)
     for line in _fmt(logs):
         yield line
@@ -1049,7 +1054,7 @@ async def flee(env, sink, uid, player):
     if caster is not None and b.result is None:
         _sub, _ended, _who = b.human_act("retreat", None, caster)
         logs.extend(str(x) for x in (_sub or []))
-    seen = CX.note_kill(p, pick[0])
+    seen = CX.note_seen(p, pick[0])
     b.auto_run(logs)
     pa = (b.sides.get(CB.PLAYER_SIDE) or [{}])[0]
     for line in _fmt([str(x) for x in logs]):

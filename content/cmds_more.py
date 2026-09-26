@@ -35,9 +35,9 @@ from __future__ import annotations
 from .cmds_ast import _data, _p, _save, T, name_with_title, _cls_label
 from .town import _func_node, town_gate
 from . import argv as AV
-from .cmds_quest import _done, _mine, _quests, _shadow, _unmet
+from .cmds_quest import _done, _mine, _quests, _shadow, _unmet, _no_wire_line
 from .cmds_recipe import _have, _take
-from .cmds_gear import affix_lines, ambig_line, stat_label
+from .cmds_gear import affix_lines, ambig_line, stat_label, worn_do_line, worn_pick
 from . import alloc as ALLOC
 from . import codex as CX
 from . import eggs as EG
@@ -161,6 +161,9 @@ async def board_show(env, sink, uid, player):
     yield T("SYS_BSHOW_REWARD", exp=x.get("reward_exp"), gold=x.get("reward_gold"))
     for line in _unmet(p, x):
         yield "  " + line
+    _nw = _no_wire_line(x)             # ★ fxb②：这条的完成条件还没接线 —— 单子上照实标出来
+    if _nw:
+        yield "  " + _nw
     if k in _done(p):
         yield T("SYS_TRADE_MARK_DONE")
     elif k in _mine(p):
@@ -229,14 +232,24 @@ async def item_show(env, sink, uid, player):
     if not iid:
         if cands:                      # ★ B4-20：同名好几件 ⇒ 照实说，不替玩家挑
             yield ambig_line("item_show", want, cands)
-        else:
-            yield T("SYS_GEAR_IN_BAG", name=want)
-        return
+            return
+        # ★ fxb⑦（试玩 P1 BUG-3）：**穿在身上的那件也摊得开** —— 查看是只读的，
+        #   没有任何理由回一句「背包里没有」（玩家就会以为装备丢了）。
+        iid, rec, cands = worn_pick(p, want)
+        if not iid:
+            if cands:
+                yield ambig_line("item_show", want, cands)
+            else:
+                yield T("SYS_GEAR_IN_BAG", name=want)
+            return
     detail = str(rec.get("kind") or "")
     if rec.get("quality"):
         detail = "%s · %s" % (detail, rec.get("quality"))
+    _n = int((p.get("bag") or {}).get(iid) or 0)
+    if _n <= 0 and iid in LT.worn_ids(p):
+        _n = 1                          # ★ fxb⑦：身上那一件也算「你有 1 件」（不然印「×0」）
     yield T("SYS_ITEM_HEAD", name=rec.get("name") or iid, icon=rec.get("icon") or "",
-            detail=detail, n=int((p.get("bag") or {}).get(iid) or 0))
+            detail=detail, n=_n)
     for line in affix_lines(rec):
         yield line
     if rec.get("desc"):
@@ -276,7 +289,8 @@ async def item_drop(env, sink, uid, player):
     iid, rec = (_hits[0], LT.rec_of(_hits[0])) if _hits else (None, {})
     have = int((p.get("bag") or {}).get(iid) or 0) if iid else 0
     if not iid or have <= 0:
-        yield T("SYS_GEAR_IN_BAG", name=name)
+        # ★ fxb⑦（试玩 P1 BUG-3）：穿在身上的那件照实说「先卸下」（丢不了穿着的）
+        yield worn_do_line(p, name) or T("SYS_GEAR_IN_BAG", name=name)
         return
     n = min(int(n), have)
     _take(p, iid, n)
@@ -310,7 +324,8 @@ async def item_sell(env, sink, uid, player):
     iid, rec = (_hits[0], LT.rec_of(_hits[0])) if _hits else (None, {})
     have = int((p.get("bag") or {}).get(iid) or 0) if iid else 0
     if not iid or have <= 0:
-        yield T("SYS_GEAR_IN_BAG", name=name)
+        # ★ fxb⑦（试玩 P1 BUG-3）：穿在身上的那件照实说「先卸下」（卖不了穿着的）
+        yield worn_do_line(p, name) or T("SYS_GEAR_IN_BAG", name=name)
         return
     price = SH.sell_price_of(rec)
     if price <= 0:
@@ -488,8 +503,13 @@ async def stash(env, sink, uid, player):
         if not iid:
             if cands:                  # ★ B4-20：同名好几件 ⇒ 照实说，不替玩家挑
                 yield ambig_line("stash", name, cands)
-            else:
-                yield T("SYS_STASH_NONE", name=name)
+                return
+            # ★ fxb⑦（试玩 P1 BUG-3）：穿在身上的那件照实说「先卸下」（穿着的东西收不进箱子）
+            _worn = worn_do_line(p, name)
+            if _worn:
+                yield _worn
+                return
+            yield T("SYS_STASH_NONE", name=name)
             return
         bag = dict(p.get("bag") or {})
         move = _move(bag, box, iid, n)

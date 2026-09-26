@@ -191,6 +191,34 @@ def _in_bag(p, want, need_slot: bool = False):
     return LT.pick(sorted(p.get("bag") or {}), want, need_slot=need_slot)
 
 
+# ── ★ fxb⑦（试玩 P1 BUG-3）：穿在身上的东西，别的几条指令也要认得出来 ─────────────
+def worn_pick(p, want, need_slot: bool = False):
+    """名字 / id → **正穿在身上**的那一件（`(iid, rec, cands)`，与 `_in_bag` 同形）。
+
+    试玩报告 BUG-3：同一个东西，『对比』/『卸下』认得出它穿在身上，
+    而『强化 / 查看 / 卖出 / 存放 / 丢弃 / 使用』一律回「背包里没有」——
+    玩家把甲穿上以后想动它，被系统告知「你没有这东西」，且猜不到是「穿着的看不见」。
+    ⇒ 「身上那六格」与背包并列地进同一个查找口（`loot.worn_ids` + `loot.pick`，
+      同名几件照旧照实说、不替玩家挑）。
+    """
+    return LT.pick(LT.worn_ids(p), want, need_slot=need_slot)
+
+
+def worn_do_line(p, want) -> str:
+    """「它正穿在身上 —— 先『卸下』再动」那一句；认不出（没穿在身上）⇒ 空串。
+
+    ★ 唯一一口：那五条指令（强化 / 卖出 / 存放 / 丢弃 / 使用）认不认得出「穿在身上」
+      都问它 —— 认得出就照实说（名字 + 怎么脱，触发词从**声明**现取，代码里不写中文）；
+      认不出就回空串，调用方接着走自己那条「背包里没有」的老路（逐字节不变）。
+    """
+    iid, rec, _c = worn_pick(p, want)
+    if not iid:
+        return ""
+    nm = str(rec.get("name") or iid)
+    say = " ".join(x for x in (AV.usage("unequip"), nm) if x)
+    return T("SYS_GEAR_WORN_DO", name=nm, say=say)
+
+
 def ambig_line(key: str, want: str, cands) -> str:
     """「背包里有 N 件叫「X」的：普通 · 精制 —— 打『强化 X 精制』说清哪一件。」（唯一一口）
 
