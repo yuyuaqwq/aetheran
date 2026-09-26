@@ -263,13 +263,23 @@ import copy as _copy                                                  # noqa: E4
 from content import cmds_codex as CC                                  # noqa: E402
 
 
-class _E(object):               # 「端详」只要 env.text（真取参数）与 env.save（落档）
+class _E(object):               # 「端详」只要 env.text（真取参数）、env.save（落档）与分页那一口
     def __init__(self, text):
         self.text = text
         self.saved = 0
 
     def save(self):
         self.saved += 1
+
+    # ★ F6：旧物谱也走 `content/pager.py` 那一口了 ⇒ 桩要把这两格的**契约**补齐
+    #   （照引擎 `host/env.py::Env` 的签名；切页本体仍是引擎那两个纯函数，桩里不重造一份）
+    def page(self, raw=None, default=1):
+        from saintess_engine.command import paging as _PG
+        return _PG.parse_page(raw) if str(raw or "").strip() else int(default)
+
+    def page_items(self, items, page=1, per_page=10):
+        from saintess_engine.command import paging as _PG
+        return _PG.page_items(list(items), page, per_page=per_page)
 
 
 def _run(text, p, fn=None):
@@ -429,6 +439,73 @@ for _name in sorted(os.listdir(os.path.join(str(REPO), "content"))):
             _day_hits.append("%s:%d %s" % (_name, _i, _line.strip()[:46]))
 chk("★ 读**玩家档上那一格** `p[day]` 的只剩 `calendar.tick()` —— 日期戳全走 `day_now()`",
     [x for x in _day_hits if not x.startswith("calendar.py")] == [], str(_day_hits))
+
+# ══════════════════════════════════════════════════════════════
+# ⑮ ★ F6（QA P4 BUG-4 / P3）：旧物谱三行排版 + 端详能重看谱里那一条
+#    改前：未认出的**捡的**那件只出一句裸问号行（没有器物名 ⇒ 看不出是哪一件），
+#    紧跟着又把『端详』的物证句当谱条目贴一遍（同一件事写两行）。
+# ══════════════════════════════════════════════════════════════
+print("⑮ ★ F6：旧物谱三行排版（认出来 / 没认出·读的 / 没认出·捡的）+ 端详能重看")
+
+
+def _book_of(p, fn=None):
+    return _run("旧物谱", p, fn)
+
+
+# ① 捡的（未认出、没看过）：带**手上的名字**；还没看 ⇒ 没有「看出来了」那行
+_p15a = {"day": 1, "loc": "windmill_town", "node": "wt_gate_n",
+         "bag": {"unid_common": 1}, "books": {}, "foot": {}}
+CM.sync_bag(_p15a)
+_b15a = _book_of(_p15a, CC.codex_relic)
+_held15 = CM.held_name("unid_common")
+chk("★ 没认出·**捡的**那一条带上器物名（`%s` —— 玩家在背包里看见的就是它）" % _held15,
+    any(x == TX["SYS_CODEX_RELIC_UNKNOWN_HELD"]["value"].replace("{name}", _held15)
+        .replace("{hint}", BOOK["relic"]["unid_common"]["hint"]) for x in _b15a), _b15a)
+chk("★ 没看过 ⇒ 谱里那件只有问号那一行（没有「看出来了」那行）",
+    not any(EV_POOL in x for x in _b15a), _b15a)
+
+# ② 看过之后：物证句与问号行**说的是同一件事** ⇒ 不再贴第二遍（BUG-4 的直接病灶）
+_seen15 = _run("端详 %s" % _held15, _p15a, CC.relic_study)
+_b15b = _book_of(_p15a, CC.codex_relic)
+chk("★ 端详那一句照旧出得来（交互回话不受影响）",
+    TX["SYS_CODEX_RELIC_SEEN"]["value"].replace("{line}", EV_POOL) in _seen15, _seen15)
+chk("★ 同一件事不贴两遍：问号行已说过的物证句**不再**当谱条目贴一行",
+    not any(EV_POOL in x for x in _b15b) and any(x.startswith("？ ") for x in _b15b), _b15b)
+
+# ③ 反证（真源 `14_图鉴四谱口径_v1 §五`「没认出来时只显示一行问号（**名字不写**）」）：
+#    **读的**那几条仍然不写名字 —— 名字本身就是认出后的答案
+_p15c = {"day": 1, "loc": "windmill_town", "node": "wt_gate_n",
+         "books": {"relic": {"poi_stone_scripts": {"day": 1, "known": False}}}, "foot": {}}
+_b15c = _book_of(_p15c, CC.codex_relic)
+chk("★ 反证：没认出的**读的**那一条**不写名字**（真源 §五「名字不写」—— 拆掉的只是捡的那半边）",
+    any(x == TX["SYS_CODEX_RELIC_UNKNOWN"]["value"]
+        .replace("{hint}", BOOK["relic"]["poi_stone_scripts"]["hint"]) for x in _b15c)
+    and not any(BOOK["relic"]["poi_stone_scripts"]["name"] in x for x in _b15c), _b15c)
+
+# ④ 信物那件：物证句是**另一层**（不是问号行已说的那句）⇒ 照 B3-16 口径仍然多出一行
+_p15d = {"day": 1, "loc": "windmill_town", "node": "wt_gate_n",
+         "bag": {"i_horn_half": 1}, "books": {}, "foot": {}}
+CM.sync_bag(_p15d)
+_run("端详 半截号角", _p15d, CC.relic_study)
+_b15d = _book_of(_p15d, CC.codex_relic)
+chk("★ 反证：物证句真**多说了一层**时照旧另起一行（`半截号角` —— B3-16 那笔没被这刀削掉）",
+    any(EV_ITEM in x for x in _b15d), _b15d)
+
+# ⑤ 端详能重看**谱里已认出**的那一条（QA P3：旧物谱里正列着它，端详却回「背包里没有」）
+_p15e = {"day": 1, "loc": "windmill_town", "node": "wt_gate_n",
+         "books": {"relic": {"poi_stone_scripts": {"day": 1, "known": True}}}, "foot": {}}
+_re15 = _run("端详 %s" % BOOK["relic"]["poi_stone_scripts"]["name"], _p15e, CC.relic_study)
+chk("★ 手上没有、但**谱里记着**的那一条：端详照旧重看一遍（出「认出后那一行」，不再回「背包里没有」）",
+    _re15 == [TX["SYS_CODEX_RELIC_KNOWN"]["value"]
+              .replace("{name}", BOOK["relic"]["poi_stone_scripts"]["name"])
+              .replace("{known}", BOOK["relic"]["poi_stone_scripts"]["known"])], _re15)
+chk("★ 反证：谱里**没有**的名字仍旧 fail-closed（`SYS_CODEX_RELIC_NOHOLD`）· 也不落档",
+    _run("端详 从来没见过的东西", _p15e, CC.relic_study)
+    == [TX["SYS_CODEX_RELIC_NOHOLD"]["value"].replace("{input}", "从来没见过的东西")]
+    and CM.count(_p15e, "relic") == 1, _p15e["books"])
+chk("★ 重看是只读的：该档一个字没动（`studied` 也没被写上）",
+    _run("端详 %s" % BOOK["relic"]["poi_stone_scripts"]["name"], _p15e, CC.relic_study) == _re15
+    and not CM.studied(_p15e, "poi_stone_scripts"))
 
 print()
 print("按谱：%s" % " · ".join("%s %d" % (LABEL[b], len(BOOK[b])) for b in BOOKS))

@@ -48,79 +48,101 @@ def _sync_bag(p, player, env):
         _save(env)
 
 
-async def codex(env, sink, uid, player):
+async def codex(env, sink, uid, player, page=None):
     p = _p(player)
     _sync_bag(p, player, env)
     pr = CX.progress(p)
-    yield T("SYS_CODEX_HEAD")
-    for bk in CX.BOOKS:
-        yield _progress_row(bk, pr)
-    yield T("SYS_CODEX_HINT")
+    head = [T("SYS_CODEX_HEAD")]
+    rows = [_progress_row(bk, pr) for bk in CX.BOOKS]
+    async for line in _page(env, "codex", head, rows, page, [T("SYS_CODEX_HINT")]):
+        yield line
 
 
-async def _one_book(p, bk: str, rows):
-    """一本谱：表头 + 一行一行（顺序 = 数据里的顺序）。"""
+async def _page(env, kind: str, head, rows, page, tail=()):
+    """一列（或一本谱）的**一页** —— 切页只走 `content/pager.py` 那一口（B4-17 / F6）。"""
+    from . import pager as PG
+    for line in PG.render(env, kind, head, rows, page=page, tail=list(tail)):
+        yield line
+
+
+async def _one_book(env, p, bk: str, kind: str, rows, page=None):
+    """一本谱：表头 + 一行一行（顺序 = 数据里的顺序）—— 超过一页就出页脚（F6）。"""
     pr = CX.progress(p)[bk]
     n = pr["n"]
     if not n:
         yield T(EMPTY_SLOT[bk])
         return
     if bk == "relic":
-        yield T("SYS_CODEX_BOOK_HEAD_OPEN", book=CX.label(bk), n=n)
+        head = [T("SYS_CODEX_BOOK_HEAD_OPEN", book=CX.label(bk), n=n)]
     else:
-        yield T("SYS_CODEX_BOOK_HEAD", book=CX.label(bk), n=n, target=pr["target"])
-    for line in rows:
+        head = [T("SYS_CODEX_BOOK_HEAD", book=CX.label(bk), n=n, target=pr["target"])]
+    # ★ 页脚**永远是最后一行**（`pager.render` 的口径）⇒ 谱自己的尾注走 tail 传进去，别在外面 yield
+    tail = [T("SYS_CODEX_RELIC_ASK_HINT")] if (bk == "relic" and pr["unknown"]) else []
+    async for line in _page(env, kind, head, rows, page, tail):
         yield line
-    if bk == "relic" and pr["unknown"]:
-        yield T("SYS_CODEX_RELIC_ASK_HINT")
 
 
-async def codex_material(env, sink, uid, player):
+async def codex_material(env, sink, uid, player, page=None):
     p = _p(player)
     _sync_bag(p, player, env)
     rows = [T("SYS_CODEX_ENTRY", name=CX.name_of("material", k),
               line=CX.line_of("material", k))
             for k in CX.book("material") if CX.has(p, "material", k)]
-    async for line in _one_book(p, "material", rows):
+    async for line in _one_book(env, p, "material", "codex_material", rows, page=page):
         yield line
 
 
-async def codex_flavor(env, sink, uid, player):
+async def codex_flavor(env, sink, uid, player, page=None):
     p = _p(player)
     _sync_bag(p, player, env)
     rows = [T("SYS_CODEX_ENTRY", name=CX.name_of("flavor", k),
               line=CX.line_of("flavor", k))
             for k in CX.book("flavor") if CX.has(p, "flavor", k)]
-    async for line in _one_book(p, "flavor", rows):
+    async for line in _one_book(env, p, "flavor", "codex_flavor", rows, page=page):
         yield line
 
 
-async def codex_monster(env, sink, uid, player):
+async def codex_monster(env, sink, uid, player, page=None):
     p = _p(player)
     rows = [T("SYS_CODEX_ENTRY_KILL", name=CX.name_of("monster", k),
               kills=CX.kills_of(p, k), line=CX.line_of("monster", k))
             for k in CX.book("monster") if CX.has(p, "monster", k)]
-    async for line in _one_book(p, "monster", rows):
+    async for line in _one_book(env, p, "monster", "codex_monster", rows, page=page):
         yield line
 
 
-async def codex_relic(env, sink, uid, player):
+async def codex_relic(env, sink, uid, player, page=None):
+    """旧物谱一页（★ F6 修 P4 BUG-4：未认出那一行的排版）。
+
+    三种行（照 `14_图鉴四谱口径_v1 §五` 三列 + F6 那一条）：
+      · 认出来了      `· <名字> —— <认出后那一句>`
+      · 没认出·读的    `？ <问号行>`（**名字不写** —— 名字本身就是认出后的答案）
+      · 没认出·捡的    `？ <手上的名字> —— <问号行>`（F6：名字在背包里就写着，
+                       谱里不写玩家根本认不出是哪一件 —— QA P4 BUG-4）
+    `端详` 自己看出的那一层（`SYS_CODEX_RELIC_SEEN`）**只在它真多说了一层**时才另起一行：
+    未鉴定那类（物证句挂在池表上、与问号行说的是同一件事）不再把同一句贴两遍。
+    """
     p = _p(player)
     _sync_bag(p, player, env)
     rows = []
     for k in CX.book("relic"):
         if not CX.has(p, "relic", k):
             continue
+        hint = CX.line_of("relic", k, "hint")
         if CX.known(p, k):
-            rows.append(T("SYS_CODEX_RELIC_KNOWN", name=CX.name_of("relic", k),
-                          known=CX.line_of("relic", k, "known")))
+            shown = CX.line_of("relic", k, "known")
+            rows.append(T("SYS_CODEX_RELIC_KNOWN", name=CX.name_of("relic", k), known=shown))
+        elif (CX.entry("relic", k) or {}).get("from") == "pick":
+            shown = hint
+            rows.append(T("SYS_CODEX_RELIC_UNKNOWN_HELD", name=CX.held_name(k), hint=hint))
         else:
-            rows.append(T("SYS_CODEX_RELIC_UNKNOWN", hint=CX.line_of("relic", k, "hint")))
-        if CX.studied(p, k):                       # ★ P-8：自己看出的那一层，跟在后面（★ 另起一行，不并进问号那行）
+            shown = hint
+            rows.append(T("SYS_CODEX_RELIC_UNKNOWN", hint=hint))
+        if CX.studied(p, k):                       # ★ P-8：自己看出的那一层，跟在后面（另起一行）
             ev = CX.evidence(k)
-            if ev:
+            if ev and not CX.said_in(shown, ev):   # ★ F6：同一件事别贴两遍
                 rows.append(T("SYS_CODEX_RELIC_SEEN", line=ev))
-    async for line in _one_book(p, "relic", rows):
+    async for line in _one_book(env, p, "relic", "codex_relic", rows, page=page):
         yield line
 
 
@@ -138,6 +160,21 @@ def _study_hit(p, want: str):
     """按名字认他手上那一件（★ 认的是**手上**的名字 —— 玩家在背包里看见的就是它）；认不出回 None。"""
     for rid in _studiable(p):
         names = (CX.held_name(rid), CX.name_of("relic", rid))
+        if want in names or (len(want) >= 2 and any(want in n for n in names)):
+            return rid
+    return None
+
+
+def _recall_hit(p, want: str):
+    """按名字认**谱里已经记下**的那一条（★ F6：手上没有的也能重看 —— QA P3「旧物谱里已认出的条目端详不了」）。
+
+    只在**已经进过他这本谱**的那些里找（`CX.has`）—— 谱里没有的一律不认（fail-closed，
+    别让他凭一个名字把还没见过的东西叫出来）。认出后那一行照 `name_of` 认（玩家在谱里看见的就是它）。
+    """
+    for rid in CX.book("relic"):
+        if not CX.has(p, "relic", rid):
+            continue
+        names = (CX.name_of("relic", rid), CX.held_name(rid))
         if want in names or (len(want) >= 2 and any(want in n for n in names)):
             return rid
     return None
@@ -170,7 +207,18 @@ async def relic_study(env, sink, uid, player):
         return
     rid = _study_hit(p, want)
     if not rid:
-        yield T("SYS_CODEX_RELIC_NOHOLD", input=want)      # 手上没有这一件（fail-closed，不编、不落档）
+        # ★ F6：手上没有 —— 但**谱里记着**的这一条照旧重看一遍（原话只有「背包里没有…」，
+        #   玩家照帮助敲『端详 <旧物>』时被弹回去，还以为是漏了东西）。
+        #   认出来过 ⇒ 认出后那一行；还留着问号 ⇒ 问号行（名字不写在没认出来那几条上）。
+        rid = _recall_hit(p, want)
+        if not rid:
+            yield T("SYS_CODEX_RELIC_NOHOLD", input=want)  # 谱里也没有（fail-closed，不编、不落档）
+            return
+        if CX.known(p, rid):
+            yield T("SYS_CODEX_RELIC_KNOWN", name=CX.name_of("relic", rid),
+                    known=CX.line_of("relic", rid, "known"))
+        else:
+            yield T("SYS_CODEX_RELIC_UNKNOWN", hint=CX.line_of("relic", rid, "hint"))
         return
     if CX.study(p, rid):                           # ★ 只头一回落档
         if player is not None:

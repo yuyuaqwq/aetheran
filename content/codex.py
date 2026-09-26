@@ -296,6 +296,26 @@ def evidence(rid: str) -> str:
     return str(h.get("lore") or h.get("hint") or "")
 
 
+#: 问号行与物证句比对时抹掉的标点（★ F6：同一件事别贴两遍 —— 判「说过了没有」只看字）
+_FLAT_DROP = "。，、；：！？…—－-·「」『』（）()〔〕《》 \u3000\t\n"
+
+
+def _flat(s) -> str:
+    """去掉标点/空白之后的字（就为比对用 —— 不落盘、不给玩家看）。"""
+    return "".join(ch for ch in str(s or "") if ch not in _FLAT_DROP)
+
+
+def said_in(line: str, said: str) -> bool:
+    """`said` 是不是**已经说在 `line` 里**了（抹掉标点后比字）。
+
+    用途（★ F6 · QA P4 BUG-4）：旧物谱那两行 —— 未鉴定那件的**问号行**
+    （`codex.hint`）与**物证句**（`evidence`：挂在池表上的 `hint`）说的是同一件事，
+    照字贴两遍看着像谱条目坏了。判据只认「字」，标点与语气差异不算多说了东西。
+    """
+    a, b = _flat(line), _flat(said)
+    return bool(b) and b in a
+
+
 def study(p: dict, rid: str) -> bool:
     """自己上手看一遍 → 落档（返回这一遍是不是**头一回**看）。
 

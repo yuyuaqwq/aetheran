@@ -5663,5 +5663,39 @@
     "params": [],
     "category": "系统",
     "desc": "药铺 · 柜上的东西与摊名不是一回事（本波补 · 真源 18_铺子买卖口径 §二①）"
+  },
+  "SYS_CODEX_RELIC_UNKNOWN_HELD": {
+    "value": "？ {name} —— {hint}",
+    "params": [
+      "name",
+      "hint"
+    ],
+    "category": "系统",
+    "desc": "旧物谱 · 还没认出来的那一行（**捡的**那几件 —— 名字在背包里就写着）"
+  },
+  "SYS_TOUCH_MISS": {
+    "value": "这儿没有「{name}」—— 能上手的是：{list}",
+    "params": [
+      "name",
+      "list"
+    ],
+    "category": "系统",
+    "desc": "触摸 · 点了名但那件不在（能上手的那几件照列）"
+  },
+  "SYS_REST_FIRE_HINT": {
+    "value": "（有火的地方：{list}）",
+    "params": [
+      "list"
+    ],
+    "category": "系统",
+    "desc": "歇脚 · 脚下没火 —— 点名哪儿有火"
+  },
+  "COMBAT_FOCUS_MISS": {
+    "value": "「{name}」认不出是哪一只 —— 『集火 <目标>』写一只认得出的怪。",
+    "params": [
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "集火 · 名字认不出（与「没组队」分开说）"
   }
 }

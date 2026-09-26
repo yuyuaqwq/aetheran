@@ -207,6 +207,37 @@ print("  · 回话逐字：%s" % _line)
 print("  · 指向的指令名：%s ⇒ 可见声明 usage 现读 = %s"
       % ("、".join(_refs) or "—", sorted(MT.declared_usages())[:6]))
 
+# ══════════════════════════════════════════════════════════════
+# ⑥ ★ F6（QA P4 E-13）：超长输入**截断回显** —— 原先是整句原样贴回来（群里刷一长条）
+#    两态：恰好到上限 ⇒ 一个字不少；超一个字 ⇒ 截断 + 省略号（边界两态都钉）
+# ══════════════════════════════════════════════════════════════
+print("⑥ ★ F6：超长输入截断回显（两态：恰好到上限 / 超一个字）")
+_cap = int(MT.ECHO_MAX)
+_short = "测" * _cap                                  # 恰好到上限 —— 照旧原样带回来
+_long = "试" * (_cap + 1)                             # 超一个字 —— 截断
+_xlong = "这是一条特别长的输入用来测试三十个字符的边界到底会不会出问题呢"   # QA 原样那 32 字
+_two = [w for w in (_short, _long, _xlong) if host.declared_hit(w) is not None]
+chk("⑥ 三个测试词都**真不命中**任何声明（先证明考的是这条线，不是某条真指令）",
+    not _two, "被接住的：%s" % (_two or "无"))
+_ad.out.clear()
+host.handle(dict(_ctx, text=_short))
+_r_short = list(_ad.out)
+chk("⑥ 恰好 %d 字 ⇒ 原样带回来（不截断）" % _cap,
+    _r_short == [_want.replace("{word}", _short)], repr(_r_short[:1]))
+_ad.out.clear()
+host.handle(dict(_ctx, text=_long))
+_r_long = list(_ad.out)
+chk("⑥ %d 字（超一个字）⇒ 只留前 %d 字 + 省略号" % (_cap + 1, _cap),
+    _r_long == [_want.replace("{word}", "试" * _cap + "…")], repr(_r_long[:1]))
+_ad.out.clear()
+host.handle(dict(_ctx, text=_xlong))
+_r_x = list(_ad.out)
+chk("⑥ ★ QA 原样那 32 字长句：回话里**不再整句出现**（玩家那句话不会在群里刷一长条）",
+    len(_r_x) == 1 and _xlong not in _r_x[0] and (_xlong[:_cap] + "…") in _r_x[0],
+    repr(_r_x[:1]))
+chk("⑥ 截断只动回显那一格：槽位本体（`%s` 的模板）一个字没改" % SLOT,
+    str((TX.get(SLOT) or {}).get("value") or "") == _want)
+
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
 sys.exit(0 if ok else 1)

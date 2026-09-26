@@ -25,6 +25,14 @@
   ⑨ 静态守卫：两个列表口（`bag_page` / `ranking_page`）都**真调** `pager.render`
   ⑩ 死槽位 0：`SYS_BAG_MORE` 已不在 texts、也不在代码里；两个新槽位都在 texts 且被引用
 
+★ F6（QA P4 E-4）追加的判据（`帮助` 里宣传的『下一页』/『回 <页码>』改前在别的长列表上是死指令）：
+  ⑪ ★ 四本谱（材料谱 / 风味谱 / 怪物谱 / 旧物谱）与 `图鉴` 一览都接进同一口 —— 静态守卫逐支核
+     「真调 `pager.render`」（`_one_book` / `codex` 那两处，不许谁自己 `rows[0:10]` 切）
+  ⑫ ★ **两态**：超过一页 ⇒ 页脚 + 『下一页』/『回 1』都翻得动，且翻完**一条都不许丢**
+     （两页并集 = 谱里那几条）；一行都不超 ⇒ **不出页脚**、光标也不记（敲『下一页』还是引导那句）
+  ⑬ ★ `图鉴 2` 这类**带页码**的写法按自己的声明剥参（与 `背包 2` 同一个口）；谱自己的尾注
+     （`SYS_CODEX_RELIC_ASK_HINT`）与页脚同时出现时，**页脚仍必须是最后一行**
+
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_pager.py
 Python 用 3.12（3.11 假红）。
 """
@@ -284,6 +292,152 @@ def main():
         ok("两个新槽位都在 texts 里、也都被 `content/` 真引用（%s）" % " / ".join(_want_slots))
     else:
         bad("新槽位不对：在 texts %s · 被引用 %s" % (_want_slots, _hit_slots))
+
+    # ══════════════════════════════════════════════════════════
+    # ★ F6（QA P4 E-4）：四本谱与图鉴一览真分页
+    # ══════════════════════════════════════════════════════════
+    print("⑪ ★ F6：五条口（图鉴 / 四本谱）都真走 `pager.render`（谁也别自己切）")
+    _tree = ast.parse(io.open(os.path.join(cdir, "cmds_codex.py"), encoding="utf-8").read())
+
+    def _calls_any(fnname, attrs):
+        for node in ast.walk(_tree):
+            if isinstance(node, ast.AsyncFunctionDef) and node.name == fnname:
+                for sub in ast.walk(node):
+                    if isinstance(sub, ast.Call) and isinstance(sub.func, ast.Name) \
+                            and sub.func.id in attrs:
+                        return True
+        return False
+
+    _miss2 = [fn for fn in ("codex", "codex_material", "codex_flavor",
+                            "codex_monster", "codex_relic")
+              if not _calls_any(fn, ("_page", "_one_book"))]
+    if not _miss2:
+        ok("图鉴 + 四本谱五条口都经 `_page` / `_one_book` 走 `pager.render`（`PER_PAGE` 是唯一登记处）")
+    else:
+        bad("这几个口自己切了：%s" % _miss2)
+    _kinds = [k for k in ("codex", "codex_material", "codex_flavor", "codex_monster",
+                          "codex_relic") if k not in PG.PER_PAGE]
+    if not _kinds:
+        ok("`pager.PER_PAGE` 里五个 kind 都登记了（%s）"
+           % " · ".join("%s %d" % (k, PG.PER_PAGE[k]) for k in
+                        ("codex", "codex_material", "codex_flavor", "codex_monster", "codex_relic")))
+    else:
+        bad("这几个 kind 没登记一页几行：%s" % _kinds)
+    _again2 = [k for k in ("codex", "codex_material", "codex_flavor", "codex_monster",
+                           "codex_relic") if not PG._again(ad, None, UID, None, k)]
+    if not _again2:
+        ok("『下一页』/『回 <页码>』在这五列上都接得上（`pager._again` 五条都在）")
+    else:
+        bad("这几列翻不动：%s" % _again2)
+
+    print("⑫ ★ F6 两态 A：超过一页 ⇒ 页脚 · 『下一页』翻得动 · 翻完一条都不许丢")
+    _cx = json.load(io.open(os.path.join(REPO, "content/data/codex.json"), encoding="utf-8"))
+    _book = {"material": list(_cx["material"]), "flavor": list(_cx["flavor"]),
+             "monster": list(_cx["monster"]), "relic": list(_cx["relic"])}
+    _BUID = "u_pager_books"
+    _bseed = dict(seed)
+    _bseed.update({"bag": {}, "books": {
+        "material": {k: {"day": 1} for k in _book["material"]},
+        "monster": {k: {"day": 1, "kills": 1} for k in _book["monster"][:12]},
+        "relic": {k: {"day": 1, "known": True} for k in _book["relic"][:11]},
+        "flavor": {}}})
+    ad.saved[_BUID] = _bseed
+
+    def say2(text):
+        ad.out = []
+        host.handle({"uid": _BUID, "group_id": GID, "text": text})
+        return list(ad.out)
+
+    def _rows(out):
+        return [x for x in out if x.startswith("· ")]
+
+    _foot1 = T("SYS_PAGE_FOOT", page=1, pages=2)
+    _foot2 = T("SYS_PAGE_FOOT", page=2, pages=2)
+    # 材料谱：12 条 / 一页 10 行
+    _m1 = say2("材料谱")
+    _m2 = say2("下一页")
+    if _m1[0] == T("SYS_CODEX_BOOK_HEAD", book="材料谱", n=12, target=10) \
+            and len(_rows(_m1)) == 10 and _m1[-1] == _foot1:
+        ok("`材料谱`（12 条）⇒ 抬头 + 10 行 + 页脚「%s」" % _foot1)
+    else:
+        bad("材料谱第 1 页不对：%r 行 %d" % (_m1[:1] + _m1[-1:], len(_rows(_m1))))
+    if len(_rows(_m1)) + len(_rows(_m2)) == 12 and _m2[-1] == _foot2:
+        ok("『下一页』⇒ 第 2 页；两页并起来 12 行（一条不漏）")
+    else:
+        bad("材料谱第 2 页不对：%d + %d 行 · 末行 %r"
+            % (len(_rows(_m1)), len(_rows(_m2)), _m2[-1] if _m2 else None))
+    if say2("回 1") == _m1:
+        ok("『回 1』⇒ 与第 1 页逐字相同")
+    else:
+        bad("『回 1』没回材料谱第 1 页")
+    if _m2 == say2("材料谱 2"):
+        ok("`材料谱 2` 与『下一页』翻到的是同一页（页码按自己的声明剥 —— 与 `背包 2` 同一个口）")
+    else:
+        bad("`材料谱 2` 没翻对")
+    # 怪物谱：12 条 / 一页 10 行 —— 带页码的写法 + 越界夹取
+    _g1 = say2("怪物谱")
+    if len(_rows(_g1)) == 10 and _g1[-1] == _foot1 and say2("怪物谱 2")[-1] == _foot2:
+        ok("`怪物谱`（12 条）⇒ 10 行 + 页脚 · `怪物谱 2` ⇒ 第 2 页")
+    else:
+        bad("怪物谱分页不对：%r" % (_g1[-1:],))
+    if say2("怪物谱 99") == say2("怪物谱 2"):
+        ok("页码越界仍由引擎夹取（`怪物谱 99` ⇒ 末页）")
+    else:
+        bad("怪物谱越界页码没夹住")
+    # 旧物谱：11 条已知 / 一页 10 行 —— 谱自己的尾注要与页脚共存，且页脚**仍必须是最后一行**
+    _q1 = say2("旧物谱")
+    _q2 = say2("下一页")
+    if len(_rows(_q1)) == 10 and _q1[-1] == _foot1 and len(_rows(_q2)) == 1 and _q2[-1] == _foot2:
+        ok("`旧物谱`（11 条）⇒ 10 + 1 行跨两页（未认出的那几条一个都不丢）")
+    else:
+        bad("旧物谱分页不对：%d + %d 行 · 末行 %r"
+            % (len(_rows(_q1)), len(_rows(_q2)), _q2[-1] if _q2 else None))
+
+    print("⑬ ★ F6 两态 B：不超一页 ⇒ 不出页脚 · 光标也不记（『下一页』还是引导那句）")
+    def _set_mat(ks):
+        """把这一档的「材料谱记了几条」改成 `ks`（★ 从**当前**那一档上取，别假定对象没被换过）。"""
+        cur = dict(ad.saved.get(_BUID) or {})
+        bk = dict(cur.get("books") or {})
+        bk["material"] = {k: {"day": 1} for k in ks}
+        cur["books"] = bk
+        ad.saved[_BUID] = cur
+
+    _set_mat(_book["material"][:3])
+    _c1 = say2("材料谱")
+    if len(_rows(_c1)) == 3 and not [x for x in _c1 if "第" in x and "页" in x]:
+        ok("只记 3 条 ⇒ 一页装下、**不出页脚**（两态的另一半）")
+    else:
+        bad("不超一页却出了页脚：%r" % (_c1,))
+    # 光标只在**真分了页**时记（B4-17 的登记口径）：一页装下的列表不记旧光标 ——
+    # 拿一个**全新的人**来钉这一条（他看过的唯一一列就是一页装得下的材料谱）。
+    _BUID2 = "u_pager_flat"
+    _flat = dict(_bseed)
+    _flat["books"] = {"material": {k: {"day": 1} for k in _book["material"][:3]},
+                      "flavor": {}, "monster": {}, "relic": {}}
+    ad.saved[_BUID2] = _flat
+
+    def say3(text):
+        ad.out = []
+        host.handle({"uid": _BUID2, "group_id": GID, "text": text})
+        return list(ad.out)
+
+    if len(_rows(say3("材料谱"))) == 3 and say3("下一页") == [T("SYS_PAGE_NONE")] \
+            and say3("回 9") == [T("SYS_PAGE_NONE")]:
+        ok("一页装下的列表**不记光标**：随后敲『下一页』/『回 9』⇒ 仍是引导那句"
+           "（`SYS_PAGE_NONE`），不是凭空翻出一页")
+    else:
+        bad("没分页时那两下不对：%r / %r" % (say3("下一页"), say3("回 9")))
+    # 图鉴一览：4 本谱 ⇒ 一页，永远不出页脚
+    _k0 = say2("图鉴")
+    if _k0[0] == T("SYS_CODEX_HEAD") and not [x for x in _k0 if "页" in x and "第" in x]:
+        ok("`图鉴`（四本谱四行）⇒ 一页，不出页脚（这一列没有超一页的那天）")
+    else:
+        bad("图鉴一览不对：%r" % (_k0,))
+    # 空谱：只回空谱那句（不分页、不出页脚）
+    if say2("风味谱") == [T("SYS_CODEX_EMPTY_FLAVOR")]:
+        ok("空的风味谱 ⇒ 只回 `SYS_CODEX_EMPTY_FLAVOR`（不分页）")
+    else:
+        bad("空风味谱那条不对：%r" % (say2("风味谱"),))
 
     print()
     print("----")
