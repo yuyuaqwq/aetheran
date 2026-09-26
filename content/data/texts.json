@@ -1,6 +1,6 @@
 {
   "READ_STONE_SCRIPTS": {
-    "value": "三种笔迹。第一种刻得最深，边角磨圆了；第二种浅，像随手划的；第三种是新的 —— 刻痕还很利。",
+    "value": "三种笔迹。第一种刻得最深，边角磨圆了；第二种浅，像随手划的；第三种是新的 —— 刻痕还很利。（你试着读，一个也读不出来 —— 这不是这地方的字。）",
     "params": [],
     "category": "可读物",
     "desc": "镇口的石头 · 主 1"
@@ -2271,6 +2271,22 @@
     "category": "系统",
     "desc": "读 · 抬头"
   },
+  "SYS_READ_NOSUCH": {
+    "value": "这儿没有叫「{name}」的东西能读。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "读 · 名字对不上（点名说对不上 —— QB-6 · 与 SYS_MOVE_NOSUCH 同一个写法）"
+  },
+  "SYS_READ_HERE": {
+    "value": "这里能读的是：{list}",
+    "params": [
+      "list"
+    ],
+    "category": "系统",
+    "desc": "读 · 名字对不上时把这站现在真能读的列出来（QB-6）"
+  },
   "SYS_HINT_TOWN": {
     "value": "先『观察』看看镇口那块石头，再去『公会』接一件小活。",
     "params": [],
@@ -2282,6 +2298,23 @@
     "params": [],
     "category": "系统",
     "desc": "提示 · 在野外"
+  },
+  "SYS_HINT_JOB": {
+    "value": "【提示】{name} —— {objective}",
+    "params": [
+      "name",
+      "objective"
+    ],
+    "category": "系统",
+    "desc": "提示 · 手上有活时先给当前委托（QB-5 · 源 04 §一「给一条当前该做什么的提示」）"
+  },
+  "SYS_HINT_JOB_READY": {
+    "value": "（这一条办完了 —— 打『交 {order}』。）",
+    "params": [
+      "order"
+    ],
+    "category": "系统",
+    "desc": "提示 · 当前委托万事俱备那一条（QB-5）"
   },
   "SYS_HELP_HEAD": {
     "value": "【指令表】",
@@ -2581,6 +2614,14 @@
     "category": "系统",
     "desc": "交活 · 前置没做（怪没打够）"
   },
+  "SYS_JOB_REQ_MON_WHERE": {
+    "value": "（它出没在：{list}）",
+    "params": [
+      "list"
+    ],
+    "category": "系统",
+    "desc": "交活 · 前置没做（点名那只怪时补一句出没在哪几站 —— QB-3 悬赏 101 · 源 24 §二 悬赏板 + monsters.habitat）"
+  },
   "SYS_JOB_REQ_ITEM": {
     "value": "还差：「{item}」×{n}（你手上有 {have}）。",
     "params": [
@@ -2710,6 +2751,15 @@
     ],
     "category": "系统",
     "desc": "我的委托 · 已交表头"
+  },
+  "SYS_MINE_PROGRESS": {
+    "value": "（{done}/{n}）",
+    "params": [
+      "done",
+      "n"
+    ],
+    "category": "系统",
+    "desc": "我的委托 · 进度那半格（同一条 require 的达成数 —— QB-4 · 源 04 §二 + 24 §二「（三次）」）"
   },
   "SYS_MINE_RANK": {
     "value": "【评级】{tier}",

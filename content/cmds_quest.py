@@ -328,11 +328,60 @@ def _shadow(p):
     return s
 
 
+#: ★ QB-2（试玩卡死 1）：**故事类**门类 —— 只有这两类才谈「一件东西本身就是那件东西」
+#:   （两个取值是域里现成的 `kind_key`，代码不认中文）。
+_STORY_KINDS = ("keepsake", "clue")
+
+
+def _unid_carries(uid, iid):
+    """这件**还没鉴定**的东西，是不是**就是** `iid`（同一件东西，只是还没认出来）？
+
+    真源 · 为什么要有它（试玩报告 P1 BUG-1「委托 25 还石头永远交不掉」，玩家的判据原话是
+    「单子要的就是玩家在骨田挖到的那件东西（**描述一字不差**）」）：
+      · `00_总纲/15_彩蛋域口径_v1.md §二` 第 2 行：彩蛋 2 条件 `hold=i_token_stone_shard`
+        （依据栏「q_side_13「还石头」的交待就是彩蛋 2，小满的石头 = **骨田捡的刻字石片**」）
+      · `06_第一阶段垂直切片/06_装备获取与支线玩法_v1.md §1.2`：「刻字的石片 ← **骨田「挖掘」挖出来**」
+      · `00_总纲/27_掉落的惊喜感与未鉴定_v1.md §三`：骨田挖到的是**未鉴定**的那件，
+        它的 `hint` = 那件信物的 `lore`（「上面有字。不是这儿的话。」）—— **逐字相同**。
+
+    判据三条（数据比数据，代码不认中文；不许放宽成「池里有就算」）：
+      · 目标必须是**故事类**（items 域的 `kind_key` ∈ keepsake / clue）—— 材料 / 垃圾 / 装备不算
+        （不然「找一块旧铁」会被一件未鉴定顶过去）
+      · 容器自己那句 `hint` 与目标那句 `lore` **逐字相同**（容器自己写着它是谁）
+      · 池里那一格真写着它（`out` 逐字相等）
+    """
+    it = LT.items().get(str(iid or "")) or {}
+    if str(it.get("kind_key") or "") not in _STORY_KINDS:
+        return False
+    said = str(it.get("lore") or "")
+    if not said:
+        return False
+    u = LT.pools().get(str(uid or "")) or {}
+    if u.get("kind_key") != "unidentified" or str(u.get("hint") or "") != said:
+        return False
+    return any(str((e or {}).get("out") or "") == str(iid) for e in (u.get("pool") or []))
+
+
 def _bag_n(p, iid):
+    """背包里有几件 `iid`。
+
+    ★ QB-2：**未鉴定**的那件容器如果唯一能开出的就是它（`_unid_carries`），也数进来 ——
+      玩家手上那件「一块刻着字的石片」与单子要的「刻字的石片」是同一件东西，只是还没认出来。
+    """
+    bag = p.get("bag") or {}
+    n = 0
     try:
-        return int((p.get("bag") or {}).get(iid) or 0)
+        n += int(bag.get(iid) or 0)
     except (TypeError, ValueError):
-        return 0
+        pass
+    for k, v in bag.items():
+        if not str(k).startswith("unid_") or not _unid_carries(k, iid):
+            continue
+        try:
+            n += int(v or 0)
+        except (TypeError, ValueError):
+            continue
+    return n
 
 
 def _req_ok(p, r):
@@ -503,6 +552,64 @@ def _cook_have(p, r):
     return have
 
 
+def _habitat_of(mid):
+    """这只怪**出没在哪几站**（`monsters[].habitat.nodes` → 站名；取不到回空表）。
+
+    ★ QB-3（试玩报告 P1 BUG-2「悬赏 101 交不掉」）：单子只点一次名（`看 <编号>` 那一行），
+      玩家在图上乱撞 —— 「野狗窝」刷的是**拾荒野狗**（名字只差三个字），杀了四回不算；
+      而真正点名的那只出没在别的站。这一段把那几站**点出来**（站名走 `maps` 域透传，
+      代码不造中文），玩家照着走就找得到。
+
+    ★ 数据来源就是挑选怪时用的同一格（`combat.pick_encounter` 的 `habitat`）——
+      不另开一份「怪在哪」的口径。
+    """
+    hb = (_data("monsters").get(str(mid or "")) or {}).get("habitat") or {}
+    nodes = [n for n in (hb.get("nodes") or []) if n]
+    if not nodes:
+        return []
+    out, where = [], []
+    for m, mv in _data("maps").items():
+        if str(m).startswith("_"):
+            continue
+        for nd in (mv.get("nodes") or []):
+            nid = str((nd or {}).get("id") or "")
+            if nid in nodes and nid not in out:
+                out.append(nid)
+                where.append((str(m), nid))
+    return [(_name_of_node(m, n) or n) for m, n in where]
+
+
+def _have_n(p, r):
+    """这一条条件「做到哪了」→ `(已达成数, 需要数)` —— **唯一一口**（达成数**封顶**在需要数上）。
+
+    ★ QB-4：『还差…』那几行里的数（「你手上有 1」「你打过 2 只」）与『我的委托』的进度
+      都从这里来 —— 进度不许自己再数一遍（两处数法 = 迟早对不上）。
+      认不出的 kind ⇒ `(0, n)`（与判定同一口径：fail-closed 不算做了）。
+      封顶那一刀对『还差…』那几行是**空操作**（那几行只在**没满足**时印，没满足 ⇒ 达成数 < 需要数），
+      但它挡住「听够 4 回显示 4/3」这种读起来像坏了的数。
+    ★ 「去过某处」这一型没有数：去过 = 1、没去过 = 0（需要数恒 1）。
+    """
+    n = _n_of(r)
+    kind = r.get("kind")
+    if kind == "visit":
+        return (1 if _req_ok(p, r) else 0), 1
+    if kind == "item":
+        have = _bag_n(p, str(r.get("item") or ""))
+    elif kind == "kill":
+        have = _kill_have(p, r) if (r.get("monster") or r.get("role")) else 0
+    elif kind == "enhance":
+        have = _enhance_have(p)
+    elif kind == "cook":
+        have = _cook_have(p, r)
+    elif kind == "talk":
+        have = _talk_have(p, r.get("npc")) if r.get("npc") else 0
+    elif kind == "ask":
+        have = _asked_have(p)
+    else:
+        have = 0
+    return min(int(have), n), n
+
+
 def _req_lines(p, r):
     """没满足的那一条 → 说人话的那一行。★ 只给名字不给机器键（id 不许出现在回话里）。"""
     kind = r.get("kind")
@@ -517,29 +624,35 @@ def _req_lines(p, r):
         if mid:
             name = _mon_name(mid)
         elif r.get("daily"):
-            name = _mon_name(_daily_pick(str(r.get("role") or ""), p))
+            mid = _daily_pick(str(r.get("role") or ""), p)
+            name = _mon_name(mid)
         else:
-            name = _role_name(str(r.get("role") or ""))
+            mid, name = "", _role_name(str(r.get("role") or ""))
         if not name:                       # 档 / 怪认不出 ⇒ 不糊一句空名字（fail-closed 的那一行）
             return [T("SYS_JOB_REQ_UNKNOWN")]
-        return [T("SYS_JOB_REQ_KILL", monster=name, n=_n_of(r), have=_kill_have(p, r))]
+        out = [T("SYS_JOB_REQ_KILL", monster=name, n=_n_of(r), have=_have_n(p, r)[0])]
+        # ★ QB-3：点名点到**一只**时，把它的出没地也说出来（点档那种没有「一只」可说）
+        where = _habitat_of(mid) if mid else []
+        if where:
+            out.append(T("SYS_JOB_REQ_MON_WHERE", list=" · ".join(where)))
+        return out
     if kind == "item":
         iid = str(r.get("item") or "")
-        return [T("SYS_JOB_REQ_ITEM", item=_item_name(iid), n=_n_of(r), have=_bag_n(p, iid))]
+        return [T("SYS_JOB_REQ_ITEM", item=_item_name(iid), n=_n_of(r), have=_have_n(p, r)[0])]
     if kind == "enhance":                  # ★ B3-13
-        return [T("SYS_JOB_REQ_ENHANCE", n=_n_of(r), have=_enhance_have(p))]
+        return [T("SYS_JOB_REQ_ENHANCE", n=_n_of(r), have=_have_n(p, r)[0])]
     if kind == "cook":                     # ★ B3-13（带品阶的走品阶那条槽位）
         if r.get("quality"):
             return [T("SYS_JOB_REQ_COOK_GRADE", grade=r.get("quality"), n=_n_of(r),
-                      have=_cook_have(p, r))]
-        return [T("SYS_JOB_REQ_COOK", n=_n_of(r), have=_cook_have(p, r))]
+                      have=_have_n(p, r)[0])]
+        return [T("SYS_JOB_REQ_COOK", n=_n_of(r), have=_have_n(p, r)[0])]
     if kind == "talk":                     # ★ B3-13
         who = _npc_name(r.get("npc"))
         if not who:
             return [T("SYS_JOB_REQ_UNKNOWN")]
-        return [T("SYS_JOB_REQ_TALK", who=who, n=_n_of(r), have=_talk_have(p, r.get("npc")))]
+        return [T("SYS_JOB_REQ_TALK", who=who, n=_n_of(r), have=_have_n(p, r)[0])]
     if kind == "ask":                      # ★ B3-13
-        return [T("SYS_JOB_REQ_ASK", n=_n_of(r), have=_asked_have(p))]
+        return [T("SYS_JOB_REQ_ASK", n=_n_of(r), have=_have_n(p, r)[0])]
     return [T("SYS_JOB_REQ_UNKNOWN")]
 
 
@@ -809,6 +922,47 @@ async def quest_abandon(env, sink, uid, player):
     yield T("SYS_JOB_ABANDONED", name=qs.get(k, {}).get("name", k))
 
 
+def _progress(x, p):
+    """这一条的**进度**那一格（`（已达成 / 需要）`）—— 没写 `require` 的老条目回空串（一个字不多）。
+
+    ★ QB-4（试玩报告 P4 E-10）：『我的委托』原先只给一句 objective —— 玩家要先跑一趟『交』
+      失败一次，才知道自己听了几回（『交』那边写着「你听过 0 回」，两处不成体系）。
+      真源：`06_第一阶段垂直切片/04_指令总表 §二`「`我的委托` `任务` ｜ 随时 ｜ 进行中的委托」
+      ＋ 同一条委托自己的 objective（`24_任务线_v1 §二` 支 9「听他讲完（三次）」——
+      「（三次）」是**文档那一格自己写的**，所以进度就该按它数：`（1/3）`）。
+    ★ 数与『还差…』那几行走**同一个口**（`_have_n` —— 它就是交活那把尺子的读数）。
+    """
+    reqs = _require_of(x)
+    if not reqs:
+        return ""
+    pairs = [_have_n(p, r) for r in reqs]
+    return T("SYS_MINE_PROGRESS", done=sum(h for h, _n in pairs), n=sum(n for _h, n in pairs))
+
+
+def _hint_lines(p):
+    """『提示』优先给的那几行 —— **当前委托的下一步**（手上没活 ⇒ 空表，调用方退回地点那一句）。
+
+    ★ QB-5（试玩报告 P1 BUG-3 / P4 E-1）：『提示』原先只看地点（镇上 / 野外各一句固定文案），
+      从不随委托走 —— 1→3 级、交 0→3 条，镇上永远回建号那一句「先『观察』…再去『公会』」，
+      而**每一条接活回话**都写着「『提示』会告诉你往哪走」（`quest_accept` 的 `SYS_JOB_GO`）。
+      真源：`06_第一阶段垂直切片/04_指令总表 §一`「`提示` `去哪` ｜ 随时 ｜ **给一条当前该做什么
+      的提示**」—— 「当前」= 手上这条活 ⇒ 先报它的名字与 objective，再逐条说还差什么
+      （那几行就是『交』失败时给的同一批行，同一个口 `_unmet`）。
+    """
+    qs = _quests()
+    for k in _mine(p):
+        x = qs.get(k) or {}
+        if not x:
+            continue
+        out = [T("SYS_HINT_JOB", name=x.get("name", k), objective=x.get("objective", ""))]
+        if _obj_ok(x, p):
+            out.append("  " + T("SYS_HINT_JOB_READY", order=x.get("order", 0)))
+        else:
+            out += ["  " + ln for ln in _unmet(p, x)]
+        return out
+    return []
+
+
 async def quest_mine(env, sink, uid, player):
     p = _p(player)
     qs = _quests()
@@ -819,7 +973,7 @@ async def quest_mine(env, sink, uid, player):
         yield T("SYS_MINE_HEAD", n=len(act))
         for k in act:
             x = qs.get(k, {})
-            yield "· %s —— %s" % (x.get("name", k), x.get("objective", ""))
+            yield "· %s —— %s%s" % (x.get("name", k), x.get("objective", ""), _progress(x, p))
     if done:
         yield T("SYS_MINE_DONE", n=len(done))
     # ★ B4-14：那半句评级与『评级』**走同一个门**（`cmds_self.has_card`）—— 没办证的人
