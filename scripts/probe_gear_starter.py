@@ -262,6 +262,47 @@ def main():
     _forge_ids = [i for i, r in items.items()
                   if isinstance(r, dict) and r.get("forge") and not str(i).startswith("_")]
 
+    def _src_own(iid):
+        """一样料的「从哪儿来」—— **探针另写一份**（不调 `content/matsrc.py`，免得两边同错）。
+
+        ★ Q-22：口径 = `gathering`（池里有它的采集点）+ `drop_pools` × `monsters`（挂了这个池的怪，
+          按等级升序、同等级按 id —— 与实现体同一条稳定序）；采集点按 `maps` 的图序 / 节点序摆；
+          怪最多点 3 只（实现体的 `MAX_KILL`）。
+        """
+        _g = _load("content/data/gathering.json")
+        _dp = _load("content/data/drop_pools.json")
+        _mo = _load("content/data/monsters.json")
+        _order = [k for k in maps if not str(k).startswith("_")]
+
+        def _road(_loc, _node):
+            _mi = _order.index(_loc) if _loc in _order else len(_order)
+            _ns = [n.get("id") for n in (maps.get(_loc) or {}).get("nodes") or []]
+            return (_mi, _ns.index(_node) if _node in _ns else len(_ns))
+
+        _spots = []
+        for _gid, _v in sorted(_g.items()):
+            if _gid.startswith("_"):
+                continue
+            if not any(str(_e.get("out")) == iid for _e in (_v.get("pool") or [])):
+                continue
+            _spots.append((_road(_v.get("map"), _v.get("subarea")), _gid, _v))
+        parts = []
+        for _o, _gid, _v in sorted(_spots):
+            _nd = next((n.get("name") for n in (maps.get(_v.get("map")) or {}).get("nodes") or []
+                        if n.get("id") == _v.get("subarea")), None)
+            parts.append(T("SYS_SRC_GATHER",
+                           verb=T("SYS_GATHER_VERB_%s" % str(_v.get("verb") or "").upper()),
+                           node=_nd or _v.get("subarea"), point=_v.get("name"),
+                           times=int(_v.get("times_per_day") or 1)))
+        _pl = [p for p, v in sorted(_dp.items()) if not p.startswith("_")
+               and any(str(_e.get("out")) == iid
+                       for _e in list(v.get("entries") or []) + list(v.get("pool") or []))]
+        _fo = sorted([(int(m.get("lv") or 0), k, m.get("name")) for k, m in _mo.items()
+                      if isinstance(m, dict) and set(_pl).intersection(m.get("drops") or [])])
+        if _fo:
+            parts.append(T("SYS_SRC_KILL", list=" · ".join(x[2] for x in _fo[:3])))
+        return " · ".join(parts)
+
     def panel_lines(p):
         out = [T("SYS_ENHANCE_SHOP")]
         for lv in range(1, int(meta.get("cap") or 0) + 1):
@@ -290,6 +331,11 @@ def main():
                 if nm not in _cr:
                     _cr.append(nm)
         out.append(T("SYS_SMITH_MATS", enh=" · ".join(_enh), craft=" · ".join(_cr)))
+        # ★ Q-22：料名后面那一栏「这几样料从哪儿来」（实现体在 `cmds_recipe.smith` —— 出处现算）
+        out.append(T("SYS_SMITH_SRC_HEAD"))
+        for e in _st1.get("inputs") or []:
+            out.append(T("SYS_SMITH_SRC_ROW", name=items[e["id"]]["name"],
+                         where=_src_own(e["id"]) or T("SYS_SRC_UNKNOWN")))
         out.append(T("SYS_SMITH_CRAFT_HEAD"))
         for _i in sorted(_forge_ids):
             _f = _forge_rec(items[_i])
@@ -899,6 +945,78 @@ def main():
     else:
         bad("① 改名没对齐：登记 %s · 材料谱没跟上 %s · 材料谱里还留着旧名 %s"
             % (sorted(_fx22), _bad22b, _oldp))
+
+    # ══════════════════════════════════════════════════════════════
+    # ⑱ ★ Q-22：料的出处（现算 —— 铁屑只在挖掘里出是**设计**，不是漏）
+    #   真源 `05_玩法数值口径_v1 §三`：「强化材料 采矿产「铁屑」· 怪掉「硬骨」」两句话分两条路。
+    #   本节的三个方向：
+    #     ① 强化料每一样都算得出出处（不许走 `SYS_SRC_UNKNOWN` 那一句 —— 它是 fail-closed 的哨兵，
+    #        只该在域里真没给出产路时出现）
+    #     ② 那两句真源行在域里**成立**：铁屑 不许出现在任何 `drop_pools` 里（= 它靠采）·
+    #        硬骨 必须至少有一个池装着（= 它靠怪掉）
+    #     ③ 「一天能刷几个」现算打印（**不设阈值**：`05_ §九` 把「一天能采到多少」列在待校准里
+    #        ⇒ 本批只把数摆出来，权重一格不动）
+    # ══════════════════════════════════════════════════════════════
+    _eh = [e["id"] for e in ((recipes.get("rc_enh_01") or {}).get("inputs") or [])]
+    _no_src = [i for i in _eh if not _src_own(i)]
+    if _eh and not _no_src:
+        ok("⑱ ★ Q-22 料的出处：强化那 %d 样（%s）每一样都**算得出**出处 —— 不走 fail-closed 那句"
+           % (len(_eh), " · ".join(items[i]["name"] for i in _eh)))
+    else:
+        bad("⑱ 这几样强化料算不出出处（玩家会看到 fail-closed 那句）：%s" % (_no_src or "（没有强化料）"))
+    _dp_all = _load("content/data/drop_pools.json")
+    _mo_all = _load("content/data/monsters.json")
+    _g_all = _load("content/data/gathering.json")
+
+    def _spots18(iid):
+        """这件料出在几个采集点上（探针自己扫域 —— 不看 `content/matsrc.py`）。"""
+        return [gid for gid, v in sorted(_g_all.items()) if not gid.startswith("_")
+                and any(str(e.get("out")) == iid for e in (v.get("pool") or []))]
+
+    _dangling, _routeless, _routes = [], [], []
+    for _m in _eh:
+        _pl = [p for p, v in _dp_all.items() if not str(p).startswith("_")
+               and any(str(e.get("out")) == _m for e in list(v.get("entries") or []) + list(v.get("pool") or []))]
+        _ft = sorted({m.get("name") for m in _mo_all.values()
+                      if isinstance(m, dict) and set(_pl).intersection(m.get("drops") or [])})
+        _sp = _spots18(_m)
+        if _pl and not _ft:
+            _dangling.append((_m, _pl))                     # 挂在池上、可没有怪掉它
+        if not _pl and not _sp:
+            _routeless.append(_m)                           # 两条路都没有 = 拿不到
+        _routes.append("%s ← %s" % (items[_m]["name"],
+                                    " · ".join(x for x in (
+                                        ("%d 个采集点" % len(_sp)) if _sp else "",
+                                        ("%d 只怪掉" % len(_ft)) if _ft else
+                                        ("（池 %s）" % " · ".join(_pl) if _pl else "")) if x)))
+    if not _dangling and not _routeless:
+        ok("⑱ ★ 每一样强化料都有**至少一条出产路**，且凡挂在掉落池上的都有怪真掉它（没有悬空引用）—— %s"
+           % " ｜ ".join(_routes))
+    else:
+        bad("⑱ 强化料的出产路有问题（悬空池 %s · 一条路都没有 %s）" % (_dangling, _routeless))
+    _g18 = _load("content/data/gathering.json")
+
+    def _daily18(iid):
+        """这件料的一天期望产出（件/游戏日）—— 池权重 × n 均值 × 一天能翻的遍数（现算，不手打）。"""
+        _t = 0.0
+        for _gid, _v in sorted(_g18.items()):
+            if _gid.startswith("_"):
+                continue
+            _pool = _v.get("pool") or []
+            _w = sum(int(e.get("w", 1) or 1) for e in _pool)
+            for _e in _pool:
+                if str(_e.get("out")) != iid:
+                    continue
+                _rng = _e.get("n")
+                _en = (_rng[0] + _rng[1]) / 2.0 if isinstance(_rng, list) else 1.0
+                _n = int(_v.get("times_per_day") or 1)
+                # 反复采那一层（第 2 遍起只给零星、最后一遍空手）—— 挖掘点一天 1 遍，不走那两层
+                _t += int(_e.get("w", 1) or 1) / float(_w) * _en * (_n if _n == 1 else (_n - 1) * 0.5)
+        return _t
+    print("     · 「一天能刷几个」（**采集那一路**的日产期望 · 件/游戏日）：%s"
+          % " ｜ ".join("%s ⇒ %s" % (items[_m]["name"], "%.2f" % _daily18(_m)) for _m in _eh))
+    print("       （怪掉那一路是「每杀一只几只」—— 数据在 `drop_pools` 的池权重里，本探针不另算一份）")
+    print("       （真源 `05 §九` 把「一天能采到多少」列在**待校准**里 —— 本批只把数摆出来，权重一格不动）")
 
     print(NL + "----")
     print("通过 %d / 失败 %d" % (len(OK), len(BAD)))
