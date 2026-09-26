@@ -2278,7 +2278,7 @@
     }
   },
   "i_material_iron_chip": {
-    "name": "铁渣",
+    "name": "矿渣",
     "icon": "🔩",
     "kind": "材料",
     "kind_key": "material",
@@ -2315,7 +2315,7 @@
     "heal": 40
   },
   "i_junk_bone": {
-    "name": "骨头",
+    "name": "残骸",
     "icon": "🦴",
     "kind": "垃圾",
     "kind_key": "junk",
@@ -2605,7 +2605,8 @@
         "stat": "hp",
         "v": 16
       }
-    ]
+    ],
+    "no_drop": true
   },
   "i_caravan_bracer": {
     "name": "外乡人的护腕",

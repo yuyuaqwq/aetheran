@@ -95,18 +95,61 @@ def _origin_home_line(rec):
     return _pending_line(PENDING_SLOTS["origin_home"], home=home, life=life)
 
 
-def _scene_line(loc, node, m=None, empty=False):
+def _scene_line(loc, node, m=None, empty=False, variant=None):
     """观察那一段场景 —— 节点级 SCENE_<节点>（近景）→ 退 SCENE_<地图>（这张图的第一眼）。
 
     ★ 解析口只有一处（content/scene.py）—— 落域脚本与这里共用，别各写一遍。
     ★ `empty=True`（本波）：先试「这一站的人都不在」那一版（`SCENE_<节点>_EMPTY`）——
       由调用方按 `content/town.py::station_empty` 判好传进来（画面与名册不许打架，P1 BUG-5）。
+    ★ `variant`（★ g4-⑤）：**按状态分支**那一档 —— 先试 `SCENE_<节点>__<状态大写>`
+      （今天只有白烛堂的满血版）；状态名由调用方判好传进来，这一层不认识「血」。
     """
-    sk = SC.resolve(_texts(), loc, node, empty=empty)
+    sk = SC.resolve(_texts(), loc, node, empty=empty, variant=variant)
     m = m if m is not None else (_map_of(loc) or {})
     if sk:
         return T(sk, name=m.get("name", loc))
     return "【%s · %s】" % (m.get("name", loc), _name_of_node(loc, node))
+
+
+def scene_variant_of(p):
+    """观察那一段场景要不要走「按状态分支」那一档（★ g4-⑤）—— 今天这一档 = **满血**。
+
+    为什么在 `cmds_ast`（不在 `scene`）：判断要看**面板**（上限的唯一来源 = `hp_cap_or_line`），
+    而 `content/scene.py` 是零依赖模块（落域脚本要用它）。
+    判不了的档（还没择业 / 档上没有 hp）⇒ `None`（回落基础那一段，fail-closed：不假装满血）。
+    """
+    cap, _line = hp_cap_or_line(p)
+    if cap is None or p.get("hp") is None:
+        return None
+    try:
+        return SC.VARIANT_FULL if int(p.get("hp")) >= int(cap) else None
+    except (TypeError, ValueError):
+        return None
+
+
+def npc_when_slot(nid) -> str:
+    """这一位「他什么时候在」的槽位键 —— `NPC_WHEN_<id 去掉 npc_ 前缀 · 大写>`（唯一写法）。"""
+    tail = str(nid).upper()
+    if tail.startswith("NPC_"):
+        tail = tail[4:]
+    return "NPC_WHEN_%s" % tail
+
+
+def npc_gone_lines(loc, node, p, st=None) -> list:
+    """这一站**按作息还没来**的那几位 —— 每人一行（31_NPC作息 §四「人不在也要有戏」）。
+
+    ★ 与「人不在那一版场景」（`SCENE_<节点>_EMPTY`）同一个判据来源（`town.absent_here`）——
+      画面 / 名册 / 这一行三处不许各说一套（P1 BUG-5 那一族）。
+    ★ 只对**基位在这一站**的人说（路过的人不在此列）；一位都不欠 ⇒ 空表（调用方走原来那句）。
+    """
+    from .town import absent_here
+    out = []
+    for nid, rec in absent_here(loc, node, p, st):
+        slot = npc_when_slot(nid)
+        if slot not in _texts():
+            continue                                  # 没写「他什么时候在」的位不出声（不编）
+        out.append(T("SYS_WHO_GONE", name=_poi_label(rec), when=T(slot)))
+    return out
 
 
 def _map_scene(loc):
@@ -702,7 +745,8 @@ async def look(env, sink, uid, player):
     #   判据在 `content/town.py::station_empty`（基位在这一站、此刻一个都没到场），
     #   与下面那行「人在」走的是**同一个** `_npcs_here`。
     from .town import station_empty                 # 本地 import：town 要 import 本模块，模块级会成环
-    yield _scene_line(loc, node, m, empty=station_empty(loc, node, p))
+    yield _scene_line(loc, node, m, empty=station_empty(loc, node, p),
+                      variant=scene_variant_of(p))   # ★ g4-⑤：满血那一站走变体那一段
     yield "━" * 12
     nb = [_name_of_node(loc, x) for x in _neighbors(loc, node)]
     yield T("SYS_LOOK_WAY", list=" · ".join("『%s』" % x for x in nb)) if nb else T("SYS_LOOK_DEAD_END")
@@ -723,6 +767,11 @@ async def look(env, sink, uid, player):
     npc_here = [v for _k, v in _npcs_here(loc, node, p=p)]
     if npc_here:
         yield T("SYS_LOOK_WHO", list=" · ".join("『%s』%s" % (v.get("name"), v.get("icon", "")) for v in npc_here))
+    else:
+        # ★ g4-⑨（31_NPC作息 §四）：这一站一个人都没有、可**基位**上本来有人 ⇒
+        #   不再一片空白，逐位说清「这个点他不在 + 他什么时候在」（与空版场景同一判据）。
+        for _gone in npc_gone_lines(loc, node, p):
+            yield _gone
     for line in event_lines(p, loc, node):      # ★ B3-5：这一站聚人那一下（集日）
         yield line
     # ★ B3-24：这一格今天的精英 —— 观察**提前看到**（09_ §二「玩家在「观察」时能提前看到」）。
@@ -1238,6 +1287,27 @@ _POI_WHY_SLOT = {"time": "SYS_POI_WHY_TIME", "weather": "SYS_POI_WHY_WEATHER",
                  "read": "SYS_POI_WHY_READ"}
 
 
+def _poi_read_slot(rec, p):
+    """这一条可读物**此刻**该念哪一条正文槽位（★ g4-⑩：按真实经历分支）。
+
+    数据：`pois.<pid>.text_variant = {"read": "<poi id>"}`（可选）—— 一个「读过了才成立」的条件。
+    判据沿用唯一的读账（`p.books.relic` 里那一条 = `CX.note_read` 写的），与 `_poi_cond` 的
+    `read` 那一支**同一个来源**（不在两处各判一套）。条件成立 ⇒ 走变体槽位
+    `variant_key(base, <poi id>)`（表里有才用）；否则回基础槽位。
+    """
+    base = str(rec.get("read_text") or "")
+    tv = rec.get("text_variant")
+    if not (isinstance(tv, dict) and tv and base):
+        return base
+    pid = str(tv.get("read") or "")
+    if not pid:
+        return base
+    if pid not in ((p.get("books") or {}).get("relic") or {}):
+        return base
+    from .scene import variant_slot
+    return variant_slot(_texts(), base, pid) or base
+
+
 def _poi_label(rec) -> str:
     """POI 在**文字里**被点名时的写法 —— 与「看得见」那一栏同一形：『名字』图标。
 
@@ -1613,7 +1683,7 @@ async def touch(env, sink, uid, player):
             continue
         yield T("SYS_TOUCH_GET", icon=v.get("icon", ""), name=v.get("name"))
         touched += 1
-        rt = v.get("read_text")
+        rt = _poi_read_slot(v, p)              # ★ g4-⑩：按真实经历取正文（读过白桦树 ⇒ 变体那一条）
         if rt:
             yield "「%s」" % T(rt)
         if v.get("into_codex") and CX.note_read(p, pid):     # ★ 读到就进旧物谱（先一行问号）
@@ -1677,7 +1747,7 @@ async def read_thing(env, sink, uid, player):
     if _ln:                                   # 判不了的门槛：正文照给，门槛那一句一起点名
         yield _ln
     yield T("SYS_READ_HEAD", name=v.get("name"))
-    yield T(v["read_text"])
+    yield T(_poi_read_slot(v, p))            # ★ g4-⑩：按真实经历取正文（读过白桦树 ⇒ 变体那一条）
     # ★ P-28：可读物身上的 effect 也走同一个消费端（「读」与「触摸」不分家）
     async for line in poi_effect_lines(env, sink, uid, p, k, v, "read", player=player):
         yield line

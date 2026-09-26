@@ -33,8 +33,8 @@ from __future__ import annotations
 
 from .argv import arg_of
 
-__all__ = ["PER_PAGE", "per_page", "page_no", "render", "cursor", "forget",
-           "page_next", "page_back"]
+__all__ = ["PER_PAGE", "PER_PAGE_DEFAULT", "LIST_DECL", "lists_hint", "per_page", "page_no",
+           "render", "cursor", "forget", "page_next", "page_back"]
 
 #: 每个列表一页多少行（★ 唯一登记处：新加一个分页列表就在这儿加一行）
 #: ★ F6（QA P4 E-4）：四本谱与图鉴一览也进来了 —— 改前只有背包/本群榜两列能翻，
@@ -46,6 +46,22 @@ PER_PAGE = {"bag": 20, "ranking": 10,
 
 #: 一页几行的默认值（`PER_PAGE` 里没登记的 kind 用这个 —— 今天没有这样的 kind）
 PER_PAGE_DEFAULT = 20
+
+#: ★ g4-④：**会分页的那几列**（kind → 声明里那一条指令的 key）—— **唯一登记处**。
+#:   为什么要有这一格：`SYS_PAGE_NONE`（"还没翻过任何列表" 那一声引导）原先把那几个列表名
+#:   **手打**在槽位里（只点了『背包』『排行』），而 F6 起四本谱与图鉴也接进了同一口
+#:   ⇒ 那句引导对着一半的列表说的是错的。现在列表名**从这一处现算**（`AV.usage(key)`
+#:   读声明里的 `usage` —— 玩家看见的那个词，代码里不抄第二份中文）。
+#:   ★ 新加一个分页列表 = `PER_PAGE` + `_again` + 这里，三处一起加（探针逐处对账）。
+LIST_DECL = {
+    "bag": "bag",
+    "ranking": "ranking",
+    "codex": "codex",
+    "codex_material": "codex_material",
+    "codex_flavor": "codex_flavor",
+    "codex_monster": "codex_monster",
+    "codex_relic": "codex_relic",
+}
 
 #: 光标最多记多少个人（进程内小表；超了从最早那条开始丢 —— 与 `instance` 的护栏同一个意思）
 CURSOR_MAX = 512
@@ -140,10 +156,25 @@ async def _turn(env, sink, uid, player, kind, page):
     from .cmds_ast import T
     more = _again(env, sink, uid, player, kind)
     if not more:
-        yield T("SYS_PAGE_NONE")
+        yield T("SYS_PAGE_NONE", lists=lists_hint())
         return
     async for line in more(page):
         yield line
+
+
+def lists_hint() -> str:
+    """`SYS_PAGE_NONE` 里那一串「能翻的列表」—— 玩家词**从声明现取**（★ g4-④）。
+
+    顺序 = `LIST_DECL` 的登记序（背包 → 排行 → 图鉴 → 四本谱），与「最常翻的那两列在前」一致。
+    注册处少登记一列 ⇒ `probe_pager ⑭` 当场红（引导里少说一列 = 玩家以为那一列翻不动）。
+    """
+    from . import argv as AV
+    words = []
+    for _k, _decl in LIST_DECL.items():
+        w = str(AV.usage(_decl) or "").strip()
+        if w and w not in words:
+            words.append(w)
+    return " · ".join("『%s』" % w for w in words)
 
 
 async def page_next(env, sink, uid, player):

@@ -134,7 +134,7 @@ _multi = {k: v for k, v in _multi.items() if len(v) > 1}
 LOOT_IN_PROSE = {
     "gt_be_dig_1": [("斧刃", "i_material_old_iron"),
                     ("铁钉", "i_material_iron_scrap"),
-                    ("骨头", "i_junk_bone")],
+                    ("残骸", "i_junk_bone")],
 }
 
 

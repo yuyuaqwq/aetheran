@@ -2528,12 +2528,6 @@
     "category": "系统",
     "desc": "帮助 · 表头"
   },
-  "SYS_HELP_BATTLE_NOTE": {
-    "value": "（战斗：一条指令打完整场 —— 你敲的那一手是这一场的第一手，之后自动打完；全部过程打「战斗日志」看。）",
-    "params": [],
-    "category": "系统",
-    "desc": "P1 BUG-9 ① / P4 E-11 帮助 · 战斗那一栏的诚实说明（一敲就是一场）：真源行待落 `00_总纲/17_文案收口口径_v1.md`（本分支 _notes.md §真源行）；战斗分回合那一批落地后撤掉"
-  },
   "SYS_HELP_ROW": {
     "value": "· {cat}：{list}",
     "params": [
@@ -3387,7 +3381,7 @@
     "desc": "22 §二·3 武器架室（架子每一格上都刻着名字 —— 名字是给谁的？）"
   },
   "READ_TOWER_STELE_NAMES": {
-    "value": "名字一排排往下刻。有三个，你在白桦林那棵树皮上见过 —— 重了。",
+    "value": "名字一排排往下刻。刻痕很深，边角还利 —— 有几个名字眼熟，你想不起在哪儿见过。",
     "params": [],
     "category": "可读物",
     "desc": "22 §二·10 号角室（读碑上的名单 → 与白桦树上的名字有 3 个重名）"
@@ -4434,7 +4428,7 @@
     "desc": "B3-16b 旧货 · 怎么卖"
   },
   "SYS_REG_ASKNAME": {
-    "value": "「叫什么名字？」—— 先打『改名 <名字>』，回头再来办证。",
+    "value": "「叫什么名字？」—— 先打『名字 <名字>』，回头再来办证。",
     "params": [],
     "category": "系统",
     "desc": "B3-16b 登记 · 档上还没名字"
@@ -4466,7 +4460,7 @@
     "desc": "B3-16b 评级 · 头目那一行"
   },
   "SYS_RENAME_ASK": {
-    "value": "想叫什么？打『改名 <名字>』—— 一到八个字，只改这一回。",
+    "value": "想叫什么？打『名字 <名字>』—— 一到八个字，只改这一回。",
     "params": [],
     "category": "系统",
     "desc": "B3-16b 改名 · 没带名字"
@@ -5294,7 +5288,7 @@
     "desc": "B4-7 建号第二步 · 收尾指路（点数走 alloc.left_of_record · 触发词从声明取）"
   },
   "SYS_CLS_NAME": {
-    "value": "名字还没定 —— 打『改名 <名字>』，只改这一回。",
+    "value": "名字还没定 —— 打『名字 <名字>』，只改这一回。",
     "params": [],
     "category": "系统",
     "desc": "B4-7 建号第二步 · 建号第三步没走完时点一行（真源 18 §一 第 3 步）"
@@ -5524,8 +5518,10 @@
     "desc": "B4-17 分页 · 页脚（一列分了两页以上才出）"
   },
   "SYS_PAGE_NONE": {
-    "value": "先打开一个列表（『背包』看东西 ·『排行』看本群榜）—— 再敲『下一页』或『回 <页码>』。",
-    "params": [],
+    "value": "先打开一个列表（{lists}）—— 再敲『下一页』或『回 <页码>』。",
+    "params": [
+      "lists"
+    ],
     "category": "系统",
     "desc": "B4-17 分页 · 还没翻过任何列表"
   },
@@ -5895,11 +5891,201 @@
     "desc": "未鉴定 · 识货的人当场把它鉴定出来那一行（真源 27 §3.3/§3.5「拿给人看 ⇒ 开出了什么」）"
   },
   "SYS_UNID_STORY": {
-    "value": "  （{story}）",
+    "value": "（{story}）",
     "params": [
       "story"
     ],
     "category": "系统",
     "desc": "未鉴定 · 那一件自带的「一段话」（域里信物/线索那两条写着；27 §3.4 那两类是内容不是数值）"
+  },
+  "SCENE_WT_CHAPEL__FULL": {
+    "value": "白烛堂是镇上唯一用石头砌得齐整的房子。\n堂里暗，只有一盏灯点着，搁在窗台上。窗台上没有灰 —— 这里每天都擦。\n艾德在修椅子，一把很旧的椅子。他修得很慢，但不返工。\n你身上没伤 —— 他看了一眼，就低头接着修那把椅子。",
+    "params": [],
+    "category": "场景",
+    "desc": "风车镇 · 白烛堂 · 满血那一版（P1 BUG-7 同族：场景按状态分支）"
+  },
+  "READ_TOWER_STELE_NAMES__POI_NAMED_BIRCH": {
+    "value": "名字一排排往下刻。有三个，你在白桦林那棵树皮上见过 —— 重了。",
+    "params": [],
+    "category": "可读物",
+    "desc": "号角室 · 石碑上的名单 · 读过白桦上那棵树名之后那一版（P2 BUG⑦ 时序）"
+  },
+  "SYS_WHO_GONE": {
+    "value": "{name} —— 这个点不在。{when}",
+    "params": [
+      "name",
+      "when"
+    ],
+    "category": "系统",
+    "desc": "观察/搭话 · 这一位按作息还没来（31_NPC作息 §四）"
+  },
+  "NPC_WHEN_HAGEN": {
+    "value": "天黑了他才来坐。",
+    "params": [],
+    "category": "NPC",
+    "desc": "31_NPC作息 §四 · 这一位「他什么时候在」的一句"
+  },
+  "NPC_WHEN_XIAOMAN": {
+    "value": "天黑了小孩就回家。白天他在这儿看人。",
+    "params": [],
+    "category": "NPC",
+    "desc": "31_NPC作息 §四 · 这一位「他什么时候在」的一句"
+  },
+  "NPC_WHEN_BELLA": {
+    "value": "天不亮她去买菜，白天到夜里都在客栈。",
+    "params": [],
+    "category": "NPC",
+    "desc": "31_NPC作息 §四 · 这一位「他什么时候在」的一句"
+  },
+  "NPC_WHEN_COLE": {
+    "value": "他住在作坊里 —— 什么时候来都找得到。",
+    "params": [],
+    "category": "NPC",
+    "desc": "31_NPC作息 §四 · 这一位「他什么时候在」的一句"
+  },
+  "NPC_WHEN_NANA": {
+    "value": "她总在摊上 —— 天亮前上山，回来就摆摊。",
+    "params": [],
+    "category": "NPC",
+    "desc": "31_NPC作息 §四 · 这一位「他什么时候在」的一句"
+  },
+  "NPC_WHEN_LAOTAO": {
+    "value": "他白天在棚里。天黑了就睡下了。",
+    "params": [],
+    "category": "NPC",
+    "desc": "31_NPC作息 §四 · 这一位「他什么时候在」的一句"
+  },
+  "NPC_WHEN_ED": {
+    "value": "他总在堂里 —— 灯是他守的。",
+    "params": [],
+    "category": "NPC",
+    "desc": "31_NPC作息 §四 · 这一位「他什么时候在」的一句"
+  },
+  "NPC_WHEN_DERRICK": {
+    "value": "他守着风车 —— 什么时候来都找得到。",
+    "params": [],
+    "category": "NPC",
+    "desc": "31_NPC作息 §四 · 这一位「他什么时候在」的一句"
+  },
+  "NPC_WHEN_MASHA": {
+    "value": "白天她在板子后面。天黑了她就回去了。",
+    "params": [],
+    "category": "NPC",
+    "desc": "31_NPC作息 §四 · 这一位「他什么时候在」的一句"
+  },
+  "NPC_WHEN_PETE": {
+    "value": "他白天在板子那边，入夜才坐回这个角。",
+    "params": [],
+    "category": "NPC",
+    "desc": "31_NPC作息 §四 · 这一位「他什么时候在」的一句"
+  },
+  "NPC_WHEN_SERAN": {
+    "value": "她跟着商队走 —— 商队到了，她才在这儿。",
+    "params": [],
+    "category": "NPC",
+    "desc": "31_NPC作息 §四 · 这一位「他什么时候在」的一句"
+  },
+  "NPC_WHEN_DURIN": {
+    "value": "他跟着商队，一年来两趟 —— 车到了才在。",
+    "params": [],
+    "category": "NPC",
+    "desc": "31_NPC作息 §四 · 这一位「他什么时候在」的一句"
+  },
+  "NPC_WHEN_LIAN": {
+    "value": "她守着门槛那块地方 —— 什么时候都在。",
+    "params": [],
+    "category": "NPC",
+    "desc": "31_NPC作息 §四 · 这一位「他什么时候在」的一句"
+  },
+  "NPC_WHEN_GREY": {
+    "value": "商队到了他才来，就坐客栈那个墙角。",
+    "params": [],
+    "category": "NPC",
+    "desc": "31_NPC作息 §四 · 这一位「他什么时候在」的一句"
+  },
+  "COMBAT_TURN_STATE": {
+    "value": "⚔ 第 {n} 手 —— 你 {hp}/{hp_max}　｜　{name} {foe_hp}/{foe_hp_max}",
+    "params": [
+      "n",
+      "hp",
+      "hp_max",
+      "name",
+      "foe_hp",
+      "foe_hp_max"
+    ],
+    "category": "战斗",
+    "desc": "G2 分段推进 · 四段式 ① 现状（第几手 / 双方血量）——真源 03_风车镇_指令与回复 §二"
+  },
+  "COMBAT_TURN_I_FIRST": {
+    "value": "⚡ 下一手你先 —— 你的到点时刻 {my_ct} 刻，它 {foe_ct} 刻。",
+    "params": [
+      "my_ct",
+      "foe_ct"
+    ],
+    "category": "战斗",
+    "desc": "G2 分段推进 · 谁先动（你的 ct 更小）——真源 02_数值宪法/02_战斗机制 §〇·五（ct = 绝对时刻，1 刻 = 1 游戏秒）"
+  },
+  "COMBAT_TURN_FOE_FIRST": {
+    "value": "⚡ 下一手它先 —— 它的到点时刻 {foe_ct} 刻，你 {my_ct} 刻。",
+    "params": [
+      "foe_ct",
+      "my_ct"
+    ],
+    "category": "战斗",
+    "desc": "G2 分段推进 · 谁先动（它的 ct 更小）——同 §〇·五"
+  },
+  "COMBAT_TURN_FOE_DOING": {
+    "value": "◆ {name}正押着一手 —— 那一手还有 {left} 秒落到你身上。",
+    "params": [
+      "name",
+      "left"
+    ],
+    "category": "战斗",
+    "desc": "G2 分段推进 · 四段式 ② 对方在干什么（在飞行动的剩余刻数，引擎 pending_left）——真源 03_ §二"
+  },
+  "COMBAT_TURN_FOE_IDLE": {
+    "value": "◆ {name}手上是空的 —— 这一拍它没押着招。",
+    "params": [
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "G2 分段推进 · 四段式 ② 对方在干什么（这一刻它没有在飞的手）——真源 03_ §二"
+  },
+  "COMBAT_TURN_MENU": {
+    "value": "　① 攻击　② 打断　③ 防御　④ 后撤\n　（还有：技能 <名> · 使用 <药> · 逃跑 · 换武器 · 集火 <目标> · 自动 · 战斗日志）",
+    "params": [],
+    "category": "战斗",
+    "desc": "G2 分段推进 · 四段式 ③ 你的选项（真源 03_ §二 那四个 + 04_指令总表 §五 其余几条）"
+  },
+  "COMBAT_LOG_LIVE_HEAD": {
+    "value": "【这一场】{enemy} —— 打到第 {n} 手",
+    "params": [
+      "enemy",
+      "n"
+    ],
+    "category": "战斗",
+    "desc": "G2 分段推进 · 『战斗日志』看在打的这一场（抬头）——真源 04_指令总表 §五「复盘（谁打断过谁）」"
+  },
+  "COMBAT_FOCUS_LOCK": {
+    "value": "锁定了「{name}」—— 后面的手都往它身上招呼（它倒了就自动换一只）。",
+    "params": [
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "G2 分段推进 · 『集火 <目标>』在打的时候真锁上（不吃行动）——真源 04_指令总表 §五「多人时指定」"
+  },
+  "COMBAT_ITEM_ONLY_HEAL": {
+    "value": "打起来的时候只能吃药 —— 「{name}」留到打完再说。",
+    "params": [
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "G2 分段推进 · 战斗中『使用』非回血类（面板在开战时固化；不消耗、不动档）——口径见 content/cmds_recipe.item_use"
+  },
+  "SYS_HELP_BATTLE_TURN": {
+    "value": "（战斗是一条指令一手 —— 敲一下走一手，双方各出一手就停回你手里。上面「战斗」那一栏的指令都在打的时候能用；想回看整场就敲 战斗日志。）",
+    "params": [],
+    "category": "系统",
+    "desc": "G2 分段推进 · 帮助里战斗那一栏（顶掉 SYS_HELP_BATTLE_NOTE 的「一条指令打完整场」）——真源 00_总纲/17_文案收口口径_v1.md"
   }
 }

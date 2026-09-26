@@ -87,8 +87,12 @@ def variant_key(base: str, eid: str) -> str:
 
     ★ 只在本模块拼这个键（别处不许自己拼 —— K65「同一件事两处口径」）：
       消费端唯一读口 = `desc_slot(eid, st)`。
+    ★ g4-⑤：拼法本体已**下沉**到 `content/scene.py::variant_key`（那边是零依赖模块，
+      场景的按状态分支与这里的按条件分支共用同一个 `%s__%s`）—— 本函数只转发，
+      两个调用点的名字不变。
     """
-    return "%s__%s" % (str(base), str(eid).upper())
+    from .scene import variant_key as _vk
+    return _vk(base, eid)
 
 
 def desc_slot(eid: str, st: dict | None = None) -> str:

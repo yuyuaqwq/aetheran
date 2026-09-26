@@ -672,7 +672,7 @@
     ],
     "category": "角色",
     "desc": "改一次名字",
-    "usage": "改名",
+    "usage": "名字",
     "visible": true,
     "order": 29,
     "guard_desc": "未用过",

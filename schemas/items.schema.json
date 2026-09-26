@@ -176,6 +176,10 @@
           },
           "additionalProperties": false
         },
+        "no_drop": {
+          "type": "boolean",
+          "$comment": "★ g4-leftovers：这一件**不进任何随机装备格**（`*armor_random` / `*weapon_random`）。唯一读口 = `content/loot.py::_resolve`（cand 现算时排掉）。写这一格的判据：真源给它的获取路只有一条、而随机格会**白送一件同样的**⇒ 那条路（打造 / 委托）就白写了。今天只有打造件 `i_forge_chest` 带这一格；铺子那三件入门装**不带**（真源 `06 §一 1.1` 明写普通档「铺子买 · 普通怪掉」两路都有 —— 那是真源授权的）。不写 = 照旧可被动态格抽到。"
+        },
         "set_id": {
           "type": "string",
           "description": "套装 id（套装件才有）"
@@ -192,9 +196,15 @@
           "type": "object",
           "description": "菜：吃下去给 15 分钟的增益（三选一 攻击/防御/生命上限）",
           "properties": {
-            "stat": {"type": "string"},
-            "pct": {"type": "integer"},
-            "seconds": {"type": "integer"}
+            "stat": {
+              "type": "string"
+            },
+            "pct": {
+              "type": "integer"
+            },
+            "seconds": {
+              "type": "integer"
+            }
           },
           "additionalProperties": false
         },

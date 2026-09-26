@@ -66,7 +66,11 @@
       "pause": "抢话（你没说完他就接）"
     },
     "funcs": [],
-    "condition": null,
+    "condition": {
+      "time": [
+        "昼"
+      ]
+    },
     "dialogue": "dlg_xiaoman"
   },
   "npc_bella": {
@@ -102,7 +106,13 @@
       "shop",
       "talk"
     ],
-    "condition": null,
+    "condition": {
+      "time": [
+        "昼",
+        "昏",
+        "夜"
+      ]
+    },
     "dialogue": "dlg_bella"
   },
   "npc_cole": {
@@ -209,7 +219,12 @@
       "hint",
       "talk"
     ],
-    "condition": null,
+    "condition": {
+      "time": [
+        "晨",
+        "昼"
+      ]
+    },
     "dialogue": "dlg_laotao"
   },
   "npc_ed": {
@@ -317,7 +332,11 @@
       "board",
       "rank"
     ],
-    "condition": null,
+    "condition": {
+      "time": [
+        "昼"
+      ]
+    },
     "dialogue": "dlg_masha"
   },
   "npc_pete": {
@@ -349,7 +368,12 @@
       "pause": "从醉切到醒的那一秒（他这个人最好看的地方）"
     },
     "funcs": [],
-    "condition": null,
+    "condition": {
+      "time": [
+        "昏",
+        "夜"
+      ]
+    },
     "dialogue": "dlg_pete"
   },
   "npc_seran": {

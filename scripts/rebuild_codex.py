@@ -99,6 +99,41 @@ def book_sections(spec: str) -> dict:
     return pick
 
 
+#: ★ g4-leftovers（材料名撞车 · p3 报告 体验-6）：**改名跟账**（真源 `14 §二` 那两行待主线跟账）。
+#:   口径（两态互锁，第三态当场抛）：真源表里那一格**要么**还是旧名（主线还没跟账），
+#:   **要么**已经是新名（跟账后）；写成第三个名字 = 表错了 ⇒ 抛。
+#:   为什么需要这一格：`check_name()` 逐条核「谱里名字 == items 域名字」，而真源仓对本分支只读 ——
+#:   改 items 的名字而不改这份登记，生成器会当场抛（两处口径打架），这正是上一轮没改名的那条原因。
+#:   ★ 名字与那一句「在哪儿见过它」一起换：旧那句 `打铁剩的，柯尔扫到墙角。攒着能修东西。` 与
+#:     `00_总纲/17` P-70「修理本轮不做」打架（空头承诺），跟着这次改名一起收口。
+NAME_FIXUP = {
+    "i_material_iron_chip": {
+        "old": "铁渣", "new": "矿渣",
+        "old_line": "打铁剩的，柯尔扫到墙角。攒着能修东西。",
+        "new_line": "打铁剩的，柯尔扫到墙角。柯尔拼小件的时候会收 —— 打造的料。",
+    },
+    "i_junk_bone": {
+        "old": "骨头", "new": "残骸",
+        "old_line": "骨田里到处都是。分不清是谁的。",
+        "new_line": "骨田里到处都是。分不清是谁的。",
+    },
+}
+
+
+def fixup(iid: str, name: str, line: str) -> tuple:
+    """真源那一行的（名字 · 一句人话）→ 域里这一版该用的那一对（两态互锁）。"""
+    fx = NAME_FIXUP.get(iid)
+    if not fx:
+        return name, line
+    if name not in (fx["old"], fx["new"]):
+        raise SystemExit("改名跟账第三态：%s 谱里写 %r —— 既不是旧名 %r 也不是新名 %r"
+                         % (iid, name, fx["old"], fx["new"]))
+    if line not in (fx["old_line"], fx["new_line"]):
+        raise SystemExit("改名跟账第三态：%s 谱里那句写的是 %r —— 既不是旧句也不是新句"
+                         % (iid, line))
+    return fx["new"], fx["new_line"]
+
+
 def check_name(tbl: dict, tid: str, name: str, where: str) -> None:
     if tid not in tbl:
         raise SystemExit("%s 条目 %r 不在 %s 里" % (where, tid, where))
@@ -127,6 +162,7 @@ def main(argv) -> int:
     mat = {}
     for row in table_rows(secs["material"], "材料谱")[1:]:
         iid, name, line = cells(row, 3, "材料谱行")
+        name, line = fixup(iid, name, line)          # ★ g4：改名跟账（两态互锁）
         check_name(items, iid, name, "items")
         mat[iid] = {"name": name, "line": line}
     codex["material"] = mat

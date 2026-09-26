@@ -120,7 +120,15 @@ def _resolve(out: str, entry: dict, level: int, rnd: random.Random, items_tbl: d
     if slots is None:
         return None
     qual = entry.get("quality")
-    cand = [k for k, v in items_tbl.items() if v.get("slot") in slots]
+    # ★ g4-leftovers（item 2）：`no_drop` 的那几件**不进动态格** —— 一格的唯一用途是「铺子买」
+    #   或「自己造」的东西（今天只有打造件 `i_forge_chest`）不该从随机防具里掉出来：
+    #   打造（料 + 钱）与「白捡一件一样的」不能并存，否则那一条指令就是白写的。
+    #   ★ 为什么只排**打造件**：真源 `06_装备获取与支线玩法_v1.md §一 1.1` 明写普通档
+    #     「镇上三家铺子直接买 · **普通怪掉**」两路都有 ⇒ 铺子那三件入门装照旧可掉（不算错）；
+    #     打造件那一条的真源行（`06 §1.1-b`）给的路只有「打造」，不在 §一 1.1 那 16 件里
+    #     ⇒ 真源没授权它掉落，本批按 fail-closed 排掉（详见分支 `_notes.md`）。
+    cand = [k for k, v in items_tbl.items()
+            if v.get("slot") in slots and not v.get("no_drop")]
     if gated:                                        # ★ P-60：按等级那一刀（先于品阶偏好）
         cand = [k for k in cand if _req_level(items_tbl[k]) <= int(level or 1)]
     if qual:

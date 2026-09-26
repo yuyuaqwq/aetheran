@@ -1061,6 +1061,8 @@ try:
     _QS12 = _CQ12._quests()
     _NPCS12 = st.domain("npcs") or {}
     _POT12, _SCRAP12, _BONE12 = "i_potion_heal", "i_material_iron_scrap", "i_junk_bone"
+    # ★ g4：那一件的**名字从域里现取**（本批改名：骨头 → 残骸）—— 别在探针里手打玩家词
+    _BONE_NM12 = str((CA9._data("items").get(_BONE12) or {}).get("name") or _BONE12)
     _WPN12 = _W1
     _SEED12 = {"cls": "cls_knight", "race": "human", "level": 3, "exp": 0, "hp": 100,
                "gold": 30, "loc": "windmill_town", "node": "wt_inn", "prev": [],
@@ -1326,12 +1328,12 @@ try:
         "%s" % [x for x in _BAD12 if x[0].startswith("丢弃")][:3])
 
     # ── 卖出：价来自域 · 装备不收 · 野外不卖 ────────────────────────────
-    _gS = _say12("卖出 骨头")
+    _gS = _say12("卖出 %s" % _BONE_NM12)
     _wS = [_r("SYS_SELL_OK", icon=_IT9[_BONE12].get("icon", ""), name=_IT9[_BONE12]["name"],
               n=1, gold=int(_IT9[_BONE12]["price"]))]
     if _gS != _wS or int(_sv12().get("gold") or 0) != 30 + int(_IT9[_BONE12]["price"]) \
             or int((_sv12().get("bag") or {}).get(_BONE12) or 0) != 2:
-        _BAD12.append(("卖出 骨头", _gS, _sv12().get("gold"), _sv12().get("bag")))
+        _BAD12.append(("卖出 %s" % _BONE_NM12, _gS, _sv12().get("gold"), _sv12().get("bag")))
     _gS2 = _say12("卖出 %s" % _wpn["name"])
     # ★ P3 BUG-4（本波 f4）：**装备现在有收价** —— 唯一一口 `content/shop.py::sell_price_of`
     #   （品阶 × 等级档；材料 / 旧物那一格照旧 = `items.price`）。原先装备域里一个价都没有
@@ -1352,7 +1354,7 @@ try:
     _h12b = Host(_ad12b, str(REPO), inject={"db_path": _db12b, "clock": lambda: _FIXED})
     _h12b.boot()
     _ad12b.out.clear()
-    _h12b.handle({"uid": "u_c", "group_id": "g_c", "text": "卖出 骨头"})
+    _h12b.handle({"uid": "u_c", "group_id": "g_c", "text": "卖出 %s" % _BONE_NM12})
     _gS3 = list(_ad12b.out)
     if _gS3 != [_r("SYS_SELL_AWAY")] or (_ad12b.saved or {}).get("bag") != _SEED12["bag"]:
         _BAD12.append(("野外卖出", _gS3, (_ad12b.saved or {}).get("bag")))
@@ -1409,14 +1411,14 @@ try:
             or int((_sv12().get("bag") or {}).get(_POT12) or 0) != 2:
         _BAD12.append(("取出 药水 · 掏空箱子摘掉那一格", _gO2,
                        (_sv12().get("flags") or {}).get("stash"), _sv12().get("bag")))
-    _gE = _say12("取出 骨头")
+    _gE = _say12("取出 %s" % _BONE_NM12)
     _stash_now = (_sv12().get("flags") or {}).get("stash") or {}
     _wE = (_r("SYS_STASH_EMPTY") if not _stash_now
            else _r("SYS_STASH_MISS", name=_IT9[_BONE12]["name"]))
     if _gE != [_wE]:
         _BAD12.append(("取出 空箱里没有的", _gE, _wE))
     _ad12b.out.clear()
-    _h12b.handle({"uid": "u_c", "group_id": "g_c", "text": "存放 骨头"})
+    _h12b.handle({"uid": "u_c", "group_id": "g_c", "text": "存放 %s" % _BONE_NM12})
     _gAway = list(_ad12b.out)
     if _gAway != [_r("SYS_STASH_AWAY")] or (_ad12b.saved or {}).get("bag") != _SEED12["bag"] \
             or ((_ad12b.saved or {}).get("flags") or {}).get("stash"):
