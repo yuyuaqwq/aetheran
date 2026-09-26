@@ -2128,17 +2128,21 @@ try:
     _fe23 = _fd23.sides[CBO23.ENEMY_SIDE][0]
     _pl23f = _fd23.focus()
     _nm23 = str((_MON23[_MS23] or {}).get("name") or _MS23)
-    _dec23 = CBAT23._retreat_decide(_nm23)
+    #   ★ 合并（fxa × fxinst）：`_retreat_decide` **不再收名字** —— fxa 起名字只从这一场现读
+    #     （`_foe_name_in(st)` → `instance.foe_of`，修的是 P3/P4「同一屏报两只」）⇒ 直调这一档
+    #     按合并后的签名传一个**场态形状**的 `st`（名字就出自那儿），其余一个字没变。
+    _st23 = {"battle": {"sides": {CBO23.ENEMY_SIDE: [{"name": _nm23, "hp": 1, "uid": _MS23}]}}}
+    _dec23 = CBAT23._retreat_decide()
     _t23 = float(getattr(_fd23, "_now", 0) or 0)
     _fe23["charging"] = {"action": "attack", "cast_done_at": _t23 + 30}
     _lg_inj = []
-    _r_inj = _dec23(_fd23, _pl23f, _lg_inj, {})
+    _r_inj = _dec23(_fd23, _pl23f, _lg_inj, _st23)
     _saw23.add(False if _r_inj is None else True)
     if _r_inj is not None or _lg_inj != [_r("COMBAT_RETREAT_BLOCK", name=_nm23)]:
         _B23.append(("后撤 注入前摇那一档没拦住", _r_inj, _lg_inj))
     _fe23["charging"] = None
     _lg_free = []
-    _r_free = _dec23(_fd23, _pl23f, _lg_free, {})
+    _r_free = _dec23(_fd23, _pl23f, _lg_free, _st23)
     _saw23.add(True if _r_free == "fled" else False)
     if _r_free != "fled" or _lg_free != [_r("COMBAT_RETREAT_OK")]:
         _B23.append(("后撤 清掉前摇之后没走得掉", _r_free, _lg_free))

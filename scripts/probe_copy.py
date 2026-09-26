@@ -1268,7 +1268,7 @@ def main():
         "（只那一句 · 位置与历史一个字不动）", not _fight_bad, "%s" % (_fight_bad[:2],))
     _clear_field()                     # 反证：这一场收掉（脱身 / 打完之后的终态）
     _free_bad = []
-    for _lab, _loc, _node, _out_slot, _fn in _OUTS:
+    for _lab, _loc, _node, _out_slot, _nr_slot, _fn in _OUTS:      # ★ 合并：`_OUTS` 是 6 元组
         _pp = _player(loc="windmill_town", node="wt_gate_n", prev=[])
         _got = _drive(_fn, _pp, "")
         if _lock in _got or (_pp.get("loc"), _pp.get("node")) != (_loc, _node):
