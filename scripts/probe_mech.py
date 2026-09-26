@@ -1259,6 +1259,99 @@ finally:
     CFG.set_hook("skill_gate_fn", _saved26)
 
 print()
+print("── ★ fix-k-critline：暴击那一行（引擎 `crit` 事件 → texts 槽位 `COMBAT_CRIT`）")
+#  改前：`COMBAT_CRIT` 槽位**全仓零读端**。引擎 `extends/ext_combat/battle/actions.py` 真在掷 ——
+#    `is_crit = random.random() < st["crit"]`（命中后再掷 30% 追加一次「幸运一击 ×1.3」⇒
+#    1.5 × 1.3 = 1.95 倍，与试玩实测那 1.5~1.9 倍跳变对得上），可玩家屏上只有裸伤害行：
+#    刺客整轮看不到「暴击」两个字。而 `effect_triggers.fire` 只跑**主体 actor 自己**声明的触发器
+#    ⇒ 读端只能挂在 `combat.player_actor` → `MECH.player_triggers()` 的 `crit` 那一格上。
+import re as _re                                                            # noqa: E402
+from unittest import mock as _mock                                          # noqa: E402
+
+_SLOT_CRIT = "COMBAT_CRIT"
+_ACT_CRIT = "aeth_crit_line"
+#: 槽位里**最长的那一段固定字** —— 判「这一行是不是暴击行」用现算出来的它（文案一改，判据跟着动），
+#: 探针里不另写一份中文镜像。
+_MARK_CRIT = max((p for p in _re.split(r"\{\w+\}", CA.T(_SLOT_CRIT)) if p.strip()), key=len)
+#: 引擎那一侧这一刻的两个数（刻 / 伤害）—— 只有引擎知道；读端读的是 `battle._fire_ctx`，
+#: 这里换成读**同一个口**旁听一手（不改任何行为），拿它当逐字锚点的另一半。
+_LIVE_CRIT: dict = {}
+_orig_crit = EF.ACTION_HANDLERS.get(_ACT_CRIT)
+
+
+def _crit_watch(battle, caster, target, params, logs):
+    """旁听那一手：记下引擎 ctx 里的刻与伤害，其余照旧交给真读端。"""
+    ctx = getattr(battle, "_fire_ctx", None) or {}
+    _LIVE_CRIT.clear()
+    _LIVE_CRIT.update({"t": int(round(float(getattr(battle, "_now", 0) or 0))),
+                       "dmg": int(ctx.get("dmg") or 0)})
+    return _orig_crit(battle, caster, target, params, logs)
+
+
+def _crit_hand(roll, mounted=True, seed=20260927, cls="cls_assassin", lv=10,
+               sid="SKILL_SHD_blade", name="试"):
+    """钉死随机源跑**你这一手**（`advance` 那一段照旧自由跑 —— 只钉你出手这一下）。
+
+    ★ 两处各钉一枚：`roll` 钉**决策**（暴击 / 幸运一击 / 闪避都走 `random.random()`）；
+      `seed` 钉**波动**（引擎公式那支 `variance=0.15` 走 `random.uniform()`，用的是同一个
+      Random 实例 —— 只 patch `random.random` 钉不住它，同一个 fixture 的数会一次一个样）。
+    """
+    random.seed(seed)
+    _bb = CMB.build({"cls": cls, "level": lv, "uid": "u_crit", "name": name, "hp": 300},
+                    [DOG], MON, party=1)
+    _ll = []
+    SCH.advance(_bb, _ll)
+    _cc = _bb.focus()
+    if not mounted:
+        _cc["triggers"] = {}                 # 撤改臂：拿掉挂载面 ⇒ 那一行该一个字都不出
+    with _mock.patch.object(ACT.random, "random", return_value=roll):
+        _sub, _e, _w = _bb.human_act("skill", sid, _cc)
+    return _bb, _cc, [str(x) for x in (_sub or [])]
+
+
+def _crit_lines(_logs):
+    """日志里那几行暴击行（按槽位现算出来的那段固定字认）。"""
+    return [x for x in _logs if _MARK_CRIT in x]
+
+
+#  ── 形状：挂载面与动词**两半都得在**（挂了没人注册 = 引擎静默跳过；注册了没人挂 = 死码）
+_mnt = [a.get("action") for a in (MECH.player_triggers().get("crit") or []) if isinstance(a, dict)]
+(ok if _mnt == [_ACT_CRIT] and not EF.missing_actions(_mnt) else bad)(
+    "  · ★ 挂载面与动词两半都在：`player_triggers()[crit]` = %s ｜ `EF.missing_actions` = %s"
+    % (_mnt, EF.missing_actions(_mnt) or "空"))
+
+#  ── ① 正向：钉死随机源（必暴击）⇒ 那一行真出，且**逐字** = 槽位 + 这一手真值
+_sd_c = _no_dodge()                          # 收口的是 fixture：闪避那枚硬币不参与这一档
+EF.ACTION_HANDLERS[_ACT_CRIT] = _crit_watch
+try:
+    _b1, _c1, _l1 = _crit_hand(0.0)
+finally:
+    EF.ACTION_HANDLERS[_ACT_CRIT] = _orig_crit
+    _restore_dodge(_sd_c)
+_bh1 = [int(x.split("受到 ")[1].split(" 点伤害")[0]) for x in _l1 if "受到 " in x and "点伤害" in x]
+_want1 = CA.T(_SLOT_CRIT, t=_LIVE_CRIT.get("t"), who="试",
+              act=" · %s" % SKD["SKILL_SHD_blade"]["name"],
+              tgt=" · %s" % MON[DOG]["name"], dmg=_LIVE_CRIT.get("dmg"))
+(ok if _crit_lines(_l1) == [_want1] and _bh1 else bad)(
+    "  · ① 必暴击那一手（随机源钉成 0.0）⇒ 回话里**恰好一行**暴击行、逐字 = 槽位 + 引擎给的真值：\n"
+    "        %s\n        （同一句现算：%s ｜ 这一手真落地 %s 点）"
+    % (_crit_lines(_l1) or "没出", _want1, _bh1 or "没打上"))
+
+#  ── ② 反证：**不暴击**那一手（同一 fixture · 随机源钉成 0.99）⇒ 这一行一个字都不许出
+_b2, _c2, _l2 = _crit_hand(0.99)
+_bh2 = [int(x.split("受到 ")[1].split(" 点伤害")[0]) for x in _l2 if "受到 " in x and "点伤害" in x]
+(ok if not _crit_lines(_l2) and _bh2 else bad)(
+    "  · ② 反证（不暴击）：随机源钉成 0.99 ⇒ 这一手照打（真落地 %s 点）**但没有**那一行"
+    % (_bh2 or "没打上"))
+
+#  ── ③ 反证：拿掉挂载面（触发器清空）⇒ 即使钉了必暴击，这一行也一个字都不出
+#       （证明那一行来自**内容侧的挂载面**，不是引擎自己渲染的）
+_b3, _c3, _l3 = _crit_hand(0.0, mounted=False)
+(ok if not _crit_lines(_l3) else bad)(
+    "  · ③ 反证（撤改）：触发器清空 + 同一手钉必暴击 ⇒ 一个字都不出（%s）"
+    % (_crit_lines(_l3) or "空"))
+
+print()
 print()
 print("── ⑮ 引擎改动面（硬指标）")
 #  ★ fxmech（2026-09-26）：本批**动了引擎**（B4-4 的两段耗时接线 + 一条新的可选否决口

@@ -10844,3 +10844,80 @@ $PY tests/run_all.py（framework-engine 仓）⇒ 96 份、通过 94、失败 2 
 **回读 + 逐段比对**（`git diff` 看有没有第二份同名实现），并把「同源」「撤改」两类判据写进探针
 —— 它们是**唯一**能自动发现「两份实现各算各的」的东西（例如 `_after_act` 与 `pending_begin`
 必须读同一份声明：判据 ㉕② 就是钉这个）。
+
+---
+
+# fix-k-critline · 暴击/幸运一击在回话里播出来（`COMBAT_CRIT` 接上读端）
+
+> 分支 `fix-k-critline`（基线 `fef4a62`）· 真源仓 / 引擎仓**一字未动**。
+> 三步改法出自本文件 §「暴击行（`COMBAT_CRIT` 槽位写好了、全仓无人引用）」那一节（fxmech 那批核过、没做）。
+
+## 一、病根
+
+引擎 `extends/ext_combat/battle/actions.py:504-508` **真在掷** ——
+`is_crit = random.random() < st["crit"]`，命中后再掷 30% 追加一次「幸运一击 ×1.3」
+（1.5 × 1.3 = **1.95 倍**，与刺客试玩实测那 1.86× / 1.75× 跳变对得上）；`:585` 把它扔成
+**事件** `_fire(battle, "crit", {actor, target, info, dmg}, logs)`。而
+`effect_triggers.fire` 只跑**主体 actor 自己**声明的触发器 ⇒ 内容侧不挂 = 引擎扔完就没了。
+本包这一头：`COMBAT_CRIT` 槽位（`texts.json:281` · params = [act, dmg, t, tgt, who]）
+接之前**全仓零引用**；玩家 actor 的挂载面只有一行 —— `content/combat.py:149`
+`a["triggers"] = MECH.player_triggers()`。
+
+## 二、改了什么（三处 · 显式文件清单）
+
+| # | 处 | 改法 |
+|---|---|---|
+| ① | `content/mech.py::player_triggers()` | `out` 里加一行 `"crit": [{"action": "aeth_crit_line"}]`（与 `act_cast` / `taken_calc` / `heal_calc` 同族：**不是机制** —— 没有机制名、不进机制表） |
+| ② | `content/mech.py` 末尾 | `@EF.register_action("aeth_crit_line")`：读 `battle._fire_ctx` 那五个值 → `logs.append(T("COMBAT_CRIT", t=…, who=…, act=…, tgt=…, dmg=…))` |
+| ③ | `scripts/probe_mech.py` | 新增「暴击那一行」一节：形状 + 正向逐字 + 两条反证（判据从 0 条 → 4 条） |
+
+五个值全从**事件上下文 / actor / 域**现取（**代码里一个中文字都没写** —— 文案在 texts 域，值一个字没改）：
+`who` = 出手 actor 名 · `act` = `" · " + ctx.info.name`（技能自己的名字，普攻也是域里那条的名字）·
+`tgt` = 挨打 actor 名 · `t` = `int(round(battle._now))` · `dmg` = `ctx.dmg`。
+分隔符「 · 」照真源 `25_文案规格与打样 / 26_消息模板` 那份战斗日志样张（`【142 刻】你 · 攻击 · 伐木工`）。
+
+★ **② 的落点不是本文件那三步改法里写的 `content/cmds_battle.py`** —— 实测而非口味：
+`@register_action` 是 **import 期**跑的装饰器 ⇒ 注册取决于那条 import 路径。照原话放进指令模块后，
+`probe_mech` 那条形状判据当场红（`EF.missing_actions = ['aeth_crit_line']`）——
+`load_stack()+install()` 这条路**不 import 命令模块**，那些进程里引擎
+`ACTION_HANDLERS.get(...)` 不命中就 `return`（**静默跳过**，正是本波要治的形状）。
+放 mech.py（`content/combat.py` 模块级 import 它）⇒ 两条路都注册得上。
+
+## 三、判据（只加严 · 4 条 · `scripts/probe_mech.py`）
+
+```text
+形状   player_triggers()["crit"] == ["aeth_crit_line"] 且 EF.missing_actions == 空（两半都钉）
+① 正向 钉死随机源 0.0（+ 闪避上限压 0 + random.seed 钉波动）⇒ **恰好一行**暴击行，
+       且**逐字** = texts 槽位 + 引擎那一手真值（t/dmg 旁听 _fire_ctx · who/act/tgt 从域现读）
+② 反证 同一 fixture 钉 0.99（不暴击）⇒ 这一手照打（有裸伤害行）**但没有**那一行
+③ 反证 触发器清空 + 同一手钉必暴击 ⇒ 一个字都不出（这一行来自挂载面，不是引擎自己渲染的）
+```
+
+钉两处是必要的：`random.random()` 只管**决策**（暴击/幸运/闪避），引擎公式那支
+`variance` 走 `random.uniform()`（同一个 Random 实例）⇒ 还得 `random.seed` 钉**波动**，
+不然同一个 fixture 的数一次一个样。
+
+## 四、锚点跟账：**0 处**（全量门禁 52/0 · 逐字锚点一条没动）
+
+```text
+rm -f "$LOCALAPPDATA/Temp/ast_probe"*.db
+bash C:/Users/yuyu/AppData/Local/Temp/w10/gorun.sh C:/Users/yuyu/ast-wt/fix-k-critline fix-k-critline
+末行：TOTAL pass=52 fail=0          （与基线同 —— 判据只多不少）
+```
+
+`probe_instance` ⑤ 的冻结基线（`_baseline_instance_solo.json`）**没有换锚**：那一段是
+`random.seed(20260926)` 定死的，骑士 5 级（暴击率 3.66%）那 3 手攻击恰好一次都没暴击 ⇒ 逐字对账照旧过。
+其余探针日志里 `暴击！造成` 出现 0 次（只有 `probe_mech` 那两条 —— 判据自己造的）。
+
+## 五、已知口径 / 留的账（没做 · 为什么）
+
+1. ★ **`dmg` 是「落地前」的数**：落地那一侧还叠等级压制/元素加成（`landing._lv_pressure` 等）
+   ⇒ 这一行可能与紧上面那行裸伤害行不逐值相同（实测 76 vs 82；被闪避时这一行照样按管线数报）。
+   引擎 `crit` 事件 ctx 里**没有**落地后那个数（`on_taken` 才有 `real`，而那是挨打方的事件、
+   主体只有挨打者）⇒ 内容侧编不出第二个数。要收紧得引擎在 `crit` 的 ctx 里多给一格（**引擎立项**）。
+2. **对面暴击不播**：`crit` 的主体是攻击者，怪 actor（`combat.monster_actor`）**不挂** triggers
+   ⇒ 田鼠/野狗的暴击没有这一行。要不要给怪也挂是口径（会让更多逐字锚点跟着走），本批**不猜**。
+3. `COMBAT_CRIT` 这条槽位**只在 texts 域里**（真源 `00_总纲/17_文案收口口径_v1.md` 里没有这一行）
+   ⇒ 请主线裁决：补进真源表，还是让它作为只看 texts 域的历史槽位留着。文案值本批**一个字没改**
+   ⇒ 不需要 `rebuild_syscopy.DOC_PENDING` 登记。
+
