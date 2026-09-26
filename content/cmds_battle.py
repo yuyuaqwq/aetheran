@@ -29,7 +29,11 @@
   · 真源 `03_风车镇_指令与回复 §二` 那四段式战斗回复（「◆ 野狗正在蓄力…还剩 N 刻 / ① 攻击
     ② 打断…」）要**一场战斗跨多条指令**的持久状态 —— 那是「轮流制」（组队那批，`_notes.md`
     留问）。本批是「一条指令 = 一场遭遇」，六条各自真生效、可观测、可判据。
-  · 逃跑（flee）那条桩句没动：真源只写「可能失败」，**没给失败率** —— 不编数（见 `_notes.md`）。
+  · ★ P-57 已落（2026-09-26 · 本波）：`逃跑` 不再是桩句 —— 野外 / 单人那条老路上它掷一次定
+    成败（失败率 **30%**，唯一声明处 `content/rules/battle_cmds.json::flee_fail_pct`）：
+    跑成 ⇒ 脱离（这一场没打）；被拦下 ⇒ 那一手白花、这一场照打（不额外挨打）。
+    ★ **多人场那一层仍没做**（`17_组队与策略配合 §三·8` 的口径真源没写）：有队时照旧回
+      `COMBAT_FLEE_TODO`（照实说，不假装做了）—— 与 `content/instance.py` 抬头那条纪律一致。
 
 ★ B3-8 战斗收尾：输了要**真的落地**（回白烛堂 · 血回满 · 掉当前等级经验的 10% ·
   不掉装备 —— 口径 `00_总纲/03_主要玩法 §4.9`，曲线走 `cmds_ast.exp_need` 一个口）；
@@ -39,6 +43,8 @@
   `cmds_ast.add_exp`（与交活同一个口）—— 原先打怪只给钱与掉落，升级只能靠交活。
 """
 from __future__ import annotations
+
+import random
 
 from .cmds_ast import (
     _data, _p, _save, _map_of, _name_of_node, T, CHAPEL, exp_need,
@@ -680,12 +686,90 @@ async def battle_log(env, sink, uid, player):
 
 
 async def flee(env, sink, uid, player):
-    """`逃跑` —— 真源 `04_指令总表 §五` 只写「可能失败」、**没给失败率** ⇒ 不编数。
+    """`逃跑`（别名 逃 / 脱离）—— ★ P-57：真源给了失败率 ⇒ 今天是**真动作**（野外 / 单人那条老路）。
 
-    ★ B4-18：原先回的是**代码里的一句内联桩句**「（第一版还没接轮流制。）」——
-      玩家看到的是开发注记，而且指不到任何一条真能用的路（同一族的『后撤』早在 B3-8
-      就接成了真动作，还能跑 / 跑不掉两态分明）。现在走槽位 `COMBAT_FLEE_TODO`：
-      照实说 + 指向**真能用**的『后撤』。
-      要不要给「逃跑」一个失败率、或者干脆并进『后撤』—— 等真源一句话（台账 §3 · P-57）。
+    口径（主线裁决 2026-09-26）：**三成被拦下**（与『后撤』同一族的两态）：
+      · 掷成（七成）⇒ **脱离**：这一场**没打**（没有掉落、没有经验），只往 `flags.last_battle`
+        写一条 `fled` 记录给『战斗日志』看 —— 与『后撤』跑掉了那一支同形。
+      · 掷败（三成）⇒ **这一手白花、这一场照打**（不额外挨打）：那一手走的就是『后撤』
+        退不开**同一档**（`battle_acts.CAT["retreat"] == "move"` + `hand.lines` 那一句）。
+
+    ★ 失败率**不在本文件里** —— 唯一声明处 = `content/rules/battle_cmds.json::flee_fail_pct`，
+      唯一的读口 = `battle_acts.flee_fail_pct()`（改数只改那一格；代码里一个数字都没有）。
+    ★ 掷骰的种子 = uid + 那一只 + 这一处 + 游戏日（见 `_flee_roll`）⇒ **同一日、同一处、
+      同一只**必是同结果（可复现：探针按同一式子现算，不靠「跑很多次看比例」）。
+    ★ 多人场那一层（`17_组队与策略配合 §三·8`）的口径真源没写 ⇒ **本波不接**：有队时照旧走
+      『尚未落地』那一句（与 `content/instance.py` 抬头那条纪律一致；只登记，见 `_notes.md`）。
     """
-    yield T("COMBAT_FLEE_TODO")
+    p = _p(player)
+    _mx, _line = hp_cap_or_line(p)
+    if _line:
+        yield _line
+        return
+    if _party_now(env, p, uid) != 1:           # ★ 多人场那一层：口径真源没写 ⇒ 照实说（不假装做了）
+        yield T("COMBAT_FLEE_TODO")
+        return
+    pick, ms, affixes, _mline = _meet(p, uid)
+    if not pick:
+        yield T("COMBAT_NEED_FOE")
+        return
+    yield _mline
+    for line in encounter_lines(ms[pick[0]], p):
+        yield line
+    name = ms[pick[0]].get("name", pick[0])
+    from ext_combat.battle import schedule as SCH
+    # ★ 这一手用 `retreat` 那一档（move）+ `hand.lines` —— 掷败时那一手 = 「说一句 + 花一手」，
+    #   与『后撤』退不开**同一形状、同一档耗时**。
+    #   ★ 不能拿字符串 `"flee"` 去 `human_act`：**引擎把 `flee` 当内置动作**
+    #   （`ext_combat/battle/battle.py` 那条 `action not in ("attack","skill","defend","flee")`
+    #   ⇒ 内置那一支**不查 `action_override`**，我们自己那一句就吐不出来）。走非内置那条口
+    #   才轮得到内容侧说话 —— 这也是『后撤』当年为什么没撞上（它的动作名叫 `retreat`）。
+    hand = BA.Hand("retreat", p=p)
+    _ids, _hm = AFFIX.spawn_plan(pick[0], list(affixes))
+    b = CB.build(p, _ids, ms, party=_party_now(env, p, uid), affixes=list(affixes),
+                 hp_mults=_hm, override=hand.override, uid=uid)
+    logs: list = []
+    SCH.advance(b, logs)                       # 推到你的决策点（快的对方该动的先动）
+    caster = b.focus()
+    if b.result is None and _flee_roll(uid, p, pick[0]) >= BA.flee_fail_pct():
+        # ── 跑成了：这一场不打（`fled`），血照当下的血（与『后撤』跑掉了那一支同形）
+        b.result = "fled"
+        pa = (b.sides.get(CB.PLAYER_SIDE) or [{}])[0]
+        p["hp"] = max(1, int(pa.get("hp", 0) or p.get("hp") or 1))
+        for line in _fmt(logs):
+            yield line
+        yield T("COMBAT_FLEE_OK", name=name)
+        _note_battle(p, name, logs, "fled")
+        if player is not None:
+            player.update(p)
+        _save(env)
+        return
+    # ── 被拦下：这一手白花（走 move 那一档耗时），这一场照打（**不额外挨打**）
+    hand.lines = [T("COMBAT_FLEE_BLOCK", name=name)]
+    if caster is not None and b.result is None:
+        _sub, _ended, _who = b.human_act("retreat", None, caster)
+        logs.extend(str(x) for x in (_sub or []))
+    seen = CX.note_kill(p, pick[0])
+    b.auto_run(logs)
+    pa = (b.sides.get(CB.PLAYER_SIDE) or [{}])[0]
+    for line in _fmt([str(x) for x in logs]):
+        yield line
+    async for line in _settle(env, p, uid, pick, ms, b.result, [str(x) for x in logs],
+                              int(pa.get("hp", 0)), seen, player):
+        yield line
+
+
+def _flee_roll(uid, p, mid) -> float:
+    """这一手逃跑的手气（`0 ≤ x < 1`）—— ★ P-57 的唯一随机口。
+
+    种子 = `uid + 那一只 + 这一处 + 游戏日`（与「悬赏每日轮换」「采集当日第几次」同一族写法：
+    种子必须由**现成的稳定标识**拼出来，不许 `random.random()` 那种不可复现的口）：
+      · 同一日 / 同一处 / 同一只 / 同一个人 ⇒ **必是同一个手气**（两个进程也一样）；
+      · 要判成/败两态，换人、换日、换地方或换一只都能翻面（探针就是照这条现算的）；
+      · 「这一手」与「上一手」用同一颗种子是本波**有意**的取舍（真源没给计数格）——
+        登记在 `_notes.md`；要「连试两次不一样」得先有 nth 那一格。
+    判定只由调用方做（`>= battle_acts.flee_fail_pct()` 就是被拦下）—— 这里不写任何阈值。
+    """
+    day = int((CAL.state() or {}).get("game_day") or 0)
+    return random.Random("%s:flee:%s:%s:%s:%d" % (uid, mid, p.get("loc") or "",
+                                                  p.get("node") or "", day)).random()

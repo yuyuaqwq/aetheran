@@ -66,8 +66,21 @@ def rules() -> dict:
         n = got.get("item_uses_per_battle")
         if isinstance(n, bool) or not isinstance(n, int) or n < 1:
             raise ValueError("item_uses_per_battle 得是 1 以上的整数（没有默认值）：%r" % (n,))
+        # ★ P-57：失败率也走同一道 fail-closed（写成 bool / 空 / 越界都当场抛 —— 不静默给默认）
+        pct = got.get("flee_fail_pct")
+        if isinstance(pct, bool) or not isinstance(pct, (int, float)) \
+                or not 0.0 <= float(pct) <= 1.0:
+            raise ValueError("flee_fail_pct 得是 0 到 1 之间的数（没有默认值）：%r" % (pct,))
         _RULES_CACHE = got
     return _RULES_CACHE
+
+
+def flee_fail_pct() -> float:
+    """`逃跑` 的失败率（唯一声明处 = `content/rules/battle_cmds.json` 的 `flee_fail_pct`）。
+
+    ★ P-57：本文件与 `cmds_battle.flee` 都**不写这个数** —— 只读声明表（取值只有一个口）。
+    """
+    return float(rules()["flee_fail_pct"])
 
 
 # ══════════════════════════════════════════════════════════════

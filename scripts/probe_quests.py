@@ -91,6 +91,10 @@ probe_cmds 各自补），原来钉的那些分支一条都没少。
 B4-27 加的那一组（P-56 放弃的冷却）：㉞（三拍真敲 + 跨日 + 失败档，见文件尾部那一节）。
 ★ 「掉一点声望」那半**没落**（没有容器）—— 登记在工作树 `_notes.md`「待鱼鱼拍板」。
 
+w9 加的那一组（P-61 悬赏板列三档悬赏）：㊱（见文件尾部那一节）—— 三档逐行对槽位 ·
+板上那三个编号**真接得下**（接线档）· 已接那档带「进行中」· 段序照旧 · 域里没有悬赏档时
+一行都不列（反证）。★ 判据只加不松：这一节没动上面任何一条。
+
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_quests.py
 """
 from __future__ import annotations
@@ -2005,6 +2009,103 @@ if [h for h in _ab_hits if h[0] != "cmds_quest.py"] or len(_ab_hits) != 2 \
 for _ln in _cd_lines:
     print("      %s" % _ln)
 FC_Q.bind_host(**_FC_SAVED)                     # ★ 拨回真钟
+
+# ══════════════════════════════════════════════════════════════
+# ㊱ ★ P-61：`悬赏` 那块板**把三档每日悬赏也列出来**（玩家不必先知道编号）
+#      真源两份各说一个形状，本批挑**写得下**的那一条落：
+#        · `24_任务线_v1 §二`：「**悬赏板**（玛莎 · 无限循环的日常内容）」
+#        · `03_风车镇_指令与回复 §一`：`悬赏` → 看板 → **三行列表**
+#      ⇒ 一档一行（普通 101 / 精英 102 / 头目 103），写法与主线那一行同形；
+#        那三行的**编号**就是『接 <编号>』认的同一个 `order`（列出来 = 接得上）。
+#      判据（都真敲）：
+#        ① 三档一个不落 · 每行逐字 = `SYS_BOARD_BOUNTY_ROW` 填参（编号 · 名字 · 标记 · 等级）
+#        ② ★ 接线档：板上那三个编号，`接 <编号>` **真接得下**（档上真写下 `quests_active`）
+#        ③ 已接那一档带「进行中」标记，另两档不带
+#        ④ 另一条路没被抢：主线段与尾注逐字照旧，段的先后 = 主线 → 悬赏 → 尾注
+#        ⑤ 反证：域里那三条一拿掉 ⇒ 板上**一行悬赏都不出现**（fail-closed：没数据就不列，
+#           也不拿别的东西顶上），而主线那一段照旧
+# ══════════════════════════════════════════════════════════════
+_BRD36 = CQ._func_node("board")
+_TOWN36 = CA.TOWN
+_BQ36 = sorted([(k, v) for k, v in CQ._quests().items() if v["chain"] == "bounty"],
+               key=lambda kv: kv[1]["order"])
+_LV36 = max((v["min_level"] for _k, v in _BQ36), default=1)
+
+
+def _slot36(key, **kw):
+    """槽位现算的期望串（不手写镜像表）。"""
+    s = (TX.get(key) or {}).get("value", "")
+    for k, v in kw.items():
+        s = s.replace("{%s}" % k, str(v))
+    return s
+
+
+_HEAD36 = _slot36("SYS_BOARD_BOUNTY_HEAD")
+_HOW36 = _slot36("SYS_BOARD_HOW")
+
+
+def _row36(v, mark=""):
+    return "  " + _slot36("SYS_BOARD_BOUNTY_ROW", order=v["order"], name=v["name"],
+                          mark=mark, level=v["min_level"])
+
+
+def _board36(flags):
+    return _drive(CQ.board, _player(loc=_TOWN36, node=_BRD36, level=_LV36, flags=flags), "")
+
+
+_bad36 = []
+_o36 = _board36({"card": 1})
+if not _BQ36:
+    _bad36.append(("quests 域里一条 bounty 都没有", []))
+for _k, _v in _BQ36:
+    _ln = _row36(_v)
+    if _ln not in _o36:
+        _bad36.append(("三档里这一行不在板上 / 逐字对不上", _v["order"], _ln))
+# ①b 段的先后：主线那一行 → 悬赏抬头 → 三档 → 尾注（别把谁挤掉）
+_MAIN36 = next((v for v in CQ._quests().values() if v["chain"] == "main"), None)
+_i_main = next((i for i, x in enumerate(_o36)
+                if _MAIN36 and x.startswith("主线 ") and str(_MAIN36["order"]) in x), -1)
+_i_head = _o36.index(_HEAD36) if _HEAD36 in _o36 else -1
+_i_how = len(_o36) - 1 if _o36 and _o36[-1] == _HOW36 else -1
+if not (_i_main >= 0 and _i_main < _i_head < _i_how and _BQ36
+        and _o36.index(_row36(_BQ36[0][1])) > _i_head):
+    _bad36.append(("段的先后不对（主线 → 悬赏 → 尾注）", (_i_main, _i_head, _i_how, len(_o36))))
+# ② 接线档：板上那三个编号真接得下
+for _k, _v in _BQ36:
+    _pa = _player(level=_LV36, flags={"card": 1})
+    _oa = _drive(CQ.quest_accept, _pa, "接 %d" % _v["order"])
+    if not _oa or MISSING in "".join(_oa) or _v["name"] not in "".join(_oa[:1]):
+        _bad36.append(("板上那个编号接不下（没那句「接下」）", _v["order"], _oa[:2]))
+    if _k not in ((_pa.get("flags") or {}).get("quests_active") or []):
+        _bad36.append(("板上那个编号接下了却没落档", _v["order"], _pa.get("flags")))
+# ③ 已接那一档带「进行中」，另两档不带
+if _BQ36:
+    _taken36 = _BQ36[0][0]
+    _o36b = _board36({"card": 1, "quests_active": [_taken36]})
+    _act36 = _slot36("SYS_BOARD_ACTIVE")
+    if _row36(_BQ36[0][1], _act36) not in _o36b:
+        _bad36.append(("已接那一档没带「进行中」", _row36(_BQ36[0][1], _act36), _o36b[:6]))
+    for _k, _v in _BQ36[1:]:
+        if _row36(_v, _act36) in _o36b:
+            _bad36.append(("没接的那一档却带了「进行中」", _v["order"]))
+# ⑤ 反证：域里没有悬赏档 ⇒ 板上不列（不拿别的东西顶上），主线那一段照旧
+_keep_q36 = CQ._quests
+try:
+    CQ._quests = (lambda: {k: v for k, v in _keep_q36().items() if v["chain"] != "bounty"})
+    _o36c = _board36({"card": 1})
+finally:
+    CQ._quests = _keep_q36
+if (_HEAD36 in _o36c) or any(_row36(v) in _o36c for _k, v in _BQ36):
+    _bad36.append(("域里一条悬赏都没有，板上却列了", _o36c[:6]))
+if _MAIN36 and not any(x.startswith("主线 ") for x in _o36c):
+    _bad36.append(("反证那一支把主线那一段也弄没了", _o36c[:4]))
+(ok if not _bad36 else bad)(
+    "★ P-61 `悬赏` 板列三档每日悬赏（源 24 §二 悬赏板 + 03 §一「三行列表」）：%s 行逐字 = "
+    "`SYS_BOARD_BOUNTY_ROW` 填参 · 板上那三个编号**真接得下**（接线档）· 已接那档带「进行中」· "
+    "主线 → 悬赏 → 尾注 的先后照旧 · 域里没有悬赏档时一行都不列（坏 %s）"
+    % ("/".join(str(v["order"]) for _k, v in _BQ36), _bad36 or "无"))
+for _k, _v in _BQ36:
+    print("      %s" % _row36(_v).strip())
 
 for n in notes:
     print("  · " + n)

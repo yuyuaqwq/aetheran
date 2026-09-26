@@ -2143,6 +2143,11 @@ try:
     chk("★ 上限只有一个口：声明表 `item_uses_per_battle` = %s ↔ 实现真读到的 %s（不手打）"
         % (_RULES23.get("item_uses_per_battle"), BA23.rules().get("item_uses_per_battle")),
         BA23.rules().get("item_uses_per_battle") == _RULES23.get("item_uses_per_battle"))
+    # ★ P-57：`逃跑` 的失败率也走同一张声明表（同一个读口）——
+    #   「代码里不写这个数」那条由 `probe_party ⑦` 的 ast 守卫钉着（那一手里除 0/1 没有别的数）
+    chk("★ P-57 失败率也只有一个口：声明表 `flee_fail_pct` = %s ↔ `battle_acts.flee_fail_pct()` = %s"
+        % (_RULES23.get("flee_fail_pct"), BA23.flee_fail_pct()),
+        _RULES23.get("flee_fail_pct") == BA23.flee_fail_pct())
     chk("★ 本批新加的两个行动类别都在声明表里（interrupt / swap 各两段耗时）：%s"
         % ", ".join("%s=%s/%s" % (c, _AB23["cast"].get(c), _AB23["recover"].get(c))
                     for c in ("interrupt", "swap")),
