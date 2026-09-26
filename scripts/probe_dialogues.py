@@ -180,6 +180,60 @@ chk("★ P-12 取句顺序（层序 %s · 熟门槛 %s）：不熟只有 meet ·
 print("      假树五层真调 `_pick_layer`：搭 0/2 次 ⇒ meet ｜ 搭 3 次 ⇒ daily ｜ daily 听过 ⇒ main "
       "⇒ hidden ⇒ idle ⇒ 全说过回 daily ｜ 14 棵树都有层序排头那一层、`start` 已撤（域里 0 处）")
 
+# ⑨ ★ fix3-⑤：**一句一行** —— 台词在**域里**就分好行（排版随文案走，与 SCENE_* 同一条路）
+#   玩家报的原状（P1 体验-5）：`搭话 杜林` 一整段 130 字、6 组「」挤在一行，界面上读成一坨；
+#   而『观察』（SCENE_* 正文自带换行）与『悬赏』（一行一条槽位）早就做到一句一行。
+#   落法 = `scripts/normalize_dialogue_lines.py`（一次性归一化，域里存的就是多行文本）；
+#   判据 = 逐条台词按 `\n` 拆完自查 + **幂等**（再跑一遍归一化不许有改动）+ 反证。
+sys.path.insert(0, os.path.join(str(REPO), "scripts"))                    # noqa: E402
+import normalize_dialogue_lines as _NL                                    # noqa: E402
+
+MAX_LINE = 72
+
+
+def _line_bad(text):
+    """这一条台词切完还有没有坏行 —— 空表 = 合规。"""
+    bad = []
+    for ln in str(text).split("\n"):
+        if not ln.strip():
+            bad.append(("空行", ln))
+        elif len(ln) > MAX_LINE:
+            bad.append(("超 %d 字" % MAX_LINE, ln[:24]))
+        elif ln.count("「") > 1:
+            bad.append(("一行挤了 %d 组引号" % ln.count("「"), ln[:24]))
+    return bad
+
+
+_ln9, _ib9, _idem9 = [], [], []
+for _k, _v in dl.items():
+    for _nk, _nd in _v["nodes"].items():
+        for _t in _nd["texts"]:
+            _s = _t["text"]
+            _ln9.append(len(_s.split("\n")))
+            _b = _line_bad(_s)
+            if _b:
+                _ib9.append(("%s/%s" % (_k, _nk), _b[:2]))
+            if "\n".join(_NL.speak(_s)) != _s:
+                _idem9.append("%s/%s" % (_k, _nk))
+chk("★ 一句一行：%d 条台词的每一行都 ≤ %d 字、且每行最多一组「」"
+    "（最长一行 %d 字 · 平均 %.1f 行/条）"
+    % (n_texts, MAX_LINE, max((max((len(x) for x in t["text"].split("\n")), default=0)
+                               for _v in dl.values() for _nd in _v["nodes"].values()
+                               for t in _nd["texts"]), default=0),
+       sum(_ln9) / float(len(_ln9) or 1)), not _ib9, "%s" % (_ib9[:3] or "全合规"))
+chk("★ 幂等：再跑一遍 `scripts/normalize_dialogue_lines.py` 的切行 ⇒ 一条都不动"
+    "（域里存的就是切好的形态）", not _idem9, "%s" % (_idem9[:3] or "0 条要改"))
+
+# 反证：这条判据抓得住玩家报的那条原状（杜林·初次 · 逐字抄自 P1 报告，130 字 / 6 组引号）
+_OLD_DURIN = ("「旧东西？拿来我看。」「……」（他翻了两下，忽然不出声了）（压低声音）"
+              "「你知道这是什么吗。」「三百年前的形制。这种扣法，只有那一家作坊用。」"
+              "（他抬头看你）「你在哪儿捡的。」「……行，你不说也行。但这个价，我给你翻倍。」")
+_ob9 = _line_bad(_OLD_DURIN)
+chk("★ 反证：旧形态（%d 字一行 · %d 组引号）会被判红；切完 %d 行全合规"
+    % (len(_OLD_DURIN), _OLD_DURIN.count("「"), len(_NL.speak(_OLD_DURIN))),
+    bool(_ob9) and not _line_bad("\n".join(_NL.speak(_OLD_DURIN))),
+    "%s" % (_ob9[:1] or "没抓住"))
+
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
 sys.exit(0 if ok else 1)

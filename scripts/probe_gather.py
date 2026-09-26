@@ -123,7 +123,58 @@ for gid, v in G.items():
 _multi = {k: v for k, v in _multi.items() if len(v) > 1}
 (ok if not _multi else bad)("★ 同节点同动词只有一个点（多一个就把另一个遮住）—— %s" % (_multi or "无"))
 
+# ⑩ ★ fix3-⑦：采集点正文点名的东西 ↔ 它自己的掉落池 —— **双向**对账
+#   玩家报的原状（P2 BUG⑩）：伐木棚『挖掘』正文只承诺「崩掉的斧刃、弯了的铁钉」，
+#   实际给的是 🦴 骨头 —— 收集向玩家会怀疑自己看错。
+#   真源口径 = `10_地图探索元素库_v1.md §四①`「显示必可触发：正文提到的物件，都要能在
+#   该节点被指令碰到」——把它落到采集点这一半，做成两条：
+#     · 池里有、正文没提 ⇒ 玩家拿到会以为看错（就是这条 bug）
+#     · 正文点名、池里没有 ⇒ 正文在承诺拿不到的东西
+#   登记表 = 点 id → [(正文里的锚词, 池里对应的那一条)]（锚词是人写的，登记在这一处）。
+LOOT_IN_PROSE = {
+    "gt_be_dig_1": [("斧刃", "i_material_old_iron"),
+                    ("铁钉", "i_material_iron_scrap"),
+                    ("骨头", "i_junk_bone")],
+}
+
+
+def _prose_bad(desc, pool_outs, pairs):
+    """这一条正文与池子对不上几处（空表 = 对得上）。"""
+    out = []
+    for word, item in pairs:
+        if item in pool_outs and word not in desc:
+            out.append("池里有 %s，正文没提「%s」" % (item, word))
+        if word in desc and item not in pool_outs:
+            out.append("正文点名「%s」，池里没有 %s" % (word, item))
+    return out
+
+
+_prose_bad_all = []
+for _gid, _pairs in LOOT_IN_PROSE.items():
+    _pt = G.get(_gid)
+    if not _pt:
+        _prose_bad_all.append((_gid, "点不在域里"))
+        continue
+    _outs = set(str(e.get("out")) for e in (_pt.get("pool") or []))
+    _b = _prose_bad(str(_pt.get("desc") or ""), _outs, _pairs)
+    if _b:
+        _prose_bad_all.append((_gid, _b))
+(ok if not _prose_bad_all else bad)(
+    "★ 采集点正文 ↔ 掉落池 双向对账（%d 个点登记：正文点名的都能拿到 · 池里有的都点过名）%s"
+    % (len(LOOT_IN_PROSE), ("；对不上：%s" % _prose_bad_all) if _prose_bad_all else ""))
+
+# 反证：这条判据抓得住玩家报的那条原状（旧正文只提斧刃/铁钉，一个字没提骨头）
+_OLD_DIG_DESC = "棚子后面那片土被刨过。崩掉的斧刃、弯了的铁钉 —— 都堆在这儿，没人捡。"
+_old_b = _prose_bad(_OLD_DIG_DESC, set(str(e.get("out")) for e in (G["gt_be_dig_1"]["pool"] or [])),
+                    LOOT_IN_PROSE["gt_be_dig_1"])
+_cur_b = _prose_bad(str(G["gt_be_dig_1"].get("desc") or ""),
+                    set(str(e.get("out")) for e in (G["gt_be_dig_1"]["pool"] or [])),
+                    LOOT_IN_PROSE["gt_be_dig_1"])
+(ok if (_old_b and not _cur_b) else bad)(
+    "★ 反证：旧伐木棚正文（提斧刃铁钉、不提骨头）会被判红 —— %s；现正文 = %s"
+    % (_old_b or "没抓住", _cur_b or "对得上"))
+
 print()
 print("按地图：%s" % by_map)
-print("结果：%s" % ("全绿 ✓" if not fails else "有红 ✗"))
+print("结果：%s" % ("全绿 ✓" if not fails else "有红 ✗（%d）" % len(fails)))
 sys.exit(1 if fails else 0)

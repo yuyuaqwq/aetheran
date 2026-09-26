@@ -1436,7 +1436,7 @@ try:
     _g13c = _say12("加点")
     _w13c = [_r("SYS_ALLOC_ASK", usage=_decl_usage_full("alloc"), left=_tot13 - 5,
                 list=_statlist13()),
-             _r("SYS_ALLOC_SUGGEST", total=_tot13,
+             _r("SYS_ALLOC_PLAN", total=_tot13,
                 list=" · ".join("%s %d" % (_r("SYS_STAT_%s" % _s), _n)
                                 for _s, _n in _AL13.plan(_lv13, "cls_knight").items() if _n))]
     if _g13c != _w13c or _alloc13() != {"STR": 5}:
@@ -1764,16 +1764,17 @@ try:
         and dict(_sv16()) == _snapP16,
         "%s（库里=%s）" % ([x for x in _BAD16 if x[0].startswith("排行")][:1], _rank_db16))
 
-    # ── 公告：包名 / 版本 / 已接条数（现点声明表）────────────────────────
+    # ── 公告：包名 / 版本 / 手边能敲什么 ────────────────────────────────
+    #   ★ fix3-⑥：原先这里还印一行「已经接上的指令：N / M 条」（内部完成度 · P1 BUG-15）
+    #     ⇒ 换成 SYS_NOTICE_WHAT；旧槽位退役登记见 `scripts/probe_copy.py::RETIRED_DOC`。
     _mf16 = json.loads((Path(str(REPO)) / "game.json").read_text(encoding="utf-8"))
-    _nb16 = len([1 for v in DECL.values() if (v or {}).get("bind")])
     _cmp16("公告", _say16("公告"),
            [_r("SYS_NOTICE_HEAD"),
             _r("SYS_NOTICE_PKG", name=_mf16.get("name") or "", ver=_mf16.get("version") or ""),
-            _r("SYS_NOTICE_CMDS", n=_nb16, total=len(DECL)),
+            _r("SYS_NOTICE_WHAT"),
             _r("SYS_NOTICE_TAIL")])
-    chk("★ `公告` 真敲：包名 / 版本取自 `game.json`、已接条数**现点**声明表里真有 `bind` 的那几条"
-        "（与『帮助』同一批口径）",
+    chk("★ `公告` 真敲：包名 / 版本取自 `game.json` · **不再报内部完成度**"
+        "（「N / M 条」这种构建期计数不上屏）",
         not [x for x in _BAD16 if x[0].startswith("公告")],
         "%s" % [x for x in _BAD16 if x[0].startswith("公告")][:2])
 

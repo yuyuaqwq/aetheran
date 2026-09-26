@@ -128,6 +128,86 @@ chk("★ 节点级场景都是正文（≥80 字）", not short, "%s" % short[:5
 todo_scene = [k for k, v in tx.items() if v.get("category") == "场景" and "〔待填" in v["value"]]
 chk("场景类 0 条待填", not todo_scene, "%s" % todo_scene[:5])
 
+# ⑪ ★ fix3-④：聆听 —— 每个节点都听得到**这一站自己的**那一句
+#   原先代码只按 `p["loc"]`（图）取 `WORLD_LISHEN_<图>`，而 texts 域里一张图都没有这一族
+#   ⇒ 玩家在镇上 11 个站点听到的是同一句 `SYS_LISTEN_DEFAULT`（P1 体验-3：与同站『观察』
+#   写的东西对不上 —— 观察写着雨、炉火、草汁、白烛，聆听只有一句「风声。远处有水声。」）。
+#   口径与 `scene.resolve` 一致：节点级 → 地图级 → 通用句；判据 = **逐节点真跑** + 互不相同。
+import asyncio as _a11                                                    # noqa: E402
+
+
+class _E11:                # `聆听` 不要 env（只取档）
+    text = ""
+
+
+def _listen_lines(loc, node):
+    p = dict(CA.DEFAULT_PLAYER)
+    p.update({"loc": loc, "node": node, "race": "human"})
+    out = []
+
+    async def _go():
+        async for ln in CA.listen(_E11(), None, "u_listen", p):
+            out.append(ln)
+
+    _a11.run(_go())
+    return out
+
+
+_lk = [(loc, nd, "WORLD_LISHEN_%s" % nd.upper()) for loc, nd in nodes]
+_missing = [(nd, k) for _l, nd, k in _lk if k not in tx]
+_leaked = [(loc, nd, _listen_lines(loc, nd)[0]) for loc, nd, _k in _lk
+           if _listen_lines(loc, nd)[0] == tx["SYS_LISTEN_DEFAULT"]["value"]]
+_vals = {}
+for _l, _nd, _k in _lk:
+    if _k in tx:
+        _vals.setdefault(tx[_k]["value"], []).append(_nd)
+_dupes = {v: who for v, who in _vals.items() if len(who) > 1}
+_bad11 = [(nd, len(tx[k]["value"]), tx[k]["value"]) for _l, nd, k in _lk
+          if k in tx and (len(tx[k]["value"]) > 40 or "\n" in tx[k]["value"])]
+chk("★ 聆听：%d 个节点**各有自己一句**（槽位 `WORLD_LISHEN_<节点>` 逐个在 texts 里）"
+    % len(nodes), not _missing, "缺：%s" % (_missing[:4] or "无"))
+chk("★ 聆听：没有哪个节点还落回通用句 `SYS_LISTEN_DEFAULT`（旧口径 = 镇上 11 站同一句）",
+    not _leaked, "%s" % (_leaked[:3] or "0 个节点"))
+chk("★ 聆听：%d 句两两不同（同一张图上也是）」" % len(_vals), not _dupes,
+    "%s" % (_dupes or "无重复"))
+chk("★ 聆听：每句都是**一行**、且 ≤ 40 字（一屏一行读得完）", not _bad11,
+    "%s" % (_bad11[:3] or "全在 40 字以内"))
+chk("★ 聆听 真跑逐节点产出的就是该节点那一句（%d 个节点）" % len(nodes),
+    not [1 for _l, _nd, _k in _lk if _k in tx and _listen_lines(_l, _nd)[0] != tx[_k]["value"]],
+    "%s" % [(_nd, _listen_lines(_l, _nd)[0][:12]) for _l, _nd, _k in _lk
+            if _k in tx and _listen_lines(_l, _nd)[0] != tx[_k]["value"]][:3])
+
+# ⑫ ★ fix3-③：**门控产出不许被「观察」提前承诺** —— 场景正文提到被时辰/天气锁住的产出时，
+#   必须同现那道门槛的词。玩家报的原状（P2 BUG⑥）：白桦林`观察`写「树根边冒出来一片菌」，
+#   而同站采集点的门槛是「只在雨出」，晴天去采只会得到「树根边的菌只在「雨」出」。
+#   登记表 = (场景槽位, 会踩到这道门的锚词, 必须同现的门槛词, 那条被锁住的采集点)。
+from content import calendar as _CAL12                                    # noqa: E402
+
+GATED_SCENE = [
+    ("SCENE_BE_BIRCH", ("菌", "断口"), "雨", "gt_be_herb_1"),
+    ("SCENE_BN_TOWER", ("白茅",), "夜", "gt_bn_herb_2"),
+]
+_gs_bad = []
+for _sk, _anchors, _gate, _gid in GATED_SCENE:
+    _txt = (tx.get(_sk) or {}).get("value") or ""
+    _hit = [a for a in _anchors if a in _txt]
+    if _hit and _gate not in _txt:
+        _gs_bad.append("%s 提到 %s 却没写门槛「%s」" % (_sk, _hit, _gate))
+    _pt = ((st.domain("gathering") or {}).get(_gid) or {}).get("time")
+    if _CAL12.resolve(_gate)[1] is None or _pt != _gate:
+        _gs_bad.append("%s 登记的采集点 %s 门槛对不上（域里是 %r）" % (_sk, _gid, _pt))
+chk("★ 门控产出：场景正文提到被判了门槛的产出时，得同现那道门槛的词"
+    "（雨后的菌 / 夜里的白茅 —— 正文与采集点不许两套口径）", not _gs_bad,
+    "%s" % (_gs_bad or "两处都同现门槛词"))
+
+# 反证：这条判据抓得住旧文案（旧正文提了菌、一个字没提门槛）
+_OLD_BIRCH = ("林子里的白桦一般粗，只有靠里的几棵例外。路是人踩出来的，踩在落叶上，浅得只有一层。"
+              "树皮上的刻痕一处比一处高 —— 刻的人一年比一年够得着更高。"
+              "树根边冒出来一片菌，有几朵被踩坏了，断口还是新的。")
+_old_hit = [a for a in ("菌", "断口") if a in _OLD_BIRCH]
+chk("★ 反证：旧白桦林正文（提「菌」不提门槛）会被判红", bool(_old_hit) and "雨" not in _OLD_BIRCH,
+    "锚词命中 %s · 门槛词「雨」在不在：%s" % (_old_hit, "雨" in _OLD_BIRCH))
+
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
 sys.exit(0 if ok else 1)

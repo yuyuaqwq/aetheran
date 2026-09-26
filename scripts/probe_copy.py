@@ -95,6 +95,27 @@ ENUM_DONE = ("武器", "上甲", "下甲", "头盔", "靴子", "饰品", "主动
              "普通", "精英", "头目", "层主",
              "烹饪", "强化")
 
+#: ★ fix3-⑥⑦：**退役登记** —— 口径表里那几条「呈现口已经不用了」的槽位（键 → 为什么）。
+#
+#   为什么要有这一格：上面 ⑤ 有一条「口径表每条都被引用」（防「写了等于没写」）。
+#   这几条退役之后，那一格会红 —— 而它们退役的**原因**恰恰是「玩家不该看到这句」
+#   （内部完成度 / 策划口径 / 重报族别），所以修法不是把旧句子挂回去，而是：
+#     ① 呈现口换新槽位（`SYS_NOTICE_WHAT` / `SYS_ALLOC_PLAN` / `SYS_CLS_LEAD`）；
+#     ② 在这里登记**真源那一行待主线改/删**（真源仓对本分支只读 ⇒ 改值就两处口径打架）。
+#   ★ 这一格**自带一条更严的判据**（见下面 ⑤）：登记了就必须**真的没被引用**
+#     （哪天有人把旧槽位读回去，登记变陈旧 ⇒ 当场红）+ 每条都必须写明理由。
+RETIRED_DOC = {
+    "SYS_NOTICE_CMDS":
+        "fix3-⑥（P1 BUG-15）公告不再报内部完成度（「已经接上的指令：98 / 103 条」）；"
+        "替身 = SYS_NOTICE_WHAT；真源 17_文案收口口径_v1.md 那一行待主线删",
+    "SYS_ALLOC_SUGGEST":
+        "fix3-⑥（P4 E-5）加点不再说「设计基线（按建议权重铺满…）」这种策划口径；"
+        "替身 = SYS_ALLOC_PLAN（推荐分配）；真源那一行待主线改/删",
+    "SYS_CLS_HEAD":
+        "fix3-⑦（P1 体验-2）选职业那一步不再重报一遍族别（「你是精灵了 —— …」）；"
+        "替身 = SYS_CLS_LEAD（族定了 —— …）；真源那一行待主线改/删",
+}
+
 ok = True
 
 
@@ -400,9 +421,17 @@ def main():
               and not _by_tpl(r["key"])]
     chk("★ 口径表 %d 条都落在 texts 里" % len(rows), not notx, "%s" % notx[:6])
     chk("★ 口径表与 texts 逐字一致（防两处口径）", not diff, "%s" % diff[:6])
+    #  ★ fix3-⑥⑦：退役登记的那几条「没被引用」是**对的**（见 RETIRED_DOC）；其余一条都不许闲着。
+    #    两态都要守：登记了却没退役（还被人引用）⇒ 登记陈旧 ⇒ 红。
+    _undecided = [k for k in unused if k not in RETIRED_DOC]
+    _stale = [k for k in RETIRED_DOC if k not in unused and k not in (notx + diff)]
+    _noreason = [k for k, v in RETIRED_DOC.items() if not str(v or "").strip()]
     chk("★ 口径表每条都被引用（代码 `T(\"…\")` / 代码字面量 / **模板拼出来** / **数据里取件**）"
-        "（T() %d · 字面量 %d · 模板 %d · 数据 %d）"
-        % (len(ref), len(ref_lit), len(_tpl_rx), len(data_ref)), not unused, "%s" % unused[:6])
+        "（T() %d · 字面量 %d · 模板 %d · 数据 %d）· 退役登记 %d 条（各自写明理由）"
+        % (len(ref), len(ref_lit), len(_tpl_rx), len(data_ref), len(RETIRED_DOC)),
+        not _undecided and not _stale and not _noreason,
+        "没被引用且没登记：%s ｜ 登记陈旧（其实还在用）：%s ｜ 理由是空的：%s"
+        % (_undecided[:6], _stale[:4], _noreason[:4]))
 
     # ⑥ 真跑实现体：产出的行里不许有取不到文案的标记
     from content import cmds_ast as CA                                    # noqa: E402
@@ -1037,6 +1066,62 @@ def main():
     chk("★ P-52：『进镇』从野外回镇**不受影响**（%d 处起手都真落到北口）" % len(_WILDS),
         not back_bad, "%s" % back_bad[:3])
 
+
+    # ── ⑲ ★ fix3-⑥⑦：机器味 / 开发词上屏（三处点名）+「扫面」的语境 ─────────────
+    #   ⑥-a 公告：构建期完成度不上屏（P1 BUG-15）
+    #   ⑥-b 加点：不说「设计基线」这种策划口径（P4 E-5）
+    #   ⑥-c 战斗日志尾巴：引擎那句兜底（无 emoji / 缩进不同）已被自己的槽位顶掉（P2 BUG⑪）
+    #   ⑦-a 老风车观察：「扫面」是磨坊主的话（真源 23_NPC设定 §7），正文要给出能读懂它的语境
+    #        （P1 体验-13 玩家当错字报上来的）
+    import re as _re19                                                     # noqa: E402
+
+    from content import battle_text as BT19                                # noqa: E402
+    from content import cmds_self as CS19                                  # noqa: E402
+
+    _CNT19 = _re19.compile(r"\d+\s*/\s*\d+\s*条")
+    _notice19 = _drive(CS19.notice, _player(), "")
+    _nt19 = [ln for ln in _notice19 if _CNT19.search(ln) or "接上" in ln]
+    chk("★ ⑥ 公告不再报内部完成度（「已经接上的指令：N / M 条」不上屏）",
+        not _nt19 and bool(_notice19), "%s" % (_nt19[:2] or " ｜ ".join(_notice19)))
+
+    # 反证：判据抓得住旧那句（把旧槽位按 P1 BUG-15 那两个数铺出来 —— 逐字重现当时那句）
+    _OLD_NOTICE19 = (tx["SYS_NOTICE_CMDS"]["value"].replace("{n}", "98").replace("{total}", "103"))
+    chk("★ 反证：旧公告那句（98 / 103 条）会被判红",
+        bool(_CNT19.search(_OLD_NOTICE19)) and "98 / 103 条" in _OLD_NOTICE19,
+        "%s" % (_OLD_NOTICE19,))
+
+    _al19 = _drive(CA.alloc_points, _player(cls="cls_knight", level=3), "")
+    _dev19 = [ln for ln in _al19 if ("设计基线" in ln) or ("权重" in ln) or ("基线" in ln)]
+    chk("★ ⑥ 加点（不带参数）不说策划口径：没有「设计基线 / 权重」这类词，"
+        "给的是打得出来的「推荐分配」（%d 行）" % len(_al19),
+        not _dev19 and any(tx["SYS_ALLOC_PLAN"]["value"].split("（")[0] in ln for ln in _al19),
+        "%s" % (_dev19[:2] or _al19[:2]))
+
+    # 反证：旧槽位的值（真源那一行）确实带着那个词 —— 判据不是空转
+    chk("★ 反证：旧加点那句（真源口径表里的 SYS_ALLOC_SUGGEST）会被判红",
+        "设计基线" in tx["SYS_ALLOC_SUGGEST"]["value"], "%s" % tx["SYS_ALLOC_SUGGEST"]["value"][:24])
+
+    _eng19 = "battle.actions.no_target"
+    _decl19 = BT19.slots().get(_eng19, "")
+    _tbl19 = BT19.battle_text()
+    _eng_default = "但没有可攻击的目标！"
+    _rend19 = _tbl19.render_or(_eng19, _eng_default)
+    chk("★ ⑥ 战斗日志尾巴那句引擎腔被顶掉（引擎槽位声明在表里 + 槽位在 texts + 真渲染三条都在）",
+        _decl19 and _decl19 in tx and _rend19 == tx[_decl19]["value"]
+        and _eng_default not in _rend19 and "没有可攻击" not in _rend19,
+        "%s → %r" % (_decl19 or "没声明", _rend19))
+    chk("★ 反证：未声明时上屏的就是引擎那句 —— 与我们的槽位逐字不同（差异是真的，不是同义词）",
+        _eng_default != tx[_decl19]["value"] and _eng_default not in _rend19,
+        "引擎兜底 = %r（未声明时原样上屏；我们的是 %r）"
+        % (_eng_default, tx[_decl19]["value"][:20]))
+
+    _mill19 = tx["SCENE_WT_MILL"]["value"]
+    _OLD_MILL19 = "德里克在下面扫面 —— 他不说话的时候也扫。"
+    chk("★ ⑦ 老风车『观察』里「扫面」带着语境（磨盘 / 落的那层白），不会读成错字",
+        "扫面" in _mill19 and "磨盘" in _mill19,
+        "「扫面」在：%s · 「磨盘」在：%s" % ("扫面" in _mill19, "磨盘" in _mill19))
+    chk("★ 反证：旧那一行（裸「扫面」、上下文里没有磨盘）会被判红",
+        "扫面" in _OLD_MILL19 and "磨盘" not in _OLD_MILL19, "%s" % _OLD_MILL19)
 
     print("  · 打样：%s" % " ｜ ".join(sample))
 

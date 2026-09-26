@@ -77,10 +77,40 @@ def name(eid: str) -> str:
     return _slot_text(e["slot"])
 
 
-def desc_slot(eid: str) -> str:
-    """条目 id → 风味文案的槽位名（代码只传槽位）。"""
+def variant_key(base: str, eid: str) -> str:
+    """风味文案的**条件变体**槽位名 —— `<基础槽位>__<条件条目 id 大写>`（唯一写法）。
+
+    为什么要有这一格（fix3-② · 玩家报告 P2 BUG⑤ / P4 BUG-2）：一条回话里天气行与时辰行
+    同屏，而两句原先各自**只认自己那一轴** ⇒ `昼 · 雨` 的正文里出现「日头正」、
+    `夜 · 晴` 的正文里出现「太阳晒到石头上」。基础句改成**跨轴中立**之后还不满足的地方
+    （例：夜里该有一句夜里的晴），挂一条**变体槽位**即可 —— 表里加一条文案，代码不改。
+
+    ★ 只在本模块拼这个键（别处不许自己拼 —— K65「同一件事两处口径」）：
+      消费端唯一读口 = `desc_slot(eid, st)`。
+    """
+    return "%s__%s" % (str(base), str(eid).upper())
+
+
+def desc_slot(eid: str, st: dict | None = None) -> str:
+    """条目 id → 风味文案的槽位名（代码只传槽位）。
+
+    ★ fix3-②：给了 `st`（此刻的 `calendar.state()`）时**先试条件变体**：
+      · 天气条目 → 试 `WEATHER_..._DESC__HR_<此刻时辰>`（夜里的晴 = `__HR_NIGHT`）
+      · 时辰条目 → 试 `HOUR_..._DESC__W_<此刻天气>`
+      变体槽位**存在**就用它，否则回落到 `desc_slot` 那一格。变体是**纯增项**：
+      表里没写变体的组合走基础句（今天只有「夜里的晴」一条）。
+    """
     e = hours().get(eid) or weathers().get(eid) or {}
-    return e.get("desc_slot") or ""
+    base = e.get("desc_slot") or ""
+    if not (st and base):
+        return base
+    other = st.get("hour") if eid in weathers() else st.get("weather")
+    if other:
+        alt = variant_key(base, other)
+        rec = (_d("texts") or {}).get(alt)
+        if isinstance(rec, dict) and str(rec.get("value") or "").strip():
+            return alt
+    return base
 
 
 # ── 现在是几时 ────────────────────────────────────────────────

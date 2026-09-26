@@ -153,8 +153,26 @@ chk("★ 就地线索里 5 条各有自己的正文槽位（%s）· 第 6 条与
              if po[k].get("read_text") == po[tw_share[0]].get("read_text")]) == 1,
     "%s（共用那一句的进谱条目：%s）"
     % ([po[k].get("name") for k in tw_share],
-       [(k, po[k].get("name")) for k in codexed
-        if po[k].get("read_text") == po[tw_share[0]].get("read_text")]))
+      [(k, po[k].get("name")) for k in codexed
+       if po[k].get("read_text") == po[tw_share[0]].get("read_text")]))
+
+# ★ fix3-⑦（P2 BUG⑫ 的处置）：上面那条「两处共用同一句正文」**是有据的，不是漏抄** ——
+#   真源 `22_旧哨塔_逐间设计_v1.md §二·12 可做` 那一行明写：
+#     「捞那页纸（→ **就是** 14 §五 那半页：同一句正文，与伐木棚那本共用 READ_SOAKED_JOURNAL；
+#       P1 不拆成半页 A/B）」
+#   玩家把它当「复制粘贴」报了上来（两处一字不差）；照 `legacy-debt-triage` 的口径先核实，
+#   结论 = **有意为之**（同一样东西的两个位置）⇒ **不改文案**；改成把「这条共享有真源依据」
+#   钉成判据：真源哪天翻成「要拆」，这里当场红（那时才该拆槽位 + 改上面那条判据）。
+_D22 = RK.rd(RK.DOC22)
+_SHARE_LINE = [ln for ln in _D22.splitlines()
+               if "READ_SOAKED_JOURNAL" in ln and "共用" in ln and "不拆" in ln]
+chk("★ 共用正文那一档**有真源依据**（22 §二·12「同一句正文 · 与伐木棚那本共用 · P1 不拆成半页 A/B」）"
+    "—— 真源翻转 ⇒ 这里当场红", bool(_SHARE_LINE),
+    "%s" % ((_SHARE_LINE[0].strip()[:70] + "…") if _SHARE_LINE else "22 文档里找不到那一行"))
+chk("★ 反证：域里确实还是共用（那几处的 `read_text` 逐字相同）—— 判据对象没跑空",
+    len({str(po[k].get("read_text")) for k in tw_share}) == 1
+    and str(po[tw_share[0]].get("read_text")) == "READ_SOAKED_JOURNAL",
+    "%s" % [(k, po[k].get("read_text")) for k in tw_share])
 chk("★ 门厅那件不认得的：挂在池表（未鉴定）· 在旧物谱里（捡的）· 是门厅那个可搜物的产物",
     "unid_tower" in dp9
     and (cx9.get("relic", {}).get("unid_tower") or {}).get("from") == "pick"

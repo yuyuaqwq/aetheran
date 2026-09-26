@@ -412,8 +412,14 @@ def _cls_star(p, rec):
 
 
 def class_menu(p) -> list:
-    """建号第二步那一眼：每种打法两行（一行是什么人 · 一行什么节奏）。文案一个字都不在这里写。"""
-    out = [T("SYS_CLS_HEAD", race=_race_label(p.get("race")))]
+    """建号第二步那一眼：每种打法两行（一行是什么人 · 一行什么节奏）。文案一个字都不在这里写。
+
+    ★ fix3-⑦：菜单头原先读 `SYS_CLS_HEAD`（「你是{race}了 —— 还没定下怎么打。」）——
+      族是**上一步**刚定过的，这一步再说一遍就是重报（玩家报告 P1 体验-2）。
+      换成 `SYS_CLS_LEAD`（「族定了 —— 还没定下怎么打。」）；旧槽位退役登记见
+      `scripts/probe_copy.py::RETIRED_DOC`（真源那一行待主线改）。
+    """
+    out = [T("SYS_CLS_LEAD")]
     for i, (k, v) in enumerate(_cls_all(), 1):
         out.append(T("SYS_CLS_ROW", i="①②③④⑤⑥"[i - 1] if i <= 6 else str(i),
                      star=_cls_star(p, v), icon=v.get("icon", ""), name=v.get("name", k),
@@ -720,13 +726,30 @@ async def map_view(env, sink, uid, player):
 
 
 async def listen(env, sink, uid, player):
+    """★ fix3-④：听这一站 —— **先本节点、再本图、最后才通用句**。
+
+    原先只按 `p["loc"]`（图）取 `WORLD_LISHEN_<图>`，而 texts 域里一张图都没有这一族
+    ⇒ 玩家在镇上 11 个站点听到的是同一句 `SYS_LISTEN_DEFAULT`（玩家报告 P1 体验-3：与
+    同站『观察』写的东西对不上）。现在口径与 `scene.resolve` 一致：节点级 → 地图级 → 默认；
+    句子都在 texts 域，本文件一个字不写（呈现口只传槽位）。
+    """
     p = _p(player)
-    yield T("WORLD_LISHEN_%s" % p["loc"].upper()) if ("WORLD_LISHEN_%s" % p["loc"].upper()) in _texts() \
-        else T("SYS_LISTEN_DEFAULT")
+    for key in ("WORLD_LISHEN_%s" % str(p["node"]).upper(),
+                "WORLD_LISHEN_%s" % str(p["loc"]).upper()):
+        if key in _texts():
+            yield T(key)
+            return
+    yield T("SYS_LISTEN_DEFAULT")
 
 
 async def time_now(env, sink, uid, player):
-    """★ 时辰与天气的唯一呈现口（模板 SYS_WEATHER_CHANGE = 26 消息模板第 13 类）。"""
+    """★ 时辰与天气的唯一呈现口（模板 SYS_WEATHER_CHANGE = 26 消息模板第 13 类）。
+
+    ★ fix3-①②：天气风味行与时辰风味行**同屏**，两句各自只认自己那一轴 ⇒ 原先
+      `昼 · 雨` 的正文里写「日头正」、`夜 · 晴` 的正文里写「太阳晒到石头上」（两个玩家
+      独立撞上：P1 BUG + P4 BUG-2 / P2 BUG⑤）。现在两句都走 `CAL.desc_slot(条目, st)`：
+      基础句已按对轴中立，另外**夜里还有一种自己的晴**（变体槽位 `WEATHER_SUNNY_DESC__HR_NIGHT`）。
+    """
     p = _p(player)
     st = CAL.tick(p)                       # 钟源 = 宿主注入（facade.clock），本模块不自己取钟
     if player is not None:
@@ -734,8 +757,8 @@ async def time_now(env, sink, uid, player):
     _save(env)
     yield T("SYS_WEATHER_CHANGE", place=_name_of_node(p["loc"], p["node"]),
             hour=st["hour_name"], weather=st["weather_name"],
-            flavor=T(CAL.desc_slot(st["weather"])))
-    yield T(CAL.desc_slot(st["hour"]))
+            flavor=T(CAL.desc_slot(st["weather"], st)))
+    yield T(CAL.desc_slot(st["hour"], st))
 
 
 async def event_now(env, sink, uid, player):
@@ -1095,14 +1118,16 @@ async def alloc_points(env, sink, uid, player):
     arg = _alloc_arg(env)
 
     if not arg:
-        # 不带参数：把「还剩几点 / 能加哪几维 / 设计基线长什么样」一次说清
+        # 不带参数：把「还剩几点 / 能加哪几维 / 推荐怎么分」一次说清
         # （甲案把点数交给玩家自己分 ⇒ 得让人一眼看见自己手里有点）
+        # ★ fix3-⑥：原先这一步读 `SYS_ALLOC_SUGGEST`，那一句开头写着「**设计基线**（按建议权重铺满…）」
+        #   —— 策划口径直接上屏（P4 E-5）。换成 `SYS_ALLOC_PLAN`（「推荐分配」），
+        #   投法还是同一个口（`alloc.plan`）；旧槽位退役登记见 `scripts/probe_copy.py::RETIRED_DOC`。
         if left <= 0:
             yield T("SYS_ALLOC_DONE", total=AL.total_points(lv))
             return
         yield T("SYS_ALLOC_ASK", usage=usage, left=left, list=_stat_list())
-        # 只列**真投得出点**的维（0 点的维不占屏）；投法来自同一份权重（`alloc.plan`）
-        yield T("SYS_ALLOC_SUGGEST", total=AL.total_points(lv),
+        yield T("SYS_ALLOC_PLAN", total=AL.total_points(lv),
                 list=" · ".join("%s %d" % (_stat_slot(s), n)
                                 for s, n in AL.plan(lv, cls).items() if n))
         return
