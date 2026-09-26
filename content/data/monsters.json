@@ -731,33 +731,50 @@
       "mech": "phase",
       "phases": [
         {
-          "min": 100,
           "name": "站桩",
+          "hp_below": 1.0,
+          "hold": "block",
           "atk_mult": 1.0,
           "def_add": 0,
+          "dmg_taken_mult": 1.0,
+          "act_rate_mult": 1.0,
+          "line": "它不先动手 —— 甲横在身前，只是在挡。",
+          "tip": "它没打算先动手 —— 你先动手再说",
           "note": "开场；不攻击，只挡"
         },
         {
-          "min": 80,
           "name": "列阵",
+          "hp_below": 0.5,
+          "turns": 8,
           "atk_mult": 1.3,
           "def_add": 60,
-          "turns": 8,
+          "dmg_taken_mult": 1.0,
+          "act_rate_mult": 1.0,
+          "line": "甲重新扣紧了 —— 出手重了一档（伤害 ×1.3、防御 +60），这一步要走 8 手。",
+          "tip": "招式开始走形了：看前摇，别贪刀",
           "note": "玩家第一次打到它（激怒）"
         },
         {
-          "min": 40,
           "name": "散架",
+          "hp_below": 0.2,
+          "turns": 5,
           "atk_mult": 0.8,
           "def_add": -120,
           "dmg_taken_mult": 1.4,
           "act_rate_mult": 0.5,
-          "turns": 5,
+          "line": "骨架在散，防御 -120、受伤 1.4 倍（5 次）。",
+          "tip": "爆发全砸进这个窗口",
           "note": "列阵结束 / 血 <50%（疲态）"
         },
         {
-          "min": 0,
           "name": "回塔",
+          "hold": true,
+          "atk_mult": 0.8,
+          "def_add": -120,
+          "dmg_taken_mult": 1.4,
+          "act_rate_mult": 0.5,
+          "line": "它不打了，转身往塔边去。",
+          "tip": "它转身走了 —— 别追",
           "note": "血 <20%（终局）；停止攻击，走向塔边"
         }
       ],

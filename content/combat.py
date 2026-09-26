@@ -28,6 +28,22 @@ ENEMY_SIDE = "enemy"
 
 _PARTY_KEY = re.compile(r"[1-9][0-9]*")
 
+# ══════════════════════════════════════════════════════════════
+# ★ Boss 阶段卡（内容侧 · 唯一消费端在下方的 `_boss_phase_hook`）
+# ══════════════════════════════════════════════════════════════
+#: 怪 actor 上那一格：`monsters.mods.phases` 的声明（照抄一份挂在 actor 上 ⇒ 落进场的存档里，
+#: 恢复之后还在 —— 见 `_restore` 里重新挂钩子那一步）。
+PH_CARD = "_boss_phases"
+#: 运行期那一格（第几阶 / 本阶走了几手 / 基数面板 / 已生效的修正）—— 同一个道理随 actor 落盘。
+PH_RUN = "_boss_ph"
+#: 阶段条目里**改面板**的那几个键（只声明了的才改 —— 没声明的沿用上一阶）。
+_PH_NUMS = ("atk_mult", "def_add", "dmg_taken_mult", "act_rate_mult")
+#: 一个阶段条目没声明时的那一套（= 与接线前逐字相同：atk/def/spd 原样、承伤无乘区、出手）。
+_PH_DEFAULTS = {"atk_mult": 1.0, "def_add": 0.0, "dmg_taken_mult": None,
+                "act_rate_mult": 1.0, "hold": False}
+#: 演出那一行缺不得的几格（装配期当场抛 —— 缺了就是「👁️ 」半句空话）
+_PH_REQUIRED = ("name", "line", "tip")
+
 
 def party_scale_of(m: dict, party: int | None) -> dict:
     """取「这个人数下，这只怪的面板倍数」（域里的 `mods.party_scale`）。
@@ -41,7 +57,8 @@ def party_scale_of(m: dict, party: int | None) -> dict:
 
     ★ B3-25 起这张表是**四档**（1/2/3/4 人）：两边锚点都不许动 —— 4 人档 = 设计值（真源
       「按 4 人队设计」）、1 人档 = 真源写死的 ÷2；中间两档（2/3 人）按主线拍板的**递减排法**
-      内插（每多一个人加得少一点：+0.25 / +0.15 / +0.10）。表写在生成器
+      内插（每多一个人加得少一点：**+0.35 / +0.25 / +0.15** —— 照表 1/2/3/4 人 = 0.25/0.6/0.85/1.0
+      算出来的递增量，真源 `17_组队与策略配合_v1.md §五` 同款）。表写在生成器
       `scripts/rebuild_monsters.PARTY_SCALE` → 数据 `mods.party_scale`（唯一来源）；
       「有效人数档 = 1..上限」的另一半在 `content/data/party.json`（跨域对账在 probe_party）。
       ★ **只收 `hp` 一项**：四处真源里两处字面写的是「**血**按 ÷2 看」——
@@ -232,10 +249,17 @@ def monster_actor(mid: str, m: dict, *, party: int | None = None, affixes=None,
         a["_affixes"] = list(affixes)              # 阈值那类词条要在 `build` 里挂导演钩子
     if m.get("skills"):
         a["skills"] = list(m["skills"])
+    # ★ Boss 阶段卡（本波）：`mods.phases` 从「只对账的数据」变成**运行期消费的声明** ——
+    #   照抄一份挂在 actor 上，由 `_boss_phase_hook` 逐阶消费（它挂在 `Battle.script_hook`
+    #   那个引擎现成的注入点上，精英词条走的是同一个口）。
+    #   **没有 phases 的怪一个字段都不写** ⇒ 与接线前逐字相同（判据钉着这一条）。
+    _ph = (m.get("mods") or {}).get("phases")
+    if _ph:
+        a[PH_CARD] = [dict(x) for x in _ph]
     return a
 
 
-def _affix_hooks(battle: Battle) -> None:
+def _affix_threshold_hook(battle: Battle):
     """★ B3-24：把「血量阈值」那类词条挂成**战斗导演钩子**（引擎的 `Battle.script_hook` 注入点）。
 
     引擎在自动 actor 每一动之前调它（`callable(battle, actor, logs) -> bool`），返回 False =
@@ -243,13 +267,14 @@ def _affix_hooks(battle: Battle) -> None:
     引擎每次结算都现读 `actor_stats`，所以改了就真生效）。
 
     ★ `once` 那条必须自己守：钩子**每一动都会被调**，不守就会一路上乘（实测 12 → 60）。
+    ★ 返回 `None` = 这一场一个带阈值的词条都没有 ⇒ 连钩子都不挂（与接线前逐字相同）。
     """
     defs = []
     for a in battle.sides.get(ENEMY_SIDE, []):
         for aid, th in AFFIX.thresholds_of(a.get("_affixes")):
             defs.append((a, aid, th))
     if not defs:
-        return
+        return None
 
     def hook(b, actor, logs):
         for target, aid, th in defs:
@@ -270,6 +295,156 @@ def _affix_hooks(battle: Battle) -> None:
             mult = float(th.get("atk_mult", 1) or 1)
             target["atk"] = int(round(float(target.get("atk", 0) or 0) * mult))
             return False
+        return False
+
+    return hook
+
+
+def _phase_enter(actor: dict, run: dict, ph: dict, i: int, logs: list) -> None:
+    """进第 `i` 阶：把这一阶的面板修正落到 actor 上 + 出一句演出。
+
+    ★ 面板一律**从基数重算**（`run["base"]` 是这一场开场那一刻的 atk/def/spd），而且
+      **没声明的格 = 回到原面板**（不沿用上一阶）—— 因为阶段会**来回走**（列阵⇄散架），
+      沿用上一阶的话「回到列阵」会把散架的 def−120 / 频率×0.5 一路带回去。
+      每一阶都是一份**写全的姿态**（数据里逐格声明，见 `monsters.mods.phases`）。
+    ★ 演出那一行走 texts 槽位 `COMBAT_BOSS_PHASE`（`⚠️ {name}进入「{phase}」/ 👁️ {note} /
+      💡 {tip}`）—— 本文件一个中文都不写，`line` / `tip` 两格从数据来。
+    """
+    m = run["m"]
+    for k in _PH_NUMS:
+        m[k] = ph.get(k, _PH_DEFAULTS[k])
+    m["hold"] = ph.get("hold", False)              # 逐阶声明（站桩 "block" / 回塔 True / 其余 False）
+    b0 = run["base"]
+    actor["atk"] = int(round(float(b0["atk"]) * float(m["atk_mult"])))
+    actor["def"] = int(round(float(b0["def"]) + float(m["def_add"])))
+    actor["spd"] = int(round(float(b0["spd"]) * float(m["act_rate_mult"])))
+    if m["dmg_taken_mult"] is None:
+        actor.pop("_dmg_taken_mult", None)         # 引擎那个承伤乘区（`landing` 现读）
+    else:
+        actor["_dmg_taken_mult"] = float(m["dmg_taken_mult"])
+    # ★ `hold` 的两态（数据里的两种取值，不是同一个东西）：
+    #   · `"block"`（站桩「不攻击，只挡」）⇒ 它这一手出**防御**：引擎的 `defend`
+    #     给 `defending=True`（承伤减半 —— 这才叫「挡」），且它照样进前摇窗口
+    #     （所以「对方正押着一手 ⇒ 后撤退不开」那条判据在站桩里仍然成立）。
+    #   · `True`（回塔「不再攻击，走向塔边」）⇒ 本刻**不出手**（钩子回 True 拦下），
+    #     它只是在走。
+    if m["hold"] == "block":
+        actor["auto_act"] = {"act": {"type": "defend"}}
+    else:
+        actor.pop("auto_act", None)                # 下一阶要还手了（不还手的态由上面那句表达）
+    run["i"], run["n"] = int(i), 0
+    from .cmds_ast import T                        # ★ 本地 import（免得包装载期成环）
+    logs.append(T("COMBAT_BOSS_PHASE", name=actor.get("name", ""), phase=ph.get("name", ""),
+                  note=ph.get("line", ""), tip=ph.get("tip", "")))
+
+
+def _phase_frame(actor: dict, logs: list) -> bool:
+    """这一动：该不该换阶（换了就出演出并**拦下本刻**）/ 不换就照这一阶的 `hold` 决定出不出手。
+
+    ★ 换阶只认**血那一档**（`hp_below`）—— 四阶 = 四条触发，逐条照真源
+      `06_第一阶段垂直切片/00_第一阶段内容总纲_v1.md §四` 的「触发」列：
+      站桩（开场 / hp 满）→ 列阵（玩家第一次打到它 = hp < 100%）→
+      散架（hp < 50%）→ 回塔（hp < 20%，终局）。
+      `turns`（列阵 8 次 / 散架 5 次）**本波不参与换阶**：它与血阈自相矛盾 —— 照它落地
+      （列阵走完 8 手就换散架）会让散架的「疲态窗口」在七成血就打开，**设计档单人**从
+      「全败」变成可过（真跑 lv19 3/96、lv20 6/96）⇒ 撞 `probe_combat` 那条「Boss 是团队内容、
+      缩放之前单人过不了」的硬判据。本波按血阈落地、把这一格留给主线裁（见 `_notes.md §真源行`）。
+    """
+    card = actor.get(PH_CARD) or []
+    # ★ 两步取值（`probe_panel ④` 那条静态守卫扫的是「`"max_hp"` 后面紧跟 `or <数字>`」那种
+    #   **写死上限**的写法 —— 与 `_affix_threshold_hook` / `instance.turn_lines` 同一款写法）。
+    _mx_raw = actor.get("max_hp")
+    _mx = float(_mx_raw) if _mx_raw else 0.0
+    if _mx <= 0:
+        return False
+    run = actor.get(PH_RUN)
+    if not isinstance(run, dict):
+        run = {"i": -1,
+               "base": {"atk": float(actor.get("atk", 0) or 0),
+                        "def": float(actor.get("def", 0) or 0),
+                        "spd": float(actor.get("spd", 0) or 0)},
+               "m": dict(_PH_DEFAULTS)}
+        actor[PH_RUN] = run
+    # ★ `or -1` 那种写法要不得：`0` 是**合法阶号**（第 0 阶），`0 or -1` 会被吞成 -1 ⇒
+    #   每一动都当成「还没进过第 0 阶」⇒ 演出每动重播一遍、永远停在站桩（实测踩到）。
+    _i = run.get("i")
+    i = -1 if _i is None else int(_i)
+    nxt = 0 if i < 0 else None                     # 第一次进来 = 进第 0 阶（开场那一阶）
+    if nxt is None and 0 <= i < len(card):
+        _below = card[i].get("hp_below")
+        if _below is not None and (float(actor.get("hp", 0) or 0) / _mx) < float(_below):
+            nxt = i + 1                            # 血掉过这一档 ⇒ 换下一阶（顺序 = 真源那四阶）
+    if nxt is not None and nxt < len(card):
+        _phase_enter(actor, run, card[nxt], nxt, logs)
+        return True                                # ★ 演出刻：本刻不出手，照推 ct（照导演帧的语义）
+    # 不换阶：照这一阶的姿态出手 / 不出手（`hold` 的三态见 `_phase_enter`）
+    return run["m"].get("hold") is True            # 回塔「不再攻击」= 本刻拦下；其余照常出手
+
+
+def _boss_phase_hook(battle: Battle):
+    """★ 本波：把 `monsters.mods.phases`（Boss 阶段卡）接上运行期 —— 返回钩子 / `None`。
+
+    真源：`06_第一阶段垂直切片/22_旧哨塔_逐间设计_v1.md §二·12`（四阶段卡）·
+      `06_第一阶段垂直切片/14_怪物原型_v1.md §四`（Boss 用阶段卡 + 技能序列）·
+      `06_第一阶段垂直切片/00_第一阶段内容总纲_v1.md §四`（触发那一列）。
+    引擎侧一个字没改：用的就是它给内容侧的注入点（`Battle.script_hook`）。
+
+    与 `_affix_threshold_hook` **合成一条**（`attach_script_hooks`）—— 两者都在改 actor 面板，
+      一条链上先词条后阶段；返回 True 的语义都是「本刻拦下」。
+    ★ 装配期四条 fail-closed（当场抛，不许出一行「👁️ 」空话、也不许运行到一半才发现）：
+      · 每一阶都得有 `name` / `line` / `tip`；
+      · 除最后一阶外，每一阶都得有 `hp_below`，而且**严格递减**（阶段 = 血带，
+        顺序就是真源那四阶 —— 顺序写乱了当场红）。
+    """
+    cards = [a for a in battle.sides.get(ENEMY_SIDE, []) if a.get(PH_CARD)]
+    if not cards:
+        return None
+    for a in cards:
+        card = a[PH_CARD]
+        for ph in card:
+            miss = [k for k in _PH_REQUIRED if not str(ph.get(k) or "").strip()]
+            if miss:
+                raise ValueError("阶段卡缺 %s（%s 的第 %r 阶）—— 演出那两行与阶段名都得有"
+                                 % (miss, a.get("uid"), ph.get("name") or card.index(ph)))
+        _band = [ph.get("hp_below") for ph in card[:-1]]
+        if any(x is None for x in _band) \
+                or any(float(_band[k]) <= float(_band[k + 1]) for k in range(len(_band) - 1)):
+            raise ValueError("阶段卡的血带不对（%s）：除最后一阶外，每阶的 hp_below 都得有且"
+                             "**严格递减**（站桩 1.0 → 列阵 0.5 → 散架 0.2 → 回塔 无）"
+                             % (_band,))
+        _hold_bad = [ph.get("hold") for ph in card
+                     if ph.get("hold") not in (False, True, "block", None)]
+        if _hold_bad:
+            raise ValueError("阶段卡的 `hold` 只有三种取值（不写 / true = 本刻不出手 / \"block\" = "
+                             "只挡）：%r" % (_hold_bad,))
+
+    def hook(b, actor, logs):
+        for a in cards:
+            if a is actor:
+                return _phase_frame(a, logs)
+        return False
+
+    return hook
+
+
+def attach_script_hooks(battle: Battle) -> None:
+    """把内容侧那几条**导演钩子**挂到这一场上（引擎现成的注入点 `Battle.script_hook`）。
+
+    ★ 为什么要有这个函数：钩子是**运行回调** —— 引擎的 `serialize.from_state` 明写
+      「这些钩子需要在恢复后自己重新挂」（`docs/engine-wiki/guides/serialize-and-resume.md`）。
+      「场」是落盘的一场（机器人重启 / 换一个进程接着打都靠它），所以 `instance._restore`
+      恢复之后必须再走一次这里 —— 与 `panel_build.ensure_stack` 补登记是同一个道理。
+    ★ 一条都不挂 ⇒ `script_hook = None`（= 与接线前逐字相同：引擎连问都不问）。
+    """
+    hooks = [h for h in (_affix_threshold_hook(battle), _boss_phase_hook(battle)) if h]
+    if not hooks:
+        battle.script_hook = None
+        return
+
+    def hook(b, actor, logs):
+        for fn in hooks:
+            if fn(b, actor, logs):
+                return True
         return False
 
     battle.script_hook = hook
@@ -327,7 +502,9 @@ def build(player: dict, monster_ids, monsters: dict, *, party: int | None = None
     if ct is not None:
         for a in es:                               # 潜伏：第一动排在所有行动之前（先手）
             a["ct"] = float(ct)
-    _affix_hooks(b)                                # 狂暴（血量阈值）→ 导演钩子
+    # ★ 导演钩子（引擎 `Battle.script_hook` 那一个注入点）：精英词条的血量阈值 + Boss 阶段卡。
+    #   一条都不挂 ⇒ `script_hook` 是 None ⇒ 与接线前逐字相同。
+    attach_script_hooks(b)
     return b
 
 
