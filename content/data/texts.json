@@ -2476,6 +2476,12 @@
     "category": "系统",
     "desc": "接活 · 重复接"
   },
+  "SYS_JOB_NEED_CARD": {
+    "value": "你还没有证 —— 先打『登记』办一张见习证，办完再来接活。",
+    "params": [],
+    "category": "系统",
+    "desc": "B4-27 接活 · 还没办证（守卫：已登记 —— 源 04 §二）"
+  },
   "SYS_JOB_LOWLEVEL": {
     "value": "「{name}」要 {need} 级。你现在 {now} 级。",
     "params": [
