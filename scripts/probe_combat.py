@@ -15,7 +15,14 @@ sys.path.insert(0, ENGINE)
 
 from saintess_engine.package import load_stack          # noqa: E402
 
-st = load_stack(str(REPO), inject={"db_path": os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp", "ast_probe.db"), "clock": time.time})
+#: ★ B4-23：探针的时钟**钉死**（与 `probe_cmds` / `probe_weather` 同一口径）—— 早先这里写
+#:   的是 `time.time`，而“遭遇里出不出精英”是按 **游戏日**掷的
+#:   （`affix.elite_of(...)`；`game_day = epoch / 7200` ⇒ 每 2 小时换一次结果）
+#:   ⇒ 同一份代码上午绿、下午红（实测：uid=`u_die` + 骨田 —— 掷中时
+#:   “田鼠 Lv3 ⇒ +9”那一条实得 36，因为打的是被精英层换成的游荡的骸骨）。
+_FIXED = 1790308800          # 2026-09-25 12:00 +08:00
+
+st = load_stack(str(REPO), inject={"db_path": os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp", "ast_probe.db"), "clock": lambda: _FIXED})
 st.install()
 
 CB = st.optional_submodule("combat")
@@ -74,6 +81,7 @@ import asyncio                                                       # noqa: E40
 
 from content import cmds_ast as CA                                   # noqa: E402
 from content import cmds_battle as CBAT                              # noqa: E402
+from content import affix as AFFIX                                   # noqa: E402
 from content import combat as CBmod                                  # noqa: E402
 
 
@@ -144,12 +152,22 @@ _GAIN.update({"cls": "cls_knight", "level": 10, "hp": 400,
               "gold": 0, "exp": 0, "loc": "belt_north", "node": "bn_bone",
               "bag": {}, "uid": "u_exp"})
 _real_pick = CBmod.pick_encounter
+_real_elite = AFFIX.elite_of
 CBmod.pick_encounter = lambda *a, **k: [_MID]
+#: ★ B4-23：**精英那一层也要一起掉** —— 钉住的那只会被 `_meet()` 的精英层
+#:   整只换掉（`affix.elite_of(...)` 按 uid + 图/节点 + **游戏日** 掷）。这一格要验的是
+#:   「怪给的经验 = 它**自己**那级」⇒ 只留一个变量（下面另有一条核“真打的就是钉住的那只”）。
+AFFIX.elite_of = lambda *a, **k: None
 try:
     _lines_exp = _drive(CBAT.attack, _GAIN)
 finally:
     CBmod.pick_encounter = _real_pick
+    AFFIX.elite_of = _real_elite
 (ok if any("打完了" in x for x in _lines_exp) else bad)("⑪ 前提：这一场真赢了（下面两条才成立）")
+#: ★ B4-23：再加一条 —— 打的**真就是钉住的那只**（原先只核结果、不核对手是谁
+#:   ⇒ 被精英层偷换成另一只也照样绿 —— 上面那个坑就是这么混过去的）。
+(ok if any(("遭遇：" + str(MON[_MID].get("name"))) in x for x in _lines_exp) else bad)(
+    "⑪ 前提：遭遇的正是钉住的那只（%s）" % MON[_MID].get("name"))
 (ok if int(_GAIN["exp"]) == CA.exp_of_kill(_MON_LV) else bad)(
     "★ 打怪给经验（%s Lv%s ⇒ +%s · 实得 %s）" % (_MID, _MON_LV, CA.exp_of_kill(_MON_LV), _GAIN["exp"]))
 (ok if int(_GAIN["gold"]) > 0 else bad)("打怪照样给钱（金币 %s）" % _GAIN["gold"])
