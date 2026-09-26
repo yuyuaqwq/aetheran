@@ -218,6 +218,17 @@ class Hand:
         if gain is None:
             return ([T("SYS_USE_NOT", name=name)], cat, None)
         hp0 = int(actor.get("hp") or mx)
+        # ★ fxe（修 e·道具使用 ②）：**回不了血就别吃** —— 原先满血时敲 `使用 <药>`
+        #   照样把药扣掉、只回一句「生命 +0」（实跑：满血 188/188 一瓶伤药照样从背包里少掉；
+        #   一瓶 24 铜板 ≈ 同档 3~4 只怪的全部收入）。判据只看**真能回多少** ——
+        #   `min(上限, 现血 + 回复量) - 现血 <= 0` ⇒ 这一手**不消耗**（同一句走
+        #   `items` 那条老路的 `SYS_USE_FULL`，文案仍只在 `content/data/texts.json` 里，
+        #   本文件零中文）；真能回一点的（含被上限截掉一半的）照旧结算 —— 上限钳制 /
+        #   减伤那类正当结算**一格不动**。
+        #   这一手也不白花：照「上限用满」那一支的形状**回落成普攻**。
+        eff = min(int(mx), hp0 + int(gain)) - hp0
+        if eff <= 0:
+            return ([T("SYS_USE_FULL", name=name)] + _plain_attack(battle, actor), "attack", None)
         actor["hp"] = min(int(mx), hp0 + int(gain))
         _take(self.p, iid, 1)
         self.used[iid] = int(self.used.get(iid, 0)) + 1

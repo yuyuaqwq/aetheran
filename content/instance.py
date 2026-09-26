@@ -475,7 +475,17 @@ async def take_turn(env, p, uid, player, *, head="", hand=None, action=None, ski
         # ★ G2：**每件的每场上限**要跨手有效 ⇒ 记账放在这一场里（原先一个
         #   `Hand` 只活一条指令，一次结算那版天然有效；分段之后必须在场里）
         hand.used = dict(st.get("items_used") or {})
-        caster["auto_act"] = {"act": {"type": "item", "skill": hand.item}}
+        # ★ fxe（修 e·道具使用 ①）：这一格**只许放引擎内置动作**。原先写的是
+        #   `{"type": "item", "skill": hand.item}`（把「用物」当成后面每一手的立场）——
+        #   而引擎的自动那条路（`auto_run` → `actor_auto` → `act`）在这一场**从场里恢复**
+        #   出来的 Battle 上**没有** `action_override`（那是不可序列化的回调：`take_turn`
+        #   这一支自己重挂、`take_auto` 那一支没有手可挂）⇒ 引擎当场走
+        #   「未知行动类型：item」那一支：**玩家一手都不出**、被活活打完（实跑见本分支
+        #   `_notes.md §一` 与 `scripts/probe_battle_turns.py` ③b）。`item_uses_per_battle` = 1
+        #   （声明表 `content/rules/battle_cmds.json`）⇒ 用满之后那一手本来就是「回落普攻」，
+        #   立场与普攻在这一档**等价** ⇒ 直接声明引擎内置的 `attack`（自动那条路认得它）。
+        #   显式点名再吃一瓶那一条照旧：`Hand._item` 的上限那一支（`COMBAT_ITEM_CAP`）。
+        caster["auto_act"] = {"act": {"type": "attack"}}
     SCH.advance(b, logs)                             # 推到我的决策点（快的对方该动的先动）
     caster = b.find_actor(u) or caster
     tgt = _focus_actor(b, st)                        # ★ 集火：这一场里记着的那个目标

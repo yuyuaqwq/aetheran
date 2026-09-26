@@ -412,9 +412,14 @@ def _run_hand(p, pick, ms, affixes=(), hand=None, action=None, skill=None, party
         if hand is not None:
             # ★ 「用物」是**每一手**的立场（上限那一层由 battle_acts 的记账挡着）；
             #   其余几手都是「抢一手」⇒ 只在你这一手走非内置动作，后面自动普攻。
+            #   ★ fxe（修 e·道具使用 ①）：这里**不许**写内容侧的 `item`（与
+            #   `instance.take_turn` 同款、同一个坑）—— 引擎自动那条路认得的内置动作只有
+            #   attack / skill / defend / flee；内容侧动作要靠 `action_override`，而它在
+            #   「从场里恢复出来的」Battle 上挂不回来（不可序列化）⇒ 玩家一手都不出。
+            #   `item_uses_per_battle` = 1 ⇒ 用满之后那一手本来也是回落普攻 ⇒ 写 `attack`。
             caster = b.focus()
             if caster is not None and hand.kind == "item":
-                caster["auto_act"] = {"act": {"type": "item", "skill": hand.item}}
+                caster["auto_act"] = {"act": {"type": "attack"}}
         SCH.advance(b, logs)                       # 推到你的决策点（对方该动的先动）
         caster = b.focus()
         if b.result is None and caster is not None:
