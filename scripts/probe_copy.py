@@ -1115,16 +1115,6 @@ def main():
         bool(here_out) and here_out[0] == here_want and far_txt not in chr(10).join(here_out),
         "%s" % (here_out[:2] if here_out else ["(空)"]))
 
-    # ★ 接缝（2026-09-26 · 本波 fxb）：世界级移动在 G2 之后多了一道**「场在跑」的闸**
-    #   （试玩复测 #1：「一场没结就走不了」）。上面那一族用例（`攻击(野外)` / `防御` / `逃跑` /
-    #   `打断(刺客·野外)` / `后撤(野外)` …）都是「一手一手」地真跑 —— 留下的那一场**是开着
-    #   没落地的**（同一个 `u_copy`）⇒ 这一组的四条出口会先被那道闸拦下
-    #   （红的是 fixture 的状态，不是这几条守卫：断言与期望一个字没动）。
-    #   这一组量的是「脚下这一站 / 在不在镇上」，所以先把这一族自己的场收干净 ——
-    #   走 `instance.clear` 那唯一的散场口，不手削记录、不改任何期望值。
-    from content import instance as INST                            # noqa: E402
-    INST.clear(INST.battle_key(_E(""), "u_copy"))
-
     # ⑫ B3-11 ★ 四条出口的「脚下这一站」（K60 家族）：站在目的地再敲一次 —— 不许演「又走了一趟」
     _EXITS = [("往北", "belt_north", "bn_bone", "SYS_MOVE_OUT_NORTH", CA.go_north),
               ("往东", "belt_east", "be_birch", "SYS_MOVE_OUT_EAST", CA.go_east),
