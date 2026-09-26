@@ -28,6 +28,9 @@ r"""探针：旧哨塔副本（B3-6）—— 12 间房真能走一遍 · 五条�
      逐处换 24 个人 × 当日第 1/2 遍（`uid` 进采集种子）；到手那一刻旧物谱真多一行问号
   ⑫ ★ B3-10：塔内 9 项可读物分两档真跑 —— 就地线索 6 条（22 §二「可做」列）念得出正文但
      **旧物谱一条不加**；进谱的 3 条真多一行问号（照字出）
+  ⑬ ★ P-66（2026-09-26 · 本波 w-h-ux · **裁决：两级槽位「不并」**）：每张图都有地图级槽位
+     （「每图一条」的对称）· 节点级与地图级**是两条键**（不许一条退化成另一条的别名）·
+     同一处两粒度两条都在、逐字不同（依据与真源行见本分支 `_notes.md §五`）
 
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_tower.py
 """
@@ -238,6 +241,36 @@ for _f in sorted((REPO / "content").rglob("*.py")):
 chk("★ P-19 槽位键的**写法只有一个口**（带「SCENE_%%s」字样的文件只剩 content/scene.py · %s —— "
     "别处再手写一次（另一个名字的写法）就红）" % _WRITERS,
     set(_WRITERS) == {"scene.py"}, "%s" % _WRITERS)
+
+# ⑬ ★ P-66（2026-09-26 · 本波 w-h-ux · **裁决：地图级与节点级两槽位「不并」**）
+#   那条老账问的是「要不要把两级并成一个槽位」。裁 **不并**，依据三条：
+#     ① **两级回答的是两个问题**：踏进这张图的**第一眼**（宽 · 「进门之后那一眼」）vs
+#        站在这一**间**的近景（窄 · 塔门那一屏）—— 合并之后只剩一条，另一屏要么没词、
+#        要么把宽的那段塞进窄的那一格（那就是「一条槽位两处写」，`⑦` 一直在防的那种）。
+#     ② 「每图一条」的**对称**：本包 `maps` 里每一张图都有自己的地图级槽位（下面 ①）——
+#        并对掉其中一条 = 那一张图的到达一屏没了（`_map_scene` 只剩一行占位）。
+#     ③ 收益只是「少一处文案」，代价是两个粒度 + `rebuild_scenes` 的对账 + `⑦` 那三条判据
+#        （`content/scene.py` 的注释里也写着这一条：两个名字只是同一处两个粒度的读法）。
+#   ⇒ 判据 = 下面三条（谁哪天把两级并掉 / 让一条退化成另一条的别名，当场红）。
+_MAPSLOTS13 = {loc: SC.map_key(loc) for loc in sorted(MP)}
+_NODESLOTS13 = {loc: [SC.node_key(n["id"]) for n in (MP.get(loc) or {}).get("nodes") or []]
+                for loc in sorted(MP)}
+_miss13 = [loc for loc, k in _MAPSLOTS13.items() if k not in TX]
+chk("★ P-66 不并 ①：每张图都有自己的**地图级**槽位（「每图一条」的对称）—— %s"
+    % " · ".join("%s=%s" % (loc, k) for loc, k in _MAPSLOTS13.items()),
+    bool(_MAPSLOTS13) and not _miss13, "缺：%s" % _miss13)
+_alias13 = [(loc, k) for loc, ks in _NODESLOTS13.items() for k in ks if k in _MAPSLOTS13.values()]
+chk("★ P-66 不并 ②：节点级槽位与地图级槽位**是两条键**（同一张图里没有任何一间的节点级槽位"
+    "就是那张图的地图级槽位 —— 并成一条就是「一条槽位两处写」）", not _alias13, "%s" % _alias13)
+chk("★ P-66 不并 ③：同一处两粒度（%s 宽 · %s 窄）两条都在 texts 里、各自被各自那一个解析口认到"
+    " —— 谁也**不是**谁的别名"
+    % (_map_slot, _node_slot),
+    _map_slot in TX and _node_slot in TX and _map_slot != _node_slot
+    and SC.resolve_map(TX, TOWER) == _map_slot and SC.resolve(TX, TOWER, entry_node) == _node_slot
+    and bool(scene_val) and bool(gate_val) and scene_val != gate_val)
+print("  · 登记（P-66）：裁决 = **不并** —— 依据（两级两个问题 · 每图一条的对称 · 收益只是少一处文案）"
+      "已写进真源行（见本分支 `_notes.md §五`）；合并要动 %d 张图的图级槽位 + `rebuild_scenes`"
+      " 对账 + 上面这三条判据。" % len(_MAPSLOTS13))
 
 # ══════════════════════════════════════════════════════════════
 # 三、真宿主：镇上 → 塔门 → 进塔 → 12 间逐间走 → 调查 → 撤退
