@@ -282,6 +282,92 @@ _bad8c = [(k, v.get("kind_key"), _RS8.kind_key_of(v)) for k, v in _OWN.items()
 chk("★ `kind_key` 逐条可复算（唯一来源 = `rebuild_skills.KIND_KEY`：主动→active · 被动→passive）",
     not _bad8c, "%s" % _bad8c[:3])
 
+# ══════════════════════════════════════════════════════════════
+# ⑨ ★ fix-f-dupname：**撞名技能认本职业那条**
+#    （真人试玩 · nightplay 基线：刺客敲 `技能 后撤` 恒回「这一手你放不出来」，
+#      可同一张 `技能` 页把它列在「已会 5 条」里 —— 自己会、却永远放不出来）
+#    根因：`cmds_skill._by_name` 按 `sorted(sk)` 取第一条（id 序 `RNG_ < SHD_`）⇒
+#      两个职业同名时刺客永远认到游侠那条 ⇒ owner 不符 ⇒ `COMBAT_SKILL_BAD`。
+#    这里**现算**域里的撞名组（不硬编码技能名），钉三件事：
+#      ① 撞名那一条，本职业的人认到的就是**本职业**那条（按 id 直认也不受影响）；
+#      ② 别人门的同名技能照旧认得到、但认出来的**不是他那一门** ⇒ 调用点照旧拦
+#         （`COMBAT_SKILL_BAD` / `SYS_SKILL_NOTMINE` 的语义一个字没松 —— 只紧不松）；
+#      ③ 「技能」页列的那一条 **==** 真放进球场的那一条（页和释放走同一个口）。
+# ══════════════════════════════════════════════════════════════
+print()
+print("── ★ fix-f-dupname：撞名技能（一对「后撤」落在两门上）认本职业那条")
+_KSK9 = {k: v for k, v in (sk or {}).items() if isinstance(v, dict) and v.get("owner_class")}
+_GRP9: dict = {}
+for _k9, _v9 in _KSK9.items():
+    _GRP9.setdefault(str(_v9.get("name") or ""), []).append(_k9)
+_DUP9 = {n: sorted(i) for n, i in _GRP9.items() if len(i) > 1}
+_CROSS9 = {n: i for n, i in _DUP9.items()
+           if len({str(_KSK9[x].get("owner_class")) for x in i}) > 1}
+chk("★ 域里**撞名**的技能现算：%s（合 %d 组 · 其中**跨门**的 %d 组 —— 跨门撞名是这条判据的靶子）"
+    % (" · ".join("%s→%s" % (n, "+".join(i)) for n, i in sorted(_DUP9.items())) or "无",
+       len(_DUP9), len(_CROSS9)),
+    bool(_CROSS9), "撞名组：%s" % (_DUP9 or "无"))
+
+_MINE9, _OTHER9, _EXACT9, _BADPAGE9 = [], [], [], []
+for _n9, _ids9 in sorted(_CROSS9.items()):
+    _owners9 = {str(_KSK9[x].get("owner_class")) for x in _ids9}
+    for _c9 in sorted(_CLS8):
+        _page9 = [x for x in _CSK8.known_ids({"cls": _c9, "level": 16})
+                  if (_KSK9.get(x) or {}).get("name") == _n9]
+        _got9, _rec9 = _CSK8._by_name(_KSK9, _n9, _c9)
+        if _c9 in _owners9:
+            if _got9 not in _ids9 or str((_rec9 or {}).get("owner_class") or "") != _c9:
+                _MINE9.append((_c9, _n9, _got9))
+            if set(_page9) != {_got9}:
+                _BADPAGE9.append((_c9, _n9, "页列 %s / 认到 %s" % (_page9, _got9)))
+        else:
+            if _page9:
+                _BADPAGE9.append((_c9, _n9, "页上不该有它：%s" % _page9))
+            if _got9 and str((_rec9 or {}).get("owner_class") or "") == _c9:
+                _OTHER9.append((_c9, _n9, _got9))
+    for _i9 in _ids9:
+        if _CSK8._by_name(_KSK9, _i9, "cls_none_such")[0] != _i9:
+            _EXACT9.append(_i9)
+chk("★ 每一条撞名的技能：**本职业的人**认到的就是本职业那条（%s）"
+    % " · ".join("%s→%s" % (str(_KSK9[x].get("owner_class")), _KSK9[x].get("name"))
+                 for _n, _i in sorted(_CROSS9.items()) for x in _i),
+    not _MINE9, "%s" % (_MINE9[:3],))
+chk("★ **别人门**的同名技能：照旧认得到、而认出来的**不是你那一门** ⇒ 调用点照旧拦"
+    "（改这一档为「认不出」会把门放**松** —— `SYS_SKILL_NOTMINE` 会退化成「域里没有这条」）",
+    not _OTHER9, "%s" % (_OTHER9[:3],))
+chk("★ 撞名的技能**按 id 直认**照旧（不受 cls 影响）", not _EXACT9, "%s" % (_EXACT9[:3],))
+chk("★ ★ 「技能」页**列的那一条** == 认得出、放得出来的那一条（页与释放同一个口 —— "
+    "改前刺客页上列 `SHD`、放的那一路认 `RNG`）", not _BADPAGE9, "%s" % (_BADPAGE9[:3],))
+
+# ★ ★ 真调实现体那一手：本职业放得出来 / 别的职业照旧放不出来（bug 的原句就是这两句之差）
+_BAD9 = (st.domain("texts") or {}).get("COMBAT_SKILL_BAD", {}).get("value", "")
+
+
+def _cast9(cls9, name9, uid9):
+    _p9 = {"cls": cls9, "level": 16, "race": "human", "hp": 300, "bag": {}, "equipped": {},
+           "flags": {}, "codex": {}}
+    _out9 = []
+
+    async def _go9():
+        async for _ln9 in _CBL8.skill_cast(_E8("技能 %s" % name9), None, uid9, _p9):
+            _out9.append(str(_ln9))
+    _a8.run(_go9())
+    return _out9
+
+
+_REL9 = []
+for _n9, _ids9 in sorted(_CROSS9.items()):
+    _owners9 = {str(_KSK9[x].get("owner_class")) for x in _ids9}
+    for _c9 in sorted(_CLS8):
+        _lines9 = _cast9(_c9, _n9, "u_dup_%s_%d" % (_c9, len(_REL9)))
+        if _BAD9.replace("{name}", _n9) in _lines9:
+            if _c9 in _owners9:
+                _REL9.append((_c9, _n9, "本职业的却放不出来", _lines9[:1]))
+        elif _c9 not in _owners9:
+            _REL9.append((_c9, _n9, "别的职业却放得出来", _lines9[:1]))
+chk("★ ★ 真调 `skill_cast`：撞名那一条 —— 本职业放得出来 · 别的职业照旧「放不出来」"
+    "（改前刺客这一路恒回「这一手你放不出来」）", not _REL9, "%s" % (_REL9[:3],))
+
 print()
 print("结论：", "全过 ✅" if ok else "有红 ❌")
 sys.exit(0 if ok else 1)
