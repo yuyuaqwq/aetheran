@@ -80,7 +80,11 @@ QUALITY_ROLE = {"精制": ("elite",), "稀有": ("chief",), "遗物": ("warden",
 #:   （`scripts/probe_items.py` ⑩：不许有「谁都没管」的家族）。
 FAMILY_FREE = ("helmet_thick", "helmet_bright", "boots_steady",
                "accessory_stat", "accessory_effect",
-               "smith_vest", "smith_cap", "smith_boots", "forge_chest", "caravan_bracer")
+               "smith_vest", "smith_cap", "smith_boots", "forge_chest", "caravan_bracer",
+               # ★ Q-22（2026-09-26 · 分支 fxd）：铁匠铺上架的**起手武器**「柯尔打的粗剑」——
+               #   与那三件粗货同族（普通品阶 ⇒ `QUALITY_MULT[普通] = None` ⇒ 本来就走不到门槛那一支），
+               #   登记在这里是为了让「每个家族都登记过」那条判据照得见它（`probe_items ⑩`）。
+               "smith_blade")
 
 QUALITIES = ("普通", "精制", "稀有", "遗物")
 
