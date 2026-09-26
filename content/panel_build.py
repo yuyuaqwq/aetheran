@@ -180,6 +180,9 @@ def build_actor(cls_id: str, level: int, alloc: dict | None = None,
     `buffs` —— `{面板键: 乘数}`（B2-6 食物增益那类），走**最后**一层 `mul`：
       乘层必须排在加层之后（引擎逐层作用：先加后乘，值才是对的）；
       只乘列出的键（引擎面板栈的 per-key mul），不写 `apply: whole`。
+    ★ B4-26：这一层**同样折进返回的 actor 快照** —— `属性` / `状态` / `hp_cap` /
+      `对比` 读的都是快照，而引擎战斗那边走的是栈 ⇒ 折进去两边才逐键一致
+      （原先只有栈里有那一层，快照没有 ⇒ 玩家吃了菜页面上什么都没变）。
 
     ★ B3-28 ①：`uid` = **身份**（handler 那三个槽位里的第二个）。拿得到就传 ——
       栈 id 会带上它（`_person_tag`）；拿不到（只有档的调用点）走这一档的指纹，
@@ -224,6 +227,19 @@ def build_actor(cls_id: str, level: int, alloc: dict | None = None,
         "emit": {"int_keys": [k for k in INT_KEYS if k in keys], "round": 4},
     }
     actor = {k: sum((base_e, grow_e, attr_e, gear_e)[i].get(k, 0) for i in range(4)) for k in keys}
+    # ★ B4-26：**增益那一层也要折进快照**（食物 / POI 短时增益共用 `food_buff` 容器）。
+    #   病根（端到端玩出来）：引擎那边 `mul` 层是**真生效**的 —— 骑士吃一碗「生命上限 +10%」
+    #   的菜，打起来的血池是 127；可本函数返回的 actor 快照原先只累加了四层 `add`
+    #   （base / growth / attr / gear）⇒ `属性` / `状态` / `hp_cap` 一个数都不动
+    #   （玩家吃了菜、页面上什么都没变，`使用` 那句话自己还写着「生命上限 +10% 撑着」）。
+    #   写法与引擎 `PanelStack.resolve` **逐条同形**（乘完 `max_hp` / `max_mp` 取整、
+    #   其余保留 4 位 —— 与上面 `emit` 那张单子同源）⇒ 快照 ≡ 引擎求值结果。
+    #   先加后乘：本层排在四层 add 之后（K24）；乘的键只有增益列出的那几个（per-key mul）。
+    for _bk, _bm in (buffs or {}).items():
+        if _bk not in actor:
+            continue
+        _bv = float(actor[_bk]) * float(_bm)
+        actor[_bk] = int(_bv) if _bk in INT_KEYS else round(_bv, 4)
     actor.update({
         "class_name": cls_id,
         "level": level,

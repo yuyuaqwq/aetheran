@@ -849,6 +849,145 @@ chk("★ 还没有职业的档：法力上限那一格也不留（照实说「�
     "mo_max" not in _mp_less, "%s" % sorted(_mp_less))
 
 print("")
+print("── ⑩ ★ B4-26：增益（食物 / POI 短时增益）**真折进面板快照** —— 快照 ≡ 引擎求值")
+#   病根（端到端玩出来）：引擎那边 `mul` 层**真生效** —— 骑士吃一碗「生命上限 +10%」的菜，
+#   打起来的血池是 127；可内容侧返回的 actor 快照原先只累加了四层 `add`（base/growth/attr/gear）
+#   ⇒ `属性` / `状态` / `hp_cap` 一个数都不动（玩家吃了菜，页面上什么都没变）。
+#   判据（逐条真算；期望值从 **域里的 `food.pct`** 现读，不抄实现体）：
+#     ① `gear.BUFF_KEY` 那四档各来一口：快照那一格 == 引擎 `actor_stats` 那一格
+#        == 基础 × (1 + pct/100)（`max_hp`/`max_mp` 取整，其余 4 位）· 别的键一个都不动
+#     ② 两个**上限**（`hp_cap` / `mp_cap`）跟着快照走（不是只涨引擎那一份）
+#     ③ 真跑 `属性` / `状态` 两个呈现口：页面上那两个数真的变了（含尾注那一行）
+#     ④ 过期（假钟拨过 `until`）⇒ 逐键回原样
+#     ⑤ 覆盖面：items 域里**每一道写了 `food` 的菜**逐个造档 ⇒ 快照 ≡ 引擎
+try:
+    from content import gear as GB10                                   # noqa: E402
+    from content import cmds_more as CM10                              # noqa: E402
+    from content import cmds_ast as CA10                               # noqa: E402
+    from content import facade as FA10                                 # noqa: E402
+
+    _foods = {k: v for k, v in sorted(_ITS.items()) if isinstance(v.get("food"), dict)}
+    chk("★ items 域里有带 `food` 的菜（%d 道）" % len(_foods), len(_foods) >= 4, "%s" % sorted(_foods)[:3])
+
+    class _E10(object):
+        def __init__(self, text=""):
+            self.text = text
+
+        def save(self):
+            pass
+
+    def _dr10(fn, p, text=""):
+        out10 = []
+
+        async def _go():
+            async for _l in fn(_E10(text), None, "u_buff10", p):
+                out10.append(str(_l))
+
+        asyncio.run(_go())
+        return out10
+
+    def _pairs10(rec):
+        """(面板快照, 引擎求值) 两份 —— **同一把尺的两端**。"""
+        _g, _b = panel_build.gear_and_buffs(rec)
+        _a = panel_build.build_actor(rec["cls"], int(rec["level"] or 1), rec.get("alloc"),
+                                     _g, buffs=_b, uid="u_buff10")
+        return _a, dict(actor_stats(None, _a))
+
+    _base10 = {"cls": "cls_knight", "level": 1, "hp": 100, "alloc": {}, "equipped": {},
+               "bag": {}, "codex": {}, "flags": {}}
+    _act0, _eng0 = _pairs10(_base10)
+
+    _pois10 = st.domain("pois") or {}
+    _cases10 = []                                  # (来源, id, stat, pct) —— 域里真写着数值的那几处
+    for _rid, _rv in sorted(_foods.items()):
+        _f10 = _rv.get("food") or {}
+        _cases10.append(("菜", _rid, str(_f10.get("stat") or ""), int(_f10.get("pct") or 0)))
+    for _rid, _rv in sorted(_pois10.items()):
+        _e10 = _rv.get("effect") if isinstance(_rv.get("effect"), dict) else {}
+        if _e10.get("buff") or _e10.get("stat"):
+            _cases10.append(("POI", _rid, str(_e10.get("stat") or ""), int(_e10.get("pct") or 0)))
+    _nfood10 = len([1 for c in _cases10 if c[0] == "菜"])
+    _bad10 = ["%s %s：stat=%r 不在 BUFF_KEY 里（引擎那边会静默不生效）" % (t, i, s)
+              for t, i, s, p in _cases10 if p and s and s not in GB10.BUFF_KEY]
+    chk("★ 域里 %d 处写了数值的短时增益（菜 %d ｜ POI %d）**条条落得到面板键上**"
+        % (len(_cases10), _nfood10, len(_cases10) - _nfood10), not _bad10, "%s" % _bad10)
+
+    _keys10 = set()
+    for _tag, _rid, _stat, _pct in _cases10:
+        if not _pct or _stat not in GB10.BUFF_KEY:
+            continue
+        _pk = GB10.BUFF_KEY[_stat]
+        _keys10.add(_pk)
+        _a1, _e1 = _pairs10(dict(_base10, food_buff={"stat": _stat, "pct": _pct, "until": 1e18}))
+        _want = float(_eng0.get(_pk, 0)) * (1.0 + _pct / 100.0)
+        _want = int(_want) if _pk in panel_build.INT_KEYS else round(_want, 4)
+        _drift = {k: (_eng0.get(k), _e1.get(k)) for k in sorted(set(_eng0) | set(_e1))
+                  if abs(float(_e1.get(k, 0)) - float(_eng0.get(k, 0))) > 1e-9 and k != _pk}
+        chk("★ %s %s（%s +%d%%）：快照 %s == 引擎 %s == 基础 %s × %.2f · 别的键一个不动 %s"
+            % (_tag, _rid, _pk, _pct, _a1.get(_pk), _e1.get(_pk), _eng0.get(_pk),
+               1 + _pct / 100.0, sorted(_drift) or "✓"),
+            _a1.get(_pk) == _e1.get(_pk) == _want and not _drift,
+            "快照 %s / 引擎 %s / 该 %s" % (_a1.get(_pk), _e1.get(_pk), _want))
+    chk("★ `gear.BUFF_KEY` 那几档在域里都喂得到真数据（今天覆盖 %s —— 少一档就红）"
+        % " · ".join(sorted(_keys10)), _keys10 == set(GB10.BUFF_KEY.values()), "%s" % sorted(_keys10))
+
+    _rec_hp10 = dict(_base10, food_buff={"stat": "hp", "pct": 10, "until": 1e18})
+    _cap10, _cap0_10 = panel_build.hp_cap(_rec_hp10), panel_build.hp_cap(_base10)
+    chk("★ `hp_cap` 跟着快照走（%s → %s = 引擎那份）" % (_cap0_10, _cap10),
+        _cap10 == int(float(_eng0["max_hp"]) * 1.1) and _cap10 > _cap0_10,
+        "%s / %s" % (_cap0_10, _cap10))
+    _am10 = panel_build.build_actor("cls_knight", 1, None, None, buffs={"max_mp": 1.5}, uid="u_buff10")
+    _em10 = dict(actor_stats(None, _am10))
+    chk("★ 法力上限同一把尺（同一份快照口喂 `max_mp ×1.5`：快照 %s == 引擎 %s == 基础 %s × 1.5）"
+        % (_am10.get("max_mp"), _em10.get("max_mp"), _eng0.get("max_mp")),
+        _am10.get("max_mp") == _em10.get("max_mp") == int(float(_eng0["max_mp"]) * 1.5),
+        "%s / %s" % (_am10.get("max_mp"), _em10.get("max_mp")))
+    _ah10, _eh10 = _pairs10(dict(_base10, food_buff={"stat": "hp", "pct": 10, "until": 1e18}))
+    chk("★ per-key：生命那口增益**不动法力上限**（%s → %s）"
+        % (_act0.get("max_mp"), _ah10.get("max_mp")),
+        _ah10.get("max_mp") == _act0.get("max_mp") and _eh10.get("max_mp") == _eng0.get("max_mp"),
+        "%s / %s" % (_ah10.get("max_mp"), _eh10.get("max_mp")))
+
+    _p10 = CA10._p(dict(_base10, food_buff={"stat": "hp", "pct": 10, "until": 1e18}))
+    _attr10, _stat10 = _dr10(CM10.attrs, _p10), _dr10(CA10.status, _p10)
+    _capv10 = panel_build.hp_cap(_p10)
+    chk("★ 真跑 `属性`：三格那一行 = 生命上限 %s（吃了一口生命增益之后现算）" % _capv10,
+        bool(_attr10) and ("生命上限 %s ｜" % _capv10) in _attr10[1],
+        "%s" % _attr10[1:2])
+    chk("★ 真跑 `状态`：那一行 = 生命 100/%s（上限跟面板走，不再各算各的）" % _capv10,
+        any(("生命 100/%s" % _capv10) in _x for _x in _stat10), "%s" % _stat10[1:2])
+    chk("★ `属性` 尾注照实说（composition 里写着「增益」那一档）",
+        CA10.T("SYS_ATTR_NOTE") in _attr10, "%s" % _attr10[-1:])
+
+    _F10 = 1790308800.0                                               # 假钟（与别处同一口径）
+    FA10.bind_host(clock=lambda: _F10)
+    try:
+        _actE, _engE = _pairs10(dict(_base10, food_buff={"stat": "hp", "pct": 10,
+                                                        "until": _F10 - 1}))
+        _driftE = {k: (_act0.get(k), _actE.get(k)) for k in sorted(set(_act0) | set(_actE))
+                   if _act0.get(k) != _actE.get(k)}
+        chk("★ 过期（假钟拨过 `until`）：快照逐键回原样（上限 %s）· 引擎那份也不动（%s）"
+            % (_actE.get("max_hp"), _engE.get("max_hp")), not _driftE, "%s" % _driftE)
+    finally:
+        FA10.bind_host(clock=time.time)
+
+    _badfood10 = []
+    for _fid2, _fv2 in _foods.items():
+        _st2 = str((_fv2.get("food") or {}).get("stat"))
+        _pk2 = GB10.BUFF_KEY.get(_st2)
+        if not _pk2:
+            _badfood10.append("%s：stat=%s 不在 BUFF_KEY 里" % (_fid2, _st2))
+            continue
+        _pc2 = int((_fv2.get("food") or {}).get("pct") or 0)
+        _a2, _e2 = _pairs10(dict(_base10, food_buff={"stat": _st2, "pct": _pc2, "until": 1e18}))
+        if _a2.get(_pk2) != _e2.get(_pk2) or float(_a2.get(_pk2) or 0) <= float(_eng0.get(_pk2) or 0):
+            _badfood10.append("%s（%s %s）：快照 %s ≠ 引擎 %s" % (_fid2, _st2, _pc2, _a2.get(_pk2), _e2.get(_pk2)))
+    chk("★ 覆盖面：items 域里每一道菜（%d 道）逐个造档 ⇒ 快照 ≡ 引擎、且真涨" % len(_foods),
+        not _badfood10, "%s" % _badfood10)
+except Exception as exc:                                              # noqa: BLE001
+    chk("★ B4-26 增益折进面板那一节跑得起来", False, "%s: %s" % (type(exc).__name__, exc))
+
+print("")
 print("===== %s =====" % ("★ P-27 / B4-8 两个上限三处一致 + 反证都过 ✅" if not fails
                           else "有红 ❌ %s" % fails))
 sys.exit(0 if ok else 1)
