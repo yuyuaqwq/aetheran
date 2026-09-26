@@ -5796,6 +5796,54 @@
     "category": "系统",
     "desc": "同族 · 铁匠铺 · 两条线各吃哪几样料（两组名字摆在一起，免得看错）"
   },
+  "SYS_SMITH_SRC_HEAD": {
+    "value": "这几样料从哪儿来：",
+    "params": [],
+    "category": "系统",
+    "desc": "Q-22 · 铁匠铺/强化 · 料的出处那一栏的表头（出处现算：采集点 + 掉它的怪）"
+  },
+  "SYS_SMITH_SRC_ROW": {
+    "value": "· {name} —— {where}",
+    "params": [
+      "name",
+      "where"
+    ],
+    "category": "系统",
+    "desc": "Q-22 · 铁匠铺/强化 · 逐样一行（where = 采集点/怪两头拼出来，见 matsrc）"
+  },
+  "SYS_SRC_GATHER": {
+    "value": "{verb}『{node} · {point}』（一天 {times} 回）",
+    "params": [
+      "node",
+      "point",
+      "times",
+      "verb"
+    ],
+    "category": "系统",
+    "desc": "Q-22 · 料的出处 · 采集那一半（动作词取自 SYS_GATHER_VERB_*）"
+  },
+  "SYS_SRC_KILL": {
+    "value": "打『{list}』这类怪掉",
+    "params": [
+      "list"
+    ],
+    "category": "系统",
+    "desc": "Q-22 · 料的出处 · 掉落那一半（怪名单从 drop_pools × monsters 现算）"
+  },
+  "SYS_SRC_UNKNOWN": {
+    "value": "眼下还没人知道它出在哪儿。",
+    "params": [],
+    "category": "系统",
+    "desc": "Q-22 · 料的出处 · 两边都算不出来时的 fail-closed 那一句（不编出处）"
+  },
+  "SYS_SRC_GATHER_MORE": {
+    "value": " 等 {n} 处",
+    "params": [
+      "n"
+    ],
+    "category": "系统",
+    "desc": "Q-22 · 料的出处 · 采集那一半漏掉的那几处（前 3 处各点一行，余下折进这一句 —— 残骸那类杂物有 15 个出产点，全摆出来那一行 350+ 字）"
+  },
   "SYS_SMITH_CRAFT_HEAD": {
     "value": "炉边那堆料是留给学徒的 —— 凑够了，柯尔让你自己上手。",
     "params": [],

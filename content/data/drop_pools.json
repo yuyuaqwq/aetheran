@@ -252,7 +252,16 @@
         "out": "*armor_random",
         "kind": "装备",
         "kind_key": "gear",
-        "w": 20,
+        "w": 10,
+        "quality": [
+          "普通"
+        ]
+      },
+      {
+        "out": "*weapon_random",
+        "kind": "装备",
+        "kind_key": "gear",
+        "w": 10,
         "quality": [
           "普通"
         ]

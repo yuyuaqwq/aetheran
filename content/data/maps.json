@@ -66,7 +66,7 @@
     ]
   },
   "belt_north": {
-    "name": "北带 · 骨田",
+    "name": "北带",
     "roles": {
       "through": "野外",
       "exit": "深处"
@@ -91,7 +91,7 @@
     ]
   },
   "belt_east": {
-    "name": "东带 · 白桦林",
+    "name": "东带",
     "roles": {
       "through": "野外",
       "exit": "深处"
@@ -116,7 +116,7 @@
     ]
   },
   "belt_west": {
-    "name": "西带 · 浅滩",
+    "name": "西带",
     "roles": {
       "through": "野外",
       "exit": "深处"

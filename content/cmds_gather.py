@@ -20,6 +20,10 @@ from __future__ import annotations
 
 import random
 
+import io
+import json
+import os
+
 from .cmds_ast import (_data, _p, _save, _map_of, _name_of_node, T, hp_cap_or_line,
                         _pois_here, rest_places)
 from .cmds_codex import new_lines
@@ -51,6 +55,41 @@ def _bump_used(p, gid):
 
 #: ★ 采集抽签的种子命名空间（与 `calendar.weather_of` 的 `aetheran:weather:` 同风格）
 _SEED_NS = "aetheran:gather"
+
+#: 采集口径那一侧的唯一真源（今天只有 `first_dig` 一条）
+_RULES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "rules", "gather.json")
+
+
+def _gather_rules() -> dict:
+    """采集口径（`rules/gather.json`）—— 读不到 ⇒ `{}`（消费端那一格就当成没配 = 不补）。"""
+    try:
+        return json.load(io.open(_RULES, encoding="utf-8")) or {}
+    except Exception:
+        return {}
+
+
+def _first_dig_fill(p, verb: str, got: list) -> list:
+    """每天**第一次「挖掘」**的保底（口径在 `rules/gather.json::first_dig` · 见那儿的 `_src`）。
+
+    为什么有它：三点一天各一铲，按域里权重现算日产 1.60 件、且「三点全空」占 32% ——
+    试玩三家实测「三处挖光、0 件铁屑」⇒ 当天强化做不了（铁屑只有挖掘这一条源）。
+    只补「这一铲没出铁屑」那一种情况 ⇒ **任何一铲的产出只增不减**，单点权重一格不动。
+    档上只记「保底用在哪一天」（一个整数，不依赖 `flags` 的跨日清理）。
+    """
+    r = _gather_rules().get("first_dig") or {}
+    if str(r.get("verb") or "") != str(verb) or not r.get("out"):
+        return []
+    if any(str(d.get("id")) == str(r.get("out")) for d in got):
+        return []                                   # 这一铲自己就出了 ⇒ 不补（不叠加）
+    day = int((p.get("flags") or {}).get("gather_first_dig_day") or 0)
+    today = int(p.get("day") or 0)
+    if day == today and today != 0:
+        return []                                   # 今天已经补过
+    f = dict(p.get("flags") or {})
+    f["gather_first_dig_day"] = today
+    p["flags"] = f
+    oid = str(r.get("out"))
+    return [{"id": oid, "n": int(r.get("n") or 1), "kind_key": LT.kind_key_of(oid, None)}]
 
 
 def _seed(uid, day: int, gid: str, nth: int) -> str:
@@ -128,6 +167,9 @@ async def _do_gather(env, sink, uid, player, verb: str, word: str):
                 # 机器键归一（未鉴定那类走池自己的 marker）—— 唯一的一口在 loot.kind_key_of
                 got.append({"id": oid, "n": n, "kind_key": LT.kind_key_of(oid, e.get("kind_key"))})
                 break
+    # ★ Q-22：每天第一次「挖掘」的保底（口径在 `rules/gather.json::first_dig`）——
+    #   只补「这一铲没出铁屑」，任何一铲的产出只增不减。
+    got.extend(_first_dig_fill(p, verb, got))
     _bump_used(p, gid)
     if got:
         LT.add_to_bag(p, got)

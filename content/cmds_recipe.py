@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import random
 
-from .cmds_ast import _data, _p, _save, T, hp_cap_or_line
+from .cmds_ast import _data, _p, _save, T, hp_cap_or_line, _name_of_node
 from .town import _func_node, town_gate
 from .cmds_talk import _arg
 from .cmds_gear import affix_lines, ambig_line, worn_do_line
@@ -27,6 +27,7 @@ from . import codex as CX
 from . import loot as LT
 from . import gear as GB
 from . import shop as SH
+from . import matsrc as MS          # ★ Q-22：料的「从哪儿来」（唯一一口，本文件只传槽位）
 
 
 def _recipes() -> dict:
@@ -105,6 +106,47 @@ def _lack_str(p, entries) -> str:
         if d > 0:
             lack.append("%s ×%d" % (_item(e["id"]).get("name", e["id"]), d))
     return " · ".join(lack)
+
+
+# ══════════════════════════════════════════════════════════════
+# 料的「从哪儿来」（Q-22 · 出处现算 —— 唯一一口在 `content/matsrc.py`）
+# ══════════════════════════════════════════════════════════════
+def _src_of(iid: str) -> str:
+    """一样料从哪儿来 —— 采集点 + 掉它的怪（两边都取不到 ⇒ 空串，由调用方照实说）。
+
+    ★ 出处**现算**：`gathering`（池里有它的采集点）∪ `drop_pools` × `monsters`（挂了这个池的怪）——
+      域里加一个出产点，这一行跟着变；不手抄任何「材料 → 地点」的对照表。
+    ★ 中文动作词（采/挖/钓/搜）走 `SYS_GATHER_VERB_*` 槽位（本文件不写中文）。
+    """
+    parts = []
+    spots = MS.gather_spots(iid, _data("gathering"), _data("maps"))
+    for sp in spots[:MS.MAX_SPOT]:
+        parts.append(T("SYS_SRC_GATHER",
+                       verb=T("SYS_GATHER_VERB_%s" % str(sp.get("verb") or "").upper()),
+                       node=_name_of_node(sp["map"], sp["node"]), point=sp["name"],
+                       times=sp["times"]))
+    # ★ 采集点最多点 `MAX_SPOT` 处，余下折进「等 N 处」—— 「残骸」这类杂物有 15 个出产点，
+    #   全摆出来那一行 350+ 字（试玩复测：不是缺信息，是读不完）。
+    if len(spots) > MS.MAX_SPOT:
+        parts.append(str(T("SYS_SRC_GATHER_MORE", n=len(spots) - MS.MAX_SPOT)).strip())
+    foes, _pools = MS.kill_foes(iid, _data("drop_pools"), _data("monsters"))
+    if foes:
+        parts.append(T("SYS_SRC_KILL",
+                       list=" · ".join(f["name"] for f in foes[:MS.MAX_KILL])))
+    return " · ".join(parts)
+
+
+def src_lines(entries) -> list:
+    """几样料的出处行（一行表头 + 逐样一行）—— `铁匠铺` 与 `强化` 两处共用同一份。
+
+    ★ 传进来的 `entries` 就是那一支自己的料表（`recipes.<id>.inputs` / `items.<件>.forge.inputs`）——
+      不另开一份「强化料是哪些」的名单（两处各写一份 = 迟早对不上）。
+    """
+    out = []
+    for e in entries:
+        out.append(T("SYS_SMITH_SRC_ROW", name=_item(e["id"]).get("name", e["id"]),
+                     where=_src_of(e["id"]) or T("SYS_SRC_UNKNOWN")))
+    return ([T("SYS_SMITH_SRC_HEAD")] + out) if out else []
 
 
 def _knows(p, rec: dict) -> bool:
@@ -234,6 +276,10 @@ async def smith(env, sink, uid, player):
     _forge_names = [_name_set(_forge_rec(i)["inputs"]) for i in sorted(_forge())]
     yield T("SYS_SMITH_MATS", enh=_name_set(_step1.get("inputs") or []),
             craft=" · ".join(x for x in _forge_names if x))
+    # ★ Q-22：料名后面立刻跟「这几样从哪儿来」—— 出处在 `gathering` / `drop_pools` × `monsters` 域里现算
+    #   （P3 报告 体验-4：玩家看到料名却不知道该去哪弄；强化那一支同样挂这一份，见 `enhance`）。
+    for _ln in src_lines(_step1.get("inputs") or []):
+        yield _ln
     yield T("SYS_SMITH_CRAFT_HEAD")
     for _iid in sorted(_forge()):
         _f = _forge_rec(_iid)
@@ -292,6 +338,11 @@ async def forge(env, sink, uid, player):
     if lack:
         yield T("SYS_SMITH_CRAFT_MISSING", name=rec.get("name", iid),
                 need=_need_str(f["inputs"]), gold=f["gold"], lack=lack)
+        # ★ Q-22 补（试玩 P3 复测 F-3）：`打造` 缺料那一下也得说清「从哪儿来」——
+        #   原来只挂在铁匠铺那一屏与 `强化` 上（试玩里 `打造` 报「你还差：残骸 ×2」就断了）。
+        #   只列真缺的那几样；只差钱 ⇒ 这里为空、不多话（与 `强化` 同一把尺）。
+        for _ln in src_lines([e for e in f["inputs"] if _have(p, e["id"]) < int(e["n"])]):
+            yield _ln
         return
     for e in f["inputs"]:                              # 料：先扣（这一段只走一次，不会扣一半）
         _take(p, e["id"], int(e["n"]))
@@ -327,7 +378,15 @@ async def enhance(env, sink, uid, player):
     # ★ B4-20：认的是**背包里**的那一件（`need_slot` = 域里 ASCII `slot` 那六格）。
     #   原先扫的是**整张物品表**的第一个同名 —— 手里只有「精制」那档时会回「背包里没有」，
     #   两档在手时又静默强了字典序在前的那一件。
-    iid, rec, cands = LT.pick(sorted(p.get("bag") or {}), want, need_slot=True)
+    # ★ Q-22 补（六个职业的试玩全都撞上同一处 · 2026-09-26）：**穿在身上的那件也算**。
+    #   原来只扫 `bag` ⇒ 「买 → 装备 → 强化 那件」回「背包里没有叫…的装备」（误导 —— 玩家手里
+    #   明明有），得先『卸下』再强化再穿回去；几个职业的新手第一把武器都卡在 +0。
+    #   加的顺序 = 背包在前、身上在后（同名两件时的判据与原来一致：照实说、不替玩家挑）。
+    _keys = list(p.get("bag") or {})
+    for _v in (p.get("equipped") or {}).values():
+        if _v and _v not in _keys:
+            _keys.append(_v)
+    iid, rec, cands = LT.pick(sorted(_keys), want, need_slot=True)
     if not iid:
         if cands:                      # ★ B4-20：同名好几件 ⇒ 照实说，不替玩家挑
             yield ambig_line("enhance", want, cands)
@@ -352,6 +411,9 @@ async def enhance(env, sink, uid, player):
         lack += (" · " if lack else "") + T("SYS_GOLD_X", n=fee - int(p.get("gold") or 0))
     if lack:
         yield T("SYS_ENHANCE_MISSING", lv=nxt, need=_need_str(ins), gold=fee, lack=lack)
+        # ★ Q-22：缺料那一下把「从哪儿来」一并说清（只列真缺的那几样；只差钱 ⇒ 这里为空、不多话）
+        for _ln in src_lines([e for e in ins if _have(p, e["id"]) < int(e["n"])]):
+            yield _ln
         return
     # 第 n 次尝试 → 同种子可复现（探针要能对着率表算分布）
     f = dict(p.get("flags") or {})

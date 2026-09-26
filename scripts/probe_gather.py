@@ -175,6 +175,87 @@ _cur_b = _prose_bad(str(G["gt_be_dig_1"].get("desc") or ""),
     % (_old_b or "没抓住", _cur_b or "对得上"))
 
 print()
+# ══════════════════════════════════════════════════════════════
+# ⑪ ★ Q-22：每天第一次「挖掘」的保底（口径在 `content/rules/gather.json::first_dig`）
+#   为什么有它（现算，不拍脑袋）：
+#     · 三点一天各一铲 ⇒ 日产期望 = Σ p(铁屑)×E[件数] = 0.900 + 0.310 + 0.389 = **1.60 件**
+#     · 「三点全空」= Π(1-p) = 0.55 × 0.793 × 0.741 = **32%** ⇒ 每 3 个新玩家就有 1 个第一天
+#       一件铁屑都挖不到 ⇒ 当天强化做不了（铁屑只有挖掘这一条源）—— 试玩三家实测撞上的就是这个
+#     · 设计目标（本条判据的来源）：一阶段（1–20）内玩家能把一件装备推到 **+5**（要 9 个料，
+#       `13_配方域口径 §五`）⇒ 日产需 ≳ 1.9 件。⇒ 每天第一铲「没出铁屑就补 1 件」。
+#   判据四条：规则在域里认得出 · 空手那一铲必补 · 同一天第二铲不补 · 次日第一铲又补。
+# ══════════════════════════════════════════════════════════════
+print("⑪ ★ 每天第一次「挖掘」的保底（rules/gather.json::first_dig）")
+import io as _io                                          # noqa: E402
+import json as _json                                      # noqa: E402
+
+_R = os.path.join(str(REPO), "content", "rules", "gather.json")
+try:
+    _rule = (_json.load(_io.open(_R, encoding="utf-8")) or {}).get("first_dig") or {}
+except Exception as _e:
+    _rule = {}
+    bad("⑪ 规则文件读不到（%s）：%s" % (_R, _e))
+if _rule:
+    ok("⑪ 规则在：verb=%s · out=%s ×%s" % (_rule.get("verb"), _rule.get("out"), _rule.get("n")))
+    if str(_rule.get("out")) not in IT:
+        bad("⑪ 规则点的产出 %r 不在 items 域里" % _rule.get("out"))
+    else:
+        ok("⑪ 规则点的产出在 items 域里（%s）" % IT[str(_rule["out"])].get("name"))
+
+    # 三点现算：日产期望（不含保底 / 含保底）＋「三点全空」概率
+    def _n(v):
+        if isinstance(v, list) and v:
+            return sum(float(x) for x in v) / len(v)
+        s = str(v if v is not None else 1)
+        if "-" in s:
+            a, b = s.split("-")[:2]
+            return (float(a) + float(b)) / 2.0
+        return float(s or 1)
+
+    _per, _miss, _ps = 0.0, 1.0, []
+    for _gid, _v in G.items():
+        if str(_gid).startswith("_") or str(_v.get("verb")) != str(_rule.get("verb")):
+            continue
+        _pool = _v.get("pool") or []
+        _W = sum(float(e.get("w") or 0) for e in _pool)
+        _hit = [e for e in _pool if str(e.get("out")) == str(_rule.get("out"))]
+        if not _hit or not _W:
+            continue
+        _p = sum(float(e.get("w") or 0) for e in _hit) / _W
+        _ps.append(_p)
+        _per += _p * (sum(_n(e.get("n")) for e in _hit) / len(_hit))
+        _miss *= (1 - _p)
+    # 保底那一补是「当天**第一铲**没出铁屑就补」⇒ 增量 = (1 - p_第一铲) —— 第一铲在哪一点由玩家路线决定，
+    # 所以日产是一段区间：先挖最瘦的点（骨田）⇒ 增量最大；先挖最肥的点（伐木棚）⇒ 最小。
+    _lo = _per + (1 - max(_ps))                            # 先挖最肥那一点（伐木棚）⇒ 下限
+    _hi = _per + (1 - min(_ps))                            # 先挖最瘦那一点（骨田）⇒ 上限
+    if _lo >= 1.9:
+        ok("⑪ 日产期望 %.2f 件（不含保底）→ **%.2f~%.2f 件**（含保底 · 三点全空的 %.0f%% 那天不再空手）"
+           " ≥ 目标线 1.9 件/日 ⇒ 9 个料 ≈ %.1f~%.1f 游戏日"
+           % (_per, _lo, _hi, 100 * _miss, 9 / _hi, 9 / _lo))
+    else:
+        bad("⑪ 含保底的下限 %.2f 件 < 目标线 1.9 件/日（9 个料要 %.1f 游戏日）" % (_lo, 9 / _lo))
+
+    # 真跑那四态：直接调实现体那一个口（同进程 · 不依赖宿主）
+    try:
+        from content import cmds_gather as _CG                         # noqa: E402
+    except Exception as _e:
+        _CG = None
+        bad("⑪ content.cmds_gather 导不进来：%s" % _e)
+    if _CG is not None:
+        _out = str(_rule.get("out"))
+        _p1 = {"day": 777001, "flags": {}, "bag": {}}
+        _r1 = _CG._first_dig_fill(_p1, str(_rule.get("verb")), [])
+        _r2 = _CG._first_dig_fill(_p1, str(_rule.get("verb")), [])
+        _r3 = _CG._first_dig_fill({"day": 777002, "flags": dict(_p1["flags"])}, str(_rule.get("verb")), [])
+        _r4 = _CG._first_dig_fill({"day": 777003, "flags": {}}, str(_rule.get("verb")),
+                                  [{"id": _out, "n": 1}])
+        (ok if [d["id"] for d in _r1] == [_out] else bad)("⑪ 空手那一铲 ⇒ 补 %r" % ([d["id"] for d in _r1],))
+        (ok if _r2 == [] else bad)("⑪ 同一天第二铲不补（当天额度只一次）⇒ %r" % (_r2,))
+        (ok if [d["id"] for d in _r3] == [_out] else bad)("⑪ 次日第一铲又补 ⇒ %r" % ([d["id"] for d in _r3],))
+        (ok if _r4 == [] else bad)("⑪ 这一铲自己就出了 ⇒ 不叠加 ⇒ %r" % (_r4,))
+print()
+
 print("按地图：%s" % by_map)
 print("结果：%s" % ("全绿 ✓" if not fails else "有红 ✗（%d）" % len(fails)))
 sys.exit(1 if fails else 0)

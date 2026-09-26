@@ -2570,6 +2570,23 @@
       }
     ]
   },
+  "i_smith_blade": {
+    "name": "柯尔打的粗剑",
+    "icon": "⚔️",
+    "kind": "武器",
+    "kind_key": "weapon",
+    "quality": "普通",
+    "slot": "weapon",
+    "shop": "smith",
+    "level": 1,
+    "price": 6,
+    "affixes": [
+      {
+        "stat": "atk",
+        "v": 5
+      }
+    ]
+  },
   "i_forge_chest": {
     "name": "学徒的护胸",
     "icon": "🛡️",
