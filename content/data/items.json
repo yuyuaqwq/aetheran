@@ -2256,7 +2256,7 @@
     "kind": "材料",
     "kind_key": "material",
     "price": 8,
-    "desc": "采矿产。强化用。"
+    "desc": "采矿产的细屑，攒一把才够。柯尔把它算进强化的料里。"
   },
   "i_material_hard_bone": {
     "name": "硬骨",
@@ -2264,7 +2264,7 @@
     "kind": "材料",
     "kind_key": "material",
     "price": 10,
-    "desc": "怪身上掉的。强化用。"
+    "desc": "怪身上掉下来的硬骨。柯尔说「拿硬的来」就是它 —— 强化的料。"
   },
   "i_potion_heal": {
     "name": "药水",
@@ -2284,7 +2284,7 @@
     "kind_key": "material",
     "quality": "普通",
     "price": 4,
-    "desc": "打铁剩的。攒着能修东西。"
+    "desc": "打铁落下的碎渣，堆在墙角。柯尔拼小件的时候会收 —— 打造的料。"
   },
   "i_material_herb_common": {
     "name": "苦叶",
@@ -2321,7 +2321,7 @@
     "kind_key": "junk",
     "quality": "普通",
     "price": 1,
-    "desc": "到处都是。没什么用。"
+    "desc": "到处都是，捡回来不占手。柯尔打造的时候会收。"
   },
   "i_horn_half": {
     "name": "半截号角",
@@ -2518,5 +2518,114 @@
     "price": 0,
     "lore": "退潮才看得见，一级一级往下，通到水里。台阶很整齐 —— 是有人修的。",
     "desc": "浅滩钓上来的那块。退潮的时候，水底下那截石阶少了一级。"
+  },
+  "i_smith_vest": {
+    "name": "粗皮甲",
+    "icon": "🛡️",
+    "kind": "上甲",
+    "kind_key": "armor_top",
+    "quality": "普通",
+    "slot": "armor_top",
+    "shop": "smith",
+    "level": 1,
+    "price": 6,
+    "affixes": [
+      {
+        "stat": "def",
+        "v": 2
+      }
+    ]
+  },
+  "i_smith_cap": {
+    "name": "补的布帽",
+    "icon": "🪖",
+    "kind": "头盔",
+    "kind_key": "helmet",
+    "quality": "普通",
+    "slot": "helmet",
+    "shop": "smith",
+    "level": 3,
+    "price": 18,
+    "affixes": [
+      {
+        "stat": "res",
+        "v": 2
+      }
+    ]
+  },
+  "i_smith_boots": {
+    "name": "跑腿的靴子",
+    "icon": "👟",
+    "kind": "靴子",
+    "kind_key": "boots",
+    "quality": "普通",
+    "slot": "boots",
+    "shop": "smith",
+    "level": 5,
+    "price": 30,
+    "affixes": [
+      {
+        "stat": "spd",
+        "v": 5
+      }
+    ]
+  },
+  "i_forge_chest": {
+    "name": "学徒的护胸",
+    "icon": "🛡️",
+    "kind": "上甲",
+    "kind_key": "armor_top",
+    "quality": "普通",
+    "slot": "armor_top",
+    "price": 15,
+    "forge": {
+      "level": 3,
+      "gold": 36,
+      "inputs": [
+        {
+          "id": "i_material_iron_chip",
+          "n": 2
+        },
+        {
+          "id": "i_junk_bone",
+          "n": 2
+        },
+        {
+          "id": "i_material_herb_common",
+          "n": 2
+        }
+      ]
+    },
+    "affixes": [
+      {
+        "stat": "def",
+        "v": 2
+      },
+      {
+        "stat": "hp",
+        "v": 16
+      }
+    ]
+  },
+  "i_caravan_bracer": {
+    "name": "外乡人的护腕",
+    "icon": "💍",
+    "kind": "饰品",
+    "kind_key": "accessory",
+    "quality": "普通",
+    "slot": "accessory",
+    "shop": "caravan",
+    "level": 3,
+    "price": 18,
+    "affixes": [
+      {
+        "stat": "crit",
+        "v": 4
+      },
+      {
+        "stat": "hit",
+        "v": 4
+      }
+    ]
   }
 }

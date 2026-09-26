@@ -125,6 +125,57 @@
           },
           "additionalProperties": false
         },
+        "shop": {
+          "type": "string",
+          "$comment": "★ fix7-gear：这件东西**在哪个柜上卖**（ASCII 键，与 `content/rules/shop.json` 的 `shelves.*.shop_key` 同名同值）。写这一格 = 上柜；不写 = 不上柜（只当掉落 / 只当打造产物）。货架由域里现取（不写死 id —— 与 `kind_key == stock_kind` 那格同一个路子）：`content/shop.py::goods` 只按这一格筛。今天：smith（柯尔打的粗货）· caravan（商队到货才摆出来的那件）。"
+        },
+        "level": {
+          "type": "integer",
+          "minimum": 1,
+          "$comment": "★ fix7-gear：这一格货**从几级起卖**（按等级解锁 —— 真源 00_总纲/06_阶段交接指南_v3 §3.1③「费用按等级」）。只对**上柜的东西**（有 `shop`）有意义；穿戴门槛那一格是 `req`（B3-19，看加点），与这一格不是一回事。买价 = 基础价 × 品阶系数 × 固定加价（普通档 1.00 ⇒ = 基础价 × 2 ⇒ 12 × 这一格）。"
+        },
+        "forge": {
+          "type": "object",
+          "$comment": "★ fix7-gear：这件东西**怎么打出来**（打造配方挂在产物自己身上 —— 与 `shop` 同一个路子：域里现取，代码不写死 id）。只有打造产物带这一格。",
+          "required": [
+            "level",
+            "gold",
+            "inputs"
+          ],
+          "properties": {
+            "level": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "几级才让你上手（费用按等级：同为 12 × 这一格）"
+            },
+            "gold": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "这一件的工钱（铜板）；料不够或钱不够 ⇒ 只回一句、档一个字不动"
+            },
+            "inputs": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "n"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "n": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        },
         "set_id": {
           "type": "string",
           "description": "套装 id（套装件才有）"

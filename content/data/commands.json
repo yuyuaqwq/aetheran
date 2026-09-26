@@ -1341,6 +1341,26 @@
       ]
     }
   },
+  "forge": {
+    "patterns": [
+      "^打造\\s*(.+)$",
+      "^打造$"
+    ],
+    "category": "生产与铺子",
+    "desc": "打一件（材料 + 钱）",
+    "usage": "打造 <参数>",
+    "visible": true,
+    "order": 61,
+    "guard_desc": "在铁匠铺且材料够",
+    "bind": {
+      "handler": "content.cmds_recipe:forge",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    }
+  },
   "herbalist": {
     "patterns": [
       "^药铺$",

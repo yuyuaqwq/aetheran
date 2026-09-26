@@ -1701,6 +1701,32 @@ try:
         out += [_r(str(r["text"])) for r in news if r.get("text")]
         if not news:
             out.append(_r("SYS_CARAVAN_QUIET"))
+        # ★ fix7-gear：商队那一家**真到货** —— 车没到 ⇒ 说清在等哪条委托；到了 ⇒ 柜上那几件
+        #   （一家一家现算：`shop == 键` + 等级那一刀；条件从 `events.period` 现取，不写死委托名）
+        #   位置：与 `cmds_places.caravan` 同序 —— **在「外人在哪一站」之前**
+        from content import shop as _SH16                                     # noqa: E402
+        for _ck16 in _SH16.shelf_keys():
+            _ev16 = str(_SH16.shelf_rec(_ck16).get("event") or "")
+            if not _ev16:
+                continue
+            if not CAL16.event_on(_ev16, p=p):
+                _who16 = _SH16.event_wait(_ck16)
+                if _who16:
+                    out.append(_r("SYS_CARAVAN_WHY", name=_who16))
+                continue
+            _rows16 = _SH16.goods(p, shelf=_ck16)
+            if _rows16:
+                out.append(_r("SYS_CARAVAN_GOODS"))
+                for _g16 in _rows16:
+                    out.append(_r("SYS_SHELF_ROW", icon=_g16["rec"].get("icon") or "",
+                                  name=_g16["rec"].get("name") or _g16["id"], gold=_g16["gold"],
+                                  level=_SH16.level_need(_g16["rec"])))
+                continue
+            for _g16 in _SH16.goods_at(_ck16, p):
+                out.append(_r("SYS_SHELF_LOCK", name=_g16["rec"].get("name") or _g16["id"],
+                              level=_SH16.level_need(_g16["rec"]),
+                              now=int((p or {}).get("level") or 0)))
+                break
         who = []
         for nd in ((st.domain("maps") or {}).get("windmill_town") or {}).get("nodes") or []:
             nid = str(nd.get("id") or "")
