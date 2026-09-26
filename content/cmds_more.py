@@ -190,7 +190,11 @@ async def attrs(env, sink, uid, player):
     actor = PB.build_actor(cls, max(1, int(p.get("level") or 1)), ALLOC.of_record(p),
                            gear, buffs=buffs, uid=uid)  # ★ B3-28 ①：栈 id 带上这个人
     yield T("SYS_ATTR_HEAD", who=name_with_title(p), cls=_cls_label(cls), level=p.get("level"))
-    yield T("SYS_ATTR_VITAL", hp=_fmt(actor.get("max_hp", 0)), mo=_fmt(actor.get("max_mp", 0)),
+    # ★ Q-22 补（六个职业的试玩里四个都撞上这条 · 2026-09-26）：上限走**唯一口** —— 原来这一行
+    #   直接印 `actor["max_hp"]`（`_fmt` = round ⇒ 127.5 印 128），而 `状态` 那一行走
+    #   `panel_build.hp_cap`（同一份 actor，int ⇒ 127）—— 于是同一刻两页差 1（存档/战斗按前者）。
+    #   现在两页都走 `hp_cap` / `mp_cap`：一个数，两处一样，也不动战斗那份数值。
+    yield T("SYS_ATTR_VITAL", hp=PB.hp_cap(p), mo=PB.mp_cap(p),
             crit=_fmt_pct(_crit_rate(actor) * 100))
     for line in _panel_rows(actor):
         yield line

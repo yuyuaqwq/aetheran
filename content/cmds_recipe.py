@@ -378,7 +378,15 @@ async def enhance(env, sink, uid, player):
     # ★ B4-20：认的是**背包里**的那一件（`need_slot` = 域里 ASCII `slot` 那六格）。
     #   原先扫的是**整张物品表**的第一个同名 —— 手里只有「精制」那档时会回「背包里没有」，
     #   两档在手时又静默强了字典序在前的那一件。
-    iid, rec, cands = LT.pick(sorted(p.get("bag") or {}), want, need_slot=True)
+    # ★ Q-22 补（六个职业的试玩全都撞上同一处 · 2026-09-26）：**穿在身上的那件也算**。
+    #   原来只扫 `bag` ⇒ 「买 → 装备 → 强化 那件」回「背包里没有叫…的装备」（误导 —— 玩家手里
+    #   明明有），得先『卸下』再强化再穿回去；几个职业的新手第一把武器都卡在 +0。
+    #   加的顺序 = 背包在前、身上在后（同名两件时的判据与原来一致：照实说、不替玩家挑）。
+    _keys = list(p.get("bag") or {})
+    for _v in (p.get("equipped") or {}).values():
+        if _v and _v not in _keys:
+            _keys.append(_v)
+    iid, rec, cands = LT.pick(sorted(_keys), want, need_slot=True)
     if not iid:
         if cands:                      # ★ B4-20：同名好几件 ⇒ 照实说，不替玩家挑
             yield ambig_line("enhance", want, cands)
