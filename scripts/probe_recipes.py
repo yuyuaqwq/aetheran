@@ -275,6 +275,22 @@ chk("★ 强化真跑：%s → +%s · 材料扣完 · 钱扣掉（%d）"
     and int(p["bag"].get(BONE, 0)) == 0 and int(p.get("gold") or 0) == 0,
     "%s / %s" % (e1, lines[:1]))
 
+# ⑧-b ★ fix-g-enhance（现象 A · 游侠路 b63/b73/b82）：成功那一下必须**逐项报出吃掉的料**，
+#   而且报的就是背包里真少掉的那几样 —— 料表 = `rc_enh_01.inputs`（与「缺料」那一支同一个变量
+#   `ins`、同一个拼法 `_need_str`）。判据**从域现算**（不抄回话、也不抄代码那份名单）。
+_pc = mk()
+_bag0 = {e["id"]: int((_pc.get("bag") or {}).get(e["id"], 0)) for e in (enh["rc_enh_01"].get("inputs") or [])}
+_lc = run_ag(CR.enhance(E("强化 %s" % WNAME), None, "u_cost", _pc))
+_line0 = _lc[0] if _lc else ""
+_ded = {k: _bag0[k] - int((_pc.get("bag") or {}).get(k, 0)) for k in _bag0}
+_ins1 = enh["rc_enh_01"].get("inputs") or []
+_say = ["%s ×%d" % (IT[e["id"]].get("name", e["id"]), int(e["n"])) for e in _ins1]
+chk("★ 强化成功那行**逐项报出吃掉的料**（%s）—— 料表与「缺料」那一支同一份 · 背包实减逐项对账"
+    % " · ".join(_say),
+    bool(_line0) and all(s in _line0 for s in _say)
+    and all(_ded[e["id"]] == int(e["n"]) for e in _ins1),
+    "回话 %r · 背包实减 %s" % (_line0, _ded))
+
 # ⑨ ★ 接线：强化真改面板（战斗真读的那份 = ext_combat.stats.actor_stats）
 from ext_combat.battle import stats as ST                            # noqa: E402
 
@@ -291,6 +307,23 @@ chk("★ 强化 +10 真进面板：atk %.3f → %.3f（主词条 %.0f × 1.04）
     % (base.get("atk", 0), plus.get("atk", 0), main_v),
     plus.get("atk", 0) > base.get("atk", 0) and abs((plus.get("atk", 0) - base.get("atk", 0)) - main_v * 0.04) < 1e-6,
     "差 %.4f（该 %.4f）" % (plus.get("atk", 0) - base.get("atk", 0), main_v * 0.04))
+
+# ⑨-b ★ fix-g-enhance（现象 B · 骑士 / 狂战 / 法师三路）：加成那一行的**说明**必须在域里，
+#   而且那句话里的断言**在数据上成立** —— 「面板按整数看：+1..+3 这点不到半格」。
+#   · 面板数值那一头：`content/cmds_more._fmt` = `"%d" % round(v)` ⇒ 整数显示；
+#   · 断言那一头：主词条**最大**那件 × 每级加成 × 3 级 < 0.5（全表 103 件装备现扫，不手写）。
+#   ★ 哪天有件装备主词条大到「+1..+3 就能挪动一格」，这一条当场红 ⇒ 那句话得跟着改（判据钉住文案断言）。
+_bpl = float(eme.get("bonus_per_level") or 0)
+_vs = [float((v.get("affixes") or [{}])[0].get("v") or 0)
+       for v in IT.values()
+       if isinstance(v, dict) and v.get("slot") and (v.get("affixes") or [])]
+_vmax = max(_vs) if _vs else 0.0
+_okv = str((TX.get("SYS_ENHANCE_OK") or {}).get("value") or "")
+chk("★ 加成那句说明在域里（`SYS_ENHANCE_OK` 带 `{cost}` + 「面板按整数看」）· 断言在数据上成立："
+    "主词条最大 %.0f × %.3f/级 × 3 = %.3f < 0.5（%d 件装备全扫）"
+    % (_vmax, _bpl, _vmax * _bpl * 3, len(_vs)),
+    "{cost}" in _okv and "面板按整数看" in _okv and 0 < _bpl and _vmax * _bpl * 3 < 0.5,
+    "槽位值 = %s" % _okv)
 
 # ⑩ ★ 吃菜：增益真进面板；过了时效自动失效（假钟）
 hp_rid = next(k for k, v in cooks.items() if (v.get("buff") or {}).get("stat") == "hp")

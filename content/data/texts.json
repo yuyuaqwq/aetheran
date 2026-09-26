@@ -1499,10 +1499,11 @@
     "desc": "菜谱名对不上"
   },
   "SYS_ENHANCE_OK": {
-    "value": "🔨 {item} → +{lv}（加成 {bonus}，走装备本体 —— 上限 +{cap}%）。",
+    "value": "🔨 {item} → +{lv}（吃了{cost}。加成 {bonus}，走装备本体 —— 上限 +{cap}%。面板按整数看：+1..+3 这点不到半格，看不出。）",
     "params": [
       "bonus",
       "cap",
+      "cost",
       "item",
       "lv"
     ],
