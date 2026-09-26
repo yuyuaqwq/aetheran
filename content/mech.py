@@ -381,11 +381,24 @@ def _self_cut(battle, caster, m: dict, logs) -> int:
     真源口径（02_狂战士_v2.md §二「不能把自己打死」）：**保底留 1 血** —— 算式在
     `_self_cut_amount` 里（与出手前那道血线门共用）。破势（旧）/ 血债 / 狂态 / 横扫 /
     狂斩 / 焚身 六条共用这一处。
+
+    ★ fix-a-screen（2026-09-27）：**一笔自付只出一行**。落地照旧走引擎那一条
+      （`LD.deal_damage` —— 护盾 / 减伤 / 事件 / 濒死一个字不动），但引擎那条**通用**
+      伤害行（`battle.landing.damage` = `💥 {name} 受到 {dmg} 点伤害！`，与「被怪打」
+      长得一模一样）在**这一调**里被顶掉（`BT.quiet_engine_damage`）⇒ 屏上只剩本包的
+      专用行。专用行报的数是**真扣下去的那一笔**（引擎的返回值），不是算式值
+      —— 这一笔不吃减免时两者相同（试玩实测 40 = 35%×116 撞上限）。
     """
     cut = _self_cut_amount(battle, caster, m)
     if cut > 0:
-        LD.deal_damage(battle, None, caster, cut, logs)
-        logs.append(T("COMBAT_MECH_SELF_CUT", n=cut))
+        from . import battle_text as BT
+        _n0 = len(logs)
+        with BT.quiet_engine_damage(battle):
+            real = LD.deal_damage(battle, None, caster, cut, logs)
+        # 顶掉的那一行是**空串**（引擎把渲染结果无条件 append）⇒ 只剔这一笔新增里的空串
+        logs[_n0:] = [x for x in logs[_n0:] if str(x) != ""]
+        if real > 0:                       # 全额被护盾吃掉 / 被闪掉 ⇒ 不谎报一笔没落的血
+            logs.append(T("COMBAT_MECH_SELF_CUT", n=real))
     return cut
 
 

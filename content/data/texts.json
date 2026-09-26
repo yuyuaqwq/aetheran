@@ -5173,6 +5173,14 @@
     "category": "战斗",
     "desc": "机制 · 反击兑现（on_taken 那一刀）"
   },
+  "COMBAT_BLOCKED_AMOUNT": {
+    "value": "（格挡后 {dmg} 点伤害）",
+    "params": [
+      "dmg"
+    ],
+    "category": "战斗",
+    "desc": "fix-a-screen ③：顶掉引擎那句兜底模板 `battle.landing.blocked_amount`（兜底是**半角括号** `(格挡后 {dmg} 点伤害)` —— 全屏唯一一处半角括号，骑士路试玩报的）。措辞照旧，只把括号改成全角。"
+  },
   "COMBAT_ELEM_IMMUNE": {
     "value": "💠 免疫 —— 【{name}】不吃这一手，伤害一点没落上去。",
     "params": [

@@ -932,6 +932,29 @@ _w5 = int(round(float(ST.actor_max_hp(_b5, _c5) or 0)
                 * float(MECH.of("def_break")["self_dmg_pct"]["value"])))
 (ok if _self_cut_of(_l5) == [_w5] else bad)(
     "  · 回归：破势（走命中后的 engine 路）自伤口径一点没变（%s，期望 [%d]）" % (_self_cut_of(_l5), _w5))
+
+#: ★ fix-a-screen（2026-09-27 · ①）：一笔自付**只出一行**。落地照旧走引擎那条
+#:   （`LD.deal_damage` —— 结算 / 事件 / 保底 1 血一个字不动），但引擎那条**通用**伤害行
+#:   （`battle.landing.damage` = `💥 {name} 受到 {dmg} 点伤害！`，与「被怪打」同形）在**自付那一调**
+#:   里被顶掉（`content/battle_text.quiet_engine_damage`）⇒ 屏上只剩本包的专用行；
+#:   专用行报的数是**真扣下去的那一笔**（= 血账差分）。
+_b6, _c6 = _bare("cls_berserker", mid=DOG, hp=500)
+_hp6 = int(_c6["hp"])
+_l6 = apply_cast(_b6, _c6, "SKILL_BSK_rampage")
+_d6 = _hp6 - int(_c6["hp"])
+_hurt6 = [x for x in _l6 if "受到" in x]
+(ok if _self_cut_of(_l6) == [_d6] and _d6 > 0 and not _hurt6 else bad)(
+    "  · 一笔自付**只出一行**：专用行 %s（真扣 %d）· 引擎那条通用伤害行不再重复（%s）"
+    % (_self_cut_of(_l6), _d6, _hurt6[:1] or "没有"))
+
+#: 反证（这一条判据不是空转）：同一调里「怪打你」那条**照旧**上屏 —— 遮挡只认自付那一笔，
+#:   没把引擎那条 key 全局改掉（`content/rules/battle_text.json` 里它**照样没声明**）。
+_b7, _c7 = _bare("cls_berserker", mid=DOG, hp=500)
+_l7 = []
+LD.deal_damage(_b7, _b7.sides["enemy"][0], _c7, 20, _l7)
+(ok if [x for x in _l7 if "受到" in x] else bad)(
+    "  · 反证：「挨打」那条通用伤害行照旧（%s）—— 遮挡只作用于自付那一笔"
+    % ([x for x in _l7 if "受到" in x][:1] or "不见了"))
 _restore_dodge(_sd)
 
 print()

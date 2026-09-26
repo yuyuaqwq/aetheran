@@ -30,10 +30,11 @@
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 
-from saintess_engine.text import TextTable
+from saintess_engine.text import TextTable, safe_format
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _RULES = os.path.join(_HERE, "rules", "battle_text.json")
@@ -110,3 +111,61 @@ def table() -> TextTable:
 def battle_text() -> TextTable:
     """`Battle(text=…)` 的实参（语义名 —— 调用点不必知道它是 `TextTable`）。"""
     return table()
+
+
+# ══════════════════════════════════════════════════════════════
+# ★ 一次性遮挡：**自付血**那一笔的引擎通用伤害行
+#   （`content/mech.py::_self_cut` 用它；不是「文案覆盖」—— 表里那条 key 照样不声明）
+# ══════════════════════════════════════════════════════════════
+#: 引擎那条**通用伤害行**的槽位名（`landing.py::_apply_damage` 的 else 支逐字抄）。
+_ENGINE_DAMAGE_KEY = "battle.landing.damage"
+
+
+class _QuietOnce:
+    """`battle.text` 的**临时替身**：只顶掉一条 key，其余原样转发给真表。
+
+    ★ 为什么在渲染口顶、而不是在 `texts` 里覆盖 `battle.landing.damage`：
+      那条 key 是**全局**的 —— 自付血与「被怪打」共用同一句，覆盖它会改到别处
+      （`content/rules/battle_text.json` 的纪律 2：只声明要覆盖的那几条）。
+      而自付血那一笔的落地是**本包自己调的** `LD.deal_damage` ⇒ 只在**那一调**期间
+      把 `battle.text` 换成这张表：一笔自付就只剩专用行（`COMBAT_MECH_SELF_CUT`）一行。
+    ★ 一次性：顶掉**第一条** `battle.landing.damage` 就交还（这一调里不会再冒出第二条 ——
+      `_apply_damage` 先把这条 append 完才 fire `on_taken`）；调用方在 `finally` 里
+      **无条件还原**（护盾全额吸收那种「走不到那一条」的情况也不会把遮挡留给后面的手）。
+    ★ 只**显示**这一件事：结算一个字不动（护盾 / 减伤 / 事件 / 濒死全照跑），
+      表的记账口（`missing()` / `unused()`）照旧问真表。
+    """
+
+    __slots__ = ("_t", "_armed")
+
+    def __init__(self, table):
+        self._t = table
+        self._armed = True
+
+    def render_or(self, key, default, /, **slots):
+        if self._armed and key == _ENGINE_DAMAGE_KEY:
+            self._armed = False
+            return ""                     # 引擎照 append ⇒ 调用方剔掉这一格空串（见下）
+        if self._t is None:               # 没注入表 ⇒ 与 `render_or(None, …)` 同一条路
+            return safe_format(default, slots)
+        return self._t.render_or(key, default, **slots)
+
+    def __getattr__(self, name):          # 自检口透传（它不是表，只是这一笔的遮挡）
+        if self._t is None:
+            raise AttributeError(name)
+        return getattr(self._t, name)
+
+
+@contextlib.contextmanager
+def quiet_engine_damage(battle):
+    """★ **这一调** `LD.deal_damage` 里的引擎通用伤害行被顶掉（返回空串）。
+
+    用法（`content/mech.py::_self_cut`）：记下日志长度 → `with` 里落地 → 把新增里那格
+    **空串**剔掉（引擎把渲染结果无条件 append 进 logs）⇒ 玩家那一屏只剩专用行一行。
+    """
+    _orig = getattr(battle, "text", None)
+    battle.text = _QuietOnce(_orig)
+    try:
+        yield
+    finally:
+        battle.text = _orig

@@ -11092,4 +11092,93 @@ SYS_ITEM_SHOW_ASK   （**改值**）看哪一件？打『查看 <东西>』；�
 全量 = `bash gate_locked.sh C:/Users/yuyu/ast-wt/fix-c-newbie fix-c-newbie`（52 支 probe_*.py）。
 基线 = `C:/Users/yuyu/AppData/Local/Temp/w10/nightplay-base/summary.txt`（夜班 · nightplay e2fb34e）。
 判据 = 失败集合与基线逐项相同（一条都不放宽）；summary 与 fail 清单见交付答复。
+---
+
+# 八 · fix-a-screen（2026-09-27）：三条**玩家可见显示层**发现（①③ 落地 · ② 判 [裁]）
+
+车道 `fix-a-screen`（基线 `fef4a62` master）· 全量门禁 `TOTAL pass=52 fail=0`（与夜班基线
+`nightplay-base` **逐支同值**：52 支全 rc=0、逐支结果行逐字相同、两边 fail 集合都是空）。
+
+## 八·一 ① 一笔自付血记两行 ⇒ 一行（狂斩 / 焚身 / 破势）
+
+```text
+现象（试玩 b12/b14 原文）：💥 拾烬 受到 40 点伤害！   ← 引擎通用模板（与被怪打的那行长一样）
+                          你劈出这一下，自己先见了血（−40）。  ← 同一笔的第二行
+根因：content/mech.py::_self_cut 先 LD.deal_damage(...)（引擎 landing.py::_apply_damage 的 else 支
+      会 append render_via(battle, "battle.landing.damage", "💥 {name} 受到 {dmg} 点伤害！")）
+      再 append 专用槽位 COMBAT_MECH_SELF_CUT ⇒ 一次自付两行。
+改法（不动结算）：落地照旧走 LD.deal_damage（护盾 / 减伤 / 事件 / 濒死 / 保底 1 血一字未改），
+      但**那一调**把 battle.text 换成 content/battle_text.py::quiet_engine_damage 的**一次性遮挡**
+      （`_QuietOnce`：只把 `battle.landing.damage` 渲染成空串，其余原样转发给真表；
+       `finally` 无条件还原）⇒ 引擎照 append 的那格空串由调用方从「这一笔新增」里剔掉
+      ⇒ 屏上只剩专用行。专用行报的数是**真扣下去的那一笔**（deal_damage 的返回值，不是算式值）。
+      ★ 为什么不去 texts 里覆盖 `battle.landing.damage`：那条 key 是**全局**的
+        （自付与「被怪打」共用一句），覆盖它会改到别处（`battle_text.json` 纪律 2）。
+判据（只紧不松）：scripts/probe_mech.py ㉑ 新增两条 ——
+      「一笔自付只出一行（专用行 = 真扣，通用行不重复）」+「反证：『挨打』那条通用行照旧」
+      （证明遮挡只作用于自付那一笔、没把 key 全局改掉）。
+端到端（真人客户端 · 自己的库/存档 · 狂战士 拾烬）：
+      » 技能 焚身 ⇒ 🌀 拾烬 开始出招… / —— 田鼠 行动 —— / 💥 拾烬 受到 7 点伤害！（咬的）/
+                    你劈出这一下，自己先见了血（−25）。/ 💥 田鼠 受到 40 点伤害，倒下了！
+      » 技能 狂斩 ⇒ … 你劈出这一下，自己先见了血（−11）。/ 💥 田鼠 受到 27 点伤害！/ 💥 拾烬 受到 6 点伤害！
+      » 技能 破势 ⇒ … 你劈出这一下，自己先见了血（−7）。/ 【田鼠】的甲被劈开 —— 防御 −30%，300 刻。
+      数值逐条对真源：狂斩 12%×92 = 11 ✓ · 破势 8%×92 = 7 ✓ · 焚身 35%×72（= 咬完后那一刻的当前血）
+      = 25.2 ⇒ 25 ✓；全篇 3 笔自付 = 3 条「见了血」，**没有**任何一条与自付同值的通用伤害行。
+```
+
+## 八·二 ② 「第 N 手」那屏的血排在过程之前 ⇒ **判 [裁]（未改一行）**
+
+```text
+现象（试玩 F-4）：⚔ 第 2 手 —— 你 62/127 印完，才印这一手的过程（喝药 +40 → 挨 11）。
+核实：真源 `06_第一阶段垂直切片/03_风车镇_指令与回复.md §二` 写死「一次战斗回复的结构（固定四段）」：
+      ① 现状一行   ② 对方在干什么   ③ 你的选项   ④ **上一手的结果**（过程在**最后**）；
+      `02_风车镇_一屏打样.md §四` 那一屏打样同序（选项之后才是「你用了『守势突刺』」+ 结果）。
+      代码 `content/instance.py:502-511` 就是这个序（turn_lines ①②③ → head → `_fmt(logs)` ④）；
+      `_notes.md` 8255 那句也写着「四段式（现状 / 谁先动 / 对方在干什么 / 你的选项）+ **这一手的过程**」。
+      数字本身**自洽**：那一屏的头 = 敲完这一手之后的「现状」（真源 ① 的字面 = 现在），
+      下面那块是这一手的过程（真源 ④「上一手的结果」）—— e2e 实测逐手对得上
+      （第 1 手 110/116 → 过程 −6 → 第 2 手 104/116 → 过程 −6 → 第 4 手 101/116…）。
+为什么不硬改：
+      · 「把过程行排到头部之前」= 把 ④ 提到 ①②③ 前面 —— 与真源那条**固定四段序号**相反；
+      · 「头部取这一手开始那一刻的值」= 让 ①现状 与 ③你的选项基于**过期**血量
+        （玩家会拿上一手开始时的血去做这一手的决定）—— 更糟；
+      · 两样都要动真源口径，且都要刷新 probe_instance ⑤ 那份冻结基线 ⇒ 按纪律留给主线拍板。
+      真要改的话：`instance.py:505-511` 把 `turn_lines` 那一块挪到 `head` + `_fmt(logs)` 之后
+      （一行位置），随之要跟账 `scripts/_baseline_instance_solo.json`（那一节是逐字对比）
+      并另配一条钉住新序的常驻判据。
+```
+
+## 八·三 ③ 全屏唯一的半角括号 `(格挡后 N 点伤害)`
+
+```text
+现象（骑士路 F-6/第 11/20/27 批）：防御过之后，挨打那几屏带着唯一一处半角括号。
+根因：引擎 landing.py:170 附近的兜底模板 `render_via(battle, "battle.landing.blocked_amount",
+      "(格挡后 {dmg} 点伤害)")` —— 引擎侧本来就是「key + 兜底 + 槽位」，措辞归内容侧。
+改法：content/rules/battle_text.json::slots 声明 `battle.landing.blocked_amount` → texts 域
+      新槽位 `COMBAT_BLOCKED_AMOUNT`（`content/data/texts.json`，**全角括号**，措辞照旧：
+      `（格挡后 {dmg} 点伤害）`）。装配期 `battle_text.check_slots()` fail-closed 照旧。
+判据（只紧不松）：scripts/probe_elements.py ⑨-d —— 真驱动一次「防御中挨打」，
+      钉「那一行走槽位渲染」+「这一屏**一个半角括号都没有**」（顺带让新槽位不是死槽位，
+      ⑨ 那条 `unused()` 照旧为空）；闪避归零走声明面（`formula_skeleton_fn` 的 `dodge.cap`，
+      判据不骑在掷骰上）。
+端到端（真人客户端 · 骑士 甲舟）：» 防御 ⇒ 🛡 甲舟 摆出防御姿态…；之后每一手
+      `（格挡后 3 点伤害）` / `（格挡后 4 点伤害）`；整份回话 grep 半角 `(` = **0 处**。
+冻结基线：`scripts/probe_instance.py` ⑤ 那份 `scripts/_baseline_instance_solo.json`
+      第六次刷新（同样是**有意**的呈现变更，这一支一个字没动）——
+      新旧两份 `--dump` 逐行 diff：5 条指令 · 共 37 行**只差 1 行**
+      「(格挡后 2 点伤害)」→「（格挡后 2 点伤害）」；括号以外**逐字节相同**
+      （半角 1 字节 → 全角 3 字节，整份基线只差这 4 字节）。
+```
+
+## 八·四 本波动的文件
+
+```text
+content/battle_text.py       + quiet_engine_damage / _QuietOnce（一次性遮挡；表那条 key 照样不声明）
+content/mech.py              _self_cut：走遮挡 + 剔空串 + 专用行报真扣值
+content/rules/battle_text.json  + slots::battle.landing.blocked_amount（+ _note 一行）
+content/data/texts.json      + COMBAT_BLOCKED_AMOUNT（全角括号）
+scripts/probe_mech.py        ㉑ + 两条判据（一笔一行 / 反证挨打那行照旧）
+scripts/probe_elements.py    ⑨-d 两条判据（走槽位 / 无半角括号）+ 抬头补一行
+scripts/probe_instance.py    ⑤ 基线刷新跟账（第六次）+ 常驻判据指路
+scripts/_baseline_instance_solo.json  第六次刷新的那份快照
 ```
