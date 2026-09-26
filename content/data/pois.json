@@ -179,6 +179,7 @@
     "kind": "隐藏点",
     "map": "belt_north",
     "subarea": "bn_camp",
+    "read_text": "READ_HIDDEN_CAMP",
     "effect": {
       "need": "search"
     }
@@ -189,6 +190,7 @@
     "kind": "隐藏点",
     "map": "belt_east",
     "subarea": "be_dogs",
+    "read_text": "READ_HIDDEN_BIRCH",
     "effect": {
       "need": "search"
     },
@@ -202,6 +204,7 @@
     "kind": "隐藏点",
     "map": "belt_west",
     "subarea": "bw_shoal",
+    "read_text": "READ_HIDDEN_SHOAL",
     "effect": {
       "need": "search"
     },

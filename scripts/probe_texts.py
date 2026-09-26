@@ -87,9 +87,20 @@ chk("★ 地图上 %d 个节点都能取到场景槽位（节点级 %d）"
     % (len(nodes), len([1 for _l, nd in nodes if _nk(nd) in tx])), not unr, "取不到：%s" % unr)
 
 # ⑧ ★ 真调「观察」（造档逐节点）—— 第一位那行必须就是该节点的场景正文
+#    ★ 本波（P1 BUG-5）：节点级场景多了一版「这一站的人此刻都不在」（`SCENE_<节点>_EMPTY`，
+#      判据在 `content/town.py::station_empty`）⇒ 期望值 = **两版里的哪一版**：
+#      「本该有人却一个都没到场」⇒ 必须逐字是空版；否则必须逐字是正版。
+#      **钟先钉死**（判据不许看真钟 —— K79 那一族），人名单按域现算（不是照代码抄）。
 import asyncio                                                        # noqa: E402
 
 from content import cmds_ast as CA                                    # noqa: E402
+from content import calendar as _CAL                                  # noqa: E402
+from content import facade as _FAC                                    # noqa: E402
+from content import town as _TW                                       # noqa: E402
+from content.scene import empty_key as _ek                            # noqa: E402
+
+_FIX = 100 * _CAL.scale_seconds() + 0.5 * _CAL.scale_seconds()        # 第 100 个游戏日 · 正午
+_FAC.bind_host(clock=lambda: _FIX)
 
 
 class _E:               # 「观察」只要 env.save()（落档是处理器的责任）
@@ -112,17 +123,29 @@ def _look_first(loc, node):
     return out
 
 
-wrong = []
+wrong, _tally = [], {"正版": 0, "空版": 0}
 for loc, nd in nodes:
-    sk = _resolve(tx, loc, nd)
+    _p = dict(CA.DEFAULT_PLAYER)
+    _p.update({"loc": loc, "node": nd, "race": "human", "cls": "cls_knight"})
+    _empty = bool(_TW.station_empty(loc, nd, _p))
+    _key = _ek(nd) if _empty else _resolve(tx, loc, nd)
+    if _key not in tx:                                 # 空版没写 ⇒ 照旧走正版（不静默给空）
+        _key = _resolve(tx, loc, nd)
+    _tally["空版" if _key == _ek(nd) else "正版"] += 1
     first = _look_first(loc, nd)[0]
-    if first != tx[sk]["value"]:
+    if first != tx[_key]["value"]:
         wrong.append((nd, first[:24]))
-chk("★ 观察 逐节点产出的就是该节点的场景正文（%d 个节点）" % len(nodes), not wrong, "对不上：%s" % wrong[:4])
+chk("★ 观察 逐节点产出的就是该节点的场景正文（%d 个节点；本波起「有人版 / 人不在版」两版，"
+    "钟钉在正午 · 按域现算该走哪一版：正版 %d · 空版 %d）"
+    % (len(nodes), _tally["正版"], _tally["空版"]), not wrong, "对不上：%s" % wrong[:4])
 
 # ⑨ 节点级场景是正文（≥80 字 —— 工单占位只有 7~16 字，一跑就露）
+#    ★ 本波：空版也算节点级场景的正文之一（两版都要立得住 —— 短的/占位的一跑就露）
+_empties = sorted(k for k in tx if k.endswith("_EMPTY") and k.startswith("SCENE_"))
 short = [(k, len(tx[k]["value"])) for _l, nd in nodes if _nk(nd) in tx and len(tx[_nk(nd)]["value"]) < 80]
-chk("★ 节点级场景都是正文（≥80 字）", not short, "%s" % short[:5])
+short += [(k, len(tx[k]["value"])) for k in _empties if len(tx[k]["value"]) < 80]
+chk("★ 节点级场景都是正文（≥80 字；含 %d 条「人不在版」：%s）" % (len(_empties), " · ".join(_empties)),
+    not short, "%s" % short[:5])
 
 # ⑩ 场景类没有待填（这一批的工单清完了）
 todo_scene = [k for k, v in tx.items() if v.get("category") == "场景" and "〔待填" in v["value"]]

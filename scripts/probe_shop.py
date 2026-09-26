@@ -243,11 +243,14 @@ def main():
                                                    for v in roster))]
     exp_panel += [T("SYS_SHOP_ROW", icon=g["rec"].get("icon") or "",
                     name=g["rec"].get("name") or g["id"], gold=g["gold"]) for g in got]
+    # ★ 本波（P1 体验-14）：摊名（苦叶摊）与货架不是一回事 —— 柜上只摆药，材料是自己上山采的。
+    #   这一行**必须**逐字对得上（槽位从 texts 取，探针里不抄中文）。
+    exp_panel += [T("SYS_SHOP_HERB_NOTE")]
     exp_panel += [T("SYS_SHOP_TAIL", gold=100)]
     before = json.dumps(ad.saved[UID], ensure_ascii=False, sort_keys=True)
     lines = drive(ad, host, "药铺")
     if lines == exp_panel:
-        ok("站到了『药铺』⇒ 面板逐行对账过（%d 行：抬头 / 人在 / %d 件货 / 钱袋）"
+        ok("站到了『药铺』⇒ 面板逐行对账过（%d 行：抬头 / 人在 / %d 件货 / 摊上只卖药 / 钱袋）"
            % (len(lines), len(got)))
     else:
         diff = [(i, a, b) for i, (a, b) in enumerate(zip(lines, exp_panel)) if a != b]

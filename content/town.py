@@ -42,6 +42,30 @@ def _func_node(func: str, loc: str = TOWN) -> str:
     return next(iter(spots)) if len(spots) == 1 else ""
 
 
+def station_empty(loc: str, node: str, p=None, st: dict | None = None) -> bool:
+    """这一站**本该有人、此刻却一个都不在** → True（★ 本波 · P1 BUG-5）。
+
+    为什么要有它：节点级场景是**静态文本**，可这一站的人有作息 / 会被事件吸走
+      （哈根只在昏/夜；小满、老陶集日被 `effects.crowd` 吸到挂板墙）⇒ 画面里写着
+      「有人在旁边坐着」，名册（『观察』的「人在」栏 / 『搭话』）里却一个人都没有 ——
+      玩家被文案指去『搭话』，只得到「这儿没有别人」。
+
+    判法：
+      · **基位** = 域里写着的 `subarea`（这一位平时站哪儿 —— **不看条件**，条件别处判）
+      · **到场** = 走唯一一口 `_npcs_here`（时辰 / 天气 / 事件三档一起看 —— 与『观察』同一处）
+      ⇒ 「人不在那一版场景」（`scene.empty_key`）与「空屋回话」（31_NPC作息 §四）共用这一个判据。
+
+    基位就没人（野外 / 塔内 / 两个镇口）⇒ 恒 False（不进这一支；空版场景也只是可选的）。
+    """
+    base = {k for k, v in (_data("npcs") or {}).items()
+            if isinstance(v, dict) and v.get("map") == loc and v.get("subarea") == node}
+    if not base:
+        return False
+    from .cmds_ast import _npcs_here                      # 本地 import：与 `town_gate` 同一个理由
+    here = {k for k, _v in _npcs_here(loc, node, st, p)}
+    return not (base & here)
+
+
 def town_gate(p, node=None, notown: str = "SYS_PLACE_NOTOWN", away: str = "SYS_PLACE_AWAY") -> str:
     """「回镇上 / 走到那一站」这一族守卫的**唯一执行面**（`guard_desc`：在镇上 · 在公会 · 在铺子 · 在客栈）。
 

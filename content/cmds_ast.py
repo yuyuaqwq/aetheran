@@ -95,12 +95,14 @@ def _origin_home_line(rec):
     return _pending_line(PENDING_SLOTS["origin_home"], home=home, life=life)
 
 
-def _scene_line(loc, node, m=None):
+def _scene_line(loc, node, m=None, empty=False):
     """观察那一段场景 —— 节点级 SCENE_<节点>（近景）→ 退 SCENE_<地图>（这张图的第一眼）。
 
     ★ 解析口只有一处（content/scene.py）—— 落域脚本与这里共用，别各写一遍。
+    ★ `empty=True`（本波）：先试「这一站的人都不在」那一版（`SCENE_<节点>_EMPTY`）——
+      由调用方按 `content/town.py::station_empty` 判好传进来（画面与名册不许打架，P1 BUG-5）。
     """
-    sk = SC.resolve(_texts(), loc, node)
+    sk = SC.resolve(_texts(), loc, node, empty=empty)
     m = m if m is not None else (_map_of(loc) or {})
     if sk:
         return T(sk, name=m.get("name", loc))
@@ -672,7 +674,11 @@ async def look(env, sink, uid, player):
         yield name_with_title(p)
     loc, node = p["loc"], p["node"]
     m = _map_of(loc) or {}
-    yield _scene_line(loc, node, m)           # ★ B3-6a：节点级近景 → 退地图级第一眼
+    # ★ 本波：这一站的人一个都不在 ⇒ 走「人不在那一版」场景（画面与名册不许打架 —— P1 BUG-5）。
+    #   判据在 `content/town.py::station_empty`（基位在这一站、此刻一个都没到场），
+    #   与下面那行「人在」走的是**同一个** `_npcs_here`。
+    from .town import station_empty                 # 本地 import：town 要 import 本模块，模块级会成环
+    yield _scene_line(loc, node, m, empty=station_empty(loc, node, p))
     yield "━" * 12
     nb = [_name_of_node(loc, x) for x in _neighbors(loc, node)]
     yield T("SYS_LOOK_WAY", list=" · ".join("『%s』" % x for x in nb)) if nb else T("SYS_LOOK_DEAD_END")
@@ -695,6 +701,9 @@ async def look(env, sink, uid, player):
     _el = AFFIX.elite_of(_data("monsters"), loc, node, uid,
                          CAL.state().get("game_day"), int(p.get("level", 1) or 1))
     if _el:
+        # ★ 本波：这一栏原先**裸着**（「看得见」「人在」都有表头，只有它没有）——
+        #   现在先出一行表头（`SYS_LOOK_FOE`），怪那一行照旧走 `COMBAT_ELITE_SPAWN`。
+        yield T("SYS_LOOK_FOE")
         yield AFFIX.elite_line(str((_data("monsters")[_el[0]] or {}).get("name", _el[0])), _el[1])
     yield T("SYS_LOOK_HINT")
     for line in egg_lines(p, player, env):      # ★ B3-1：看四周那一下可能把两件事连起来
@@ -1157,6 +1166,19 @@ _POI_WHY_SLOT = {"time": "SYS_POI_WHY_TIME", "weather": "SYS_POI_WHY_WEATHER",
                  "read": "SYS_POI_WHY_READ"}
 
 
+def _poi_label(rec) -> str:
+    """POI 在**文字里**被点名时的写法 —— 与「看得见」那一栏同一形：『名字』图标。
+
+    ★ 本波（P1 体验-10）：门槛那两句（`SYS_POI_NOT_YET` / `SYS_POI_COND_TODO`）原先只传名字 ——
+      屏幕上「看得见」那一栏写的是『重复七次的记号』✂️，点名行却是光秃秃的
+      「白桦林深处的记号 —— …」，两条名字里都带「记号」时，读起来像在说上面那一条。
+      图标从**域里取**（不是代码里写死），写法收在这一处（谁要改口径只改这里）。
+    """
+    name = str(rec.get("name") or "")
+    icon = str(rec.get("icon") or "")
+    return "『%s』%s" % (name, icon) if icon else name
+
+
 def _poi_cond(rec, p, st=None):
     """这条 POI 的门槛此刻过不过 → `(状态, 要说给玩家的那一行)`（P-31）。
 
@@ -1177,7 +1199,8 @@ def _poi_cond(rec, p, st=None):
         return ("ok", "")
     if st is None:
         st = CAL.state()
-    name = str(rec.get("name") or "")
+    # ★ 本波（P1 体验-10）：点名行里的名字走 `_poi_label`（『名字』图标 —— 与「看得见」同一形），
+    #   这里不再单独取一次 `name`（两处取法就有两处口径了）。
     unknown, blocked = [], []
     for key in list(POI_COND_KEYS) + [k for k in cond if k not in POI_COND_KEYS]:
         if key not in cond:
@@ -1213,9 +1236,9 @@ def _poi_cond(rec, p, st=None):
         else:
             unknown.append("%s %s" % (key, want))     # 词表外的键
     if unknown:
-        return ("unknown", T("SYS_POI_COND_TODO", name=name, keys=" · ".join(unknown)))
+        return ("unknown", T("SYS_POI_COND_TODO", name=_poi_label(rec), keys=" · ".join(unknown)))
     if blocked:
-        return ("no", T("SYS_POI_NOT_YET", name=name, why=" · ".join(blocked)))
+        return ("no", T("SYS_POI_NOT_YET", name=_poi_label(rec), why=" · ".join(blocked)))
     return ("ok", "")
 
 
@@ -1429,6 +1452,26 @@ async def poi_effect_lines(env, sink, uid, p, pid, rec, verb, player=None):
 # ══════════════════════════════════════════════════════════════
 # 四、可读物（触摸）
 # ══════════════════════════════════════════════════════════════
+def _poi_touch_gives(rec) -> bool:
+    """这一样东西**上手真给得出内容** → True（★ 本波 · P2 BUG②）。
+
+    给得出 = 两样里占一样：
+      · 有正文（`read_text` —— 可读物，以及本波给三处隐藏点补上的那三句）
+      · 有一个**归「触摸」这个动词**的 `effect`（`rest` / 带数值的 `buff` / `talk`；门槛 `need` 写的是
+        别的动词 = 那样东西的产出归那条线，本口不越权代它消费）
+
+    ★ 为什么要有这一条：原先「看得见」里的每一样都**无条件**先吐一行「📦你摸到…」——
+      三处隐藏点（`effect.need = search`、没有正文）在屏幕上就是**一行标题、零内容**；
+      玩家以为自己摸到了那件东西（P2 BUG②，`📍` `🐚` 正是最想摸的两件）。
+      ⇒ 上手给不出内容的，这一支**不出声**（别假装摸到了）；整站一样都上不了手时，
+      末尾那一句 `SYS_TOUCH_NONE` 兜底（P1 BUG-6）。
+    """
+    eff = rec.get("effect")
+    if isinstance(eff, dict) and eff and _poi_verb_ok(rec, "touch"):
+        return True
+    return bool(str(rec.get("read_text") or "").strip())
+
+
 async def touch(env, sink, uid, player):
     p = _p(player)
     # ★ P-31：这一站的 poi 走唯一一口（门槛现看）—— 原先这一条自己扫域、`condition` 谁都没读，
@@ -1437,14 +1480,18 @@ async def touch(env, sink, uid, player):
     if not here:
         yield T("SYS_TOUCH_NONE")
         return
-    got = []
+    got, touched = [], 0
     for pid, v, cond_state, cond_line in here:
         if cond_state == "no":                # 门槛判得出不成立 ⇒ 这一下不做，但点名说清差什么
             yield cond_line
             continue
         if cond_line:                         # 判不了的门槛：照旧可用（藏起来 = 静默删内容），只点名
             yield cond_line
+        # ★ 本波（P2 BUG②）：上手给不出内容的**不出声** —— 别吐一行标题就当摸到了。
+        if not _poi_touch_gives(v):
+            continue
         yield T("SYS_TOUCH_GET", icon=v.get("icon", ""), name=v.get("name"))
+        touched += 1
         rt = v.get("read_text")
         if rt:
             yield "「%s」" % T(rt)
@@ -1455,6 +1502,10 @@ async def touch(env, sink, uid, player):
         # ★ P-28：上手那一下的 effect 走唯一消费端（原先 `effect` 谁都读 —— 摸了等于没摸）
         async for line in poi_effect_lines(env, sink, uid, p, pid, v, "touch", player=player):
             yield line
+    # ★ 本波（P1 BUG-6）：这一站一样都上不了手（有东西但门槛全挡着 / 全归别的动词）⇒
+    #   照别处一样明说，**别把「看得见」栏的锁定说明当成触摸结果**（玩家会以为摸到了那本账簿）。
+    if not touched:
+        yield T("SYS_TOUCH_NONE")
     if got:
         if player is not None:
             player.update(p)
