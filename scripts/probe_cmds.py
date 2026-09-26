@@ -2992,29 +2992,31 @@ try:
         "（`bag` / `flags.gather_used` / `codex` 至少动一格）（坏 %s）" % (_bad23b or "无",),
         not _bad23b, "%s" % (_bad23b[:3],))
 
-    # ── ③ 覆盖面（静态）：这道闸**只写一处**、且落在 `_do_gather` 里（四条共用一条路）
+    # ── ③ 覆盖面（静态）：这一族**每个写档的入口**各自带闸、`pick_up` 有意不拦 ────────
+    #   ★ 判据按**函数**数，不数全文件的总数：这一族三个入口是 `_do_gather`（四条动词共用）·
+    #     `rest`（歇脚）· `pick_up`（有意不拦）；别处多出一个 `_in_fight` 调用照样红。
+    #     （写「全文件只有一处」在**并线**之后必然假红：`歇脚` 那一闸是另一条车道落进 `rest`
+    #       的 —— 两条是同一族的两半，不是重复。）
     _gf23 = (REPO / "content" / "cmds_gather.py").read_text(encoding="utf-8")
     _t23 = _ast23.parse(_gf23)
     _calls23 = [n.lineno for n in _ast23.walk(_t23)
                 if isinstance(n, _ast23.Call) and isinstance(n.func, _ast23.Name)
                 and n.func.id == "_in_fight"]
-    _do23 = next((n for n in _ast23.walk(_t23) if isinstance(n, _ast23.AsyncFunctionDef)
-                  and n.name == "_do_gather"), None)
-    _in_do23 = bool(_do23) and any(
-        isinstance(n, _ast23.Call) and isinstance(n.func, _ast23.Name)
-        and n.func.id == "_in_fight" and n.lineno >= _do23.lineno
-        for n in _ast23.walk(_do23))
-    _pick23 = next((n for n in _ast23.walk(_t23) if isinstance(n, _ast23.AsyncFunctionDef)
-                    and n.name == "pick_up"), None)
-    _pick_has23 = bool(_pick23) and any(
-        isinstance(n, _ast23.Call) and isinstance(n.func, _ast23.Name)
-        and n.func.id == "_in_fight"
-        for n in _ast23.walk(_pick23))
-    chk("★ ③ 覆盖面（静态）：`_in_fight` 在这个文件里**只有一处**、且就在 `_do_gather` 里"
-        "（四条动词共用那一支 = 一条闸罩住全族；%s 处调用）· `pick_up` **有意不拦**"
-        "（那一支一个字都不写，拦它只换一句话）"
-        % len(_calls23), len(_calls23) == 1 and _in_do23 and not _pick_has23,
-        "调用 %s · 在 _do_gather=%s · pick_up 带闸=%s" % (_calls23, _in_do23, _pick_has23))
+    _gated23 = {}
+    for _fn23 in _ast23.walk(_t23):
+        if isinstance(_fn23, _ast23.AsyncFunctionDef):
+            _gated23[_fn23.name] = sum(
+                1 for n in _ast23.walk(_fn23)
+                if isinstance(n, _ast23.Call) and isinstance(n.func, _ast23.Name)
+                and n.func.id == "_in_fight")
+    _names23 = sorted(k for k, v in _gated23.items() if v)
+    chk("★ ③ 覆盖面（静态）：这一族**每个写档的入口各自带闸** —— `_do_gather`（四条动词共用）"
+        "必须带（%s）· `pick_up` **有意不拦**（那一支一个字都不写，拦它只换一句话）· "
+        "带闸的只许是这一族那两处（`_do_gather` / `rest`，%d 处调用）"
+        % ("带了" if _gated23.get("_do_gather") else "**没带**", len(_calls23)),
+        _gated23.get("_do_gather") == 1 and not _gated23.get("pick_up")
+        and set(_names23) <= {"_do_gather", "rest"} and len(_calls23) == len(_names23),
+        "带闸的: %s · 调用 %s" % (_gated23, _calls23))
 except Exception as exc:                                                  # noqa: BLE001
     chk("★ fix-q 野外那四条那一道闸跑得起来（真宿主契约）", False,
         "%s: %s" % (type(exc).__name__, exc))
