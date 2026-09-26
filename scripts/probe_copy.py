@@ -13,9 +13,9 @@
   ⑨ 面板分层名（B3-6b-2d）真造一个 actor 逐层核 `src` —— 必须正好是 texts 里那 6 条的字
   ⑩ 去(脚下这一站) 回「到了」不回「过不去」（B3-10 ① —— HERE 那一支真取到）
   ⑪ 呈现口不漏机器键的覆盖面：战斗 / 配方 / 图鉴 / 称号 / 彩蛋 / 时间 也逐行扫（B3-10 ②）
-  ⑫ 四条出口（北口/往东/往西/进镇）站在**目的地**上敲 = 回 HERE、不演出门、不塞历史（B3-11 · K60）
+  ⑫ 四条出口（往北/往东/往西/进镇）站在**目的地**上敲 = 回 HERE、不演出门、不塞历史（B3-11 · K60）
      ★ P-52（⑫-b，2026-09-26 · 本波 w5）：那三条出镇口令的「在镇上」守卫 —— 不在镇上 ⇒ 拦下
-     （只那一句 · 位置与历史一个字不动）；在镇上（不核北口那一站）⇒ 照旧出门；『进镇』野外回镇不受影响
+     （只那一句 · 位置与历史一个字不动）；在镇上（不核西边那一站）⇒ 照旧出门；『进镇』野外回镇不受影响
   ⑬ 默认档不许被就地改（B3-12 · K57）：真跑完一遍后 bag/equipped/flags/codex 必须原样；
      半截老档（缺这几个键）采集一趟，不许把东西写进默认档、也不许串给下一个人
   ⑭ ★ P-27：还没择业的档（无职业）= 没有面板 ⇒ `状态` 的生命上限照实说「未定」，
@@ -571,7 +571,14 @@ def main():
         ("去(走到)", CA.go_to, "去 %s" % town[3], {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
         ("去(不是邻居)", CA.go_to, "去 %s" % belt[-1], {"loc": "belt_north", "node": "bn_bone"}),
         ("去(没这地方)", CA.go_to, "去 高塔", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
-        ("北口", CA.go_north, "", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
+        ("往北", CA.go_north, "", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
+        # ★ fix5-nav：屏幕上的站名能直接敲（= 去 <名>）· 跨图那个名字说「从这儿过不去」·
+        #   走到塔门口那一站多说一句「门能进」· 本层挡路的没过手时『下一层』拦住
+        ("去(裸站名·走到)", CA.go_to, "老风车", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
+        ("去(裸站名·别张图)", CA.go_to, "白桦林", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
+        ("去(走到塔门口那一站)", CA.go_to, "去 旧哨塔下", {"loc": "belt_north", "node": "bn_camp", "race": "human"}),
+        ("观察(塔门口那一站)", CA.look, "", {"loc": "belt_north", "node": "bn_tower", "race": "human"}),
+        ("下一层(挡路的没过手)", CTW.tower_next, "", {"loc": "old_watchtower", "node": "tower_stair1", "books": {}}),
         ("往东", CA.go_east, "", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
         ("往西", CA.go_west, "", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
         ("进镇", CA.enter_town, "", {"loc": "belt_north", "node": "bn_bone"}),
@@ -729,7 +736,7 @@ def main():
         ("彩蛋(一个都没有)", CE.eggs_book, "", {}),
         ("彩蛋(有)", CE.eggs_book, "", {"eggs": {_eid: {"day": 2}}} if _eid else {}),
         # ★ B3-11：站在目的地上再敲那四条出口（原先会再演一遍出门 · 往历史里塞自己）
-        ("北口(就在骨田)", CA.go_north, "", {"loc": "belt_north", "node": "bn_bone"}),
+        ("往北(就在骨田)", CA.go_north, "", {"loc": "belt_north", "node": "bn_bone"}),
         ("往东(就在白桦林)", CA.go_east, "", {"loc": "belt_east", "node": "be_birch"}),
         ("往西(就在旧渡口)", CA.go_west, "", {"loc": "belt_west", "node": "bw_old_ferry"}),
         ("进镇(就在镇口)", CA.enter_town, "", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
@@ -1018,7 +1025,7 @@ def main():
         "%s" % (here_out[:2] if here_out else ["(空)"]))
 
     # ⑫ B3-11 ★ 四条出口的「脚下这一站」（K60 家族）：站在目的地再敲一次 —— 不许演「又走了一趟」
-    _EXITS = [("北口", "belt_north", "bn_bone", "SYS_MOVE_OUT_NORTH", CA.go_north),
+    _EXITS = [("往北", "belt_north", "bn_bone", "SYS_MOVE_OUT_NORTH", CA.go_north),
               ("往东", "belt_east", "be_birch", "SYS_MOVE_OUT_EAST", CA.go_east),
               ("往西", "belt_west", "bw_old_ferry", "SYS_MOVE_OUT_WEST", CA.go_west),
               ("进镇", "windmill_town", "wt_gate_n", None, CA.enter_town)]
@@ -1041,18 +1048,18 @@ def main():
             why.append("紧接着的『返回』不是「没什么可回」：%s" % (back[:1] or ["(空)"]))
         if why:
             exit_bad.append((label, why))
-    chk("★ 站在目的地敲『北口 / 往东 / 往西 / 进镇』：回 HERE · 不演出门 · 不塞历史（4 条）",
+    chk("★ 站在目的地敲『往北 / 往东 / 往西 / 进镇』：回 HERE · 不演出门 · 不塞历史（4 条）",
         not exit_bad, "%s" % exit_bad[:2])
 
     # ⑫-b ★ P-52（B4-12 顺势核到 · 台账「我的倾向：加」）：出镇那三条的「在镇上」守卫
     #   —— 声明（`guard_desc`）+ 真源 `03_风车镇_指令与回复 §一` / `04_指令总表 §一` 同一栏都写着
-    #      「在镇上」，可实现原先**无条件传送**：在白桦林敲『北口』一步落到骨田、敲『往西』落到浅滩
+    #      「在镇上」，可实现原先**无条件传送**：在白桦林敲『往北』一步落到骨田、敲『往西』落到浅滩
     #      （违反地图铁律「城镇星形 / 野外线性相邻 / 出城走 _gate」· 跨图一步到对面那一片）。
-    #   守在哪一支：HERE（脚下这一站）之后、`_move` 之前 —— 站在骨田敲『北口』仍旧回「你已经到了」，
+    #   守在哪一支：HERE（脚下这一站）之后、`_move` 之前 —— 站在骨田敲『往北』仍旧回「你已经到了」，
     #      只有**不在镇上**才拦；拦下来 = 那一句 + 位置与历史一个字不动（不 `_save`）。
     #   『进镇』不受影响：它的守卫写的是「在北口或野外」（真源两处一致）⇒ 野外回镇照旧放行。
     _NOTOWN = tx["SYS_PLACE_NOTOWN"]["value"]
-    _OUTS = (("北口", "belt_north", "bn_bone", "SYS_MOVE_OUT_NORTH", CA.go_north),
+    _OUTS = (("往北", "belt_north", "bn_bone", "SYS_MOVE_OUT_NORTH", CA.go_north),
              ("往东", "belt_east", "be_birch", "SYS_MOVE_OUT_EAST", CA.go_east),
              ("往西", "belt_west", "bw_old_ferry", "SYS_MOVE_OUT_WEST", CA.go_west))
     #: 野外起手那几处（含三条各自的目的地 —— 那三对交给 ⑫ 的 HERE 那一支，这里跳过）
@@ -1074,7 +1081,7 @@ def main():
                 guard_bad.append(("%s→%s" % (_from_lab, _lab), "往历史里塞了自己", _pp.get("prev")))
             if tx[_out_slot]["value"] in chr(10).join(_got):
                 guard_bad.append(("%s→%s" % (_from_lab, _lab), "照样演了出门那一屏", _got[:1]))
-    chk("★ P-52：不在镇上敲『北口 / 往东 / 往西』= 拦下（只那一句 · 位置与历史一个字不动）"
+    chk("★ P-52：不在镇上敲『往北 / 往东 / 往西』= 拦下（只那一句 · 位置与历史一个字不动）"
         "（%d 处起手 × 3 条）" % len(_WILDS), not guard_bad, "%s" % guard_bad[:3])
 
     pass_bad = []

@@ -73,6 +73,53 @@ def _inside(p) -> bool:
     return str(p.get("loc") or "") == TOWER
 
 
+def door_hint_lines(p) -> list:
+    """站在**塔门口那一格**（`maps.old_watchtower.entrance` —— 数据声明）时，给一句「能进去」。
+
+    ★ fix5-nav（P2 体验 · 真试玩撞出来的）：第一阶段的主线去处就是这座塔，可那一屏正文只写着
+      「门是铁的、关着」，`往哪走` 只有一条退路、`触摸` 回「这里没有什么可以上手的」
+      ⇒ 玩家以为塔是背景板（报告原话：「我是靠翻『帮助』里的『进塔』才知道能进去的」）。
+      「门在哪一格」照旧从数据现读（`entrance`），本函数**不写死任何节点 id**；
+      人已经在塔里就不再说（那时由进塔那一屏的尾注说话）。
+    """
+    if _inside(p):
+        return []
+    if (str(p.get("loc") or ""), str(p.get("node") or "")) != _entrance():
+        return []
+    return [T("SYS_TOWER_DOOR")]
+
+
+def _room_foes(node) -> list:
+    """这一间会出场的怪（`monsters.habitat` 里认这张图 + 这一间）—— 挡路的那个就是它们。"""
+    out = []
+    for mid, m in (_data("monsters") or {}).items():
+        h = (m or {}).get("habitat") or {}
+        if TOWER in [str(x) for x in (h.get("maps") or [])] \
+                and str(node) in [str(x) for x in (h.get("nodes") or [])]:
+            out.append(str(mid))
+    return out
+
+
+def _blocked_by(p, node) -> str:
+    """挡在路前、还没交过手的那些怪（显示名；空串 = 没有东西挡着 / 已经交过手）。
+
+    ★ fix5-nav（P2 体验）：那一屏写着「楼梯口堵着一个人……从他身边过不去」，可『下一层』
+      照旧放行 —— 话就白说了。真源 `22 §二·4` 写的是「可做 **战斗后上楼**」（§二·8 / §二·12
+      同理：每一层最后一间都有一只挡路的）。
+      ★ 本版的门 = **怪物谱上有它**（= 在那一间真动过手，`codex.note_kill` 那本账）。
+        「非得打赢才算」要另开一个容器（今天只有 `flags.last_battle` 一场的账）—— 真源没给这一格，
+        ⇒ 不自己编（见本分支 `_notes.md §五`）。判据 probe_nav ⑦（正例 + 反证）。
+    """
+    foes = _room_foes(node)
+    if not foes:
+        return ""
+    book = ((p.get("books") or {}).get("monster") or {})
+    if any(mid in book for mid in foes):
+        return ""
+    ms = _data("monsters") or {}
+    return " · ".join(str((ms.get(mid) or {}).get("name") or mid) for mid in foes)
+
+
 def _floor_of(node):
     """这一间属于第几层 → (下标, 层名, [这一层的节点 id…])。不在任何一层 = 声明不全。"""
     for i, (name, rooms) in enumerate(_floors()):
@@ -126,6 +173,12 @@ async def tower_next(env, sink, uid, player):
         return
     if i + 1 >= len(fl):
         yield T("SYS_TOWER_TOP_NONE")
+        return
+    # ★ fix5-nav：本层最后一间**还挡着东西** ⇒ 先动手（真源 `22 §二·4`「可做 战斗后上楼」）。
+    #   原先『下一层』一律放行，而那一屏写着「从他身边过不去」—— 话白说了（P2 体验）。
+    _who = _blocked_by(p, p["node"])
+    if _who:
+        yield T("SYS_TOWER_BLOCKED", name=_who)
         return
     fname, dest = fl[i + 1][0], fl[i + 1][1][0]
     p = _go(p, dest, sink)
@@ -208,8 +261,13 @@ async def tower_leave(env, sink, uid, player):
         return
     loc, node = _entrance()
     p["loc"], p["node"] = loc, node
+    # ★ fix5-nav（P4 BUG-5）：把**这一趟进塔**整段从历史上回滚 —— 原先只弹掉「顶上那条正好
+    #   等于塔门口」的那一条：人只要在塔里走过房间，`prev` 顶上就是塔内那一间，条件不成立
+    #   ⇒ 紧接着的一次『返回』把玩家**送回塔内那一间**（「撤退白做」）。
+    #   现在把顶上一连串「塔内那一间」与「进塔那一步压的塔门口」一起弹掉
+    #   ⇒ 『返回』回到进塔之前那一格（判据 probe_nav ⑥：正例 + 反证）。
     prev = list(p.get("prev") or [])
-    if prev and tuple(prev[-1]) == (loc, node):
+    while prev and (tuple(prev[-1]) == (loc, node) or str(prev[-1][0] or "") == TOWER):
         prev.pop()
     p["prev"] = prev
     CX.note_visit(p, loc, node)

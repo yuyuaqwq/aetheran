@@ -5848,5 +5848,34 @@
     ],
     "category": "系统",
     "desc": "同族 · 打造 · 名字对不上"
+  },
+  "SYS_TOWER_DOOR": {
+    "value": "门就在跟前 —— 敲『进塔』推门进去。",
+    "params": [],
+    "category": "系统",
+    "desc": "fix5-nav · 塔门口那一站（旧哨塔下）的引导 —— 门是第一阶段的主线去处，别让它当背景板（P2 体验）"
+  },
+  "SYS_TOWER_BLOCKED": {
+    "value": "{name}还堵在那儿 —— 打『攻击』跟它过一手，再往前走。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "fix5-nav · 下一层被挡路的怪拦下（22 §二·4「可做 战斗后上楼」）"
+  },
+  "SYS_POI_WHY_TIME_ALIAS": {
+    "value": "得等到{token}（就是「{real}」）",
+    "params": [
+      "token",
+      "real"
+    ],
+    "category": "系统",
+    "desc": "fix5-nav · POI 时辰门槛：域里那个词是散文（「退潮」），把刻度一并点明（P2 体验）"
+  },
+  "SYS_TOWN_ENTER_GATE": {
+    "value": "（『北口』是镇口那一站；出镇：『往北』骨田 ·『往东』白桦林 ·『往西』浅滩。）",
+    "params": [],
+    "category": "系统",
+    "desc": "fix5-nav · 进镇尾注第二句 —— 站名归站点之后的出门口径（真源 17_文案收口口径 里 SYS_TOWN_ENTER_HINT 那条的**待改行**见本分支 _notes.md）"
   }
 }
