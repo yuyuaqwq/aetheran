@@ -229,14 +229,21 @@ BONE = (enh["rc_enh_01"].get("inputs") or [{}])[1].get("id")
 WEAPON = sorted(k for k, v in IT.items() if v.get("kind") == "武器" and v.get("quality") == "普通")[0]
 WNAME = IT[WEAPON].get("name")
 
+#: ★ P3 BUG-2（本波 f4）：`强化` 现在有**地点门禁**（必须以铁匠铺那一站为脚下，与『铁匠铺』同口径）
+#:   ⇒ 这一支的测试档要站在那一站。节点从 `npcs.funcs` 的 `smith` 现取（**不手写 id** ——
+#:   与 `content/cmds_recipe.py` 里那条守卫同一个口）。
+from content.town import _func_node as _fn_node                          # noqa: E402
+from content.town import TOWN as _TOWN                                   # noqa: E402
+SMITH_NODE = _fn_node("smith", _TOWN)
+
 
 def mk(lv_now=0, target=None, gold=None):
-    """测试档：背包里带那件武器 + 下一档要的材料与钱。"""
+    """测试档：背包里带那件武器 + 下一档要的材料与钱（站在铁匠铺那一站）。"""
     tgt = min(int(target or (lv_now + 1)), len(doc_need))
     n = doc_need[tgt - 1]
     fee = int((enh.get("rc_enh_%02d" % tgt) or {}).get("gold") or 0)
     p = {"name": "测试者", "cls": "cls_knight", "level": 1, "exp": 0,
-         "loc": "windmill_town", "node": "wt_gate_n", "prev": [],
+         "loc": _TOWN, "node": SMITH_NODE, "prev": [],
          "gold": (fee if gold is None else gold),
          "bag": {WEAPON: 1, IRON: n, BONE: n}, "equipped": {"weapon": WEAPON},
          "flags": {}, "codex": {}}
@@ -350,6 +357,7 @@ chk("★ `need_slot` 收下的 = 「带 slot 的那些」（%d 件 · 非装备�
 _plain = next(k for k, v in sorted(IT.items()) if not v.get("slot"))
 _pname = IT[_plain].get("name") or _plain
 _p2 = {"name": "试", "cls": "cls_knight", "level": 1, "exp": 0, "gold": 9999,
+       "loc": _TOWN, "node": SMITH_NODE,          # ★ P3 BUG-2：站在铁匠铺那一站（门禁之外的变量只剩「不是装备」）
        "bag": {_plain: 1}, "flags": {}, "codex": {}}
 _l2 = run_ag(CR.enhance(E("强化 %s" % _pname), None, "u_cmp2", _p2))
 chk("★ 非装备真跑「强化 %s（%s）」：拒掉（不出强化结果、档上不动）" % (_pname, _plain),

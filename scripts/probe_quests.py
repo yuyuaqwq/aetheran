@@ -1593,11 +1593,17 @@ _GEAR = next(((k, v) for k, v in ITEMS.items()
 
 
 def _act_enhance(x):
-    """真做：真的把一件装备强化到 +n（走 `cmds_recipe.enhance`，不是往档里写数）。"""
+    """真做：真的把一件装备强化到 +n（走 `cmds_recipe.enhance`，不是往档里写数）。
+
+    ★ P3 BUG-2（本波 f4）：`强化` 现在有**地点门禁**（必须在铁匠铺那一站，与『铁匠铺』同口径）
+      ⇒ 这一支的档要**站在那一站**（节点从 `npcs.funcs` 的 `smith` 现取，不手写）。
+    """
     iid, rec = _GEAR
     if not iid:
         return None, [], "items 域里没有能强化的装备"
+    from content.town import _func_node as _fn_enh
     p = _player(level=1, gold=9999, flags={"card": 1},
+                loc="windmill_town", node=_fn_enh("smith"),
                 bag={iid: 1, "i_material_iron_scrap": 9, "i_material_hard_bone": 9})
     out = []
     for _ in range(int(CQ._require_of(x)[0]["n"])):

@@ -1295,8 +1295,16 @@ try:
             or int((_sv12().get("bag") or {}).get(_BONE12) or 0) != 2:
         _BAD12.append(("卖出 骨头", _gS, _sv12().get("gold"), _sv12().get("bag")))
     _gS2 = _say12("卖出 %s" % _wpn["name"])
-    if _gS2 != [_r("SYS_SELL_NOPRICE", name=_wpn["name"])]:
-        _BAD12.append(("卖出 没价的（域里没写 price）", _gS2))
+    # ★ P3 BUG-4（本波 f4）：**装备现在有收价** —— 唯一一口 `content/shop.py::sell_price_of`
+    #   （品阶 × 等级档；材料 / 旧物那一格照旧 = `items.price`）。原先装备域里一个价都没有
+    #   ⇒ 这里回的是「这东西没价」，打到的多余装备只能占背包（实测三把同名剑）。
+    _wpn_gold12 = int(_SH15.sell_price_of(_wpn))
+    if _gS2 != [_r("SYS_SELL_OK", icon=_wpn.get("icon") or "", name=_wpn["name"], n=1,
+                   gold=_wpn_gold12)] \
+            or _WPN12 in (_sv12().get("bag") or {}) \
+            or int(_sv12().get("gold") or 0) != 30 + int(_IT9[_BONE12]["price"]) + _wpn_gold12:
+        _BAD12.append(("卖出 装备（收价表现算）", _gS2, _wpn_gold12, _sv12().get("bag"),
+                       _sv12().get("gold")))
     _db12b = os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp", "ast_probe_cmds_more_b.db")
     try:
         os.remove(_db12b)
@@ -1310,7 +1318,8 @@ try:
     _gS3 = list(_ad12b.out)
     if _gS3 != [_r("SYS_SELL_AWAY")] or (_ad12b.saved or {}).get("bag") != _SEED12["bag"]:
         _BAD12.append(("野外卖出", _gS3, (_ad12b.saved or {}).get("bag")))
-    chk("★ `卖出` 真敲三档：域里有价 ⇒ 钱与背包同时变 / 域里没价（拿在手上的）⇒ 不收 / "
+    chk("★ `卖出` 真敲三档：域里有价 ⇒ 钱与背包同时变 / **装备按收价表现算的价真收到**"
+        "（P3 BUG-4 · 与『旧货』同一个口）/ "
         "人在野外 ⇒ 明说铺子在镇上且**不动档**",
         not [x for x in _BAD12 if x[0].startswith("卖出")],
         "%s" % [x for x in _BAD12 if x[0].startswith("卖出")][:3])
@@ -1638,11 +1647,14 @@ try:
         rows = []
         for iid in sorted(p.get("bag") or {}):
             rec = LT16.rec_of(iid)
-            price = rec.get("price")
-            if not isinstance(price, (int, float)) or isinstance(price, bool) or price <= 0:
+            # ★ P3 BUG-4（本波 f4）：收价走**唯一一口**（`content/shop.py::sell_price_of`）——
+            #   材料 / 旧物那一格照旧 = `items.price`，**装备**按品阶 × 等级档现算
+            #   （原先这里是 `rec.get("price")`：装备域里没价 ⇒ 永远不列它）
+            price = _SH15.sell_price_of(rec)
+            if price <= 0:
                 continue
             n = int((p.get("bag") or {}).get(iid) or 0)
-            rows.append((str(rec.get("name") or iid), n, int(price) * n))
+            rows.append((LT16.label_of(iid), n, int(price) * n))   # 名字也走那一口（重名的缀品阶）
         out = [_r("SYS_JUNK_HEAD")]
         if rows:
             out.append(_r("SYS_JUNK_MINE"))
@@ -1659,8 +1671,15 @@ try:
     _cmp16("旧货（包里有东西）", _say16("旧货"), _junk_want16(_sv16()))
     _ad16.saved["bag"] = {}
     _cmp16("旧货（包里空的）", _say16("旧货"), _junk_want16(_sv16()))
+    # ★ P3 BUG-4（本波 f4）：**装备那一档** —— 包里一件装备时，`旧货` 也得照收价表列出来
+    #   （原先装备没价 ⇒ 这一页永远不列它，玩家以为铺子不收装备）
+    _GEAR16 = next((k for k, v in (st.domain("items") or {}).items()
+                    if isinstance(v, dict) and v.get("slot") and not v.get("price")), "")
+    if _GEAR16:
+        _ad16.saved["bag"] = {_GEAR16: 1}
+        _cmp16("旧货（包里一件装备）", _say16("旧货"), _junk_want16(_sv16()))
     _ad16.saved["bag"] = _bag16
-    chk("★ `旧货` 真敲两档（有东西 / 空的）：逐件与 `items.price` 现算的期望逐字一致，"
+    chk("★ `旧货` 真敲三档（有东西 / 空的 / **一件装备**）：逐件与收价那一口现算的期望逐字一致，"
         "且**看一眼旧货铺不动档**（bag / flags 原样）",
         not [x for x in _BAD16 if x[0].startswith("旧货")]
         and (_sv16().get("bag") or {}) == (_snap16.get("bag") or {}),

@@ -55,6 +55,11 @@ from saintess_engine.host.runtime import Host             # noqa: E402
 FIXED = 1790308800          # 与 probe_cmds / probe_pager 同一根假钟（昼）
 TOWN = "windmill_town"
 INN = "wt_inn"
+#: ★ P3 BUG-2（本波 f4）：`强化` 有了**地点门禁**（必须在铁匠铺那一站）—— 这一支里那几处
+#:   真敲 `强化` 的档要站到那一站。节点从 `npcs.funcs` 的 `smith` 现取（**不手写 id**）。
+_NPC_F = json.load(io.open(os.path.join(REPO, "content", "data", "npcs.json"), encoding="utf-8"))
+FORGE = next((str(v.get("subarea") or "") for v in _NPC_F.values()
+              if isinstance(v, dict) and "smith" in (v.get("funcs") or [])), "")
 UID, UID2, UID3, UID4 = "u_pick", "u_pick2", "u_pick3", "u_pick4"
 GID = "g_pick"
 OK, BAD = [], []
@@ -261,8 +266,8 @@ def main():
         p.update(kw)
         return p
 
-    seeds = {UID: base({sid: 5, lid: 1}), UID2: base({g1: 1, g2: 1}),
-             UID3: base(dict({g2: 1}, **mats), gold=fee), UID4: base({g1: 1})}
+    seeds = {UID: base({sid: 5, lid: 1}), UID2: base({g1: 1, g2: 1}, node=FORGE),
+             UID3: base(dict({g2: 1}, **mats), gold=fee, node=FORGE), UID4: base({g1: 1})}
     ad = Ad(seeds)
     host = Host(ad, str(REPO), inject={"db_path": db, "clock": lambda: FIXED})
     host.boot()
@@ -314,7 +319,7 @@ def main():
         ad.saved[UID2]["node"] = INN
         _o_in = say("存放 %s" % gname, UID2)
         _o_out = say("取出 %s" % gname, UID2)
-        ad.saved[UID2]["node"] = "wt_gate_n"
+        ad.saved[UID2]["node"] = FORGE          # ★ P3 BUG-2：还原成铁匠铺那一站（`强化` 要站那儿）
         if _o_in == amb(gname, [gq1, gq2], "存放") and _o_out == [T("SYS_STASH_EMPTY")]:
             ok("`存放` 也走同一句（箱子里没有 ⇒ `取出` 照实说）")
         else:

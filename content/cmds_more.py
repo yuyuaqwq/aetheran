@@ -292,8 +292,10 @@ async def item_drop(env, sink, uid, player):
 async def item_sell(env, sink, uid, player):
     """`卖出 <物品> [数量]` —— 卖给铺子。
 
-    ★ 价 = `items` 域里的 `price`（**基础价**，域里的数，不手打）。域里没写价的收不了
-      （拿在手上的东西 —— `05 §七`「钱从哪来：悬赏 + 卖材料 + 卖旧物，**不靠卖装备**」）。
+    ★ 价 = **唯一一口** `content/shop.py::sell_price_of`：域里写了 `price` 的就是它
+      （B3-12 落的那一格，一个字不动）；**装备**（域里有 `slot`）按品阶 × 等级档现算
+      （★ P3 BUG-4 · 本波 f4：原先装备域里一个价都没有 ⇒ 铺子永远回「这东西没价」，
+      打到的多余装备只能占背包）；信物 / 线索这类**真没价**的照实说不收。
     ★ 铺子在镇上（`05 §六`「铺子：镇上 3 家」）—— 在野外卖不了，这里照实说一句。
     """
     p = _p(player)
@@ -310,8 +312,8 @@ async def item_sell(env, sink, uid, player):
     if not iid or have <= 0:
         yield T("SYS_GEAR_IN_BAG", name=name)
         return
-    price = rec.get("price")
-    if not isinstance(price, (int, float)) or isinstance(price, bool) or price <= 0:
+    price = SH.sell_price_of(rec)
+    if price <= 0:
         yield T("SYS_SELL_NOPRICE", name=rec.get("name") or iid)
         return
     line = town_gate(p, notown="SYS_SELL_AWAY")     # ★ B4-12：守卫走唯一执行面（用这一族自己的话）

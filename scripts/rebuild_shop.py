@@ -7,6 +7,10 @@
   · `06_第一阶段垂直切片/03_风车镇_指令与回复 §一` —— `药铺`（在镇上 · 买药）
   · `06_第一阶段垂直切片/04_指令总表 §物品` —— `购买 <物品>`（别名 买 · 守卫 在铺子且钱够）
   · `06_第一阶段垂直切片/05_玩法数值口径 §六` —— 「铺子｜镇上 3 家；价 = 基础价 × 品阶系数」
+ ★ P3 BUG-4（本波 f4）那一格（`sell_gear`）：**装备的收价** —— 真源 `05 §七` 只给了取向
+  （「钱从哪来：悬赏 + 卖材料 + 卖旧物（**不靠卖装备**）」），这一块真源**没给数** ⇒
+  按那条取向取小价（普通档 1 级 = 6 铜板，低于一瓶伤药 24）；级档读 `items.req.level`。
+  收价一个字不动的是**材料 / 旧物**那一路（B3-12 落的『卖出』= `items.price`）。
 ★ P-55 那一格（本批加的）：**固定加价** `buy_markup` —— 真源 05 §六 只给了方向
   （「价 = 基础价 × 品阶系数」），这一格真源**没给数** ⇒ 乙档保守取：
   台账 ⏸ P-55 的倾向（「例：买价 = 收价 × 2」）+ 本路作业书同一句 ⇒ 普通档（系数 1.00）
@@ -46,6 +50,21 @@ STATION_FUNC = "herb"
 #: ★ 铺子的固定加价（P-55）：买价 = 基础价 × 品阶系数 × 这一格。
 #:   真源没给这个数（05 §六 只有方向）⇒ 口径来源与理由见本文件头注（台账 ⏸ P-55 的倾向）。
 BUY_MARKUP = 2
+
+#: ★ P3 BUG-4（本波 f4）：**装备的收价**表 —— 『卖出』/『旧货』认的是同一个口
+#:   （`content/shop.py::sell_price_of`）。材料 / 旧物那一路照旧走 `items.price`（B3-12 落的那一格，
+#:   一个字不动）；**装备**域里一个价都没有 ⇒ 原先收价恒 0，铺子永远回「这东西没价」。
+#:   真源 `05 §七` 只给了**取向**（「钱从哪来：悬赏 + 卖材料 + 卖旧物 —— **不靠卖装备**」），
+#:   没给数 ⇒ 本表按那条取向取**小价**（普通档 1 级 = 6 铜板，低于一瓶伤药 24）：
+#:   装备能变现、但绝不成「钱的来源」；等级档用 `items.req.level`（穿戴门槛，域里现成那一格）。
+#:   要调只改下面这两块 + 重跑本脚本。真源待补行见本分支 `_notes.md §真源行`。
+SELL_GEAR_SLOT_FIELD = "slot"
+SELL_GEAR_BASE_BY_QUALITY = {"普通": 6, "精制": 15, "稀有": 36, "遗物": 80}
+SELL_GEAR_LEVEL_BANDS = ((0, 5, 1.0), (6, 10, 1.5), (11, 15, 2.5), (16, 20, 4.0))
+SELL_GEAR_SRC = ("aetheran-plan/06_第一阶段垂直切片/05_玩法数值口径_v1.md §七"
+                 "「钱从哪来：悬赏 + 卖材料 + 卖旧物（**不靠卖装备**）」—— 真源给了取向、**没给数**；"
+                 "品阶四档的词表来自 items 域的 `quality`（`loot.quality_words()`），"
+                 "等级那一格来自 `items.req.level`（`loot._req_level`）⇒ 本表不抄第二份词表、也不新造字段")
 
 
 def die(msg):
@@ -118,6 +137,14 @@ def build(coeffs, items, npcs):
         "quality_mult": {q: coeffs[q] for q in QUAL_ORDER},
         "quality_default": "普通",
         "buy_markup": BUY_MARKUP,
+        # ★ P3 BUG-4（本波 f4）：装备的收价（`content/shop.py::sell_price_of` 现读）
+        "sell_gear": {
+            "_src": SELL_GEAR_SRC,
+            "slot_field": SELL_GEAR_SLOT_FIELD,
+            "base_by_quality": dict(SELL_GEAR_BASE_BY_QUALITY),
+            "level_mult_by_band": [{"min_lv": a, "max_lv": b, "mul": m}
+                                   for a, b, m in SELL_GEAR_LEVEL_BANDS],
+        },
         "stock_kind": STOCK_KIND,
         "station_func": STATION_FUNC,
     }

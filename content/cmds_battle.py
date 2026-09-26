@@ -85,6 +85,20 @@ def _flags(p):
     return f
 
 
+def drop_seed(uid, mid, nth: int, round_i: int = 0) -> str:
+    """★ P3 BUG-1（本波 f4）：**掉落那一颗种子的唯一一口** —— 生产端（`_settle`）与探针都走它。
+
+    种子 = `uid : 怪 id : 这一只打过几回 : 第几轮`。
+      · 「第几次」是**非有不可**的那一维：只有 `uid:怪 id` 时，同一只怪对同一个人
+        **每次都掉同一件**（实测：田鼠 4 次全铁渣、骸骨 3 次全短刃；强化要的「硬骨」
+        对本档永远刷不出来）—— 那是「随机」变成了「算死的」。
+      · 「第几轮」是给精英那条 `drop_rounds` 用的（同一次战斗里两轮各要一份种子，
+        否则两轮同结果 = 白多一轮）。
+    ⇒ 谁要复现「这个人打这只怪第 n 次掉什么」，都调这一口，别自己拼一份（拼错就是两处口径）。
+    """
+    return "%s:%s:%d:%d" % (uid, mid, int(nth), int(round_i))
+
+
 def encounter_lines(monster, p):
     """怪身上的战内台词（B3-4 装备事件）—— 它**先开口**的那几句。
 
@@ -217,24 +231,53 @@ async def _settle(env, p, uid, pick, ms, res, logs, hp_after, seen, player, affi
         lv = int(m.get("lv", 1))
         rk = m.get("role_key")
         gold = lv * (8 if rk == "elite" else (20 if rk in ("chief", "warden", "boss") else 3))
+        # ★ P3 BUG-3（本波 f4）：**词条精英**那一档加成 —— 原先这里只有 `role_key` 那一档，
+        #   而 `† 群居的田鼠 †`（3 只）的 `role_key` 仍是 `normal` ⇒ 精英与打 1 只普通怪
+        #   钱/经验一字不差（精英纯亏）。倍数在 `rules/elite.json::reward`（真源 09_ §四/§六③），
+        #   没词条 ⇒ 全 1（= 与接线前逐字相同）。
+        rw = AFFIX.reward_of(affixes)
+        gold = int(round(gold * float(rw["gold_mult"])))
         p["gold"] = int(p.get("gold", 0)) + gold
         p["hp"] = hp_after
         # ★ B3-13：打怪给经验（原先只有交活给 —— 「接活→出门→打怪→交活」这条循环里，
         #   打怪那一半是白打的）。公式走 `exp_of_kill`，升级走 `add_exp` —— 都只有一个口。
-        exp_gain = exp_of_kill(lv)
+        exp_gain = int(round(exp_of_kill(lv) * float(rw["exp_mult"])))
         ups = add_exp(p, exp_gain)
-        # ★ 掉落（B2-3）：按怪身上的 dp_* 池抽（可复现：种子 = 玩家 uid + 怪 id）
+        # ★ 掉落（B2-3）：按怪身上的 dp_* 池抽（可复现：种子 = 玩家 uid + 怪 id + **这一只的第几次**）
         # ★ P-60：`level` 这一格原先传的是**怪的等级**（而且 `loot` 收了从来没用 —— 死参数）
         #   ⇒ 现在传**玩家自己的等级**：带 `level_gated` 的池（`dp_elite_gear`「按等级抽一件」）
         #   只在玩家这一级穿得上的那批里挑，3 级的人再也抽不到 17 级的遗物。
         #   （怪的等级另有用处：上面掉钱那两行 `lv * …` 照旧。）
+        # ★ P3 BUG-1（本波 f4）：**种子原先只有 `uid:怪 id`** —— 不含次数/日期 ⇒ 同一只怪对同一个
+        #   人**每次都掉同一件**（实测：田鼠 4 次全 `铁渣 ×2`、游荡的骸骨 3 次全 `拾荒者的短刃 ×1`；
+        #   强化要的「硬骨」对本档永远刷不出来）。现在把「**这一只打过几回**」记进
+        #   `flags.drops_seen`（与 `flags.enhance_tries` 同族的计数格），一轮一份种子；
+        #   精英那一场由 `rules/elite.json::reward.drop_rounds` 多跑一轮（每轮种子不同 ⇒ 不重样）。
         plv = int(p.get("level") or 1)
+        f = _flags(p)
+        seen_n = dict(f.get("drops_seen") or {})
+        nth = int(seen_n.get(pick[0], 0))
+        seen_n[pick[0]] = nth + 1
+        f["drops_seen"] = seen_n
         drops = []
-        for pool_id in (m.get("drops") or []):
-            drops.extend(LT.roll_pool(pool_id, level=plv,
-                                     rnd=__import__("random").Random("%s:%s" % (uid, pick[0]))))
+        for round_i in range(max(1, int(rw["drop_rounds"]))):
+            _dseed = drop_seed(uid, pick[0], nth, round_i)
+            for pool_id in (m.get("drops") or []):
+                drops.extend(LT.roll_pool(pool_id, level=plv,
+                                         rnd=__import__("random").Random(_dseed)))
         # ★ B3-24：掉落按词条 PE 等比上调 + 富饶那条的「材料翻倍」（倍数在 rules/elite.json）
         drops = AFFIX.scale_drops(drops, affixes)
+        # ★ P3 BUG-3（本波 f4）：多轮那个口子会把**同一件**抽出来两次 ⇒ 同名合并成一行
+        #   （`add_to_bag` 本来就是按 id 累加的 —— 背包一行、掉落也一行，不印两行一样的）。
+        if len(drops) > 1:
+            _m: dict = {}
+            for _d in drops:
+                _k = _d["id"]
+                if _k in _m:
+                    _m[_k]["n"] = int(_m[_k].get("n", 1) or 1) + int(_d.get("n", 1) or 1)
+                else:
+                    _m[_k] = dict(_d)
+            drops = list(_m.values())
         if drops:
             LT.add_to_bag(p, drops)
         new = CX.note_items(p, [d["id"] for d in drops]) if drops else []
@@ -439,7 +482,7 @@ async def retreat(env, sink, uid, player):
     for line in _fmt([str(x) for x in logs]):
         yield line
     async for line in _settle(env, p, uid, pick, ms, b.result, [str(x) for x in logs],
-                              int(pa.get("hp", 0)), seen, player):
+                              int(pa.get("hp", 0)), seen, player, affixes=affixes):
         yield line
 
 
@@ -670,6 +713,28 @@ async def defend(env, sink, uid, player):
 
 
 async def auto_battle(env, sink, uid, player):
+    """`自动` —— 与『攻击』同一条路（一条指令打完整场）。
+
+    ★ P2 体验（本波 f4）：**没仗打时那句话**原先掉进了场景口吻的 `COMBAT_NONE`
+      （「这一带暂时没有遇到什么。」）——「自动」是**开打之后**的指令，同族的
+      打断 / 防御 / 后撤 / 逃跑 都回 `COMBAT_NEED_FOE`（「这一手得在打起来的时候用 ——
+      这一带没有能打的东西。」），只有它一个不一样（P4 报告里点名的「同族指令错话术不统一」）。
+      ⇒ 先按同一条遇敌口径看一眼：这一带根本没有能打的 ⇒ 回同族那一句，**什么都不动**；
+      有得打 ⇒ 原样走 `attack`（一个字不变）。
+    """
+    p = _p(player)
+    _mx, _line = hp_cap_or_line(p)
+    if _line:                       # 档上还没择业 ⇒ 与『攻击』同一条 fail-closed 行
+        yield _line
+        return
+    from . import instance as INST
+    if INST.route_needed(env, uid):     # 「场」那一道不在这儿判（原样交给 `attack`）
+        async for line in attack(env, sink, uid, player):
+            yield line
+        return
+    if not _meet(p, uid)[0]:        # 空列表 = 这一带的 `habitat` 里一只都挑不出来
+        yield T("COMBAT_NEED_FOE")
+        return
     async for line in attack(env, sink, uid, player):
         yield line
 
@@ -755,7 +820,7 @@ async def flee(env, sink, uid, player):
     for line in _fmt([str(x) for x in logs]):
         yield line
     async for line in _settle(env, p, uid, pick, ms, b.result, [str(x) for x in logs],
-                              int(pa.get("hp", 0)), seen, player):
+                              int(pa.get("hp", 0)), seen, player, affixes=affixes):
         yield line
 
 

@@ -1607,6 +1607,14 @@ async def help_cmd(env, sink, uid, player):
     yield T("SYS_HELP_HEAD")
     for c, ws in cats.items():
         yield T("SYS_HELP_ROW", cat=c, list=" · ".join("『%s』" % w for w in ws))
+    # ★ P1 BUG-9 ① / P4 E-11（本波 f4）：**界面上的承诺改诚实** —— 战斗那一栏与别的栏一样是
+    #   一串平铺的『防御』『打断』『技能 <参数>』…，读起来像「逐回合出招」，而这一版实际是
+    #   **一条指令打完整场**（你敲的那一手 = 这一场的第一手，之后自动打完）。
+    #   这一句把差别说在表尾巴上（不新开一栏、也不动任何一条 usages —— 探针 ⑤ 逐词对账照旧）。
+    #   战斗真分回合那一批落地之后，这一句跟着撤（方案见本分支 `_notes.md §战斗分段化`）。
+    _bat = str((cmds.get("attack") or {}).get("category") or "")
+    if _bat and any(str(c) == _bat for c in cats):
+        yield T("SYS_HELP_BATTLE_NOTE")
 
 
 def declared_soon(env):
