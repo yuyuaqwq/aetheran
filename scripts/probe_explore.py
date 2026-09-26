@@ -24,7 +24,9 @@
      （= 同一次抽）；精英那一档也核（名字带 `† … †`）；结算那几行与『攻击』同一套
   ⑥ **四态②  掷空**（威慑档 = 真 0）：出拾取提示 / `SYS_EXPLORE_CLEAR`，且**不建场、不动档**
   ⑦ **四态③  持态**（场在跑）：`探索` 被拦下，回的那一句与移动族**逐字同一句**
-  ⑧ **四态④  可读**：`观察` 的普通怪行 = 『攻击』真开的那一只（同一次抽 · 一次命令只抽一次）
+  ⑧ **四态④  可读**：`观察` 的普通怪行 = 『攻击』真开的那一只（同一次抽 · 一次命令只抽一次）。
+     钉子下在**候选 ≥ 3 的站**（一只候选的站分不出「就是那一只」与「候选名单」），
+     并连精英那条口一起钉 —— 判据是「紧跟表头那一行**恰好**是钉死的那只 · 别的候选名一个都不许出现」
      + **反证**：没有候选的站（镇上）一个字都不出
   ⑨ **反证一**：把「威慑档」改成 ×1 ⇒ 掷中率变化**可复算**（800 次抽样现算，实测率 ≈ 现算率）
   ⑩ **反证二**：表拿掉（真把文件挪走）⇒ 回「不掷」：`ratio` 回 `None`、**`roll` 一次都不调**、
@@ -581,6 +583,7 @@ chk("★ 拦下那两下**档一个字不动**（位置 / 历史 / 血都是拦�
 # ══════════════════════════════════════════════════════════════
 print("\n⑧ 四态④  可读：`SYS_LOOK_FOE_ROW` 接上读端，且那一只 = 『攻击』真开的那只（同一次抽）")
 _real_pick = CBO.pick_encounter
+_real_elite = AFFIX.elite_of
 _calls = []
 
 
@@ -591,24 +594,42 @@ def _pinned(mid):
     return _f
 
 
-#: 钉一只**不是**这一站第一候选的怪 —— 「另起一套抽怪」的写法（扫 habitat 取第一个）会当场说错
-_CAND = CBO.encounter_cand(MS, BONE[0], BONE[1], 3)[0]
-_PIN = next((m for m in _CAND if m != _CAND[0]), _CAND[0])
+#: 钉子下在**候选 ≥ 3 的站**（拾荒营地：田鼠 / 拾荒野狗 / 拾荒人），钉的是**最后那一只**。
+#:  ★ 第二手复核（2026-09-27 · 复核那一路的自查）：这一条原先下在**骨田**，而骨田按这一档
+#:    只有**一只**候选 ⇒ 「把候选列出来」那种写法（`SYS_LOOK_FOE_ROW` 的 `{list}` 天然容得下
+#:    多名）与「就是那一只」在屏上**逐字相同** ⇒ 判据抓不住（实测：把实现换成候选名单，
+#:    这一条照样绿 —— 那是「判据没牙」）。三处加严：
+#:      ① 挪到候选 ≥ 3 的站；
+#:      ② **连精英那条口一起钉**（野外 `affix.elite_of` 会抢「这一格那只」，不钉它钉子会被顶掉）；
+#:      ③ 判据从「屏上**有**这一行」加严成「紧跟表头那一行**恰好**是它 · 别的候选名一个都不许出现」。
+_PIN_AT = CAMP
+_CAND = CBO.encounter_cand(MS, _PIN_AT[0], _PIN_AT[1], 3)[0]
+_PIN = _CAND[-1] if len(_CAND) > 1 else _CAND[0]
+_OTHERS = [m for m in _CAND if m != _PIN]
 at(_RAIN, 12.0)
 try:
     CBO.pick_encounter = _pinned(_PIN)
+    AFFIX.elite_of = lambda *a, **k: []            # 精英那条口也钉掉（野外它会抢「这一格那只」）
     _calls.clear()
-    _pl = player()
+    _pl = player(loc=_PIN_AT[0], node=_PIN_AT[1])
     _lk = run(CA.look, _pl, uid="u_exp")
     _row = V("SYS_LOOK_FOE_ROW", list="『%s』" % MS[_PIN].get("name", _PIN))
-    chk("★ `观察` 印出表头 `SYS_LOOK_FOE` + 普通怪行 `SYS_LOOK_FOE_ROW`（钉死的那一只）",
-        V("SYS_LOOK_FOE") in _lk and _row in _lk, "%s" % (_lk[-3:],))
+    _hdr_at = _lk.index(V("SYS_LOOK_FOE")) if V("SYS_LOOK_FOE") in _lk else -1
+    _rows_on = _lk[_hdr_at + 1:_hdr_at + 2] if _hdr_at >= 0 else []
+    chk("★ `观察` 印出表头 `SYS_LOOK_FOE` + 普通怪行 `SYS_LOOK_FOE_ROW`：紧跟表头那一行"
+        "**恰好**是钉死的那一只",
+        _hdr_at >= 0 and _rows_on == [_row], "表头后那一行 = %s" % (_rows_on,))
+    chk("★ 那一行里**没有别的候选**的名字（这一栏说的是会开打的那一只，不是候选名单）",
+        bool(_OTHERS) and _rows_on == [_row]
+        and all(str(MS[m].get("name") or m) not in "".join(_rows_on) for m in _OTHERS),
+        "别的候选 = %s ／ 表头后那一行 = %s"
+        % ([(m, MS[m].get("name")) for m in _OTHERS], _rows_on))
     chk("★ 行里的名字 = 钉的那一只（名字走 `cmds_battle.foe_here` —— 『攻击』开的也是它）",
-        _row in _lk and _calls == [_PIN],
+        _rows_on == [_row] and _calls == [_PIN],
         "抽怪被调了 %d 次 · %s" % (len(_calls), _calls[:2]))
     _calls.clear()
     clear_battle("u_exp")
-    _at = run(CBAT.attack, player(), uid="u_exp")
+    _at = run(CBAT.attack, player(loc=_PIN_AT[0], node=_PIN_AT[1]), uid="u_exp")
     _head = [x for x in _at if "遭遇" in x]
     chk("★ 『攻击』真开的那一只 = `观察` 印的那一只（同一个口 · 同一次抽 · 逐字）",
         bool(_head) and MS[_PIN].get("name") in _head[0] and _calls == [_PIN],
@@ -616,6 +637,7 @@ try:
     clear_battle("u_exp")
 finally:
     CBO.pick_encounter = _real_pick
+    AFFIX.elite_of = _real_elite
 # 反证：没有候选的站（镇上）一个字都不出
 _town_look = run(CA.look, player(loc=TOWN, node="wt_gate_n"), uid="u_exp")
 chk("★ 反证：镇上（这一站一只候选都没有）⇒ 表头与那一行**都不出**（不是「总要印一行」）",
