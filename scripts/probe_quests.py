@@ -1700,45 +1700,84 @@ def _act_cook(x):
     return p, out, "下锅 %d 次（%s）" % (CQ._cook_have(p, r0), rg.get("name"))
 
 
+def _band_hour(npc_id):
+    """这位 NPC 的作息里挑一个「他在」的钟点（没写 `condition.time` ⇒ None = 不拨钟）。
+
+    ★ 合入落账（Wave-2 · G4 作息那一批）：五位 NPC 起有了 `condition.time` ⇒「他在不在」成了
+      **按钟点翻面**的事。而这一档问的是「这条支线真能走通」，不是「此刻他在不在」——
+      不拨钟的后果：真实钟点落在昏/夜时这条判据红、早上跑却是绿的（那种红不是回归）。
+      钟点→时辰的对应由 `content/calendar.py::state` **现算**（晨 5–7 · 昼 8–17 · 昏 18–19 · 夜 20–4）。
+    """
+    toks = ((NPCS.get(npc_id) or {}).get("condition") or {}).get("time")
+    if not toks:
+        return None
+    toks = toks if isinstance(toks, (list, tuple)) else [toks]
+    for band, h in (("hr_day", 12.0), ("hr_dawn", 6.0), ("hr_dusk", 18.0), ("hr_night", 22.0)):
+        for t in toks:
+            _k, _e = CAL_Q.resolve(t)
+            if _k == "hour" and _e == band:
+                return h
+    return None
+
+
 def _act_talk(x):
-    """真做：站到他那儿真的搭 N 次话（走 `cmds_talk.talk`）。"""
+    """真做：站到他那儿真的搭 N 次话（走 `cmds_talk.talk`）。
+
+    ★ 有作息的那位：**先把假钟拨到他在的时辰**再跑（跑完还原）—— 见 `_band_hour`。
+    """
     r0 = CQ._require_of(x)[0]
     n = int(r0.get("n") or 1)
     npc = str(r0.get("npc") or "")
     who = str((NPCS.get(npc) or {}).get("name") or npc)
     fl = _flags_for_event(_event_of(npc))
-    spot = _stand(npc, fl)
-    if not spot:
-        return None, [], "找不到「%s」此刻在场的节点" % who
-    p = _player(level=9, flags={"card": 1})
-    p.update({"loc": spot[0], "node": spot[1]})
-    if fl:
-        # ★ B4-27：那一位有出场条件（事件）时**并进去**，不是整格换掉 ——
-        #   否则刚补上的 `flags.card`（接活那道门要的）会被这一行冲掉。
-        p["flags"] = dict(p.get("flags") or {}, **fl)
-    out = []
-    for _ in range(n):
-        out += _drive(CT.talk, p, "搭话 %s" % who)
-    return p, out, "跟「%s」搭话 %d 次（他在 %s）" % (who, CQ._talk_have(p, npc), spot[1])
+    _saved = dict(FC_Q.HANDLES)
+    _h = _band_hour(npc)
+    if _h is not None:
+        _at_day(CAL_Q.day_now(), _h)
+    try:
+        spot = _stand(npc, fl)
+        if not spot:
+            return None, [], "找不到「%s」此刻在场的节点" % who
+        p = _player(level=9, flags={"card": 1})
+        p.update({"loc": spot[0], "node": spot[1]})
+        if fl:
+            # ★ B4-27：那一位有出场条件（事件）时**并进去**，不是整格换掉 ——
+            #   否则刚补上的 `flags.card`（接活那道门要的）会被这一行冲掉。
+            p["flags"] = dict(p.get("flags") or {}, **fl)
+        out = []
+        for _ in range(n):
+            out += _drive(CT.talk, p, "搭话 %s" % who)
+        return p, out, "跟「%s」搭话 %d 次（他在 %s）" % (who, CQ._talk_have(p, npc), spot[1])
+    finally:
+        FC_Q.bind_host(**_saved)
 
 
 def _act_ask(x):
-    """真做：真的跟 N 个**不同的人**搭话（走同一个 `talk` 实现体 —— 账按对话树记）。"""
+    """真做：真的跟 N 个**不同的人**搭话（走同一个 `talk` 实现体 —— 账按对话树记）。
+
+    ★ 同 `_act_talk`：先把假钟拨到**昼**（在场的人最多）再挑人 —— 否则「问得到几个人」
+      会按真实钟点翻面（夜里好几位不在 ⇒ 这条也红）。
+    """
     n = int(CQ._require_of(x)[0].get("n") or 1)
     p = _player(level=9, flags={"card": 1})
     out, hit = [], []
-    for npc, v in sorted(NPCS.items(), key=lambda kv: kv[0]):
-        if len(hit) >= n or not v.get("dialogue"):
-            continue
-        fl = _flags_for_event(_event_of(npc))
-        spot = _stand(npc, fl)
-        if not spot:
-            continue
-        p.update({"loc": spot[0], "node": spot[1]})
-        p["flags"] = dict(p.get("flags") or {}, **fl) if isinstance(p.get("flags"), dict) else dict(fl)
-        out += _drive(CT.talk, p, "搭话 %s" % v.get("name"))
-        hit.append(str(v.get("name")))
-    return p, out, "搭话过 %d 个人（%s）" % (CQ._asked_have(p), "/".join(hit))
+    _saved = dict(FC_Q.HANDLES)
+    _at_day(CAL_Q.day_now(), 12.0)
+    try:
+        for npc, v in sorted(NPCS.items(), key=lambda kv: kv[0]):
+            if len(hit) >= n or not v.get("dialogue"):
+                continue
+            fl = _flags_for_event(_event_of(npc))
+            spot = _stand(npc, fl)
+            if not spot:
+                continue
+            p.update({"loc": spot[0], "node": spot[1]})
+            p["flags"] = dict(p.get("flags") or {}, **fl) if isinstance(p.get("flags"), dict) else dict(fl)
+            out += _drive(CT.talk, p, "搭话 %s" % v.get("name"))
+            hit.append(str(v.get("name")))
+        return p, out, "搭话过 %d 个人（%s）" % (CQ._asked_have(p), "/".join(hit))
+    finally:
+        FC_Q.bind_host(**_saved)
 
 
 _ACT = {"enhance": _act_enhance, "cook": _act_cook, "talk": _act_talk, "ask": _act_ask}

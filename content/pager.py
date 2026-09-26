@@ -65,6 +65,9 @@ LIST_DECL = {
     "codex_flavor": "codex_flavor",
     "codex_monster": "codex_monster",
     "codex_relic": "codex_relic",
+    # ★ 合入落账（Wave-2）：G2 把「在打的这一场」接进了同一口分页 —— 三处登记一起加
+    #   （`PER_PAGE` / `LIST_DECL` / `_again`；`probe_pager` 逐处对账，漏一处当场红）。
+    "battle_log": "battle_log",
 }
 
 #: 光标最多记多少个人（进程内小表；超了从最早那条开始丢 —— 与 `instance` 的护栏同一个意思）
