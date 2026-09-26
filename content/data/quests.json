@@ -1072,8 +1072,7 @@
     "teach": "",
     "insight": "",
     "hook": "",
-    "unlock": [],
-    "repeat": "daily"
+    "unlock": []
   },
   "q_bounty_elite": {
     "name": "悬赏·精英",
@@ -1098,8 +1097,7 @@
     "teach": "",
     "insight": "",
     "hook": "",
-    "unlock": [],
-    "repeat": "daily"
+    "unlock": []
   },
   "q_bounty_boss": {
     "name": "悬赏·头目",
@@ -1124,7 +1122,6 @@
     "teach": "",
     "insight": "",
     "hook": "",
-    "unlock": [],
-    "repeat": "daily"
+    "unlock": []
   }
 }

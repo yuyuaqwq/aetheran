@@ -224,6 +224,95 @@ _bad_run += [k for k, v in DP.items() if str(k).startswith("unid_") and LT.kind_
 (ok if LT.kind_key_of("i_material_iron_chip", "gear") == "gear" else bad)(
     "★ 条目写了键就优先用它（动态装备那一类：池侧说 gear ≠ 物品自己的 weapon）")
 
+# ── ⑮ ★ P-60：`level_gated` 真被读（池上那句「按等级抽一件」原先是一句空话）——
+#   病根：`loot._resolve(out, entry, level, …)` **收了 `level` 却一次都没用**（死参数），
+#         于是 `dp_elite_gear` 从**全部同格**的件里等概率挑 ⇒ 1 级的人也能抽到 7 级才穿得上的。
+#   四条：① 池声明 → 真抽（1..20 级 × 2000 次，逐件核 `items.req.level <= 该级`）
+#         ② 两态对照（判据不是永真：同一个种子不按等级挑 ⇒ 真出得来越级件）
+#         ③ fail-closed（够不着 ⇒ 不放 · 不退回全档 · 不编一个更低档的）
+#         ④ 静态守卫（`level_gated` 的读端只有 `loot.roll_pool` 一处；传进来的是**玩家自己的
+#            等级**——`cmds_battle._settle` 那两行，原先那格传的是怪的等级、而且收的人没用过）
+_gate_bad, _gate_lines = [], []
+_LV_ALL = list(range(1, 21))
+_N_GATE = 2000
+for _L in _LV_ALL:
+    _over, _got = [], 0
+    _rnd = random.Random(20260926 + _L)
+    for _ in range(_N_GATE):
+        for _d in LT.roll_pool("dp_elite_gear", level=_L, rnd=_rnd):
+            _got += 1
+            _o = str(_d["id"])
+            if _o in IT:                                     # 未鉴定（`unid_*`）没有穿戴门槛
+                _r = int((IT[_o].get("req") or {}).get("level") or 0)
+                if _r > _L:
+                    _over.append((_L, _o, _r))
+    if _over or not _got:
+        _gate_bad.append((_L, _over[:3], _got))
+    _gate_lines.append("L%d 抽 %d 件/越级 %d" % (_L, _got, len(_over)))
+(ok if not _gate_bad else bad)(
+    "★ ① 池真按等级抽：`dp_elite_gear` 1..20 级各 %d 次 ⇒ **越级 0 件**（%s）"
+    % (_N_GATE, " · ".join(_gate_lines[::5]) + " … 逐级见上"))
+
+# ② 两态对照：同一批种子，**不按等级**那一臂（= 改前）必须真出得来越级件 —— 否则这条判据永真
+def _ungated_hits(level, n=400):
+    out = []
+    for _s in range(n):
+        oid = LT._resolve("*weapon_random", {"w": 30, "quality": ["精制"]}, level,
+                          random.Random(_s), IT, gated=False)
+        if oid and int((IT[oid].get("req") or {}).get("level") or 0) > level:
+            out.append((oid, int(IT[oid]["req"]["level"])))
+    return out
+
+
+_ctl = _ungated_hits(3)
+(ok if _ctl else bad)(
+    "★ ② 两态对照：**不按等级**那一臂（改前）在 3 级真挑得出来越级件（%s）⇒ ① 不是永真"
+    % (_ctl[:3]))
+
+# ③ fail-closed：够不着 ⇒ 不放。今天的数据里每一级都够得着（普通 / 精制那两档里有一批
+#    `req.level = 0` 的）⇒ 拿**只装遗物武器**的那张物品表造出「全越级」那一档（构造用例，
+#    不是今天真会发生的路）：门槛之上照抽、门槛之下**不放**（返回 None，不退回全档）。
+_rel = [k for k, v in IT.items() if v.get("slot") == "weapon" and v.get("quality") == "遗物"]
+_rel_tbl = {k: IT[k] for k in _rel}
+_lo = min([int((IT[k].get("req") or {}).get("level") or 0) for k in _rel] or [0])
+_none_arm = LT._resolve("*weapon_random", {"w": 30}, _lo - 1, random.Random(1), _rel_tbl, gated=True)
+_same_arm = LT._resolve("*weapon_random", {"w": 30}, _lo, random.Random(1), _rel_tbl, gated=True)
+(ok if (_rel and _none_arm is None and _same_arm in _rel) else bad)(
+    "★ ③ fail-closed：够不着那一档 ⇒ **不放**（构造用例：表里只留遗物武器〔最低 req %d〕，"
+    "%d 级的人抽 = %r）· 够得着照抽（%d 级 = %s）"
+    % (_lo, _lo - 1, _none_arm, _lo, _same_arm))
+
+# ④ 静态守卫（两条）：`level_gated` 这个**键字面量**的读端只许一处 · 那一处拿的是玩家自己的等级
+def _key_lines(rel):
+    """某个键字面量（带引号）在 content/*.py 里出现在哪几行 —— 注释 / 文档串里那种不带引号的不算。"""
+    hits = []
+    cdir = os.path.join(REPO, "content")
+    for _f in sorted(os.listdir(cdir)):
+        if not _f.endswith(".py"):
+            continue
+        for _i, _ln in enumerate(io.open(os.path.join(cdir, _f), encoding="utf-8").read().split("\n")):
+            if rel in _ln:
+                hits.append((_f, _i + 1, _ln.strip()[:60]))
+    return hits
+
+
+_lg = _key_lines('"level_gated"')
+_src_cb = io.open(os.path.join(REPO, "content", "cmds_battle.py"), encoding="utf-8").read()
+_gate_static = [
+    ("读口只许 loot.py 一处", len(_lg) == 1 and _lg[0][0] == "loot.py"),
+    ("`_settle` 传的是玩家自己的等级", ('plv = int(p.get("level")' in _src_cb and "level=plv" in _src_cb)),
+]
+_bad_static = [n for n, v in _gate_static if not v]
+(ok if not _bad_static else bad)(
+    '★ ④ 静态守卫：`"level_gated"` 在 content/*.py 里只有 %d 处读（%s）· `_settle` 那两行在'
+    " —— 坏 %s" % (len(_lg), _lg or "无", _bad_static or "无"))
+# ⑤ 「不按等级」那一族的池一个字没动：同一个种子两态逐字相同（`dp_trash_small` 不带声明）
+_a5 = LT.roll_pool("dp_trash_small", level=3, rnd=random.Random("s"))
+_b5 = LT.roll_pool("dp_trash_small", level=17, rnd=random.Random("s"))
+(ok if _a5 == _b5 else bad)(
+    "★ ⑤ 没写 `level_gated` 的池**按等级也是同结果**（`dp_trash_small` 3 级 vs 17 级：%s）"
+    % [d["id"] for d in _a5])
+
 print()
 print("结果：%s" % ("全绿 ✓" if not fails else "有红 ✗"))
 sys.exit(1 if fails else 0)

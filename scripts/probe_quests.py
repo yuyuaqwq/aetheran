@@ -1637,6 +1637,44 @@ print("      真跑：没做到 →「%s」｜打了「%s」→「%s」"
          next((ln for ln in _pay2 if ln.startswith("交了")), "?")))
 FC_Q.bind_host(**_FC_SAVED)                                            # ★ B4-9：拨回真钟
 
+# ── ★ P-60（B4-25 顺手全扫记的那一笔 · 本批落）：每日轮换**只留一份写法**
+#   原先同一个概念有两份：`quests.q_bounty_*.repeat = "daily"`（域 + schema 里都有，**0 个读端**）
+#   与 `require[].daily`（`cmds_quest._daily_pick` 真读的那一份）。今天不咬人（没人读 `repeat`），
+#   但谁哪天顺手去读它，两边就可能给出不同的日子（K74：同一件事两处口径）。
+#   ⇒ 清成一份：域里那三格删掉 · `schemas/quests.schema.json` 那条 enum 删掉 · 并在这儿立守卫
+#     （判据只加强：这三条谁破了当场红，而不是等哪一天真去读才发现两份不一样）。
+_REP_BAD = []
+#   ① 域里一条都不许带 `repeat`（条目级扫，不是扫文件文本）
+_rep = [k for k, v in QE.items() if isinstance(v, dict) and "repeat" in v]
+if _rep:
+    _REP_BAD.append("域里还有 %s 带 repeat" % _rep)
+#   ② schema 里没有 `repeat` 这个键（唯一真源那一侧也清干净 —— 不然编辑器还会把它当合法字段）
+_schp = os.path.join(REPO, "schemas", "quests.schema.json")
+_sch_txt = io.open(_schp, encoding="utf-8").read() if os.path.exists(_schp) else ""
+if '"repeat"' in _sch_txt:
+    _REP_BAD.append("schemas/quests.schema.json 里还有 repeat")
+#   ③ 代码里 0 处读 `"repeat"`（键字面量；注释里提一嘴不算）
+_rep_code = []
+for _f in sorted(os.listdir(os.path.join(REPO, "content"))):
+    if not _f.endswith(".py"):
+        continue
+    for _i, _ln in enumerate(io.open(os.path.join(REPO, "content", _f),
+                                     encoding="utf-8").read().split("\n")):
+        if '"repeat"' in _ln:
+            _rep_code.append((_f, _i + 1))
+if _rep_code:
+    _REP_BAD.append("content 里还有读 repeat 的地方 %s" % _rep_code)
+#   ④ 今日轮换的那**一份**写法还在，且真挂在悬赏三档上（那份就是 `require[].daily`）——
+#      域里那三档必须各带一条 `daily`（轮换本身由 ㉛ 真跑核：同一次探针里逐日对账）
+_rep_ok = [k for k in ("q_bounty_normal", "q_bounty_elite", "q_bounty_boss")
+           if any(r.get("daily") for r in ((QE.get(k) or {}).get("require") or []))]
+if len(_rep_ok) != 3:
+    _REP_BAD.append("悬赏三档里只有 %s 带 require[].daily" % _rep_ok)
+(ok if not _REP_BAD else bad)(
+    "★ P-60 · 每日轮换只有一份写法（`require[].daily`）：域里带 `repeat` 的条目 **0** 条 · "
+    "schema 里没有 `repeat` · content/*.py 里读它的地方 **0** 处 · 悬赏三档各带一条 `daily`"
+    "（%s）—— 坏 %s" % ("/".join(_rep_ok), _REP_BAD or "无"))
+
 for n in notes:
     print("  · " + n)
 

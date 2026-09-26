@@ -218,9 +218,14 @@ async def _settle(env, p, uid, pick, ms, res, logs, hp_after, seen, player, affi
         exp_gain = exp_of_kill(lv)
         ups = add_exp(p, exp_gain)
         # ★ 掉落（B2-3）：按怪身上的 dp_* 池抽（可复现：种子 = 玩家 uid + 怪 id）
+        # ★ P-60：`level` 这一格原先传的是**怪的等级**（而且 `loot` 收了从来没用 —— 死参数）
+        #   ⇒ 现在传**玩家自己的等级**：带 `level_gated` 的池（`dp_elite_gear`「按等级抽一件」）
+        #   只在玩家这一级穿得上的那批里挑，3 级的人再也抽不到 17 级的遗物。
+        #   （怪的等级另有用处：上面掉钱那两行 `lv * …` 照旧。）
+        plv = int(p.get("level") or 1)
         drops = []
         for pool_id in (m.get("drops") or []):
-            drops.extend(LT.roll_pool(pool_id, level=lv,
+            drops.extend(LT.roll_pool(pool_id, level=plv,
                                      rnd=__import__("random").Random("%s:%s" % (uid, pick[0]))))
         # ★ B3-24：掉落按词条 PE 等比上调 + 富饶那条的「材料翻倍」（倍数在 rules/elite.json）
         drops = AFFIX.scale_drops(drops, affixes)

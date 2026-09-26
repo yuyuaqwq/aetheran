@@ -86,12 +86,32 @@ def _pick(entries, rnd: random.Random):
     return entries[-1]
 
 
-def _resolve(out: str, entry: dict, level: int, rnd: random.Random, items_tbl: dict):
+def _req_level(rec: dict) -> int:
+    """一件装备的**穿戴门槛**（`items.req.level`；没写 = 0 ⇒ 谁都能穿）。
+
+    ★ P-60：这一格原先全仓只有 items 域自己写着、**没有任何读端** ——
+      「按等级抽一件」那条声明（`drop_pools.dp_elite_gear.level_gated`）也就跟着落了空。
+    """
+    return int((rec.get("req") or {}).get("level") or 0)
+
+
+def _resolve(out: str, entry: dict, level: int, rnd: random.Random, items_tbl: dict,
+             gated: bool = False):
     """把 `*armor_random` 这种动态项解析成具体物品 id。
 
     ★ B3-6b-2d-b：按域里现成的 ASCII `slot` 挑（原先按 `kind` 的**中文枚举**挑 ——
       「中文枚举当机器键」，一字之差就静默一件都挑不出，K48 / P-20）。格 → 槽位集合见
       `_GRID_SLOTS`（格名本来就是 ASCII，写在 drop_pools 的 out 上）。
+
+    ★ P-60（B4-25 记的那笔账 · 本批落）：`gated=True` = **这个池自己声明了 `level_gated`**
+      ⇒ 只在「这一级穿得上」的那批里挑。原先 `level` 这个参数**收了却一次都没用**
+      （死参数就是欠账的指纹）⇒ 池子 `label` 上写着的「按等级抽一件」是空话：
+      3 级玩家打掉一只精英，照样可能抽到 17 级才穿得上的遗物。
+      · 门槛来自 `items.req.level`（**现取**，不手打任何等级表）；
+      · **够不着 ⇒ 不放**（返回 None · fail-closed）：不退回「全档」——
+        退回等于这条声明白写；也不编一个更低档的东西出来（那是自造口径）。
+        代价与今天的可达性见 `_notes.md`（每一级都抽得到：普通/精制那两档里
+        另有一批 `req.level = 0` 的）。
     """
     if not out.startswith("*"):
         return out
@@ -101,6 +121,8 @@ def _resolve(out: str, entry: dict, level: int, rnd: random.Random, items_tbl: d
         return None
     qual = entry.get("quality")
     cand = [k for k, v in items_tbl.items() if v.get("slot") in slots]
+    if gated:                                        # ★ P-60：按等级那一刀（先于品阶偏好）
+        cand = [k for k in cand if _req_level(items_tbl[k]) <= int(level or 1)]
     if qual:
         f = [k for k in cand if items_tbl[k].get("quality") in qual]
         if f:
@@ -115,6 +137,10 @@ def roll_pool(pool_id: str, *, level: int = 1, rnd: random.Random | None = None)
 
     ★ B3-6b-2d-keys-2：那一格叫 `kind_key`（ASCII 机器键），不再是中文 `kind` —— 它与域里
       新增的 `kind_key` 同名同值（中文分类名留在域里，代码不引）。
+    ★ P-60：`level` 这一格现在**真被读** —— 池自己写了 `level_gated: true`（唯一读口就是
+      **本函数这一行**）时，动态格只在「这一级穿得上」的那批里挑（见 `_resolve`）。
+      `level` 缺省 1（与调用方一致）；嵌套池把 `level` 原样传下去（`dp_trash_mid` → `dp_elite_gear`
+      那条路就是靠它）。
     """
     rnd = rnd or random.Random()
     p = pools().get(pool_id)
@@ -123,6 +149,7 @@ def roll_pool(pool_id: str, *, level: int = 1, rnd: random.Random | None = None)
     it = items()
     out, seen = [], set()
     rolls = int(p.get("rolls", 1) or 1)
+    gated = bool(p.get("level_gated"))                # ★ P-60：池侧声明 → 动态格那一刀
     for _ in range(rolls):
         e = _pick(p.get("entries") or [], rnd)
         if not e:
@@ -130,7 +157,7 @@ def roll_pool(pool_id: str, *, level: int = 1, rnd: random.Random | None = None)
         if e.get("kind_key") == "pool":                 # 嵌套池（ASCII 机器键；原先比中文枚举）
             out.extend(roll_pool(e["out"], level=level, rnd=rnd))
             continue
-        oid = _resolve(str(e.get("out")), e, level, rnd, it)
+        oid = _resolve(str(e.get("out")), e, level, rnd, it, gated=gated)
         if not oid:
             continue
         if p.get("unique") and oid in seen:

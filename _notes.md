@@ -4423,3 +4423,178 @@ e2e 真宿主（`格温` · 骑士 5 级 · 在客栈）：
 ② `加点智力2` 认不出「智力2」是**对**的（fail-closed），但提示没说「数字前要留空格」——
    要么给 `SYS_ALLOC_BAD_STAT` 补一句，要么把「维名后跟数字」也认（`_split_n` 同族）。不定不动。
 ```
+
+---
+
+# w3 · `w-c-sources` —— 「出产渠道与消费端」那一簇 交接单（2026-09-26）
+
+> 工作树 `C:/Users/yuyu/ast-wt/w3` · 分支 `w-c-sources` · 冻结点 `00ed7ea`
+> 真源仓 `C:/Users/yuyu/aetheran-plan` **一字未碰** · 引擎仓 `C:/Users/yuyu/framework-engine` **零改动**
+> （`git -C C:/Users/yuyu/framework-engine status --porcelain` 空）。
+> 口径：每一条落之前都按**条目身份**在代码 / 域 / schema 三处 grep 过一遍消费者 —— 台账会过期，
+> 实测为准（下面每条都写了实测那句）。
+
+## 落链
+
+- 提交 1 `f25810b` `fix(包): 掉落池那句「按等级抽一件」真按等级了 —— 原先 level 是个死参数（P-60 之一）`
+  —— 3 文件 · **+124 / −3**
+  （`content/loot.py` · `content/cmds_battle.py` · `scripts/probe_drops.py`）
+- 提交 2 `5885ccf` `fix(包): 每日轮换清成一份写法 + 静态守卫 —— 原先域里那格「写了白写」（P-60 之二）`
+  —— 3 文件 · **+41 / −13**
+  （`content/data/quests.json` · `schemas/quests.schema.json` · `scripts/probe_quests.py`）
+- 提交 3 `docs(交接): w3 w-c-sources 交接单` —— 1 文件 · 只动 `_notes.md`（本节 · 就是它自己这一笔：
+  `git log -1 --format=%h -- _notes.md` 即得 —— 本文件的内容里不再写自己的 sha，免得自指失效）
+
+## 一、逐条结论（★ 台账 §3 那五条，逐条实测过）
+
+| 台账条目 | 实测结论 | 证据（现算 / 真跑） |
+|---|---|---|
+| **P-7** 强化材料没有出产渠道 | **已通（账是旧的）** —— 台账 §3 那条**早就标了 ✅**（包 `61dc65f` + B3-22 复核），本批按身份 grep 复核：`i_material_iron_scrap`（铁屑）与 `i_material_hard_bone`（硬骨）**都有产出口且真拿得到** | `scripts/probe_sources.py`（本批前就在的**第 42 支**）：`i_material_iron_scrap ✓ 真拿到 —— 采集 gt_be_dig_1（belt_east/be_shed w=45）` · `i_material_hard_bone ✓ 真拿到 —— 战斗 ms_bone_wanderer 掉 dp_trash_mid（lv9）` · 尾行 `按图：32 个可达节点 · 产出口 739 条` / `结果：全绿 ✓` |
+| **P-11** 九件套装件没有出产渠道 | **已通（账是旧的）** —— 同上，**9/9 都有产出口**（8 件走采集点 / 1 件走精英掉落） | `probe_sources`：`i_set_scavenger_blade ✓ 真拿到 —— 战斗 ms_pick_scavenger 掉 dp_scavenger_pick` · `i_set_sentry_gauntlet ✓ 真拿到 —— 采集 gt_tw_search_1（old_watchtower/tower_storage w=100）`（其余 7 件同表逐条 ✓）· 该探针的 ③ 还现算过「每条产出口都在**走得到**的地方」 |
+| **P-28** POI 的 `effect` 没有消费端 | **已落**（消费端在 `762a1bc` / B3-21 + `3e8ecf3`；B4-25 又把 `effect.rest` 的守卫补上）—— 本批按身份 grep 复核：`effect` 的**每一个键都有读端** | `content/cmds_ast.py::poi_effect_lines`（**唯一**消费端，`need` / `rest` / `buff` / `talk` + 认不出的键点名 fail-closed）· 域里 25 条 POI 里带 `effect` 的 **7 条**（1 祷词石 `buff` + 3 篝火 `rest` + 3 隐藏点 `need`）逐条对上；`probe_pois` 尾行 `结果：全绿 ✓` |
+| **P-31** POIS 的 `condition` 没有消费端 | **已落**（消费端在 `762a1bc` / B3-21：四条列 POI 的口收成 `_pois_here` **一口** + `_poi_cond` **三态**）+ **「退潮」那份刻度真源里仍然没有**（仍待裁，见下） | `_poi_cond` / `_pois_here` / `poi_names_seen` / `poi_gate_lines`（`content/cmds_ast.py:1040-1141`）· 域里带 `condition` 的 **4 条**（`poi_underwater_steps` / `poi_hidden_shoal` = `time:["退潮"]` → `unknown` 档照旧在场并点名；`poi_old_ledger` = `quest` → 真账 `q_main_06`；`poi_hidden_birch` = `read` → 真账 `poi_repeated_mark`） |
+| **P-60** 三处「数据写了白写」 | **落了两处 · 一处只登记**（下表逐条） | 见下 |
+
+**P-60 逐条**：
+
+| # | 字段 | 本批怎么做 | 判据 |
+|---|---|---|---|
+| ① | `drop_pools.dp_elite_gear.level_gated`（`loot._resolve` 收了 `level` 却一次没用） | **落了** —— 池侧声明成了真读口（`roll_pool` 里那一行），`_settle` 改传**玩家自己的等级** | `probe_drops ⑮` 四条（见下）· 分布对账见 §二 |
+| ② | `quests.q_bounty_*.repeat = "daily"` 与 `require[].daily` 两份写法 | **落了** —— 域里三格删掉 · schema 那条 enum 删掉 · 新静态守卫三条 | `probe_quests` 新增那条（域 0 条 / schema 无 / 代码 0 处读 / 留下来的那份三档齐） |
+| ③ | `races.<六族>.home / lifespan` 没有读端 | **只登记，不动**（见 §三 裁决记录 2 · 与台账 P-60 原判一致） | `_key_lines` 那套扫法实测：`"home"` / `"lifespan"` 在 `content/*.py` + `scripts/*.py` + 引擎仓 **0 处读**；只有 `content/data/races.json`（数据）与 `schemas/races.schema.json`（schema）两处写着 |
+
+## 二、P-60 ① 的判据与证据（原始尾行）
+
+### 2.1 分布对账（★ 任务要的「2000 次抽样 vs 设计期望」这一条）
+
+`dp_elite_gear`（`label` = 「精英装备池（**按等级抽一件**）」· 条目 = `*armor_random` w60〔普通/精制〕
++ `*weapon_random` w30〔精制〕+ `unid_rare` w10）· 同一种子各 2000 次：
+
+```text
+玩家  3 级 · 改前（不按等级 · 基座 00ed7ea） ⇒ {'req=0': 878, 'req=7': 930, '未鉴定': 192}
+                                               ← 46.5% 是**越级件**（7 级才穿得上）
+玩家  3 级 · 改后（按等级）                  ⇒ {'req=0': 1813, '未鉴定': 187}
+玩家 17 级 · 改后                             ⇒ {'req=0': 878, 'req=7': 930, '未鉴定': 192}
+                                               ← 够得着的级别上一格没动（只砍够不着的）
+```
+
+（★ 台账 P-60 原话写的是「17 级才穿得上的**遗物**」—— 实测口径更准一点：遗物那一档被
+`quality` 偏好挡在外面，真会越级的是 `req=7` 的**精制**那一档；结论与病根同一处，只是量级小一档。）
+
+### 2.2 `scripts/probe_drops.py` ⑮（新增 · 5 条，全绿）
+
+```text
+✓ ★ ① 池真按等级抽：`dp_elite_gear` 1..20 级各 2000 次 ⇒ **越级 0 件**
+✓ ★ ② 两态对照：**不按等级**那一臂（改前）在 3 级真挑得出来越级件
+     （[('i_weapon_knight_wall_refined', 7), ('i_weapon_assassin_venom_refined', 7),
+       ('i_weapon_berserker_burn_refined', 7)]）⇒ ① 不是永真
+✓ ★ ③ fail-closed：够不着那一档 ⇒ **不放**（构造用例：表里只留遗物武器〔最低 req 17〕，
+     16 级的人抽 = None）· 够得着照抽（17 级 = i_weapon_berserker_burn_relic）
+✓ ★ ④ 静态守卫：`"level_gated"` 在 content/*.py 里只有 1 处读（[('loot.py', 152, ...)]）·
+     `_settle` 那两行在 —— 坏 无
+✓ ★ ⑤ 没写 `level_gated` 的池**按等级也是同结果**（`dp_trash_small` 3 级 vs 17 级：['i_material_herb_common']）
+```
+
+### 2.3 e2e（★ 任务要的「真敲采集 / 掉落 / POI 两三条」）
+
+```bash
+AST_E2E_EPOCH=738000 AST_E2E_SEED='{"name":"格温","race":"human","cls":"cls_knight","level":5,
+  "loc":"belt_north","node":"bn_bone","prev":["windmill_town"],"gold":30,"bag":{},
+  "equipped":{"weapon":"i_weapon_knight_wall_common"},"flags":{},"codex":{},"hp":200}' \
+  python scripts/e2e_drive.py "观察" "挖掘" "触摸" "属性" "攻击" "歇脚" "去 拾荒营地" "歇脚"
+```
+
+```text
+» 挖掘            【塌了一半的坑】土是松的，像被人翻过。挖下去能听见铁碰铁。
+                  得到：⚙️ 旧铁 ×1 ｜ ★ 新进谱：材料谱 · 旧铁                  ← 采集（真进背包 + 真进谱）
+» 触摸            🪨你摸到骨田边的祷词石。
+                  骨田边的祷词石：速度 +10% 撑着（15 分钟）。                    ← P-28 的 effect 消费端
+» 属性            速度 114 ｜（这一页是现算的：职业基础 + 等级成长 + 加点 + 装备 + 增益。）
+» 攻击            ⚠️ 遭遇：游荡的骸骨 … ✔ 打完了。💰 金币 +18，✨ 经验 +36
+                  拾取：👟 疾靴子 ×1                                          ← 掉落（`疾靴子` = req 0
+                                                                                  —— 5 级这一档抽不到越级件）
+» 歇脚            这儿没有篝火 —— 歇脚得在火边。                                 ← P-28 rest 守卫（骨田没火）
+» 去 拾荒营地     你走到 拾荒营地。看得见：『北带的篝火』🔥 · 『营地角落的东西』📦
+» 歇脚            你坐下来歇了一会儿。生命 +32（65/164）                          ← 火边那一站真回血
+== 落档 ==        {'level': 5, 'loc': 'belt_north', 'node': 'bn_camp', 'gold': 48}
+```
+
+### 2.4 全量门禁（原始尾行）
+
+```text
+① 域探针   probe_drops  全绿（本批新增 ⑮ 五条）／probe_quests 38 条全绿（本批新增静态守卫那条）
+② 全量     for f in scripts/probe_*.py; do …; done   ⇒ **42/42 绿**（红 0）
+③ 生成器   probe_generators ⇒ 通过 22 · 失败 0 · `结果：全绿 ✓`（19 支生成器干跑两遍 · content/ 零写入）
+④ e2e      见 §2.3（真宿主 · 假钟 · 起手档）
+⑤ 反证     撤改验证见 §三 裁决记录 1 与提交 2 的消息（两条守卫都真会红）
+```
+
+## 三、裁决记录（乙档自决的，逐条写理由）
+
+1. **P-60 ① 要不要单落？—— 落**（红线的判断依据，务必看一眼）。
+   派工那条红线写的是「P-60 里如果某一条与 **P-30**（精英层：`elite_pool` / `mods.hp_mult`）同源
+   ⇒ 与 P-30 一起只登记、别单落」。实测这条**前提已经不成立**了：
+   · `elite_pool` **有读端** —— `content/affix.py`（B3-24 落的精英层：抽词条 / 面板乘 / 群居 /
+     开场盾 / 遭遇预告）整条线都在跑，`probe_monsters` 的「精英词条」那一节三头对账钉着；
+   · `mods.hp_mult / atk_mult` 确实还是 0 读端，但它是每只怪身上一个**恒为 1.0 的空占位**
+     （全仓只有 Boss `mods.phases` 里那个 0.8 是另一格、且那格有读端）—— 与本条**不同源**：
+     本条是 `drop_pools` 这个**掉落表**的事（读它的是 `loot`），P-30 是**遭遇 / 面板**那一层；
+   · 台账里 P-30 那一行本身已经是 **✅ 已修**。
+   ⇒ 判定「不同源、且 P-30 那条已闭环」，本批按 §2 甲/乙档落了它。
+   ★ 若主线认为该并进 P-30：这条是**三个文件、一个 `gated` 形参**的改动，`git revert f25810b` 即可。
+2. **「够不着那一档时给什么」—— 选「不放」（fail-closed）**（台账 P-60 原文留给拍板的那一问）。
+   两个候选里：① 不放（= 精英白打一次）；② 退到最低那一档（= 永远有货，但给的可能仍是越级的）。
+   取 ① 的理由：本仓的成文纪律是 fail-closed（不静默兜底 · `fail-closed-boundaries`），
+   ② 在「一件都够不着」时给出来的照样是越级件 —— 等于把刚修掉的那个病按另一个名字装回去。
+   ★ 今天这一支**走不到**：现数据每一级都有 `req.level = 0` 的候选（普通 12 支武器 + 21 件防具、
+   精制 1 支武器 + 4 件防具）⇒ 它是给后面阶段留的护栏，不是今天会发生的路（⑮③ 用构造用例钉着）。
+3. **`races.home / lifespan` —— 只登记，不补显示口**。
+   实测 0 读端（`content/*.py` + `scripts/*.py` + 引擎仓三处全空），**真源里也没有哪一屏要求它**：
+   `06_第一阶段垂直切片/04_指令总表 §三` 的 `出身` 只写「族 + 那一句**为什么来**」（`18_建号与新手引导 §一`
+   第 4 步同）；全仓 grep「家乡 / 寿数」只命中台账那一条自己。⇒ 往界面加 = 自己编口径
+   （与台账 P-60 原判一致）。要显示先给真源一句「它出现在哪一屏」。
+4. **`_settle` 那一格从「怪的等级」改成「玩家自己的等级」**（不是顺手，是本条的核心）。
+   原先传的是 `lv = int(m.get("lv", 1))`（怪的等级），而收的人从来没用过 ⇒ 没露破绽。
+   改后 `level` 语义 = **穿的人**的等级（「按等级抽一件」）。
+   ★ 连带面向：`probe_sources` 的掉落预判（`roll_pool(..., level=<玩家等级>)`）与新口径**对齐**了
+   （原先它猜的是玩家等级、真路径传的是怪等级 —— 靠「level 没人读」才蒙对）；本批两条路同一口径。
+
+## 四、真源行（★ 主线合入时请落进 `aetheran-plan`）
+
+- **台账 §1 新行**（照表头四列）：
+
+```text
+| **w3 / B4-27** | P-60 ① 掉落池「按等级抽一件」真按等级（`level_gated` 消费端）+ ② 每日轮换清成一份写法 | 2 提交 · 6 文件 · +165/−16 | 包 `f25810b` + `5885ccf` · ★ `probe_drops ⑮`（1..20 级 × 2000 次抽 ⇒ 越级 0 件 · 两态对照 · fail-closed · 静态守卫 · 非门槛池不动）· `probe_quests` 静态守卫 · 全量 **42/42** 绿 · e2e 真敲（挖掘 → 触摸 → 攻击 → 歇脚两档） |
+```
+
+- **台账 §3 变动**：
+
+```text
+⏸ P-60 ★ 三处「数据写了白写」的字段 ⇒ 已落两处 + 一处仍待裁（2026-09-26 · w3 / `w-c-sources`）：
+  · ① `drop_pools.level_gated` —— ✅ 已闭环（`f25810b`：池侧声明成真读口，`_settle` 传玩家等级；
+    判据 `probe_drops ⑮`；「够不着 ⇒ 不放」按 fail-closed 自决，理由与可达性见交接单 §三·2）。
+    ★ 与 P-30 的「同源」前提**实测已不成立**（`elite_pool` 早有读端〔B3-24 `affix.py`〕，
+      `mods.hp_mult/atk_mult` 是恒 1.0 的空占位、属遭遇/面板那一层，与本条不同源）—— 交接单 §三·1 有全文。
+  · ② `quests.repeat` 与 `require[].daily` —— ✅ 已闭环（`5885ccf`：域删三格 · schema 删 enum ·
+    静态守卫三条；留下的那一份是 `require[].daily`）。
+  · ③ `races.home / lifespan` —— ⏸ **仍待裁**（w3 只登记未动）：0 读端属实，且真源里没有哪一屏
+    要求它 ⇒ 要显示先给 `04_指令总表 §三` / `18_建号与新手引导 §一` 补一句「它出现在哪一屏」。
+  · 原条目里那句「真要落得先答一句：够不着那一档时给什么」—— 本批自决为「不放」（fail-closed ·
+    §三·2），今天走不到那一支；鱼鱼若要「永远有货」，改 `_resolve` 那一行即可（判据跟着动）。
+```
+
+- **其他真源**（口径表 / 宪法 / 命令表）：**本批一个字都没改** —— 没有新槽位（texts 域不动数）、
+  没有新数值（等级门槛一律从 `items.req.level` 现取）、命令表不动。
+- **P-7 / P-11 / P-28 / P-31** 四条：台账 §3 已经是 ✅（`61dc65f` / `762a1bc` / B3-22 / B3-28），
+  本批只做**按身份的实测复核**（§一 表内的证据），**无需任何真源行改动**。
+
+## 五、待鱼鱼拍板（丙档：本批没动的）
+
+1. **「退潮」的刻度**（台账 P-31 甲 · 与 `poi_underwater_steps` / `poi_hidden_shoal` 两条 POI 有关）：
+   真源 `05 §二` / `10 §E` / `19 §三` 三处都只有散文，没有周期 / 时长 / 枚举 ⇒ 那两条今天走
+   `unknown` 档（照旧在场 + 点名一行 `SYS_POI_COND_TODO`）。要落得真源先给「涨 / 退」那一格
+   （最省的落法是挂进 `weather` 域 —— 判定口与槽位都现成）。
+2. **`races.home / lifespan` 出现在哪一屏**（§三·3）。
+3. **`mods.hp_mult / atk_mult`（每只怪恒 1.0 的空占位）** —— 本批顺手量到的另一处「写了白写」，
+   属 P-30 那一层，**没动**：留着 = 下一阶段按怪调强度的一格；要清就三处一起（域 + schema +
+   生成器 `rebuild_monsters.py`），本批不碰别人的生成器。
