@@ -316,6 +316,20 @@ def live(env, uid):
     return st
 
 
+def fighting(env, uid) -> bool:
+    """这一位手上还有一场**没落地**的仗吗（世界级移动拿它当闸）。
+
+    ★ 试玩复测 #1：G2 把「一条指令打完整场」改成**一手一手**之后，移动那一族没人拦 ——
+      跑掉没跑掉都能照常赶路 / 进镇 / 进塔，没打完的那一场跟着你跨图跨层。判据：
+      有「场」且那一场的结果还没落下（`battle.result is None`）。只读，不动状态。
+    """
+    st = live(env, uid)
+    if st is None:
+        return False
+    b = st.get("battle") or {}
+    return b.get("result") is None
+
+
 def foe_of(st):
     """这一场里**还站着的第一个敌人**那一格 actor（没有 ⇒ None）。
 

@@ -878,6 +878,10 @@ async def event_now(env, sink, uid, player):
 
 
 async def go_north(env, sink, uid, player):
+    _lock = _in_fight(env, uid)
+    if _lock:
+        yield _lock
+        return
     p = _p(player)
     if (p["loc"], p["node"]) == ("belt_north", "bn_bone"):        # ★ B3-11：脚下这一站（K60）
         for line in _here_lines(p):
@@ -902,6 +906,10 @@ async def go_north(env, sink, uid, player):
 
 
 async def go_east(env, sink, uid, player):
+    _lock = _in_fight(env, uid)
+    if _lock:
+        yield _lock
+        return
     p = _p(player)
     if (p["loc"], p["node"]) == ("belt_east", "be_birch"):        # ★ B3-11：脚下这一站（K60）
         for line in _here_lines(p):
@@ -923,6 +931,10 @@ async def go_east(env, sink, uid, player):
 
 
 async def go_west(env, sink, uid, player):
+    _lock = _in_fight(env, uid)
+    if _lock:
+        yield _lock
+        return
     p = _p(player)
     if (p["loc"], p["node"]) == ("belt_west", "bw_old_ferry"):        # ★ B3-11：脚下这一站（K60）
         for line in _here_lines(p):
@@ -943,7 +955,23 @@ async def go_west(env, sink, uid, player):
         yield line
 
 
+def _in_fight(env, uid) -> str:
+    """手上还留着一场没打完吗 —— 有就返回拦下那句话（没有 ⇒ 空串）。
+
+    ★ 试玩复测 #1（2026-09-26）：一场没结就走不了（出镇 / 带间 / 返回 / 去 / 进镇）。
+      要走先『逃跑』/『后撤』脱身，或者把它打完。拦下时**位置与历史一个字不动**。
+    """
+    from . import instance as INST
+    if not INST.fighting(env, uid):
+        return ""
+    return T("SYS_MOVE_IN_FIGHT")
+
+
 async def enter_town(env, sink, uid, player):
+    _lock = _in_fight(env, uid)
+    if _lock:
+        yield _lock
+        return
     p = _p(player)
     if (p["loc"], p["node"]) == (TOWN, "wt_gate_n"):             # ★ B3-11：脚下这一站（K60）
         for line in _here_lines(p):
@@ -969,6 +997,10 @@ async def enter_town(env, sink, uid, player):
 
 
 async def go_back(env, sink, uid, player):
+    _lock = _in_fight(env, uid)
+    if _lock:
+        yield _lock
+        return
     p = _p(player)
     prev = p.get("prev") or []
     if not prev:
@@ -985,7 +1017,11 @@ async def go_back(env, sink, uid, player):
 
 
 async def go_to(env, sink, uid, player):
-    """`去 <地方>` —— 在同一张图里走到另一个节点。
+    """    _lock = _in_fight(env, uid)
+    if _lock:
+        yield _lock
+        return
+`去 <地方>` —— 在同一张图里走到另一个节点。
 
     ★ 为什么需要它：玩家到了镇上（风车镇是 star 拓扑 11 个节点），若只能在
       「北口 / 东口 / 西口」之间跳，北墙根（哈根）、白烛堂（艾德/莉安）这些地方
