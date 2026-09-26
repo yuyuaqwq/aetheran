@@ -88,6 +88,9 @@ B4-27 加的那一组（P-53 见习证门）：㉝（四拍，见文件尾部那
 既有夹具里「手拼最小档直接接活」的十几处只是照**新守卫**补上 `flags.card`（探针 / probe_copy /
 probe_cmds 各自补），原来钉的那些分支一条都没少。
 
+B4-27 加的那一组（P-56 放弃的冷却）：㉞（三拍真敲 + 跨日 + 失败档，见文件尾部那一节）。
+★ 「掉一点声望」那半**没落**（没有容器）—— 登记在工作树 `_notes.md`「待鱼鱼拍板」。
+
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_quests.py
 """
 from __future__ import annotations
@@ -1807,6 +1810,96 @@ _card_lines.append("无证 ⇒ 交活「%s」· 我的委托 %s 行照旧"
     % (_card_bad or "无"))
 for _ln in _card_lines:
     print("      %s" % _ln)
+
+# ══════════════════════════════════════════════════════════════
+# ㉞ ★ B4-27 ③（P-56）：`放弃` 的冷却 = **同一个游戏日只许放弃一条**
+#      真源 = `06_第一阶段垂直切片/05_玩法数值口径_v1.md §一`「放弃 ｜ 冷却 1 天；掉一点声望」。
+#      ★ 本批**只落冷却那半**（「掉一点声望」没有容器 ⇒ 登记待裁，见 `_notes.md`）。
+#      判据（都真敲 · 拨钟造日）：
+#        ① 第 5 日 放弃 1 ⇒ 掉了 + `flags.abandon_day = 5`
+#        ② 同一日再 放弃 2 ⇒ **拦住**（冷却那一行）+ **档一个字不动**
+#        ③ 跨到第 6 日 ⇒ 放行（冷却真的只有 1 个游戏日）
+#        ④ 冷却期内「另一件事」不许被连累：`放弃 99`（不在手上）照旧回「没有这一条」·
+#           裸「放弃」照旧回「放弃哪一条」（两拍档都不动）
+#        ⑤ ★ 判定读的是**那根钟**：档上那格 `p["day"]` 故意写成错的旧值也不许影响
+#           （B4-9 同族 —— 日期戳一律现算）· 那一格写坏了（认不出）不许把玩家永久锁住
+# ══════════════════════════════════════════════════════════════
+_CD_Q = (TX.get("SYS_JOB_ABANDON_CD") or {}).get("value") or ""
+_NONE_Q = (TX.get("SYS_JOB_NO_ACTIVE_ONE") or {}).get("value") or ""
+_ASK_Q = (TX.get("SYS_JOB_ABANDON_ASK") or {}).get("value") or ""
+_cd_bad, _cd_lines = [], []
+if not _CD_Q:
+    _cd_bad.append(("槽位 SYS_JOB_ABANDON_CD 取不到文案", ""))
+_CD_D = 5
+_at_day(_CD_D)                                  # ★ 拨钟造「第 5 个游戏日」
+# ① 第一条：放得下 + 冷却那一格写下**今天**
+_p_cd1 = _player(level=3, day=99, flags={"card": 1,
+                                         "quests_active": ["q_main_01", "q_main_02"]})
+_o_cd1 = _drive(CQ.quest_abandon, _p_cd1, "放弃 1")
+_f_cd1 = _p_cd1.get("flags") or {}
+if not any("放弃了" in ln for ln in _o_cd1):
+    _cd_bad.append(("第 %d 日 · 放弃 1" % _CD_D, _o_cd1[:2]))
+if _f_cd1.get("quests_active") != ["q_main_02"] or int(_f_cd1.get("abandon_day") or 0) != _CD_D:
+    _cd_bad.append(("第 %d 日 · 掉完之后档上不对" % _CD_D, _f_cd1))
+_cd_lines.append("第 %d 日 · 放弃 1 ⇒ 「%s」（档上 abandon_day=%s · 手上 %s）"
+                 % (_CD_D, next((ln for ln in _o_cd1 if "放弃了" in ln), "?"),
+                    _f_cd1.get("abandon_day"), _f_cd1.get("quests_active")))
+# ② 同一天第二条：拦住 + 档一个字不动（`day=99` 那格假的旧戳照样不许影响判定）
+_p_cd2 = _player(level=3, day=99, flags={"card": 1, "quests_active": ["q_main_02"],
+                                         "abandon_day": _CD_D})
+_o_cd2 = _drive(CQ.quest_abandon, _p_cd2, "放弃 2")
+if _o_cd2 != [_CD_Q]:
+    _cd_bad.append(("同一日 · 放弃 2（应当只回冷却那一行）", _o_cd2[:2]))
+if (_p_cd2.get("flags") or {}) != {"card": 1, "quests_active": ["q_main_02"],
+                                   "abandon_day": _CD_D}:
+    _cd_bad.append(("同一日 · 拦下时动了档", _p_cd2.get("flags")))
+_cd_lines.append("同日 · 放弃 2 ⇒ 「%s」· 档原样" % (_o_cd2[0][:20] if _o_cd2 else "?"))
+# ④ 冷却期内「另一件事」不受连累（不在手上 / 没带编号 —— 都是别的问法）
+_o_cd4 = _drive(CQ.quest_abandon, _player(level=3, flags={"card": 1, "quests_active": ["q_main_02"],
+                                                          "abandon_day": _CD_D}), "放弃 99")
+_p_cd5 = _player(level=3, flags={"card": 1, "quests_active": ["q_main_02"], "abandon_day": _CD_D})
+_o_cd5 = _drive(CQ.quest_abandon, _p_cd5, "放弃")
+if _o_cd4 != [_NONE_Q] or _o_cd5 != [_ASK_Q]:
+    _cd_bad.append(("冷却期内的另一件事被连累", (_o_cd4[:2], _o_cd5[:2])))
+if (_p_cd5.get("flags") or {}).get("quests_active") != ["q_main_02"]:
+    _cd_bad.append(("裸「放弃」动了档", _p_cd5.get("flags")))
+# ③ 跨日 ⇒ 放行（冷却只有 1 个游戏日）
+_at_day(_CD_D + 1)
+_p_cd3 = _player(level=3, day=99, flags={"card": 1, "quests_active": ["q_main_02"],
+                                         "abandon_day": _CD_D})
+_o_cd3 = _drive(CQ.quest_abandon, _p_cd3, "放弃 2")
+_f_cd3 = _p_cd3.get("flags") or {}
+if not any("放弃了" in ln for ln in _o_cd3) \
+        or int(_f_cd3.get("abandon_day") or 0) != _CD_D + 1:
+    _cd_bad.append(("跨到第 %d 日竟然还拦着" % (_CD_D + 1), (_o_cd3[:2], _f_cd3)))
+_cd_lines.append("第 %d 日 · 放弃 2 ⇒ 「%s」（abandon_day 跟到 %s）"
+                 % (_CD_D + 1, next((ln for ln in _o_cd3 if "放弃了" in ln), "?"),
+                    _f_cd3.get("abandon_day")))
+# ⑤ 那一格写坏了（认不出）不许把玩家永久锁住 —— 退回「没冷却过」
+_p_cd6 = _player(level=3, flags={"card": 1, "quests_active": ["q_main_02"],
+                                 "abandon_day": "坏了"})
+_o_cd6 = _drive(CQ.quest_abandon, _p_cd6, "放弃 2")
+if not any("放弃了" in ln for ln in _o_cd6):
+    _cd_bad.append(("abandon_day 写坏了却被永久锁住", _o_cd6[:2]))
+# 静态守卫：那一格只有 `cmds_quest.py` 两处（读口 `_abandon_day` + 写口那一行）
+_ab_hits = []
+for _p_ab in sorted(_glob.glob(os.path.join(REPO, "content", "*.py"))):
+    for _i_ab, _ln_ab in enumerate(io.open(_p_ab, encoding="utf-8").read().split("\n")):
+        if '"abandon_day"' in _ln_ab or "'abandon_day'" in _ln_ab:
+            _fn_ab = next((_s.split("(")[0].replace("def ", "").strip()
+                           for _s in reversed(io.open(_p_ab, encoding="utf-8").read()
+                                              .split("\n")[:_i_ab]) if _s.startswith("def ")), "?")
+            _ab_hits.append((os.path.basename(_p_ab), _i_ab + 1, _fn_ab))
+if [h for h in _ab_hits if h[0] != "cmds_quest.py"] or len(_ab_hits) != 2 \
+        or not any(h[2] == "_abandon_day" for h in _ab_hits):
+    _cd_bad.append(("冷却那一格出现了第二个口", _ab_hits))
+(ok if not _cd_bad else bad)(
+    "★ B4-27（P-56）`放弃` 的冷却（1 个游戏日 · 源 05 §一）：同日第二条拦住且档原样 · 跨日放行 · "
+    "冷却期内别的问法不受连累 · 判定走那根钟（档上那格假的也不影响）· 那一格坏掉不把人锁死 · "
+    "读写各一处（坏 %s）" % (_cd_bad or "无"))
+for _ln in _cd_lines:
+    print("      %s" % _ln)
+FC_Q.bind_host(**_FC_SAVED)                     # ★ 拨回真钟
 
 for n in notes:
     print("  · " + n)

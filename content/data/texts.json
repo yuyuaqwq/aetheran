@@ -5064,6 +5064,12 @@
     "category": "系统",
     "desc": "B4-13 放弃 · 没给编号"
   },
+  "SYS_JOB_ABANDON_CD": {
+    "value": "今天已经放弃过一条了 —— 明天再来。",
+    "params": [],
+    "category": "系统",
+    "desc": "B4-27 放弃 · 冷却（1 个游戏日 —— 源 05 §一）"
+  },
   "SYS_SHOP_HEAD": {
     "value": "【药铺】{name}",
     "params": [
