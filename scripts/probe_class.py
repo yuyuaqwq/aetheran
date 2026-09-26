@@ -269,6 +269,35 @@ def main():
     else:
         bad("『攻击』没有结果：%s" % j[:200])
 
+    # (14) ★ P-50：建号第二步那一欄「优势 / 弱点」—— 真源只写了「要有」，逐条句子在
+    #   03_职业与技能/ 六份详案 与 08_六职业对照_v2 里**都没有**（只有形状轴与数值对照）
+    #   ⇒ 本批**只登记、不自己编**（编一句 = 第三种口径；而且是玩家可见文案 ⇒ 得先过
+    #   17_文案收口口径的槽位表 + 共享面 texts 域，见本分支 `_notes.md`）。
+    #   这一条判据干两件事：把缺的那一欄**印出来**；钉住「今天没有人偷偷编一句」。
+    PENDING = {"优势 / 弱点": "真源 06_第一阶段垂直切片/18_建号与新手引导_v1.md §一 第 2 步写着"
+                              "「显示 职业名 · 节奏来源一句话 · 优势 / 弱点 · 一句自述」，"
+                              "而 03_职业与技能/0X_*_v2.md 与 08_六职业对照_v2 里没有逐条的句子"}
+    print("  ★ 待补清单（真源没写的那一欄 —— 本批只登记，不自己编）：")
+    for _k, _why in sorted(PENDING.items()):
+        print("      · %s → %s" % (_k, _why))
+    _madeup = sorted({k for k, v in C.items()
+                      for f in ("adv", "weak", "advantage", "flaw", "优势", "弱点") if f in v})
+    if not _madeup:
+        ok("★ 域里**没有**自己编的「优势 / 弱点」格（谁哪天加了：先补真源行，再把这一条改成"
+           "「逐职业 == 真源那句」）")
+    else:
+        bad("域里自己编了「优势 / 弱点」：%s（真源没写 ⇒ 先补真源行）" % _madeup)
+    ad4 = Ad()
+    host4 = Host(ad4, REPO, inject={"db_path": ":memory:", "clock": time.time})
+    host4.boot()
+    u4 = uid + "_menu2"
+    drive(ad4, host4, "我是 人类", u4)
+    jm = NL.join(drive(ad4, host4, "选职业", u4))
+    if "优势" not in jm and "弱点" not in jm:
+        ok("★ 第二步那一眼今天**没有**「优势 / 弱点」字样（真源没给句 ⇒ 菜单也就不许先印那两栏）")
+    else:
+        bad("菜单里出现了「优势 / 弱点」而真源还没有那两句：%s" % jm[:200])
+
     print()
     print("----")
     print("通过 %d / 失败 %d" % (len(OK), len(BAD)))
