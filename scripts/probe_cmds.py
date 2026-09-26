@@ -2796,6 +2796,40 @@ try:
     chk("★ 篝火那一站『触摸』照样能歇（`effect.rest` 那一条路与 `歇脚` 是同一支 `cmds_gather.rest`）",
         _s21c.get("hp") == _want21, "%s / hp=%s" % (_o21c[:3], _s21c.get("hp")))
 
+    # ── ③b ★ fix-p-restfight：**战斗中的『歇脚』**（持态闸 · 与出镇 / 带间 / 返回 / 去 / 塔门同一条）
+    #   原先这一支只判「脚下有没有火」⇒ 战斗中照样放行，而回血落在**玩家档那一份**、
+    #   这一场的血在「场」里 = **一人两套血**（实测：屏上被报满、下一手实战仍从旧血接着算，
+    #   试玩里靠它把屏上血量报满之后当场被打死）。两态互锁：这一敲被拦（下面）+ 不打架时
+    #   那一站照旧真回血（上面 ② 那条）。
+    def _two21(seed, texts):
+        _dbc = os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp",
+                            "ast_probe_cmds_b425_fight.db")
+        try:
+            os.remove(_dbc)
+        except OSError:
+            pass
+        _ac = _Ad([], seed=dict(seed))
+        _hc = Host(_ac, str(REPO), inject={"db_path": _dbc, "clock": lambda: _FIXED})
+        _hc.boot()
+        _steps = []
+        for _t in texts:
+            _ac.out.clear()
+            _hc.handle({"uid": "u_c", "group_id": "g_c", "text": _t})
+            _steps.append((list(_ac.out), dict(_ac.saved or {})))
+        return _steps
+
+    _steps21f = _two21(dict(_SEED21, cls="cls_knight", level=14, hp=999, exp=0, gold=0,
+                            bag={}, flags={}, prev=[], loc=_FM21, node=_FN21),
+                       ["攻击", "歇脚"])
+    _bad21f = []
+    if _steps21f[1][0] != [_r("SYS_MOVE_IN_FIGHT")]:
+        _bad21f.append(("拦话", _steps21f[1][0][:3]))
+    if _steps21f[1][1].get("hp") != _steps21f[0][1].get("hp"):
+        _bad21f.append(("档上的血被动了", _steps21f[0][1].get("hp"), _steps21f[1][1].get("hp")))
+    chk("★ fix-p-restfight：**战斗中『歇脚』一律拦下**（`SYS_MOVE_IN_FIGHT` —— 与出镇 / 带间 / "
+        "塔门同一条闸）· 档**一个字不动**（原先放行 ⇒ 回血落在玩家档那一份、而这一场的血在「场」里 "
+        "= 一人两套血）（坏 %s）" % (_bad21f or "无",), not _bad21f)
+
     # ── ④ 覆盖面（静态）：`cmds_gather.py` 不许自己扫 `pois` 域；`rest` 必须真调 `_fire_here`
     _gf21 = (REPO / "content" / "cmds_gather.py").read_text(encoding="utf-8")
     _t21 = _ast21.parse(_gf21)
