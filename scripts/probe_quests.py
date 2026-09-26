@@ -696,6 +696,49 @@ for _n in sorted(doc24):
 for _ln in recon_lines:
     print("      %s" % _ln)
 
+# ⑳-b ★ fix-h-small（真人试玩 b59 · 游侠路）：主线 2 的 objective 把玩家指去**图上走不到**的
+#      「白烛堂侧屋」——镇图 11 站里没有「侧屋」那一站（实测 `去 白烛堂侧屋` ⇒
+#      「这儿没有叫「白烛堂侧屋」的地方。」），而莉安就站在 `白烛堂`（`wt_chapel` =
+#      她 `subarea` 那一格，`观察` 的「人在」栏印着她）。
+#   判据（**全现算**：站名从 `maps` 取、人名从 `npcs` 取、真源那一行探针自己解析）：
+#     ① objective 的第一步那段**逐字** = 「去<莉安真站的那一站>找<莉安>」—— 站名与名字都现算，
+#        不手打（改前那句多了「侧屋」两个字 ⇒ 这一条当场红）；
+#     ② 「侧屋」不许再出现在 objective 里（站内的子地点 —— 图上走不到）；
+#     ③ **真源那一行待主线跟账**（两态互锁 · 第三态红）：`24 §一` 主 2 的「步骤」行
+#        **要么**还写着「去白烛堂侧屋找莉安」（未跟账 —— 域里那句是去掉那两个字的版本）·
+#        **要么**已经跟账成同一句（域里这句那时与真源逐字同款）；两态都不是 ⇒ 真源被改跑偏了 ⇒ 红。
+#        ★ 两态之下**域里那句都是** `去<站>找<人>`：这一格是「玩家照着敲得通」的呈现口径，
+#          真源补/删「侧屋」都不改变它（那一行只是叙述莉安住在侧屋 —— 站内的子房间）。
+_Q2 = (mainq.get(2) or (None, {}))[1]
+_OBJ2 = str(_Q2.get("objective") or "")
+#: 域里那一步找的那个人 —— 从**本条自己的 require** 现取（不手打名字）
+_TALK2 = next((r for r in CQ._require_of(_Q2) if r.get("kind") == "talk"), {})
+_NPC2 = NPCS.get(str(_TALK2.get("npc") or "")) or {}
+_LIAN_NM = str(_NPC2.get("name") or "?")
+#: 这个人**真站的那一站名** —— `subarea` → `maps` 里的节点名（不写死「白烛堂」）
+_LIAN_STOP = next((str(_nd.get("name")) for _m in MAPS.values()
+                   for _nd in (_m.get("nodes") or [])
+                   if str(_nd.get("id")) == str(_NPC2.get("subarea") or "")), "")
+_STEP2 = _re.sub(r"\s+", "", str((doc24.get(2) or {}).get("步骤") or ""))
+_WANT2 = "去%s找%s" % (_LIAN_STOP, _LIAN_NM)
+_DOC_OLD2 = "去%s侧屋找%s" % (_LIAN_STOP, _LIAN_NM)        # 真源未跟账那一版（多「侧屋」两字）
+_FORMS2 = [f for f in (_DOC_OLD2, _WANT2) if f and f in _STEP2]
+_obj2_bad = []
+if not (_LIAN_NM != "?" and _LIAN_STOP):
+    _obj2_bad.append("主 2 的交待那个人 / 他真站的那一站，在 npcs+maps 里算不出来")
+if len(_FORMS2) != 1:
+    _obj2_bad.append("真源 24 §一 主2 那一行既不是「%s」也不是「%s」（%s）"
+                     % (_DOC_OLD2, _WANT2, _STEP2 or "解析不出「步骤」"))
+if _OBJ2.split("（")[0] != _WANT2:
+    _obj2_bad.append("objective 第一步那段 ≠「%s」：%s" % (_WANT2, _OBJ2.split("（")[0]))
+if "侧屋" in _OBJ2:
+    _obj2_bad.append("objective 里还写着站内的子地点「侧屋」：%s" % _OBJ2)
+(ok if not _obj2_bad else bad)(
+    "★ 主 2 的 objective 指的就是那个人真站的那一站（现算 %r）· 子地点「侧屋」不在 objective 里 · "
+    "真源 24 §一 那一行 %s（坏 %s）"
+    % (_WANT2, "**待主线跟账**（仍写着「%s」）" % _DOC_OLD2
+       if _FORMS2 and _FORMS2[0] == _DOC_OLD2 else "**已跟账**", _obj2_bad or "无"))
+
 # ㉑ ★ 真跑「接 <编号>」/「交 <编号>」：槽位里的字必须**原样**出现在屏上（槽位 → 玩家眼睛的闭环）
 #   ★ B4-2（P-25 §①）：这一块的**执行**挪到下面（`_sat_player` 定义之后就开跑 —— 见 §㉑ 那一段）。
 #     为什么：主线这一批开始有 `require` 了，「交得掉」那一拍得先把条件那条账做上，

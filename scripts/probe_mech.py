@@ -419,7 +419,15 @@ _left = sorted(_c.get("effects") or {})
 (ok if "aa_ctl" not in _left and "zz_buff" in _left else bad)(
     "  · 控制态被解掉、非控制条目留着（剩 %s）" % (_left,))
 _mlogs = apply_cast(_b, _c, "SKILL_PRS_absolve")
-(ok if any("没有能解" in x for x in _mlogs) else bad)("  · 没控可解 ⇒ 出「没有能解的东西」那一句（不静默）")
+_none = CA.T("COMBAT_MECH_ABSOLVE_NONE")
+(ok if _none in _mlogs else bad)(
+    "  · 没控可解 ⇒ 出「没有能解的东西」那一句（不静默）—— 逐字取自槽位 %r" % _none)
+#: ★ fix-h-small（真人试玩 b13 · 修女路）：净罪的**收件人就是施法者自己**
+#:   （`_cast_cleanse` 只动 caster 自己的 `effects`；单人对面只有怪）⇒ 那一句的主人公必须是
+#:   「你」。改前写的是「它身上…」，屏上被读成**对面**（玩家以为打空 / 解错了对象）。
+#:   判据：那一句里有「你」、没有「它」（槽位值改回去 ⇒ 这一条当场红）。
+(ok if ("你" in _none and "它" not in _none) else bad)(
+    "  · 那一句的主人公是「你」（单人 = 自己，不是对面）：%r" % _none)
 
 print()
 print("── ⑫ 安神曲（hot）：300 刻再生，每刻 = 这一发治疗量的 1/4（真推进时间轴）")
