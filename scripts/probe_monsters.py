@@ -391,6 +391,32 @@ chk("★ 递减排法：%s 严格递增 · 增量递减（%s）· 4 人档 = 设
     and all(_deltas[i] > _deltas[i + 1] for i in range(len(_deltas) - 1))
     and abs(_lad[-1] - 1.0) < 1e-9 and abs(_lad[0] - 0.5) < 1e-9, "%s" % _lad)
 
+# ⑮-b ★ P-36：Boss 单人 ÷2 的**现算对账** —— 上面那几条只核了「文档里真有那句话」+「表里 = 0.5」，
+#   没核「照表算出来的那个数」与文档给的那个数对不对得上（今天这条口径的**落链**差这一格）。
+#   真源 `12_ §一④`：「★ Boss（旧誓哨兵，Lv19 hp 7340）按 **4 人队 × 18 次行动**设计 ——
+#   单人打会很吃力（有意的，它是团队内容）；**单人挑战时按 ÷2 看（≈3670）**，一场约 30 次行动」。
+#   ⇒ 现算：域里 boss（`role=boss`，今天恰好一只）面板 hp × 表里「1 人档」 == 文档那个 ≈ 数。
+#   容差 5%：文档写的是「≈」约数，且那两个数（表 10275 / 正文 7340）是**档位第二版 b3-18 之前**
+#   的旧案值；同族「凑整 + 一版重算」的量级（实测差 0.98%）—— 取值理由见 `_notes.md` 裁决记录。
+_bkeys = [k for k, v in mo.items() if str(v.get("role") or "") == "boss"]
+_bhp = int((mo[_bkeys[0]].get("panel") or {}).get("hp") or 0) if len(_bkeys) == 1 else 0
+_doc_hp_tbl = _num(D12, r"\|\s*旧誓哨兵\s*\|\s*boss\s*\|\s*19\s*\|\s*(\d+)\s*\|", int)
+_doc_hp_txt = _num(D12, r"旧誓哨兵，Lv19\s*hp\s*(\d+)", int)
+_doc_solo = _num(D12, r"按\s*÷2\s*看（≈\s*(\d+)\s*）", int)
+_solo_dom = _bhp * float((_have.get(_bkeys[0]) or {}).get("1", {}).get("hp") or 0) if _bhp else 0
+_drift = abs(_solo_dom - _doc_solo) / float(_doc_solo) if _doc_solo else 1.0
+chk("★ P-36 单人档 hp **现算** = %d（域里 boss 面板 hp %d × 表里 1 人档 %s）≈ 真源 `12_ §一④` "
+    "那个「≈%s」—— 差 %.0f（%.2f%% ≤ 5%% 容差）"
+    % (_solo_dom, _bhp, (_have.get(_bkeys[0]) or {}).get("1", {}).get("hp"), _doc_solo,
+       abs(_solo_dom - _doc_solo), 100 * _drift),
+    len(_bkeys) == 1 and _bhp > 0 and bool(_doc_solo) and _drift <= 0.05,
+    "带档的 %s · 文档表 %s / 正文 %s / 域 %d" % (sorted(_have), _doc_hp_tbl, _doc_hp_txt, _bhp))
+print("     · ★ 登记待跟账（**不当判据**）：`12_ §一` 那张表写 boss hp %s · 正文读法④ 写 hp %s · "
+      "域里 %d —— 三处不一致（表 vs 正文那一处 ⑫ 已登过）；且「÷2 之后单人仍然全败」"
+      "（`probe_combat ②` 实跑）与 `17_ §五`「单人 能过」/`22_ §三④`「P1 单人也能过」对不上 —— "
+      "两条都只登记，见 `_notes.md` 待鱼鱼拍板。"
+      % (_doc_hp_tbl, _doc_hp_txt, _bhp))
+
 # ⑬ ★ B3-18：**常数三头对账** —— 反解用的 K_def/K_rate 必须来自公式表 `$const`
 #   （引擎真读的那一份），而 panel_build 那份副本也必须同值。任何一头漂了 ⇒ 三把尺。
 import io as _io2                                                         # noqa: E402
@@ -437,6 +463,64 @@ chk("★ 档位/原型表唯一来源 = content/rules/monster_tiers.json（%d �
     % (len(_tj["tiers"]), len(_tj["arch"])),
     RB.TIERS == _tj["tiers"] and RB.ARCH == _tj["arch"]
     and set(RB.TIERS) == set(RB.TIER_ORDER) and set(RB.ARCH) == set(ARCHS))
+
+# ⑰ ★ P-35：**精英怪该打几次** —— 真源两份打架的裁决 + 可复算判据（B3-14 查出 · 本批收口）
+#   打架的两份（逐字见 `_notes.md` 裁决记录）：
+#     ① `02_数值宪法/03_全流程数值主干_v1.md` §四 那张表（**权威**）：
+#        「普通怪 3–5 次 · 精英 5–8 次 · BOSS 12–18 次（一场战斗行动次数）」
+#     ② `06_第一阶段垂直切片/12_怪物面板与精英词条池_v1.md` §一 —— **两处都写 12 次**：
+#        · 抬头那行反推式「怪 hp = 玩家单次行动伤害 × 目标击杀行动数（普通 4 · **精英 12** ·
+#          头目 14 · 层主 18 · Boss 72）」
+#        · 读法②「精英 hp 是普通 3 倍（**12 次行动**）、spd 104 比玩家快」
+#   ★ 更正一处归因（本波任务书写的是「`12_` 与 `09_精英怪机制` 两份真源打架」）——
+#     逐字核 `09_精英怪机制_v1.md`：那份 §二 表只写「强度 = 基础怪 ×**1.5 hp** / ×0.75 atk」，
+#     与宪法那两列（×1.50 hp / ×0.75 atk）**逐字一致** ⇒ 09_ 不是打架的那一份（详见 `_notes.md`）。
+#   裁法（作业书 §2 乙档①：两份真源打架 ⇒ 认【数值宪法】为权威，另一份按「过时」点名）：
+#     ⇒ 认宪法：精英要打 **5–8** 次；`12_` 那两处「12 次」（= 普通 3 倍）按**过时**
+#       （宪法定格之前的旧案反推式；域里档位第二版 b3-18 反解出来的 n_me 与它全不对）。
+#       逐条登记进 `_notes.md`。
+#   判据口径：**基准（杂兵原型）阶梯**的 n_me = 「玩家要打它几下」——
+#     hp/atk 保了原型全幅（鱼鱼 2026-09-25 拍板，见 ⑭ 与 §三），所以只有基准阶梯该落在宪法带的里面；
+#     逐只怪（含原型偏移）不在这条判据上（群居血薄是设计，不是漂移）。
+#   ★ 数字全部**现取**：带 = 从宪法文档现解析；n_me = 从域里的档位表现算（`RB.design_ttk`）。
+_DOCC = os.path.join(PLAN, "02_数值宪法", "03_全流程数值主干_v1.md")
+_DC = _io.open(_DOCC, encoding="utf-8").read() if os.path.exists(_DOCC) else ""
+_BANDS = {}
+for _ln in _DC.splitlines():
+    _m17 = _re2.match(r"^(普通怪|精英|BOSS)\s+×([\d.]+)\s+×([\d.]+)\s+(\d+)[–-](\d+)\s*次",
+                      _ln.strip())
+    if _m17:
+        _BANDS[_m17.group(1)] = (float(_m17.group(2)), float(_m17.group(3)),
+                                 int(_m17.group(4)), int(_m17.group(5)))
+chk("★ P-35 宪法 §四 那三行**现解析**得到（%s）"
+    % " · ".join("%s %s–%s 次" % (k, v[2], v[3]) for k, v in sorted(_BANDS.items())),
+    sorted(_BANDS) == ["BOSS", "普通怪", "精英"], "解析到 %d 行" % len(_BANDS))
+
+_TIER_OF = {"普通怪": "普通", "精英": "精英", "BOSS": "boss"}      # 宪法的档名 ⇒ 域里的档位名
+_NME17 = {d: RB.design_ttk(t, "杂兵")[0] for d, t in _TIER_OF.items()}   # 基准＝杂兵原型（偏移 0）
+for _d17 in ("普通怪", "精英"):
+    chk("★ P-35 「%s」要打 **%.1f** 次 ⇒ 落在宪法那条带（%d–%d 次）里"
+        % (_d17, _NME17[_d17], _BANDS[_d17][2], _BANDS[_d17][3]),
+        _BANDS[_d17][2] <= _NME17[_d17] <= _BANDS[_d17][3])
+_D12_HAS = bool(_re2.search(r"精英\s*12", D12) and _re2.search(r"（12 次行动）", D12))
+chk("★ P-35 反面：「精英要打几下」域里是 **%.1f** 次、**不是** `12_` 那两处的 12 次"
+    "（差 %.1f 次）—— 那两处按「过时」裁掉（宪法为准；文档里那两处仍在，待主线跟账）"
+    % (_NME17["精英"], abs(_NME17["精英"] - 12.0)),
+    _D12_HAS and abs(_NME17["精英"] - 12.0) > 1.0)
+# 反面之二：`12_` 读法② 那条「精英 hp 是普通 **3 倍**（12 次行动）」与域现算比值的对账 ——
+#   宪法两条带（普通 3–5 · 精英 5–8）能推出的比值区间 = [5/5, 8/3]；3 倍掉在区间外。
+_r17 = _NME17["精英"] / _NME17["普通怪"]
+_rlo17 = _BANDS["精英"][2] / _BANDS["普通怪"][3]          # 5 ÷ 5
+_rhi17 = _BANDS["精英"][3] / _BANDS["普通怪"][2]          # 8 ÷ 3
+_D12_3X = bool(_re2.search(r"3 倍", D12) and _re2.search(r"（\s*12 次行动\s*）", D12))
+chk("★ P-35 「精英 ÷ 普通」的 hp 比域里现算 = **%.3f**（%.1f ÷ %.1f）⇒ 落在宪法两条带推出的"
+    "区间 [%.2f, %.2f] 里（`12_` 读法② 那个「3 倍」在区间外 ⇒ 按过时裁掉）"
+    % (_r17, _NME17["精英"], _NME17["普通怪"], _rlo17, _rhi17),
+    _D12_3X and _rlo17 <= _r17 <= _rhi17 and not (_rlo17 <= 3.0 <= _rhi17),
+    "12_ 那两处逐字在=%s · 现算比值 %.4f 区间 [%.4f, %.4f]" % (_D12_3X, _r17, _rlo17, _rhi17))
+print("     · ★ 登记待跟账（**不当判据**）：宪法 §四 BOSS 那行写 12–18 次，而域里 Boss 的 n_me = %.1f "
+      "—— 两者不是一个口径（`12_ §一④`：Boss 按 4 人队 × 18 次行动设计 · 单人 ÷2 约 30 次）"
+      "⇒ 只登记，不立判据（没裁决过的账不许钉成红）" % _NME17["BOSS"])
 
 print()
 print("  · 档位 × 原型的 δ（保序压幅）：%s"

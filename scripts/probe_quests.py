@@ -204,6 +204,61 @@ _hand8 = [x for x in ("lv" + _MUL8 + " lv", "lvl" + _MUL8 + " lvl",
     "★ P-37：经验曲线只有包内一个口 —— 探针用的就是 `cmds_ast.exp_need`（同一对象：%s）· "
     "本文件里手打的曲线式子 0 处（实得 %s）" % (exp_need is _CA8.exp_need, _hand8 or "无"))
 
+# ⑧-c ★ P-37 收口（B3-14 顺手核出那条账的**另一半**）：唯一口还要与**真源现算对账**，
+#   而且「曲线只此一处」要按**全包**核 —— ⑧-b 只核了本文件自己。
+#   真源 `06_第一阶段垂直切片/00_第一阶段内容总纲_v1.md §七`（2026-09-25 定格）：
+#     「升级需求 40 × L² ⇒ L1 40 · L10 4,000 · L20 16,000（1→20 级合计 98,800）」
+#   ⇒ ① 乘数与那三个锚点、那一个合计**从文档现解析**，与 `exp_need` 逐点现算比；
+#      ② 1–20 全等级 + 六锚点（1/20/40/60/80/100）逐点比（鱼鱼硬约束：数值都要按等级扩展体检）；
+#      ③ 全包（`content/` 与 `scripts/` 的 .py）里「等级平方」那种式子的**代码落点只有
+#         `content/cmds_ast.py` 一处**；别的文件里若出现，只许在注释里（列出来）。
+import re as _re7                                                        # noqa: E402
+_DOC7 = os.path.join(PLAN, "06_第一阶段垂直切片", "00_第一阶段内容总纲_v1.md")
+_D7 = io.open(_DOC7, encoding="utf-8").read() if os.path.exists(_DOC7) else ""
+_SEC7 = _D7.split("## 七、经济口径")[1].split("## 八")[0] if "## 七、经济口径" in _D7 else ""
+_K7 = _re7.search(r"升级需求\s+(\d+)\s*[×x]\s*L", _SEC7)
+_PTS7 = [(int(a), int(b.replace(chr(44), ""))) for a, b in _re7.findall(r"L(\d+)\s+([\d,]+)", _SEC7)]
+_TOT7 = _re7.search(r"1→20 级合计\s*([\d,]+)", _SEC7)
+_k7 = int(_K7.group(1)) if _K7 else 0
+_bad7 = [("L%d" % _L7, _v7, exp_need(_L7)) for _L7, _v7 in _PTS7 if exp_need(_L7) != _v7]
+_all7 = [_L7 for _L7 in range(1, 21) if exp_need(_L7) != _k7 * _L7 * _L7]
+_anch7 = [_L7 for _L7 in (1, 20, 40, 60, 80, 100) if exp_need(_L7) != _k7 * _L7 * _L7]
+(ok if (_k7 and _PTS7 and not _bad7 and not _all7 and not _anch7) else bad)(
+    "★ P-37：曲线与真源**现算对账** —— 乘数 %s 从 `00 §七` 现解析 · 文档那 %d 个锚点逐点相等"
+    "（%s）· 1–20 全等级 + 六锚点逐点相等（坏 %s / %s）"
+    % (_k7 or "没解析到", len(_PTS7), _bad7 or "全对", _all7 or "无", _anch7 or "无"))
+_sum7 = sum(exp_need(_L7) for _L7 in range(1, 20))          # 1→20 级 = 19 次升级
+_want7 = int(_TOT7.group(1).replace(chr(44), "")) if _TOT7 else -1
+(ok if _sum7 == _want7 else bad)(
+    "★ P-37：1→20 级合计**现算** %d == 真源那一个数 %d（= 19 次升级，从 1 级升到 20 级）"
+    % (_sum7, _want7))
+_SQ7 = _re7.compile(r"\b(lv|lvl|level)\s*" + _re7.escape(_MUL8) + r"\s*(lv|lvl|level)\b")
+#   ★ 分类口径：**按 AST 判「代码里真有这个式子」** —— 注释与文档串里的「提到」不算
+#     （行文本判会假阳：`probe_quests` 自己的注释与模块头注里就写着那两处旧账）。
+import ast as _ast7                                                      # noqa: E402
+_STAT7 = {"lv", "lvl", "level"}
+_code7, _mention7 = [], []
+for _r7 in ("content", "scripts"):
+    for _dp7, _dn7, _fn7 in os.walk(os.path.join(REPO, _r7)):
+        _dn7[:] = [_d7 for _d7 in _dn7 if _d7 != "__pycache__"]
+        for _f7 in sorted(_fn7):
+            if not _f7.endswith(".py"):
+                continue
+            _fp7 = os.path.join(_dp7, _f7)
+            _rel7 = os.path.relpath(_fp7, REPO).replace("\\", "/")
+            _src7 = io.open(_fp7, encoding="utf-8").read()
+            if _SQ7.search(_src7):                       # 文本层命中 = 只在注释/串里也记一笔
+                _mention7.append(_rel7)
+            for _n7 in _ast7.walk(_ast7.parse(_src7)):
+                if (isinstance(_n7, _ast7.BinOp) and isinstance(_n7.op, _ast7.Mult)
+                        and isinstance(_n7.left, _ast7.Name) and isinstance(_n7.right, _ast7.Name)
+                        and _n7.left.id in _STAT7 and _n7.right.id in _STAT7):
+                    _code7.append("%s:%d" % (_rel7, _n7.lineno))
+(ok if sorted(_code7) == ["content/cmds_ast.py:100"] else bad)(
+    "★ P-37：「等级平方」那种式子的**代码落点只有一处** = `content/cmds_ast.exp_need`"
+    "（按 AST 取 · 实得 %s）· 文本层提到过它的文件（注释/文档串，不算）：%s"
+    % (_code7 or "无", _mention7 or "无"))
+
 # ⑨ 交付文案不为空（三段式的第三段）
 #   ★ B3-6c / B3-8：取口就是 code 里那个映射（`cmds_quest._slot_of` / `_beat` · 不另写镜像表）——
 #     四条链都走 texts 槽位；域里那三个内嵌字段已裁掉（㉓ 钉着「0 处」）。
