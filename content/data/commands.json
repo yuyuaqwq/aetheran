@@ -1304,7 +1304,7 @@
       "^铁匠$"
     ],
     "category": "生产与铺子",
-    "desc": "修装备与强化",
+    "desc": "强化",
     "usage": "铁匠铺",
     "visible": true,
     "order": 60,

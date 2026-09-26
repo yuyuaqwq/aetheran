@@ -418,6 +418,63 @@ def main():
     else:
         bad("这两条没走 town_gate：%s" % miss)
 
+    # ⑯ ★ P-70（2026-09-26 · 本波 w-h-ux · **裁决：「修理」本轮不做**）
+    #   真源 `05_玩法数值口径_v1.md §七` 把钱算四个去处（药水 · 修理 · 强化 · 住店），
+    #   而「修理」这一口**没有任何域存它**（items 域没有耐久字段）⇒ 本路裁：**本轮不做**
+    #   —— 它**不是漏做**，是**另一批**（要做先有耐久设计：耐久怎么掉 · 修理费按什么 ·
+    #   修不好怎么办）。这一条判据干三件事，免得下一轮又把它当成「欠着的第四口」：
+    #     ① 已落的那三个口逐口当场取证（药水 / 强化 / 住店）
+    #     ② 「不做」要有**机器可见**的理由：items 域不许有耐久字段（谁加了就先红 —— 提醒回来设计）
+    #     ③ 声明里不许再拿「修装备」当卖点（`smith.desc` 已回正 —— 与 P-52「声明回正」同款）
+    _ITEMS16 = _load("content/data/items.json")
+    _DURW16 = ("durability", "dur", "耐久", "wear", "repair", "修理", "损耗")
+    _keys16 = sorted({k for v in _ITEMS16.values() if isinstance(v, dict) for k in v})
+    _dur16 = sorted({k for k in _keys16 if any(w in str(k).lower() for w in _DURW16)})
+    _inn16 = _load("content/rules/inn.json")
+    _fee16 = _inn16.get("fee")
+    _ok16 = {
+        "药水": bool((decl.get("item_buy") or {}).get("bind"))
+                and bool((decl.get("herbalist") or {}).get("bind")),
+        "强化": bool((decl.get("enhance") or {}).get("bind"))
+                and bool((decl.get("smith") or {}).get("bind")),
+        "住店": bool((decl.get("inn") or {}).get("bind"))
+                and isinstance(_fee16, int) and not isinstance(_fee16, bool) and _fee16 >= 1,
+    }
+    if all(_ok16.values()):
+        ok("★ P-70 四个消耗口逐口状态：药水 ✅（购买 + 药铺两条都有 bind）· 强化 ✅（强化 + 铁匠铺）· "
+           "住店 ✅（fee=%s 从 `content/rules/inn.json` 现读）· 修理 ❌ **本轮不做**" % _fee16)
+    else:
+        bad("★ P-70 已落的那三个口有掉链子的：%s" % _ok16)
+    if not _dur16:
+        ok("★ P-70 「修理本轮不做」的**机器可见理由**：items 域没有任何耐久字段"
+           "（%d 条记录 · %d 个键 · 黑名单「%s」零命中）—— 真做是**新形状**（另立一批），"
+           "不是本波漏做" % (len(_ITEMS16), len(_keys16), " / ".join(_DURW16)))
+    else:
+        bad("★ P-70 items 域里出现了耐久字段 %s —— 有人开始做修理了：先把真源 `05 §七` 那一行"
+            "改成「修理」的落地口径（耐久怎么掉 · 修理费按什么），再把本探针改成真敲 `修理` 的判据"
+            % _dur16)
+    _repair16 = sorted(k for k, v in decl.items()
+                       if any(w in (str((v or {}).get("desc") or "")
+                                    + str((v or {}).get("usage") or ""))
+                              for w in ("修装备", "修理")))
+    if not _repair16:
+        ok("★ P-70 声明里不再拿「修装备」当卖点（`smith.desc` 已回正为只写「强化」—— "
+           "与 P-52「声明回正」同款：声明 ≡ 实现）")
+    else:
+        bad("★ P-70 声明里还写着「修装备 / 修理」：%s —— 那是本波**裁过不做**的那一口，"
+            "回正成「强化」（真源 `04 §七` 那一格的跟账见本分支 `_notes.md §八`）" % _repair16)
+    # 真源那一侧（登记 · 两态互锁的另一半）：`05 §七`「钱到哪去」那一行跟没跟账
+    _D0516 = os.path.join(PLAN, "06_第一阶段垂直切片", "05_玩法数值口径_v1.md")
+    _L16 = []
+    if os.path.exists(_D0516):
+        with io.open(_D0516, encoding="utf-8") as _fh16:
+            _L16 = [_ln.strip() for _ln in _fh16 if "钱到哪去" in _ln]
+    _ln16 = _L16[0] if _L16 else ""
+    print("  · 登记（P-70）：真源 `05 §七`「钱到哪去」那一行 = %s" % (_ln16[:84] or "（没解析到）"))
+    print("      %s —— 本路裁「修理：本轮不做」的真源行见本分支 `_notes.md §八`；"
+          % ("**已跟账**" if "不做" in _ln16 else "**还没跟账**（今天仍把「修理」列在四个去处里）"))
+    print("      真源跟账后，「修理不做」就从「待跟账的裁决」转成正式口径（本探针那两条跟着转正）。")
+
     print()
     print("----")
     print("通过 %d / 失败 %d" % (len(OK), len(BAD)))
