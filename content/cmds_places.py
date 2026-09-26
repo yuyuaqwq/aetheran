@@ -209,6 +209,10 @@ async def herbalist(env, sink, uid, player):
         rec = g["rec"]
         yield T("SYS_SHOP_ROW", icon=rec.get("icon") or "", name=rec.get("name") or g["id"],
                 gold=g["gold"])
+    # ★ 本波（P1 体验-14）：摊名（苦叶摊）与货架不是一回事 —— 柜上只有药，材料是自己采的
+    #   （口径 = 真源 18_铺子买卖口径 §二①：货架 = `kind_key == tool`；卖材料那条走『卖出』）。
+    #   不说这一句，玩家站在「苦叶摊」的柜前问「苦叶呢」，得到的是「柜上没有」。
+    yield T("SYS_SHOP_HERB_NOTE")
     yield T("SYS_SHOP_TAIL", gold=int(p.get("gold") or 0))
 
 

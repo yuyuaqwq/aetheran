@@ -24,8 +24,10 @@ sys.path.insert(0, ENGINE)
 from saintess_engine.package import load_stack                       # noqa: E402
 
 ok = True
+#: ★ 本波（P1 BUG-7）加的两个：`hurt`（有伤 —— 生命没满）· `equipped`（那一格上有东西）。
+#:   两个字都在 `content/cmds_talk._pick_indexed` 里各有一支（下面 ③ 的静态守卫钉着）。
 NEED_KINDS = {"flag", "quest_done", "quest_active", "time", "event", "holding",
-              "weather", "codex", "flag_not"}
+              "weather", "codex", "flag_not", "hurt", "equipped"}
 MAX_CHARS = 400          # 一屏字数硬约束（消息模板 §优化 3）
 
 
@@ -61,21 +63,41 @@ bad1 = [k for k, v in dl.items()
 chk("每棵树都有节点 · 且有层序排头那一层（%s —— 取句顺序的唯一口 `cmds_talk.LAYERS`）" % _head_layer,
     not bad1, " · ".join(bad1))
 
-# ② ★ 与 npcs 双向对账
+# ② ★ 与 npcs 双向对账 —— ★ 本波起「落点」多一处：`pois.effect.talk` 指的那棵树
+#   （三处篝火的夜谈：那棵树没有 NPC，玩家是在**那一处东西**上听到它的）。
+#   ⇒ ① 「NPC 指向的树都存在」② 「POI 指向的树都存在」（悬空当场红 —— 原先那三条
+#      `talk_campfire_*` 全仓没有定义处，上手只吐一行「（…边的话还没写下来。）」）③ 没有孤立的树。
+po_d = st.domain("pois") or {}
 a = {v["dialogue"] for v in np_.values()}
+c = set()
+for _v in po_d.values():
+    _t = (_v.get("effect") or {})
+    if isinstance(_t, dict) and _t.get("talk"):
+        c.add(str(_t["talk"]))
 b = set(dl)
 chk("★ NPC 指向的对话树都存在", not (a - b), "缺：%s" % (a - b))
-chk("★ 没有孤立的对话树", not (b - a), "孤立：%s" % (b - a))
+chk("★ POI 的 `effect.talk` 指向的树都存在（悬空 = 上手吐「…边的话还没写下来。」）",
+    not (c - b), "缺：%s" % (c - b))
+chk("★ 没有孤立的对话树（NPC 或 POI 至少一处引得到）", not (b - a - c), "孤立：%s" % (b - a - c))
 
-# ③ need 条件合法
+# ③ need 条件合法 —— ★ 本波加强：从「至少要认得一个键」改成「**每个**键都得在词表里
+#   （欠一个就是落到 `else: ok = True` 的静默兜底：那一句会被**所有**档听到）」
+#   + 静态守卫：域里用到的每个键，在 `content/cmds_talk.py` 里都得有它自己的分支。
 bad3 = []
 for k, v in dl.items():
     for nk, nd in v["nodes"].items():
         for t in nd["texts"]:
             nd_ = t.get("need")
-            if nd_ and not (set(nd_) & NEED_KINDS):
-                bad3.append("%s/%s=%s" % (k, nk, list(nd_)))
-chk("need 条件都是合法类型", not bad3, " · ".join(bad3))
+            if nd_ and (set(nd_) - NEED_KINDS):
+                bad3.append("%s/%s=%s" % (k, nk, sorted(set(nd_) - NEED_KINDS)))
+chk("★ need 条件的**每个**键都在词表里（%s）" % " · ".join(sorted(NEED_KINDS)),
+    not bad3, " · ".join(bad3))
+_ct_src = (REPO / "content" / "cmds_talk.py").read_text(encoding="utf-8")
+_used_kinds = {kk for v in dl.values() for nd in v["nodes"].values()
+               for t in nd["texts"] for kk in (t.get("need") or {})}
+_nobranch = sorted(kk for kk in _used_kinds if ('k == "%s"' % kk) not in _ct_src)
+chk("★ 域里用到的 need 键在 `_pick_indexed` 里各有一支（没分支 = 写了等于没写：静默满足）",
+    not _nobranch, "没分支：%s" % _nobranch)
 
 # ④ 每节点至少一条 + 台词非空
 bad4 = [("%s/%s" % (k, nk)) for k, v in dl.items() for nk, nd in v["nodes"].items()

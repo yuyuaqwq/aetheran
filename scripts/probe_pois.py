@@ -458,10 +458,15 @@ for _pid in _cond_pids:
         continue
     # 点名行必须是**那个槽位**渲染出来的（不手抄整句：拿槽位模板的前半截当判据）
     _slot12 = "SYS_POI_NOT_YET" if _st12 == "no" else "SYS_POI_COND_TODO"
-    _head12 = str((tx.get(_slot12) or {}).get("value") or "").replace("{name}", str(_rec12["name"]))
+    # ★ 本波（P1 体验-10）：点名行现在**带主语** —— 与「看得见」那一栏同一形（『名字』图标）。
+    #   期望值按**域里的名字与图标**现算（不抄代码里那一行怎么写）。
+    _head12 = str((tx.get(_slot12) or {}).get("value") or "").replace(
+        "{name}", "『%s』%s" % (_rec12["name"], _rec12.get("icon") or ""))
     _head12 = _head12.split("{")[0]
     if not _ln12 or not _ln12.startswith(_head12):
         _bad12.append((_pid, "点名行不是 %s 渲染的" % _slot12, _ln12[:40]))
+    elif str(_rec12.get("icon") or "") and str(_rec12["icon"]) not in _ln12:
+        _bad12.append((_pid, "点名行没带上那件东西的图标（主语不明）", _ln12[:40]))
 chk("★ 域里带门槛的 %d 条：每一条都判出了状态（%s），且**不满足 / 判不了都要点名**（一条都不许静默）"
     % (len(_cond_pids), " · ".join("%s=%d" % kv for kv in sorted(_tally12.items()))),
     not _bad12, "%s" % _bad12[:2])
@@ -476,7 +481,7 @@ else:
     _loc12, _node12 = po[_q_pid]["map"], po[_q_pid]["subarea"]
     _p_no = _player12(loc=_loc12, node=_node12)
     _p_yes = _player12(loc=_loc12, node=_node12, flags={"quests_done": [_qid]})
-    _no_txt = CA10.T("SYS_POI_NOT_YET", name=po[_q_pid]["name"],
+    _no_txt = CA10.T("SYS_POI_NOT_YET", name=CA10._poi_label(po[_q_pid]),
                      why=CA10.T("SYS_POI_WHY_QUEST", token=_qname))
     _no_look = _run12(CA10.look, _p_no)
     _no_read = _run12(CA10.read_thing, _p_no, "读 %s" % po[_q_pid]["name"])
@@ -503,7 +508,7 @@ else:
     _p_no2 = _player12(loc=po[_r_pid]["map"], node=po[_r_pid]["subarea"])
     _p_yes2 = _player12(loc=po[_r_pid]["map"], node=po[_r_pid]["subarea"],
                         books={"relic": {_need: {"known": False}}})
-    _no2 = CA10.T("SYS_POI_NOT_YET", name=po[_r_pid]["name"],
+    _no2 = CA10.T("SYS_POI_NOT_YET", name=CA10._poi_label(po[_r_pid]),
                   why=CA10.T("SYS_POI_WHY_READ", token=_need_name))
     _l_no2 = _run12(CA10.look, _p_no2)
     _l_yes2 = _run12(CA10.look, _p_yes2)
@@ -559,18 +564,36 @@ _unk = [_pid for _pid in _cond_pids if CA10._poi_cond(po[_pid], _player12(), Non
 chk("★ P-31 换锚④：域里带门槛的 %d 条 POI **一条都不许判不了**（`unknown` = %s —— 真源写着的词都得有刻度）"
     % (len(_cond_pids), _unk or "0 条"),
     not _unk, "%s" % [po[k]["name"] for k in _unk])
-_syn_unk = dict(po[_cond_pids[0]] or {})
-_syn_unk["condition"] = {"time": ["涨潮"]}                 # 词表外的 token（真源没有这一档）
-_st_u, _ln_u = CA10._poi_cond(_syn_unk, _player12(), None)
-_p_u = _player12(loc=_syn_unk["map"], node=_syn_unk["subarea"])
-_o_u = _run12(CA10.read_thing, _p_u, "读 %s" % _syn_unk["name"]) if _syn_unk.get("read_text") else []
-chk("★ P-31 「判不了就点名 + 照旧可用」那条**路**仍在（合成一条脏 token「涨潮」）：状态 = %s · 点名行 = 「%s」· "
-    "正文照样拿得到（不许静默删内容）"
-    % (_st_u, str(_ln_u)[:42]),
-    _st_u == "unknown" and _ln_u.startswith(CA10.T("SYS_POI_COND_TODO", name=_syn_unk["name"]).split("{")[0])
-    and (not _syn_unk.get("read_text")
-         or str((tx.get(_syn_unk["read_text"]) or {}).get("value") or "") in _o_u),
+# ★ 本波加强：这一支原先拿「域里第一条带门槛的」当底座，而那条**没有正文** ⇒ 「正文照样拿得到」
+#   半句被 `not read_text` 短路掉了（等于没测）。现在换成**有正文的那条**（带时辰门槛的那件），
+#   并把域里那条记录**临时**换成脏 token 真跑 `读`：正文必须照样拿得到；换回去 ⇒ 回到被门槛挡住。
+#   （注入面 = 代码真正在用的那一份 `_CACHE`，跑完原样还原 —— 不动盘上的数据。）
+_LIVE = CA10._data("pois")
+_REC_U = _LIVE[str(_t_pid)]
+_SAVED_U = _json12.loads(_json12.dumps(_REC_U, ensure_ascii=False))
+_st_u, _ln_u, _o_u, _o_u2 = "", "", [], []
+try:
+    _REC_U["condition"] = {"time": ["涨潮"]}               # 词表外的 token（真源没有这一档）
+    _st_u, _ln_u = CA10._poi_cond(_REC_U, _player12(), None)
+    _p_u = _player12(loc=_REC_U["map"], node=_REC_U["subarea"])
+    _o_u = _run12(CA10.read_thing, _p_u, "读 %s" % _REC_U["name"])
+finally:
+    _REC_U.clear()
+    _REC_U.update(_SAVED_U)
+_body_u = str((tx.get(_REC_U.get("read_text")) or {}).get("value") or "")
+_p_u2 = _player12(loc=_REC_U["map"], node=_REC_U["subarea"])
+_o_u2 = _run12(CA10.read_thing, _p_u2, "读 %s" % _REC_U["name"])
+chk("★ P-31 「判不了就点名 + 照旧可用」那条**路**仍在（把域里 `%s` 临时换成脏 token「涨潮」）："
+    "状态 = %s · 点名行 = 「%s」· 正文照样拿得到（不许静默删内容）"
+    % (str(_REC_U.get("name")), _st_u, str(_ln_u)[:42]),
+    _st_u == "unknown"
+    and _ln_u.startswith(CA10.T("SYS_POI_COND_TODO", name=CA10._poi_label(_REC_U)).split("{")[0])
+    and bool(_body_u) and _body_u in _o_u,
     "%s" % (_o_u[:2] if _o_u else "（不可读物 · 只看点名行）"))
+chk("★ 同一件的**另一态**（脏 token 还原回真源那个词）：门槛判得出来 ⇒ 昼被挡、正文一个字不给 "
+    "（`%s`）" % _t_tok,
+    _body_u not in _o_u2 and CA10.T("SYS_POI_WHY_TIME", token=_t_tok) in "\n".join(_o_u2),
+    "%s" % _o_u2[:2])
 
 print()
 print("⑬ 隐藏点的产出引用 —— `effect.loot` 不许悬空（B3-28 ②）")

@@ -24,7 +24,8 @@
 """
 from __future__ import annotations
 
-from .cmds_ast import _data, _p, _save, _map_of, _name_of_node, T, _texts, _npcs_here
+from .cmds_ast import (_data, _p, _save, _map_of, _name_of_node, T, _texts, _npcs_here,
+                       hp_cap_or_line)
 from . import argv as AV
 from .cmds_ast import egg_lines, title_lines
 from . import calendar as CAL
@@ -74,6 +75,19 @@ def _pick_indexed(lines, p, st=None):
                 ok = bool(flags.get("last_" + str(v)))
             elif k == "quest_done":
                 ok = bool(flags.get(v))
+            elif k == "hurt":
+                # ★ 本波（P1 BUG-7）：**有伤才说那一句** —— 上限只有一个来源（职业面板）。
+                #   档上还没择业（建号第二步没走完）⇒ 判不了 = 不算满足（fail-closed：
+                #   宁可落到兜底那一句，也不在一个还不知道自己有多少血的档上假定「有伤」）。
+                _cap, _line = hp_cap_or_line(p)
+                if _cap is None or int(p.get("hp") or _cap) >= int(_cap):
+                    ok = False
+            elif k == "equipped":
+                # ★ 本波（P1 BUG-7）：**那一格上真有东西**才说那一句（`equipped` 的形状 =
+                #   `{槽: 件 id}`，槽名是 ASCII 机器键 —— `weapon` / `armor_top` …）。
+                #   写这一条是因为柯尔那句「（他看了一眼你的剑）」在空手玩家身上也照说。
+                if not (p.get("equipped") or {}).get(str(v)):
+                    ok = False
             elif k == "codex":
                 # `codex: "<谱>:<条目>"` —— 谱里有了才出这句（B2-7：图鉴与对话接上）
                 bk, _, rid = str(v).partition(":")
@@ -179,7 +193,13 @@ async def talk(env, sink, uid, player):
     want = _arg(env)
     if not want:
         yield T("SYS_TALK_HERE", list=" · ".join("『%s』" % v.get("name") for _, v in here))
-        yield T("SYS_TALK_HOW", name=here[0][1].get("name"))
+        # ★ 本波（P1 体验-6）：这一站不止一个人时，原先只举**第一个**名字当例子 ——
+        #   玩家以为只有他。两个人以上就把名字**都**写进教法那一句。
+        if len(here) > 1:
+            yield T("SYS_TALK_HOW_MANY",
+                    list=" · ".join("『%s』" % v.get("name") for _, v in here))
+        else:
+            yield T("SYS_TALK_HOW", name=here[0][1].get("name"))
         return
     hit = None
     for k, v in here:
