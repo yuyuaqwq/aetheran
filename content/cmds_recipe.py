@@ -119,11 +119,16 @@ def _src_of(iid: str) -> str:
     ★ 中文动作词（采/挖/钓/搜）走 `SYS_GATHER_VERB_*` 槽位（本文件不写中文）。
     """
     parts = []
-    for sp in MS.gather_spots(iid, _data("gathering"), _data("maps")):
+    spots = MS.gather_spots(iid, _data("gathering"), _data("maps"))
+    for sp in spots[:MS.MAX_SPOT]:
         parts.append(T("SYS_SRC_GATHER",
                        verb=T("SYS_GATHER_VERB_%s" % str(sp.get("verb") or "").upper()),
                        node=_name_of_node(sp["map"], sp["node"]), point=sp["name"],
                        times=sp["times"]))
+    # ★ 采集点最多点 `MAX_SPOT` 处，余下折进「等 N 处」—— 「残骸」这类杂物有 15 个出产点，
+    #   全摆出来那一行 350+ 字（试玩复测：不是缺信息，是读不完）。
+    if len(spots) > MS.MAX_SPOT:
+        parts.append(str(T("SYS_SRC_GATHER_MORE", n=len(spots) - MS.MAX_SPOT)).strip())
     foes, _pools = MS.kill_foes(iid, _data("drop_pools"), _data("monsters"))
     if foes:
         parts.append(T("SYS_SRC_KILL",

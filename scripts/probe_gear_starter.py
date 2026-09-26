@@ -287,13 +287,15 @@ def main():
                 continue
             _spots.append((_road(_v.get("map"), _v.get("subarea")), _gid, _v))
         parts = []
-        for _o, _gid, _v in sorted(_spots):
+        for _o, _gid, _v in sorted(_spots)[:3]:            # ★ 采集点也最多 3 处（实现体的 MAX_SPOT）
             _nd = next((n.get("name") for n in (maps.get(_v.get("map")) or {}).get("nodes") or []
                         if n.get("id") == _v.get("subarea")), None)
             parts.append(T("SYS_SRC_GATHER",
                            verb=T("SYS_GATHER_VERB_%s" % str(_v.get("verb") or "").upper()),
                            node=_nd or _v.get("subarea"), point=_v.get("name"),
                            times=int(_v.get("times_per_day") or 1)))
+        if len(_spots) > 3:                                 # 余下折进「等 N 处」
+            parts.append(str(T("SYS_SRC_GATHER_MORE", n=len(_spots) - 3)).strip())
         _pl = [p for p, v in sorted(_dp.items()) if not p.startswith("_")
                and any(str(_e.get("out")) == iid
                        for _e in list(v.get("entries") or []) + list(v.get("pool") or []))]
@@ -495,7 +497,15 @@ def main():
             b4 = snap()
             lines = drive(ad, host, "打造 " + fname)
             _need = " · ".join("%s ×%d" % (items[e["id"]]["name"], int(e["n"])) for e in f["inputs"])
+            # ★ Q-22 补（试玩 P3 复测 F-3）：缺料那一支现在**跟着出处**（表头 + 逐样一行 · 只列真缺的），
+            #   判据跟着加严 —— 回话必须**恰好**是「差什么那一句 + 缺那几样的出处行」。
+            _lack_e = [e for e in f["inputs"] if int(dict(_bag).get(e["id"], 0)) < int(e["n"])]
             exp = [T("SYS_SMITH_CRAFT_MISSING", name=fname, need=_need, gold=f["gold"], lack=_lack)]
+            if _lack_e:
+                exp.append(T("SYS_SMITH_SRC_HEAD"))
+                for e in _lack_e:
+                    exp.append(T("SYS_SMITH_SRC_ROW", name=items[e["id"]]["name"],
+                                 where=_src_own(e["id"]) or T("SYS_SRC_UNKNOWN")))
             if lines == exp and snap() == b4:
                 ok("⑧ %s ⇒ 一句说清差什么、**档一个字不动**（%s）" % (_case, lines[0][:46]))
             else:
