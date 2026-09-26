@@ -464,15 +464,34 @@ chk("★ 每间的出口与 §二 逐条对得上（一步邻居 / 二选一两�
     not exit_bad, "%s" % exit_bad[:3])
 
 # ⑧ 下一层：没站到本层最后一间 · 已经在塔顶
-ad.saved = dict(ad.saved, loc=TOWER, node=NODES[1])
+ad.saved = dict(ad.saved, loc=TOWER, node=NODES[1], books={})
 far = send("下一层")
 chk("★ 没站到本层尽头：『下一层』说清最后一间是「%s」" % rooms[4]["name"],
     far == [txt("SYS_TOWER_NEXT_FAR", room=rooms[4]["name"])], "%s" % far[:1])
-ad.saved = dict(ad.saved, loc=TOWER, node=NODES[3])
+# ★ fix5-nav（P2 体验）：最后一间**挡着东西**时真拦 —— 真源 22 §二·4 写的是「可做 战斗后上楼」
+#   （那一屏正文也写着「楼梯口堵着一个人……从他身边过不去」）。原先『下一层』一律放行 = 话白说。
+_ms = st.domain("monsters") or {}
+_block_node = NODES[3]
+_foes = sorted(mid for mid, m in _ms.items()
+               if TOWER in [str(x) for x in ((m.get("habitat") or {}).get("maps") or [])]
+               and _block_node in [str(x) for x in ((m.get("habitat") or {}).get("nodes") or [])])
+chk("★ fix5-nav：本层尽头那一间（%s）确实有挡路的怪（%d 只 · 怪物谱那本账按它判）"
+    % (rooms[4]["name"], len(_foes)), bool(_foes), "%s" % _foes)
+ad.saved = dict(ad.saved, loc=TOWER, node=_block_node, books={}, prev=[])
+_blocked = send("下一层")
+_want_blk = txt("SYS_TOWER_BLOCKED", name=" · ".join(
+    str((_ms.get(_m) or {}).get("name") or _m) for _m in _foes))
+chk("★ fix5-nav：挡路的**没打过** ⇒ 『下一层』拦下并点名（不是照样上去）",
+    _blocked == [_want_blk] and ad.saved.get("node") == _block_node,
+    "%s" % _blocked[:1])
+# 反证：把那一间的怪记进怪物谱（= 在那一间真动过手）⇒ 同一句不再出、那一层真上得去
+ad.saved = dict(ad.saved, loc=TOWER, node=_block_node,
+                books={"monster": {_foes[0]: {"day": 1, "kills": 1}}}, prev=[])
 up = send("下一层")
-chk("★ 站到本层尽头：『下一层』上到 %s 的「%s」（并给新一屏）"
+chk("★ fix5-nav 反证：打过了（怪物谱上有它）⇒ 拦那一句一个字不出、真上到 %s 的「%s」（并给新一屏）"
     % (FLOORS[1], rooms[5]["name"]),
-    up[0] == txt("SYS_TOWER_UP", floor=FLOORS[1], room=rooms[5]["name"])
+    _want_blk not in up
+    and up[0] == txt("SYS_TOWER_UP", floor=FLOORS[1], room=rooms[5]["name"])
     and (TX.get("SCENE_%s" % NODES[4].upper()) or {}).get("value") in up
     and ad.saved.get("node") == NODES[4], "%s" % up[:2])
 ad.saved = dict(ad.saved, loc=TOWER, node=NODES[11])

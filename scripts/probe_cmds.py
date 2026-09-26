@@ -160,7 +160,9 @@ def samples(pattern):
 DOC = (
     ("§一 移动与世界", (
         ("进镇", "enter_town"), ("风车镇", "enter_town"), ("回镇", "enter_town"),
-        ("北口", "go_north"), ("往北", "go_north"), ("出北门", "go_north"),
+        # ★ fix5-nav：`北口` 归**站点名**那一族（= 『去 北口』）—— 拍定口径「站名归站点」，
+        #   出镇口令 = `往北` / `出北门`（真源 04 §一 那一行的后两个词照旧）。见 probe_nav ①。
+        ("北口", "go_to"), ("往北", "go_north"), ("出北门", "go_north"),
         ("往东", "go_east"), ("东边", "go_east"),
         ("往西", "go_west"), ("西边", "go_west"),
         ("返回", "go_back"), ("回", "go_back"), ("退回去", "go_back"),
@@ -2473,6 +2475,18 @@ try:
                "exp": 0, "gold": 100, "hp": 116, "loc": "windmill_town", "node": "wt_inn",
                "prev": [], "bag": {}, "equipped": {}, "codex": {}, "flags": {}}
     _DIRTY18 = ("没有命中包内任何指令声明", "/help", "content/", "commands.py", "『』")
+    # ★ fix5-nav：屏幕上的**站名**也是一族裸触发词（敲了 = 『去 <名>』，名字从 maps 现读）——
+    #   它们**本来就该动档**，动的是「人在哪」那几格。于是这一条判据**加严**成两档：
+    #     · 站名        ⇒ 只许动移动那四格（loc / node / prev / foot），别的格一个字不许动；
+    #     · 其余裸触发词 ⇒ 照旧**一个字不动**（裸「放弃」拿 act[0] 顶上那类会当场红）。
+    _PLACE18 = {str(_n.get("name")) for _m in (st.domain("maps") or {}).values()
+                for _n in (_m.get("nodes") or [])}
+    _MOVE18 = ("loc", "node", "prev", "foot")
+    # ★ fix5-nav：`_p()` 出档时会**派生**几格（生命/法力上限与现值 —— 唯一来源是职业面板）。
+    #   那不是「这条指令动了档」，是出档口按面板算出来的 ⇒ 逐键对账时把这几格排除
+    #   （排除的是**派生键**这个集合本身，不是某一个写死的名字）。
+    from content.cmds_ast import _p as _p18
+    _DERIVED18 = set(_p18(dict(_SEED18))) - set(_SEED18)
     _bad18, _n18 = [], 0
     for _w in _batch18:
         _o18, _s18 = _say15(_SEED18, _w)
@@ -2480,12 +2494,14 @@ try:
         _txt = "\n".join(_o18)
         _dirty = [d for d in _DIRTY18 if d in _txt]
         _moved = [k for k in set(list(_SEED18) + list(_s18 or {}))
-                  if (_s18 or {}).get(k) != _SEED18.get(k)]
-        if not _o18 or _dirty or _moved:
-            _bad18.append((_w, _dirty, _o18[:2], _moved))
+                  if k not in _DERIVED18 and (_s18 or {}).get(k) != _SEED18.get(k)]
+        _illegal = [k for k in _moved if not (_w in _PLACE18 and k in _MOVE18)]
+        if not _o18 or _dirty or _illegal:
+            _bad18.append((_w, _dirty, _o18[:2], _illegal))
     chk("★ 真敲这一批的 %d 个裸触发词：回话都是人话（没漏宿主那句兜底 / `/help` / 内部路径 / "
-        "空引号「『』」），且**档一个字不动** —— 裸「放弃」原先会拿 `act[0]` 顶上 ⇒ 当场丢一条委托"
-        % _n18, not _bad18, "%s" % (_bad18[:4],))
+        "空引号「『』」）—— 站名只许动移动那四格（%s），其余裸触发词**档一个字不动**"
+        "（裸「放弃」原先会拿 `act[0]` 顶上 ⇒ 当场丢一条委托）"
+        % (_n18, " / ".join(_MOVE18)), not _bad18, "%s" % (_bad18[:4],))
 except Exception as exc:                                                  # noqa: BLE001
     chk("★ B4-13 裸触发词那一族跑得起来（真宿主契约）", False,
         "%s: %s" % (type(exc).__name__, exc))

@@ -590,6 +590,24 @@ def _name_of_node(loc, node):
     return (n or {}).get("name") or node
 
 
+def _place_at(name):
+    """这个名字（或节点 id）在**哪张图**上 → `(loc, 显示名)`；五张图都没有 → `(None, "")`。
+
+    ★ fix5-nav：**裸站名**那一支要用它 —— 屏幕把地点名用『』写出来（`观察` 的「往哪走」、
+      `进镇` 的「能去的地方」），敲下去就该等于 `去 <名>`（P1 BUG-12 / P2 BUG① / P3 体验，
+      三个玩家里有三个独立撞上）。名字的真源只有 `maps` 域：逐个图现扫，
+      **不手抄一份名字表**（`scripts/rebuild_place_alias.py` 补的别名 pattern 也从同一份现读）。
+    """
+    want = str(name or "").strip()
+    if not want:
+        return (None, "")
+    for loc, m in (_data("maps") or {}).items():
+        for n in (m.get("nodes") or []):
+            if want in (n.get("id"), n.get("name")):
+                return (str(loc), str(n.get("name") or want))
+    return (None, "")
+
+
 
 def _move(p, loc, node, sink_lines):
     p["prev"] = (p.get("prev") or [])[-8:] + [(p.get("loc"), p.get("node"))]
@@ -676,6 +694,12 @@ async def look(env, sink, uid, player):
     yield "━" * 12
     nb = [_name_of_node(loc, x) for x in _neighbors(loc, node)]
     yield T("SYS_LOOK_WAY", list=" · ".join("『%s』" % x for x in nb)) if nb else T("SYS_LOOK_DEAD_END")
+    # ★ fix5-nav（P2 体验）：塔门口那一站多一句「门就在跟前 —— 敲『进塔』推门进去。」
+    #   （门在哪一格从 `maps.old_watchtower.entrance` 现读 —— 见 `door_hint_lines`；
+    #    本地 import：`cmds_tower` 要 import 本模块，模块级 import 会成环。）
+    from .cmds_tower import door_hint_lines
+    for _door in door_hint_lines(p):
+        yield _door
     # ★ P-31：列 poi 走唯一一口（`_pois_here` 现看门槛）—— 门槛判得出不成立的这一刻不算在场，
     #   但**不静默**：逐条点名说清差什么；判不了的（如「退潮」）照旧在场 + 点名。
     poi_here = _pois_here(loc, node, p)
@@ -854,6 +878,11 @@ async def enter_town(env, sink, uid, player):
     _save(env)
     yield _map_scene(TOWN)                                      # ★ B3-6a：进镇那一屏从 texts 来（原内联）
     yield T("SYS_TOWN_ENTER_HINT")
+    # ★ fix5-nav（P1 BUG-11 / P3 体验）：`北口` 归站点（站名那一族）之后，「出镇走哪个词」要当面说清 ——
+    #   上面那一句 `SYS_TOWN_ENTER_HINT`（真源 `17_文案收口口径_v1.md` 锁着、一字不动）
+    #   把『北口』列在「出门」里；这一句把口径补齐：北口 是镇口那一站，出镇是 往北 / 往东 / 往西。
+    #   （真源那一行该改成「『往北』出门」—— 两处一起改的那笔账写在 `_notes.md`。）
+    yield T("SYS_TOWN_ENTER_GATE")
     for line in event_lines(p, TOWN, "wt_gate_n", entered=True):  # ★ B3-5：进镇那一下
         yield line
 
@@ -884,6 +913,13 @@ async def go_to(env, sink, uid, player):
     """
     p = _p(player)
     want = AV.arg_of(env)        # ★ B4-11：跟着自己的声明剥参（连写也算）
+    raw = (getattr(env, "text", "") or "").strip()
+    # ★ fix5-nav：**屏幕上的站名能直接敲** —— 整句就是一个地点名时，当它等于「去 <名>」。
+    #   别名 pattern（`^老风车$` 那一族）由 `scripts/rebuild_place_alias.py` 从 `maps` 现读补上；
+    #   这里**只认「整句真是一个地点名」**（本包五张图的节点名 / id）⇒ 裸指令名
+    #   （`去` / `走到` / `前往`）照旧走「去哪儿？」那一支（判据 probe_nav ③）。
+    if not want and raw and _place_at(raw)[0]:
+        want = raw
     loc, node = p["loc"], p["node"]
     nb = _neighbors(loc, node)
     if not want:
@@ -905,6 +941,13 @@ async def go_to(env, sink, uid, player):
                 yield T("SYS_MOVE_FAR", name=n.get("name"))
                 yield T("SYS_MOVE_CAN", list=" · ".join("『%s』" % _name_of_node(loc, x) for x in nb))
                 return
+        # ★ fix5-nav：名字真存在、只是**不在这张图上** —— 说「从这儿过不去」（别印 id、
+        #   也别谎称「没这个地方」）。判据 probe_nav ④。
+        _there, _disp = _place_at(want)
+        if _there:
+            yield T("SYS_MOVE_FAR", name=_disp)
+            yield T("SYS_MOVE_CAN", list=" · ".join("『%s』" % _name_of_node(loc, x) for x in nb))
+            return
         yield T("SYS_MOVE_NOSUCH", name=want)
         yield T("SYS_MOVE_CAN", list=" · ".join("『%s』" % _name_of_node(loc, x) for x in nb))
         return
@@ -916,6 +959,10 @@ async def go_to(env, sink, uid, player):
         player.update(p)
     _save(env)
     yield T("SYS_MOVE_TO", name=_name_of_node(loc, hit))
+    # ★ fix5-nav：走到塔门口那一格 —— 顺口说一句门能进（与 `观察` 同一支 · `door_hint_lines`）
+    from .cmds_tower import door_hint_lines
+    for _door in door_hint_lines(p):
+        yield _door
     # ★ P-31：与「观察」同一个口（`_pois_here` 现看门槛）—— 原先这一条自己扫域、不判条件
     poi_here = _pois_here(loc, hit, p)
     seen_poi = poi_names_seen(poi_here)
@@ -1186,10 +1233,21 @@ def _poi_cond(rec, p, st=None):
         if key in ("time", "weather"):
             toks = list(want) if isinstance(want, (list, tuple)) else [want]
             known = [str(t) for t in toks if CAL.resolve(t)[0]]
-            if not known:                       # 认不出的 token（「退潮」今天就是这一档）
+            if not known:                       # 词表外的 token（真源没有这一档 —— 「涨潮」那类）
                 unknown.append(" · ".join(str(t) for t in toks))
             elif not CAL.allows(known, st):
-                blocked.append(T(_POI_WHY_SLOT[key], token=" · ".join(known)))
+                # ★ fix5-nav（P2 体验）：域里那个词常常是**散文**（「退潮」）—— 别名表把它接到真时辰上
+                #   （`rules/calendar.json` 的 `token_alias`）。这里把**刻度**一并点明：
+                #   token 不是它自己的正式名（= 它是别名）就补一句「就是「夜」」——
+                #   原先只写「得等到退潮」，玩家在浅滩拿六个动词挨个试（报告原话）。
+                #   ★ 判据：probe_pois ③-c（别名那一档走新槽位 · 真名字那一档照旧走旧的）。
+                _real = []
+                for _t in known:
+                    _k2, _e2 = CAL.resolve(_t)
+                    if _k2 and _t != CAL.name(_e2):
+                        _real.append(CAL.name(_e2))
+                _slot = "SYS_POI_WHY_TIME_ALIAS" if (key == "time" and _real) else _POI_WHY_SLOT[key]
+                blocked.append(T(_slot, token=" · ".join(known), real=" · ".join(_real)))
         elif key == "event":
             nm = str(want)
             if not CAL.event(nm):

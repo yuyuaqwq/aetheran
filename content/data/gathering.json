@@ -444,6 +444,43 @@
     "desc": "白天钓不到 —— 娜娜说这下面的东西怕光。",
     "times_per_day": 3
   },
+  "gt_bw_fish_3": {
+    "name": "断桩下的水",
+    "map": "belt_west",
+    "subarea": "bw_ferry",
+    "kind": "垂钓",
+    "verb": "fish",
+    "pool": [
+      {
+        "out": "i_fish_common",
+        "w": 60,
+        "n": [
+          1,
+          1
+        ]
+      },
+      {
+        "out": "i_fish_rare",
+        "w": 30,
+        "n": [
+          1,
+          1
+        ],
+        "when": "夜"
+      },
+      {
+        "out": "i_junk_boot",
+        "w": 10,
+        "n": [
+          1,
+          1
+        ]
+      }
+    ],
+    "time": null,
+    "desc": "两根断桩底下那一片水是活的 —— 平台挡了风，水在这儿打了弯，鱼爱停在这儿。",
+    "times_per_day": 3
+  },
   "gt_bw_search_1": {
     "name": "退潮后的滩",
     "map": "belt_west",

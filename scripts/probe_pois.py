@@ -544,12 +544,21 @@ for _hod in (12.0, 22.0):
     _cases12.append((_hod, CAL11.state()["hour"], CA10._poi_cond(po[_t_pid], _player12(), None)))
 CAL11.facade.bind_host(clock=lambda: FIX11)
 #: 点名那一句里的 token **用域里那个词**（`_poi_cond` 就是这么渲染的：写「退潮」不写「夜」）
+#: ★ fix5-nav：域里那个词是**散文**（「退潮」）时，门槛那一句要把**刻度**一并点明
+#:   （P2 体验：「退潮后的石缝」只报条件不给刻度 ⇒ 玩家在浅滩把六个动词挨个试）——
+#:   走的槽位因此是 `SYS_POI_WHY_TIME_ALIAS`（token 照旧 + 补一句「就是「夜」」）。
+_alias_line = CA10.T("SYS_POI_WHY_TIME_ALIAS", token=_t_tok, real=CAL11.name(_eid_t))
 chk("★ P-31 「%s → %s」是**真门槛**（域里那条 POI · 假钟两档）：昼 = %s ⟶ %s ｜ 夜 = %s ⟶ %s"
     % (_t_tok, CAL11.name(_eid_t), _cases12[0][1], _cases12[0][2][0],
        _cases12[1][1], _cases12[1][2][0]),
     _cases12[0][2][0] == "no" and _cases12[1][2][0] == "ok"
-    and CA10.T("SYS_POI_WHY_TIME", token=_t_tok) in _cases12[0][2][1],
+    and CA10.T("SYS_POI_WHY_TIME", token=_t_tok) in _cases12[0][2][1]
+    and _alias_line in _cases12[0][2][1],
     "%s" % _cases12)
+chk("★ fix5-nav（P2 体验）：门槛那一句把**刻度**点明了 —— 散文词「%s」的那一档走 "
+    "`SYS_POI_WHY_TIME_ALIAS`、逐字 = 「%s」（昼那一档）" % (_t_tok, _alias_line),
+    _alias_line in (_cases12[0][2][1] or "") and CAL11.token_alias().get(_t_tok) == CAL11.name(_eid_t),
+    "%s" % (_cases12[0][2][1],))
 
 # ④ ★ P-31（2026-09-26）**换锚**：原先这一条要求「判不了的那两条」在场（= 把「真源写着、刻度没有」
 #   这个**欠账状态**钉成了判据）。现在那两条判得了（别名表），判据换成更强的一条：
