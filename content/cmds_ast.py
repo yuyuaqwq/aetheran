@@ -293,8 +293,12 @@ def _p(player):
         p.pop("mo_max", None)                              # 无职业 ⇒ 这一格也不留（照实说未定）
     else:
         from . import mana as _MANA
+        # ★ 本批（试玩 A3）：**上限涨了现值跟着涨**（差量补）—— 基线 = 档上那一格「上次派生出来的
+        #   上限」。加点 / 升级 / 换装把面板上限推上去时，现值按同一个差量补（唯一口 `mana.on_cap`）
+        #   ⇒ 智力 / 意志里那半「+法力」真看得见（改前上限 110→159 而现值恒 110）。
+        _prev_cap = p.get("mo_max")
         p["mo_max"] = mcap
-        p["mo"] = _MANA.initial_mp(p.get("mo"), mcap)
+        p["mo"] = _MANA.initial_mp(_MANA.on_cap(p.get("mo"), _prev_cap, mcap), mcap)
     return p
 
 
@@ -1150,6 +1154,26 @@ async def go_to(env, sink, uid, player):
 # ══════════════════════════════════════════════════════════════
 # 二、角色
 # ══════════════════════════════════════════════════════════════
+def live_mp(env, uid, p):
+    """打斗中途「我这一手」的现蓝 —— **唯一口**：有「场」就按场里那一格 actor 现读。
+
+    ★ 本批（试玩 A2）：扣蓝的落账落在**这一场收尾那一刻**（`cmds_battle._settle`），
+      所以在打的这一场里档上那一格还是开场时的数 —— 中途敲『状态』该报的是**眼下这一场**
+      的余蓝，不是开打前那个（改前实测：放完两招敲 `状态`，报的还是 `85/85`）。
+      拿不到（没在打 / 场里没这一格）⇒ 照**档上那一格**（= 与接线前逐字相同，不编数）。
+
+    血不在这儿读：血在**每一手**都落回档（`instance._write_back`），档上那一格本来就是活的。
+    """
+    from . import instance as INST                 # 本地 import：与 `live_foe` 那一族同款
+    st = INST.live(env, uid)
+    if st is None:
+        return p.get("mo")
+    a = INST.actor_of(st, uid)
+    if not isinstance(a, dict) or a.get("mp") is None:
+        return p.get("mo")
+    return a.get("mp")
+
+
 async def status(env, sink, uid, player):
     p = _p(player)
     nm = name_with_title(p)                     # ★ B3-2：称号跟着名字走进面板
@@ -1166,7 +1190,7 @@ async def status(env, sink, uid, player):
                 mo=T("SYS_UNSET"), mo_max=T("SYS_UNSET"), gold=p.get("gold"))
     else:
         yield T("SYS_STATUS_VITALS", hp=p.get("hp"), hp_max=cap,
-                mo=p.get("mo"), mo_max=mcap, gold=p.get("gold"))
+                mo=live_mp(env, uid, p), mo_max=mcap, gold=p.get("gold"))
     yield T("SYS_STATUS_EXP", exp=p.get("exp"),
             place=_map_of(p["loc"]).get("name", p["loc"]) if _map_of(p["loc"]) else p["loc"])
 
