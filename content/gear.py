@@ -39,6 +39,30 @@ def enhance_bonus(player, item_id) -> float:
         return 0.0
 
 
+def enhance_lv(player, item_id) -> int:
+    """那件东西当前的强化档（没强化过 = 0）—— 档上 `enhance.<id>.lv` 那一格。
+
+    ★ 试玩问题 #13（本波）：强化成功之后**三个界面都看不出 +1**（`查看` / `背包` / `属性`
+      逐字与强化前一模一样）⇒ 展示处统一走 `shown_badge`，这一格是它唯一的读数口。
+    """
+    e = (player.get("enhance") or {}).get(str(item_id)) or {}
+    try:
+        return max(0, int(e.get("lv") or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def shown_badge(player, item_id) -> str:
+    """展示用的强化后缀（`" +1"`；**没强化过 = 空串**）—— 拼法只有这一处（K65）。
+
+    消费端五处（都是「那一档变化要看得见」）：`背包` 那一行 · `查看` 的抬头 ·
+    `属性` 的「身上」那一栏 · `装备` 的「你穿上了…」· `卸下` 的「你卸下了…」。
+    没强化过 ⇒ 与从前逐字相同（老判据一个字不用动）。
+    """
+    lv = enhance_lv(player, item_id)
+    return " +%d" % lv if lv > 0 else ""
+
+
 def gear_stats(player) -> dict:
     """已装备的东西 → 面板数值（主词条 × 强化加成，其余词条原样）。"""
     out: dict = {}

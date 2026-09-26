@@ -1265,7 +1265,7 @@
     "usage": "拾取",
     "visible": true,
     "order": 57,
-    "guard_desc": "有掉落",
+    "guard_desc": "随时",
     "bind": {
       "handler": "content.cmds_gather:pick_up",
       "call": "run",

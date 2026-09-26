@@ -209,7 +209,9 @@ async def attrs(env, sink, uid, player):
     _left = ALLOC.left_of_record(p)
     if _left > 0:
         yield T("SYS_ATTR_LEFT", left=_left, usage=AV.usage("alloc"))
-    eq = [LT.rec_of(iid).get("name") or iid for iid in (p.get("equipped") or {}).values()]
+    # ★ 试玩问题 #13：身上那几件强化过的带上 `+N`（没强化过 ⇒ 与从前逐字相同）
+    eq = ["%s%s" % (LT.rec_of(iid).get("name") or iid, GB.shown_badge(p, iid))
+          for iid in (p.get("equipped") or {}).values()]
     yield T("SYS_ATTR_GEAR", list=" · ".join(eq)) if eq else T("SYS_ATTR_NOGEAR")
     yield T("SYS_ATTR_NOTE")
 
@@ -248,8 +250,9 @@ async def item_show(env, sink, uid, player):
     _n = int((p.get("bag") or {}).get(iid) or 0)
     if _n <= 0 and iid in LT.worn_ids(p):
         _n = 1                          # ★ fxb⑦：身上那一件也算「你有 1 件」（不然印「×0」）
-    yield T("SYS_ITEM_HEAD", name=rec.get("name") or iid, icon=rec.get("icon") or "",
-            detail=detail, n=_n)
+    # ★ 试玩问题 #13：强化过的在抬头里带上 `+N`（没强化过 ⇒ 与从前逐字相同）
+    yield T("SYS_ITEM_HEAD", name="%s%s" % (rec.get("name") or iid, GB.shown_badge(p, iid)),
+            icon=rec.get("icon") or "", detail=detail, n=_n)
     for line in affix_lines(rec):
         yield line
     if rec.get("desc"):

@@ -304,12 +304,15 @@ async def equip(env, sink, uid, player):
         player.update(p)
     _save(env)
 
-    yield T("SYS_GEAR_EQUIP_OK", icon=rec.get("icon", ""), name=LT.label_of(iid),
+    # ★ 试玩问题 #13：名字后缀一律走 `GB.shown_badge`（强化过才缀 `+N`）—— 背包 / 查看 /
+    #   属性 与这里同一口径（没强化过 ⇒ 与从前逐字相同）
+    yield T("SYS_GEAR_EQUIP_OK", icon=rec.get("icon", ""),
+            name="%s%s" % (LT.label_of(iid), GB.shown_badge(p, iid)),
             kind=rec.get("kind", ""))
     for line in affix_lines(rec):
         yield line
     if old and old != iid:
-        yield T("SYS_GEAR_SWAP_OUT", name=LT.label_of(old))
+        yield T("SYS_GEAR_SWAP_OUT", name="%s%s" % (LT.label_of(old), GB.shown_badge(p, old)))
     if cap0 is not None and cap1 is not None and int(cap0) != int(cap1):
         yield T("SYS_GEAR_HP_CAP", old=int(cap0), new=int(cap1))
 
@@ -330,7 +333,8 @@ async def unequip(env, sink, uid, player):
             yield T("SYS_GEAR_NAKED")
             return
         yield T("SYS_GEAR_WEARING", list=" · ".join(
-            "『%s』" % _item(eq[s]).get("name", eq[s]) for s in sorted(eq)))
+            "『%s%s』" % (_item(eq[s]).get("name", eq[s]), GB.shown_badge(p, eq[s]))
+            for s in sorted(eq)))
         return
 
     slot, iid, rec = _worn(p, want)
@@ -348,7 +352,8 @@ async def unequip(env, sink, uid, player):
         player.update(p)
     _save(env)
 
-    yield T("SYS_GEAR_UNEQUIP_OK", icon=rec.get("icon", ""), name=rec.get("name", iid),
+    yield T("SYS_GEAR_UNEQUIP_OK", icon=rec.get("icon", ""),
+            name="%s%s" % (rec.get("name", iid), GB.shown_badge(p, iid)),
             kind=rec.get("kind", ""))
     if cap0 is not None and cap1 is not None and int(cap0) != int(cap1):
         yield T("SYS_GEAR_HP_CAP", old=int(cap0), new=int(cap1))
