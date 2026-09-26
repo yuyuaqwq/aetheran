@@ -838,6 +838,12 @@ async def map_view(env, sink, uid, player):
         yield line
     for line in title_lines(p, player, env):    # ★ B3-2：走了那么多趟，名字该挂上来了
         yield line
+    # ★ fix-l（试玩 ranger b56/b57：野外敲『地图』只列本图三站，回镇得自己想出「进镇」，
+    #   而『往南』这类方向词根本不被接住）：**野外**那一屏补一行尾注点明回镇的口。
+    #   只认拓扑（`star` = 镇上 ⇒ 不印：镇里回镇那句话已由进镇那一屏的尾注说了）；
+    #   真源 `04_指令总表 §一` 那张表里 `进镇` 的守卫本来就是「在北口或野外」。
+    if str(m.get("topology") or "") != "star":
+        yield T("SYS_MAP_BACK_TOWN")
 
 
 async def listen(env, sink, uid, player):
@@ -1193,6 +1199,13 @@ async def status(env, sink, uid, player):
                 mo=live_mp(env, uid, p), mo_max=mcap, gold=p.get("gold"))
     yield T("SYS_STATUS_EXP", exp=p.get("exp"),
             place=_map_of(p["loc"]).get("name", p["loc"]) if _map_of(p["loc"]) else p["loc"])
+    # ★ fix-l（试玩 ranger b38~b40：跨进程回来先敲『状态』一个字都不提，直到敲『去 X』
+    #   才被 `SYS_MOVE_IN_FIGHT` 拦下 ⇒ 玩家读不懂为什么走不动）：**手上还留着一场**时
+    #   面板上就把它说出来。只读 `instance` 那两个现成口（`live` / `fighting`），
+    #   不动状态、不重开那一场；面板其余各行一个字不动（`SYS_MOVE_IN_FIGHT` 那道闸也照旧）。
+    from . import instance as _INST                       # 本地 import：避免包装载期成环
+    if _INST.fighting(env, uid):
+        yield T("SYS_STATUS_IN_FIGHT")
 
 
 async def origin(env, sink, uid, player):

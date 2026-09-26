@@ -782,13 +782,22 @@ async def skill_cast(env, sink, uid, player):
         yield T("COMBAT_SKILL_BAD", name=rec.get("name", sid))
         return
     owner = str(rec.get("owner_class") or "")
-    if (owner and owner != cls) or sid not in known_ids(p):
+    if owner and owner != cls:
         yield T("COMBAT_SKILL_BAD", name=rec.get("name", sid))
         return
+    # ★ fix-l（试玩 berserker b58：「技能 血债」在 11 级前读起来像「这门没这条技能」）：
+    #   抬头那张门表写的第三道是「解锁等级没到 ⇒ `SYS_SKILL_TOO_LOW`」，可实现把
+    #   `sid not in known_ids(p)` 与 owner 挤在**同一条 if** 里 —— `known_ids` 只列
+    #   此刻解锁的那一班 ⇒ 等级没到的一律先落 `COMBAT_SKILL_BAD`，第三道门**走不到**。
+    #   改法：owner 与「等级」拆开判，等级那一道**在 known_ids 之前** —— 判据一个字没松
+    #   （两个都不满足照旧被拦），只是拦下时说的话分得开：等级没到 ⇒ 点名到几级。
     lv = int(rec.get("lv") or 1)
-    if lv > int(p.get("level") or 1):
-        yield T("SYS_SKILL_TOO_LOW", name=rec.get("name", sid), lv=lv,
-                gap=lv - int(p.get("level") or 1))
+    _mine = int(p.get("level") or 1)
+    if lv > _mine:
+        yield T("SYS_SKILL_TOO_LOW", name=rec.get("name", sid), lv=lv, gap=lv - _mine)
+        return
+    if sid not in known_ids(p):
+        yield T("COMBAT_SKILL_BAD", name=rec.get("name", sid))
         return
     # ★ 本批（试玩三家 · 指令词那一族）：**第五道半 —— 这一手自己声明的资源够不够**。
     #   引擎那道预检在「场」的第一手上是空的（见 `res_short_line` 的抬头）⇒ 在这儿按开战

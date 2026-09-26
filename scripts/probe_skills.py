@@ -369,5 +369,65 @@ chk("★ ★ 真调 `skill_cast`：撞名那一条 —— 本职业放得出来 
     "（改前刺客这一路恒回「这一手你放不出来」）", not _REL9, "%s" % (_REL9[:3],))
 
 print()
+print("── ★ fix-l：**「等级没到」那一档要说得出「要几级」**（试玩 berserker b58）")
+#   「技能 血债」（11 级才学）在 1~2 级敲 ⇒ 原先回的是「这一手你放不出来 —— 敲『技能』看你这一门
+#   会哪些。」——玩家读成「这门没这条技能」，可同一张 `技能` 页正写着「到 11 级才能学」。
+#   根因：抬头那张门表写的第三道门（`SYS_SKILL_TOO_LOW`）**走不到** —— `owner` 判定与
+#   `sid not in known_ids(p)` 挤在同一条 `if` 里，而 `known_ids` 只列**此刻解锁**的那一班。
+#   判据（现算，不硬编码技能名）：逐职业挑本门**等级最高**那一条（低级别一定没到）⇒ 必须
+#   逐字回 `SYS_SKILL_TOO_LOW`（点名到几级）；三条反证钉「门一条没松」：别人门的技能照旧
+#   `COMBAT_SKILL_BAD` · 域里没这个名字照旧 `COMBAT_SKILL_BAD` · 够等级的那一条照旧放得出来。
+_TX10 = st.domain("texts") or {}
+_BAD10 = _TX10["COMBAT_SKILL_BAD"]["value"]
+_LOW10, _NOTMINE10, _NONE10, _UP10 = [], [], [], []
+_NC10 = 0                                               # 真跑过的职业数（报数用）
+for _c10 in _CLS8:
+    _mine10 = sorted((int(v.get("lv") or 1), k, v) for k, v in _OWN.items()
+                     if v.get("owner_class") == _c10 and v.get("kind_key") != "passive")
+    if not _mine10:
+        continue
+    _NC10 += 1
+    _lv10, _id10, _rec10 = _mine10[-1]                 # 本门等级最高那一条
+    _low_pl = {"cls": _c10, "level": 1, "race": "human", "hp": 300, "bag": {},
+               "equipped": {}, "flags": {}, "codex": {}}
+    _got10 = _drive8(_CBL8.skill_cast, _low_pl, "技能 %s" % _rec10.get("name"))
+    _want10 = (_TX10["SYS_SKILL_TOO_LOW"]["value"]
+               .replace("{name}", str(_rec10.get("name")))
+               .replace("{lv}", str(_lv10)).replace("{gap}", str(_lv10 - 1)))
+    if _got10 != [_want10]:
+        _LOW10.append((_c10, _rec10.get("name"), _lv10, _got10[:1], _want10))
+    # 反证① 别人门的（等级也没到）：owner 那一关在前 ⇒ 照旧「放不出来」
+    _other10 = sorted((int(v.get("lv") or 1), k, v) for k, v in _OWN.items()
+                      if v.get("owner_class") and v.get("owner_class") != _c10
+                      and v.get("kind_key") != "passive")
+    if _other10:
+        _o10 = _other10[-1][2]
+        _g10 = _drive8(_CBL8.skill_cast, _low_pl, "技能 %s" % _o10.get("name"))
+        if _g10 != [_BAD10.replace("{name}", str(_o10.get("name")))]:
+            _NOTMINE10.append((_c10, _o10.get("name"), _g10[:1]))
+    # 反证③ 够等级的那一条（本门最低等级那条 + 够那个级）照旧放得出来
+    _lv_a, _id_a, _rec_a = _mine10[0]
+    _ok_pl = dict(_low_pl)
+    _ok_pl["level"] = _lv_a
+    _g10a = _drive8(_CBL8.skill_cast, _ok_pl, "技能 %s" % _rec_a.get("name"))
+    if not _g10a or _g10a[0] in (_BAD10.replace("{name}", str(_rec_a.get("name"))),
+                                 _want10):
+        _UP10.append((_c10, _rec_a.get("name"), _lv_a, _g10a[:1]))
+# 反证② 域里没有这个名字 ⇒ 照旧「放不出来」
+_g10n = _drive8(_CBL8.skill_cast, {"cls": "cls_knight", "level": 16, "race": "human",
+                                   "hp": 300, "bag": {}, "equipped": {}, "flags": {},
+                                   "codex": {}}, "技能 没有这条技能")
+_NONE10 = [] if _g10n == [_BAD10.replace("{name}", "没有这条技能")] else _g10n[:2]
+
+chk("★ 逐职业：敲「等级没到」那一条 ⇒ 回 `SYS_SKILL_TOO_LOW`（点名到几级），"
+    "不再落成「这一手你放不出来」（%d 职业）" % _NC10, not _LOW10,
+    "%s" % (_LOW10[:2],))
+chk("★ 反证①：别人门的技能（等级也没到）照旧「放不出来」—— owner 那一关没松",
+    not _NOTMINE10, "%s" % (_NOTMINE10[:2],))
+chk("★ 反证②：域里没有这个名字 ⇒ 照旧「放不出来」", not _NONE10, "%s" % (_NONE10,))
+chk("★ 反证③：够等级的那一条照旧放得出来（不是把技能一律拦了）", not _UP10,
+    "%s" % (_UP10[:2],))
+
+print()
 print("结论：", "全过 ✅" if ok else "有红 ❌")
 sys.exit(0 if ok else 1)

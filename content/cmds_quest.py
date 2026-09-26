@@ -752,7 +752,18 @@ def _req_lines(p, r):
         return out
     if kind == "item":
         iid = str(r.get("item") or "")
-        return [T("SYS_JOB_REQ_ITEM", item=_item_name(iid), n=_n_of(r), have=_have_n(p, r)[0])]
+        out = [T("SYS_JOB_REQ_ITEM", item=_item_name(iid), n=_n_of(r), have=_have_n(p, r)[0])]
+        # ★ fix-l（试玩 ranger b71/b85 · 副业 15「娜娜的药单」）：与上面 `kill` 那一支的
+        #   「出没地」**同一口径** —— 缺的是**料**时把「从哪儿来」也说一遍。
+        #   `强化` / `打造` 早就有这一栏（唯一出处口 = `cmds_recipe.src_lines` → `matsrc`：
+        #   采集点 + 掉它的怪），而 `提示` / `看 <编号>` 这一路原先只报名字与数目 ⇒ 玩家
+        #   拿着「夜明砂 ×3」不知道去哪儿找。出处现算 —— 域里加一个出产点这一行跟着变。
+        #   取不到出处（域里真没有渠道）⇒ 不多话（与「只差钱 ⇒ 那几行为空」同一把尺）。
+        from .cmds_recipe import _src_of as _src_of_item     # 本地 import：避免装载期成环
+        _where = _src_of_item(iid)
+        if _where:
+            out.append(T("SYS_JOB_REQ_ITEM_WHERE", item=_item_name(iid), where=_where))
+        return out
     if kind == "enhance":                  # ★ B3-13
         return [T("SYS_JOB_REQ_ENHANCE", n=_n_of(r), have=_have_n(p, r)[0])]
     if kind == "cook":                     # ★ B3-13（带品阶的走品阶那条槽位）
