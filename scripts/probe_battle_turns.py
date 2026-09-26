@@ -23,6 +23,11 @@ r"""探针：战斗的**分段推进**（★ G2 · B3-26b）—— 一手一推�
      `后撤` 两态 · `换武器`（档上真换 + 场里面板当场重挂）· `集火`（锁目标 + 不吃行动）·
      `战斗日志`（看在打的那一场 + 分页）· `使用` 非药（照实说、不消耗）
   ⑧ fail-closed：没得打的地方那五条说**同一句**（`COMBAT_NEED_FOE`）· 两个单人互不串场
+  ⑨ ★ fix-j：**集火锁的是敌人 ⇒ 只有「攻击那一档」吃它** —— 治疗 / 增益不吃
+     （改前：`集火 <怪>` 之后敲 `技能 安神曲` 把那一发的治疗量**整份**加到那只敌人身上，
+     而屏上印「圣光治愈了你 N 点生命」= 修女核心机制反向，第 2 轮真人试玩 8 批逐条复现）。
+     分档：技能按域里 `kind_override`（治疗 / 增益不吃，伤害三通道吃）· 内置动作只有 `attack` ·
+     内容侧那几手只有 `interrupt`（用物只为它**上限用满回落成普攻**那一手）。
 
 跑法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_battle_turns.py
 """
@@ -667,6 +672,144 @@ def main():
             and int(s1.get("hands") or 0) == int(s0.get("hands") or 0), o[:2])
     finally:
         _unpin(saved)
+
+    # ── 辛 · ★ fix-j：集火锁的是敌人 ⇒ 只有**攻击那一档**吃它 ──────────────
+    print()
+    print("辛 ★ fix-j：集火之后 治疗 / 增益 **不吃**那个目标 —— 攻击 / 打断 / 用物回落照旧吃")
+    from content import battle_acts as BA2                             # noqa: E402
+    from content import mech as MECH                                   # noqa: E402
+    from content import skills_lookup as SK                            # noqa: E402
+    # ① 分档表：**逐条现算对账**（不手打名单）—— 「吃不吃集火」== 「是不是伤害三通道」
+    _non_attack = {SK.kind_value("heal"), SK.kind_value("buff")}
+    _actives = [(sid, rec) for sid, rec in sorted(SK.skills().items())
+                if not str(sid).startswith("_") and isinstance(rec, dict)
+                and str(rec.get("kind_key")) == "active"]
+    _bad = [(sid, rec.get("kind_override"), INST._hand_takes_focus("skill", sid, None))
+            for sid, rec in _actives
+            if (rec.get("kind_override") not in _non_attack)
+            != INST._hand_takes_focus("skill", sid, None)]
+    chk("★ 分档表逐条现算对账（%d 条主动技能：「这一手吃不吃集火」==「是不是伤害三通道」"
+        "= 域里 kind_override 经 kinds.json 换语义）" % len(_actives), not _bad, _bad[:3])
+    _rows = [(t, INST._hand_takes_focus(a, s, h)) for (t, a, s, h) in (
+        ("攻击", "attack", None, None),
+        ("防御", "defend", None, None),
+        ("技能《安神曲》(治疗)", "skill", "SKILL_PRS_lullaby", None),
+        ("技能《庇护》(增益)", "skill", "SKILL_PRS_aegis", None),
+        ("技能《圣杖》(魔法)", "skill", "SKILL_PRS_staff", None),
+        ("打断", None, None, BA2.Hand("interrupt")),
+        ("用物", None, None, BA2.Hand("item")),
+        ("换手", None, None, BA2.Hand("swap")),
+        ("后撤", None, None, BA2.Hand("retreat")))]
+    chk("★ 地标：吃 = %s ｜ 不吃 = %s"
+        % ("、".join(t for t, v in _rows if v), "、".join(t for t, v in _rows if not v)),
+        [v for _t, v in _rows] == [True, False, False, False, True, True, True, False, False], _rows)
+    try:
+        INST._hand_takes_focus("skill", "SKILL_NOPE_fixj", None)
+        _raised = ""
+    except RuntimeError as _e:
+        _raised = str(_e)
+    chk("★ fail-closed：技能 id 域里没有 ⇒ 当场抛且**点名**（不按「吃 / 不吃」猜）",
+        "SKILL_NOPE_fixj" in _raised, _raised)
+
+    def _foe_hps(s):
+        return [int(a.get("hp") or 0) for a in
+                ((((s or {}).get("battle") or {}).get("sides") or {}).get("enemy") or [])]
+
+    def _my_hp(s, uid):
+        return int((INST.actor_of(s, uid) or {}).get("hp") or 0)
+
+    def _heal_scene(tag, focus, affixes=None, seq=("技能 安神曲",)):
+        """集火那一档（focus=True）/ 对照那一档（focus=False）真跑一遍，逐格读数。"""
+        db = _fresh(tag)
+        host, ad = _boot(db, "g_%s" % tag)
+        _seed("g_%s" % tag, "u_%s" % tag, cls="cls_priest", hp=60)
+        env = _E("g_%s" % tag)
+        saved = _pin(affixes=affixes)
+        gid, uid = "g_%s" % tag, "u_%s" % tag
+        try:
+            random.seed(20260926)
+            _drive(host, ad, uid, "攻击")
+            if focus:
+                random.seed(20260926)
+                _drive(host, ad, uid, "集火 %s" % MID)
+            s0 = INST.live(env, uid)
+            chk("★ 前提（%s）：%s" % (tag, "锁真锁上了" if focus else "这一场**没锁**集火"),
+                bool(s0.get("focus")) == bool(focus), s0.get("focus"))
+            out = []
+            for _t in seq:
+                random.seed(20260926)
+                out += _drive(host, ad, uid, _t)
+            s1 = INST.live(env, uid)
+            return (_foe_hps(s0), _foe_hps(s1), _my_hp(s0, uid), _my_hp(s1, uid), out)
+        finally:
+            _unpin(saved)
+
+    # ② 集火 + 安神曲：敌人**一格不动**、自己真涨血（修女核心机制那一半）
+    fo0, fo1, h0, h1, out = _heal_scene("fhA", True)
+    chk("★ ② 集火之后敲 `技能 安神曲` ⇒ **敌人一格都不动**（%s → %s）"
+        "—— 改前：那一发的治疗量整份落在锁着的那只身上（实测 田鼠 12→51 = +39）"
+        % (fo0, fo1), fo0 == fo1, out[-2:])
+    chk("★ ② 而好处真到了**自己**身上（%d → %d）" % (h0, h1), h1 > h0, (h0, h1))
+    chk("★ ② 报的还是「治愈了你 N 点生命」那一句（改前报的是**敌人**那一次治疗，"
+        "自己一格没涨）", any(("治愈了" in x) for x in out), out[-2:])
+    # ③ 对照（无集火）：同形 —— 敌人不动、自己涨血
+    co0, co1, ch0, ch1, cout = _heal_scene("fhB", False)
+    chk("★ ③ 对照：**没锁**集火时同形（敌人 %s → %s 不动 ｜ 你 %d → %d）"
+        % (co0, co1, ch0, ch1), co0 == co1 and ch1 > ch0, cout[-2:])
+
+    # ④ 集火 + 攻击：**仍打在集火目标上**（这条不许松）—— 群居三只，另两只一格不动
+    db = _fresh("fhC")
+    host, ad = _boot(db, "g_fhC")
+    _seed("g_fhC", "u_fhC", cls="cls_priest", hp=60)
+    env = _E("g_fhC")
+    saved = _pin(affixes=["af_swarm"])
+    try:
+        random.seed(20260926)
+        _drive(host, ad, "u_fhC", "攻击")
+        random.seed(20260926)
+        _drive(host, ad, "u_fhC", "集火 %s" % MID)
+        s0 = INST.live(env, "u_fhC")
+        a0 = _foe_hps(s0)
+        random.seed(20260926)
+        _drive(host, ad, "u_fhC", "攻击")
+        s1 = INST.live(env, "u_fhC")
+        a1 = _foe_hps(s1)
+        chk("★ ④ 集火之后 `攻击` **仍打在锁的那一只上**（三只 %s → %s：只有第 1 只掉血）"
+            % (a0, a1), a0[0] > a1[0] and a1[1:] == a0[1:], (a0, a1))
+        # ⑤ 用物（上限用满那一手回落成普攻）也吃集火 —— 同一条规则
+        random.seed(20260926)
+        _drive(host, ad, "u_fhC", "使用 伤药")                 # 第 1 瓶：真回血、真扣药
+        b0 = _foe_hps(INST.live(env, "u_fhC"))
+        random.seed(20260926)
+        o = _drive(host, ad, "u_fhC", "使用 伤药")             # 第 2 瓶：回落成普攻那一手
+        b1 = _foe_hps(INST.live(env, "u_fhC"))
+        chk("★ ⑤ 用满上限那一手回落成普攻 ⇒ **也打在锁的那一只上**（%s → %s）" % (b0, b1),
+            _has(o, "COMBAT_ITEM_CAP") and b0[0] > b1[0] and b1[1:] == b0[1:], (b0, b1))
+        # ⑥ 增益：态挂在**自己**身上，敌人身上没有那一条
+        _key = str(MECH.of("shield_ally").get("state") or "")
+        random.seed(20260926)
+        _drive(host, ad, "u_fhC", "技能 庇护")
+        s2 = INST.live(env, "u_fhC")
+        _me = INST.actor_of(s2, "u_fhC") or {}
+        _foes = [a for a in ((s2.get("battle") or {}).get("sides") or {}).get("enemy") or []]
+        chk("★ ⑥ 集火之后敲 `技能 庇护`（增益）⇒ 态 `%s` 挂在**自己**身上、敌人身上没有"
+            % _key,
+            bool(_key) and _key in (_me.get("effects") or {})
+            and not any(_key in (a.get("effects") or {}) for a in _foes))
+    finally:
+        _unpin(saved)
+
+    # ⑦ 反证：把分档撤掉（回到「集火目标原样传给每一条指令」）⇒ ② 那条判据**当场红**
+    _real_tf = INST._hand_takes_focus
+    INST._hand_takes_focus = lambda *a, **k: True
+    try:
+        bo0, bo1, bh0, bh1, bout = _heal_scene("fhD", True)
+    finally:
+        INST._hand_takes_focus = _real_tf
+    chk("★ ⑦ 反证（有牙）：分档撤掉 ⇒ 同一句 `技能 安神曲` 把好处整份送给敌人"
+        "（敌 %s → %s，自己 %d → %d —— ② 的「敌人一格不动」当场红）"
+        % (bo0, bo1, bh0, bh1), bo1 != bo0 and bo1[0] > bo0[0],
+        (bo0, bo1, bh0, bh1))
 
     # ── ⑧ fail-closed：没得打那五条说同一句 · 两个单人互不串场 ──────
     print()

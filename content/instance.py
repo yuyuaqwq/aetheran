@@ -70,6 +70,7 @@ import json
 import os
 
 from . import persistence as PS
+from . import skills_lookup as SK
 from .cmds_ast import T, _p, hp_cap_or_line
 
 #: 共同档里的作用域名（这一套数据是谁在用）—— 键形状 `<scope>:<group_id>`
@@ -386,7 +387,8 @@ async def take_turn(env, p, uid, player, *, head="", hand=None, action=None, ski
       · 回话按 `03_ §二` 的**四段式**：现状 + 对方在干什么 + 你的选项（`turn_lines`）
         → 这一手说的话（`head`）→ 上一手的结果（日志）—— 打完/散场那一档不出这一屏；
       · 每一手都把 `st["hands"]` 加一（「第几手」那一格只有一个写端）；
-      · `st["focus"]`（集火）现读现传给引擎的目标解析。
+      · `st["focus"]`（集火）现读现传给引擎的目标解析 —— ★ fix-j：**只给吃目标的那几手**
+        （攻击 / 伤害技能 / 打断），治疗·增益那两档不吃（见 `_hand_takes_focus` 的抬头）。
     """
     grp = group_of(env)
     u = str(uid or "")
@@ -478,7 +480,10 @@ async def take_turn(env, p, uid, player, *, head="", hand=None, action=None, ski
         caster["auto_act"] = {"act": {"type": "item", "skill": hand.item}}
     SCH.advance(b, logs)                             # 推到我的决策点（快的对方该动的先动）
     caster = b.find_actor(u) or caster
-    tgt = _focus_actor(b, st)                        # ★ 集火：这一场里记着的那个目标
+    # ★ 集火：这一场里记着的那个目标 —— **只有吃目标的那几手**才拿得到它（★ fix-j：
+    #   治疗 / 增益那一档不吃 —— 那两手上的 `target` 是「受疗对象 / 挂机制的落点」，
+    #   不是「打击对象」；锁着的这一格永远是敌人 ⇒ 原样传下去 = 好处落到敌人身上）。
+    tgt = _focus_actor(b, st) if _hand_takes_focus(action, skill, hand) else None
     took, decided = False, None
     if b.result is None and int(caster.get("hp", 0) or 0) > 0:
         if decide is not None:
@@ -553,6 +558,60 @@ async def take_auto(env, p, uid, player):
     _write_back(env, p, player, b, u)
     async for line in _finish(env, grp, key, st, p, u, player, str(b.result)):
         yield line
+
+
+#: 内置动作里**吃「集火」**的那一档 —— 引擎 `do_attack` 走伤害管线，拿 `target` 当**打击对象**。
+#: 另外两档内置动作（`defend` / `flee`）引擎那边**一个都不读** `target` ⇒ 不吃。
+_FOCUS_ACTIONS = ("attack",)
+
+#: 内容侧那几手（`battle_acts.Hand` 的 `kind`）里**吃「集火」**的那一档：
+#: 打断 —— 它本来就是**对对面**的动作（拆掉它押着的那一手 / 推后它的到点时刻，
+#: 见 `battle_acts.Hand._interrupt` 的 `pick_target`），与「后面的手都往它身上招呼」同义。
+#: 用物 —— **用物本身**不指向敌人（回的是**自己**的血 —— `Hand._item` 只看 `actor`），
+#: 但它上限用满之后**回落成普攻**（`battle_acts` 的 `_plain_attack`）⇒ 那一手是**攻击**、
+#: 吃集火目标（★ fix-j：`Hand._item` 现在把调用方给的 target 交给回落那一手）。
+#: 换手 / 后撤都不指向敌人（一个重挂面板、一个说一句），不吃。
+_FOCUS_HANDS = ("interrupt", "item")
+
+
+def _hand_takes_focus(action, skill, hand) -> bool:
+    """这一手**吃不吃「集火」锁着的那一格**（★ fix-j：按 `target` 在这一手上的**合法面**分档）。
+
+    ★ 为什么要分档：`target` 在引擎里**不是一个意思** —— `do_skill` 的分派就是那条线
+      （同一个形参、三种语义）：
+
+        伤害支（域里 `kind_override` = 物理 / 魔法 / 真伤）  拿它当**打击对象**
+        治疗支（`actions._do_heal`）                          拿它当**受疗对象**（缺省 = 施法者**自己**）
+        增益支（`actions._do_buff`）                          拿它当挂机制的落点
+                                                              （内容侧 `route=cast` 那几条一律挂自己）
+
+      而「集火」锁着的那一格**永远是敌方 actor**（`cmds_battle.focus_fire` 只锁对手 ⇒ `set_focus`）
+      —— 把它原样传给后两档 = **好处整份落到敌人身上**，而屏上还印「治愈了你 N 点生命」。
+      2026-09-27 修女路真人试玩实测（同一场、一回合内 A/B）：`集火 田鼠` 之后敲 `技能 安神曲`
+      ⇒ 田鼠 12→51 = **+39 = 那一发的治疗量**，自己 231/231 一格没涨。
+
+    分档口径（**每档只有一个来源**，不另抄一份「哪些算攻击」的名单）：
+      · 技能 ⇒ `skills_lookup.takes_target()`（域里 `kind_override` 经 `kinds.json` 换语义 ——
+        与引擎 `do_skill` 的分派**同一格**；缺 / 非法 ⇒ 当场抛，不静默按某一档算）；
+      · 内置动作 ⇒ `_FOCUS_ACTIONS`（只有 `attack`）；
+      · 内容侧那几手 ⇒ `_FOCUS_HANDS`（`interrupt`；`item` 只为它**回落成普攻**的那一手）。
+
+    ★ 为什么不把这条判据塞进 `_focus_actor`（另一种改法）：那个口回答的是「**这一场锁着谁**」
+      （一个纯读 —— 探针 ⑤ 拿它核「锁真传进引擎」）；让它按动作改主意 ⇒ 锁的含义变成**条件的**，
+      读它的地方都得先知道自己要干嘛。而「哪个动作吃目标」只有**出手那一处**知道（`hand` /
+      `action` / `skill` 三个实参都在那儿）⇒ 分档放在调用点 = 一个写端（`take_turn` 那条赋值）。
+    """
+    if hand is not None:
+        return str(getattr(hand, "kind", "")) in _FOCUS_HANDS
+    if str(action or "") in _FOCUS_ACTIONS:
+        return True
+    if str(action or "") == "skill":
+        rec = SK.skills().get(str(skill or ""))
+        if not isinstance(rec, dict):
+            raise RuntimeError("认不出这一手要放的技能：%r（域里没这条 ⇒ 别按「吃 / 不吃」猜）"
+                               % (skill,))
+        return SK.takes_target(rec)
+    return False
 
 
 def _focus_actor(b, st):
