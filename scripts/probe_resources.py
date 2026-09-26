@@ -12,12 +12,46 @@
 ⑤ 游侠准星（每次出手 +1 · 封顶 6）· 修女祷言（一次受伤 > 上限 15% ⇒ +1 · 每 300 刻自然回 1 · 倒下清空）
 ⑥ 格挡（骑士被动「格挡回誓」）：掷中 ⇒ 这次承伤按真源 F10 打折 + 回守誓（账本 +12 + 被动 +8）·
    没掷中 ⇒ 不写字段 · 等级没到 16 ⇒ 不掷
+   ★ `g5-flake`：前两态原先**只跑「掷中」那一半**（`if _luck` 恒真 ⇒ `else` 支从没执行过）——
+     现在两态各钉一遍，且都不看手气（掷中 = 把骰子钉成 0.10 · 没掷中 = `block_chance` 压 0）
 ⑦ 反证（不装配 = 与接线前一字不差）：资源表读不到 ⇒ 一个字段都不写
 ⑧ 引擎零改动（硬指标）
 
 口径说明（为什么「定向」和「端到端」都要）：引擎的事件 ctx（`{"actor","target","info","dmg"}`）
 **不会**并进动作的 `params`，读口是 `battle._fire_ctx`；而端到端那一路中间还会夹进对手的出手
 （会额外加资源）⇒ 逐值复算用定向（ctx 形状照引擎调用点逐字摆），「真能跑通」用端到端。
+
+承伤 fixture 口径（`g5-flake` 补）：挨打那几档（③ 受击 · ⑤ 祷言 · ⑦ 反证）量的是**渠道**，
+不是命中率。引擎承伤链上有两枚硬币 —— `landing._roll_dodge`（闪避，读口 `dodge_cap()`）
+与内容侧 `mech.aeth_block_roll`（格挡）。**被闪掉的那一下 `deal_damage` 直接 `return 0`**
+⇒ `on_taken` 根本不触发 ⇒ 拿它当 fixture 的判据 = 掷硬币。故 **③ 起把随机口都收掉**
+（`no_block()` 只在 ③；`no_dodge()` 一直挂到 ⑦ 之后才还原），判据本体一个字没松 ——
+收的是 fixture，不是判据。（⑦ 那一条另有 fail-closed 兜着：资源表读不到时
+`mech.aeth_block_roll` 第一行就 `return`，连骰子都不掷。）
+
+红率实测（本波两把独立尺子）：把 ③ 那处还原成「只打一下」（= `fix7-gear` 之前那一版）
+⇒ **200 跑 5 红（2.5%）**，红的整行**恒为**「✗ ③ 受击 +6（真源「受击（无论格挡与否）+6」）
+—— ⇒ 0 层」（与骑士 16 级 `dodge=0.031` 那枚硬币对得上）；收口之后连跑 **180 次 0 红**。
+
+★ 同类可疑写法（本波只扫不改，清单留给后续批）：口径 = 「把**会掷骰的真实路径**当
+fixture/判据，又没有确定性把手」。**不是所有掷骰都得收** —— 判据不靠单次命中就不算靠运气。
+按**后果**分三档（本波逐支实测后重分类，别再把三者混成"抖动"）：
+
+  〔真·抖动〕会**真的红**、随机复现 —— 只有 ③（本波已治）。判据：跑 N 跑数红率。
+  〔已兜住〕概率被压到≈0，**红不了**，但判据仍骑在硬币上 —— `probe_mech.py:557/:569` 两处
+    `while … < 20`「重试到落槌为止」。实测（本波跑 20 遍）：**0/20 红**，而硬币**翻过一次**
+    （19 跑「第 1 次才挨到」· 1 跑「第 2 次才挨到」）⇒ 要连翻 20 次才红（约 0.032²⁰）。
+    属**风格收口**（收口走声明面 `dodge.cap`，别裸写 `actor["dodge"]=0` —— 挨打方是玩家、
+    面板是聚合出来的），**不是缺陷**。
+  〔确定但**脆**〕判据不靠硬币、但**骑在掷骰次序上** —— 别处多/少一次 roll 就红成"像回归"。
+    `probe_elements.py:54` 挑种子即此例：实测把 `SEED` 换 4242 ⇒ **真红 2 条**（⑦ 两条，对照臂
+    被浅滩水鬼那 4% 闪避吃掉 ⇒ 基线 0 ⇒ 比值判据塌成 `0 × 1.25 == 0`）。**它不假绿、是会叫的脆**。
+    ★ 本波已治：挨打方 dodge 归零 ⇒ 同一判据 `SEED=1/4242/7/999` **四种都绿**（见该文件 `_enemy` 注）。
+  〔真·假绿〕判据只跑一半/前提被挑出来 —— 本文件 **⑥ 的 else 支从没被执行过**（`if _luck` 那一半
+    恒真 ⇒ 「没掷中 ⇒ 一个字都不写」那半判据只存在纸面上）。这个**不会叫**，比抖动更该治。
+ ④~⑦ 全骑在 ④ 的 `random.seed(SEED)` 上（③⑤⑦ 本波已换确定性闸）—— 属「脆」那一档的温床。
+已核实**不用**收（登记备查）：`probe_cmds.py` 一跑掷 43 枚硬币、且**实测有一跑真闪了 2 下仍全绿**
+（它的判据不靠单次命中）；`probe_mana.py` 的回复是**时钟驱动**、与硬币无关。
 
 用法（Python 用 3.12；3.11 会假红）
     GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_resources.py
@@ -51,8 +85,10 @@ CLS = st.domain("classes")
 from ext_combat.battle import landing as LD                        # noqa: E402
 from ext_combat.battle import schedule as SCH                      # noqa: E402
 from ext_combat.battle import stats as ST                          # noqa: E402
+from ext_combat.battle import formulas as F                        # noqa: E402
 from ext_combat.battle.effect_triggers import fire as _fire         # noqa: E402
 from ext_combat.battle.actions import _skill_usable as _usable, _spend_skill_cost as _spend   # noqa: E402
+from saintess_engine import config as CFG                          # noqa: E402
 
 MID = "ms_field_mouse"
 SEED = 1
@@ -124,6 +160,31 @@ def restore_block(saved):
         MECH.of("block_oath")["block_chance"] = saved
 
 
+def no_dodge():
+    """fixture：把**闪避上限**临时压成 0 —— 挨打那一档要问渠道，不能问命中率。
+
+    为什么必须收（`g5-flake` 实测）：引擎承伤链上有一枚硬币 ——
+    `landing._roll_dodge` 里 `if random.random() < dodge`（`dodge` 是聚合面板值，
+    上限走**声明口** `formulas.dodge_cap()`）。被闪掉的那一下 `deal_damage`
+    **直接 `return 0`**，压根走不到 `_apply_damage` ⇒ `on_taken` 根本不触发
+    （引擎语义如此，是对的：「没碰到」当然不算受击）。于是**拿它当 fixture 的判据
+    = 掷硬币**：骑士 16 级 `dodge=0.031` ⇒ 约每 32 跑红一次。
+
+    收口走**引擎自己的声明面**（不是 monkeypatch 引擎）：`FORMULA_SKELETON["dodge"]["cap"]`
+    —— 读口就是 `dodge_cap()`。压成 0 之后 `min(dodge, 0) = 0` ⇒ `dodge <= 0`
+    ⇒ 引擎**连 roll 都不发生**（不是「希望它别闪」）。返回挂载前的 hook 值供还原。
+    """
+    _saved = CFG.optional_hook("formula_skeleton_fn")   # 「不配 = 合法」的读口（不问 strict）
+    _sk = dict(F._skeleton() or {})                # 当前生效的骨架表（照抄，只动 dodge.cap）
+    _sk["dodge"] = dict(_sk.get("dodge") or {}, cap=0.0)
+    CFG.mount(formula_skeleton_fn=lambda: _sk)
+    return _saved
+
+
+def restore_dodge(saved):
+    CFG.set_hook("formula_skeleton_fn", saved)
+
+
 print("══ ① 形状档（resources.json）")
 _res, _ch = RES.resources(), RES.channels()
 chk("① 资源表读得到（%d 条资源 · %d 个渠道名）" % (len(_res), len(_ch)), bool(_res) and bool(_ch))
@@ -162,28 +223,28 @@ finally:
 print()
 print("══ ③ 骑士守誓值（受击 +6 · 普攻命中 +3 · 技能命中 +5 · 盾墙 +12 · 守誓斩 −25）")
 _sb = no_block()                       # 这一档只看渠道：先把格挡推开（格挡自己那一档在 ⑥）
+_sd = no_dodge()                       # 同理把闪避那枚硬币也收掉（下一段注释：为什么必须收）
+chk("③ fixture 生效：闪避上限已被压成 0（挨打不再靠命中率——弹硬币就不算 fixture）",
+    F.dodge_cap() == 0.0, "⇒ dodge_cap()=%s" % F.dodge_cap())
 _b = build("cls_knight", 16)
 _c = focus(_b)
 chk("③ 开战把资源摆成 0 层（引擎的资源闸门才真的存在：res_cost 判据是「有该条目才须足额」）",
     stacks(_c, "RES_OATH") == 0, "⇒ %d 层" % stacks(_c, "RES_OATH"))
 _mob = (_b.sides.get("enemy") or [None])[0]
 put(_c, "RES_OATH", 0)
-# ★ fix7-gear 顺手收口（**判据一个字没松，收的是 fixture**）：引擎 `_apply_damage` **先 roll 闪避**，
-#   被闪掉的那一下**不触发 `on_taken`**（`_apply_damage` 里闪掉就 return 0 —— 引擎语义如此）。
-#   原先这里只打一下 ⇒ 命中率那一枚硬币有时翻到「闪掉了」，这一条就红一次（实测：满载那一跑红过一回，
-#   单独连跑 3 回又全绿 —— 是掷硬币，不是判据错）。⇒ 改成「打到真挨住那一发为止」，
-#   期望值仍然是 `gain_of`（**不许放宽**：挨住的第一下必须正好等于声明的 +6）。
-_took = 0
-for _try in range(20):
-    LD.deal_damage(_b, _mob, _c, 10, [])
-    if stacks(_c, "RES_OATH"):
-        _took = stacks(_c, "RES_OATH")
-        break
-chk("③ 受击 +%d（真源「受击（无论格挡与否）+6」· 挨住那一发：第 %d 次落上）"
-    % (RES.gain_of("RES_OATH", "on_taken"), _try + 1),
-    _took == RES.gain_of("RES_OATH", "on_taken")
-    and stacks(_c, "RES_OATH") == RES.gain_of("RES_OATH", "on_taken"),
-    "⇒ %d 层" % stacks(_c, "RES_OATH"))
+# ★ g5-flake 收口（**判据本体一个字没松，收的是 fixture**）：这根渠道走的是**挨打**，
+#   而引擎承伤链上先有一枚硬币 —— `landing._roll_dodge`（`random.random() < dodge`）；
+#   被闪掉的那一下 `deal_damage` **直接 `return 0`**，走不到 `on_taken`。骑士 16 级
+#   `dodge=0.031` ⇒ 单跑这里约每 32 次红一次（实测：单跑连跑 160 次，红 6 次 —
+#   红的整行就是「③ 受击 +6（真源「受击（无论格挡与否）+6」）  —— ⇒ 0 层」）。
+#   前一轮曾用「打到挨住为止」的重试遮过去 —— 重试**仍是运气**（0.031^20 只是小，
+#   不是 0），且真出现连续闪避时判据会**悄悄改成量第 20 次的结果**。
+#   ⇒ 现在改成**确定性**收口：`no_dodge()` 把闪避上限压成 0（`min(dodge,0)=0`
+#   ⇒ 连 roll 都不发生）。这样**闪避要是回来了，这条当场红** —— 比重试更强。
+#   期望值仍是声明的 `on_taken` 渠道值（**不许放宽**）。
+LD.deal_damage(_b, _mob, _c, 10, [])
+chk("③ 受击 +%d（真源「受击（无论格挡与否）+6」）" % RES.gain_of("RES_OATH", "on_taken"),
+    stacks(_c, "RES_OATH") == RES.gain_of("RES_OATH", "on_taken"), "⇒ %d 层" % stacks(_c, "RES_OATH"))
 put(_c, "RES_OATH", 0)
 dir_event(_b, "attack_hit", actor=_c, ctx_extra={"target": _mob, "info": {"_basic": True}, "dmg": 9})
 chk("③ 普攻命中 +%d（引擎 `attack_hit`）" % RES.gain_of("RES_OATH", "hit_basic"),
@@ -260,6 +321,8 @@ dir_event(_b5, "act_cast", actor=_c5, ctx_extra={"target": _mob5, "info": SK.ski
 chk("⑤ 准星封顶 %d（夹在 0..max）" % RES.max_of("RES_AIM"), stacks(_c5, "RES_AIM") == RES.max_of("RES_AIM"),
     "⇒ %d 层" % stacks(_c5, "RES_AIM"))
 _b6 = build("cls_priest", 16, uid="u_res6")
+#: 这一档也要「**真挨到**」才算数 ⇒ 骑在 ③ 挂的那个 `no_dodge()` fixture 上
+#: （闪避不关掉的话，「+1 祷言」这半也是掷硬币 —— 修女 16 级 dodge=0.0375）。
 _c6 = focus(_b6)
 _mob6 = (_b6.sides.get("enemy") or [None])[0]
 _mx6 = int(ST.actor_max_hp(_b6, _c6) or 0)
@@ -292,28 +355,46 @@ _blk = float(ST.actor_stats(_b7, _c7).get("block", 0) or 0)
 _mit = float(_AP._table().eval("F10_block_mit", {"block": _blk}))
 _bonus = int((MECH.of("block_oath").get("oath_bonus") or {}).get("value") or 0)
 _acct = int(RES.gain_of("RES_OATH", "on_block"))
-put(_c7, "RES_OATH", 0)
-random.seed(SEED)
-_hp0 = int(_c7.get("hp") or 0)
-_lg7 = []
-LD.deal_damage(_b7, None, _c7, 100, _lg7)                          # source=None ⇒ 不掺等级压制
-_d7 = _hp0 - int(_c7.get("hp") or 0)
-_luck = any("举盾挡下" in x for x in _lg7)
 _want7 = max(1, int(100 * (1 - _mit)))
 chk("⑥ 骑士 16 级 block=%g ⇒ F10 减免 %.4f（求值 formula_table，不重写公式）" % (_blk, _mit),
     0 < _mit < 0.6, "⇒ %.4f" % _mit)
-if _luck:
-    chk("⑥ 掷中 ⇒ 承伤按 F10 打折（100 点应剩 %d）" % _want7, _d7 == _want7, "实测掉 %d 点" % _d7)
+# ★ g5-flake：这一档原先**只有「掷中」那一半真跑** —— `if _luck:` 恒真（种子 1 的头一枚骰子
+#   0.134 < 0.25），`else:` 那半（「没掷中 ⇒ 一个字都不写」）**从没被执行过** = 判据只跑一半
+#   （不叫的那种假绿）。现在**两态各钉一遍**，而且都不看手气（不是"换颗种子赌另一面"）。
+_chance = (MECH.of("block_oath").get("block_chance") or {}).get("value")
+_rand = random.random
+try:
+    # ① 掷中：把那一枚骰子钉成 0.10（< 声明的 block_chance）⇒ 必掷中，且与掷骰次序无关
+    random.random = lambda: 0.10
+    put(_c7, "RES_OATH", 0)
+    _hp0 = int(_c7.get("hp") or 0)
+    _lg7 = []
+    LD.deal_damage(_b7, None, _c7, 100, _lg7)                      # source=None ⇒ 不掺等级压制
+    _d7 = _hp0 - int(_c7.get("hp") or 0)
+    chk("⑥ 掷中（fixture 把骰子钉成 0.10 < %s）⇒ 承伤按 F10 打折（100 点应剩 %d）" % (_chance, _want7),
+        _d7 == _want7 and any("举盾挡下" in x for x in _lg7), "实测掉 %d 点" % _d7)
     chk("⑥ 掷中 ⇒ 回守誓 %d（账本 +%d + 本被动 +%d）+ 那一下的受击 +%d"
         % (_acct + _bonus + RES.gain_of("RES_OATH", "on_taken"), _acct, _bonus,
            RES.gain_of("RES_OATH", "on_taken")),
         stacks(_c7, "RES_OATH") == _acct + _bonus + RES.gain_of("RES_OATH", "on_taken"),
         "⇒ %d 层" % stacks(_c7, "RES_OATH"))
-else:
-    chk("⑥ 这一种子没掷中（概率 %s）—— 掉血 = 不打折的基线，且一个字都不写"
-        % (MECH.of("block_oath").get("block_chance") or {}).get("value"),
-        _d7 == 100 and stacks(_c7, "RES_OATH") == RES.gain_of("RES_OATH", "on_taken"),
-        "掉 %d 点 · 层 %d" % (_d7, stacks(_c7, "RES_OATH")))
+finally:
+    random.random = _rand
+# ② 没掷中：`block_chance` 压 0 ⇒ 机制第一行就 `return`（连骰子都不掷）⇒ 不打折、一个字都不写
+_sb7 = no_block()
+try:
+    put(_c7, "RES_OATH", 0)
+    _hp1 = int(_c7.get("hp") or 0)
+    _lg7b = []
+    LD.deal_damage(_b7, None, _c7, 100, _lg7b)
+finally:
+    restore_block(_sb7)
+_d7b = _hp1 - int(_c7.get("hp") or 0)
+chk("⑥ 没掷中（block_chance 压 0）⇒ 掉血 = 不打折的基线 100，且只写「受击」那一笔（+%d）"
+    % RES.gain_of("RES_OATH", "on_taken"),
+    _d7b == 100 and stacks(_c7, "RES_OATH") == RES.gain_of("RES_OATH", "on_taken")
+    and not any("举盾挡下" in x for x in _lg7b),
+    "掉 %d 点 · 层 %d" % (_d7b, stacks(_c7, "RES_OATH")))
 _b8 = build("cls_knight", 15, uid="u_res8")
 _c8 = focus(_b8)
 put(_c8, "RES_OATH", 0)
@@ -340,6 +421,10 @@ finally:
         RES._CACHE.pop("t", None)
     else:
         RES._CACHE["t"] = _saved
+
+restore_dodge(_sd)                     # ★ ③ 起挂的那个「挨打必中」fixture 到这儿还原
+                                       #   （③⑤⑦ 三档的挨打渠道都骑在它上面；③ 的格挡那半
+                                       #     已由 ③ 末尾的 restore_block 先还原了）
 
 print()
 print("══ ⑧ 引擎零改动（硬指标）")

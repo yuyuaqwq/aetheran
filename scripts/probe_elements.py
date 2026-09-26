@@ -13,6 +13,8 @@
   ⑥ 弱点（机制层真跑 · 可复算）：直调落地 —— 伤害 **== int(基线 × 真源那个倍数)**
   ⑦ 真战斗（技能 → 落地）：放真技能打样例怪 —— 两态差值对得上（冰 == int(基线×1.25) · 火 == 0）
      + 两行日志逐字 · 战斗照旧打得完
+     ★ ⑤⑥⑦ 的挨打方**闪避已归零**（`g5-flake`）：这一档原先靠「挑一颗恰好不闪的种子」站着，
+       实测换种子会**真红 2 条** ⇒ 判据骑在掷骰次序上（见 `_enemy` 那条注）。期望值一字未改。
   ⑧ 一键撤 / 零影响：关掉样例 ⇒ actor 上没有那两个字段（逐字相同）· 非样例怪两态逐字相同
   ⑨ 死槽位：声明的槽位（含 2026-09-25 补的 DoT 每跳那条）**真被引擎请求过**（`TextTable.unused()` 空）
      · ⑨-a 顺带钉死「DoT 那行不含状态机器键」（引擎兜底会打出 `bleeding`）
@@ -51,7 +53,9 @@ from ext_combat.battle import landing as LD                          # noqa: E40
 
 MID = "ms_shallow_ghoul"          # P-1 样例怪（既有怪）
 OTHER = "ms_field_mouse"          # 对照：不在样例里
-SEED = 1                          # 实测这一种子下浅滩水鬼那 4% 闪避不命中（4242 会命中 ⇒ 判据空转）
+SEED = 1                          # 只用来让**两臂吃同一串随机**（伤害波动/暴击两边一致 ⇒ 比值干净）
+                                  # ★ 闪避那枚硬币**不**靠它：已在 fixture 里把挨打方 dodge 归零
+                                  #   （原先把判据押在「这一种子恰好不闪」上 —— 实测换 4242 红 2 条）
 
 fails = []
 
@@ -163,13 +167,24 @@ finally:
 # ⑤⑥ 机制层真跑（直调落地 · source=None ⇒ 不掺等级压制，读数就是元素那一格）
 # ══════════════════════════════════════════════════════════════
 def _enemy(sample_on=True):
-    """造一场真战斗，取那只样例怪 actor（`sample_on=False` = 撤掉样例的对照臂）。"""
+    """造一场真战斗，取那只样例怪 actor（`sample_on=False` = 撤掉样例的对照臂）。
+
+    ★ fixture（`g5-flake` · 2026-09-26）：**把挨打方的闪避归零**。原先这一档靠「挑一颗恰好
+    不闪的种子」（`SEED=1`）站着 —— 本波实测：换成 4242 **真红 2 条**（⑦ 两条都是"对照臂被
+    闪掉 ⇒ 基线 0 ⇒ 比值判据塌成 `0 × 1.25 == 0`"）。判据本身没错，错的是它**骑在掷骰次序上**：
+    别处多一次/少一次 roll（比如战斗管线被改）就会让它红成"像回归"。怪是**试桩式**的
+    （无职业 ⇒ 面板不参与），所以裸写 `actor["dodge"] = 0` 就生效；**玩家那边不行**（面板是
+    聚合出来的，要给玩家去闪避得走声明面 `dodge.cap`，见 `probe_resources.no_dodge()`）。
+    要验闪避另有 `probe_engine_knobs` 那一档。**期望值一个字没改。**
+    """
     _orig = ELE.sample_fields
     if not sample_on:
         ELE.sample_fields = lambda m: {}
     try:
         b = CB.build({"cls": "cls_mage", "level": 9, "name": "探", "uid": "u_el"}, [MID], MON, uid="u_el")
-        return b, b.sides[CB.ENEMY_SIDE][0]
+        e = b.sides[CB.ENEMY_SIDE][0]
+        e["dodge"] = 0
+        return b, e
     finally:
         ELE.sample_fields = _orig
 
@@ -219,6 +234,7 @@ def _cast(cls, skill, sample_on):
     try:
         b = CB.build({"cls": cls, "level": 9, "name": "探", "uid": "u_el2"}, [MID], MON, uid="u_el2")
         e = b.sides[CB.ENEMY_SIDE][0]
+        e["dodge"] = 0                      # ★ 同 `_enemy`：挨打方闪避归零（判据不骑在掷骰上）
         c = b.focus()
         random.seed(SEED)
         hp0 = int(e.get("hp"))
