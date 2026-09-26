@@ -6256,5 +6256,27 @@
     ],
     "category": "战斗",
     "desc": "机制 · 每场一次（焚身：「一场战斗最多一次」，02_狂战士_v2 §三）· 真源槽位行见 fxmech/_notes.md §真源行"
+  },
+  "COMBAT_EXPLORE_MET": {
+    "value": "你往里探了两步 —— {name} 也正盯着你。",
+    "params": [
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "探索遇怪（fxexp）：探索撞上怪那一刻「你这一手」那句话 —— 名字由 `cmds_battle._open_and_hand` 从**同一次抽**现读（`affix.display_name`，与『观察』那一栏 / 『攻击』开的那一场同一个口）。"
+  },
+  "SYS_EXPLORE_CLEAR": {
+    "value": "转了一圈 —— 这一带没什么动静。",
+    "params": [],
+    "category": "系统",
+    "desc": "探索 · **掷空**那一句（fxexp）：脚下这一站没有可捡的点时的产出 —— 「掷空不空手」的下沿（有拾取点就走 SYS_EXPLORE_PICK 那一条）。"
+  },
+  "SYS_EXPLORE_PICK": {
+    "value": "转了一圈 —— 这一带能捡的：{list}",
+    "params": [
+      "list"
+    ],
+    "category": "系统",
+    "desc": "探索 · **掷空**那一句的另一种（fxexp）：脚下这一站**有拾取点**（采集点声明）时，把现成的点列出来（`list` 由现成槽位 SYS_SRC_GATHER 逐点拼，动作词走 SYS_GATHER_VERB_*）—— 提示不空手。"
   }
 }

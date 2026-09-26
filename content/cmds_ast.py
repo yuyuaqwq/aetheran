@@ -20,6 +20,7 @@ from . import titles as TT            # 称号（B3-2）：显示跟着名字走
 from . import scene as SC           # 场景槽位解析（B3-6a）：节点级近景 → 退地图级第一眼
 from . import timed_events as TE     # 限时事件那一格（B3-5）：宿主维护门落档 · 这里只读
 from . import affix as AFFIX
+from . import explore as EX          # ★ fxexp：探索遇怪的概率与掷骰（唯一出口 · 表在 rules/）
 from . import argv as AV          # ★ B4-11：取参的唯一口（零依赖 ⇒ 本模块也能 import）         # ★ B3-24：精英词条（观察那行预告 = 遭遇的同一个种子）
 
 _DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
@@ -814,8 +815,11 @@ async def look(env, sink, uid, player):
     #   『下一层』那句去「打它」却看不见目标。这一栏与『攻击』**同一次抽**（名字从
     #   `cmds_battle.foe_here` 来）⇒ 看见的就是会开打的那只。本地 import：`cmds_tower`
     #   要 import 本模块（模块级 import 会成环）。
+    #   ★ fxexp（本波）：这一栏原先**只有塔内**有名字行 —— 野外 / 镇上那一档的槽位
+    #     `SYS_LOOK_FOE_ROW` 一个读端都没有（死槽位）。现在两档都走这一口（`elite_row`
+    #     = 上面那一支已经说过精英 ⇒ 不再重复一行）。
     from .cmds_tower import foe_lines_here
-    for _foe in foe_lines_here(p, uid):
+    for _foe in foe_lines_here(p, uid, elite_row=bool(_el)):
         yield _foe
     yield T("SYS_LOOK_HINT")
     for line in egg_lines(p, player, env):      # ★ B3-1：看四周那一下可能把两件事连起来
@@ -855,6 +859,46 @@ async def listen(env, sink, uid, player):
             yield T(key)
             return
     yield T("SYS_LISTEN_DEFAULT")
+
+
+async def explore(env, sink, uid, player):
+    """★ fxexp：`探索`（别名 探 / 走一圈）—— 在**脚下这一站**转一圈：掷一次遇怪；没撞上 ⇒ 不空手。
+
+    口径（设计案《fxexp · 「探索遇怪」字段级设计案 §2》· 真源 `00_总纲/03_主要玩法`
+    「路上：**遇怪**、看见能捡的东西…」）：
+
+      · **持态**：手上还有一场没打完 ⇒ **拦下**（与移动族**同一道闸** `_in_fight`、
+        同一句 fail-closed —— 位置与历史一个字不动）；
+      · **概率**走 `content/explore.py`（表 = `content/rules/explore_encounter.json`；
+        base[档] × 等级差 × 时辰 × 天气 × 世界事件，上限 0.9）—— 本文件**一个数都不写**。
+        **表缺 / 这一站拿不到档 ⇒ 不掷**（与接线前逐字相同：不建场、不动档）；
+      · **命中** ⇒ 走**同一条** `_open_and_hand` 骨架开一场（head 用槽位
+        `COMBAT_EXPLORE_MET`，名字由骨架从**同一次抽**里现读）—— 抽怪仍走
+        `_encounter` / `affix.elite_of`（**不另起一套**），所以「探索撞到的」与
+        「『观察』印的那只 / 『攻击』开的那一场」是**同一个口**；
+      · **掷空** ⇒ 有拾取点给拾取提示，没有就通用那句（`explore.miss_lines`）。
+        ★ 掷空这一支**一个字都不写档**（设计案 §四验收 2「不建场、不动档」）。
+    """
+    _lock = _in_fight(env, uid)
+    if _lock:
+        yield _lock
+        return
+    p = _p(player)
+    st = CAL.state()                              # 时辰 / 天气 / 游戏日（现算，不落档）
+    _ratio = EX.ratio(_data("monsters"), p["loc"], p["node"], int(p.get("level", 1) or 1), st, p)
+    if _ratio is None or EX.roll(uid, p) >= float(_ratio):
+        # 不掷（表缺 / 档取不到）或掷空 —— 两支都**不建场、不动档**
+        for line in EX.miss_lines(p, st):
+            yield line
+        return
+    # ★ P-27 同一个口径：这一场要靠面板（档上还没有职业 ⇒ 不出假数、这一场不开）
+    _mx, _line = hp_cap_or_line(p)
+    if _line:
+        yield _line
+        return
+    from .cmds_battle import _open_and_hand        # 本地 import：`cmds_battle` 要 import 本模块
+    async for line in _open_and_hand(env, p, uid, player, "", head_slot="COMBAT_EXPLORE_MET"):
+        yield line
 
 
 async def time_now(env, sink, uid, player):

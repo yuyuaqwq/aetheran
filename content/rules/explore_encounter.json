@@ -1,0 +1,92 @@
+{
+  "_src": {
+    "真源": "aetheran-plan/00_总纲/03_主要玩法.md「路上：遇怪、看见能捡的东西…」（★ 把「遇怪」从「只有战斗指令能触发」扩成**探索也能触发**）+ AETHERAN_推进进度.md P-16 登记「现在遇敌是敲指令打的（`pick_encounter` 由指令触发），**没有遇见率**」",
+    "口径表": "本文件 = 设计案《fxexp · 「探索遇怪」字段级设计案 §2.3》那几个数的唯一机器可读副本。`content/explore.py` **一个数都不写**（表缺 / 档取不到 ⇒ 回「不掷」，与接线前逐字相同）；三头对账 = `scripts/probe_explore.py`",
+    "叶子": "content/explore.py（概率与掷骰的唯一出口）· content/cmds_ast.py::explore（指令实现体）",
+    "公式": "p = clamp(base[档] × m_level × m_time × m_weather × m_event, floor, cap)"
+  },
+  "band": {
+    "_src": "档从**站点数据现取** = maps 域节点的 `role`（现成字段，不新造深度字段）—— 与 content/rules/elite.json::rate.eligible_node_roles 读的是同一个字段、同一个口（`affix.node_place`）。取不到（节点不在图里 / 没有 role / role 不在表里）⇒ 按 `default`（野外带）",
+    "by_node_role": {
+      "镇上": "town",
+      "镇口": "town",
+      "野外": "wild",
+      "深处": "deep",
+      "营地": "camp",
+      "塔门": "room",
+      "塔内": "room",
+      "塔顶": "room"
+    },
+    "default": "wild",
+    "_camp_note": "「营地」这一档今天**没有站点命中**（maps 域里没有节点的 role 写成「营地」—— 拾荒营地那一站自己的 role 是「野外」）。表里照设计案留着 0.35 那一格：将来哪张图把节点 role 写成「营地」就自动吃到它，代码不用改。登记见本分支 `_notes.md §真源行`。"
+  },
+  "base": {
+    "_src": "设计案 §2.3 `base` 那一行：野外带 0.28 · 深处 0.40 · 营地 0.35 · 副本房间 0.55 · 镇内 0（安全区）",
+    "wild": 0.28,
+    "deep": 0.4,
+    "camp": 0.35,
+    "room": 0.55,
+    "town": 0.0
+  },
+  "cap": {
+    "_src": "设计案 §2.3 `cap` 那一行：0.9（永远给「掷空」留余地 —— 满值不出现）",
+    "value": 0.9
+  },
+  "floor": {
+    "_src": "下界（夹取用）—— 表里只有非负倍数 ⇒ 0 就是它；不在代码里写这个数",
+    "value": 0.0
+  },
+  "m_level": {
+    "_src": "设计案 §2.3 `m_level` 那一行（等级差五档）。**等级差 = 玩家等级 − 这一站的基准等级**；站基准 = 这一站说得上话的怪里**最低的那一级**（`combat.encounter_cand` 那一口现读，不另造「图深度」字段）—— 这一条是设计案没写死、本批落的（登记见 `_notes.md §本批处置 · 设计决定`）",
+    "bands": [
+      {
+        "min_diff": -99,
+        "max_diff": -5,
+        "mul": 2.2
+      },
+      {
+        "min_diff": -4,
+        "max_diff": -2,
+        "mul": 1.6
+      },
+      {
+        "min_diff": -1,
+        "max_diff": 1,
+        "mul": 1.0
+      },
+      {
+        "min_diff": 2,
+        "max_diff": 4,
+        "mul": 0.4
+      },
+      {
+        "min_diff": 5,
+        "max_diff": 99,
+        "mul": 0.0
+      }
+    ],
+    "_bands_src": "≥ 站基准+5 ⇒ ×0（威慑：那一片的怪看见你就躲）· +2..+4 ⇒ ×0.4 · ±1 ⇒ ×1 · −2..−4 ⇒ ×1.6 · ≤−5 ⇒ ×2.2。档位区间把 ±99 盖满 ⇒ 「落在表外」只有一种可能：表被改坏了（fail-closed：不掷）"
+  },
+  "m_time": {
+    "_src": "设计案 §2.3 `m_time` 那一行（夜 ×1.25 · 昼 ×1）—— 键是 calendar 域的**时辰 id**（`hr_dawn` / `hr_day` / `hr_dusk` / `hr_night`），不写死钟点：钟点窗界在 content/data/calendar.json 里",
+    "hr_dawn": 1.0,
+    "hr_day": 1.0,
+    "hr_dusk": 1.0,
+    "hr_night": 1.25,
+    "_night_note": "「昏」（hr_dusk）今天按 ×1 落 —— 设计案只写了「夜 / 昼」两档，四时辰各给一格免得一档落空（落空 = 整套 fail-closed ⇒ 那一档永远不掷，那不是设计意图）"
+  },
+  "m_weather": {
+    "_src": "设计案 §2.3 `m_weather` 那一行（雾 ×1.3 · 雨 ×1.15 · 晴 ×1）—— 键是 weather 域的**天气 id**（唯一天气出口 = calendar.weather_of）",
+    "w_sunny": 1.0,
+    "w_rain": 1.15,
+    "w_fog": 1.3,
+    "w_snow": 1.0,
+    "_snow_note": "「雪」（w_snow）设计案没点名 —— 本批给它 ×1（不列它就会让雪天整套 fail-closed ⇒ 一整天探索不掷，那是把一条天气变成「探索失效」）。登记见 `_notes.md §本批处置 · 设计决定`"
+  },
+  "m_event": {
+    "_src": "设计案 §2.3 `m_event` 那一行 = `calendar.encounter_mul`（**已有那一口** —— P-16 那个死轴就此盘活）。那一口给的是 `{怪 id: 倍数}`（`combat.pick_encounter` 的加权形状），本档要的是**一个数** ⇒ 取表里那一档的 `reduce`",
+    "reduce": "max",
+    "default": 1.0,
+    "_reduce_note": "空表（今天一条世界事件都没给 encounter_mul）⇒ `default`（= 1，零变化）。给了一条或几条时取**最大倍数**（「哪一只被抬得最多，这一片就抬多少」）—— 不做乘积（那会把「按怪加权」误读成「叠两层翻倍」）。这一条是设计案没写死、本批落的（登记见 `_notes.md §本批处置 · 设计决定`）。"
+  }
+}

@@ -90,24 +90,32 @@ def door_hint_lines(p) -> list:
     return [T("SYS_TOWER_DOOR")]
 
 
-def foe_lines_here(p, uid) -> list:
-    """副本房间里「遇敌」那一栏（`观察`）—— 与『攻击』**同一次抽**（`cmds_battle.foe_here`）。
+def foe_lines_here(p, uid, elite_row: bool = False) -> list:
+    """『观察』「遇敌」那一栏 —— 塔内走 `SYS_LOOK_FOE_ROOM` / 野外与镇上走 `SYS_LOOK_FOE_ROW`。
 
     ★ fxa（P2 试玩 #2）：**塔内不刷精英**（`rules/elite.json` 的 `eligible_node_roles` 只列
       野外 / 深处 —— 塔门 / 塔内 / 塔顶 一律不刷），而『观察』那一栏原先**只有精英那一条路**
       ⇒ 塔里 16 间房一次都没印过「遇敌：」，玩家按『下一层』那句去「打它」，屏幕上却看不见
-      目标（野外 9 站反而印得出来）。现在塔里这一栏与野外**同一个形状**（表头 + 名字行），
+      目标（野外 9 站反而印得出来）。塔里这一栏与野外**同一个形状**（表头 + 名字行），
       差别只在名字行走哪个槽位：精英那行是 `COMBAT_ELITE_SPAWN`（塔里出不来），
-      这一行走 `SYS_LOOK_FOE_ROOM`。
-    不在这张图 / 这一间没有怪 ⇒ 空表（fail-closed：没东西可遇就不多说一行）。
+      塔内这一行走 `SYS_LOOK_FOE_ROOM`。
+    ★ fxexp（本波）：**野外 / 镇上那一档也接上读端** —— 槽位 `SYS_LOOK_FOE_ROW`
+      原先零读端（那一行在 `texts` 里躺着，没人印）。两档**同一个口**
+      （`cmds_battle.foe_here` —— 『攻击』真开的那一场也是它 ⇒ 「说的 = 打的」），
+      差别只在槽位：野外那一档的名字行走 `SYS_LOOK_FOE_ROW`（`{list}` 形状）。
+      `elite_row=True`（这一站今天有精英、那两行已经由观察那一支出过了）⇒ 空表（不重复）。
+    不在这张图 / 这一间没有怪 / 这一带一只候选都挑不出来 ⇒ 空表（fail-closed：没东西可遇
+    就不多说一行 —— 镇上与塔内空房就是这一档）。
     """
-    if not _inside(p):
+    if elite_row:
         return []
     from .cmds_battle import foe_here
     name = foe_here(p, uid)
     if not name:
         return []
-    return [T("SYS_LOOK_FOE"), T("SYS_LOOK_FOE_ROOM", name=name)]
+    if _inside(p):
+        return [T("SYS_LOOK_FOE"), T("SYS_LOOK_FOE_ROOM", name=name)]
+    return [T("SYS_LOOK_FOE"), T("SYS_LOOK_FOE_ROW", list="『%s』" % name)]
 
 
 def _room_foes(node) -> list:

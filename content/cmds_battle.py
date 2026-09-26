@@ -541,11 +541,18 @@ async def _settle(env, p, uid, pick, ms, res, logs, hp_after, seen, player, affi
         _save(env)
 
 
-async def _open_and_hand(env, p, uid, player, head, hand=None, action=None, skill=None):
+async def _open_and_hand(env, p, uid, player, head, hand=None, action=None, skill=None,
+                         head_slot=None):
     """★ B3-23 的公共骨架：遇敌 → 报这一手 → 打 → 落账（六条指令都走它）。
 
     `head` 是这一手要说的那句话（已经渲染好的槽位行）；没遇敌 ⇒ 换成
     `COMBAT_NEED_FOE` 那一句，**什么都不动**（fail-closed，不白打一场）。
+
+    ★ fxexp：`head_slot` = 这一手那句话的**槽位名**（内容侧只传槽位名，一个字不写文案）——
+      句子里要带**这一场真开的那一只**的名字时就给这一格：名字从 `_meet` 这一次抽里
+      现读（`affix.display_name`，与 `foe_here` / 『观察』那一栏同一个口），
+      **不许调用方自己先抽一次**（那就两处口径、两只怪）。给了 `head_slot` 且 `head` 为空
+      ⇒ 这一句就是这一手要说的那句话；两个都给了 ⇒ `head` 优先（老调用方一字不变）。
     """
     pick, ms, affixes, _mline = _meet(p, uid)
     if not pick:
@@ -554,6 +561,9 @@ async def _open_and_hand(env, p, uid, player, head, hand=None, action=None, skil
     yield _mline
     for line in encounter_lines(ms[pick[0]], p):
         yield line
+    if not head and head_slot:
+        head = T(head_slot,
+                 name=AFFIX.display_name(str(ms[pick[0]].get("name", pick[0])), list(affixes)))
     if head:
         yield head
     _b, res, logs, hp_after = _run_hand(p, pick, ms, affixes=affixes, hand=hand,
