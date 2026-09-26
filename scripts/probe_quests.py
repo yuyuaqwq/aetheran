@@ -72,6 +72,12 @@ B4-2 加的那一组（P-25 §① 主线收口 · P-37 曲线唯一口）：
       行里点了名（探针现解析；不是从别条串台凑的）· **缺一步矩阵**（逐条少做那一件 ⇒ 拦住）·
       万事俱备 ⇒ 交得掉 + 奖励入档 + `flags.quests[<id>]` 的 `step == 条件条数`
 
+B4-27 加的那一组（P-25 §② 再收一条：支 7 白烛堂的灯）：
+  ㉚（扩）★ 支 7「送灯油 → 陪他配一次」的后半截落成 `talk npc_ed ×1`（「陪」= 搭话，与
+      「听他讲完（三次）」同一族；次数从那一句现取）⇒ `_EXP_KIND` 6 → **7**，于是 ㉘ 的
+      「交不掉」钉住名单 5 → **4**（名单只许变短，变了当场红）。
+      ★ 前半截「送灯油」**没落**：items 域里没有「灯油」这件东西 ⇒ 缺口登记在 `_notes.md`。
+
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_quests.py
 """
 from __future__ import annotations
@@ -982,11 +988,11 @@ _SHAPE_OF = {"visit": "「去过某处」", "item": "「手上有某物」",
              # ★ B3-13 四型（账都在现有档上 —— 形状名只是给人看的那一栏）
              "enhance": "「有一件装备强化到某一级」", "cook": "「下过锅 N 次」",
              "talk": "「跟某人搭过 N 次话」", "ask": "「搭过话的人有 N 个」"}
-#: ★ 今天交不掉的支线**钉住名单**（B3-13 现状 —— 从 11 条压到 5 条）—— 名单一变当场红：
+#: ★ 今天交不掉的支线**钉住名单**（B4-27：从 5 条压到 4 条）—— 名单一变当场红：
 #:   少一条（有人把它修好了）要**故意**从这儿删掉，多一条（新死的）立刻红。
+#:   ★ 这 4 条的根因都是**内容/形状缺**（不是代码漏判）—— 逐条「要补进真源的行」写在工作树
+#:     `_notes.md`；补上之后照 支 7 那条的办法（生成器 + 探针各写一条从文档现解析的规则）落。
 _DEAD_SIDE = {
-    "q_side_07": "「送灯油 → 陪他配一次」—— 两截都缺：灯油这个物品**域里不存在**（items 全域没有此物），"
-                 "「送出去」也还没有形状（`item` 只查持有）⇒ 先补内容（灯油那件东西）再谈条件",
     "q_side_10": "「陪一个 NPC 走一段（送信）」—— 信这个物品域里不存在，且**目的地文档没写**"
                  "（没目的地落不了 `visit`；「陪一段」本身也没有形状）",
     "q_side_11": "「查他酒钱从哪来」—— 要「线索 / 隐藏线 flag」这种形状（隐藏线「号角」口径未落）",
@@ -1346,8 +1352,9 @@ EV = st.domain("events")
 _NUM2 = r"[一二两三四五六七八九十\d]"
 _CN2 = {"一": 1, "二": 2, "两": 2, "三": 3, "四": 4, "五": 5,
         "六": 6, "七": 7, "八": 8, "九": 9, "十": 10}
-#: 这 6 条该是什么型（条件**形状**由哪一句推 —— 与生成器各写各的）
+#: 这 7 条该是什么型（条件**形状**由哪一句推 —— 与生成器各写各的）
 _EXP_KIND = {"q_side_01": "enhance", "q_side_05": "cook", "q_side_06": "cook+quality",
+             "q_side_07": "talk",           # ★ B4-27：陪他配一次 → 跟艾德搭 1 次话
              "q_side_09": "talk", "q_side_16": "talk", "q_side_17": "ask"}
 
 
@@ -1375,6 +1382,13 @@ def _exp_side(steps, who):
     m = _re.search(r"帮[他她]问(" + _NUM2 + r"+)个人", steps)
     if m:
         return [{"kind": "ask", "n": _cn(m.group(1))}]
+    # ★ B4-27 · 支 7 白烛堂的灯：「陪他配一次」⇒ 跟**谁给的那位**搭 N 次话
+    #   （「陪」在支线里就是搭话 —— 与「听他讲完（三次）」同一族；次数从这一句现取）
+    m = _re.search(r"陪[他她]配(" + _NUM2 + r"*)次", steps)
+    if m:
+        ids = [k for k, v in NPCS.items() if v.get("name") == who]
+        return ([{"kind": "talk", "npc": ids[0], "n": _cn(m.group(1) or "一")}]
+                if len(ids) == 1 else None)
     return None
 
 
@@ -1551,9 +1565,10 @@ for _qid in sorted(_EXP_KIND, key=lambda q: QE[q]["order"]):
                         json.dumps(_want, ensure_ascii=False), _how,
                         (next((ln for ln in _pay if ln.startswith("交了")), "?") + " · 经验 +%d 铜板 +%d"
                          % (_x["reward_exp"], _x["reward_gold"]))))
-(ok if len(_EXP_KIND) == 6 and not _nk_bad else bad)(
-    "★ 支线新四型 6 条：与 24 §二「步骤」列逐条对账（含数词）· 量够达成 / 途径存在 · "
-    "**真做一次再真交一次**（动作走真指令：强化 / 下锅 / 搭话 / 问人；坏 %s）" % (_nk_bad or "无"))
+(ok if len(_EXP_KIND) == 7 and not _nk_bad else bad)(
+    "★ 支线新四型 %d 条：与 24 §二「步骤」列逐条对账（含数词）· 量够达成 / 途径存在 · "
+    "**真做一次再真交一次**（动作走真指令：强化 / 下锅 / 搭话 / 问人；坏 %s）"
+    % (len(_EXP_KIND), _nk_bad or "无"))
 for _ln in _nk_lines:
     print("      %s" % _ln)
 

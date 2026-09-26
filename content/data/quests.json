@@ -586,6 +586,13 @@
     "min_level": 1,
     "need": null,
     "objective": "送灯油 → 陪他配一次",
+    "require": [
+      {
+        "kind": "talk",
+        "npc": "npc_ed",
+        "n": 1
+      }
+    ],
     "reward_exp": 100,
     "reward_gold": 30,
     "teach": "",
