@@ -1235,6 +1235,22 @@ def _pois_here(loc, node, p, st=None):
     return out
 
 
+def rest_places() -> list:
+    """有火的那几站（节点名 · 按 pois 域的顺序去重）—— `歇脚` 没有火时**指路**用（★ F6）。
+
+    ★ 与 `_pois_here` 同一处：`pois` 域的读口只在本模块（P-31 / K65）——
+      `cmds_gather.py` 里一个 `_data("pois")` 都不许有（`probe_cmds` ㉑④ 钉着）。
+    """
+    out = []
+    for v in (_data("pois") or {}).values():
+        if not isinstance(v, dict) or not (v.get("effect") or {}).get("rest"):
+            continue
+        nm = _name_of_node(str(v.get("map") or ""), str(v.get("subarea") or ""))
+        if nm and nm not in out:
+            out.append(nm)
+    return out
+
+
 def poi_names_seen(here) -> list:
     """能看见的那几条 —— `no` 不算在场（列表里不列）· `unknown` 照旧在场（点名但不藏）。"""
     return [rec for _pid, rec, state, _ln in here if state != "no"]
@@ -1430,6 +1446,14 @@ async def poi_effect_lines(env, sink, uid, p, pid, rec, verb, player=None):
 # 四、可读物（触摸）
 # ══════════════════════════════════════════════════════════════
 async def touch(env, sink, uid, player):
+    """`触摸 [<东西>]` —— 上手摸。
+
+    ★ F6（QA P2 BUG⑧）：原先**不吃参数**（`触摸 半埋的碑` 回「这句我没接住」），
+      同一个 POI 上「读」吃得下名字、「触摸」吃不下 —— 玩家想只摸某一件事做不到，
+      还得连带把整站的增益/消耗一并领了。现在与 `读` 同一待遇：
+      点了名就只摸那一件；名字对不上照实说（不静默换成「这儿没有可以上手的」——
+      这儿明明有，只是他敲错了名字）。
+    """
     p = _p(player)
     # ★ P-31：这一站的 poi 走唯一一口（门槛现看）—— 原先这一条自己扫域、`condition` 谁都没读，
     #   带条件的四件（水下的石阶 / 退潮后的石缝 / 商会旧账簿 / 白桦林深处的记号）永远能上手。
@@ -1437,6 +1461,15 @@ async def touch(env, sink, uid, player):
     if not here:
         yield T("SYS_TOUCH_NONE")
         return
+    want = AV.arg_of(env)                     # ★ F6：跟着自己的声明剥参（连写也算）
+    if want:
+        hit = [x for x in here
+               if want == (x[1].get("name") or "") or want in (x[1].get("name") or "")]
+        if not hit:
+            yield T("SYS_TOUCH_MISS", name=want,
+                    list=" · ".join("『%s』" % v.get("name") for _pid, v, _st, _ln in here))
+            return
+        here = hit
     got = []
     for pid, v, cond_state, cond_line in here:
         if cond_state == "no":                # 门槛判得出不成立 ⇒ 这一下不做，但点名说清差什么

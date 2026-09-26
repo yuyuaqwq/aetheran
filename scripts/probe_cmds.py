@@ -157,6 +157,11 @@ def samples(pattern):
 
 
 # ── 文档点名的触发词（`04_指令总表` 各节；别名一律算）──────────────
+# ★ F6（QA P4 E-7）：`看` 这个单字别名原先**同时**挂在观察（§一）与查看（§四）上，
+#   裸 `看` 走的是 §一那一支（= 一整段场景描写）⇒ 玩家敲「看」看不出自己少写了参数，
+#   而 `看 abc` 又悄悄当成「查看」回「背包里没有…」。本批收敛成：**裸 `看` 归查看**
+#   （照 §〇⑥「单字只做别名」+ §四 `查看 <物品>`（别名 看）），`看 <编号>` 照 §二 归委托。
+#   ⇒ 工作树 `_notes.md` §F6 记着「真源 §一 那一行的 `看` 待摘」（真源仓单写，本分支只改包）。
 DOC = (
     ("§一 移动与世界", (
         ("进镇", "enter_town"), ("风车镇", "enter_town"), ("回镇", "enter_town"),
@@ -165,7 +170,7 @@ DOC = (
         ("往西", "go_west"), ("西边", "go_west"),
         ("返回", "go_back"), ("回", "go_back"), ("退回去", "go_back"),
         ("地图", "map"), ("m", "map"),
-        ("观察", "look"), ("看", "look"), ("看四周", "look"),
+        ("观察", "look"), ("看四周", "look"),
         ("触摸", "touch"), ("摸", "touch"), ("碰", "touch"),
         ("聆听", "listen"), ("听", "listen"),
         ("问路", "ask_way"), ("打听", "ask_way"),
@@ -201,6 +206,8 @@ DOC = (
     ("§四 背包与物品", (
         ("背包", "bag"), ("包", "bag"), ("包裹", "bag"), ("inv", "bag"),
         ("查看 伤药", "item_show"),
+        ("看", "item_show"),                     # ★ F6：裸 `看` 收敛到「查看」
+        ("看 伤药", "item_show"),                #   与 `^看\s*(.+)$` 同一个口
         ("使用 伤药", "item_use"), ("用 伤药", "item_use"), ("吃 伤药", "item_use"),
         ("丢弃 伤药", "item_drop"), ("丢 伤药", "item_drop"),
         ("卖出 伤药", "item_sell"), ("卖 伤药", "item_sell"),
@@ -2062,14 +2069,21 @@ try:
         "%s" % [x for x in _B23 if x[0].startswith("用物")][:2])
 
     # ── 五、集火：单人明确回话（不动档、不开战斗）────────────────────────────────
+    #   ★ F6（QA P3）：**三档分得开** —— 认得出 / 认不出这个名字 / 空着没点名。
+    #     改前「认不出」与「空着」回的是**同一句**（掉进「没组队」那句），玩家以为自己点对了。
     _o_focus1, _s_focus1 = _say23(dict(_BASE23), "集火 %s" % _MON23[_MS23]["name"])
     _o_focus2, _s_focus2 = _say23(dict(_BASE23), "集火 谁都不认识的名字")
+    _o_focus3, _s_focus3 = _say23(dict(_BASE23), "集火")
     if _o_focus1 != [_r("COMBAT_FOCUS_NAMED", name=_MON23[_MS23]["name"])] \
-            or _o_focus2 != [_r("COMBAT_FOCUS_SOLO")] \
-            or _s_focus1 != dict(_BASE23) or _s_focus2 != dict(_BASE23):
-        _B23.append(("集火", _o_focus1, _o_focus2))
+            or _o_focus2 != [_r("COMBAT_FOCUS_MISS", name="谁都不认识的名字")] \
+            or _o_focus3 != [_r("COMBAT_FOCUS_SOLO")] \
+            or _o_focus1 == _o_focus2 or _o_focus2 == _o_focus3 \
+            or _s_focus1 != dict(_BASE23) or _s_focus2 != dict(_BASE23) \
+            or _s_focus3 != dict(_BASE23):
+        _B23.append(("集火", _o_focus1, _o_focus2, _o_focus3))
     chk("★ `集火 <目标>`：域里认得出来的那只 ⇒ 一句明确回话（不假装锁上了谁）· 认不出 ⇒ 另一句 ·"
-        "**两档都不动档、都不开战斗**", not [x for x in _B23 if x[0].startswith("集火")],
+        "**三档三句话各不相同**（认得出 / 认不出 / 空着）· **三档都不动档、都不开战斗**",
+        not [x for x in _B23 if x[0].startswith("集火")],
         "%s" % [x for x in _B23 if x[0].startswith("集火")][:2])
 
     # ── 六、换武器：真换上 + 吃一手（野外）/ 只换手（镇里）──────────────────────
@@ -2585,6 +2599,20 @@ try:
         return list(_ad21.out), (_ad21.saved or {})
 
     _NOFIRE21 = _r("SYS_REST_NOFIRE")
+    # ★ F6（QA P4 E-3）：没有火时**还要指出哪儿有火** —— 名单照 ㉑④ 同一口径**现算**
+    #   （pois 域里挂 `effect.rest` 的那几处 → 它们所在节点的名字走 maps 域现读，一个字都不手写）。
+    _FIRE_NODES21 = []
+    for _v21 in _POIS21.values():
+        if not (isinstance(_v21, dict) and (_v21.get("effect") or {}).get("rest")):
+            continue
+        _nm21 = next((str(n.get("name")) for n in
+                      ((_MAP21.get(str(_v21.get("map") or "")) or {}).get("nodes") or [])
+                      if n.get("id") == _v21.get("subarea")), "")
+        if _nm21 and _nm21 not in _FIRE_NODES21:
+            _FIRE_NODES21.append(_nm21)
+    _HINT21 = _r("SYS_REST_FIRE_HINT", list=" · ".join("『%s』" % x for x in _FIRE_NODES21))
+    chk("★ F6：没火那几档的回话里**指名哪儿有火**（名单现算 = %s；一个节点名都不手写）"
+        % (" · ".join(_FIRE_NODES21) or "（域里没有火？）"), bool(_FIRE_NODES21), _HINT21)
 
     # ── ① 没有篝火的三档（镇上 / 骨田 / 塔里）⇒ 逐字回那一句 · 档一个字不动
     _bad21 = []
@@ -2592,9 +2620,10 @@ try:
                                   ("骨田", "belt_north", "bn_bone"),
                                   ("塔里（塔门）", "old_watchtower", "tower_gate")):
         _o21, _s21 = _say21(dict(_SEED21, loc=_loc21, node=_nd21), "歇脚")
-        if _o21 != [_NOFIRE21] or _s21.get("hp") != 60:
+        if _o21 != [_NOFIRE21, _HINT21] or _s21.get("hp") != 60:
             _bad21.append((_lab21, _o21[:2], _s21.get("hp")))
-    chk("★ 没有篝火的三档（镇上 / 骨田 / 塔里）⇒ 逐字回 `SYS_REST_NOFIRE`，"
+    chk("★ 没有篝火的三档（镇上 / 骨田 / 塔里）⇒ 逐字回 `SYS_REST_NOFIRE` **+ 指路那一行**"
+        "（★ F6：`歇脚棚` 那类地名会让人以为能歇 —— 光说「这儿没有」不够，得说清哪儿有），"
         "档**一个字不动**（血还是 60）—— 原先这三档一律回「生命 +20%」", not _bad21,
         "%s" % (_bad21[:2],))
 
@@ -2635,6 +2664,84 @@ try:
         "自扫 pois %s · rest 里真调 %s" % (_scan21, _in_rest21))
 except Exception as exc:                                                  # noqa: BLE001
     chk("★ B4-25 歇脚那一条守卫跑得起来（真宿主契约）", False,
+        "%s: %s" % (type(exc).__name__, exc))
+
+
+# ══════════════════════════════════════════════════════════════
+# ★ F6（QA P2 BUG⑧）：`触摸` 吃参数 —— 与同一 POI 上的 `读` 同一待遇
+#   改前：`触摸 半埋的碑` 回「这句我没接住」，而 `读 半埋的碑` 通 ——
+#   玩家想只摸某一件做不到，还得连带把整站的增益/消耗一并领走。
+# ══════════════════════════════════════════════════════════════
+print("㉒ ★ F6：`触摸 <东西>` 点名只摸那一件 · 名字对不上照实说（不静默换成「这儿没有可以上手的」）")
+try:
+    _POIS22 = st.domain("pois") or {}
+    _by22 = {}
+    for _pid22, _v22 in _POIS22.items():
+        if isinstance(_v22, dict):
+            _by22.setdefault((str(_v22.get("map") or ""), str(_v22.get("subarea") or "")),
+                             []).append((str(_pid22), _v22))
+    _spot22 = next((k for k, v in sorted(_by22.items()) if len(v) >= 2), None)
+    chk("★ ① 域里真有「同一站两件以上」的地方（现算 · 不手写节点 id）：%s / %s ⇒ %d 件"
+        % ((_spot22 or ("?", "?"))[0], (_spot22 or ("?", "?"))[1],
+           len(_by22.get(_spot22) or [])),
+        _spot22 is not None)
+
+    # ── ② 声明面：`触摸` 与 `读` 取参的形状**一致**（都有带参的写法）
+    _tp22 = list((DECL.get("touch") or {}).get("patterns") or [])
+    _rp22 = list((DECL.get("read") or {}).get("patterns") or [])
+    chk("★ ② 声明面：`触摸` 与 `读` 都带「点名」那一支（触摸 %d 条 / 读 %d 条 pattern · 都含 `(.+)`）"
+        % (len(_tp22), len(_rp22)),
+        any("(" in p for p in _tp22) and any("(" in p for p in _rp22), "%s" % (_tp22,))
+
+    _SEED22 = {"cls": "cls_knight", "race": "human", "name": "试炼者", "level": 5, "exp": 0,
+               "gold": 100, "hp": 116, "loc": _spot22[0], "node": _spot22[1],
+               "prev": [], "bag": {}, "equipped": {}, "codex": {}, "flags": {}}
+    _db22 = os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp", "ast_probe_cmds_f6.db")
+
+    def _say22(text, loc=None, node=None):
+        _ad22 = _Ad([], seed=dict(_SEED22, loc=loc or _SEED22["loc"], node=node or _SEED22["node"]))
+        _h22 = Host(_ad22, str(REPO), inject={"db_path": _db22, "clock": lambda: _FIXED})
+        _h22.boot()
+        _ad22.out.clear()
+        _h22.handle({"uid": "u_c", "group_id": "g_c", "text": text})
+        return list(_ad22.out)
+
+    # ★ 挑地方：**不手写节点 id**，也不假定第一处两件都能上手（带门槛的那几件在这一刻可能
+    #   `state == "no"`）—— 现算一个「裸『触摸』真摸到两件」的地方，再考取参那一支。
+    _PREFIX22 = _r("SYS_TOUCH_GET", icon="\u0000", name="\u0000").split("\u0000")[0]
+    _spot2 = _hit2 = None
+    for _k22 in sorted(_by22):
+        if len(_by22[_k22]) < 2:
+            continue
+        _o22 = _say22("触摸", loc=_k22[0], node=_k22[1])
+        _hits22 = [_v for _pid, _v in _by22[_k22]
+                   if any(x.startswith(_PREFIX22) and str(_v.get("name")) in x for x in _o22)]
+        if len(_hits22) >= 2:
+            _spot2, _hit2 = _k22, _hits22
+            break
+    chk("★ ① 现算出一个「裸『触摸』真摸到两件以上」的地方（不手写节点 id）：%s / %s ⇒ %s"
+        % ((_spot2 or ("?", "?"))[0], (_spot2 or ("?", "?"))[1],
+           " · ".join(str(v.get("name")) for v in (_hit2 or [])) or "（一处都没摸到两件？）"),
+        _hit2 is not None)
+
+    _one22 = _hit2[0].get("name")
+    _other22 = _hit2[1].get("name")
+    _got22 = _say22("触摸 %s" % _one22, loc=_spot2[0], node=_spot2[1])
+    chk("★ ③ 点名 `触摸 %s` ⇒ **只**摸这一件（另一件「%s」一个字都不出）"
+        % (_one22, _other22),
+        _r("SYS_TOUCH_GET", icon=_hit2[0].get("icon", ""), name=_one22) in _got22
+        and not any(_other22 in x for x in _got22), _got22)
+    _all22 = _say22("触摸", loc=_spot2[0], node=_spot2[1])
+    chk("★ ④ 反证：不带参照旧**全摸**（两件都在 ⇒ 取参那一支没把老口径顶掉）",
+        _r("SYS_TOUCH_GET", icon=_hit2[0].get("icon", ""), name=_one22) in _all22
+        and any(_other22 in x for x in _all22), _all22)
+    _miss22 = _say22("触摸 压根没有这一件", loc=_spot2[0], node=_spot2[1])
+    chk("★ ⑤ 名字对不上 ⇒ 自己的槽位（点名 + 把**能上手的**列出来），不是「这儿没有可以上手的」",
+        _miss22 == [_r("SYS_TOUCH_MISS", name="压根没有这一件",
+                       list=" · ".join("『%s』" % v.get("name") for v in _hit2))]
+        and _r("SYS_TOUCH_NONE") not in _miss22, _miss22)
+except Exception as exc:                                                  # noqa: BLE001
+    chk("★ F6 `触摸` 取参那一族跑得起来（真宿主契约）", False,
         "%s: %s" % (type(exc).__name__, exc))
 
 

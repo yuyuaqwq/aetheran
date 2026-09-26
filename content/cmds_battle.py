@@ -574,6 +574,11 @@ async def focus_fire(env, sink, uid, player):
     if hit:
         yield T("COMBAT_FOCUS_NAMED", name=hit[1].get("name", hit[0]))
         return
+    # ★ F6（QA P3）：点了名却认不出 —— 与「空着没点」分开说。原先两句回的是同一句话，
+    #   玩家以为「集火 不存在的怪」被听懂了（其实只是掉进了「没组队」那一句）。
+    if want:
+        yield T("COMBAT_FOCUS_MISS", name=want)
+        return
     yield T("COMBAT_FOCUS_SOLO")
 
 

@@ -429,7 +429,10 @@ def main():
     read_at = next(((v.get("map"), v.get("subarea"), v.get("name")) for v in pois.values()
                     if v.get("read_text")), ("windmill_town", town[0] and "wt_gate_n", "?"))
     rmap, rnode, rname = read_at
-    touch_at = next(((v.get("map"), v.get("subarea")) for v in pois.values()), (rmap, rnode))
+    # ★ F6：那一站第一件 poi 的**名字**也要留着 —— `触摸 <东西>` 点名那一支要用它（不手写）
+    _touch_at3 = next(((v.get("map"), v.get("subarea"), v.get("name")) for v in pois.values()),
+                      (rmap, rnode, ""))
+    touch_at = (_touch_at3[0], _touch_at3[1])
     # ★ P-31：带门槛的两条（从域里现挑，不写死 id）—— 一条 `quest` 门槛（账没交 ⇒ 真挡）、
     #   一条 `time` 门槛（token 判不了 ⇒ 点名但照旧可用）
     _gt_q = next((v for _k, v in sorted(pois.items())
@@ -481,6 +484,14 @@ def main():
                 "flags": {"quests_done": []}}
         over.update(kw)
         return _player(**over)
+    # ★ F6：旧物谱那三行 / 端详那几支的 fixture —— 从 codex 域**现挑**（不手写 id）
+    _rel_book = dict((st.domain("codex") or {}).get("relic") or {})
+    _rel_pick = next((k for k, v in sorted(_rel_book.items()) if v.get("from") == "pick"), "")
+    _rel_read = next((k for k, v in sorted(_rel_book.items()) if v.get("from") == "read"), "")
+    _rel_pick_name = str((_rel_book.get(_rel_pick) or {}).get("name") or "")
+    _rel_read_name = str((_rel_book.get(_rel_read) or {}).get("name") or "")
+    _rel_known = {"relic": {_rel_read: {"day": 1, "known": True}}}
+    _rel_unknown = {"relic": {_rel_pick: {"day": 1, "known": False}}}
     cases = [
         ("观察", CA.look, "", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
         ("地图", CA.map_view, "", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
@@ -511,6 +522,12 @@ def main():
         ("提示(野外)", CA.hint, "", {"loc": "belt_north"}),
         ("帮助", CA.help_cmd, "", {}),
         ("触摸", CA.touch, "", {"loc": touch_at[0], "node": touch_at[1]}),
+        # ★ F6（QA P2 BUG⑧）：`触摸` 吃参数了 —— 点名那一支（只摸一件）与「名字对不上」那一支
+        #   一起进用例表 ⇒ ⑥ 的「不缺文案 / 不漏机器键」**自动**罩到它们身上（K61）
+        ("触摸(点名·一件)", CA.touch, "触摸 %s" % _touch_at3[2],
+         {"loc": touch_at[0], "node": touch_at[1]}),
+        ("触摸(点名·对不上)", CA.touch, "触摸 压根没有这一件",
+         {"loc": touch_at[0], "node": touch_at[1]}),
         ("读", CA.read_thing, "", {"loc": rmap, "node": rnode}),
         # ★ P-31：门槛那两条（真挡 / 判不了就点名）—— 一起进用例表，于是⑥「不漏机器键」与
         #   「取不到文案」两条守卫**自动**罩到它们身上（K61：覆盖面跟判据一起加）
@@ -753,6 +770,20 @@ def main():
         ("查看(带价的成品)", CMO.item_show, "查看 %s" % _its.get(_pric, {}).get("name", ""),
          {"bag": {_pric: 2}} if _pric else {}),
         ("查看(没有这件)", CMO.item_show, "查看 不存在的东西", {}),
+        # ★ F6（QA P4 E-7 / P3）：`看` 收敛到「查看」那一支（裸名 = 没带东西 ⇒ 问一句）·
+        #   `端详` 四支（没点名 / 手上那件 / 谱里认出的 / 谱里也没有）
+        ("看(裸名·收敛到查看)", CMO.item_show, "看", {}),
+        ("看(汉字参=查看)", CMO.item_show, "看 %s" % _its.get(_wpn, {}).get("name", ""),
+         {"bag": {_wpn: 1}}),
+        ("端详(没点名·列谱)", CC.relic_study, "端详", {"bag": {}, "books": _rel_unknown}),
+        ("端详(手上那件)", CC.relic_study, "端详 %s" % _rel_pick_name,
+         {"bag": {_rel_pick: 1}, "books": _rel_unknown}),
+        ("端详(谱里认出的那一条)", CC.relic_study, "端详 %s" % _rel_read_name,
+         {"bag": {}, "books": _rel_known}),
+        ("端详(谱里也没有)", CC.relic_study, "端详 从来没见过的东西",
+         {"bag": {}, "books": _rel_unknown}),
+        ("旧物谱(未认出的捡的·带名字)", CC.codex_relic, "", {"bag": {_rel_pick: 1},
+                                                              "books": _rel_unknown}),
         ("丢弃(丢一件)", CMO.item_drop, "丢弃 %s" % _its.get(_wpn, {}).get("name", ""),
          {"bag": {_wpn: 2}}),
         ("丢弃(超过手里的)", CMO.item_drop, "丢弃 %s 9" % _its.get(_wpn, {}).get("name", ""),

@@ -37,7 +37,12 @@ __all__ = ["PER_PAGE", "per_page", "page_no", "render", "cursor", "forget",
            "page_next", "page_back"]
 
 #: 每个列表一页多少行（★ 唯一登记处：新加一个分页列表就在这儿加一行）
-PER_PAGE = {"bag": 20, "ranking": 10}
+#: ★ F6（QA P4 E-4）：四本谱与图鉴一览也进来了 —— 改前只有背包/本群榜两列能翻，
+#:   `帮助` 里宣传的『下一页』/『回 <页码>』在**别的**长列表上全是死指令
+#:   （玩家在 `怪物谱` / `旧物谱` 上敲『下一页』，拿到的是「先打开一个列表」那句）。
+PER_PAGE = {"bag": 20, "ranking": 10,
+            "codex": 10, "codex_material": 10, "codex_flavor": 10,
+            "codex_monster": 10, "codex_relic": 10}
 
 #: 一页几行的默认值（`PER_PAGE` 里没登记的 kind 用这个 —— 今天没有这样的 kind）
 PER_PAGE_DEFAULT = 20
@@ -119,6 +124,14 @@ def _again(env, sink, uid, player, kind):
         from .cmds_self import ranking_page
         gid = str(getattr(env, "group_id", "") or "")
         return lambda page: ranking_page(env, sink, gid, uid, player, page)
+    # ★ F6：四本谱与图鉴一览（每本自己一列 —— 光标记的是「上一次看的是哪一本」）
+    if kind in ("codex", "codex_material", "codex_flavor", "codex_monster", "codex_relic"):
+        from . import cmds_codex
+        fn = getattr(cmds_codex, {"codex": "codex", "codex_material": "codex_material",
+                                  "codex_flavor": "codex_flavor",
+                                  "codex_monster": "codex_monster",
+                                  "codex_relic": "codex_relic"}[kind])
+        return lambda page: fn(env, sink, uid, player, page)
     return None
 
 

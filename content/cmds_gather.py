@@ -21,7 +21,7 @@ from __future__ import annotations
 import random
 
 from .cmds_ast import (_data, _p, _save, _map_of, _name_of_node, T, hp_cap_or_line,
-                        _pois_here)
+                        _pois_here, rest_places)
 from .cmds_codex import new_lines
 from . import calendar as CAL
 from . import codex as CX
@@ -189,8 +189,13 @@ async def rest(env, sink, uid, player):
     p = _p(player)
     # ★ B4-25：**先看脚下有没有火** —— 这是声明里写着的守卫（`guard_desc` = 有篝火），
     #   不是装饰：没有火就照实说，档一个字都不动（不扣血、不推进天数、不落库）。
+    #   ★ F6（QA P4 E-3）：光说「这儿没有篝火」不够 —— 「歇脚棚」这个名字天然让玩家以为能歇，
+    #     回话得**指出哪儿有火**（名单从 pois 域现读，不手写镜像）。
     if not _fire_here(p):
         yield T("SYS_REST_NOFIRE")
+        fires = rest_places()             # ★ 名单从 pois 域现读（读口在 `cmds_ast`，本模块不扫）
+        if fires:
+            yield T("SYS_REST_FIRE_HINT", list=" · ".join("『%s』" % x for x in fires))
         return
     # ★ P-27：上限只有一个来源 = 职业面板。档上还没有职业（建号第二步没走完）⇒ **不出假数**：
     #   出一行点名的 fail-closed 行，歇脚这一支整段不做。
