@@ -704,6 +704,14 @@ async def go_north(env, sink, uid, player):
         for line in _here_lines(p):
             yield line
         return
+    # ★ P-52：出镇那一条的「在镇上」守卫 —— 唯一执行面 = `town.town_gate`（B4-12 收的口）。
+    #   本地 import：`town` 要 import 本模块，模块级 import 会成环（与 `_p` 里 panel_build 同一手）。
+    #   被拦 ⇒ 一句话、**位置与历史一个字不动**（不 `_save`）。
+    from .town import town_gate
+    _blocked = town_gate(p)
+    if _blocked:
+        yield _blocked
+        return
     p = _move(p, "belt_north", "bn_bone", sink)
     if player is not None:
         player.update(p)
@@ -720,6 +728,11 @@ async def go_east(env, sink, uid, player):
         for line in _here_lines(p):
             yield line
         return
+    from .town import town_gate                                   # ★ P-52：同 `go_north`
+    _blocked = town_gate(p)
+    if _blocked:
+        yield _blocked
+        return
     p = _move(p, "belt_east", "be_birch", sink)
     if player is not None:
         player.update(p)
@@ -735,6 +748,11 @@ async def go_west(env, sink, uid, player):
     if (p["loc"], p["node"]) == ("belt_west", "bw_old_ferry"):        # ★ B3-11：脚下这一站（K60）
         for line in _here_lines(p):
             yield line
+        return
+    from .town import town_gate                                   # ★ P-52：同 `go_north`
+    _blocked = town_gate(p)
+    if _blocked:
+        yield _blocked
         return
     p = _move(p, "belt_west", "bw_old_ferry", sink)
     if player is not None:

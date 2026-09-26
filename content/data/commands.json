@@ -39,7 +39,7 @@
         "player"
       ]
     },
-    "guard_desc": "随时"
+    "guard_desc": "在镇上"
   },
   "go_east": {
     "patterns": [
@@ -59,7 +59,7 @@
         "player"
       ]
     },
-    "guard_desc": "随时"
+    "guard_desc": "在镇上"
   },
   "go_west": {
     "patterns": [
@@ -79,7 +79,7 @@
         "player"
       ]
     },
-    "guard_desc": "随时"
+    "guard_desc": "在镇上"
   },
   "go_back": {
     "patterns": [

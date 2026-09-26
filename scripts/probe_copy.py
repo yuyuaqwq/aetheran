@@ -14,6 +14,8 @@
   ⑩ 去(脚下这一站) 回「到了」不回「过不去」（B3-10 ① —— HERE 那一支真取到）
   ⑪ 呈现口不漏机器键的覆盖面：战斗 / 配方 / 图鉴 / 称号 / 彩蛋 / 时间 也逐行扫（B3-10 ②）
   ⑫ 四条出口（北口/往东/往西/进镇）站在**目的地**上敲 = 回 HERE、不演出门、不塞历史（B3-11 · K60）
+     ★ P-52（⑫-b，2026-09-26 · 本波 w5）：那三条出镇口令的「在镇上」守卫 —— 不在镇上 ⇒ 拦下
+     （只那一句 · 位置与历史一个字不动）；在镇上（不核北口那一站）⇒ 照旧出门；『进镇』野外回镇不受影响
   ⑬ 默认档不许被就地改（B3-12 · K57）：真跑完一遍后 bag/equipped/flags/codex 必须原样；
      半截老档（缺这几个键）采集一趟，不许把东西写进默认档、也不许串给下一个人
   ⑭ ★ P-27：还没择业的档（无职业）= 没有面板 ⇒ `状态` 的生命上限照实说「未定」，
@@ -973,6 +975,59 @@ def main():
             exit_bad.append((label, why))
     chk("★ 站在目的地敲『北口 / 往东 / 往西 / 进镇』：回 HERE · 不演出门 · 不塞历史（4 条）",
         not exit_bad, "%s" % exit_bad[:2])
+
+    # ⑫-b ★ P-52（B4-12 顺势核到 · 台账「我的倾向：加」）：出镇那三条的「在镇上」守卫
+    #   —— 声明（`guard_desc`）+ 真源 `03_风车镇_指令与回复 §一` / `04_指令总表 §一` 同一栏都写着
+    #      「在镇上」，可实现原先**无条件传送**：在白桦林敲『北口』一步落到骨田、敲『往西』落到浅滩
+    #      （违反地图铁律「城镇星形 / 野外线性相邻 / 出城走 _gate」· 跨图一步到对面那一片）。
+    #   守在哪一支：HERE（脚下这一站）之后、`_move` 之前 —— 站在骨田敲『北口』仍旧回「你已经到了」，
+    #      只有**不在镇上**才拦；拦下来 = 那一句 + 位置与历史一个字不动（不 `_save`）。
+    #   『进镇』不受影响：它的守卫写的是「在北口或野外」（真源两处一致）⇒ 野外回镇照旧放行。
+    _NOTOWN = tx["SYS_PLACE_NOTOWN"]["value"]
+    _OUTS = (("北口", "belt_north", "bn_bone", "SYS_MOVE_OUT_NORTH", CA.go_north),
+             ("往东", "belt_east", "be_birch", "SYS_MOVE_OUT_EAST", CA.go_east),
+             ("往西", "belt_west", "bw_old_ferry", "SYS_MOVE_OUT_WEST", CA.go_west))
+    #: 野外起手那几处（含三条各自的目的地 —— 那三对交给 ⑫ 的 HERE 那一支，这里跳过）
+    _WILDS = (("白桦林", "belt_east", "be_birch"), ("拾荒营地", "belt_north", "bn_camp"),
+              ("旧渡口", "belt_west", "bw_old_ferry"), ("塔里", "old_watchtower", "tower_hall"))
+    guard_bad = []
+    for _from_lab, _wloc, _wnode in _WILDS:
+        for _lab, _loc, _node, _out_slot, _fn in _OUTS:
+            if (_wloc, _wnode) == (_loc, _node):
+                continue                 # 站在目的地 ⇒ 走上「脚下这一站」那一支（⑫ 已核）
+            _pp = _player(loc=_wloc, node=_wnode, prev=[])
+            _got = _drive(_fn, _pp, "")
+            if _got != [_NOTOWN]:
+                guard_bad.append(("%s→%s" % (_from_lab, _lab), _got[:2], [_NOTOWN]))
+            if (_pp.get("loc"), _pp.get("node")) != (_wloc, _wnode):
+                guard_bad.append(("%s→%s" % (_from_lab, _lab), "位置被挪动了",
+                                  (_pp.get("loc"), _pp.get("node"))))
+            if _pp.get("prev"):
+                guard_bad.append(("%s→%s" % (_from_lab, _lab), "往历史里塞了自己", _pp.get("prev")))
+            if tx[_out_slot]["value"] in chr(10).join(_got):
+                guard_bad.append(("%s→%s" % (_from_lab, _lab), "照样演了出门那一屏", _got[:1]))
+    chk("★ P-52：不在镇上敲『北口 / 往东 / 往西』= 拦下（只那一句 · 位置与历史一个字不动）"
+        "（%d 处起手 × 3 条）" % len(_WILDS), not guard_bad, "%s" % guard_bad[:3])
+
+    pass_bad = []
+    for _lab, _loc, _node, _out_slot, _fn in _OUTS:
+        _pp = _player(loc="windmill_town", node="wt_board", prev=[])   # 在镇上（**不在北口**）
+        _got = _drive(_fn, _pp, "")
+        if not _got or _got[0] != tx[_out_slot]["value"]:
+            pass_bad.append((_lab, _got[:1], tx[_out_slot]["value"]))
+        if (_pp.get("loc"), _pp.get("node")) != (_loc, _node) or not _pp.get("prev"):
+            pass_bad.append((_lab, "没真出门", (_pp.get("loc"), _pp.get("node"), _pp.get("prev"))))
+    chk("★ P-52：在镇上（挂板墙那一站 —— 不核北口）敲那三条 = 照旧出门、真挪位置、真记一步",
+        not pass_bad, "%s" % pass_bad[:3])
+
+    back_bad = []
+    for _from_lab, _wloc, _wnode in _WILDS:
+        _pp = _player(loc=_wloc, node=_wnode, prev=[])
+        _got = _drive(CA.enter_town, _pp, "")
+        if (_pp.get("loc"), _pp.get("node")) != ("windmill_town", "wt_gate_n"):
+            back_bad.append((_from_lab, _got[:1], (_pp.get("loc"), _pp.get("node"))))
+    chk("★ P-52：『进镇』从野外回镇**不受影响**（%d 处起手都真落到北口）" % len(_WILDS),
+        not back_bad, "%s" % back_bad[:3])
 
 
     print("  · 打样：%s" % " ｜ ".join(sample))
