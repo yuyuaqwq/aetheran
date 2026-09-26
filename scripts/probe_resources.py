@@ -457,14 +457,19 @@ print()
 print("══ ⑧ 引擎改动面（硬指标）")
 #  ★ fxmech（2026-09-26）：本批**动了引擎**（B4-4 两段耗时接线 + 一条可选否决口 `skill_gate_fn`）
 #    ⇒ 判据从「引擎零改动」改成**钉住改动面**：只许落在这四份文件里（多一个文件就红）。
-_out = subprocess.run(["git", "-C", ENGINE, "status", "--porcelain"],
-                      capture_output=True, text=True, encoding="utf-8").stdout.strip()
-_touched = sorted((ln.split()[-1] if len(ln.split()) > 1 else ln.strip())
-                  for ln in _out.splitlines() if ln.strip())
+import subprocess as _sp                                                # noqa: E402
 _want_t = sorted(["extends/ext_combat/battle/schedule.py", "extends/ext_combat/battle/battle.py",
                   "extends/ext_combat/battle/actions.py", "saintess_engine/config.py"])
-chk("⑧ 引擎那半的改动面 == 本批声明的那四份（%s）" % ("、".join(_touched) or "无"),
-    _touched == _want_t, "实际 %s / 声明 %s" % (_touched, _want_t))
+_out = _sp.run(["git", "-C", ENGINE, "status", "--porcelain"],
+               capture_output=True, text=True, encoding="utf-8").stdout.strip()
+_committed = sorted({p for p in _sp.run(["git", "-C", ENGINE, "log", "--name-only",
+                                         "--pretty=format:", "-1"],
+                                        capture_output=True, text=True,
+                                        encoding="utf-8").stdout.split() if p})
+_code = [p for p in _committed if not p.startswith("docs/")]
+chk("⑧ 引擎仓工作区干净 + 本批那一提交的代码落点 == 声明的四份（干净 %s ｜ 代码 %s）"
+    % (_out == "", "、".join(_code) or "无"),
+    _out == "" and _code == _want_t, "实际 %s / 声明 %s" % (_code, _want_t))
 
 print()
 print("结果：%s" % ("全绿 ✓" if not fails else "有红 ✗（%d 条）" % len(fails)))
