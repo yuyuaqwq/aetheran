@@ -244,6 +244,156 @@ rules = (CAL._d("weather") or {}).get("_rules") or {}
 chk("★ 权重来源记在表里（可追溯）", bool(rules.get("weights_source")) and bool(rules.get("source")),
     "%s · 跳过 %s" % (str(rules.get("weights_source"))[:38], rules.get("skipped")))
 
+# ══════════════════════════════════════════════════════════════
+# ⑭⑮ ★ fix3-①②：『时间』一屏 —— 时辰行 × 天气行 **16 个组合**都要自洽
+# ------------------------------------------------------------
+# 玩家报告（两个玩家独立撞上）：
+#   · P1 BUG / P4 BUG-2：标题写 `昼 · 雨`，正文却写「日头正。狗都躲到墙根去了」
+#   · P2 BUG⑤：       标题写 `夜 · 晴`，正文却写「太阳晒到石头上…」
+# 口径（真源 26_消息模板 §一 / 19 §三 D）：一屏里两行**各自只许认自己那一轴**——
+#   时辰行说时辰，天气行说天气；要出太阳才成立的话（太阳 / 日头 / 晒）只在晴天出现，
+#   要有夜色才成立的话（天黑 / 星星 / 入夜）只在夜里出现。
+# 判据分两层：**16 个组合逐组真跑 `time_now`**（不是拿实现自证：这里按行拆完自己判词）+ 反证。
+# ══════════════════════════════════════════════════════════════
+import asyncio                                                         # noqa: E402
+
+from content import cmds_ast as CA                                     # noqa: E402
+from content import facade as FA                                       # noqa: E402
+
+#: 要出太阳才成立的话 / 要有夜色才成立的话
+_SUN_WORDS = ("太阳", "日头", "晒")
+_NIGHT_WORDS = ("天黑", "星星", "入夜")
+_HOUR_IDS = ["hr_dawn", "hr_day", "hr_dusk", "hr_night"]
+
+
+def _axis_bad(hid, wid, h_line, w_line, w_names):
+    """这一组（时辰 × 天气）里两行有没有**跨轴**的话 —— 返回坏处清单。"""
+    bad = []
+    if wid != "w_sunny":                       # 不是晴天：时辰行里不许有「要出太阳」的话
+        for t in _SUN_WORDS:
+            if t in h_line:
+                bad.append("时辰行（%s·%s）里出现「%s」" % (hid, wid, t))
+    for wn in w_names:                         # 时辰行里也不许替别的天气说话
+        if wn in h_line and wn != w_names[wid]:
+            bad.append("时辰行（%s·%s）里出现别的天气名「%s」" % (hid, wid, wn))
+    if hid == "hr_night":                      # 夜里：天气行里不许有「要出太阳」的话
+        for t in _SUN_WORDS:
+            if t in w_line:
+                bad.append("天气行（%s·%s）里出现「%s」" % (hid, wid, t))
+    else:                                      # 不是夜里：天气行里不许有夜色的话
+        for t in _NIGHT_WORDS:
+            if t in w_line:
+                bad.append("天气行（%s·%s）里出现「%s」" % (hid, wid, t))
+    return bad
+
+
+class _TE:                    # `时间` 只要 env.save()（落档是处理器的责任）
+    def save(self):
+        pass
+
+
+def _time_screen(epoch, loc, node):
+    """真跑一次 `time_now`（钟临时拨到 epoch）→ 三行原文。"""
+    _old_clock = FA.clock
+    FA.clock = lambda: epoch
+    CAL.facade.clock = lambda: epoch                  # `calendar._epoch` 读的就是它
+    _out = []
+
+    async def _go():
+        _p = dict(CA.DEFAULT_PLAYER)
+        _p.update({"loc": loc, "node": node, "race": "human"})
+        async for _ln in CA.time_now(_TE(), None, "u_time", _p):
+            _out.append(_ln)
+
+    try:
+        asyncio.run(_go())
+    finally:
+        FA.clock = _old_clock
+        CAL.facade.clock = _old_clock
+    return _out
+
+
+_w_names = {wid: CAL.name(wid) for wid in WEA}
+#: 每种天气挑一个游戏日（抽签 + 保底之后真出这一种的那天）—— 不手编日历
+_day_of = {}
+_d = 100000
+while len(_day_of) < len(WEA):
+    _w = CAL.weather_of(_d)
+    if _w not in _day_of:
+        _day_of[_w] = _d
+    _d += 1
+
+_combo, _hdr_bad, _screen_bad = [], [], []
+for hid in _HOUR_IDS:
+    _h = HRS[hid]
+    _a, _b = int(_h["from_hour"]), int(_h["to_hour"])
+    _hod = (_a + ((_b - _a) % 24) / 2.0) % 24           # 窗中点（窗界支持跨零点）
+    for wid in sorted(WEA):
+        _ep = _day_of[wid] * SCALE + (_hod / 24.0) * SCALE
+        _lines = _time_screen(_ep, "windmill_town", "wt_gate_n")
+        if len(_lines) != 2 or "\n" not in _lines[0]:
+            _screen_bad.append("%s·%s 的回话形状不对：%r" % (hid, wid, _lines))
+            continue
+        _head, _wline = _lines[0].split("\n", 1)
+        _hline = _lines[1]
+        _want_head = "📍 %s · %s · %s" % ("北口", CAL.name(hid), CAL.name(wid))
+        if _head.strip() != _want_head:
+            _hdr_bad.append((hid, wid, _head.strip(), _want_head))
+        _combo.append((hid, wid, _hline, _wline))
+        _screen_bad.extend(_axis_bad(hid, wid, _hline, _wline, _w_names))
+
+chk("★ 16 个组合（4 时辰 × 4 天气）逐组真跑 `时间`：标题行 = 📍 地名 · 时辰 · 天气（%d 组）"
+    % len(_combo), len(_combo) == 16 and not _hdr_bad, "%s" % (_hdr_bad[:3] or "16/16 相符"))
+chk("★ 两行**各自只认自己那一轴**：时辰行不说天气/太阳，天气行不说夜色/太阳"
+    "（`昼 · 雨` 不写「日头正」· `夜 · 晴` 不写「太阳晒到石头上」）",
+    not _screen_bad, "；".join(_screen_bad[:4]) or "16 组两行都没有跨轴的话")
+
+# ── ⑮ 变体槽位（夜里的晴）· 两态 + 反证 ─────────────────────────────
+#   写法 = `<基础槽位>__<条件条目 id 大写>`（唯一拼法在 `calendar.variant_key`）；
+#   读口 = `calendar.desc_slot(条目, st)`（两次：给了 st 才认变体）。
+_VAR = CAL.variant_key("WEATHER_SUNNY_DESC", "hr_night")
+_st_night = {"hour": "hr_night", "weather": "w_sunny"}
+_st_day = {"hour": "hr_day", "weather": "w_sunny"}
+_night_line = [w for h, wd, _hl, w in _combo if h == "hr_night" and wd == "w_sunny"]
+_want_night = TX.get(_VAR, {}).get("value", "")
+chk("★ 夜里的晴**有自己的一句**（变体槽位 `%s` 落在 texts 里）" % _VAR, bool(_want_night.strip()),
+    "%s" % (_want_night[:34] or "缺"))
+chk("★ 读口真读表（两态）：给了 st 才认变体 —— 夜 ⇒ 变体；昼 ⇒ 基础句；不给 st ⇒ 基础句",
+    CAL.desc_slot("w_sunny", _st_night) == _VAR
+    and CAL.desc_slot("w_sunny", _st_day) == "WEATHER_SUNNY_DESC"
+    and CAL.desc_slot("w_sunny") == "WEATHER_SUNNY_DESC",
+    "夜 %s / 昼 %s / 不给 %s" % (CAL.desc_slot("w_sunny", _st_night),
+                                CAL.desc_slot("w_sunny", _st_day), CAL.desc_slot("w_sunny")))
+chk("★ 真跑那一屏用的就是变体那句（夜里那行 == 变体槽位的值）",
+    _night_line and _night_line[0] == _want_night,
+    "%s" % (_night_line[:1] or "没跑到"))
+
+# 反证：把变体槽位临时撤掉 ⇒ 读口当场回落到基础句（证明这一格不是摆设）
+_tx_live = CAL._d("texts")
+_keep = _tx_live.pop(_VAR, None)
+try:
+    _fallback = CAL.desc_slot("w_sunny", _st_night)
+finally:
+    if _keep is not None:
+        _tx_live[_VAR] = _keep
+chk("★ 反证：撤掉变体槽位 ⇒ 读口回落到基础句（不是写死的那一句）；放回去 ⇒ 逐字复原",
+    _fallback == "WEATHER_SUNNY_DESC"
+    and CAL.desc_slot("w_sunny", _st_night) == _VAR,
+    "撤掉时 %s" % _fallback)
+
+# 反证：这条判据**抓得住**玩家报的那两个 bug —— 拿旧文案（逐字）过一遍，必须判红
+_OLD_LINES = {
+    "hr_day": "（日头正。狗都躲到墙根去了，路上没什么人。）",
+    "hr_dusk": "（影子拉得很长。收摊的人开始往家走，北边那头起了一层灰。）",
+    "w_sunny": "（太阳晒到石头上，能闻见灰和麦秆的味道。）",
+    "w_rain": "（雨不大，但是下了一整夜。墙根的土泡软了，踩上去陷下去半只鞋。）",
+}
+_old_bad = (_axis_bad("hr_day", "w_rain", _OLD_LINES["hr_day"], _OLD_LINES["w_rain"], _w_names)
+            + _axis_bad("hr_night", "w_sunny", HRS and TX["HOUR_NIGHT_DESC"]["value"],
+                        _OLD_LINES["w_sunny"], _w_names))
+chk("★ 反证：判据抓得住旧文案（P1/P4「昼·雨 写日头正」+ P2「夜·晴 写太阳晒石头」）",
+    len(_old_bad) >= 2, "%d 处：%s" % (len(_old_bad), _old_bad[:3]))
+
 print()
 print("结果：%s" % ("全绿 ✓" if not fails else "有红 ✗（%d）" % len(fails)))
 sys.exit(1 if fails else 0)

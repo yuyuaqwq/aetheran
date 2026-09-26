@@ -78,10 +78,10 @@
     "desc": "第一屏 · 见 02_风车镇_一屏打样 · ★ 已写正文"
   },
   "SCENE_WT_MILL": {
-    "value": "老风车底下。木头是深色的，接缝里塞着旧麻。\n叶片转过来的时候，整座架子都在响，声音不刺耳，像老人清嗓子。\n德里克在下面扫面 —— 他不说话的时候也扫。\n地上落着一层白，踩上去有印子。谁来过，来过几趟，看得清清楚楚。",
+    "value": "老风车底下。木头是深色的，接缝里塞着旧麻。\n叶片转过来的时候，整座架子都在响，声音不刺耳，像老人清嗓子。\n德里克在下面扫面 —— 磨盘边落的那层白，他不说话的时候也扫。\n地上那层白踩上去有印子。谁来过，来过几趟，看得清清楚楚。",
     "params": [],
     "category": "场景",
-    "desc": "风车镇 · 老风车 · ★ 已写正文"
+    "desc": "风车镇 · 老风车 · ★ 已写正文 ★ fix3-⑦：正文补出「磨盘 / 那层白」的语境 —— 「扫面」是磨坊主的话（真源 23_NPC设定_v6 §7 癖好「扫面」），不留裸词（P1 体验-13）"
   },
   "SCENE_WT_INN": {
     "value": "转叶客栈的门是坏的，推它得抬一下。\n里面不大，五六张桌子挤在一起。墙角那张桌子永远有人坐着 —— 一个老头，面前三四个杯子。\n柜台后面是贝拉。她手上永远在擦什么，看见你进来，眼睛先转过来，人还在擦。\n墙上挂着一块牌子：不是公告，是一张画得很难看的地图。",
@@ -144,7 +144,7 @@
     "desc": "带 · 旧哨塔下 · ★ 已写正文"
   },
   "SCENE_BE_BIRCH": {
-    "value": "林子里的白桦一般粗，只有靠里的几棵例外。路是人踩出来的，踩在落叶上，浅得只有一层。树皮上的刻痕一处比一处高 —— 刻的人一年比一年够得着更高。树根边冒出来一片菌，有几朵被踩坏了，断口还是新的。",
+    "value": "林子里的白桦一般粗，只有靠里的几棵例外。路是人踩出来的，踩在落叶上，浅得只有一层。树皮上的刻痕一处比一处高 —— 刻的人一年比一年够得着更高。树根边那块木头是湿的，上面留着几个被踩坏的断口 —— 那种东西只在雨后冒出来。",
     "params": [],
     "category": "场景",
     "desc": "带 · 白桦林 · ★ 已写正文"
@@ -1273,10 +1273,16 @@
     "desc": "天气名"
   },
   "WEATHER_SUNNY_DESC": {
-    "value": "（太阳晒到石头上，能闻见灰和麦秆的味道。）",
+    "value": "（石头是干的。风把灰味和麦秆味一起送过来。）",
     "params": [],
     "category": "世界动静",
     "desc": "天气 · 一句风味"
+  },
+  "WEATHER_SUNNY_DESC__HR_NIGHT": {
+    "value": "（夜里没有云。星星落在石头上，白得发亮。）",
+    "params": [],
+    "category": "世界动静",
+    "desc": "② 夜里的晴 —— 变体槽位的写法 = `<槽位>__<时辰 id 大写>`（消费端 content/calendar.desc_slot · fix3-②）"
   },
   "WEATHER_RAIN": {
     "value": "雨",
@@ -1285,7 +1291,7 @@
     "desc": "天气名"
   },
   "WEATHER_RAIN_DESC": {
-    "value": "（雨不大，但是下了一整夜。墙根的土泡软了，踩上去陷下去半只鞋。）",
+    "value": "（雨不大，但一直没停。墙根的土泡软了，踩上去陷下去半只鞋。）",
     "params": [],
     "category": "世界动静",
     "desc": "天气 · 一句风味"
@@ -1333,7 +1339,7 @@
     "desc": "时辰名"
   },
   "HOUR_DAY_DESC": {
-    "value": "（日头正。狗都躲到墙根去了，路上没什么人。）",
+    "value": "（正午前后，路上没什么人 —— 狗都躲到墙根去了。）",
     "params": [],
     "category": "世界动静",
     "desc": "时辰 · 一句风味"
@@ -1345,7 +1351,7 @@
     "desc": "时辰名"
   },
   "HOUR_DUSK_DESC": {
-    "value": "（影子拉得很长。收摊的人开始往家走，北边那头起了一层灰。）",
+    "value": "（该收了。人一个一个往家走，北边那头慢慢暗下去。）",
     "params": [],
     "category": "世界动静",
     "desc": "时辰 · 一句风味"
@@ -1964,6 +1970,198 @@
     "params": [],
     "category": "系统",
     "desc": "聆听 · 这张图没有专属槽位时"
+  },
+  "WORLD_LISHEN_WT_MILL": {
+    "value": "木头一圈一圈地响。扫帚扫过地面的声音，很轻。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "聆听 · 老风车（逐个节点各一句 —— 原先 11 个镇上站点同回 SYS_LISTEN_DEFAULT）"
+  },
+  "WORLD_LISHEN_WT_INN": {
+    "value": "门轴抬一下的响。里面有人说话，压着嗓子。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "聆听 · 转叶客栈"
+  },
+  "WORLD_LISHEN_WT_FORGE": {
+    "value": "炉火烧得很细。铁翻过来，磕在砧子上。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "聆听 · 半截铁砧"
+  },
+  "WORLD_LISHEN_WT_BOARD": {
+    "value": "纸边被风掀起来，一下一下打着墙。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "聆听 · 挂板墙"
+  },
+  "WORLD_LISHEN_WT_HERBS": {
+    "value": "草叶被翻过来，又翻过去。小罐子里有一点动静。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "聆听 · 苦叶摊"
+  },
+  "WORLD_LISHEN_WT_CHAPEL": {
+    "value": "堂里很静。灯芯偶尔响一声，木屑落到石头上。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "聆听 · 白烛堂"
+  },
+  "WORLD_LISHEN_WT_WALL": {
+    "value": "风从荒那头过来，没有挡的。墙根下有人挪了一下身子。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "聆听 · 北墙根"
+  },
+  "WORLD_LISHEN_WT_SHED": {
+    "value": "棚里有人在说话 —— 说给自己听。手里那根东西一下一下戳着地。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "聆听 · 歇脚棚"
+  },
+  "WORLD_LISHEN_WT_GATE_N": {
+    "value": "风从麦田那头来。风车的声音在背后，很远。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "聆听 · 北口"
+  },
+  "WORLD_LISHEN_WT_GATE_E": {
+    "value": "镇上的人声在身后。往东，声音一层层薄下去。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "聆听 · 东口"
+  },
+  "WORLD_LISHEN_WT_GATE_W": {
+    "value": "很远的地方有水声，若有若无。身后的镇子还热闹着。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "聆听 · 西口"
+  },
+  "WORLD_LISHEN_BN_BONE": {
+    "value": "风过麦茬，沙沙的。土里像有什么轻轻碰了一下。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "聆听 · 骨田"
+  },
+  "WORLD_LISHEN_BN_CAMP": {
+    "value": "篷布被风掀起来，拍两下又落下。火堆里还有一点响。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "聆听 · 拾荒营地"
+  },
+  "WORLD_LISHEN_BN_TOWER": {
+    "value": "风从塔顶那个缺口进去，又从里面出来。铁门后面没有别的声音。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "聆听 · 旧哨塔下"
+  },
+  "WORLD_LISHEN_BE_BIRCH": {
+    "value": "鸟叫得很密，看不见鸟。脚底下是踩碎的叶子。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "聆听 · 白桦林"
+  },
+  "WORLD_LISHEN_BE_DOGS": {
+    "value": "草里有什么在低低地哼。骨头被踩碎的声音，很近。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "聆听 · 野狗窝"
+  },
+  "WORLD_LISHEN_BE_SHED": {
+    "value": "棚顶的木条在响。粘成一块的纸被风掀不起来。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "聆听 · 伐木棚"
+  },
+  "WORLD_LISHEN_BW_SHOAL": {
+    "value": "水一下一下地响，很平。石缝里有东西被水推着撞。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "聆听 · 浅滩"
+  },
+  "WORLD_LISHEN_BW_FERRY": {
+    "value": "木板在脚底下响。水从断桩那儿过去，分开又合上。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "聆听 · 石滩渡口"
+  },
+  "WORLD_LISHEN_BW_OLD_FERRY": {
+    "value": "一点动静都没有 —— 风不往这边来。只有水拍石阶，很闷。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "聆听 · 旧渡口"
+  },
+  "WORLD_LISHEN_TOWER_GATE": {
+    "value": "门缝里有风出来，很细。里面没有别的声音。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "聆听 · 塔门"
+  },
+  "WORLD_LISHEN_TOWER_HALL": {
+    "value": "高处有风，顺着楼梯下来。地上那两具东西没出声。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "聆听 · 门厅"
+  },
+  "WORLD_LISHEN_TOWER_ARMORY": {
+    "value": "格子空着，不响。这间安静得能听见自己的呼吸。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "聆听 · 武器架室"
+  },
+  "WORLD_LISHEN_TOWER_STAIR1": {
+    "value": "上面有人在啃东西。楼梯口堵着，过不去。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "聆听 · 楼梯前"
+  },
+  "WORLD_LISHEN_TOWER_OUTPOST_OUT": {
+    "value": "风在墙外侧打转。脚底下是湿土，踩一下响一下。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "聆听 · 哨所（外）"
+  },
+  "WORLD_LISHEN_TOWER_OUTPOST_IN": {
+    "value": "甲片之间有一点响 —— 你不动，它就不动。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "聆听 · 哨所（内）"
+  },
+  "WORLD_LISHEN_TOWER_WATER_ROOM": {
+    "value": "水一动就响。那页纸在水面上慢慢转。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "聆听 · 水房"
+  },
+  "WORLD_LISHEN_TOWER_STORAGE": {
+    "value": "木料被风吹得互相磨。墙角的绳子轻轻响。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "聆听 · 储藏室"
+  },
+  "WORLD_LISHEN_TOWER_EMPTY_ROOM": {
+    "value": "窗关得很严，一点风都没有。这间比别处安静。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "聆听 · 空营房"
+  },
+  "WORLD_LISHEN_TOWER_HORN_ROOM": {
+    "value": "风到这儿就断了。石台那边很轻的一声，像铜锈掉了一块。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "聆听 · 号角室"
+  },
+  "WORLD_LISHEN_TOWER_STAIR2": {
+    "value": "上面有光，也有脚步声 —— 不停，也不近。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "聆听 · 阶梯"
+  },
+  "WORLD_LISHEN_TOWER_TOP": {
+    "value": "风从缺口进来，从那边出去。那个东西一动不动，甲没响。",
+    "params": [],
+    "category": "世界动静",
+    "desc": "聆听 · 塔顶"
   },
   "SYS_MOVE_OUT_NORTH": {
     "value": "你走出北门。风车在背后慢慢转，声音越来越远。",
@@ -3703,6 +3901,15 @@
     "category": "系统",
     "desc": "P-34 加点（B3-15）"
   },
+  "SYS_ALLOC_PLAN": {
+    "value": "推荐分配（{total} 点铺满）：{list}",
+    "params": [
+      "total",
+      "list"
+    ],
+    "category": "系统",
+    "desc": "P-34 加点 · 建议投法（替掉说「设计基线」那句 —— 玩家不看策划口径 · fix3-⑥）"
+  },
   "SYS_ALLOC_SUGGEST": {
     "value": "设计基线（按建议权重铺满 {total} 点）：{list}",
     "params": [
@@ -4247,6 +4454,12 @@
     ],
     "category": "系统",
     "desc": "B3-16b 公告 · 包与版本"
+  },
+  "SYS_NOTICE_WHAT": {
+    "value": "· 手边能敲什么，打『帮助』看一眼。",
+    "params": [],
+    "category": "系统",
+    "desc": "⑥ 替掉原先那句内部完成度「已经接上的指令：N / M 条」（SYS_NOTICE_CMDS 退役 · fix3-⑥）"
   },
   "SYS_NOTICE_CMDS": {
     "value": "· 已经接上的指令：{n} / {total} 条（打『帮助』看清单）",
@@ -4923,6 +5136,12 @@
     "category": "战斗",
     "desc": "战斗 · 资源不足（顶掉引擎那句坏格式符的兜底；★ 不显示资源机器键，玩家自己那一条资源不用点名） ★ B4-23：两个数按宪法 §一 整数显示（引擎传的是 float ⇒ 原先印「6.0 点」）。"
   },
+  "COMBAT_NO_TARGET": {
+    "value": "（场上没有能打的了 —— 这一场就到这儿。）",
+    "params": [],
+    "category": "战斗",
+    "desc": "⑥ 顶掉引擎兜底那句「但没有可攻击的目标！」（引擎槽位 battle.actions.no_target · 声明在 content/rules/battle_text.json · fix3-⑥）"
+  },
   "SYS_CLS_ASK": {
     "value": "还差一步：打『选职业』看六种打法，定下你往后怎么打。",
     "params": [],
@@ -4936,6 +5155,12 @@
     ],
     "category": "系统",
     "desc": "B4-7 建号第二步 · 菜单头"
+  },
+  "SYS_CLS_LEAD": {
+    "value": "族定了 —— 还没定下怎么打。\n—— 六种打法，挑一个你愿意一直用的。",
+    "params": [],
+    "category": "系统",
+    "desc": "⑦ 建号第二步 · 菜单头（替掉会重报一遍族别的 SYS_CLS_HEAD —— 那一步的族刚定过 · fix3-⑦）"
   },
   "SYS_CLS_ROW": {
     "value": "{i}{star} {icon} {name}（{role}） —— {desc}",

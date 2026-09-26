@@ -336,6 +336,19 @@ chk("⑨-b 两句里**一个小数尾巴都不许有**（整数显示 —— 原
 chk("⑨-b 这一场渲染出来的**每一条**日志都没有小数尾巴（共 %d 条）" % len(_lg_s),
     all(re.search(r"\d\.\d", str(y)) is None for y in _lg_s))
 
+#: ★ fix3-⑥（P2 BUG⑪）：再驱动一次**没有可攻击目标**的那一手 —— 引擎那句兜底
+#:   （`battle.actions.no_target`）原先**原样上屏**：玩家在『战斗日志』尾巴上看到的就是它
+#:   （「但没有可攻击的目标！」—— 没有 emoji、缩进与玩家行也不同，一看就是内部循环的收尾话）。
+#:   组一场**对面没人**的仗再出一手攻击技能即可走到那一支；这里把这一格也钉成
+#:   「声明的槽位真被请求过」，并写死「渲染出来的就是我们槽位里那一行」。
+_bn = CB.build({"cls": "cls_assassin", "level": 16, "name": "探", "uid": "u_nt"}, [], MON, uid="u_nt")
+_nt_slot = BT.slots()["battle.actions.no_target"]
+_lg_nt = [str(x) for x in (_bn.human_act("skill", "SKILL_SHD_bleed", _bn.focus())[0] or [])]
+_nt_line = [x for x in _lg_nt if str(_tx[_nt_slot]["value"]) in x]
+chk("⑨-c 场上没有可攻击目标那一手 ⇒ 走槽位渲染（%s）—— 引擎兜底那句"
+    "「但没有可攻击的目标！」不上屏" % (_nt_line[:1] or "（没出）"),
+    bool(_nt_line) and not any("没有可攻击的目标" in x for x in _lg_nt))
+
 _unused = BT.battle_text().unused()
 chk("⑨ 声明的槽位（%d 条）都被引擎真请求过（unused = %r）" % (len(BT.slots()), _unused), _unused == ())
 

@@ -257,16 +257,18 @@ def _manifest() -> dict:
 
 
 async def notice(env, sink, uid, player):
-    """`公告` —— 服务器消息：这一版跑的是哪一份、接上了多少条。
+    """`公告` —— 服务器消息：这一版跑的是哪一份、手边能敲什么。
 
-    ★ 「服务器消息」在本包里 = **这一份包自己的状态**（名字 / 版本 / 已接指令数）——
-      世界上的动静是另一条线（『异动』），这里只报包与指令面，不替事件层说话。
-    ★ 已接条数**现点**：声明表里真有 `bind` 的那几条（与 `帮助` 列的是同一批口径）。
+    ★ 「服务器消息」在本包里 = **这一份包自己的状态**（名字 / 版本）—— 世界上的动静是
+      另一条线（『异动』），这里只报包与指令面，不替事件层说话。
+    ★ fix3-⑥（P1 BUG-15）：原先还印一行「已经接上的指令：N / M 条」—— 那是**构建期
+      完成度**（声明表里真有 `bind` 的条数 / 声明总数），玩家会去数缺了哪几条；而且
+      「M − N」里有一部分是**永远不该接的**（GM / 调试那几条），这个比值对玩家没有意义。
+      ⇒ 换成 `SYS_NOTICE_WHAT`（「手边能敲什么，打『帮助』看一眼」）；旧槽位退役登记见
+      `scripts/probe_copy.py::RETIRED_DOC`。
     """
     mf = _manifest()
-    cmds = _data("commands") or {}
-    n = len([1 for v in cmds.values() if isinstance(v, dict) and v.get("bind")])
     yield T("SYS_NOTICE_HEAD")
     yield T("SYS_NOTICE_PKG", name=mf.get("name") or "", ver=mf.get("version") or "")
-    yield T("SYS_NOTICE_CMDS", n=n, total=len(cmds))
+    yield T("SYS_NOTICE_WHAT")
     yield T("SYS_NOTICE_TAIL")
