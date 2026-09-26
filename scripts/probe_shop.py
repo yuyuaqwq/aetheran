@@ -33,6 +33,11 @@
      当场红（买价 == 收价）；摘掉 `item_buy` 的 bind ⇒ ⑥⑦ 红
   ⑮ ★ P-16：**物价倍数**（世界事件效果栏 `price_mul`）真接在买价上 —— 注入一条假事件 ⇒
      面板那一行与『购买』扣的钱**同一眼同一个价**（都 ×1.25）、收价一个字不动；拿掉 ⇒ 回原价
+  ⑯ ★ P-70（2026-09-26 · 本波 w-h-ux · **裁决：修理「本轮不做」**）：四个消耗口逐口取证
+     （药水 / 强化 / 住店 ✅ · 修理 ❌）·「不做」的机器可见理由 = items 域零耐久字段 ·
+     声明里不许再拿「修装备」当卖点 · 真源 `05 §七` 那一行跟账登记
+  ⑰ ★ P-71（同一波 · **裁决：住店那一句复用现成槽位，不新开**）：真敲那一行逐字 ==
+     `SYS_SHOP_POOR` 渲染 · texts 里没有住店专用的欠钱槽位 · 静态只有一处读它 · 两态真调
 
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_shop.py
 """
@@ -474,6 +479,78 @@ def main():
     print("      %s —— 本路裁「修理：本轮不做」的真源行见本分支 `_notes.md §八`；"
           % ("**已跟账**" if "不做" in _ln16 else "**还没跟账**（今天仍把「修理」列在四个去处里）"))
     print("      真源跟账后，「修理不做」就从「待跟账的裁决」转成正式口径（本探针那两条跟着转正）。")
+
+    # ⑰ ★ P-71（2026-09-26 · 本波 w-h-ux · **裁决：住店那一句复用现成槽位，不新开**）
+    #   老账问的是「住店费（钱不够）要不要一个**专门**的槽位」。本路裁 —— **不新开**：复用
+    #   `SYS_SHOP_POOR`。依据三条：
+    #     ① **同一件事同一句话**：钱不够就是钱不够。差额 `{lack}` 本来就是现算的
+    #        —— 住店要的「带上价钱」那半本来就有，没有一句是住店独有的。
+    #     ② 多开一条槽位就多一条要跟账的真源行（17 号口径表 + texts），换来的是**零**玩家差别
+    #        （两句都是「铜板不够 —— 还差 N 个。」）—— 少一处文案就少一处以后会打架的地方。
+    #     ③ 同族先例：`SYS_MINE_RANK` / `SYS_REST_HEAL` / `SYS_LOOK_WHO` 那几格本来就是两处共用一个
+    #        槽位（B3-16b 的登记里写的是「借现成槽位，不新增」）。
+    #   判据四条（下面）：真敲那一行逐字 == 同一格 · texts 里没有住店专用的欠钱槽位 ·
+    #   静态只有一处读它 · **两态**（临时改那一格的值 ⇒ 住店那句跟着变 = 真是同一格）。
+    from content import cmds_ast as _CA17                                      # noqa: E402
+    from content.cmds_more import STASH_NODE as _STASH17                       # noqa: E402
+
+    _POOR17 = "SYS_SHOP_POOR"
+    _inn17 = sorted(k for k in texts if str(k).startswith("SYS_INN_"))
+    _poor17 = [k for k in _inn17
+               if ("POOR" in str(k).upper() or "NOGOLD" in str(k).upper()
+                   or "钱不够" in str((texts.get(k) or {}).get("value") or ""))]
+    if not _poor17:
+        ok("★ P-71 texts 域里**没有**住店专用的「钱不够」槽位（住店那几张只有 %s —— "
+           "共用 `%s` 这一格）" % (" / ".join(_inn17), _POOR17))
+    else:
+        bad("★ P-71 texts 域里冒出了住店专用的欠钱槽位 %s —— 本路裁过「复用 `%s`，不新开」："
+            "真要新开，先改 `18_铺子买卖口径_v1.md` 与 17 号口径表（并把这一条判据改成两格逐字对）"
+            % (_poor17, _POOR17))
+    _src17 = io.open(os.path.join(REPO, "content", "cmds_places.py"), encoding="utf-8").read()
+    _n17 = _src17.count('"%s"' % _POOR17)
+    if _n17 == 1:
+        ok("★ P-71 静态：`content/cmds_places.py`（客栈那一支）里读的欠钱槽位**只有一处** —— "
+           "`%s`（与『购买』同一格，一个字都不另写）" % _POOR17)
+    else:
+        bad("★ P-71 `cmds_places.py` 里 `%s` 出现 %d 次（应当恰好 1 处 —— 客栈那一支）"
+            % (_POOR17, _n17))
+    _fee17 = int(_fee16 or 0)
+    _ad17 = Ad()
+    _host17 = Host(_ad17, REPO, inject={"db_path": ":memory:", "clock": lambda: FIXED})
+    _host17.boot()
+    _u17 = UID + "_p71"
+    _gold17 = max(0, _fee17 - 3)
+    _ad17.saved[_u17] = {"race": "human", "cls": "cls_knight", "name": "试",
+                         "loc": TOWN, "node": _STASH17, "prev": [], "flags": {},
+                         "hp": 1, "gold": _gold17}
+    _out17 = drive(_ad17, _host17, "客栈", _u17)
+    _want17 = T(_POOR17, lack=_fee17 - _gold17)
+    if _want17 in _out17:
+        ok("★ P-71 真敲『客栈』（人在客栈那一站 + 有伤 + 钱不够）：那一行**逐字 ==** "
+           "`%s` 渲染（%r）—— 住店与『购买』共用同一句话" % (_POOR17, _want17))
+    else:
+        bad("★ P-71 住店钱不够那一行不是 `%s`：%s" % (_POOR17, (_out17 or [])[:3]))
+    if _ad17.saved[_u17].get("gold") == _gold17 and int(_ad17.saved[_u17].get("hp") or 0) == 1:
+        ok("★ P-71 那一趟**档一个字不动**（fail-closed：不睡 / 不回血 / 不扣钱）")
+    else:
+        bad("★ P-71 欠钱那一趟动了档：%s" % {k: _ad17.saved[_u17].get(k) for k in ("gold", "hp")})
+    _live17 = _CA17._texts()
+    _had17 = _live17.get(_POOR17)
+    _live17[_POOR17] = {"value": "[P]{lack}", "params": ["lack"], "category": "系统",
+                        "desc": "（probe_shop 临时注入 —— 用完即撤）"}
+    try:
+        _out17b = drive(_ad17, _host17, "客栈", _u17)
+        _same17 = "[P]%d" % (_fee17 - _gold17) in _out17b
+    finally:
+        if _had17 is None:
+            _live17.pop(_POOR17, None)
+        else:
+            _live17[_POOR17] = _had17
+    if _same17 and _want17 in drive(_ad17, _host17, "客栈", _u17):
+        ok("★ P-71 两态真调：临时改掉 `%s` 那一格 ⇒ 住店那一行**跟着变**（= 真是同一格，"
+           "不是碰巧同字）；撤掉注入 ⇒ 回到原句" % _POOR17)
+    else:
+        bad("★ P-71 两态不过：改掉那一格之后住店那句没跟着变（住店可能自己写了一句）")
 
     print()
     print("----")
