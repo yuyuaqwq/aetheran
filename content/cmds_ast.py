@@ -669,6 +669,28 @@ def _move(p, loc, node, sink_lines):
     return p
 
 
+def _can_line(loc, node) -> str:
+    """「现在能走到：…」那一行 —— 邻居名从 `maps` 现取（**唯一拼法**：`_here_lines` 与出镇那三条共用）。
+
+    ★ 试玩问题 #9（本波）：出镇那三条在野外被拦下的那一刻，要把「这一带能走到哪儿」
+      一并说清 —— 玩家才不至于以为是自己敲错了地方（原先只借铺子那一句，答不了那个问题）。
+    """
+    nb = [_name_of_node(loc, x) for x in _neighbors(loc, node)]
+    return T("SYS_MOVE_CAN", list=" · ".join("『%s』" % x for x in nb))
+
+
+def _entry_node(loc) -> str:
+    """这张图**入口那一站** = `maps.<loc>.nodes` 的第一站（出镇那三条口令的落点 · 唯一口径）。
+
+    ★ 试玩问题 #10（本波）：`往西` 原先在代码里写死落在西带**最后一站**（旧渡口），
+      而往北 / 往东都落第一站 ⇒ 一进西带就跳过《浅滩》《石滩渡口》两站，
+      而且进门第一屏讲的是浅滩、脚下却是旧渡口（画面与落点打架）。
+      落点一律从 `maps` 现取：图上第一站就是那条带的入口，三层图（`topology: chain`）一个口径。
+    """
+    nodes = (_map_of(loc) or {}).get("nodes") or []
+    return str((nodes[0] or {}).get("id") or "") if nodes else ""
+
+
 def _here_lines(p) -> list:
     """★ K60：目标 == 脚下这一站 —— 说「到了」，别假装又走了一趟（B3-10 立的 · B3-11 收全）。
 
@@ -679,9 +701,8 @@ def _here_lines(p) -> list:
     """
     loc, node = p.get("loc"), p.get("node")
     out = [T("SYS_MOVE_HERE", name=_name_of_node(loc, node))]
-    nb = [_name_of_node(loc, x) for x in _neighbors(loc, node)]
-    if nb:
-        out.append(T("SYS_MOVE_CAN", list=" · ".join("『%s』" % x for x in nb)))
+    if _neighbors(loc, node):
+        out.append(_can_line(loc, node))
     return out
 
 
@@ -883,25 +904,29 @@ async def go_north(env, sink, uid, player):
         yield _lock
         return
     p = _p(player)
-    if (p["loc"], p["node"]) == ("belt_north", "bn_bone"):        # ★ B3-11：脚下这一站（K60）
+    dest = _entry_node("belt_north")
+    if (p["loc"], p["node"]) == ("belt_north", dest):        # ★ B3-11：脚下这一站（K60）
         for line in _here_lines(p):
             yield line
         return
     # ★ P-52：出镇那一条的「在镇上」守卫 —— 唯一执行面 = `town.town_gate`（B4-12 收的口）。
     #   本地 import：`town` 要 import 本模块，模块级 import 会成环（与 `_p` 里 panel_build 同一手）。
     #   被拦 ⇒ 一句话、**位置与历史一个字不动**（不 `_save`）。
+    #   ★ 试玩问题 #9（本波）：不在镇上时**不再借铺子那一句**（「这几处都在镇上」答不了
+    #     「往北去哪儿了」）—— 方向各自一句 + 「现在能走到」从 `maps` 现算。
     from .town import town_gate
-    _blocked = town_gate(p)
+    _blocked = town_gate(p, notown="SYS_MOVE_NO_ROAD_NORTH")
     if _blocked:
         yield _blocked
+        yield _can_line(p["loc"], p["node"])
         return
-    p = _move(p, "belt_north", "bn_bone", sink)
+    p = _move(p, "belt_north", dest, sink)
     if player is not None:
         player.update(p)
     _save(env)
     yield T("SYS_MOVE_OUT_NORTH")
     yield _map_scene("belt_north")            # ★ B3-6a：地一屏从 texts 来（原先内联在代码里）
-    for line in event_lines(p, "belt_north", "bn_bone", entered=True):    # ★ B3-5：一句进林描述
+    for line in event_lines(p, "belt_north", dest, entered=True):    # ★ B3-5：一句进林描述
         yield line
 
 
@@ -911,22 +936,24 @@ async def go_east(env, sink, uid, player):
         yield _lock
         return
     p = _p(player)
-    if (p["loc"], p["node"]) == ("belt_east", "be_birch"):        # ★ B3-11：脚下这一站（K60）
+    dest = _entry_node("belt_east")
+    if (p["loc"], p["node"]) == ("belt_east", dest):        # ★ B3-11：脚下这一站（K60）
         for line in _here_lines(p):
             yield line
         return
     from .town import town_gate                                   # ★ P-52：同 `go_north`
-    _blocked = town_gate(p)
+    _blocked = town_gate(p, notown="SYS_MOVE_NO_ROAD_EAST")       # ★ #9：方向各自那一句
     if _blocked:
         yield _blocked
+        yield _can_line(p["loc"], p["node"])
         return
-    p = _move(p, "belt_east", "be_birch", sink)
+    p = _move(p, "belt_east", dest, sink)
     if player is not None:
         player.update(p)
     _save(env)
     yield T("SYS_MOVE_OUT_EAST")
     yield _map_scene("belt_east")             # ★ B3-6a：同上
-    for line in event_lines(p, "belt_east", "be_birch", entered=True):    # ★ B3-5：同上
+    for line in event_lines(p, "belt_east", dest, entered=True):    # ★ B3-5：同上
         yield line
 
 
@@ -936,22 +963,24 @@ async def go_west(env, sink, uid, player):
         yield _lock
         return
     p = _p(player)
-    if (p["loc"], p["node"]) == ("belt_west", "bw_old_ferry"):        # ★ B3-11：脚下这一站（K60）
+    dest = _entry_node("belt_west")           # ★ #10：落点 = 西带第一站（浅滩），从 maps 现取
+    if (p["loc"], p["node"]) == ("belt_west", dest):        # ★ B3-11：脚下这一站（K60）
         for line in _here_lines(p):
             yield line
         return
     from .town import town_gate                                   # ★ P-52：同 `go_north`
-    _blocked = town_gate(p)
+    _blocked = town_gate(p, notown="SYS_MOVE_NO_ROAD_WEST")       # ★ #9：方向各自那一句
     if _blocked:
         yield _blocked
+        yield _can_line(p["loc"], p["node"])
         return
-    p = _move(p, "belt_west", "bw_old_ferry", sink)
+    p = _move(p, "belt_west", dest, sink)
     if player is not None:
         player.update(p)
     _save(env)
     yield T("SYS_MOVE_OUT_WEST")
     yield _map_scene("belt_west")             # ★ B3-6a：同上
-    for line in event_lines(p, "belt_west", "bw_old_ferry", entered=True):    # ★ B3-5：同上
+    for line in event_lines(p, "belt_west", dest, entered=True):    # ★ B3-5：同上
         yield line
 
 
@@ -1148,11 +1177,13 @@ async def origin(env, sink, uid, player):
 def _bag_rows(p) -> list:
     """背包里每一行（★ 顺序 = 档上的插入序）—— 分页只负责切，行怎么拼只在这一处。"""
     from . import loot as LT                      # local import：免得包装载期成环
+    from . import gear as GB                      # ★ #13：`+N` 那截后缀走它唯一那一口
     rows = []
     for k, v in (p.get("bag") or {}).items():
         rec = LT.rec_of(k)                        # ★ 未鉴定的 marker：名字与图标写在池上
         # ★ B4-20：名字走 `LT.label_of` —— 「域里重名的那些」缀品阶（同名四档装备原先两行一模一样）
-        rows.append("· %s %s ×%s" % (rec.get("icon", ""), LT.label_of(k), v))
+        # ★ 试玩问题 #13：强化过的缀上 `+N`（没强化过 ⇒ 与从前逐字相同）
+        rows.append("· %s %s%s ×%s" % (rec.get("icon", ""), LT.label_of(k), GB.shown_badge(p, k), v))
     return rows
 
 

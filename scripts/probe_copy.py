@@ -818,9 +818,11 @@ def main():
         ("彩蛋(一个都没有)", CE.eggs_book, "", {}),
         ("彩蛋(有)", CE.eggs_book, "", {"eggs": {_eid: {"day": 2}}} if _eid else {}),
         # ★ B3-11：站在目的地上再敲那四条出口（原先会再演一遍出门 · 往历史里塞自己）
+        #   ★ 试玩问题 #10（本波）：`往西` 的落点改成西带**第一站**（浅滩 —— `maps` 上第一站，
+        #     原先写死落在最后一站旧渡口）⇒ 「站在目的地」的那一格跟着挪到浅滩。
         ("往北(就在骨田)", CA.go_north, "", {"loc": "belt_north", "node": "bn_bone"}),
         ("往东(就在白桦林)", CA.go_east, "", {"loc": "belt_east", "node": "be_birch"}),
-        ("往西(就在旧渡口)", CA.go_west, "", {"loc": "belt_west", "node": "bw_old_ferry"}),
+        ("往西(就在浅滩)", CA.go_west, "", {"loc": "belt_west", "node": "bw_shoal"}),
         ("进镇(就在镇口)", CA.enter_town, "", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
         # ★ B3-6：副本（旧哨塔）五条 —— 塔内 / 塔外 / 空档三档都扫一遍（K56 覆盖面）
         ("进塔(在塔门口)", CTW.tower_enter, "", {"loc": "belt_north", "node": "bn_tower"}),
@@ -1098,6 +1100,16 @@ def main():
             and _GBP.food_buff(_p_cls) == _want_mult and _GBP.food_buff(_p_no) == _want_mult,
             "%s / %s ｜ 乘数 %s" % (_shCls[-1:], _shNo[-1:], _GBP.food_buff(_p_cls)))
 
+    # ★ 试玩复测 #1 的接缝（6f20265 那一笔「场在跑」的闸）：世界级移动那一族新增了
+    #   `SYS_MOVE_IN_FIGHT` 这条拦 —— 于是上面那批用例里 `攻击` / `技能` / `集火` 那几条
+    #   会在**共同档**（`aetheran_meta`，键 `g_copy#u_copy`）里留下一场没落地的仗，
+    #   而下面这几支移动用例整段被它拦掉（探针自己造的残留污染自己的下一段 —— 第二遍跑
+    #   必红、干净库上第一遍绿）。⇒ 进移动那几支之前**把自己造的那一场清掉**：
+    #   判据与期望一个字不动，只是不再让 fixture 的残留当判据。清键走 `instance.battle_key`
+    #   那唯一一口（与真宿主同一条路，不手拼键）。
+    from content import instance as _INS                                   # noqa: E402
+    _INS.clear(_INS.battle_key(_E(""), "u_copy"))
+
     # ⑩ B3-10 ①：`去 <脚下这一站>` —— 回的是「到了」，不是「过不去」
     here_out = _drive(CA.go_to, _player(loc="windmill_town", node="wt_gate_n"), "去 %s" % cur)
     here_want = tx["SYS_MOVE_HERE"]["value"].replace("{name}", cur)
@@ -1107,9 +1119,11 @@ def main():
         "%s" % (here_out[:2] if here_out else ["(空)"]))
 
     # ⑫ B3-11 ★ 四条出口的「脚下这一站」（K60 家族）：站在目的地再敲一次 —— 不许演「又走了一趟」
+    #   ★ 试玩问题 #10（本波）：`往西` 的落点 = 西带第一站（浅滩）—— 那一格跟着改，
+    #     判据本身（回 HERE / 不演出门 / 不挪位置 / 不塞历史 / 紧接着『返回』没什么可回）一个字没动。
     _EXITS = [("往北", "belt_north", "bn_bone", "SYS_MOVE_OUT_NORTH", CA.go_north),
               ("往东", "belt_east", "be_birch", "SYS_MOVE_OUT_EAST", CA.go_east),
-              ("往西", "belt_west", "bw_old_ferry", "SYS_MOVE_OUT_WEST", CA.go_west),
+              ("往西", "belt_west", "bw_shoal", "SYS_MOVE_OUT_WEST", CA.go_west),
               ("进镇", "windmill_town", "wt_gate_n", None, CA.enter_town)]
     exit_bad = []
     for label, loc, node, out_slot, fn in _EXITS:
@@ -1140,22 +1154,28 @@ def main():
     #   守在哪一支：HERE（脚下这一站）之后、`_move` 之前 —— 站在骨田敲『往北』仍旧回「你已经到了」，
     #      只有**不在镇上**才拦；拦下来 = 那一句 + 位置与历史一个字不动（不 `_save`）。
     #   『进镇』不受影响：它的守卫写的是「在北口或野外」（真源两处一致）⇒ 野外回镇照旧放行。
-    _NOTOWN = tx["SYS_PLACE_NOTOWN"]["value"]
-    _OUTS = (("往北", "belt_north", "bn_bone", "SYS_MOVE_OUT_NORTH", CA.go_north),
-             ("往东", "belt_east", "be_birch", "SYS_MOVE_OUT_EAST", CA.go_east),
-             ("往西", "belt_west", "bw_old_ferry", "SYS_MOVE_OUT_WEST", CA.go_west))
+    #   ★ 试玩问题 #9（本波）：拦下那一句**改用方向各自的那一格**（`SYS_MOVE_NO_ROAD_<方向>`）+
+    #     紧接一行「现在能走到」（`_can_line` 的同一拼法）—— 原先三条都借铺子那一句
+    #     （「这几处都在镇上」），玩家在骨田敲『往东』读到的是一句答不了他问题的话。
+    #     期望值从 texts 现取（探针不抄中文）· 判据**加严**：除首行外还钉那一行 CAN。
+    _OUTS = (("往北", "belt_north", "bn_bone", "SYS_MOVE_OUT_NORTH", "SYS_MOVE_NO_ROAD_NORTH", CA.go_north),
+             ("往东", "belt_east", "be_birch", "SYS_MOVE_OUT_EAST", "SYS_MOVE_NO_ROAD_EAST", CA.go_east),
+             ("往西", "belt_west", "bw_shoal", "SYS_MOVE_OUT_WEST", "SYS_MOVE_NO_ROAD_WEST", CA.go_west))
     #: 野外起手那几处（含三条各自的目的地 —— 那三对交给 ⑫ 的 HERE 那一支，这里跳过）
     _WILDS = (("白桦林", "belt_east", "be_birch"), ("拾荒营地", "belt_north", "bn_camp"),
               ("旧渡口", "belt_west", "bw_old_ferry"), ("塔里", "old_watchtower", "tower_hall"))
     guard_bad = []
     for _from_lab, _wloc, _wnode in _WILDS:
-        for _lab, _loc, _node, _out_slot, _fn in _OUTS:
+        for _lab, _loc, _node, _out_slot, _nr_slot, _fn in _OUTS:
             if (_wloc, _wnode) == (_loc, _node):
                 continue                 # 站在目的地 ⇒ 走上「脚下这一站」那一支（⑫ 已核）
             _pp = _player(loc=_wloc, node=_wnode, prev=[])
             _got = _drive(_fn, _pp, "")
-            if _got != [_NOTOWN]:
-                guard_bad.append(("%s→%s" % (_from_lab, _lab), _got[:2], [_NOTOWN]))
+            _want = [tx[_nr_slot]["value"], tx["SYS_MOVE_CAN"]["value"].replace(
+                "{list}", " · ".join("『%s』" % CA._name_of_node(_wloc, x)
+                                     for x in CA._neighbors(_wloc, _wnode)))]
+            if _got != _want:
+                guard_bad.append(("%s→%s" % (_from_lab, _lab), _got[:2], _want))
             if (_pp.get("loc"), _pp.get("node")) != (_wloc, _wnode):
                 guard_bad.append(("%s→%s" % (_from_lab, _lab), "位置被挪动了",
                                   (_pp.get("loc"), _pp.get("node"))))
@@ -1163,11 +1183,12 @@ def main():
                 guard_bad.append(("%s→%s" % (_from_lab, _lab), "往历史里塞了自己", _pp.get("prev")))
             if tx[_out_slot]["value"] in chr(10).join(_got):
                 guard_bad.append(("%s→%s" % (_from_lab, _lab), "照样演了出门那一屏", _got[:1]))
-    chk("★ P-52：不在镇上敲『往北 / 往东 / 往西』= 拦下（只那一句 · 位置与历史一个字不动）"
-        "（%d 处起手 × 3 条）" % len(_WILDS), not guard_bad, "%s" % guard_bad[:3])
+    chk("★ P-52 / #9：不在镇上敲『往北 / 往东 / 往西』= 拦下（方向各自那一句 + 「现在能走到」一行 · "
+        "位置与历史一个字不动）（%d 处起手 × 3 条）" % len(_WILDS), not guard_bad, "%s" % guard_bad[:3])
+
 
     pass_bad = []
-    for _lab, _loc, _node, _out_slot, _fn in _OUTS:
+    for _lab, _loc, _node, _out_slot, _nr_slot, _fn in _OUTS:
         _pp = _player(loc="windmill_town", node="wt_board", prev=[])   # 在镇上（**不在北口**）
         _got = _drive(_fn, _pp, "")
         if not _got or _got[0] != tx[_out_slot]["value"]:
