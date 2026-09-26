@@ -2034,15 +2034,30 @@ try:
     _MEET23 = _r("COMBAT_MEET", name=_MON23[_MS23]["name"])
     _INT_NAME = (BA23.interrupt_action_of(_BASE23) or {}).get("name", "")
 
+    # ★ G2（2026-09-26）：战斗改成**一手一推进** ⇒ 「这一场」跨指令落盘
+    #   （`_say23` 走群 `g_c` + uid `u_c` ⇒ 单人键 `g_c#u_c`；直调那一支 `_E9` 没有群 ⇒ 键 `#u_c`）
+    def _field23(uid="u_c", gid="g_c"):
+        from content import instance as _INST23
+        return _INST23.load(_INST23.key_of(gid, uid, [uid]))
+
+    def _clear23(uid="u_c", gid=""):
+        from content import instance as _INST23
+        _INST23.clear(_INST23.key_of(gid, uid, [uid]))
+
     # ── 一、打断：本门的动作名 + 真做出来（断成 / 压后 两种情形直调钉住）──────────
+    #   ★ G2：一条战斗指令 = **推一手** ⇒ 真敲那一档看的是「这一场真起来了吗 + 那两句在不在」
+    #     （不再看 `last_battle` —— 那是**结算期**才写的账，这一场还没打完）
     _o_int, _s_int = _say23(dict(_BASE23), "打断")
+    _f_int = _field23()
     _PUSH23 = (TX.get("COMBAT_INT_PUSH") or {}).get("value", "").split("{ticks}")[0]
-    if _o_int[:2] != [_MEET23, _r("COMBAT_INT_HEAD", skill=_INT_NAME)] \
+    if _o_int[:1] != [_MEET23] \
+            or _r("COMBAT_INT_HEAD", skill=_INT_NAME) not in _o_int \
             or not (_r("COMBAT_INT_BREAK") in _o_int
                     or any(ln.startswith(_PUSH23) for ln in _o_int)):
         _B23.append(("打断 真敲", _o_int[:3]))
-    if not (_s_int.get("flags") or {}).get("last_battle"):
-        _B23.append(("打断 真敲没写 last_battle", _s_int.get("flags")))
+    if _f_int is None or int(_f_int.get("hands") or 0) != 1:
+        _B23.append(("打断 真敲没把这一场推起来（手数 = %s）"
+                     % (None if _f_int is None else _f_int.get("hands"))))
     # 受控两档（直调回调本体）：对方**在出招窗口里** ⇒ 那一手作废；没在窗口里 ⇒ 只压后
     _rec23 = dict(_BASE23)
     _b23a = CBO23.build(dict(_BASE23), [_MS23], _MON23)
@@ -2119,33 +2134,44 @@ try:
         _B23.append(("放技能 认不出", _o_sk_bad))
     if _o_sk_nocls != [_r("SYS_SKILL_NOCLS")]:
         _B23.append(("放技能 没择业", _o_sk_nocls))
-    if _o_sk_ok[:2] != [_MEET23, _r("COMBAT_SKILL_HEAD", name=_INT_NAME)] \
-            or not (_s_sk_ok.get("flags") or {}).get("last_battle") or len(_o_sk_ok) < 6:
+    if _o_sk_ok[:1] != [_MEET23] \
+            or _r("COMBAT_SKILL_HEAD", name=_INT_NAME) not in _o_sk_ok \
+            or _field23() is None or int((_field23() or {}).get("hands") or 0) != 1 \
+            or len(_o_sk_ok) < 6:
         _B23.append(("放技能 真放", _o_sk_ok[:3]))
     chk("★ `技能 <名>`：认不出 / 没择业 各回各自那句（逐字）· 本门「%s」真放出来"
-        "（这一场真打完、写 last_battle）" % _INT_NAME,
+        "（这一手真花掉、这一场真起来）" % _INT_NAME,
         not [x for x in _B23 if x[0].startswith("放技能")],
         "%s" % [x for x in _B23 if x[0].startswith("放技能")][:2])
 
     # ── 四、战斗中用物：一场每件只算一次（带得多 ≠ 用得多）──────────────────────
+    #   ★ G2：一条指令 = 一手 ⇒ 这一档要**在同一个场里敲两次**才看得见「上限」
+    #     （清一次场 → 第 1 次真喝、第 2 次照实说「这一场用过了」并回落普攻）
     _p_item = dict(_BASE23, hp=20)
+    _clear23(gid="")                              # 直调那一支 env 没有群 ⇒ 键 `#u_c`
     _o_item = _direct23(CBAT23.battle_item, _p_item, "使用 伤药")
     _used_left = (_p_item.get("bag") or {}).get(_POT23)
+    _f_item = _field23(gid="")
+    _o_item2 = _direct23(CBAT23.battle_item, _p_item, "使用 伤药")
+    _used_left2 = (_p_item.get("bag") or {}).get(_POT23)
     _o_none = _direct23(CBAT23.battle_item, dict(_BASE23, bag={}), "使用 伤药")
-    if _o_item[:2] != [_MEET23, _r("COMBAT_ITEM_HEAD", name="伤药")] \
+    if _o_item[:1] != [_MEET23] \
+            or _r("COMBAT_ITEM_HEAD", name="伤药") not in _o_item \
             or _used_left != 2 \
-            or not (_r("COMBAT_ITEM_CAP", name="伤药") in _o_item) \
+            or not (_r("COMBAT_ITEM_CAP", name="伤药") in _o_item2) \
+            or _used_left2 != 2 \
+            or _f_item is None or int(_f_item.get("items_used", {}).get(_POT23, 0)) != 1 \
             or len([ln for ln in _o_item if "伤药" in ln and "喝下" in ln]) != 1:
-        _B23.append(("用物 上限那一档", _o_item[:3], _used_left,
+        _B23.append(("用物 上限那一档", _o_item[:3], _used_left, _used_left2,
                      [ln for ln in _o_item if "喝下" in ln]))
     if _o_none != [_r("COMBAT_ITEM_BAD", name="伤药")]:
         _B23.append(("用物 没带", _o_none))
-    chk("★ `使用 <药>`（战斗口径 · 直调）：这一手真喝（%s）· **一场只算一次**（背包 3 → %s，"
-        "后面的手出「%s」并回落成普攻）· 没带就一句实话（不开打）"
-        % ((TX.get("SYS_USE_HEAL") or {}).get("value", "")[:6], _used_left,
-           (TX.get("COMBAT_ITEM_CAP") or {}).get("value", "")[:10]),
-        not [x for x in _B23 if x[0].startswith("用物")],
-        "%s" % [x for x in _B23 if x[0].startswith("用物")][:2])
+    _clear23(gid="")
+    chk("★ `使用 <药>`（战斗口径 · 直调 · G2 起一手一手）：第 1 手真喝（背包 3 → %s）· "
+        "同一场第 2 手出「%s」并回落成普攻（背包仍是 %s）· 没带就一句实话（不开打）"
+        % (_used_left, (TX.get("COMBAT_ITEM_CAP") or {}).get("value", "")[:10], _used_left2),
+        not [x for x in _B23 if str(x[0]).startswith("用物")],
+        "%s" % [x for x in _B23 if str(x[0]).startswith("用物")][:2])
 
     # ── 五、集火：单人明确回话（不动档、不开战斗）────────────────────────────────
     #   ★ F6（QA P3）：**三档分得开** —— 认得出 / 认不出这个名字 / 空着没点名。
@@ -2172,6 +2198,7 @@ try:
     _o_town, _s_town = _say23(dict(_BASE23, loc="windmill_town", node="wt_gate_n",
                                    bag={_WPN23: 1}), "换武器", pin=None)
     _o_wild, _s_wild = _say23(dict(_BASE23, bag={_WPN23: 1}), "换武器")
+    _f_wild = _field23()
     _o_none2, _s_none2 = _say23(dict(_BASE23), "换武器")
     _o_ask, _s_ask = _say23(dict(_BASE23), "换武器", pin=None)
     if _o_town[:1] != [_r("SYS_GEAR_EQUIP_OK", icon=(_IT9.get(_WPN23) or {}).get("icon", ""),
@@ -2181,11 +2208,12 @@ try:
             or (_s_town.get("bag") or {}):
         _B23.append(("换武器 镇里", _o_town[:2], _s_town.get("equipped")))
     if (_s_wild.get("equipped") or {}).get("weapon") != _WPN23 \
-            or not (_s_wild.get("flags") or {}).get("last_battle") \
+            or _f_wild is None or int(_f_wild.get("hands") or 0) != 1 \
             or _o_wild[:1] != [_MEET23] \
             or not any(ln.startswith((TX.get("COMBAT_SWAP_OK") or {}).get("value", "")
                                      .split("{icon}")[0] or "\0") for ln in _o_wild):
-        _B23.append(("换武器 野外·吃一手", _o_wild[:3], _s_wild.get("equipped")))
+        _B23.append(("换武器 野外·吃一手", _o_wild[:3], _s_wild.get("equipped"),
+                     None if _f_wild is None else _f_wild.get("hands")))
     # 带两件 ⇒ 换上 id 序第一件、另一件只提示（不静默吞掉）
     _wpn2 = sorted(k for k, v in (_IT9 or {}).items()
                    if isinstance(v, dict) and v.get("slot") == "weapon" and k < _WPN23)[:1]
@@ -2199,23 +2227,29 @@ try:
     if _o_ask != [_r("COMBAT_SWAP_NONE")] or _s_ask.get("equipped"):
         _B23.append(("换武器 背包里没武器", _o_ask))
     chk("★ `换武器` 真敲：没得打那儿只换手（%s · 回现成的装备那一句）· 野外**换上了 + 这一手"
-        "花在换手上**（这一场照打、写 last_battle）· 带两件时换第一件并把另一件列出来 · "
+        "花在换手上**（这一场真起来、真花掉一手）· 带两件时换第一件并把另一件列出来 · "
         "没得换一句实话" % _wpn_name,
         not [x for x in _B23 if x[0].startswith("换武器")],
         "%s" % [x for x in _B23 if x[0].startswith("换武器")][:2])
 
-    # ── 七、没遇敌那一档 + 老路没被撞坏（`攻击` 对照）+ 文案面扫一遍 ──────────────
+    # ── 七、没遇敌那一档 + `攻击` 那一支 + 文案面扫一遍 ──────────────────────────
     _o_nofoe, _s_nofoe = _say23(dict(_BASE23), "打断", pin=None)
     if _o_nofoe != [_r("COMBAT_NEED_FOE")] or _s_nofoe != dict(_BASE23):
         _B23.append(("没遇敌那一档", _o_nofoe))
+    # ★ G2 换向：`攻击` 不再一次打完 —— 判据改成「同一套：遇敌 + 四段式那一屏 + 这一场起来」
+    #   （改前那两条读法：`打完` / 死亡那一行 + 写 `last_battle`；分段之后那是**结算期**的事）
     _o_atk, _s_atk = _say23(dict(_BASE23), "攻击")
-    if not any("打完" in ln or (TX.get("SYS_DEATH_WILD") or {}).get("value", "")[:4] in ln
-               for ln in _o_atk) or not (_s_atk.get("flags") or {}).get("last_battle"):
-        _B23.append(("攻击 对照（老路）", _o_atk[:2]))
-    chk("★ 没遇敌 ⇒ 一句「%s」（**档一个字不动**）· `攻击` 老路仍照旧（打完 / 写 last_battle）"
+    _f_atk = _field23()
+    _TURN_PRE23 = (TX.get("COMBAT_TURN_STATE") or {}).get("value", "").split("{")[0]
+    if _o_atk[:1] != [_MEET23] or _f_atk is None \
+            or int(_f_atk.get("hands") or 0) != 1 \
+            or not any(str(ln).startswith(_TURN_PRE23) for ln in _o_atk):
+        _B23.append(("攻击 那一支", _o_atk[:3]))
+    chk("★ 没遇敌 ⇒ 一句「%s」（**档一个字不动**）· `攻击` 那一支照同一套（遇敌 + 四段式那一屏"
+        "«现状/谁先动/对方在干什么/你的选项» + 这一场起来、真花掉一手）"
         % (TX.get("COMBAT_NEED_FOE") or {}).get("value", "")[:12],
-        not [x for x in _B23 if x[0] in ("没遇敌那一档", "攻击 对照（老路）")],
-        "%s" % [x for x in _B23 if x[0] in ("没遇敌那一档", "攻击 对照（老路）")][:2])
+        not [x for x in _B23 if x[0] in ("没遇敌那一档", "攻击 那一支")],
+        "%s" % [x for x in _B23 if x[0] in ("没遇敌那一档", "攻击 那一支")][:2])
 
     _ALL23 = (_o_int + _o_sk_bad + _o_sk_nocls + _o_sk_ok + _o_item + _o_none
               + _o_focus1 + _o_focus2 + _o_ask + _o_town + _o_wild + _o_none2

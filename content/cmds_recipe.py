@@ -440,6 +440,20 @@ async def item_use(env, sink, uid, player):
         yield T("SYS_GEAR_IN_BAG", name=want)
         return
     iid, rec = hit
+    # ★ G2：**打起来的时候**这一手走战斗那一条（花掉你这一手、当场回血、记每场上限）
+    #   —— 判据只有一个：此刻**真有一场在跑**（`instance.live`，与战斗那边同一个口）。
+    #   面板在开战时固化 ⇒ 战斗里只认**回血**那一类；别的（食物 / 增益）照实说，
+    #   **不消耗、不动档**（吃掉却没效果 = 骗人）。
+    from . import instance as INST
+    if INST.live(env, uid) is not None:
+        _mx0 = hp_cap_or_line(p)[0] or 0        # 没面板 ⇒ 0（只影响 hp_pct 那一类的估值）
+        if _heal_gain(p, rec, _mx0) is None:
+            yield T("COMBAT_ITEM_ONLY_HEAL", name=rec.get("name", iid))
+            return
+        from . import cmds_battle as CBAT
+        async for line in CBAT.battle_item(env, sink, uid, player):
+            yield line
+        return
     food = rec.get("food") or {}
     if food:
         from . import facade

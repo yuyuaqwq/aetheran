@@ -92,8 +92,17 @@ class _E:                       # handler 只要 env.save()（落档是处理器
         pass
 
 
+def _clear_duel(uid):
+    """★ G2：战斗改成**一手一推进**之后，「这一场」是**落盘**的（`instance` 的「场」）——
+    夹具要的是「从零开一场」⇒ 每一拍之前先把那一格清掉（不清的话上一次运行 / 上一节
+    留下的场会被接着打，`攻击` 就不再重新 build）。"""
+    from content import instance as _INST
+    _INST.clear(_INST.battle_key(_E(), uid))
+
+
 def _drive(fn, p, uid="u_die"):
     out = []
+    _clear_duel(uid)
 
     async def _go():
         async for line in fn(_E(), None, uid, p):
@@ -159,7 +168,9 @@ CBmod.pick_encounter = lambda *a, **k: [_MID]
 #:   「怪给的经验 = 它**自己**那级」⇒ 只留一个变量（下面另有一条核“真打的就是钉住的那只”）。
 AFFIX.elite_of = lambda *a, **k: None
 try:
-    _lines_exp = _drive(CBAT.attack, _GAIN)
+    # ★ G2：一条 `攻击` 只推一手 ⇒ 这一节要的是「一场打完的落账」，夹具改走 `自动`
+    #   （**一次打完**那条，钱 / 经验 / 掉落走 `cmds_battle._settle` **同一个口**；判据一个字没动）
+    _lines_exp = _drive(CBAT.auto_battle, _GAIN)
 finally:
     CBmod.pick_encounter = _real_pick
     AFFIX.elite_of = _real_elite

@@ -934,6 +934,10 @@ if _el_n:
     _want2 = _AF.elite_line(str(mo[_el_n[0]]["name"]), _el_n[1])
 
     async def _go2():
+        # ★ G2：战斗改**一手一推进** ⇒ 「这一场」跨指令落盘（夹具用的 key = 空群 + uid）
+        #   —— 真敲之前先清掉（不清的话上一次运行留下的场会被接着打：那一敲就**没有遭遇那两行**）
+        from content import instance as _INST23
+        _INST23.clear(_INST23.key_of("", _found_uid, [_found_uid]))
         async for _l in _CBAT.attack(_E(), None, _found_uid, _pl2):
             _at.append(_l)
     asyncio.run(_go2())

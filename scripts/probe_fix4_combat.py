@@ -143,6 +143,13 @@ DP = load("content/data/drop_pools.json")
 
 def drive(fn, p, uid=UID):
     out = []
+    # ★ G2：战斗改**一手一推进** ⇒ 「这一场」跨指令落盘（`instance` 的「场」）——
+    #   夹具要的是「从零开一场」⇒ 每一拍之前先清掉那一格（`_E` 没有群 ⇒ 键 = `#uid`）。
+    try:
+        from content import instance as _INST
+        _INST.clear(_INST.key_of("", uid, [uid]))
+    except Exception:                                            # noqa: BLE001
+        pass
 
     async def _go():
         async for line in fn(E(), None, uid, p):
@@ -193,7 +200,10 @@ _seen, _seq = [], []
 try:
     for _i in range(20):
         _bag0 = dict(_p.get("bag") or {})
-        drive(CBAT.attack, _p, uid="u_f4_drop")
+        # ★ G2（2026-09-26 · 本波）：战斗改成**一手一推进**之后，一条 `攻击` 只推一手
+        #   ⇒ 这一节要的是「一场的落账」，夹具改走 `自动`（**一次打完**那条，落账同一个口）。
+        #   判据一个字没动（drops_seen 逐场 +1 · 掉落序列 ≥2 种 · 硬骨刷得出来）。
+        drive(CBAT.auto_battle, _p, uid="u_f4_drop")
         _got = {k: int(v) - int(_bag0.get(k, 0)) for k, v in (_p.get("bag") or {}).items()
                 if int(v) - int(_bag0.get(k, 0)) > 0}
         _seq.append(tuple(sorted(_got)))
@@ -352,7 +362,8 @@ def _one_battle(aids, uid="u_f4_elite", p_in=None):
     CBmod.pick_encounter = lambda *a, **k: [MID]
     AFFIX.elite_of = (lambda *a, **k: (MID, list(aids))) if aids else (lambda *a, **k: None)
     try:
-        lines = drive(CBAT.attack, q, uid=uid)
+        # ★ G2：一条 `攻击` 只推一手 ⇒ 这一节的「一场对照」改走 `自动`（一次打完，落账同口）
+        lines = drive(CBAT.auto_battle, q, uid=uid)
     finally:
         CBmod.pick_encounter, AFFIX.elite_of = _rp, _re
     _got = tuple(sorted(k for k, v in (q.get("bag") or {}).items()
@@ -537,10 +548,13 @@ chk("★ ⑥ 两态对照：`攻击` 在同一处**一个字没动**（照旧回
 # ══════════════════════════════════════════════════════════════
 # ⑦ `帮助` 尾巴那句诚实说明（P1 BUG-9 ① / P4 E-11）
 # ══════════════════════════════════════════════════════════════
-print(NL + "⑦ `帮助` 里那句「一敲就是一场」（P1 BUG-9 ① / P4 E-11）")
+print(NL + "⑦ `帮助` 里战斗那栏的尾巴（P1 BUG-9 ① / P4 E-11 · ★ G2 换向）")
 _l_help = say("帮助")
-_want_note = T("SYS_HELP_BATTLE_NOTE")
-chk("★ ⑦ 敲 `帮助` ⇒ 末尾那行逐字 == 槽位渲染（把「一条指令打完整场」说在表尾巴上）",
+# ★ G2（2026-09-26 · 本波）：战斗从「一条指令打完整场」改成**一手一手**
+#   ⇒ 尾巴那句换成 SYS_HELP_BATTLE_TURN（判据跟着换向，下面「不带来新『』词」那条判据不动）。
+#   旧槽位 SYS_HELP_BATTLE_NOTE 的退役登记在 scripts/probe_copy.py::RETIRED_DOC。
+_want_note = T("SYS_HELP_BATTLE_TURN")
+chk("★ ⑦ 敲 `帮助` ⇒ 末尾那行逐字 == 槽位渲染（战斗那栏的尾巴说的是本波口径：一条指令一手）",
     bool(_l_help) and _l_help[-1] == _want_note, "末行 %s" % (_l_help[-1:] or ["（空）"]))
 _listed = [w for ln in _l_help for w in re.findall(r"『([^』]*)』", ln)]
 _decl = load("content/data/commands.json")

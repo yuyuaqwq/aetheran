@@ -125,6 +125,30 @@ def _plain_attack(battle, actor) -> list:
     return list(ACT.do_attack(battle, ctx))
 
 
+def repanel(actor, p) -> None:
+    """把这一格 actor 的面板按**当下**的档重挂（★ G2：给「换武器」用）。
+
+    为什么需要它：一场战斗是**快照**（`combat.player_actor` 在开战那一刻把面板与 `panel_stack`
+    折好），而换手换的是档上的 `equipped` —— 不重挂的话，「吃一次行动换武器」在这一场里
+    **一个数都不动**（等于白亏一手，玩家看不出来）。
+
+    只重挂**面板那一族键**（`player_actor` 给的全部键 + 栈 id）；战斗态一概不动：
+    `hp` / `mp` / `ct` / `charging` / `effects` / `shields` / `cooldown` / `defending` 原样留着
+    （换手不该把人打回满血，也不该清掉身上的状态）。现血按**新的上限**钳一次。
+    """
+    from . import combat as CB
+    fresh = CB.player_actor(dict(p or {}), uid=str((actor or {}).get("uid") or ""))
+    keep = {k: actor[k] for k in ("hp", "mp", "ct", "charging", "effects", "shields",
+                                  "cooldown", "defending") if k in actor}
+    for k, v in fresh.items():
+        actor[k] = v
+    actor.update(keep)
+    _to = actor.get("max_hp")            # 先取成局部量：静态守卫见 probe_panel ④
+    mx = int(_to) if _to else 0
+    if mx > 0:
+        actor["hp"] = max(1, min(int(actor.get("hp", 0) or 0), mx))
+
+
 # ══════════════════════════════════════════════════════════════
 # 一手
 # ══════════════════════════════════════════════════════════════
@@ -138,12 +162,14 @@ class Hand:
     · `used`  : **这一场**里用了几次（物品 id → 次）—— 上限的记账就在这儿，跨手有效
     """
 
-    def __init__(self, kind, *, p=None, item=None, lines=None):
+    def __init__(self, kind, *, p=None, item=None, lines=None, used=None):
         self.kind = str(kind)
         self.p = p
         self.item = item
         self.lines = list(lines or [])
-        self.used = {}
+        # ★ G2：每件用几次的记账 —— 由调用方给（走「场」时那一格是 `场["items_used"]`，
+        #   跨手有效）；不给 = 自己一份（一次结算那条老路：一个 Hand 就是整场）。
+        self.used = dict(used) if used is not None else {}
         self.ok = False                     # 这一手是否真的做成了（探针/回话用）
 
     # ---------------------------------------------------------- 引擎回调
@@ -153,6 +179,7 @@ class Hand:
         if self.kind == "item":
             return self._item(battle, actor, skill_name or self.item)
         if self.kind == "swap":
+            repanel(actor, self.p)                  # ★ G2：换手**当场**生效（重挂面板那一族键）
             return (list(self.lines), CAT["swap"], None)
         if self.kind == "retreat":
             return (list(self.lines), CAT["retreat"], None)

@@ -259,13 +259,22 @@ def main():
 
     # (13) 真打一场：建号两步走完 ⇒ 打得动（原先卡在「职业基础 还没接上」）
     ad3 = Ad()
-    host3 = Host(ad3, REPO, inject={"db_path": ":memory:", "clock": time.time})
+    # ★ G2：战斗改成**一手一推进**之后，「这一场」要在两条指令之间**真存住**
+    #   （`persistence.group_*` 每条指令各开一次连接 ⇒ `:memory:` 那种库下一次读不回来，
+    #   开场那一敲会看起来「只回了一行」）⇒ 这一节用真文件库（其余几节不碰战斗，照旧 `:memory:`）。
+    _db3 = os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp", "ast_probe_class_battle.db")
+    try:
+        os.remove(_db3)
+    except OSError:
+        pass
+    host3 = Host(ad3, REPO, inject={"db_path": _db3, "clock": time.time})
     host3.boot()
     u3 = "u_class_probe3"
     drive(ad3, host3, "我是 人类", u3)
     drive(ad3, host3, "选职业 骑士", u3)
     drive(ad3, host3, "往北", u3)
-    j = NL.join(drive(ad3, host3, "攻击", u3))
+    # ★ G2：一条 `攻击` = 推一手 ⇒ 连敲两次，把「你这一手 + 对方那一手」都收进来再判
+    j = NL.join(drive(ad3, host3, "攻击", u3) + drive(ad3, host3, "攻击", u3))
     if "职业基础" in j:
         bad("两步走完还是「职业基础 还没接上」：%s" % j[:160])
     elif ("伤害" in j and "受到" in j) or T("COMBAT_NONE") in j:

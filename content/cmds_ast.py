@@ -1800,13 +1800,14 @@ async def help_cmd(env, sink, uid, player):
     for c, ws in cats.items():
         yield T("SYS_HELP_ROW", cat=c, list=" · ".join("『%s』" % w for w in ws))
     # ★ P1 BUG-9 ① / P4 E-11（本波 f4）：**界面上的承诺改诚实** —— 战斗那一栏与别的栏一样是
-    #   一串平铺的『防御』『打断』『技能 <参数>』…，读起来像「逐回合出招」，而这一版实际是
-    #   **一条指令打完整场**（你敲的那一手 = 这一场的第一手，之后自动打完）。
-    #   这一句把差别说在表尾巴上（不新开一栏、也不动任何一条 usages —— 探针 ⑤ 逐词对账照旧）。
-    #   战斗真分回合那一批落地之后，这一句跟着撤（方案见本分支 `_notes.md §战斗分段化`）。
+    #   一串平铺的『防御』『打断』『技能 <参数>』…，读起来像「逐手出招」。
+    #   ★ G2（本波）撤掉的就是那句「一条指令打完整场」：**战斗真分了一手一手**，
+    #     帮助尾巴改成本波的口径（`SYS_HELP_BATTLE_TURN`）。旧槽位 `SYS_HELP_BATTLE_NOTE`
+    #     的包内读端到这一行就没了 —— 它的退役登记在 `scripts/probe_copy.py::RETIRED_DOC`
+    #     （真源那一行的**值**要由主线改：真源仓对本分支只读 ⇒ 账在 `_notes.md`）。
     _bat = str((cmds.get("attack") or {}).get("category") or "")
     if _bat and any(str(c) == _bat for c in cats):
-        yield T("SYS_HELP_BATTLE_NOTE")
+        yield T("SYS_HELP_BATTLE_TURN")
 
 
 def declared_soon(env):
