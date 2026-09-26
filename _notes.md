@@ -11408,3 +11408,87 @@ if eff <= 0:
 本包今天起不再往里放内容侧动作（本波）；但**别的接入方**（第三方包）照样可能踩。
 「自动那条路遇到不认识的 type 要不要回落普攻」是**跨游戏**的口径，不在本包内 ⇒ 判 **[裁]**、不动引擎。
 
+---
+
+# fix-g-enhance · 强化：成功不回话报料 + 加成在屏上找不到落点（两条 · 同一条指令两处口径不一）
+
+> 分支 `fix-g-enhance`（基线 `fef4a62` = master）· 引擎仓 `framework-engine` **零改动** ·
+> 真源仓 `aetheran-plan` **只读**（一字未动）。
+> 现象出处：`AppData/Local/hermes/workspace/AETHERAN_夜班发现.md` 第 **163** 行（游侠 b63/b73/b82）·
+> 第 **149** 行（狂战 第 42 批；骑士 / 法师同形）。两条是**同一条指令的两处口径不一**：
+> 现象 A = 料被吃了没报，现象 B = 加成在屏上找不到落点。
+> 仓外现场记录（现象原文 · 根因 · 改法逐字 · 门禁数字 · 复现命令）：
+> `C:/Users/yuyu/AppData/Local/Temp/w10/fix-g-enhance_notes.md`。
+
+## 一、改前 → 改后（都是真跑）
+
+```text
+改前：🔨 柯尔打的粗剑 → +2（加成 +0.8%，走装备本体 —— 上限 +4.0%）。        铜板 98
+      （背包 铁屑 ×1 · 硬骨 ×2 → 硬骨 ×1 —— 少了 铁屑 ×1 · 硬骨 ×1，回话一个字没提料；
+        属性 攻击 17 → 17 · 查看 攻击 +5 → +5 —— 加成在屏上没有落点）
+改后：🔨 柯尔打的粗剑 → +2（吃了铁屑 ×1 · 硬骨 ×1。加成 +0.8%，走装备本体 —— 上限 +4.0%。
+      面板按整数看：+1..+3 这点不到半格，看不出。）                        铜板 98
+```
+
+* 现象 A：成功那支多传一个 `cost` —— **料表就是那一档的 `inputs`**（`_need_str(ins)`，与「缺料」
+  那一支**同一个变量、同一个拼法**），不是新造一份名单，也不是只印总数。
+* 现象 B（取**改动面最小**的甲案）：在同一格文案里补一句说明。**不取乙案**（`查看` 带一位小数）的
+  一句话理由：**一位小数也看不见这个加成**——粗剑 +1 是 5 × 1.004 = **5.02**，印一位还是 `5.0`；
+  要看得见得印两位，那是面板/数值显示口径（`02_数值宪法`「数值 = 整数显示」+ `probe_cmds ⑫`
+  钉「行值里一个小数点都没有」），属数值口径、改动面更大。
+* **数值一格没动**：`content/gear.py` 的 `gear_stats` / `enhance_bonus` 逐字未改；
+  `content/data/recipes.json::_meta.enhance`（`bonus_per_level 0.004` · `bonus_at_cap_pct 4.0` · `cap 10`）
+  一格未动；引擎仓零改动。
+
+## 二、判据（只加强 · 逐条落在既有探针里）
+
+```text
+scripts/probe_recipes.py  ⑧-b（新）：成功那行**逐项报出吃掉的料**，料表**从域现算**（`rc_enh_01.inputs`）
+                                  + **背包实减逐项对账**（回话里那几样 ⇔ 真少掉的那几样）
+                          ⑨-b（新）：加成那句说明**在域里**（`SYS_ENHANCE_OK` 带 `{cost}` + 「面板按整数看」）
+                                  + **断言在数据上成立**：103 件装备现扫，主词条最大 41 × 0.004/级 × 3
+                                  = 0.492 < 0.5（面板按整数显示）⇒ 哪天有件装备大到 +1..+3 就能挪动一格，
+                                  这一条当场红（判据钉住文案里的那句断言）
+scripts/probe_copy.py     用例表 +1 条 `强化(成功·报料)`：成功那一支（原先只有「没给 / 没有这件 /
+                          料不够」）进用例表 ⇒ ⑥「不缺文案 / 不空回」与 ⑪「不漏机器键」**自动**罩到
+                          这条新写的呈现口上（K61）；那一站从 `npcs.funcs` 的 `smith` 现取、
+                          料从那一档的配方现取（都不手写节点 id / 料名）
+```
+
+## 三、门禁（实跑 · 原始末行）
+
+```text
+rm -f "$LOCALAPPDATA/Temp/ast_probe"*.db
+bash C:/Users/yuyu/AppData/Local/Temp/w10/gorun.sh C:/Users/yuyu/ast-wt/fix-g-enhance fix-g-enhance
+⇒ TOTAL pass=52 fail=0（基线上最后一行也是这个数；含 probe_shop / probe_texts / probe_cmds）
+  连跑第二轮：见 Temp/w10/fix-g-enhance-run2/summary.txt
+  probe_generators 全绿（rebuild_syscopy --dry 连跑两遍 rc=0 · 零写入 —— DOC_PENDING 那一格不破幂等）
+```
+
+## 四、真源行（请主线搬）
+
+`content/data/texts.json::SYS_ENHANCE_OK` 这一格的**值**改了（`cost` 参数 + 那句「面板按整数看」）。
+★ 该槽位**不在** `00_总纲/17_文案收口口径_v1.md` 的槽位表里（B2-6 那批 `SYS_ENHANCE_*` 是包内先落、
+真源待搬 —— 全仓 grep `ENHANCE` 只命中 `SYS_JOB_REQ_ENHANCE`）⇒ 已按规矩在
+`scripts/rebuild_syscopy.py::DOC_PENDING` 登记（`old` 取**本分支改前域里的值**，`why` 里写明原因）。
+主线搬那一族槽位表时照 `new` 落即可（`probe_copy ⑤` 的「逐字一致」从此对上）：
+
+```text
+| SYS_ENHANCE_OK | 🔨 {item} → +{lv}（吃了{cost}。加成 {bonus}，走装备本体 —— 上限 +{cap}%。面板按整数看：+1..+3 这点不到半格，看不出。） | bonus,cap,cost,item,lv | 系统 | B2-6 强化 · 成功那一下（fix-g-enhance：报出吃掉的料 + 加成在面板上的可见性） |
+```
+
+## 五、本批动了哪些文件（逐行）
+
+```text
+content/data/texts.json        SYS_ENHANCE_OK：值 + params 加 cost（**本批唯一改的槽位值**）
+content/cmds_recipe.py         enhance 成功那支：`cost=_need_str(ins)`（★ 与「缺料」那一支同一份料表）
+scripts/probe_recipes.py       ⑧-b / ⑨-b（见 §二）
+scripts/probe_copy.py          用例表 + `强化(成功·报料)` + 两个 fixture（smith 那一站 / 那一档的料）
+scripts/rebuild_syscopy.py     DOC_PENDING + `SYS_ENHANCE_OK`（旧值 → 新值 + 理由）
+_notes.md                      本节
+```
+
+**没做的**：`SYS_ENHANCE_FAIL`（失败那支）没一并逐项报料 —— 现象 A 的要求点名「**成功**那行」，
+失败那句已写着「材料吃了，钱没扣、等级没掉」；要一并点名只需挂同一个 `cost`（同一份 `ins`）⇒
+属设计口径的取舍，**留主线拍板**。数值口径本身（加成乘在装备本体上）按真人报告的判定
+（「不是数值 bug，是回话/面板没说清」）不动。真源仓 / 引擎仓 / 别的车道 / `AETHERAN_夜班发现.md` 一字未动。

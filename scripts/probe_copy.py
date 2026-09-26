@@ -573,6 +573,13 @@ def main():
     _w2 = next((k for k in sorted(k for k, v in _its.items() if v.get("slot") == "weapon")
                 if _its[k].get("name") != _its.get(_wpn, {}).get("name")), _wpn)
     _plain = next((k for k in sorted(_its) if not _its[k].get("slot")), "")
+    # ★ fix-g-enhance（现象 A）：「强化 **成功**」那一支要进用例表 —— 它得站在柯尔那一站
+    #   （那一站从 `npcs.funcs` 的 `smith` 现取，与 `cmds_recipe` 那条守卫**同一个口**，不手写节点 id），
+    #   料则从**那一档的配方**现取（同一个域 —— 不另抄一份「强化料是哪些」）。
+    from content.town import _func_node as _TOWN_FN                       # noqa: E402
+    _SMITH_NODE = _TOWN_FN("smith")
+    _ENH1 = ((st.domain("recipes") or {}).get("rc_enh_01") or {}).get("inputs") or []
+    _ENH1_BAG = {str(e["id"]): int(e["n"]) for e in _ENH1}
     # ★ B3-12 的 fixture（都从域里挑，不手写 id）：域里带价的（卖得掉）· 域里没写价的（拿在手上的）
     _pric = next((k for k in sorted(_its) if isinstance(_its[k].get("price"), (int, float))
                   and not isinstance(_its[k].get("price"), bool) and _its[k]["price"] > 0), "")
@@ -822,6 +829,12 @@ def main():
         ("强化(没有这件)", CR.enhance, "强化 不存在的剑", {}),
         ("强化(料不够)", CR.enhance, "强化 %s" % _its.get(_wpn, {}).get("name", "剑"),
          {"bag": {_wpn: 1}} if _wpn else {}),
+        # ★ fix-g-enhance（现象 A / B）：**成功**那一支也进用例表 —— 成功那行要逐项报出吃掉的料
+        #   （料表 = 那一档的 `inputs`，与「缺料」那一支同一份）· 加成那句说明在域里；
+        #   ⑥「不缺文案」与 ⑪「不漏机器键」于是**自动**罩到这条新写的呈现口上（K61）。
+        ("强化(成功·报料)", CR.enhance, "强化 %s" % _its.get(_wpn, {}).get("name", "剑"),
+         {"loc": "windmill_town", "node": _SMITH_NODE, "gold": 999,
+          "bag": dict(_ENH1_BAG), "equipped": {_its.get(_wpn, {}).get("slot"): _wpn}}),
         ("使用(没给东西)", CR.item_use, "使用", {}),
         ("使用(药水)", CR.item_use, "使用 药水", {"cls": "cls_knight", "bag": {"i_potion_heal": 1}}),
         ("使用(伤药)", CR.item_use, "使用 伤药",
