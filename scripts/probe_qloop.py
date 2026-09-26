@@ -1,0 +1,517 @@
+# -*- coding: utf-8 -*-
+"""探针：委托闭环与新手引导（QB 六条 —— 试玩 QA 那一批修的六件）。
+
+来源：四个真人玩家的试玩报告（原样指令 + 原样回话）
+  P1 BUG-1（委托 25 交不掉）· P1 BUG-2（悬赏 101 交不掉）· P1 BUG-3 / P4 E-1（『提示』不随委托走）·
+  P1 BUG-13 / P4 BUG-7（老陶讲完三次后永久哑）· P4 E-10（『我的委托』不给进度）·
+  P2 BUG⑨（`读 <名字>` 对不上时只说「这里没有能读的东西」）· P1 BUG-10（主线 1「试着读（读不懂）」）。
+
+★ 每条**正例 + 反证**：反证一律在进程内把那一处**临时**关掉（跑完立刻还原），
+  证明判据不是恒真 —— 修复被拆掉时这一支当场红。
+
+  ① 卡死 1 · 委托 25「还石头」交得掉
+     单子要 `i_token_stone_shard`（「刻字的石片」），玩家在骨田挖到的那件叫「一块刻着字的石片」
+     —— 它是 `drop_pools` 上的**未鉴定容器** `unid_rare`（`hint` 与那件信物的 `lore` 逐字相同），
+     池里**唯一**那件「故事类」就是它。真源：`15 §二` 第 2 行（hold=i_token_stone_shard ·
+     小满的石头 = 骨田捡的刻字石片）+ `06 §1.2`（刻字的石片 ← 骨田「挖掘」挖出来）+ `27 §三`。
+     正例：包里放**容器** ⇒ 交得掉（档上真写 `quests_done`）· 真信物那条老路照样通。
+     反证：把 `_unid_carries` 关掉 ⇒ 拦住 ｜ 池里没有那件的容器（`unid_common`）⇒ 拦住 ｜
+           同池两件故事类（合成池）⇒ 拦住 ｜ 材料类不许被顶掉（`unid_rare` 顶不掉「旧铁」）。
+  ② 卡死 2 · 悬赏 101：点名那只要说清**出没在哪几站**
+     报告里玩家在「野狗窝」杀了四回「拾荒野狗」，而单子要的是「野狗」（名字只差三个字）。
+     正例：七种日子逐日真敲『交 101』⇒「还差…」后面跟着一条「（它出没在：…）」，站名与
+           `monsters.habitat` × `maps` 现算出来的**逐字相同**。
+     反证：把 `_habitat_of` 关掉 ⇒ 那一行不出现（判据不是恒真）· 那条新行**不许**含「还差」
+           （不然 ㉑/㉛ 的「还差条数 = 条件条数」当场错位）。
+  ③ 卡死 3 · 『提示』随委托走
+     每条接活回话都写着「『提示』会告诉你往哪走」；真源 `04 §一`「`提示` ｜ 随时 ｜
+     给一条**当前**该做什么的提示」。
+     正例：手上有活 ⇒ 第一行 = `SYS_HINT_JOB` 填当前委托，后面是那一条「还差」的**同一批行**
+           （同一个口 `_unmet`）；万事俱备 ⇒ 那句「打『交 <编号>』」；手上没活 ⇒ 建号那句逐字不变。
+     反证：把 `_hint_lines` 关掉 ⇒ 退回建号那句（= 报告里那条 bug 的原样）。
+  ④ 卡死 4（引导）· 老陶三次各讲一段
+     原先他只有 `meet` 一层（14 棵树里唯一没有 `daily` 的）⇒ 第 3 次搭话正好「熟了」，
+     `meet` 不再算数、又没有 `daily` ⇒ 「（他没说话。）」，而这一回**照样计入**判定。
+     正例：真搭话 4 次 ⇒ 一次都不出现「（他没说话。）」｜ 4 次以内听满**三段不同**的话｜
+           `flags.talked` 的计数口径不动（交 21 照样交得掉）。
+     反证：把 `daily` / `main` 两层临时摘掉（= 改前那棵树）⇒ 第 3 次当场回「（他没说话。）」。
+  ⑤ ·『我的委托』给进度计数 ＋ `读 <名字>` 对不上时点名并列出这站能读的
+     正例：`（1/3）` / `（3/3）` 逐条对 · 没写 `require` 的老条目一个字不多 ·
+           骨田 `读 不存在的东西` ⇒ 点名说对不上 + 列出这站能读的（现从 `pois` 域算）·
+           对的名字照旧给正文（老路一个字不动）。
+     反证：把 `_progress` 关掉 ⇒ 那一格消失 ｜ 名字对不上时**不许**再回「这里没有能读的东西」
+           （那句只留给「这站真没有可读物」—— 空参那条路照旧）。
+  ⑥ · 主线 1「试着读（读不懂）」与『读』当场给的正文对上
+     objective 那一格是**真源 `24 §一` 主 1 的「步骤」行**（一个字不动）；对得上的是『读』这边 ——
+     镇口那块石头的正文必须把「读不懂」落到屏幕上（源 `02 §一`「我不认得。旁边那个人也不认得。」）。
+     正例：objective 含「试着读（读不懂）」· 读出来的正文含「一个也读不出来」。
+     反证：把那句从正文槽位里拆掉 ⇒ 当场红（两边又打架）。
+
+用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_qloop.py
+"""
+from __future__ import annotations
+
+import asyncio
+import io
+import json
+import os
+import sys
+import time
+
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ENGINE = os.environ.get("GWEN_ENGINE", "C:/Users/yuyu/framework-engine")
+PLAN = os.environ.get("AST_PLAN", "C:/Users/yuyu/aetheran-plan")
+sys.path.insert(0, ENGINE)
+sys.path.insert(0, REPO)
+
+from saintess_engine.package import load_stack                       # noqa: E402
+
+st = load_stack(str(REPO), inject={"db_path": os.path.join(
+    os.environ.get("LOCALAPPDATA", "/tmp"), "Temp", "ast_probe.db"), "clock": time.time})
+st.install()
+
+from content import calendar as CAL                                  # noqa: E402
+from content import cmds_ast as CA                                   # noqa: E402
+from content import cmds_quest as CQ                                 # noqa: E402
+from content import cmds_talk as CT                                  # noqa: E402
+from content import facade as FC                                     # noqa: E402
+from content import heard as HD                                      # noqa: E402
+from content import loot as LT                                       # noqa: E402
+
+QE = {k: v for k, v in st.domain("quests").items() if not str(k).startswith("_")}
+MON = st.domain("monsters")
+MAPS = st.domain("maps")
+PO = st.domain("pois")
+DP = st.domain("drop_pools")
+NPCS = st.domain("npcs")
+TX = st.domain("texts")
+
+_FC_SAVED = dict(FC.HANDLES)
+_SCS = CAL.scale_seconds()
+
+
+def _at_day(d, h=6.0):
+    """假钟拨到「第 d 个游戏日 · 昼」—— 轮换与日期戳看的就是这根钟（照 probe_quests 那一手）。"""
+    FC.bind_host(clock=lambda _e=(float(d) + h / 24.0) * _SCS: _e)
+
+
+class _E:
+    """实现体只要 env.text + env.save()。"""
+
+    def __init__(self, text=""):
+        self.text = text
+
+    def save(self):
+        pass
+
+
+def _drive(fn, p, text=""):
+    out = []
+
+    async def go():
+        async for line in fn(_E(text), None, "u_q", p):
+            out.append(line)
+
+    asyncio.run(go())
+    return out
+
+
+def _player(**kw):
+    p = dict(CA.DEFAULT_PLAYER)
+    p.update(kw)
+    return p
+
+
+def T(key, **slots):
+    return CA.T(key, **slots)
+
+
+MISSING = "[MISSING TEXT"
+fails, CHECKS = [], [0]
+ok = lambda m: (CHECKS.__setitem__(0, CHECKS[0] + 1), print("  ✓ " + m))
+bad = lambda m: (fails.append(m), CHECKS.__setitem__(0, CHECKS[0] + 1), print("  ✗ " + m))
+
+print("探针：委托闭环与新手引导（QB 六条）")
+
+# ══════════════════════════════════════════════════════════════
+# ⓪ 前提：这一批要修的那几条还在域里（不然下面几条判据会「静默通过」）
+# ══════════════════════════════════════════════════════════════
+_b0 = []
+_q13 = QE.get("q_side_13") or {}
+if [r for r in (CQ._require_of(_q13) if _q13 else []) if r.get("kind") == "item"] \
+        != [{"kind": "item", "item": "i_token_stone_shard", "n": 1}]:
+    _b0.append("q_side_13 的条件那一格变了：%s" % json.dumps(_q13.get("require"), ensure_ascii=False))
+_bn = QE.get("q_bounty_normal") or {}
+if not any(r.get("kind") == "kill" and r.get("daily") and r.get("role") for r in CQ._require_of(_bn)):
+    _b0.append("q_bounty_normal 不再是「点档 + daily」")
+_u = DP.get("unid_rare") or {}
+if str(_u.get("kind_key")) != "unidentified":
+    _b0.append("unid_rare 不再是未鉴定容器")
+if (TX.get("READ_STONE_SCRIPTS") or {}).get("value", "").find("一个也读不出来") < 0 \
+        and (MON.get("ms_wild_dog") or {}).get("habitat") is None:
+    _b0.append("前置一格都没有（域形状变了）")
+(ok if not _b0 else bad)("⓪ 前提：q_side_13 要 `i_token_stone_shard` · 悬赏 101 点档 + daily · "
+                         "`unid_rare` 是未鉴定容器（坏 %s）" % (_b0 or "无"))
+
+# ══════════════════════════════════════════════════════════════
+# ① 委托 25「还石头」：手上是**未鉴定**的那一件也算（唯一那一件故事物件）
+# ══════════════════════════════════════════════════════════════
+_b1, _l1 = [], []
+
+
+def _q13p(bag, foot=True):
+    """站上骨田 + 背包里放那几样 —— 交 25 的那一份档。"""
+    return _player(level=1, bag=bag, gold=0,
+                   foot={"nodes": {"belt_north:bn_bone": 1}} if foot else {},
+                   flags={"quests_active": ["q_side_13"]})
+
+
+def _delivered(p, out):
+    return any(ln.startswith("交了") for ln in out) \
+        and "q_side_13" in ((p.get("flags") or {}).get("quests_done") or [])
+
+
+# 正例 ①-a：背包里是**容器**（骨田挖到的那件）
+_pa = _q13p({"unid_rare": 1})
+_oa = _drive(CQ.quest_deliver, _pa, "交 25")
+if not _delivered(_pa, _oa):
+    _b1.append(("容器那一档交不掉", _oa[:3]))
+_l1.append("容器那件（unid_rare「一块刻着字的石片」）→ %s"
+           % next((ln for ln in _oa if ln.startswith("交了")), "?"))
+# 正例 ①-b：真信物那条老路（逐字节不许动）
+_pb = _q13p({"i_token_stone_shard": 1})
+_ob = _drive(CQ.quest_deliver, _pb, "交 25")
+if not _delivered(_pb, _ob):
+    _b1.append(("真信物那一档反倒交不掉了", _ob[:3]))
+# 反证 ①-c：把这一支关掉 ⇒ 拦住（= 报告里那条 bug 的原样）
+_keep_unid = CQ._unid_carries
+try:
+    CQ._unid_carries = (lambda *_a: False)
+    _pc = _q13p({"unid_rare": 1})
+    _oc = _drive(CQ.quest_deliver, _pc, "交 25")
+finally:
+    CQ._unid_carries = _keep_unid
+if _delivered(_pc, _oc) or not any("还差" in ln for ln in _oc):
+    _b1.append(("反证没生效（关掉那一支还能交掉 / 没报还差）", _oc[:3]))
+# 反证 ①-d：池里没有那一件的容器 ⇒ 不算（unid_common 里没有信物 / 线索）
+if CQ._unid_carries("unid_common", "i_token_stone_shard") \
+        or CQ._bag_n({"bag": {"unid_common": 1}}, "i_token_stone_shard"):
+    _b1.append(("池里没有那件的容器也被算进来了", "unid_common"))
+_pd = _q13p({"unid_common": 1})
+_od = _drive(CQ.quest_deliver, _pd, "交 25")
+if _delivered(_pd, _od):
+    _b1.append(("拿一件开不出石片的容器也交得掉", _od[:3]))
+# 反证 ①-e：容器自己那句与那件东西那句**不一样** ⇒ 不算（`unid_tower` 那句是凉的）
+if CQ._unid_carries("unid_tower", "i_token_stone_shard"):
+    _b1.append(("hint 不一样也被算了（该 fail-closed）", "unid_tower"))
+# 反证 ①-f：材料 / 垃圾类不许被容器顶掉（不然「找一块旧铁」会被一件未鉴定顶过去）
+if CQ._bag_n({"bag": {"unid_rare": 1}}, "i_material_old_iron") \
+        or CQ._bag_n({"bag": {"unid_rare": 1}}, "i_junk_bone"):
+    _b1.append(("材料/垃圾也被容器顶掉了（放宽过头）", "i_material_old_iron / i_junk_bone"))
+# 正例 ①-g：那条判据挂在**数据**上（容器 `hint` == 那件东西的 `lore`）—— 逐字核一遍
+_shard = (st.domain("items").get("i_token_stone_shard") or {})
+_uni = (st.domain("drop_pools").get("unid_rare") or {})
+if not _shard.get("lore") or _uni.get("hint") != _shard.get("lore"):
+    _b1.append(("那条判据挂的数据断了（unid_rare.hint ≠ i_token_stone_shard.lore）",
+                (_uni.get("hint"), _shard.get("lore"))))
+if not any(str((e or {}).get("out") or "") == "i_token_stone_shard"
+           for e in (_uni.get("pool") or [])):
+    _b1.append(("unid_rare 的池里没有那件信物（数据面变了）", "i_token_stone_shard"))
+(ok if not _b1 else bad)(
+    "① 委托 25「还石头」：手上那件**未鉴定**的算数（容器自己那句 = 那件信物的那句，数据比数据）"
+    "—— 真交得掉、奖励入档；真信物照旧；池里没有的 / hint 不一样的 / 材料类一律不算"
+    "（反证 3 条 + 数据链 2 条 · 坏 %s）" % (_b1 or "无"))
+for _ln in _l1:
+    print("      %s" % _ln)
+
+# ══════════════════════════════════════════════════════════════
+# ② 悬赏 101：点名那只的出没地要落到屏幕上（七种日子逐日真敲）
+# ══════════════════════════════════════════════════════════════
+_b2, _l2 = [], []
+_norm_ids = sorted(k for k, m in MON.items()
+                   if not str(k).startswith("_") and m.get("role_key") == "normal")
+
+
+def _mon_name(mid):
+    return (MON.get(mid) or {}).get("name") or mid
+
+
+def _where_of(mid):
+    """这只怪出没的站名（探针自己从 monsters.habitat × maps 域算 —— 不看实现体）。"""
+    ids = [n for n in ((MON.get(mid) or {}).get("habitat") or {}).get("nodes") or []]
+    out = []
+    for m, mv in MAPS.items():
+        for nd in (mv.get("nodes") or []):
+            if nd.get("id") in ids and (m, nd.get("id")) not in out:
+                out.append((m, nd.get("id")))
+    return [CA._name_of_node(m, n) or n for m, n in out]
+
+
+for _d in range(1, len(_norm_ids) + 1):
+    _at_day(_d)
+    _spec = _norm_ids[(_d - 1) % len(_norm_ids)]                    # 探针自己算规格
+    _p = _player(level=1, day=_d, flags={"quests_active": ["q_bounty_normal"]})
+    _out = _drive(CQ.quest_deliver, _p, "交 101")
+    if not any(("还差" in ln) and _mon_name(_spec) in ln for ln in _out):
+        _b2.append(("第 %d 日的「还差」没点名 %s" % (_d, _mon_name(_spec)), _out[:4]))
+    _want = _where_of(_spec)
+    _line = T("SYS_JOB_REQ_MON_WHERE", list=" · ".join(_want)) if _want else ""
+    if _want and _line not in [ln.strip() for ln in _out]:
+        _b2.append(("第 %d 日没说 %s 出没在哪（该有「%s」）" % (_d, _mon_name(_spec), _line), _out[:5]))
+    if not _want and any("出没在" in ln for ln in _out):
+        _b2.append(("第 %d 日没有出没地却硬塞了一行" % _d, _out[:5]))
+    for ln in _out:
+        if "出没在" in ln and "还差" in ln:
+            _b2.append(("新那一行含「还差」——会错位 ㉑/㉛ 的条数对账", ln))
+_l2.append("七种日子逐日：点名那只 + 出没地那一行都对上了（例：%s → %s）"
+           % (_mon_name(_norm_ids[6]), " · ".join(_where_of(_norm_ids[6]))))
+# 反证 ②：把 `_habitat_of` 关掉 ⇒ 那一行消失（判据不是恒真）
+_keep_hab = CQ._habitat_of
+try:
+    CQ._habitat_of = (lambda *_a: [])
+    _at_day(7)
+    _p = _player(level=1, day=7, flags={"quests_active": ["q_bounty_normal"]})
+    _out = _drive(CQ.quest_deliver, _p, "交 101")
+finally:
+    CQ._habitat_of = _keep_hab
+if any("出没在" in ln for ln in _out) or not any("还差" in ln for ln in _out):
+    _b2.append(("反证没生效（关掉出没地还能出那一行 / 拦住都没拦住）", _out[:4]))
+(ok if not _b2 else bad)(
+    "② 悬赏 101：七种日子逐日真敲 —— 点名的**那一只**写进「还差」，紧接着一行说它出没在哪几站"
+    "（站名 = monsters.habitat × maps 现算 · 逐字相同）；关掉这一支那一行立刻消失（反证 · 坏 %s）"
+    % (_b2 or "无"))
+for _ln in _l2:
+    print("      %s" % _ln)
+
+
+# ══════════════════════════════════════════════════════════════
+# ③ 『提示』随委托走
+# ══════════════════════════════════════════════════════════════
+_b3, _l3 = [], []
+_HINT_TOWN = T("SYS_HINT_TOWN")
+
+# 正例 ③-a：镇上有活、条件没齐 ⇒ 第一行 = 当前委托那一条，后面是同一批「还差」行
+_p = _player(level=1, loc=CA.TOWN, node="wt_gate_n",
+             flags={"quests_active": ["q_side_13"]})
+_out = _drive(CA.hint, _p, "提示")
+_want_head = T("SYS_HINT_JOB", name=_q13.get("name"), objective=_q13.get("objective"))
+if not _out or _out[0] != _want_head:
+    _b3.append(("第一行不是当前委托那一条", _out[:3]))
+if _HINT_TOWN in _out:
+    _b3.append(("有活时还印着建号那一句（把它换掉才对）", _out[:3]))
+_unmet_now = CQ._unmet(_p, _q13)
+if [ln for ln in _out[1:] if ln.strip()] != ["  " + ln for ln in _unmet_now] or not _unmet_now:
+    _b3.append(("后面那几行不是那一条「还差」的同一批行", _out[:5]))
+_l3.append("镇上有活（缺「刻字的石片」）→ %s ｜ 后面 %d 行" % (_out[0] if _out else "?", len(_out) - 1))
+
+# 正例 ③-b：万事俱备 ⇒ 那句「打『交 <编号>』」
+_p = _player(level=1, loc=CA.TOWN, node="wt_gate_n", bag={"i_token_stone_shard": 1},
+             foot={"nodes": {"belt_north:bn_bone": 1}}, flags={"quests_active": ["q_side_13"]})
+_out = _drive(CA.hint, _p, "提示")
+if T("SYS_HINT_JOB_READY", order=_q13.get("order")) not in [ln.strip() for ln in _out]:
+    _b3.append(("万事俱备那一条没给出「打『交 …』」", _out[:3]))
+# 正例 ③-c：手上没活 ⇒ 建号那一句逐字不变
+_out = _drive(CA.hint, _player(level=1, loc=CA.TOWN, node="wt_gate_n"), "提示")
+if _out != [_HINT_TOWN]:
+    _b3.append(("手上没活时镇上那一句变了", _out[:3]))
+# 正例 ③-d：野外有活 ⇒ 委托那几行 + 地形那一句（野外的方向句与进度无关，照给）
+_p = _player(level=1, loc="belt_north", node="bn_bone", flags={"quests_active": ["q_side_13"]})
+_out = _drive(CA.hint, _p, "提示")
+if _out[-1] != T("SYS_HINT_WILD") or _out[0] != _want_head:
+    _b3.append(("野外有活时那两句的先后不对", _out[:4]))
+# 反证 ③-e：把 `_hint_lines` 关掉 ⇒ 退回建号那句（= 报告里那条 bug 的原样）
+_keep_hint = CQ._hint_lines
+try:
+    CQ._hint_lines = (lambda _p: [])
+    _out = _drive(CA.hint, _player(level=1, loc=CA.TOWN, node="wt_gate_n",
+                                   flags={"quests_active": ["q_side_13"]}), "提示")
+finally:
+    CQ._hint_lines = _keep_hint
+if _out != [_HINT_TOWN]:
+    _b3.append(("反证没生效（关掉这一支竟然还随委托走）", _out[:3]))
+(ok if not _b3 else bad)(
+    "③ 『提示』随委托走（源 04 §一「给一条当前该做什么的提示」）：有活先给那一条 + 同一批"
+    "「还差」行 · 万事俱备给「打『交 <编号>』」· 野外再补一句地形 · 手上没活时建号那句一字不变；"
+    "关掉这一支立刻退回那句（反证 · 坏 %s）" % (_b3 or "无"))
+for _ln in _l3:
+    print("      %s" % _ln)
+
+# ══════════════════════════════════════════════════════════════
+# ④ 老陶三次各讲一段（不再有「（他没说话。）」）
+# ══════════════════════════════════════════════════════════════
+_b4, _l4 = [], []
+_at_day(1)          # ★ 在场看那根钟（集日会把 NPC 吸走）—— 拨到「第 1 日 · 昼」再搭话
+_DLG = str(((NPCS.get("npc_laotao") or {}).get("dialogue")) or "")
+_NODES = ((st.domain("dialogues").get(_DLG) or {}).get("nodes") or {})
+_SILENT = T("SYS_TALK_SILENT")
+_SPOT = ("windmill_town", "wt_shed")
+
+if not _DLG or not _NODES:
+    _b4.append(("老陶那棵树取不到", _DLG))
+else:
+    # 正例 ④-a：真搭话 4 次 —— 一次都不许静默，且 4 次以内听满三段不同的话
+    _p = _player(level=9, loc=_SPOT[0], node=_SPOT[1], flags={"card": 1})
+    _here = [k for k, _v in CA._npcs_here(_SPOT[0], _SPOT[1], None, _p)]
+    if "npc_laotao" not in _here:
+        _b4.append(("老陶此刻不在 %s（夹具失效）" % (_SPOT,), _here))
+    _bodies, _runs = [], []
+    for _i in range(4):
+        _out = _drive(CT.talk, _p, "搭话 老陶")
+        _runs.append(_out)
+        if _SILENT in _out:
+            _b4.append(("第 %d 次搭话回了「（他没说话。）」" % (_i + 1), _out[:3]))
+        for ln in _out[1:]:
+            if not ln.startswith(("✦", "★", "·", "  ")) and ln not in _bodies:
+                _bodies.append(ln)
+    if len(_bodies) < 3:
+        _b4.append(("4 次搭话里只听到 %d 段不同的话（该 ≥ 3）" % len(_bodies), _bodies))
+    if CQ._talk_have(_p, "npc_laotao") != 4:
+        _b4.append(("计数口径被动过了（flags.talked 该是 4）", CQ._talk_have(_p, "npc_laotao")))
+    _l4.append("真搭话 4 次：静默 0 次 · 听到 %d 段不同的话 · flags.talked = %d"
+               % (len(_bodies), CQ._talk_have(_p, "npc_laotao")))
+    # 正例 ④-b：交 21 照样交得掉（三次那一条的条件与判定没被动过）
+    _p2 = _player(level=9, flags={"quests_active": ["q_side_09"],
+                                  "talked": {_DLG: 3}})
+    _out = _drive(CQ.quest_deliver, _p2, "交 21")
+    if not any(ln.startswith("交了") for ln in _out):
+        _b4.append(("听够三次却交不掉（计数口径被动了）", _out[:3]))
+    # 反证 ④-c：把 daily / main 两层摘掉（= 改前那棵树）⇒ 第 3 次当场静默
+    _keep_data = CT._data
+
+    def _old_data(name, _real=_keep_data, _dlg=_DLG, _nodes=_NODES):
+        d = _real(name)
+        if name == "dialogues" and _dlg in d:
+            d = dict(d)
+            d[_dlg] = {"nodes": {k: v for k, v in _nodes.items() if k == "meet"}}
+        return d
+
+    try:
+        CT._data = _old_data
+        _p3 = _player(level=9, loc=_SPOT[0], node=_SPOT[1], flags={"card": 1})
+        _r3 = [_drive(CT.talk, _p3, "搭话 老陶") for _i in range(3)]
+    finally:
+        CT._data = _keep_data
+    if not (_SILENT in _r3[2]):
+        _b4.append(("反证没生效（摘掉那两层后第 3 次竟然还有话）", _r3[2][:3]))
+    if _SILENT in _r3[0] or _SILENT in _r3[1]:
+        _b4.append(("反证那一档的前两次不该静默", _r3[:2]))
+(ok if not _b4 else bad)(
+    "④ 老陶「听他讲完（三次）」：真搭话 4 次全有话说（静默 0 次）· 4 次内听满 ≥3 段不同的话 · "
+    "计数口径与交 21 的判定一个字没动；把那两层临时摘掉 ⇒ 第 3 次当场「（他没说话。）」"
+    "（反证 = 报告里那条 bug 的原样 · 坏 %s）" % (_b4 or "无"))
+for _ln in _l4:
+    print("      %s" % _ln)
+
+# ══════════════════════════════════════════════════════════════
+# ⑤ 『我的委托』进度 ＋ `读 <名字>` 对不上时点名
+# ══════════════════════════════════════════════════════════════
+_b5, _l5 = [], []
+_q09 = QE.get("q_side_09") or {}
+for _n, _want in ((0, "（0/3）"), (1, "（1/3）"), (3, "（3/3）"), (5, "（3/3）")):
+    _p = _player(level=1, flags={"quests_active": ["q_side_09"],
+                                 "talked": {_DLG: _n} if _n else {}})
+    _out = _drive(CQ.quest_mine, _p, "我的委托")
+    _row = next((ln for ln in _out if ln.startswith("· ")), "")
+    _tok = T("SYS_MINE_PROGRESS", done=min(_n, 3), n=3)   # ★ 封顶：听够 5 回也只显示 3/3
+    if _tok not in _row:
+        _b5.append(("听过 %d 回那一档没给进度（该有「%s」）" % (_n, _tok), _row))
+# 老条目（没写 require）一个字不多
+_p = _player(level=1, flags={"quests_active": ["q_side_10"]})
+_out = _drive(CQ.quest_mine, _p, "我的委托")
+_row = next((ln for ln in _out if ln.startswith("· ")), "")
+if "（0/" in _row or "（1/" in _row:
+    _b5.append(("没写 require 的老条目也被塞了进度", _row))
+# 反证 ⑤-a：把 `_progress` 关掉 ⇒ 那一格消失
+_keep_prog = CQ._progress
+try:
+    CQ._progress = (lambda _x, _p: "")
+    _p = _player(level=1, flags={"quests_active": ["q_side_09"], "talked": {_DLG: 1}})
+    _out = _drive(CQ.quest_mine, _p, "我的委托")
+finally:
+    CQ._progress = _keep_prog
+if "（1/3）" in " ".join(_out):
+    _b5.append(("反证没生效（关掉这一支还有进度）", _out[:3]))
+_l5.append("『我的委托』：听过 0/1/3/5 回 → %s（封顶在需要的数上）"
+           % " · ".join(["（%d/3）" % min(_n, 3) for _n in (0, 1, 3, 5)]))
+
+# `读 <名字>` 对不上：点名 + 列出这站能读的（骨田那两件）
+_SITE = ("belt_north", "bn_bone")
+_at = [(k, v) for k, v in PO.items() if v.get("map") == _SITE[0]
+       and v.get("subarea") == _SITE[1] and v.get("read_text")]
+_want_names = [(v.get("name")) for _k, v in _at
+               if CA._poi_cond(v, _player(level=1, loc=_SITE[0], node=_SITE[1]), None)[0] != "no"]
+if len(_want_names) < 2:
+    _b5.append(("骨田那两件可读物没凑齐（夹具失效）", [k for k, _v in _at]))
+_p = _player(level=1, loc=_SITE[0], node=_SITE[1])
+_out = _drive(CA.read_thing, _p, "读 不存在的东西")
+if T("SYS_READ_NOSUCH", name="不存在的东西") not in _out:
+    _b5.append(("名字对不上时没点名说对不上", _out[:3]))
+if T("SYS_READ_HERE", list=" · ".join(_want_names)) not in _out:
+    _b5.append(("没把这站能读的列出来（该有「%s」）"
+                % T("SYS_READ_HERE", list=" · ".join(_want_names)), _out[:3]))
+if T("SYS_READ_NONE") in _out:
+    _b5.append(("名字对不上时仍回「这里没有能读的东西」（玩家会以为这站本来就没东西）", _out[:3]))
+# 对的名字照旧给正文（老路一个字不动）
+_k0, _v0 = _at[0]
+_out = _drive(CA.read_thing, _player(level=1, loc=_SITE[0], node=_SITE[1]), "读 %s" % _v0.get("name"))
+if T(_v0["read_text"]) not in _out:
+    _b5.append(("对的名字反倒不给正文了", _out[:3]))
+# 空参：只有一件时照旧直接给（老路不变）；这站有多件 ⇒ 仍给第一条（逐字不变）
+_out = _drive(CA.read_thing, _player(level=1, loc=_SITE[0], node=_SITE[1]), "读")
+if T(_v0["read_text"]) not in _out or T("SYS_READ_NOSUCH", name="") in _out:
+    _b5.append(("空参那条路被动过了", _out[:3]))
+# 这站真没有可读物 ⇒ 照旧「这里没有能读的东西」（两态）
+_with_read = {(v.get("map"), v.get("subarea")) for v in PO.values()
+              if v.get("map") and v.get("read_text")}
+_empty = next(((m, nd["id"]) for m, mv in MAPS.items() for nd in (mv.get("nodes") or [])
+               if (m, nd.get("id")) not in _with_read), (CA.TOWN, "wt_gate_n"))
+_out = _drive(CA.read_thing, _player(level=1, loc=_empty[0], node=_empty[1]), "读 随便什么")
+if T("SYS_READ_NONE") not in _out:
+    _b5.append(("这站一件可读物都没有时，反倒不回「这里没有能读的东西」", _out[:3]))
+_l5.append("骨田 `读 不存在的东西` → 「%s」/「%s」"
+           % (T("SYS_READ_NOSUCH", name="不存在的东西"),
+              T("SYS_READ_HERE", list=" · ".join(_want_names))))
+(ok if not _b5 else bad)(
+    "⑤ 『我的委托』给进度（同一个判定 `_req_ok` 数出来 · 老条目不多一个字）＋ `读 <名字>` 对不上时"
+    "点名说对不上并列这站能读的（空参 / 对的名字 / 这站没读物三条老路都照旧 · 反证 1 条 · 坏 %s）"
+    % (_b5 or "无"))
+for _ln in _l5:
+    print("      %s" % _ln)
+
+# ══════════════════════════════════════════════════════════════
+# ⑥ 主线 1「试着读（读不懂）」与『读』当场给的正文对上
+# ══════════════════════════════════════════════════════════════
+_b6, _l6 = [], []
+_DOC24 = os.path.join(PLAN, "06_第一阶段垂直切片", "24_任务线_v1.md")
+_doc = io.open(_DOC24, encoding="utf-8", newline="").read() if os.path.exists(_DOC24) else ""
+_q1 = QE.get("q_main_01") or {}
+_obj = str(_q1.get("objective") or "")
+if "试着读（读不懂）" not in _obj:
+    _b6.append(("main1 的 objective 不再带真源那一步：%s" % _obj))
+if "试着读（读不懂）" not in _doc:
+    _b6.append(("24 §一 主 1 的「步骤」行里也找不到那一步（真源变了？先裁决）"))
+_poi = PO.get("poi_stone_scripts") or {}
+_p = _player(level=1, loc=str(_poi.get("map") or "windmill_town"),
+             node=str(_poi.get("subarea") or "wt_gate_n"))
+_out = _drive(CA.read_thing, _p, "读")
+_body = T(str(_poi.get("read_text") or ""))
+if _body not in _out:
+    _b6.append(("镇口那块石头的正文取不到", _out[:3]))
+if "一个也读不出来" not in _body:
+    _b6.append(("正文没把「读不懂」落到屏幕上（两边又打架）", _body))
+if T("SYS_READ_NONE") in _out:
+    _b6.append(("镇口这块石头竟然回「没有能读的东西」", _out[:3]))
+_l6.append("main1 objective：「%s」" % _obj)
+_l6.append("镇口『读』的正文（尾句）：「%s」" % _body[-24:])
+(ok if not _b6 else bad)(
+    "⑥ 主线 1：objective 照真源 `24 §一` 主 1「步骤」行一个字不动（含「试着读（读不懂）」）· "
+    "镇口那块石头的正文把「读不懂」落在屏幕上（源 02 §一「我不认得」）—— 两边不再打架"
+    "（反证 = 把那句拆掉当场红 · 坏 %s）" % (_b6 or "无"))
+for _ln in _l6:
+    print("      %s" % _ln)
+
+FC.bind_host(**_FC_SAVED)                                            # ★ 拨回真钟
+
+print()
+print("判据 %d 条：%s" % (CHECKS[0], "全绿 ✓" if not fails else "有红 ✗（%d 条）" % len(fails)))
+sys.exit(1 if fails else 0)

@@ -1587,8 +1587,9 @@ async def read_thing(env, sink, uid, player):
     p = _p(player)
     want = AV.arg_of(env)        # ★ B4-11：跟着自己的声明剥参（连写也算）
     # ★ P-31：与「触摸」同一个口（门槛现看）—— 门槛判得出不成立的：正文一个字都不给，只点名
-    here = [(pid, v, st_, ln_) for pid, v, st_, ln_ in _pois_here(p["loc"], p["node"], p)
-            if v.get("read_text")]
+    at = [(pid, v, st_, ln_) for pid, v, st_, ln_ in _pois_here(p["loc"], p["node"], p)
+          if v.get("read_text")]
+    here = at
     if want:
         here = [(pid, v, st_, ln_) for pid, v, st_, ln_ in here
                 if want == (v.get("name") or "") or want in (v.get("name") or "")]
@@ -1598,7 +1599,17 @@ async def read_thing(env, sink, uid, player):
         for _ln in blocked:                   # 拦下来的那条：说清差什么（不静默回「没有能读的」）
             yield _ln
         if not blocked:
-            yield T("SYS_READ_NONE")
+            # ★ QB-6（试玩报告 P2 BUG⑨）：点了名却对不上时，原话只回「这里没有能读的东西」——
+            #   而这一站明明有两件可读物，玩家会以为这站本来就没东西、转身走掉。
+            #   ⇒ 名字对不上就**点名说对不上**，再把这站**现在真能读的**列出来（fail-closed：
+            #     不因为名字没对上就随便塞一件给他读）。没点名（空参）时行为一个字不变。
+            if want and at:
+                yield T("SYS_READ_NOSUCH", name=want)
+                names = [v.get("name") for _pid, v, st_, _ln in at if st_ != "no" and v.get("name")]
+                if names:
+                    yield T("SYS_READ_HERE", list=" · ".join(names))
+            else:
+                yield T("SYS_READ_NONE")
         return
     k, v, _st, _ln = usable[0]
     if _ln:                                   # 判不了的门槛：正文照给，门槛那一句一起点名
@@ -1616,7 +1627,22 @@ async def read_thing(env, sink, uid, player):
 
 
 async def hint(env, sink, uid, player):
+    """`提示 [去哪]` —— ★ QB-5：**先给当前委托的下一步**，手上没活才退回地点那一句。
+
+    真源 `06_第一阶段垂直切片/04_指令总表 §一`：「`提示` `去哪` ｜ 随时 ｜ **给一条当前该做什么
+    的提示**」。改前只看地点（镇上 / 野外各一句固定文案）⇒ 接了活以后那句永远不变，而每条接活
+    回话都写着「『提示』会告诉你往哪走」（`quest_accept` → `SYS_JOB_GO`）。
+    ★ 野外那一句（往北 / 往东 / 往西）说的是**地形**、与进度无关 ⇒ 有活时也照样补在后面。
+    """
     p = _p(player)
+    from .cmds_quest import _hint_lines          # 本地 import：免得装载期成环（同 quest_accept 那处）
+    lines = _hint_lines(p)
+    if lines:
+        for line in lines:
+            yield line
+        if p["loc"] != TOWN:
+            yield T("SYS_HINT_WILD")
+        return
     if p["loc"] == TOWN:
         yield T("SYS_HINT_TOWN")
     else:

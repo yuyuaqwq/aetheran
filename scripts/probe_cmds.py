@@ -516,11 +516,40 @@ try:
             _read_bad.append((_t, _loc, _got[:2], _head))
     chk("★ 真敲 %d 条「读」：抬头与正文都对（含同一处两个可读物时按名字挑）" % len(_READS),
         not _read_bad, "%s" % _read_bad[:2])
+    # ★ QB-6（本波 fix1-quests · 试玩报告 P2 BUG⑨）：这一条原先钉的是「点错名 ⇒ 回
+    #   `SYS_READ_NONE`（这里没有能读的东西）」。报告实测：站在**有两件可读物**的骨田敲
+    #   `读 不存在的东西`，玩家照这句会以为「这站本来就没东西」，转身走掉。
+    #   ⇒ 判据**换锚不降强度**（P-31 换锚④那一族的做法）：点错名时
+    #     ① 不许给任何一件的正文（原来那条「不塞东西」照钉）
+    #     ② 必须点名说对不上（`SYS_READ_NOSUCH` · 填进玩家敲的那个名字）
+    #     ③ 必须把这站**现在真能读的**列出来（`SYS_READ_HERE` · 名字从 pois 域现取）
+    #     ④ **不许**再回那句「这里没有能读的东西」—— 那句只留给「这站真没有可读物」（两态里的另一态，
+    #        判据在 scripts/probe_qloop.py ⑤）。
     _ad.saved = dict(_ad.saved or {}, loc="windmill_town", node="wt_gate_n")
     _ad.out.clear()
     _host.handle({"uid": "u_c", "group_id": "g_c", "text": "读 这儿没有的东西"})
+    _got = list(_ad.out)
     _none = (TX.get("SYS_READ_NONE") or {}).get("value", "")
-    chk("★ 点错名不塞东西：回的是「%s」" % _none, list(_ad.out) == [_none], list(_ad.out))
+    _nosuch = (TX.get("SYS_READ_NOSUCH") or {}).get("value", "").replace("{name}", "这儿没有的东西")
+    _po = st.domain("pois") or {}
+    _here_names = [v.get("name") for v in _po.values()
+                   if v.get("map") == "windmill_town" and v.get("subarea") == "wt_gate_n"
+                   and v.get("read_text") and v.get("name")]
+    _here = (TX.get("SYS_READ_HERE") or {}).get("value", "").replace("{list}", " · ".join(_here_names))
+    _any_body = [k for v in _po.values() if v.get("read_text")
+                 for k in [(TX.get(str(v.get("read_text"))) or {}).get("value", "")]
+                 if k and k in _got]
+    _read_bad2 = []
+    if _any_body:
+        _read_bad2.append("点错名却给了某一件的正文")
+    if _nosuch not in _got:
+        _read_bad2.append("没点名说对不上（该有「%s」）" % _nosuch)
+    if _here not in _got:
+        _read_bad2.append("没把这站能读的列出来（该有「%s」）" % _here)
+    if _none and _none in _got:
+        _read_bad2.append("又回了那句「%s」（玩家会以为这站本来就没东西）" % _none)
+    chk("★ 点错名不塞东西（换锚不降强度 · QB-6）：「%s」+「%s」· 一件正文都不给 · "
+        "不糊「%s」" % (_nosuch, _here, _none), not _read_bad2, "%s" % (_read_bad2 or _got[:3]))
 except Exception as exc:                                               # noqa: BLE001
     chk("★ P-23 3/3「读」那条接上了（真宿主契约）", False, "%s: %s" % (type(exc).__name__, exc))
 
