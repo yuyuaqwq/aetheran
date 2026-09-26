@@ -41,6 +41,21 @@ bad = [k for k, v in mp.items()
        if not all(f in v for f in ("name", "roles", "nodes", "topology"))]
 chk("每张图四字段齐全（name/roles/nodes/topology）", not bad, "缺：%s" % bad if bad else "")
 
+# ⑨ ★ Q-22 补（2026-09-26 · 分支 `fxd`）：图名 = **区域名**，不许把节点名拼进去。
+#   起因（试玩 P3 复测 · 全新玩家）：站在拾荒营地，`状态` 写「在 北带 · 骨田」、`观察` 的标题写
+#   「【北带 · 骨田（野外）】」—— 而人根本不在骨田。那串是早先批次把「带名 · 入口节点」拼成一格
+#   留下来的（真源 `06_/00_第一阶段内容总纲` 那张表里地带叫**北带**，骨田只是它的第一个节点）。
+#   判据：每张图的 `name` 里**不许出现自己任一节点的名字**（复合名一定含节点名 ⇒ 一并挡掉）；
+#   当前站在哪个节点由 `观察` 的节点列表（▸ 那一行）与 `时间` 单独给。
+bad9 = []
+for _k, _v in mp.items():
+    _nm = str(_v.get("name") or "")
+    _hit = [str(_n.get("name")) for _n in (_v.get("nodes") or [])
+            if _n.get("name") and str(_n.get("name")) in _nm]
+    if _hit:
+        bad9.append("%s:「%s」里含节点名 %s" % (_k, _nm, " · ".join(_hit)))
+chk("★ 图名是区域名（不含自己的节点名 · 不是「带名 · 节点」那种复合）", not bad9, " ｜ ".join(bad9))
+
 # ② 拓扑对
 chk("风车镇 = star（城镇）", mp.get("windmill_town", {}).get("topology") == "star")
 belts = [k for k in mp if k.startswith("belt_")]

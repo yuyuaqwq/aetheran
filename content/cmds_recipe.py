@@ -333,6 +333,11 @@ async def forge(env, sink, uid, player):
     if lack:
         yield T("SYS_SMITH_CRAFT_MISSING", name=rec.get("name", iid),
                 need=_need_str(f["inputs"]), gold=f["gold"], lack=lack)
+        # ★ Q-22 补（试玩 P3 复测 F-3）：`打造` 缺料那一下也得说清「从哪儿来」——
+        #   原来只挂在铁匠铺那一屏与 `强化` 上（试玩里 `打造` 报「你还差：残骸 ×2」就断了）。
+        #   只列真缺的那几样；只差钱 ⇒ 这里为空、不多话（与 `强化` 同一把尺）。
+        for _ln in src_lines([e for e in f["inputs"] if _have(p, e["id"]) < int(e["n"])]):
+            yield _ln
         return
     for e in f["inputs"]:                              # 料：先扣（这一段只走一次，不会扣一半）
         _take(p, e["id"], int(e["n"]))

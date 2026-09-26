@@ -338,6 +338,22 @@ def rate_of(node_role: str, idx: int, total: int):
     return float(t["middle"])
 
 
+def no_elite_at(loc: str, node: str) -> bool:
+    """这一格**不许**刷精英（`rules/elite.json` 的 `rate.no_elite_nodes`）。
+
+    ★ 真源 `09_ §六②` 的对策写着「精英不出现在新手带第一个节点」，而 `09_ §二` 的概率表写着
+      「第一节点 8%」—— 两处打架（`rules/elite.json` 的 `_conflict_note` 记着上一批照表办）。
+      P3 试玩复证（全新玩家 · 2026-09-26）：1 级在骨田撞上「† 群居的田鼠 †」（一包 3 只）必败、
+      而且**当天那一格反复是它**（种子含 `game_day`）⇒ 真源那两条里选**对策**：
+      只摘名单里这一格，其余档位（8% / 12% / 20%）一概不动。已登记真源行，待主线裁。
+    """
+    r = rules()["rate"]
+    for e in (r.get("no_elite_nodes") or []):
+        if str(e.get("map")) == str(loc) and str(e.get("node")) == str(node):
+            return True
+    return False
+
+
 def maps() -> dict:
     """地图域（只读节点 `role` 与节点序 —— 概率靠它分档，不另造深度字段）。"""
     return _load(os.path.join(_DATA_DIR, "maps.json"))
@@ -367,6 +383,8 @@ def elite_of(monsters: dict, loc: str, node: str, uid: str, game_day, level: int
         node_index = (i, total)
     if node_role is None or node_index[0] is None:
         return None
+    if no_elite_at(loc, node):
+        return None                                   # ★ 09_ §六② 的对策：新手带第一节点不刷精英
     r = rate_of(node_role, int(node_index[0]), int(node_index[1]))
     if r is None:
         return None
