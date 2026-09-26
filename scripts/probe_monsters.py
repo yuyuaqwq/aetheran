@@ -391,6 +391,32 @@ chk("★ 递减排法：%s 严格递增 · 增量递减（%s）· 4 人档 = 设
     and all(_deltas[i] > _deltas[i + 1] for i in range(len(_deltas) - 1))
     and abs(_lad[-1] - 1.0) < 1e-9 and abs(_lad[0] - 0.5) < 1e-9, "%s" % _lad)
 
+# ⑮-b ★ P-36：Boss 单人 ÷2 的**现算对账** —— 上面那几条只核了「文档里真有那句话」+「表里 = 0.5」，
+#   没核「照表算出来的那个数」与文档给的那个数对不对得上（今天这条口径的**落链**差这一格）。
+#   真源 `12_ §一④`：「★ Boss（旧誓哨兵，Lv19 hp 7340）按 **4 人队 × 18 次行动**设计 ——
+#   单人打会很吃力（有意的，它是团队内容）；**单人挑战时按 ÷2 看（≈3670）**，一场约 30 次行动」。
+#   ⇒ 现算：域里 boss（`role=boss`，今天恰好一只）面板 hp × 表里「1 人档」 == 文档那个 ≈ 数。
+#   容差 5%：文档写的是「≈」约数，且那两个数（表 10275 / 正文 7340）是**档位第二版 b3-18 之前**
+#   的旧案值；同族「凑整 + 一版重算」的量级（实测差 0.98%）—— 取值理由见 `_notes.md` 裁决记录。
+_bkeys = [k for k, v in mo.items() if str(v.get("role") or "") == "boss"]
+_bhp = int((mo[_bkeys[0]].get("panel") or {}).get("hp") or 0) if len(_bkeys) == 1 else 0
+_doc_hp_tbl = _num(D12, r"\|\s*旧誓哨兵\s*\|\s*boss\s*\|\s*19\s*\|\s*(\d+)\s*\|", int)
+_doc_hp_txt = _num(D12, r"旧誓哨兵，Lv19\s*hp\s*(\d+)", int)
+_doc_solo = _num(D12, r"按\s*÷2\s*看（≈\s*(\d+)\s*）", int)
+_solo_dom = _bhp * float((_have.get(_bkeys[0]) or {}).get("1", {}).get("hp") or 0) if _bhp else 0
+_drift = abs(_solo_dom - _doc_solo) / float(_doc_solo) if _doc_solo else 1.0
+chk("★ P-36 单人档 hp **现算** = %d（域里 boss 面板 hp %d × 表里 1 人档 %s）≈ 真源 `12_ §一④` "
+    "那个「≈%s」—— 差 %.0f（%.2f%% ≤ 5%% 容差）"
+    % (_solo_dom, _bhp, (_have.get(_bkeys[0]) or {}).get("1", {}).get("hp"), _doc_solo,
+       abs(_solo_dom - _doc_solo), 100 * _drift),
+    len(_bkeys) == 1 and _bhp > 0 and bool(_doc_solo) and _drift <= 0.05,
+    "带档的 %s · 文档表 %s / 正文 %s / 域 %d" % (sorted(_have), _doc_hp_tbl, _doc_hp_txt, _bhp))
+print("     · ★ 登记待跟账（**不当判据**）：`12_ §一` 那张表写 boss hp %s · 正文读法④ 写 hp %s · "
+      "域里 %d —— 三处不一致（表 vs 正文那一处 ⑫ 已登过）；且「÷2 之后单人仍然全败」"
+      "（`probe_combat ②` 实跑）与 `17_ §五`「单人 能过」/`22_ §三④`「P1 单人也能过」对不上 —— "
+      "两条都只登记，见 `_notes.md` 待鱼鱼拍板。"
+      % (_doc_hp_tbl, _doc_hp_txt, _bhp))
+
 # ⑬ ★ B3-18：**常数三头对账** —— 反解用的 K_def/K_rate 必须来自公式表 `$const`
 #   （引擎真读的那一份），而 panel_build 那份副本也必须同值。任何一头漂了 ⇒ 三把尺。
 import io as _io2                                                         # noqa: E402
