@@ -431,6 +431,14 @@ async def take_turn(env, p, uid, player, *, head="", hand=None, action=None, ski
                 return
             continue                                 # 消化掉一个，再来一轮看轮到谁
         # ② 未超时 ⇒ 等待提示，收工（★ 不动档、不动场、不开新战斗）
+        #   ★ 本波：**已经倒下的请求者**不说「还没轮到你」—— 他这一场再也出不了手了，
+        #     「在等谁」那句会让人以为轮到自己（试玩实测：甲舟 倒下之后敲『攻击』，
+        #     回的还是「⏳ 还没轮到你 —— 你在等 乙舟」）。这一档**不动任何状态**。
+        #     位置必须在 ①「没站着的了 ⇒ 按输收」**之后** —— 全灭时还得靠这一敲触发结算。
+        _me2 = actor_of(st, u)
+        if _me2 is not None and int(_me2.get("hp", 0) or 0) <= 0:
+            yield T("COMBAT_FALL", who=name_of(grp, u))
+            return
         yield T("SYS_ROUND_HOLD", who=name_of(grp, cur))
         return
     # ── ③ 轮到我（或 ⑤ 消化到上限后按参考实现落到「轮到请求者」）
@@ -493,7 +501,8 @@ async def take_turn(env, p, uid, player, *, head="", hand=None, action=None, ski
             st["items_used"] = {k: int(v) for k, v in (hand.used or {}).items()}
     if b.result is None:
         # ★ 四段式 ①②③ —— 这一手打完之后的样子（下一手该敲什么，看这一屏）
-        for line in turn_lines(st):
+        #   ★ 本波：「你」那一格按**敲指令的人**算（`u`）—— 组队时不许报别人的血。
+        for line in turn_lines(st, u):
             yield line
     save(key, st)
     if head:
@@ -532,7 +541,7 @@ async def take_auto(env, p, uid, player):
     st["logs"] = list(st.get("logs") or []) + [str(x) for x in logs]
     if b.result is None:
         save(key, st)                                # 没分出胜负 ⇒ 这一场还留着（下一敲接着来）
-        for line in turn_lines(st):
+        for line in turn_lines(st, u):
             yield line
         for line in _fmt(logs):
             yield line
@@ -557,22 +566,27 @@ def _focus_actor(b, st):
     return a
 
 
-def turn_lines(st) -> list:
+def turn_lines(st, uid) -> list:
     """★ G2 四段式的 ①②③ —— **只读那一份场**（不重开引擎），给每一次出手之后看。
 
     ① 现状 + 谁先动（`COMBAT_TURN_STATE` + `COMBAT_TURN_I_FIRST` / `COMBAT_TURN_FOE_FIRST`）
     ② 对方在干什么（`COMBAT_TURN_FOE_DOING` / `COMBAT_TURN_FOE_IDLE`）
     ③ 你的选项（`COMBAT_TURN_MENU`）
 
-    两边有一边不在了（打完了 / 场是坏的）⇒ 出**空表**：那种时候该说话的是结算那一段，
-    这里不抢话（空表 = 不出一屏，不是「出了几行空行」）。
+    ★ 本波：`uid` = **敲这条指令的人** —— 「你」那一格（血 / ct）只报**他自己**。
+      原先这里取的是 `sides["player"]` 里第一个活着的 actor ⇒ 组队时**除队长以外的人
+      全程看到的是队长的血**（试玩实测：乙舟 12 手一直显示 甲舟 的 116→23，自己 92/92
+      一次都没出现 ⇒ 要不要打、要不要跑只能猜）。`uid` 是**必给**的（不给就没有「你」）。
+
+    两边有一边不在了（打完了 / 场是坏的 / 请求者已经倒下）⇒ 出**空表**：那种时候该说话的
+    是结算那一段（或调用方那句「你已经倒下了」），这里不抢话（空表 = 不出一屏，不是几行空行）。
     """
+    a_me = actor_of(st, uid)
+    if a_me is None:
+        raise RuntimeError("这一场里没有敲指令的这个人：%r（在场的是 %r）"
+                           % (uid, [x.get("uid") for x in players_of(st)]))
     bd = st.get("battle") or {}
-    me = None
-    for a in ((bd.get("sides") or {}).get("player") or []):
-        if isinstance(a, dict) and int(a.get("hp", 0) or 0) > 0:
-            me = a
-            break
+    me = a_me if int(a_me.get("hp", 0) or 0) > 0 else None
     foe = foe_of(st)
     if me is None or foe is None:
         return []
@@ -674,16 +688,22 @@ def _restore(st):
     ★ G2：恢复之后**把面板栈补登记回来**（`panel_build.ensure_stack`）—— 栈声明只活在造它的
       那个进程里，而这一场是**落盘**的（机器人重启 / 换一个进程接着打 ⇒ 旧栈 id 查不到，
       引擎当场抛 `panel_layers 无此栈`）。补登记用的是 actor 自己那份快照 ⇒ 数一个都不动。
+    ★ 本波：**导演钩子也要重挂**（`combat.attach_script_hooks`）—— 引擎的 `from_state` 明写
+      「脚本钩子要恢复方自己重新挂」（`docs/engine-wiki/guides/serialize-and-resume.md`）。
+      不重挂的话：精英词条的血量阈值、Boss 的阶段卡**只在开场那一手有效**，后面每一手都静默
+      退回「没有钩子」那条路（与 `panel_build` 那个补登记是同一个坑）。
     """
     from ext_combat.battle import serialize as SER
     from . import battle_text as BT
     from . import panel_build as PB
+    from . import combat as CB
     # ★ P-1：文案表**不落盘**（引擎 `from_state` 的注释明写「续战方重新传入」）——
     #   不传 ⇒ 续战那几刻的日志退回引擎兜底模板（元素那两行走不到槽位 = 静默降级）。
     b = SER.from_state(dict(st.get("battle") or {}), text=BT.battle_text())
     for acts in (b.sides or {}).values():
         for a in acts:
             PB.ensure_stack(a)
+    CB.attach_script_hooks(b)                       # ★ 导演钩子重挂（见抬头）
     return b
 
 
@@ -743,6 +763,14 @@ async def _finish(env, grp, key, st, p, uid, player, res):
       `_settle` 是单人那条**唯一**的结算实现，本模块不另写一份（单一出口）。
     ★ 别人的档走包自己的存档半边（`update_player`）；请求者那一份走宿主给的 `player` 句柄
       （与单人那条完全同款）。
+
+    ★ 本波两处收口（试玩实测）：
+      ① **一人一段** —— 原先把每个人的回话**都 yield 给请求者**，2 人场那一段字会出现两遍
+         （「★ 新进谱 / 💀 眼前一黑 / 💀 掉了一些经验」连着报两次，玩家以为死了两回、掉了两次经验），
+         而且 `_settle` 的句子是**第二人称**（「你」）—— 报别人的那一段连主人都点不出来。
+         现在：**只有敲这条指令的那个人**那一段上屏，别人的照样真落档、只是不进这一屏。
+      ② **败仗不记击杀**（`codex.note_kill(..., win=)`）—— 原先不看 `res` 就记，
+         输了也 `kills += 1`（怪物谱虚高、悬赏/评级跟着虚；塔里挡路的门也「打输一次就放行」）。
     """
     from . import cmds_battle as CBAT
     from . import cmds_ast as CA
@@ -764,12 +792,16 @@ async def _finish(env, grp, key, st, p, uid, player, res):
             d = dict(raw)
             d["uid"] = m
             p_m, handle = _p(d), _StoreHandle(grp, m)
-        seen = CX.note_kill(p_m, pick[0])
+        seen = CX.note_kill(p_m, pick[0], win=(str(res) == "victory"))
         # ★ 现血：倒地的按 **1** 落（与 `cmds_ast._p` / `player_actor` 同一条钳法）——
         #   「队伍里有人倒下了、但这一场赢了」的下场真源没写（见 `_notes.md` 待补行）。
+        _out = []
         async for line in CBAT._settle(env, p_m, m, pick, ms, res, logs,
                                        max(1, hp_of(st, m)), seen, handle, affixes=affixes):
-            yield line
+            _out.append(line)
+        if m == str(uid):                            # ★ 只有请求者自己那一段上屏（见抬头 ①）
+            for line in _out:
+                yield line
     clear(key)
 
 

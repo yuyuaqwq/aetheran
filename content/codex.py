@@ -194,19 +194,33 @@ def sync_bag(p: dict) -> list:
     return out
 
 
-def note_kill(p: dict, mid: str) -> bool:
-    """打过一只怪（★ 输了也算见过 —— 见过就是见过，由调用方决定记不记）。"""
+def note_kill(p: dict, mid: str, *, win: bool = True) -> bool:
+    """打过一只怪（★ 输了也算见过 —— 见过就是见过，由调用方决定记不记）。
+
+    ★ 本波：`win=False` = **这一场输了** —— 真源 `00_总纲/14_图鉴四谱口径_v1.md §四`
+      「怪物谱（17 条）… 见过的怪」说的是**见过**，而呈现口那一行印的是「打过 {kills} 回」
+      （`SYS_CODEX_ENTRY_KILL`）⇒ 两件事得分开：
+        · 输的那一场照样**进谱**（见过的怪进谱，进谱那句「★ 新进谱」照旧出）、`kills` 不动；
+        · 赢的那一场才是 `kills += 1`。
+      为什么不能「输了就不进谱」：塔里挡路的门读的就是「怪物谱上有它」
+      （`cmds_tower._blocked_by`），真源 `22_ §二·4` 写的是「战斗后上楼」——**过一手就开**
+      （试玩报告 §5⑤ 的裁决原话）⇒ 那份「见过」必须还在。
+      而 `kills` 那一格是**悬赏进度 / 评级头目数 / 图鉴那一行**的读源：败仗记成击杀 = 那三处全虚高。
+    """
     mark_here(p)
     b = _books(p)
     if mid not in book("monster"):
         return False
+    n = 1 if win else 0
     rec = b["monster"].get(mid)
     if rec:
-        rec["kills"] = int(rec.get("kills") or 0) + 1
-        _foot(p)["kills"] += 1
+        if n:
+            rec["kills"] = int(rec.get("kills") or 0) + n
+            _foot(p)["kills"] += n
         return False
-    b["monster"][mid] = {"day": today(p), "kills": 1}
-    _foot(p)["kills"] += 1
+    b["monster"][mid] = {"day": today(p), "kills": n}
+    if n:
+        _foot(p)["kills"] += n
     return True
 
 
