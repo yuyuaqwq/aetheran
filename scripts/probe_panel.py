@@ -446,9 +446,13 @@ def _store34(rec):
 _b34 = _store34(_rec34)
 _cap0_34 = int(_b34["hp_max"])
 _live34 = dict(_b34)
-_out34 = []
-for _t34 in ("加点 力量 3", "加点 体质 2", "加点 意志 1"):
-    _out34 += _drive34(CA.alloc_points, _live34, _t34)
+#: ★ fix-n-small ①：三档各自单独收，才看得出「哪一屏多了那一行」（上限变了 vs 没变）
+_STEPS34 = (("STR", 3, "加点 力量 3"), ("VIT", 2, "加点 体质 2"), ("WIL", 1, "加点 意志 1"))
+_out34, _out34_each = [], []
+for _s34, _n34, _t34 in _STEPS34:
+    _got34 = _drive34(CA.alloc_points, _live34, _t34)
+    _out34 += _got34
+    _out34_each.append(_got34)
 _want34 = {_s: _n for _s, _n in (("STR", 3), ("VIT", 2), ("WIL", 1))}
 _pan34 = int(panel_build.hp_cap(_live34))
 _act34 = int(CB.player_actor(_live34)["max_hp"])
@@ -459,11 +463,50 @@ chk("★ P-34 真敲三次「加点」（骑士 6 级 · 共 %d 点）⇒ 档上
     and _AL34.left_of_record(_live34) == _AL34.total_points(6) - 6, "%s / %s / %s" % (
         _AL34.of_record(_live34), _live34.get("hp_max"), _act34))
 
-_want34lines = [CA.T("SYS_ALLOC_OK", stat=CA.T("SYS_STAT_STR"), n=3, now=3, left=20),
-                CA.T("SYS_ALLOC_OK", stat=CA.T("SYS_STAT_VIT"), n=2, now=2, left=18),
-                CA.T("SYS_ALLOC_OK", stat=CA.T("SYS_STAT_WIL"), n=1, now=1, left=17)]
-chk("★ P-34 那三行回话**逐字**取自 texts 槽位（`SYS_ALLOC_OK`）：%s" % _out34[0],
+
+def _cap34(al):
+    """这一档在 `alloc=al`（无装备）时的**生命上限** —— 唯一来源 `panel_build.hp_cap`（与「装备」同源）。"""
+    return int(panel_build.hp_cap(dict(_rec34, alloc=dict(al), equipped={})))
+
+
+_alr34, _want34lines, _want_cap34 = {}, [], []
+for _s34, _n34, _t34 in _STEPS34:
+    _c0_34 = _cap34(_alr34)
+    _alr34 = dict(_alr34)
+    _alr34[_s34] = _alr34.get(_s34, 0) + _n34
+    _c1_34 = _cap34(_alr34)
+    _want34lines.append(CA.T("SYS_ALLOC_OK", stat=CA.T("SYS_STAT_%s" % _s34), n=_n34,
+                             now=_alr34[_s34],
+                             left=_AL34.total_points(6) - sum(_alr34.values())))
+    _want_cap34.append([(_c0_34, _c1_34)] if _c0_34 != _c1_34 else [])
+    if _c0_34 != _c1_34:                       # ★ fix-n-small ①：真抬了上限 ⇒ 多这一行
+        _want34lines.append(CA.T("SYS_GEAR_HP_CAP", old=_c0_34, new=_c1_34))
+chk("★ P-34 那 %d 行回话**逐字**取自 texts 槽位（`SYS_ALLOC_OK` · ★ fix-n-small ①：抬了上限的"
+    "那一屏多一行 `SYS_GEAR_HP_CAP`）：%s" % (len(_want34lines), " ／ ".join(_out34)),
     _out34 == _want34lines, "%s" % _out34)
+
+
+def _cap_lines34(out):
+    """回话里那几行「生命上限 old → new」→ `[(old, new)]`（按槽位前缀认，不手写镜像串）。"""
+    _pre = CA.T("SYS_GEAR_HP_CAP").split("{")[0]
+    _rows = []
+    for _ln in out:
+        if not str(_ln).startswith(_pre):
+            continue
+        _o, _n = str(_ln)[len(_pre):].split(" → ")
+        _rows.append((int(_o), int(_n)))
+    return _rows
+
+
+_cap34 = [_cap_lines34(_o) for _o in _out34_each]
+_cap34_any = [_x for _x in _cap34 if _x]         # 真出了那一行的那几屏
+chk("★ fix-n-small ① **加点报上限**（与「装备 / 卸下」同一句、同一份数据源）—— 力量 +3 ⇒ %s · "
+    "体质 +2 ⇒ %s · **意志 +1 ⇒ 不出这一行**（那一维不带上限）；且这条链接得上：加**前**那一格（真库 %s）"
+    " → 加**后**那格 = 面板 = actor（%s）"
+    % (_cap34[0], _cap34[1], _cap0_34, _pan34),
+    _cap34 == _want_cap34 and len(_cap34_any) == 2 and _cap34_any[0][0][0] == _cap0_34
+    and _cap34_any[-1][-1][1] == _pan34 == int(_live34["hp_max"]) == _act34
+    and _cap34[2] == [], "%s / %s" % (_cap34, _pan34))
 
 _b34b = _store34(_live34)                                        # 加了点之后真落库再读回来
 chk("★ P-34 加了点再落库读回：档上那格 = 面板 = actor（%s）—— 玩家加的点**真进了战斗面板**"
@@ -572,10 +615,14 @@ chk("★ P-34 六个锚点（1/20/40/60/80/100 级）：面板**单调增 · 不
 _l100 = _rec34_of(100, "cls_knight", "none")
 _o100 = _drive34(CA.alloc_points, _l100, "加点 力量 1")
 _o100b = _drive34(CA.alloc_points, _l100, "加点 力量 %d" % (_AL34.total_points(100) + 1))
+#   ★ fix-n-small ①：这一档加的是力量（带上限的那一维）⇒ 回话里也要有那一行上限变化
+_l100_al = dict(_l100, alloc={}, equipped={})
+_o100_cap = CA.T("SYS_GEAR_HP_CAP", old=int(panel_build.hp_cap(_l100_al)),
+                 new=int(panel_build.hp_cap(dict(_l100_al, alloc={"STR": 1}))))
 chk("★ P-34 100 级真敲：加 1 点 ⇒ 还剩 %d 点（%d − 1）· 想加 %d 点（超总点数）⇒ 只说不够、**不动档**"
     % (_AL34.total_points(100) - 1, _AL34.total_points(100), _AL34.total_points(100) + 1),
     _o100 == [CA.T("SYS_ALLOC_OK", stat=CA.T("SYS_STAT_STR"), n=1, now=1,
-                   left=_AL34.total_points(100) - 1)]
+                   left=_AL34.total_points(100) - 1), _o100_cap]
     and _o100b == [CA.T("SYS_ALLOC_SHORT", stat=CA.T("SYS_STAT_STR"),
                         n=_AL34.total_points(100) + 1, left=_AL34.total_points(100) - 1,
                         usage=str((CA._data("commands").get("alloc") or {}).get("usage") or ""))]
