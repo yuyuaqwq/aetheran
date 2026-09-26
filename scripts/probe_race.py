@@ -10,6 +10,9 @@
   ⑥ 已经定过的族**不许改**（手滑换族会毁档）
   ⑦ 选了个不存在的族 ⇒ 报错但**不动档**
   ⑧ ★ 精灵 ⇒ eggs.ctx 的 `lore_scripts` 为真（彩蛋 3 的条件）；非精灵且没学铭文 ⇒ 假
+  ⑨ ★ P-69（2026-09-26 · 本波 w-h-ux）：建号第 4 步「出身」**并进第 1 步**（裁决 + 依据见
+     `content/cmds_ast.BUILD_STEPS` 的注释）—— 步表里没有 origin · 第 1 步里那句话出现两次 ·
+     定完族递出的是第 2 步（没有「确认」那一屏）· `出身` 是回看口
 
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_race.py
 """
@@ -139,6 +142,47 @@ def main():
         ok("「出身」读得到「为什么来」（原来读 why，域里字段叫 line）")
     else:
         bad("「出身」没给出「为什么来」：%s" % j3[:140])
+
+    # ⑨ ★ P-69（2026-09-26 · 本波 w-h-ux · **裁决：并进第 1 步，不拆**）
+    #   真源 `18_建号与新手引导_v1.md §一` 把第 4 步「出身」写成**单独一步**（「只给一个选项（确认）」）——
+    #   可那一屏的内容就是这句「为什么来」，而它**本来就出在第 1 步**：六族菜单每一行末尾带的就是它，
+    #   定族那一下（`SYS_RACE_DONE`）再念一次。⇒ 拆出去 = 同一句话问两遍 + 一个纯点击的屏。
+    #   本路裁：**不拆**（少一屏就少一个放弃点）。判据三条：
+    #     ① 建号步表里**没有** origin（`content/cmds_ast.BUILD_STEPS` —— 那个常量就是这条裁决的落点）
+    #     ② 并进的实证：第 1 步里那句话出现**两次**（菜单行 + 定族回话）
+    #     ③ 定完族等着玩家的是**第 2 步**（中间没有「确认」那一屏）；`出身` 是**回看口**不是第 4 步入口
+    from content import cmds_ast as _CA9                                        # noqa: E402
+    _steps9 = tuple(getattr(_CA9, "BUILD_STEPS", ()))
+    if _steps9 == ("race", "class", "name", "town") and "origin" not in _steps9:
+        ok("★ P-69 建号步表 = %s —— **出身不单列**（并进第 1 步）" % (_steps9,))
+    else:
+        bad("★ P-69 建号步表不对：%r（应当 = ('race','class','name','town') 且不含 origin）"
+            % (_steps9,))
+    ad9 = Ad()
+    host9 = Host(ad9, REPO, inject={"db_path": ":memory:", "clock": time.time})
+    host9.boot()
+    u9 = "u_race_probe9"
+    _menu9 = drive(ad9, host9, "观察", u9)
+    _done9 = drive(ad9, host9, "我是 人类", u9)
+    _why9 = R["race_human"].get("line") or ""
+    _in_menu9 = any(_why9 in ln for ln in _menu9)
+    _in_done9 = any(_why9 in ln for ln in _done9)
+    if _in_menu9 and _in_done9:
+        ok("★ P-69 并进实证：那句「为什么来」在第 1 步里出现**两次**（菜单那一行 + 定族那一下）"
+           "—— 第 4 步的内容已经在第 1 步里，再拆一屏就是把它问两遍")
+    else:
+        bad("★ P-69 并进实证不对：菜单里 %s · 定族回话里 %s" % (_in_menu9, _in_done9))
+    _next9 = [ln for ln in _done9 if "还差一步" in ln]
+    if _next9:
+        ok("★ P-69 定完族等着玩家的是**第 2 步**（%s）—— 中间没有「确认」那一屏" % _next9[0][:34])
+    else:
+        bad("★ P-69 定完族没有递出第 2 步：%s" % (" | ".join(_done9))[:140])
+    _orig9 = "\n".join(drive(ad9, host9, "出身", u9))
+    if "人类" in _orig9 and _why9 in _orig9 and _orig9 != _orig9.replace(_why9, ""):
+        ok("★ P-69 「出身」（`04 §三` · 守卫「随时」）是**回看口**：建完号照样读到同一句"
+           "—— 它不是建号第 4 步的那个入口")
+    else:
+        bad("★ P-69 「出身」不像回看口：%s" % _orig9[:120])
 
     j4 = "\n".join(drive(ad, host, "状态", uid))
     if "精灵" in j4 and "race_elf" not in j4:
