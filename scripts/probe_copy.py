@@ -105,15 +105,15 @@ ENUM_DONE = ("武器", "上甲", "下甲", "头盔", "靴子", "饰品", "主动
 #   ★ 这一格**自带一条更严的判据**（见下面 ⑤）：登记了就必须**真的没被引用**
 #     （哪天有人把旧槽位读回去，登记变陈旧 ⇒ 当场红）+ 每条都必须写明理由。
 RETIRED_DOC = {
-    "SYS_NOTICE_CMDS":
-        "fix3-⑥（P1 BUG-15）公告不再报内部完成度（「已经接上的指令：98 / 103 条」）；"
-        "替身 = SYS_NOTICE_WHAT；真源 17_文案收口口径_v1.md 那一行待主线删",
-    "SYS_ALLOC_SUGGEST":
-        "fix3-⑥（P4 E-5）加点不再说「设计基线（按建议权重铺满…）」这种策划口径；"
-        "替身 = SYS_ALLOC_PLAN（推荐分配）；真源那一行待主线改/删",
+    # ★ 2026-09-26（试玩修复轮真源行落地）：`SYS_NOTICE_CMDS` / `SYS_ALLOC_SUGGEST` 两条登记**已删** ——
+    #   真源 `00_总纲/17_文案收口口径_v1.md` 里那两行已由主线删掉（fix3 §三·B ①/②）⇒ 那两格从
+    #   「退役登记」转成「口径表里不再有这一行」（⑤ 只扫口径表里的行，登记留着反而变陈旧 ⇒ 红）。
+    #   ★ 包内 texts 那两格**照旧留着**：⑲ 的反证还拿它们当靶子（「旧那句会被判红」）。
     "SYS_CLS_HEAD":
         "fix3-⑦（P1 体验-2）选职业那一步不再重报一遍族别（「你是精灵了 —— …」）；"
-        "替身 = SYS_CLS_LEAD（族定了 —— …）；真源那一行待主线改/删",
+        "替身 = SYS_CLS_LEAD（族定了 —— …）；"
+        "真源那一行的**值**已随修复轮落地（改值 + 去掉 race 参数），呈现口仍走 SYS_CLS_LEAD "
+        "⇒ 本键在包内没有读端（登记留着是为了这一条「确实没被引用」）",
 }
 
 ok = True
@@ -410,6 +410,43 @@ def main():
                 _stack.extend(_v)
             elif isinstance(_v, str) and _v in tx:
                 data_ref.add(_v)
+
+    # ⑤ ★ 2026-09-26（试玩修复轮真源行落地）：两处**真引用**原先看不见 ⇒ 补上
+    #    （都走生产端那一口/那一份真源，不在这边另写一份判定）：
+    #    ① `content/rules/*.json` 里的声明也算「数据里取件」—— 例 `battle_text.json::slots`
+    #       把引擎 key 映到 texts 槽位名（那正是「声明式顶掉引擎兜底」的唯一口，值是槽位名）；
+    #    ② 风味文案的**条件变体**槽位 `<基础槽位>__<条件条目 id 大写>` —— 拼法唯一在
+    #       `content/calendar.py::variant_key`（K65），这里**调那一个函数现算比对**（不重写拼法），
+    #       且要求条目 id 真在 calendar 域里（域里没有 = 拼不出那个键 ⇒ 不算引用）。
+    _rdir = os.path.join(str(REPO), "content", "rules")
+    if os.path.isdir(_rdir):
+        for _fn in sorted(os.listdir(_rdir)):
+            if not _fn.endswith(".json"):
+                continue
+            try:
+                with open(os.path.join(_rdir, _fn), encoding="utf-8") as _f:
+                    _obj = json.load(_f)
+            except Exception:                                         # noqa: BLE001 —— 坏文件由别处报
+                continue
+            _stack = [_obj]
+            while _stack:
+                _v = _stack.pop()
+                if isinstance(_v, dict):
+                    _stack.extend(_v.values())
+                elif isinstance(_v, list):
+                    _stack.extend(_v)
+                elif isinstance(_v, str) and _v in tx:
+                    data_ref.add(_v)
+
+    from content import calendar as _CAL                                  # noqa: E402
+    _cal_ids = {k for k in (st.domain("calendar") or {}) if not str(k).startswith("_")}
+    for _k in tx:
+        if "__" not in _k:
+            continue
+        _base, _, _tail = _k.rpartition("__")
+        if _base and _tail and _tail.lower() in _cal_ids \
+                and _CAL.variant_key(_base, _tail.lower()) == _k:
+            data_ref.add(_k)
 
     rows = RS.parse_doc()
     notx = [r["key"] for r in rows if r["key"] not in tx]
