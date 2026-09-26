@@ -129,13 +129,6 @@
           "items": {
             "type": "string"
           }
-        },
-        "repeat": {
-          "enum": [
-            "daily",
-            "weekly",
-            "once"
-          ]
         }
       },
       "additionalProperties": true
