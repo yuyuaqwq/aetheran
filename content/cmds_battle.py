@@ -766,7 +766,7 @@ async def skill_cast(env, sink, uid, player):
         # ★ B4-13：裸「技」/「放」走到这儿（裸「技能」= 技能表那条）—— 照实说「放哪一手」
         yield T("SYS_SKILL_CAST_ASK")
         return
-    sid, rec = _by_name(_skills(), want)
+    sid, rec = _by_name(_skills(), want, cls)
     if not sid:
         yield T("COMBAT_SKILL_BAD", name=want)
         return
