@@ -32,8 +32,9 @@
     （`content/instance.py`），单人也有自己那一场；四段式那一屏在 `instance.turn_lines`。
   · ★ P-57 已落（2026-09-26 · 本波之前）：`逃跑` 掷一次定成败（失败率 **30%**，唯一声明处
     `content/rules/battle_cmds.json::flee_fail_pct`）。
-    ★ **多人场那一层仍没做**（`17_组队与策略配合 §三·8` 的口径真源没写）：有队时照旧回
-      `COMBAT_FLEE_TODO`（照实说，不假装做了）—— 与 `content/instance.py` 抬头那条纪律一致。
+    ★ **本波把多人那一层也接上了**（原先有队时回的是一句「还没接上」的桩句 ⇒ 那句已退役，
+      槽位登记在 `scripts/probe_copy.RETIRED_DOC`、真源那一行请主线删）：多人照**同一条规则**
+      （三成被拦下 / 跑成这一场没打），多人那一层的语义与待裁点在 `_notes.md §真源行`。
     ★ G2 起：**同一次逃跑**再敲一次会**重掷**（种子带上「这一场里第几次跑」的那一格，
       存在场里），不再「今天在这儿跑不掉就永远跑不掉」。
 
@@ -61,6 +62,11 @@ from . import cmds_gear as CG
 from . import loot as LT
 from . import affix as AFFIX        # ★ B3-24：精英词条（遭遇抽词条 / 名字与那一行走 texts 槽位）
 from . import party as PT           # ★ B3-25：队伍（进战那一刻现算真实人数 —— 唯一来源）
+
+#: 档位机器键里「区域 Boss」那一档（`monsters.role_key`，取值口径见
+#: `scripts/rebuild_monsters.ROLE_KEY`）—— 真源 `05_玩法数值口径_v1 §四` 的
+#: 「区域 Boss 只能打一次」那条闸只认这一档（头目 / 层主不算 —— 它们不是「区域 Boss」）。
+BOSS_ROLE = "boss"
 
 
 def _party_now(env, p, uid):
@@ -140,11 +146,26 @@ def _encounter(p, uid, seed=None):
 
     ★ B3-5：遇敌权重那一层挂上来了 —— 现在开场的事件给了 `encounter_mul` 就按它加权；
       **没给 / 没有事件 = 与改前逐字相同**（同一个种子挑出同一只）。
+    ★ 本波：**区域 Boss 只能打一次**（真源 `06_第一阶段垂直切片/05_玩法数值口径_v1.md §四`
+      「区域 Boss 旧誓哨兵，**只能打一次**（剧情）；打完给「半截号角」」）——
+      **已经打掉过**的那一只不再出现在遇敌里（`role_key == "boss"` 那一档，别处照旧）。
+      「已经打掉」取的是 `books.monster.kills ≥ 1`（`codex.note_kill(win=)` 那一格）——
+      **输掉的那一场不算**（否则剧情 Boss 只有一次机会）。
+      读那本账走**影子档**：`codex.kills_of` 会把缺的格子补齐，「看一眼遇敌」不该往
+      玩家档里塞空容器（K57 那一族）。
     """
     ms = _data("monsters")
     mul = CAL.encounter_mul(p=p)
-    return CB.pick_encounter(ms, p["loc"], p["node"], int(p.get("level", 1)),
+    pick = CB.pick_encounter(ms, p["loc"], p["node"], int(p.get("level", 1)),
                              seed=seed, mul=mul or None)
+    if not pick:
+        return []
+    _sh = dict(p)
+    if isinstance(p.get("books"), dict):
+        _sh["books"] = dict(p["books"])           # 影子档（只拷一层：查账不写档）
+    return [k for k in pick
+            if not (str((ms.get(k) or {}).get("role_key") or "") == BOSS_ROLE
+                    and CX.kills_of(_sh, str(k)) > 0)]
 
 
 def _fmt(logs, limit=12):
@@ -438,10 +459,11 @@ async def _open_and_hand(env, p, uid, player, head, hand=None, action=None, skil
         yield line
     if head:
         yield head
-    seen = CX.note_kill(p, pick[0])
     _b, res, logs, hp_after = _run_hand(p, pick, ms, affixes=affixes, hand=hand,
                                         action=action, skill=skill,
                                         party=_party_now(env, p, uid), uid=uid)
+    # ★ 本波：进谱那一下挪到**打完知道胜负之后**（原先在打之前 ⇒ 输了也 `kills += 1`）
+    seen = CX.note_kill(p, pick[0], win=(str(res) == "victory"))
     for line in _fmt(logs):
         yield line
     async for line in _settle(env, p, uid, pick, ms, res, logs, hp_after, seen, player,
@@ -477,12 +499,14 @@ async def attack(env, sink, uid, player):
     # ★ B3-4：怪身上挂着「先开口」的台词时，它先说话（数据驱动 —— 本文件不写文案）
     for line in encounter_lines(ms[pick[0]], p):
         yield line
-    seen = CX.note_kill(p, pick[0])            # ★ 打过一次就进谱（输了也算「见过」）
     # ★ B3-25：人数 = **进战那一刻现算**（在队 + 同节点 + 活人，含自己）——单人 = 1，
     #   与 B3-17 接线之前逐字相同；它只对「团队内容」那几只怪生效（Boss 的面板按人数缩放）。
     _ids, _hm = AFFIX.spawn_plan(pick[0], list(affixes))
     res, logs, hp_after = CB.run_auto(p, _ids, ms, party=_party_now(env, p, uid),
                                       affixes=list(affixes), hp_mults=_hm, uid=uid)
+    # ★ 本波：进谱那一下挪到**打完知道胜负之后**（原先在打之前 ⇒ 输了也 `kills += 1`）——
+    #   见过的怪照样进谱（`win=False` 只是不加那一格击杀数）。
+    seen = CX.note_kill(p, pick[0], win=(str(res) == "victory"))
     for line in _fmt(logs):
         yield line
     async for line in _settle(env, p, uid, pick, ms, res, logs, hp_after, seen, player,
@@ -598,8 +622,9 @@ async def retreat(env, sink, uid, player):
     if caster is not None and b.result is None:
         _sub, _ended, _who = b.human_act("retreat", None, caster)
         logs.extend(str(x) for x in (_sub or []))
-    seen = CX.note_kill(p, pick[0])
+    # ★ 本波：进谱那一下挪到**打完知道胜负之后**（原先在打之前 ⇒ 输了也 `kills += 1`）
     b.auto_run(logs)
+    seen = CX.note_kill(p, pick[0], win=(str(b.result) == "victory"))
     pa = (b.sides.get(CB.PLAYER_SIDE) or [{}])[0]
     for line in _fmt([str(x) for x in logs]):
         yield line
@@ -746,7 +771,8 @@ async def focus_fire(env, sink, uid, player):
         INST.set_focus(env, uid, foe.get("uid"))
         yield T("COMBAT_FOCUS_LOCK", name=foe.get("name") or foe.get("uid") or "")
         # ★ 这条不吃行动 ⇒ 顺手把「现在什么局势」再报一遍（与出手那一屏同一个口）
-        for line in INST.turn_lines(st):
+        #   ★ 本波：那个口按**敲指令的人**算「你」（`uid`）—— 组队时不报别人的血。
+        for line in INST.turn_lines(st, uid):
             yield line
         return
     ms = _data("monsters")
@@ -846,8 +872,9 @@ async def swap_weapon(env, sink, uid, player):
         yield line
     # ★ 「你换上了…」由**这一手落地那一刻**说出来（`hand.lines` 走 B 段那条路）——
     #   不在抬头处重复一遍（换手本身就是这一手，报两次是两句话一件事）。
-    seen = CX.note_kill(p, pick[0])
+    # ★ 本波：进谱那一下挪到**打完知道胜负之后**（原先在打之前 ⇒ 输了也 `kills += 1`）
     _b, res, logs, hp_after = _run_hand(p, pick, ms, affixes=affixes, hand=hand, uid=uid)
+    seen = CX.note_kill(p, pick[0], win=(str(res) == "victory"))
     for line in _fmt(logs):
         yield line
     async for line in _settle(env, p, uid, pick, ms, res, logs, hp_after, seen, player,
@@ -964,17 +991,21 @@ async def flee(env, sink, uid, player):
       唯一的读口 = `battle_acts.flee_fail_pct()`（改数只改那一格；代码里一个数字都没有）。
     ★ 掷骰的种子 = uid + 那一只 + 这一处 + 游戏日（见 `_flee_roll`）⇒ **同一日、同一处、
       同一只**必是同结果（可复现：探针按同一式子现算，不靠「跑很多次看比例」）。
-    ★ 多人场那一层（`17_组队与策略配合 §三·8`）的口径真源没写 ⇒ **本波不接**：有队时照旧走
-      『尚未落地』那一句（与 `content/instance.py` 抬头那条纪律一致；只登记，见 `_notes.md`）。
+    ★ 多人那一条（本波接上）：有队时走的是**同一条规则** —— 真源 `05_ §四` 只写了「逃跑」
+      这一条规则（没分单人 / 多人），所以多人按它落地；多人那一层的**语义**（谁来跑、
+      跑成之后全队算不算「这一场没打」）真源没写，登记在 `_notes.md §真源行` 等主线裁。
     """
     p = _p(player)
     _mx, _line = hp_cap_or_line(p)
     if _line:
         yield _line
         return
-    if _party_now(env, p, uid) != 1:           # ★ 多人场那一层：口径真源没写 ⇒ 照实说（不假装做了）
-        yield T("COMBAT_FLEE_TODO")
-        return
+    # ★ 本波：**多人场那一条也接上了** —— 原先有队时走的是「尚未落地」那句桩句
+    #   （真源 `17_组队与策略配合 §三·8` 没给多人那一层的口径 ⇒ 当时不假装做了）。
+    #   现在与单人**同一条规则**：`05_玩法数值口径_v1.md §四`「失败率 30%（三成被拦下）；
+    #   被拦下 = 这一手白花、这一场照打；跑成 = 这一场没打」——多人那一层的**语义**是
+    #   「谁来跑，谁就替这一场收了尾」（`_flee_decide` 把这一场判成 `fled`，全队都不拿收益）：
+    #   真源没写多人该按谁算，本波照**同一条规则**落地并登记（见本分支 `_notes.md §真源行`）。
     # ★ G2：分段推进 —— 走「场」，这一手 = 你的一手（30% 被拦下，掷骰走 `_flee_decide`）
     from . import instance as INST
     if INST.route_needed(env, uid):
@@ -1028,8 +1059,9 @@ async def flee(env, sink, uid, player):
     if caster is not None and b.result is None:
         _sub, _ended, _who = b.human_act("retreat", None, caster)
         logs.extend(str(x) for x in (_sub or []))
-    seen = CX.note_kill(p, pick[0])
+    # ★ 本波：进谱那一下挪到**打完知道胜负之后**（原先在打之前 ⇒ 输了也 `kills += 1`）
     b.auto_run(logs)
+    seen = CX.note_kill(p, pick[0], win=(str(b.result) == "victory"))
     pa = (b.sides.get(CB.PLAYER_SIDE) or [{}])[0]
     for line in _fmt([str(x) for x in logs]):
         yield line

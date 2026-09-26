@@ -797,6 +797,48 @@ chk("★ 副本那 5 条声明都挂了 bind（%s）"
 handlers = len(st.command_handlers())
 chk("★ 引擎认的处理器数是 %d（副本那 5 条在内）" % handlers, handlers >= 59)
 
+# ══════════════════════════════════════════════════════════════
+# ⑬ ★ 本波：**副本出口也接上「场在跑」那道闸**（与出镇 / 带间 / 返回同一档）
+#    起因（试玩报告 §5④）：原来这一闸只接在**世界级移动**上（往北 / 进镇 / 进塔），
+#    副本出口『撤退』没接 —— 实测「打着一场就走出了塔，那一场跟着人跨图继续」
+#    （人在塔外「旧哨塔下」，照样在打塔顶的 Boss）。『下一层』同理（它也动位置）。
+#    判据（真敲 · 真宿主）：持态中敲『撤退』/『下一层』⇒ 出 `SYS_MOVE_IN_FIGHT`、
+#    **位置与历史一个字不动**、这一场照旧；把这一场收掉之后 ⇒ 『撤退』照旧出塔。
+# ══════════════════════════════════════════════════════════════
+print("⑬ 本波：持态中『撤退』『下一层』被同一档拦下（位置与历史一个字不动）")
+_GATE = []
+_ENT2 = (ent.get("map"), ent.get("node"))
+ad.saved = dict(FIGHT, loc=TOWER, node="tower_stair1", prev=[])      # 楼梯前：那只挡路的
+_clear_field()
+send("攻击")                                   # 开一场（这一手打不完它 —— 血厚）
+_g_f = _field()
+if _g_f is None:
+    _GATE.append(("前提：这一敲没开出这一场", None))
+else:
+    _pos0 = (dict(ad.saved).get("loc"), dict(ad.saved).get("node"))
+    _prev0 = list(ad.saved.get("prev") or [])
+    _o_leave = send("撤退")
+    if _o_leave != [txt("SYS_MOVE_IN_FIGHT")]:
+        _GATE.append(("持态中『撤退』没被拦", _o_leave[:2]))
+    _o_next = send("下一层")
+    if _o_next != [txt("SYS_MOVE_IN_FIGHT")]:
+        _GATE.append(("持态中『下一层』没被拦", _o_next[:2]))
+    if ((dict(ad.saved).get("loc"), dict(ad.saved).get("node"))) != _pos0 \
+            or list(ad.saved.get("prev") or []) != _prev0:
+        _GATE.append(("被拦下却动了位置 / 历史",
+                      ((dict(ad.saved).get("loc"), dict(ad.saved).get("node")), _pos0)))
+    if _field() is None:
+        _GATE.append(("被拦下却把这一场弄没了", None))
+    fight_over()                               # 收掉这一场 ⇒ 出口照旧
+    _o_leave2 = send("撤退")
+    if not any(x.startswith(txt("SYS_TOWER_LEAVE").split("{")[0]) for x in _o_leave2):
+        _GATE.append(("收掉之后『撤退』反倒出不去了", _o_leave2[:2]))
+    if (dict(ad.saved).get("loc"), dict(ad.saved).get("node")) != _ENT2:
+        _GATE.append(("出塔没回到进塔那一格",
+                      (dict(ad.saved).get("loc"), dict(ad.saved).get("node")), _ENT2))
+chk("★ 副本出口那一闸：持态中『撤退』『下一层』被 `SYS_MOVE_IN_FIGHT` 拦下"
+    "（位置 / 历史 / 这一场一字不动）· 这一场收掉之后出塔照旧", not _GATE, "%s" % _GATE[:2])
+
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
 sys.exit(0 if ok else 1)
