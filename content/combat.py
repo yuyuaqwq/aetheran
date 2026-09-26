@@ -345,9 +345,39 @@ def run_auto(player: dict, monster_ids, monsters: dict, *, seed: int | None = No
     return b.result, [str(x) for x in logs], int(pa.get("hp", 0))
 
 
+def encounter_cand(monsters: dict, loc: str, node: str, level: int, keep: int = 3):
+    """这一格上「说得上话」的怪 → `(全部候选, 按等级最近的前 keep 只)`。
+
+    ★ 两处共用这一处（同一把尺子）：
+      · 遇敌挑选 `pick_encounter`（玩家敲『攻击』那一下真挑哪一只）；
+      · **悬赏轮换池的可遇性**（`cmds_quest._encounterable` / `_pool_of` —— 单子点名的怪
+        必须在这一站按这一档的等级真碰得上）。
+      两处要回答的是同一件事；各写一份 = 迟早对不上（K74 那一族）。
+      ★ 探针那边**另写一份**（`scripts/probe_quests.py` ㉛ / `probe_qloop.py` ②）——
+        两处的错不会互相掩盖（照 ⑬/⑳ 的老规矩）。
+
+    门（与 `pick_encounter` 的抬头同一段）：`habitat.maps` 必给（不含这一张图 ⇒ 不是候选），
+    给了 `habitat.nodes` 再收窄到那几个节点；候选为空就回**空表**（村镇 / 没挂怪的图）。
+    """
+    cand = []
+    for k, m in monsters.items():
+        hb = m.get("habitat") or {}
+        if loc not in (hb.get("maps") or []):
+            continue                                  # ★ 不属于这张图的怪，一律不出现
+        ns = hb.get("nodes") or []
+        if ns and node not in ns:
+            continue                                  # ★ 收窄到节点
+        cand.append(k)
+    near = sorted(cand, key=lambda k: abs(int(monsters[k].get("lv", 1)) - int(level)))
+    return cand, near[:max(0, int(keep))]
+
+
 def pick_encounter(monsters: dict, loc: str, node: str, level: int, *, seed: int | None = None,
                    mul: dict | None = None):
     """从怪里挑一只「这一带、这个等级」的（第一版：按等级最近 + 可复现随机）。
+
+    ★ 「说得上话的怪 + 按等级最近的前 3」这一半 = `encounter_cand`（**唯一一处**）——
+      悬赏轮换池的可遇性（`cmds_quest._encounterable`）问的就是它；这里只多做「挑一只」。
 
     ★ P-30：地点**真的参与挑选**了 —— 每条怪在 monsters 域里挂着 `habitat`：
       `maps` = 会出现的图（必给，空 = 哪儿都不出）；`nodes` = 再收窄到这几个节点
@@ -366,19 +396,9 @@ def pick_encounter(monsters: dict, loc: str, node: str, level: int, *, seed: int
       **没给 = 零变化**（还是 `choice` 那一支，同一个种子挑出同一只 —— 判据钉着这一条）；
       给了就按权重挑（倍数为 0 的候选天然挑不中）。
     """
-    cand = []
-    for k, m in monsters.items():
-        hb = m.get("habitat") or {}
-        if loc not in (hb.get("maps") or []):
-            continue                                  # ★ 不属于这张图的怪，一律不出现
-        ns = hb.get("nodes") or []
-        if ns and node not in ns:
-            continue                                  # ★ 收窄到节点
-        cand.append(k)
+    cand, top = encounter_cand(monsters, loc, node, level)
     if not cand:
         return []                                     # ★ 不兜底（村镇 / 没挂怪的图）
-    cand.sort(key=lambda k: abs(int(monsters[k].get("lv", 1)) - level))
-    top = cand[:3]
     rnd = random.Random(seed)
     if not mul:
         return [rnd.choice(top)]                      # ★ 没给 = 与改前逐字相同

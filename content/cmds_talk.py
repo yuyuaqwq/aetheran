@@ -31,6 +31,7 @@ from .cmds_ast import egg_lines, title_lines
 from . import calendar as CAL
 from . import codex as CX
 from . import heard as HD
+from . import prog as PROG     # ★ 本波：对话旗标族（`main*_done` 那一族）的唯一判定口
 
 
 def _arg(env, default=""):
@@ -58,7 +59,12 @@ def _pick_indexed(lines, p, st=None):
         ok = True
         for k, v in need.items():
             if k == "flag":
-                if not flags.get(v):
+                # ★ 本波（g3-quests2）：走**真实进度**那一口（`content/prog.flag_ok`）——
+                #   改前这里只是 `bool(flags.get(v))`，而 `main04_done` 那一族**全仓没有写端**
+                #   ⇒ 域里 12 条台词永久出不来。现在：表里的 slug 以真实进度为准（老档里
+                #   进度在、旗标那格当年没写 ⇒ 照样成立；旗标写着而进度不成立 ⇒ 不算满足，
+                #   不刷出不该出的台词）；表外的 token（`card` / `lore_scripts` …）走老口径。
+                if not PROG.flag_ok(p, v):
                     ok = False
             elif k == "holding":
                 if not (p.get("bag") or {}).get(v):

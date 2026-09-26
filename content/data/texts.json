@@ -2790,6 +2790,16 @@
     "category": "系统",
     "desc": "接活 · 尾注"
   },
+  "SYS_JOB_GIVE": {
+    "value": "得到：{icon} {name} ×{n}",
+    "params": [
+      "icon",
+      "name",
+      "n"
+    ],
+    "category": "系统",
+    "desc": "接活 · 那一条**接活时就发到手**的东西那一行（B3-8 支线还石头 · g3-quests2 落地；源 15_彩蛋域口径_v1 §二 第 2 行「小满的石头 = 骨田捡的刻字石片」＋ 17 §QUEST_SIDE25_STORY「小满把那块石头塞给你」；值形与 SYS_GATHER_GET 同形）"
+  },
   "SYS_JOB_NONE": {
     "value": "你手上没有活。",
     "params": [],
