@@ -25,7 +25,7 @@ import json
 import os
 
 from .cmds_ast import (_data, _p, _save, _map_of, _name_of_node, T, hp_cap_or_line,
-                        _pois_here, rest_places)
+                        _pois_here, rest_places, _in_fight)
 from .cmds_codex import new_lines
 from . import calendar as CAL
 from . import codex as CX
@@ -229,6 +229,17 @@ def _fire_here(p):
 
 async def rest(env, sink, uid, player):
     p = _p(player)
+    # ★ fix-p-restfight（试玩 ⛔ · assassin b110/b115/b118/b119）：「歇脚」原先只判「脚下有没有
+    #   篝火」，**战斗中照样放行** —— 而这一支的回血落点是**玩家档那一份** `p["hp"]`
+    #   （`player.update(p)`），这一场的血却在「场」里 ⇒ **一人两套血**：屏上被报到 120/120，
+    #   下一手实战仍从旧血接着算（实测 82 − 23），b115 就是靠它把屏上血量报满之后当场被打死。
+    #   处置 = 与出镇 / 带间 / 返回 / 去 / 塔门同一道**持态闸**（`SYS_MOVE_IN_FIGHT`，fail-closed）：
+    #   先把这一场打完，或者『逃跑』/『后撤』脱身 —— 那一手在场上才花得掉。
+    #   ★ 判据只紧：不打架时那一站照旧真回血（`probe_cmds` ㉑② 两态互锁）。
+    _lock = _in_fight(env, uid)
+    if _lock:
+        yield _lock
+        return
     # ★ B4-25：**先看脚下有没有火** —— 这是声明里写着的守卫（`guard_desc` = 有篝火），
     #   不是装饰：没有火就照实说，档一个字都不动（不扣血、不推进天数、不落库）。
     #   ★ F6（QA P4 E-3）：光说「这儿没有篝火」不够 —— 「歇脚棚」这个名字天然让玩家以为能歇，
