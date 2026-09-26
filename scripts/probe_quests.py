@@ -2321,6 +2321,66 @@ if _MAIN36 and not any(x.startswith("主线 ") for x in _o36c):
 for _k, _v in _BQ36:
     print("      %s" % _row36(_v).strip())
 
+# ══════════════════════════════════════════════════════════════
+# ㊲ ★ fix-l：缺的是**料**时也要说「从哪儿来」（试玩 ranger b71/b85 · 副业 15「娜娜的药单」）
+#   与 `kill` 那一支的「出没地」（QB-3）**同一口径**：`强化` / `打造` 早就有这一栏
+#   （唯一出处口 = `cmds_recipe._src_of` → `matsrc`：采集点 + 掉它的怪），而 `提示` /
+#   `看 <编号>` 这一路原先只报名字与数目 ⇒ 玩家拿着「夜明砂 ×3」不知道去哪儿找。
+#   判据（现算，不硬编码材料名 · 期望走**同一个出处口**）：逐条带 `item` 条件的任务，
+#   用一个空手档真敲「看 <编号>」—— 凡是那件东西域里真有出产渠道的，那一行必须在屏上；
+#   取不到渠道的不许多塞一行。反证：把出处口换成空 ⇒ 那些行全消失（判据不是恒真）。
+print()
+print("── ★ fix-l ㊲：缺料要说「从哪儿来」（与 `kill` 的「出没地」同一口径）")
+from content import cmds_recipe as _CR37                                  # noqa: E402
+from content import cmds_more as _CMO37                                    # noqa: E402（`看 <编号>` 那一支住在 cmds_more）
+_LW37 = TX["SYS_JOB_REQ_ITEM_WHERE"]["value"]
+
+
+def _want37(iid):
+    _wh = _CR37._src_of(iid)
+    if not _wh:
+        return ""
+    # 品名走**实现那一口**（`CQ._item_name`）—— 未鉴定件（`unid_*`）不在 items 域里，
+    # 探针自己从域里取名会取到机器键（那正是判据要防的那种漏键）。
+    return _LW37.replace("{item}", str(CQ._item_name(iid))).replace("{where}", _wh)
+
+
+_bad37, _n37, _tgt37, _sat_p37 = [], [0], [], {}
+for _k37, _v37 in sorted(QE.items(), key=lambda kv: int(kv[1].get("order") or 0)):
+    for _i37, _r37 in enumerate(CQ._require_of(_v37)):
+        if _r37.get("kind") != "item":
+            continue
+        _iid37 = str(_r37.get("item") or "")
+        _w37 = _want37(_iid37)
+        if not _w37:
+            continue                      # 域里真没渠道的那几样：不在本条判据的范围（另有 ⑮ 管「渠道存在」）
+        #   单子按步走 ⇒ 只有**轮到这一条**（前面几步都做过）时它才上屏：用 `skip=<这一条>`
+        #   造一个「前面都做过、只差这件料」的档（同一个骨架，不另写一份）。
+        _p37 = _sat_player(_v37, _k37, skip=_i37)
+        _p37["loc"], _p37["node"] = "windmill_town", "wt_board"
+        _sat_p37[(_v37["order"], _iid37)] = _p37
+        _n37[0] += 1
+        _tgt37.append((_v37["order"], _iid37, _w37))
+        _o37 = _drive(_CMO37.board_show, _p37, "看 %s" % _v37["order"])
+        if not any(_w37 in _ln for _ln in _o37):      # 单子那一屏每条前面自带两个空格 ⇒ 比子串
+            _bad37.append((_v37["order"], _v37.get("name"), _w37, _o37[-3:]))
+(ok if not _bad37 else bad)(
+    "★ fix-l ㊲：带 `item` 条件的单子，缺那件料时屏上带「从哪儿来」那一行"
+    "（%d 处逐条真敲 · 期望走同一个出处口）· 取不到渠道的不多话（坏 %s）"
+    % (_n37[0], _bad37[:2] or "无"))
+# 反证：把出处口换成空 ⇒ 刚才那几行**全都**消失（判据真的咬在「出处是现算的」上）
+_keep_src37 = _CR37._src_of
+try:
+    _CR37._src_of = (lambda *_a, **_k: "")
+    _rev37 = [(od, w) for od, _iid, w in _tgt37
+              if any(w in _ln for _ln in _drive(_CMO37.board_show, _sat_p37[(od, _iid)],
+                                                "看 %s" % od))]
+finally:
+    _CR37._src_of = _keep_src37
+(ok if (not _rev37 and _tgt37) else bad)(
+    "★ 反证：把出处口换成空 ⇒ 那 %d 行全都消失（判据咬得住「有没有真现算」）"
+    "（坏 %s）" % (len(_tgt37), _rev37[:2] or "无"))
+
 for n in notes:
     print("  · " + n)
 

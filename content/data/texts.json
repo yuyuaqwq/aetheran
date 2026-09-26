@@ -1980,6 +1980,12 @@
     "category": "系统",
     "desc": "地图 · 当前节点那一行"
   },
+  "SYS_MAP_BACK_TOWN": {
+    "value": "（回镇：敲『进镇』 —— 野外哪一站都走得通。）",
+    "params": [],
+    "category": "系统",
+    "desc": "地图 · 野外那屏的尾注（fix-l）：回镇的词只在『帮助』那一栏，玩家自己想不到；镇上那屏不印这一行"
+  },
   "SYS_LISTEN_DEFAULT": {
     "value": "风声。远处有水声。没有别的声音。",
     "params": [],
@@ -2287,6 +2293,21 @@
     ],
     "category": "系统",
     "desc": "状态 · 第三行"
+  },
+  "SYS_STATUS_IN_FIGHT": {
+    "value": "⚔ 手上这一场还没打完 —— 敲『战斗日志』看打到哪儿了，或者『逃跑』脱身。",
+    "params": [],
+    "category": "系统",
+    "desc": "状态 · 第四行（fix-l）：手上还留着一场时补一行 —— 走不动的原因原先要等玩家敲『去 X』被拦才知道"
+  },
+  "SYS_JOB_REQ_ITEM_WHERE": {
+    "value": "（{item} 从哪儿来：{where}）",
+    "params": [
+      "item",
+      "where"
+    ],
+    "category": "系统",
+    "desc": "交活 · 前置没做（缺的是料时补一句从哪儿来 —— fix-l：与 `kill` 的「出没地」同一口径；出处口 = cmds_recipe._src_of / matsrc）"
   },
   "SYS_UNSET": {
     "value": "未定",

@@ -793,6 +793,10 @@ def main():
          {"cls": "cls_assassin", "level": 5}),
         ("放技能(不是本职业)", CBL.skill_cast, "技能 冰棱",
          {"cls": "cls_assassin", "level": 5}),
+        # ★ fix-l：**等级没到**这一支也进用例表 —— 于是 ⑥「不缺文案」与 ⑪「不漏机器键」
+        #   两条守卫自动罩到它身上（K61）；「要几级」那句逐字对账在 ⑫-d 一条正例 + 三条反证。
+        ("放技能(等级没到)", CBL.skill_cast, "技能 血债",
+         {"cls": "cls_berserker", "level": 2}),
         ("放技能(本门的断势)", CBL.skill_cast, "技能 断势",
          {"cls": "cls_assassin", "level": 5, "loc": "belt_north", "node": "bn_bone"}),
         ("战斗中用物(没带)", CBL.battle_item, "使用 伤药",
@@ -1288,6 +1292,42 @@ def main():
             _free_bad.append((_lab, _got[:1], (_pp.get("loc"), _pp.get("node"))))
     chk("★ 反证：这一场收掉之后（脱身 / 打完）⇒ 同一步真放行（那三条各自真出门）",
         not _free_bad, "%s" % (_free_bad[:2],))
+
+    # ⑫-d ★ fix-l（夜班试玩 · ranger b38~b40 / b56·b57）：两条**呈现缺口**，各配一条反证
+    #   （两态互锁 —— 不是「恒印一句」）。
+    #   ① 手上还有一场没打完 ⇒ 『状态』末行就把它说出来。改前：面板一个字不提，玩家要等
+    #      敲『去 X』被 `SYS_MOVE_IN_FIGHT` 拦下才知道自己走不动（跨进程回来尤其看不懂）。
+    #      只读 `instance.fighting`，不动状态；那一场收掉之后**不印**（反证）。
+    #   ② 野外那屏『地图』末行点明回镇的口（『进镇』原先只在『帮助』那一栏，玩家自己想不到）；
+    #      镇上那屏**不印**（反证）—— 判据的轴 = maps 域的 `topology`（star = 镇）。
+    _in_fight = tx["SYS_STATUS_IN_FIGHT"]["value"]
+    _back_town = tx["SYS_MAP_BACK_TOWN"]["value"]
+    _l_d = []
+    _mk = dict(loc="belt_north", node="bn_bone", cls="cls_knight", level=3, hp=80,
+               bag={}, codex={}, flags={})
+    _drive(CBL.attack, _player(**_mk), "")
+    _st_on = _drive(CA.status, _player(**_mk), "")
+    if _in_fight not in _st_on:
+        _l_d.append(("场在跑·状态没提", _st_on[-2:]))
+    _clear_field()
+    _st_off = _drive(CA.status, _player(**_mk), "")
+    if _in_fight in _st_off:
+        _l_d.append(("场收掉了·状态还印", _st_off[-2:]))
+    chk("★ fix-l ①：手上还有一场没打完 ⇒ 『状态』末行说出来；收掉之后不再印（两态互锁）",
+        not _l_d, "%s" % (_l_d[:2],))
+
+    _l_m = []
+    _mw = _drive(CA.map_view, _player(loc="belt_north", node="bn_camp"), "")
+    _mt = _drive(CA.map_view, _player(loc="windmill_town", node="wt_gate_n", race="human"), "")
+    if not _mw or _mw[-1] != _back_town:
+        _l_m.append(("野外没这一行", _mw[-1:]))
+    if any(_back_town in ln for ln in _mt):
+        _l_m.append(("镇上不该印", _mt[-2:]))
+    if str((st.domain("maps").get("windmill_town") or {}).get("topology")) != "star" \
+            or str((st.domain("maps").get("belt_north") or {}).get("topology")) == "star":
+        _l_m.append(("拓扑轴选错了", "镇上 / 野外那张图的 topology"))
+    chk("★ fix-l ②：野外那屏『地图』末行点明回镇的口；镇上那屏**不印**（两态互锁）",
+        not _l_m, "%s" % (_l_m[:2],))
 
 
     # ── ⑲ ★ fix3-⑥⑦：机器味 / 开发词上屏（三处点名）+「扫面」的语境 ─────────────
