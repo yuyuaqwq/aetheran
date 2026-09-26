@@ -1379,6 +1379,8 @@ async def alloc_points(env, sink, uid, player):
         yield T("SYS_ALLOC_SHORT", stat=_stat_slot(stat), n=cnt, left=left, usage=usage)
         return
 
+    from . import panel_build as _PB   # 本地 import（与 `_p` 同一个理由：避免包装载期成环）
+    _cap0 = _PB.hp_cap(p, strict=False)          # ★ 加点**前**那一格（唯一来源 = 职业面板）
     try:
         p["alloc"] = AL.apply(al, stat, cnt)
     except AL.AllocError as e:                   # 档上那一格是小数（配平基准那种）⇒ 不截断，点名
@@ -1390,6 +1392,19 @@ async def alloc_points(env, sink, uid, player):
     _save(env)
     yield T("SYS_ALLOC_OK", stat=_stat_slot(stat), n=cnt,
             now=int((p.get("alloc") or {}).get(stat) or 0), left=left - cnt)
+    # ★ fix-n-small ①：**加点也报上限变化** —— 与「装备 / 卸下」那一条**同一句话、同一份数据源**：
+    #   槽位 `SYS_GEAR_HP_CAP`（「生命上限 {old} → {new}」）+ 上限走 `panel_build.hp_cap`
+    #   这唯一一口（与 `_p` 出档口、`属性` 页、战斗 actor 同一个数）。原先只报「力量 +3」，
+    #   上限自己悄悄涨了一格 ⇒ 玩家看不见这一笔投在哪儿兑现（P-27 三处一致，独独回话不提）。
+    #   ★ 上限没动（例：只加不带上限的那几维）⇒ **不出这一行**（与装备那条同形：真变了才说）。
+    #   ★ 只报上限：**现值那半边一个字不碰** —— 「加点后上限涨、现血/现蓝跟不跟」是队列里
+    #     一条**待裁**的口径题（归主线），这里不许顺手拍。（现血/现蓝仍由 `_p` 那条既有口径管。）
+    #   ★ 借槽位：真源 `00_总纲/17_文案收口口径_v1.md` 里这一句挂在「装备/卸下」名下，
+    #     还没有「加点」自己的槽位名 ⇒ 本轮借 `SYS_GEAR_HP_CAP` 顶上（待补的槽位名写在
+    #     分支 `_notes.md`），等主线连同真源表一起补 —— 别在代码里新造中文。
+    _cap1 = _PB.hp_cap(p, strict=False)          # 加完点**同一口**再算一遍
+    if _cap0 is not None and _cap1 is not None and int(_cap0) != int(_cap1):
+        yield T("SYS_GEAR_HP_CAP", old=int(_cap0), new=int(_cap1))
 
 
 # ══════════════════════════════════════════════════════════════

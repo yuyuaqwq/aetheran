@@ -1459,18 +1459,45 @@ try:
     _lv13 = int(_sv12().get("level") or 1)
     _tot13 = _AL13.total_points(_lv13)
 
-    def _ok13(stat, n, now, left):
-        return [_r("SYS_ALLOC_OK", stat=_r("SYS_STAT_%s" % stat), n=n, now=now, left=left)]
+    def _cap13(al):
+        """这一档在 `alloc=al` 时的**生命上限**（唯一来源 `PB.hp_cap` —— 与「属性」页 / `面板` 同一个口）。"""
+        return int(PB.hp_cap(dict(_sv12(), alloc=dict(al))))
+
+    def _capline13(out):
+        """回话里那行「生命上限 old → new」→ `(old, new)`；没有这行回 `None`（按槽位前缀认）。"""
+        _pre = str(TX["SYS_GEAR_HP_CAP"]["value"]).split("{")[0]
+        for _ln in out:
+            if _ln.startswith(_pre):
+                _o, _n = _ln[len(_pre):].split(" → ")
+                return int(_o), int(_n)
+        return None
+
+    def _ok13(stat, n, now, left, al_before, al_after):
+        """`加点` 那一屏的期望 —— ★ fix-n-small ①：**上限真动了就多一行**（与「装备」同一句）。"""
+        _c0, _c1 = _cap13(al_before), _cap13(al_after)
+        out = [_r("SYS_ALLOC_OK", stat=_r("SYS_STAT_%s" % stat), n=n, now=now, left=left)]
+        if _c0 != _c1:
+            out.append(_r("SYS_GEAR_HP_CAP", old=_c0, new=_c1))
+        return out
 
     def _alloc13():
         return (_sv12().get("alloc") or {})
 
     _g13a = _say12("加点 力量 3")
-    if _g13a != _ok13("STR", 3, 3, _tot13 - 3) or _alloc13() != {"STR": 3}:
+    if _g13a != _ok13("STR", 3, 3, _tot13 - 3, {}, {"STR": 3}) or _alloc13() != {"STR": 3}:
         _BAD12.append(("加点 力量 3", _g13a, _alloc13()))
     _g13b = _say12("加点 STR 2")
-    if _g13b != _ok13("STR", 2, 5, _tot13 - 5) or _alloc13() != {"STR": 5}:
+    if _g13b != _ok13("STR", 2, 5, _tot13 - 5, {"STR": 3}, {"STR": 5}) or _alloc13() != {"STR": 5}:
         _BAD12.append(("加点 STR 2（ASCII 也认）", _g13b, _alloc13()))
+    # ★ fix-n-small ①：**加点回话报的那条上限变化 = 「属性」页那一格**（同一份数据源、两个口）
+    _vital_pre13 = str(TX["SYS_ATTR_VITAL"]["value"]).split("{")[0]
+    _g13cap = _say12("属性")
+    _vital13 = [ln for ln in _g13cap if ln.startswith(_vital_pre13)]
+    _attr_cap13 = int(_vital13[0][len(_vital_pre13):].split(" ｜")[0]) if _vital13 else None
+    _cl13 = _capline13(_g13b)
+    if _cl13 != (_cap13({"STR": 3}), _attr_cap13) or _attr_cap13 != _cap13({"STR": 5}) \
+            or _cl13[1] != _cap13({"STR": 5}):
+        _BAD12.append(("加点报的上限 != 属性页", _g13b, _g13cap[:2]))
     _asks = [("加点 运气 1", _r("SYS_ALLOC_BAD_STAT", want="运气", list=_statlist13()),
               "认不出的维"),
              ("加点 力量 0", _r("SYS_ALLOC_BAD_NUM", want="0"), "次数 0"),
@@ -1491,7 +1518,9 @@ try:
     if _g13c != _w13c or _alloc13() != {"STR": 5}:
         _BAD12.append(("加点（不带参数）", _g13c, _w13c, _alloc13()))
     _g13d = _say12("加点 意志 %d" % (_tot13 - 5))
-    if _g13d != _ok13("WIL", _tot13 - 5, _tot13 - 5, 0) or _AL13.left_of_record(_sv12()) != 0 \
+    if _g13d != _ok13("WIL", _tot13 - 5, _tot13 - 5, 0, {"STR": 5},
+                      {"STR": 5, "WIL": _tot13 - 5}) \
+            or _AL13.left_of_record(_sv12()) != 0 \
             or _AL13.spent_of_record(_sv12()) != _tot13:
         _BAD12.append(("加点（投满）", _g13d, _alloc13(), _AL13.left_of_record(_sv12())))
     _g13e = _say12("加点")
@@ -1503,7 +1532,8 @@ try:
         _BAD12.append(("加点（余额 0 还想加）", _g13f))
     chk("★ P-34 `加点` 真敲 11 档：中文名 / ASCII 都认 · 逐字对账 · **余额对得上**"
         "（总点数 %d = 8 + 3×(级−1)）· 超余额 / 认不出的维 / 次数不是正整数 各回一行且**不动档**"
-        " · 投满 ⇒ `DONE`" % _tot13,
+        " · 投满 ⇒ `DONE` · ★ fix-n-small ① 抬了上限的那几维**多一行上限变化**（= 「属性」页那一格）"
+        "且不带上限的那一维**不出**这一行" % _tot13,
         not [x for x in _BAD12 if str(x[0]).startswith("加点")],
         "%s" % [x for x in _BAD12 if str(x[0]).startswith("加点")][:2])
 
