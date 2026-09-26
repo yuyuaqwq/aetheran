@@ -21,6 +21,10 @@
   ⑪ 裸 `职业`：定过 = 看你这一门（带域里的自述与节奏）；没定过 = 菜单
   ⑫ 推荐星跟着**族**走（精灵 ⇒ 法师 / 游侠两行带星 · 人类那条写「任意」⇒ 一行都不带）
   ⑬ ★ 真打一场：建号两步走完 ⇒ `攻击` 不再回「职业基础 还没接上」，整场真打完并落账
+  ⑭ ★ P-50（2026-09-26 · 本波 w-h-ux）：建号第二步那一栏「优势 / 弱点」—— **裁决：补真源行，
+     代码先接线**。键名钉住 `SYS_CLS_EDGE` · **两态一致（半截 = 红）** · 拿造出来的记录 +
+     临时注入的槽位直调接线（用完即撤）· 域里不许有自己编的那两格。逐字句子见
+     `_notes.md §真源行`（本路不碰共享面 `texts.json`）。
 
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_class.py
 """
@@ -269,34 +273,97 @@ def main():
     else:
         bad("『攻击』没有结果：%s" % j[:200])
 
-    # (14) ★ P-50：建号第二步那一欄「优势 / 弱点」—— 真源只写了「要有」，逐条句子在
-    #   03_职业与技能/ 六份详案 与 08_六职业对照_v2 里**都没有**（只有形状轴与数值对照）
-    #   ⇒ 本批**只登记、不自己编**（编一句 = 第三种口径；而且是玩家可见文案 ⇒ 得先过
-    #   17_文案收口口径的槽位表 + 共享面 texts 域，见本分支 `_notes.md`）。
-    #   这一条判据干两件事：把缺的那一欄**印出来**；钉住「今天没有人偷偷编一句」。
+    # (14) ★ P-50（2026-09-26 · 本波 w-h-ux · **本波裁决：补真源行，代码先接线**）
+    #   真源 `18_建号与新手引导_v1.md §一 第 2 步` 要那一栏「优势 / 弱点」，可六份职业详案与
+    #   `08_六职业对照_v2` 到今天也没有逐条的句 —— 而本路**不碰共享面**（`content/data/texts.json`）
+    #   ⇒ 本轮把**接线**做好、把**缺的那一头**印出来、把**两态**钉死：
+    #     ① 键名钉住（`SYS_CLS_EDGE` —— 真源行落进 17 号口径表时要用这一个键）；
+    #     ② **两态一致（半截 = 红）**：域里两句 + texts 里槽位「都在 ⇒ 菜单里有那一行、
+    #        逐字对得上」·「都缺 ⇒ 菜单里一行都没有、一个字都不出现」·
+    #        「只有一头 ⇒ 红」（加了域没加槽位 / 加了槽位没加域，都不许存在）；
+    #     ③ 拿**探针自己造的记录 + 临时注入的槽位**直调接线（用完即撤）—— 证明那不是死代码，
+    #        也不写死一张镜像模板（临时那条模板是本探针自己给的）；
+    #     ④ 逐字句子（真源行的交付物）印在下面那张待补清单里（见本分支 `_notes.md §真源行`）。
+    from content import cmds_ast as _CA14                                  # noqa: E402
     PENDING = {"优势 / 弱点": "真源 06_第一阶段垂直切片/18_建号与新手引导_v1.md §一 第 2 步写着"
                               "「显示 职业名 · 节奏来源一句话 · 优势 / 弱点 · 一句自述」，"
                               "而 03_职业与技能/0X_*_v2.md 与 08_六职业对照_v2 里没有逐条的句子"}
     print("  ★ 待补清单（真源没写的那一欄 —— 本批只登记，不自己编）：")
     for _k, _why in sorted(PENDING.items()):
         print("      · %s → %s" % (_k, _why))
-    _madeup = sorted({k for k, v in C.items()
-                      for f in ("adv", "weak", "advantage", "flaw", "优势", "弱点") if f in v})
-    if not _madeup:
-        ok("★ 域里**没有**自己编的「优势 / 弱点」格（谁哪天加了：先补真源行，再把这一条改成"
-           "「逐职业 == 真源那句」）")
+    print("      真源行落进 `00_总纲/17_文案收口口径_v1.md` 的槽位表（新开一节）要用这一条：")
+    print("      | SYS_CLS_EDGE | 优势 · {adv} ｜ 弱点 · {weak} | adv,weak | 系统 | P-50 建号第二步 · "
+          "每门一句优势 + 一句弱点（句在 classes 域：adv / weak） |")
+    _tmp14 = _CA14.PENDING_SLOTS.get("cls_edge")
+    if _tmp14 == "SYS_CLS_EDGE":
+        ok("★ P-50 待槽位的**键名** = SYS_CLS_EDGE（真源行落进 17 号口径表就用这一个键）")
     else:
-        bad("域里自己编了「优势 / 弱点」：%s（真源没写 ⇒ 先补真源行）" % _madeup)
+        bad("★ P-50 待槽位键名不对：%r（应当是 SYS_CLS_EDGE）" % _tmp14)
+    _dom14 = sorted(k for k, v in C.items() if v.get("adv") or v.get("weak"))
+    _half14 = sorted(k for k, v in C.items() if bool(v.get("adv")) != bool(v.get("weak")))
+    _slot14 = _tmp14 in TX                                   # texts 里有没有那条槽位
+    _exp14 = {k: _CA14._cls_edge_line(v) for k, v in C.items()}
+    _exp14 = {k: ln for k, ln in _exp14.items() if ln}
+    if _half14:
+        bad("★ P-50 半截：这几门只写了优势或只写了弱点（%s）—— 两句都在才出那一行，"
+            "缺一句就是缺一行（不许只印半句）" % _half14)
+    if bool(_dom14) != bool(_slot14):
+        bad("★ P-50 **半截**：域里有 adv/weak 的 %d 门 · texts 里那条槽位 %s —— 两头必须一起在"
+            "（先补真源行 → 跑 rebuild_syscopy → 再补域里那两句；反序也红）"
+            % (len(_dom14), "在" if _slot14 else "不在"))
+    else:
+        ok("★ P-50 两头一致：域里 adv/weak %d 门 · texts 那条槽位%s —— 今天**都没铺**（真源行还没写）"
+           % (len(_dom14), "在" if _slot14 else "不在"))
     ad4 = Ad()
     host4 = Host(ad4, REPO, inject={"db_path": ":memory:", "clock": time.time})
     host4.boot()
     u4 = uid + "_menu2"
     drive(ad4, host4, "我是 人类", u4)
     jm = NL.join(drive(ad4, host4, "选职业", u4))
-    if "优势" not in jm and "弱点" not in jm:
-        ok("★ 第二步那一眼今天**没有**「优势 / 弱点」字样（真源没给句 ⇒ 菜单也就不许先印那两栏）")
+    if _exp14:
+        _miss14 = [k for k, ln in _exp14.items() if ln not in jm]
+        if _miss14:
+            bad("★ P-50 域与槽位都在 ⇒ 菜单里每一门都要有那一行，缺：%s" % _miss14)
+        else:
+            ok("★ P-50 菜单里 %d 门都出了「优势 / 弱点」那一行（逐字对得上）" % len(_exp14))
+    elif "优势" not in jm and "弱点" not in jm:
+        ok("★ P-50 两头都没铺 ⇒ 第二步那一眼**没有**「优势 / 弱点」字样"
+           "（真源没给句 ⇒ 菜单也就不许先印那两栏 —— 更不许自己编一句顶上）")
     else:
-        bad("菜单里出现了「优势 / 弱点」而真源还没有那两句：%s" % jm[:200])
+        bad("★ P-50 菜单里出现了「优势 / 弱点」而真源还没有那两句：%s" % jm[:200])
+    # ③ 两态（探针自己造记录 + 临时注入槽位，用完即撤）
+    _TXT14 = _CA14._texts()
+    _REC14 = {"adv": "（探针造的）优势那一句", "weak": "（探针造的）弱点那一句"}
+    _TPL14 = "[A]{adv}[B]{weak}"              # 探针自己给的模板（不镜像真源那一行）
+    _cases14 = []
+    _cases14.append(("缺槽位 ⇒ 不出那一行（今天这一态）", _CA14._cls_edge_line(_REC14) is None))
+    _had14 = _TXT14.get(_tmp14)
+    _TXT14[_tmp14] = {"value": _TPL14, "params": ["adv", "weak"], "category": "系统",
+                      "desc": "（probe_class 临时注入 —— 用完即撤）"}
+    try:
+        _cases14.append(("槽位在 · 域里缺一句 ⇒ 也不出（不许只印半句）",
+                         _CA14._cls_edge_line({"adv": "只有优势"}) is None))
+        _cases14.append(("两头全 ⇒ 逐字渲染（槽位模板 + 域里那两句）",
+                         _CA14._cls_edge_line(_REC14)
+                         == "[A]%s[B]%s" % (_REC14["adv"], _REC14["weak"])))
+    finally:
+        if _had14 is None:
+            _TXT14.pop(_tmp14, None)
+        else:
+            _TXT14[_tmp14] = _had14
+    _cases14.append(("临时注入撤干净 ⇒ 又回到「不出那一行」", _CA14._cls_edge_line(_REC14) is None))
+    _bad14 = [n for n, o in _cases14 if not o]
+    if not _bad14:
+        ok("★ P-50 接线两态真调（造记录 · 临时注入即撤）：%s" % " ｜ ".join(n for n, _ in _cases14))
+    else:
+        bad("★ P-50 接线两态有一条不过：%s" % _bad14)
+    _leak14 = sorted({str(k) for k, v in C.items() for f in ("advantage", "flaw", "优势", "弱点")
+                      if f in v})
+    if not _leak14:
+        ok("★ P-50 域里**没有**自己编的「优势 / 弱点」格（另一套字段名也不行："
+           "先补真源行，句进 adv / weak 两格）")
+    else:
+        bad("★ P-50 域里自己编了「优势 / 弱点」：%s（真源没写 ⇒ 先补真源行）" % _leak14)
 
     print()
     print("----")
