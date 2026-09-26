@@ -1,12 +1,16 @@
 # -*- coding: utf-8 -*-
 """探针：races 域读得到 · 六族形状对（2 正 1 负 · 至少一条可见性）· 数值天赋值域合理。
 
+⑪ ★ P-60（本波 w5）：`home` / `lifespan` 两格 —— 数据都在 · 今天 0 读端 · 真源也没有要求
+   显示它的口 ⇒ **只登记不接**（谁把它接到某个呈现口上，这条当场红）。
+
 用法（在 aetheran-package 仓根跑）：
     GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_races.py
 """
 from __future__ import annotations
 
 import json
+import io
 import os
 import time
 import sys
@@ -87,6 +91,45 @@ chk("races.schema.json 在位", sch.exists(), str(sch.name))
 # ⑩ 通路与反面都写了（设计判据：每族一条别人走不了的路 + 一条真的疼的代价）
 bad10 = [k for k, v in rc.items() if not v.get("path") or not v.get("flip")]
 chk("每族都写了「专属通路 + 反面」", not bad10, "缺：%s" % bad10 if bad10 else "")
+
+# ⑪ ★ P-60（2026-09-26 · 本波 w5 · 顺带核 `races.home/lifespan` 有没有该显示的口）—— **登记档**
+#   六族数据里都有 `home`（家乡）与 `lifespan`（寿数）两格；可真源里**没有一处**要求把它们
+#   显示出来（`06_第一阶段垂直切片/04_指令总表 §三` 的 `出身` 只写「族 + 那一句为什么来」；
+#   全仓 grep「寿数 / 家乡」零命中）⇒ 今天**不接**（往界面加 = 自己编口径），只登记：
+#   这两格是**留给编辑器 / 下一阶段的形状**。判据 = K80 的自检问题「这两格，哪一行代码在读它？」
+bad11 = [k for k, v in rc.items() if not v.get("home") or not v.get("lifespan")]
+chk("★ P-60 · 六族的 `home` / `lifespan` 两格数据都在 —— %s"
+    % " · ".join("%s=%s／%s" % (v["name"], v["home"], v["lifespan"]) for v in rc.values()),
+    not bad11, "缺：%s" % bad11 if bad11 else "")
+_READERS11 = []
+# ★ 覆盖面要跟判据一起加（K61）：不只 `content/*.py` —— content 递归 + scripts + editor 全扫
+#   （本探针自己除外：这几行注释与判据本来就写着这两个词）。「哪一行代码在读它？」要问全仓。
+for _f11 in (sorted((REPO / "content").rglob("*.py")) + sorted((REPO / "scripts").glob("*.py"))
+             + sorted((REPO / "editor").rglob("*"))):
+    if not _f11.is_file() or _f11.name == "probe_races.py" or "__pycache__" in str(_f11):
+        continue
+    try:
+        _t11 = _f11.read_text(encoding="utf-8")
+    except (UnicodeDecodeError, OSError):
+        continue
+    _READERS11 += ["%s:%s" % (_f11.relative_to(REPO), _kw)
+                   for _kw in ('"home"', "'home'", '"lifespan"', "'lifespan'") if _kw in _t11]
+chk("★ P-60 · 登记：`home` / `lifespan` 今天**一个读端都没有**"
+    "（content/ 递归 + scripts/ + editor/ 全扫 · 0 命中）"
+    "—— 真源也没有要求显示它的口 ⇒ 不接、只登记；谁把它们接到某个呈现口上（没先改真源），这里当场红",
+    not _READERS11, "%s" % _READERS11)
+# 登记的另一半依据（真源那侧）：`04_指令总表 §三` 的 `出身` 只写「族 + 那为什么来」——
+# 真源里**没有** home / lifespan 的位置。哪天真源定了「它出现在哪一屏」，这条当场红（提醒回来接上）。
+_L11, _TAIL11 = [], os.environ.get("AST_PLAN", "C:/Users/yuyu/aetheran-plan")
+_DOC0411 = os.path.join(_TAIL11, "06_第一阶段垂直切片", "04_指令总表.md")
+if os.path.exists(_DOC0411):
+    with io.open(_DOC0411, encoding="utf-8") as _fh11:
+        _L11 = [_ln.strip() for _ln in _fh11 if "出身" in _ln and "|" in _ln]
+chk("★ P-60 · 真源里也没有这个显示口（04 §三 `出身` 那一行 = %s）—— 往界面加 = 自己编口径 ⇒ "
+    "登记不接；真源定了它出现在哪一屏再回来接"
+    % ((_L11[0][:80]) if _L11 else "（没解析到）"),
+    bool(_L11) and all("家乡" not in _ln and "寿数" not in _ln for _ln in _L11)
+    and all("族" in _ln and "为什么来" in _ln for _ln in _L11))
 
 print()
 print("六族速览：")

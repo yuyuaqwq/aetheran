@@ -16,8 +16,9 @@ r"""探针：旧哨塔副本（B3-6）—— 12 间房真能走一遍 · 五条�
   ⑤ ★ 9 项可读物：§一 点名的那几项，在文档说的那一间真拿得到（『读 <名>』 · 房间里的
      『触摸』也全都在）· 且**清单与 §一 那一列双向相等**（不多不少）
   ⑥ 『撤退』真的出塔（回到 `entrance` 那一格）· 塔外敲塔里的事 fail-closed 说人话
-  ⑦ P-19：`SCENE_OLD_WATCHTOWER` 不再是死槽位 —— 『进塔』那一屏取的就是它（且与节点级
-     的塔门那一屏不是同一段字）
+  ⑦ P-19：地图级槽位与进场那一间的节点级槽位是**同一处**（旧哨塔门口）—— 两个槽位名都由
+     `content.scene` 现算（一个口 · 探针不手写槽位名）· 两屏逐字不同；真宿主里『进塔』给
+     地图级（宽）· 站在这一间『观察』给节点级（窄），两屏各司其职、不打架
   ⑧ 三档空档都说人话：没站到本层最后一间 / 已经在塔顶 / 那一间没有可读物
   ⑨ ★ B3-7：塔内 12 间的「主要敌人」↔ `monsters.habitat` 逐间对齐（探针自己解析 §一 那一列 ·
      候选算法与 `combat.pick_encounter` 同一套）· 文档写「无」的那几间一只候选都算不出来
@@ -47,6 +48,8 @@ sys.path.insert(0, ENGINE)
 
 from saintess_engine.host.runtime import Host                      # noqa: E402
 from saintess_engine.package import load_stack                     # noqa: E402
+
+from content import scene as SC                                    # noqa: E402
 
 TOWER = "old_watchtower"
 DOC = os.path.join(PLAN, "06_第一阶段垂直切片", "22_旧哨塔_逐间设计_v1.md")
@@ -204,11 +207,37 @@ entry_node = next((n["id"] for n in (TW.get("nodes") or []) if n.get("role") == 
 chk("★ roles.entry 点的那间 = 文档第 1 间「%s」" % rooms[1]["name"],
     NAME_OF.get(entry_node) == rooms[1]["name"], "%r" % entry_node)
 
-scene_slot, gate_slot = TX.get("SCENE_OLD_WATCHTOWER") or {}, TX.get("SCENE_TOWER_GATE") or {}
+# ⑦ P-19（★ 2026-09-26 本波 w5 收紧）：地图级槽位（宽）与进场那一间的节点级槽位（窄）是**同一处**
+#   （旧哨塔门口 —— 地图 id `old_watchtower` / 那一间房 id `tower_gate`），原先两条键各写一份
+#   `"SCENE_%s" % …upper()`，且地图级那条**代码里 0 引用**（死槽位）。现在：
+#     · 两个槽位名**都由 `content.scene` 现算**（探针不再手写槽位名 —— K59/K65 那族）
+#     · 同一个「场景」解析口有序分流：踏进这张图取**地图级**、站在节点上取**节点级**（先窄后宽兜底）
+#     · 两屏**逐字不同**（同一处、两屏各司其职 —— 不许又变成「一条槽位两处写」）
+_map_slot, _node_slot = SC.map_key(TOWER), SC.node_key(entry_node)
+scene_slot, gate_slot = TX.get(_map_slot) or {}, TX.get(_node_slot) or {}
 scene_val = scene_slot.get("value") or ""
-chk("★ P-19 地图级槽位 SCENE_OLD_WATCHTOWER 有正文（%d 字 · 不是塔门那一屏）" % len(scene_val),
-    80 <= len(scene_val) <= 200 and scene_val != (gate_slot.get("value") or ""),
-    scene_val[:24])
+gate_val = gate_slot.get("value") or ""
+chk("★ P-19 地图级槽位 %s 有正文（%d 字 · 与节点级 %s 不是同一段字）"
+    % (_map_slot, len(scene_val), _node_slot),
+    80 <= len(scene_val) <= 200 and scene_val != gate_val, scene_val[:24])
+chk("★ P-19 槽位/地图级写法**一个口**：`SC.map_key(%r)=%s` · `SC.node_key(%r)=%s`（都由 "
+    "`content.scene` 现算）· 解析口分流对得上（地图级只认 `resolve_map` · 节点级先认 `resolve`）"
+    % (TOWER, _map_slot, entry_node, _node_slot),
+    _map_slot == "SCENE_" + TOWER.upper() and _node_slot == "SCENE_" + str(entry_node).upper()
+    and SC.resolve_map(TX, TOWER) == _map_slot and SC.resolve(TX, TOWER, entry_node) == _node_slot
+    and _map_slot != _node_slot)
+# ★ 静态守卫（P-19「一个口」那把锁）：槽位键的**写法**全仓只有一处 —— `content/scene.py::slot_key`
+#   （scene.py 里出现两次 = 唯一的实现 + 说明它为什么收口的注释引用）。节点级与地图级两条键都由它
+#   算 ⇒「两个名字」只是**同一处**在两个粒度上的读法，不是两份写法。谁在别处再手写一次就红。
+_WRITERS = {}
+for _f in sorted((REPO / "content").rglob("*.py")):
+    _t = _f.read_text(encoding="utf-8")
+    _n = _t.count('"SCENE_%s"') + _t.count("'SCENE_%s'")
+    if _n:
+        _WRITERS[_f.name] = _n
+chk("★ P-19 槽位键的**写法只有一个口**（带「SCENE_%%s」字样的文件只剩 content/scene.py · %s —— "
+    "别处再手写一次（另一个名字的写法）就红）" % _WRITERS,
+    set(_WRITERS) == {"scene.py"}, "%s" % _WRITERS)
 
 # ══════════════════════════════════════════════════════════════
 # 三、真宿主：镇上 → 塔门 → 进塔 → 12 间逐间走 → 调查 → 撤退
@@ -291,11 +320,16 @@ chk("★ 从镇上走到塔门口（%s）" % GNAME.get(ent.get("node")),
     (ad.saved.get("loc"), ad.saved.get("node")) == (ent.get("map"), ent.get("node")),
     "%s" % ((ad.saved.get("loc"), ad.saved.get("node")),))
 
-# ⑦ 进塔那一屏 = SCENE_OLD_WATCHTOWER（死槽位复活）
+# ⑦ 进塔那一屏 = 地图级那一屏（死槽位复活）· 同一处**两屏各司其职**（真宿主）
 out = send("进塔")
-chk("★ P-19『进塔』那一屏取的就是 SCENE_OLD_WATCHTOWER（不再是死槽位）",
+chk("★ P-19『进塔』那一屏取的就是地图级槽位 %s（不再是死槽位）" % _map_slot,
     txt("SYS_TOWER_ENTER") in out and scene_val in out and bool(out),
     "%s" % [x[:20] for x in out])
+out_obs = send("观察")                       # 同一间（塔门）再『观察』⇒ 该给节点级那一屏
+chk("★ P-19 同一处两屏不打架（真宿主）：『进塔』给地图级（宽）· 站在这一间『观察』给节点级（窄，%s）"
+    % _node_slot,
+    bool(out_obs) and bool(gate_val) and gate_val in out_obs and scene_val not in out_obs,
+    "%s" % [x[:20] for x in out_obs])
 entered = (ad.saved.get("loc"), ad.saved.get("node"))
 chk("★ 进塔落在那间 = 文档第 1 间「%s」" % rooms[1]["name"],
     ad.saved.get("loc") == TOWER and ad.saved.get("node") == NODES[0], "%s" % (entered,))
