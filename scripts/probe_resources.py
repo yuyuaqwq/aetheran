@@ -19,6 +19,14 @@
 **不会**并进动作的 `params`，读口是 `battle._fire_ctx`；而端到端那一路中间还会夹进对手的出手
 （会额外加资源）⇒ 逐值复算用定向（ctx 形状照引擎调用点逐字摆），「真能跑通」用端到端。
 
+承伤 fixture 口径（`g5-flake` 补）：挨打那几档（③ 受击 · ⑤ 祷言 · ⑦ 反证）量的是**渠道**，
+不是命中率。引擎承伤链上有两枚硬币 —— `landing._roll_dodge`（闪避，读口 `dodge_cap()`）
+与内容侧 `mech.aeth_block_roll`（格挡）。**被闪掉的那一下 `deal_damage` 直接 `return 0`**
+⇒ `on_taken` 根本不触发 ⇒ 拿它当 fixture 的判据 = 掷硬币。故 **③ 起把随机口都收掉**
+（`no_block()` 只在 ③；`no_dodge()` 一直挂到 ⑦ 之后才还原），判据本体一个字没松 ——
+收的是 fixture，不是判据。（⑦ 那一条另有 fail-closed 兜着：资源表读不到时
+`mech.aeth_block_roll` 第一行就 `return`，连骰子都不掷。）
+
 用法（Python 用 3.12；3.11 会假红）
     GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_resources.py
 """
@@ -51,8 +59,10 @@ CLS = st.domain("classes")
 from ext_combat.battle import landing as LD                        # noqa: E402
 from ext_combat.battle import schedule as SCH                      # noqa: E402
 from ext_combat.battle import stats as ST                          # noqa: E402
+from ext_combat.battle import formulas as F                        # noqa: E402
 from ext_combat.battle.effect_triggers import fire as _fire         # noqa: E402
 from ext_combat.battle.actions import _skill_usable as _usable, _spend_skill_cost as _spend   # noqa: E402
+from saintess_engine import config as CFG                          # noqa: E402
 
 MID = "ms_field_mouse"
 SEED = 1
@@ -124,6 +134,31 @@ def restore_block(saved):
         MECH.of("block_oath")["block_chance"] = saved
 
 
+def no_dodge():
+    """fixture：把**闪避上限**临时压成 0 —— 挨打那一档要问渠道，不能问命中率。
+
+    为什么必须收（`g5-flake` 实测）：引擎承伤链上有一枚硬币 ——
+    `landing._roll_dodge` 里 `if random.random() < dodge`（`dodge` 是聚合面板值，
+    上限走**声明口** `formulas.dodge_cap()`）。被闪掉的那一下 `deal_damage`
+    **直接 `return 0`**，压根走不到 `_apply_damage` ⇒ `on_taken` 根本不触发
+    （引擎语义如此，是对的：「没碰到」当然不算受击）。于是**拿它当 fixture 的判据
+    = 掷硬币**：骑士 16 级 `dodge=0.031` ⇒ 约每 32 跑红一次。
+
+    收口走**引擎自己的声明面**（不是 monkeypatch 引擎）：`FORMULA_SKELETON["dodge"]["cap"]`
+    —— 读口就是 `dodge_cap()`。压成 0 之后 `min(dodge, 0) = 0` ⇒ `dodge <= 0`
+    ⇒ 引擎**连 roll 都不发生**（不是「希望它别闪」）。返回挂载前的 hook 值供还原。
+    """
+    _saved = CFG.optional_hook("formula_skeleton_fn")   # 「不配 = 合法」的读口（不问 strict）
+    _sk = dict(F._skeleton() or {})                # 当前生效的骨架表（照抄，只动 dodge.cap）
+    _sk["dodge"] = dict(_sk.get("dodge") or {}, cap=0.0)
+    CFG.mount(formula_skeleton_fn=lambda: _sk)
+    return _saved
+
+
+def restore_dodge(saved):
+    CFG.set_hook("formula_skeleton_fn", saved)
+
+
 print("══ ① 形状档（resources.json）")
 _res, _ch = RES.resources(), RES.channels()
 chk("① 资源表读得到（%d 条资源 · %d 个渠道名）" % (len(_res), len(_ch)), bool(_res) and bool(_ch))
@@ -162,28 +197,28 @@ finally:
 print()
 print("══ ③ 骑士守誓值（受击 +6 · 普攻命中 +3 · 技能命中 +5 · 盾墙 +12 · 守誓斩 −25）")
 _sb = no_block()                       # 这一档只看渠道：先把格挡推开（格挡自己那一档在 ⑥）
+_sd = no_dodge()                       # 同理把闪避那枚硬币也收掉（下一段注释：为什么必须收）
+chk("③ fixture 生效：闪避上限已被压成 0（挨打不再靠命中率——弹硬币就不算 fixture）",
+    F.dodge_cap() == 0.0, "⇒ dodge_cap()=%s" % F.dodge_cap())
 _b = build("cls_knight", 16)
 _c = focus(_b)
 chk("③ 开战把资源摆成 0 层（引擎的资源闸门才真的存在：res_cost 判据是「有该条目才须足额」）",
     stacks(_c, "RES_OATH") == 0, "⇒ %d 层" % stacks(_c, "RES_OATH"))
 _mob = (_b.sides.get("enemy") or [None])[0]
 put(_c, "RES_OATH", 0)
-# ★ fix7-gear 顺手收口（**判据一个字没松，收的是 fixture**）：引擎 `_apply_damage` **先 roll 闪避**，
-#   被闪掉的那一下**不触发 `on_taken`**（`_apply_damage` 里闪掉就 return 0 —— 引擎语义如此）。
-#   原先这里只打一下 ⇒ 命中率那一枚硬币有时翻到「闪掉了」，这一条就红一次（实测：满载那一跑红过一回，
-#   单独连跑 3 回又全绿 —— 是掷硬币，不是判据错）。⇒ 改成「打到真挨住那一发为止」，
-#   期望值仍然是 `gain_of`（**不许放宽**：挨住的第一下必须正好等于声明的 +6）。
-_took = 0
-for _try in range(20):
-    LD.deal_damage(_b, _mob, _c, 10, [])
-    if stacks(_c, "RES_OATH"):
-        _took = stacks(_c, "RES_OATH")
-        break
-chk("③ 受击 +%d（真源「受击（无论格挡与否）+6」· 挨住那一发：第 %d 次落上）"
-    % (RES.gain_of("RES_OATH", "on_taken"), _try + 1),
-    _took == RES.gain_of("RES_OATH", "on_taken")
-    and stacks(_c, "RES_OATH") == RES.gain_of("RES_OATH", "on_taken"),
-    "⇒ %d 层" % stacks(_c, "RES_OATH"))
+# ★ g5-flake 收口（**判据本体一个字没松，收的是 fixture**）：这根渠道走的是**挨打**，
+#   而引擎承伤链上先有一枚硬币 —— `landing._roll_dodge`（`random.random() < dodge`）；
+#   被闪掉的那一下 `deal_damage` **直接 `return 0`**，走不到 `on_taken`。骑士 16 级
+#   `dodge=0.031` ⇒ 单跑这里约每 32 次红一次（实测：单跑连跑 160 次，红 6 次 —
+#   红的整行就是「③ 受击 +6（真源「受击（无论格挡与否）+6」）  —— ⇒ 0 层」）。
+#   前一轮曾用「打到挨住为止」的重试遮过去 —— 重试**仍是运气**（0.031^20 只是小，
+#   不是 0），且真出现连续闪避时判据会**悄悄改成量第 20 次的结果**。
+#   ⇒ 现在改成**确定性**收口：`no_dodge()` 把闪避上限压成 0（`min(dodge,0)=0`
+#   ⇒ 连 roll 都不发生）。这样**闪避要是回来了，这条当场红** —— 比重试更强。
+#   期望值仍是声明的 `on_taken` 渠道值（**不许放宽**）。
+LD.deal_damage(_b, _mob, _c, 10, [])
+chk("③ 受击 +%d（真源「受击（无论格挡与否）+6」）" % RES.gain_of("RES_OATH", "on_taken"),
+    stacks(_c, "RES_OATH") == RES.gain_of("RES_OATH", "on_taken"), "⇒ %d 层" % stacks(_c, "RES_OATH"))
 put(_c, "RES_OATH", 0)
 dir_event(_b, "attack_hit", actor=_c, ctx_extra={"target": _mob, "info": {"_basic": True}, "dmg": 9})
 chk("③ 普攻命中 +%d（引擎 `attack_hit`）" % RES.gain_of("RES_OATH", "hit_basic"),
@@ -260,6 +295,8 @@ dir_event(_b5, "act_cast", actor=_c5, ctx_extra={"target": _mob5, "info": SK.ski
 chk("⑤ 准星封顶 %d（夹在 0..max）" % RES.max_of("RES_AIM"), stacks(_c5, "RES_AIM") == RES.max_of("RES_AIM"),
     "⇒ %d 层" % stacks(_c5, "RES_AIM"))
 _b6 = build("cls_priest", 16, uid="u_res6")
+#: 这一档也要「**真挨到**」才算数 ⇒ 骑在 ③ 挂的那个 `no_dodge()` fixture 上
+#: （闪避不关掉的话，「+1 祷言」这半也是掷硬币 —— 修女 16 级 dodge=0.0375）。
 _c6 = focus(_b6)
 _mob6 = (_b6.sides.get("enemy") or [None])[0]
 _mx6 = int(ST.actor_max_hp(_b6, _c6) or 0)
@@ -340,6 +377,10 @@ finally:
         RES._CACHE.pop("t", None)
     else:
         RES._CACHE["t"] = _saved
+
+restore_dodge(_sd)                     # ★ ③ 起挂的那个「挨打必中」fixture 到这儿还原
+                                       #   （③⑤⑦ 三档的挨打渠道都骑在它上面；③ 的格挡那半
+                                       #     已由 ③ 末尾的 restore_block 先还原了）
 
 print()
 print("══ ⑧ 引擎零改动（硬指标）")
