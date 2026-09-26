@@ -345,6 +345,71 @@ chk("★ P-34 六职业 × (%d 个等级)：`plan`（整数投法）与 `flat`�
     % len(_L34),
     not _bad34b, "%s" % _bad34b[:1])
 
+# ②-b ★ P-34：上面那句「与本口同源」原先只是**写在文案里**（判据没查那件事）—— 这里真核一遍：
+#   配平那条 alias（`rebuild_monsters.alloc_of`）与面板基线那一口（`alloc.flat`）必须是**同一个实现**
+#   ⇒ 逐等级逐职业同结果 + 模块对象也是同一个（谁在那边另写一份「铺满」，当场红）。
+_bad34c = [(_L, _cid) for _L in _L34 for _cid in _CLS34
+           if _RBM34.alloc_of(_L, _cid) != _AL34.flat(_L, _cid)]
+chk("★ P-34 配平那条 alias **真同源**：`rebuild_monsters.alloc_of` == `content/alloc.flat`"
+    "（%d 级 × %d 职业逐格比 · 生成器模块里那个 `AL` 就是本口这个模块对象：%s）"
+    % (len(_L34), len(_CLS34), _RBM34.AL is _AL34),
+    not _bad34c and _RBM34.AL is _AL34, "%s" % _bad34c[:2])
+
+# ①-b ★ P-34：**点数那条式子的代码落点全包只有一处** = `content/alloc.py`（按 AST 取；
+#   注释 / 文档串里「提到」不算）—— 与 P-37 那条「经验曲线只有一个口」同一手法。
+#   改前实测：代码落点 **2 处** —— `content/alloc.py` 与**本文件**（540 行处手打了一份
+#   `8 + 3 * (L - 1)`，装备门槛那一段（607/608/625 行）在用）⇒ 收进唯一口之后只剩一处，并立判据钉住。
+#   （「第二把尺」这类病的代价：口改了、这里不跟着改 ⇒ 门槛探针拿一个过时的总点数去比真源。）
+import ast as _ast34                                                       # noqa: E402
+import io as _io34                                                         # noqa: E402
+_CONST34 = {"LV1_POINTS": _AL34.LV1_POINTS, "PER_LEVEL_POINTS": _AL34.PER_LEVEL_POINTS}
+
+
+def _isconst34(_n, _v):
+    return ((isinstance(_n, _ast34.Constant) and _n.value == _v)
+            or (isinstance(_n, _ast34.Name) and _CONST34.get(_n.id) == _v))
+
+
+def _mult34(_n):
+    """`PER_LEVEL_POINTS × (级 − 1)` 那种式子（常数或常量名都认）。"""
+    if not (isinstance(_n, _ast34.BinOp) and isinstance(_n.op, _ast34.Mult)):
+        return None
+    for _a, _b in ((_n.left, _n.right), (_n.right, _n.left)):
+        if not _isconst34(_a, _CONST34["PER_LEVEL_POINTS"]):
+            continue
+        if (isinstance(_b, _ast34.BinOp) and isinstance(_b.op, _ast34.Sub)
+                and isinstance(_b.right, _ast34.Constant) and _b.right.value == 1):
+            return _n
+    return None
+
+
+_code34, _mention34 = set(), set()
+for _r34 in ("content", "scripts"):
+    for _dp34, _dn34, _fn34 in os.walk(os.path.join(PKG, _r34)):
+        _dn34[:] = [_d34 for _d34 in _dn34 if _d34 != "__pycache__"]
+        for _f34 in sorted(_fn34):
+            if not _f34.endswith(".py"):
+                continue
+            _fp34 = os.path.join(_dp34, _f34)
+            _rel34 = os.path.relpath(_fp34, PKG).replace("\\", "/")
+            _src34 = _io34.open(_fp34, encoding="utf-8").read()
+            if "LV1_POINTS" in _src34 or "PER_LEVEL_POINTS" in _src34:
+                _mention34.add(_rel34)
+            for _n34 in _ast34.walk(_ast34.parse(_src34)):
+                if not isinstance(_n34, _ast34.BinOp):
+                    continue
+                _m34 = _mult34(_n34)
+                if _m34 is None and isinstance(_n34.op, _ast34.Add):
+                    _o34 = _n34.right if _isconst34(_n34.left, _CONST34["LV1_POINTS"]) else _n34.left
+                    _m34 = _mult34(_o34) if _isconst34(_n34.left, _CONST34["LV1_POINTS"]) \
+                        or _isconst34(_n34.right, _CONST34["LV1_POINTS"]) else None
+                if _m34 is not None:
+                    _code34.add("%s:%d" % (_rel34, _n34.lineno))
+chk("★ P-34 点数那条式子（`LV1_POINTS + PER_LEVEL_POINTS × (级−1)`）的**代码落点只有一处** = "
+    "`content/alloc.py`（按 AST 取 · 实得 %s）· 文本层提到过那两口名字的文件（注释/文档串，不算）：%s"
+    % (sorted(_code34) or "无", sorted(_mention34) or "无"),
+    len(_code34) == 1 and next(iter(_code34)).startswith("content/alloc.py:"), "%s" % sorted(_code34))
+
 # ③ 真敲「加点」（真存档半边）：档上那格真变 ⇒ 面板 / 档 / actor 三处一起动 · 余额对得上
 class _E34(object):
     """直调实现体：只要 env.save() + env.text（与别处同形）。"""
@@ -537,7 +602,10 @@ try:
     _MON7 = st.domain("monsters") or {}
     _EQ7 = {k: v for k, v in (st.domain("items") or {}).items() if v.get("slot")}
     _LV7 = {q: _RIR7.req_level_of(q, _MON7) for q in ("精制", "稀有", "遗物")}
-    _TOT7 = lambda L: 8 + 3 * (L - 1)          # 建号 8 点 + 每级 3 点（07_装备体系_v2 §一）
+    #   ★ P-34：总点数**只走唯一口** `content/alloc.total_points`（真源 07_装备体系_v2 §一
+    #   「建号 8 点 + 每级 3 点」）—— 原先这里手打了一份 `8 + 3 × (级−1)` = 第二把尺
+    #   （口改了它不跟着改；本文件 ①-b 那条判据钉着「代码落点只有一处」）。
+    _TOT7 = _AL34.total_points
     _PL7 = (1, 6, 10, 20)                      # 判据给的四档（主线口径）
     _PAIR7 = ((1, "普通"), (6, "精制"), (10, "稀有"), (20, "遗物"))
 
