@@ -955,6 +955,15 @@ async def status(env, sink, uid, player):
 
 
 async def origin(env, sink, uid, player):
+    """`出身` —— 你从哪儿来的（`04_指令总表 §三` · 守卫「随时」）。
+
+    ★ P-69：「出身」是**回看口**（建号那一步并进第 1 步了，见 `BUILD_STEPS`）。
+    ★ P-68（2026-09-26 · 本波 w-h-ux 裁）：**家乡与寿数放进这一屏，一行**（第三行）——
+      真源 `04 §三` 那一行本波裁成「族 · 那句「为什么来」· **家乡与寿数**」，`races.home` /
+      `races.lifespan` 两格（六族都有）就从这儿见光。位置就这一处：别处不再放第二遍
+      （`观察` 是「眼下这一站」、`状态` 是「这一会话的数字」，两处都不带族谱那一层）。
+      槽位 `SYS_ORIGIN_HOME` 的真源行还没落 ⇒ **今天不印这一行**（`_origin_home_line` 回 None）。
+    """
     p = _p(player)
     if not p.get("race"):
         yield T("SYS_ORIGIN_NONE")
@@ -963,6 +972,9 @@ async def origin(env, sink, uid, player):
     yield T("SYS_ORIGIN_WHO", name=rs.get("name") or _race_label(p.get("race")))
     yield T("SYS_ORIGIN_WHY",
             why=rs.get("line") or rs.get("why") or T("SYS_ORIGIN_WHY_TODO"))  # ★ P-10：域里的字段叫 line（原来读 why，永远给「还没写」）
+    home = _origin_home_line(rs)          # ★ P-68：家乡 · 寿数（待槽位 ⇒ 今天不印）
+    if home:
+        yield home
 
 
 def _bag_rows(p) -> list:
