@@ -2517,6 +2517,98 @@ except Exception as exc:                                                  # noqa
         "%s: %s" % (type(exc).__name__, exc))
 
 
+# ══════════════════════════════════════════════════════════════
+# ★ B4-25：`歇脚` 的「有篝火」守卫 —— 声明里写着（`guard_desc` = 有篝火 · 04 总表 §六 同一句），
+#   原先代码里**没有执行面**（镇上 / 骨田 / 塔里一律回 20% 血）⇒ 三处营地篝火形同虚设。
+# ══════════════════════════════════════════════════════════════
+print("㉑ ★ B4-25：`歇脚` 的「有篝火」守卫（原先在哪儿都能歇 —— 声明里那条守卫没有执行面）")
+try:
+    import ast as _ast21
+
+    _POIS21 = st.domain("pois") or {}
+    _MAP21 = st.domain("maps") or {}
+    _FIRES21 = sorted((str(v.get("map") or ""), str(v.get("subarea") or ""))
+                      for v in _POIS21.values()
+                      if isinstance(v, dict) and (v.get("effect") or {}).get("rest"))
+    chk("★ 「能歇的地方」从 pois 域现读 —— %d 处（%s）· 名单一个字都不手写"
+        % (len(_FIRES21), _FIRES21), len(_FIRES21) >= 1)
+    _FM21, _FN21 = _FIRES21[0]
+    _nodes21 = [n.get("id") for n in ((_MAP21.get(_FM21) or {}).get("nodes") or [])]
+    chk("★ 那几处**都是真图上的真节点**（%s：%s ⇒ 图里 %s）"
+        % (_FM21, _FN21, "在" if _FN21 in _nodes21 else "不在"), _FN21 in _nodes21)
+
+    _SEED21 = {"cls": "cls_knight", "race": "human", "name": "试炼者", "level": 10, "exp": 0,
+               "gold": 0, "hp": 60, "loc": "windmill_town", "node": "wt_gate_n",
+               "prev": [], "bag": {}, "equipped": {}, "codex": {}, "flags": {}}
+
+    def _say21(seed, text):
+        _db21 = os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp",
+                             "ast_probe_cmds_b425.db")
+        try:
+            os.remove(_db21)
+        except OSError:
+            pass
+        _ad21 = _Ad([], seed=dict(seed))
+        _h21 = Host(_ad21, str(REPO), inject={"db_path": _db21, "clock": lambda: _FIXED})
+        _h21.boot()
+        _ad21.out.clear()
+        _h21.handle({"uid": "u_c", "group_id": "g_c", "text": text})
+        return list(_ad21.out), (_ad21.saved or {})
+
+    _NOFIRE21 = _r("SYS_REST_NOFIRE")
+
+    # ── ① 没有篝火的三档（镇上 / 骨田 / 塔里）⇒ 逐字回那一句 · 档一个字不动
+    _bad21 = []
+    for _lab21, _loc21, _nd21 in (("镇上（北口）", "windmill_town", "wt_gate_n"),
+                                  ("骨田", "belt_north", "bn_bone"),
+                                  ("塔里（塔门）", "old_watchtower", "tower_gate")):
+        _o21, _s21 = _say21(dict(_SEED21, loc=_loc21, node=_nd21), "歇脚")
+        if _o21 != [_NOFIRE21] or _s21.get("hp") != 60:
+            _bad21.append((_lab21, _o21[:2], _s21.get("hp")))
+    chk("★ 没有篝火的三档（镇上 / 骨田 / 塔里）⇒ 逐字回 `SYS_REST_NOFIRE`，"
+        "档**一个字不动**（血还是 60）—— 原先这三档一律回「生命 +20%」", not _bad21,
+        "%s" % (_bad21[:2],))
+
+    # ── ② 篝火那一站 ⇒ 真回血（上限的 20%，与 poI 那条 `effect.rest` 同一支）
+    _mx21, _line21 = CA17.hp_cap_or_line(dict(_SEED21, hp=60))
+    _want21 = 60 + max(1, int(_mx21 * 0.2)) if _mx21 else 0
+    _o21b, _s21b = _say21(dict(_SEED21, loc=_FM21, node=_FN21), "歇脚")
+    chk("★ 篝火那一站（%s / %s）⇒ 真回血：60 -> %d（上限 %s 的两成 · 期望值由 `hp_cap` 现算）"
+        % (_FM21, _FN21, _want21, _mx21),
+        bool(_mx21) and _s21b.get("hp") == _want21, "%s / hp=%s" % (_o21b[:2], _s21b.get("hp")))
+
+    # ── ③ 同一个守卫也罩着『触摸篝火』那条路（`pois.effect.rest` 的消费端）
+    _o21c, _s21c = _say21(dict(_SEED21, loc=_FM21, node=_FN21), "触摸")
+    chk("★ 篝火那一站『触摸』照样能歇（`effect.rest` 那一条路与 `歇脚` 是同一支 `cmds_gather.rest`）",
+        _s21c.get("hp") == _want21, "%s / hp=%s" % (_o21c[:3], _s21c.get("hp")))
+
+    # ── ④ 覆盖面（静态）：`cmds_gather.py` 不许自己扫 `pois` 域；`rest` 必须真调 `_fire_here`
+    _gf21 = (REPO / "content" / "cmds_gather.py").read_text(encoding="utf-8")
+    _t21 = _ast21.parse(_gf21)
+    _scan21, _call21 = [], []
+    for _n21 in _ast21.walk(_t21):
+        if (isinstance(_n21, _ast21.Call) and isinstance(_n21.func, _ast21.Name)
+                and _n21.func.id == "_data" and _n21.args
+                and getattr(_n21.args[0], "value", None) == "pois"):
+            _scan21.append(_n21.lineno)
+        if (isinstance(_n21, _ast21.Call) and isinstance(_n21.func, _ast21.Name)
+                and _n21.func.id == "_fire_here"):
+            _call21.append(_n21.lineno)
+    _rest21 = next((_n for _n in _ast21.walk(_t21) if isinstance(_n, _ast21.AsyncFunctionDef)
+                    and _n.name == "rest"), None)
+    _in_rest21 = bool(_rest21) and any(
+        isinstance(_n, _ast21.Call) and isinstance(_n.func, _ast21.Name)
+        and _n.func.id == "_fire_here" and _n.lineno >= _rest21.lineno
+        for _n in _ast21.walk(_rest21))
+    chk("★ 覆盖面（静态）：`cmds_gather.py` 里**没有** `_data(\"pois\")`（脚下有没有火走 "
+        "`_pois_here` 唯一那一口）· `rest` 自己真调 `_fire_here`（%s 处调用）"
+        % len(_call21), not _scan21 and _in_rest21,
+        "自扫 pois %s · rest 里真调 %s" % (_scan21, _in_rest21))
+except Exception as exc:                                                  # noqa: BLE001
+    chk("★ B4-25 歇脚那一条守卫跑得起来（真宿主契约）", False,
+        "%s: %s" % (type(exc).__name__, exc))
+
+
 print("")
 print("结果：全绿 ✓" if ok else "结果：有红 ✗")
 sys.exit(0 if ok else 1)

@@ -20,7 +20,8 @@ from __future__ import annotations
 
 import random
 
-from .cmds_ast import _data, _p, _save, _map_of, _name_of_node, T, hp_cap_or_line
+from .cmds_ast import (_data, _p, _save, _map_of, _name_of_node, T, hp_cap_or_line,
+                        _pois_here)
 from .cmds_codex import new_lines
 from . import calendar as CAL
 from . import codex as CX
@@ -173,8 +174,24 @@ async def search(env, sink, uid, player):
         yield line
 
 
+#: ★ B4-25：`歇脚` 的守卫「有篝火」原先**没有执行面** —— 声明自己的 `guard_desc`（有篝火）、
+#:   `06_第一阶段垂直切片/04_指令总表 §六` 那一行、以及 `pois` 域给三处营地挂的 `effect.rest`
+#:   三处都写着这一条，可这一支原先**在哪儿都能歇**（镇上、骨田、塔里一律回血）⇒ 篝火形同虚设。
+#:   ★ 判法只此一处：脚下这一站有没有 `effect.rest` 的 poi。名单**不手写** —— 列 poi 走
+#:     `_pois_here` **唯一那一口**（K65 / P-31 那一族：谁再自己扫一遍 `pois` 域，就会漏掉门槛判定）。
+def _fire_here(p):
+    """脚下这一站的火（`effect.rest`）—— 空列表 = 这儿没有篝火。"""
+    return [rec for _pid, rec, state, _ln in _pois_here(p["loc"], p["node"], p)
+            if (rec.get("effect") or {}).get("rest") and state != "no"]
+
+
 async def rest(env, sink, uid, player):
     p = _p(player)
+    # ★ B4-25：**先看脚下有没有火** —— 这是声明里写着的守卫（`guard_desc` = 有篝火），
+    #   不是装饰：没有火就照实说，档一个字都不动（不扣血、不推进天数、不落库）。
+    if not _fire_here(p):
+        yield T("SYS_REST_NOFIRE")
+        return
     # ★ P-27：上限只有一个来源 = 职业面板。档上还没有职业（建号第二步没走完）⇒ **不出假数**：
     #   出一行点名的 fail-closed 行，歇脚这一支整段不做。
     mx, _line = hp_cap_or_line(p)

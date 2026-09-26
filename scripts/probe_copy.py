@@ -465,6 +465,12 @@ def main():
     _GUILD_NODE = next((str(v.get("subarea") or "") for v in _NP16C.values()
                         if isinstance(v, dict) and v.get("map") == "windmill_town"
                         and "board" in (v.get("funcs") or [])), "wt_board")
+    # ★ B4-25：`歇脚` 那条守卫「有篝火」的那一站 —— **从 pois 域现读**（不手写节点 id）：
+    #   凡挂 `effect.rest` 的 poi 就是能歇的地方。
+    _FIRE_MAP, _FIRE_NODE = next(
+        ((str(v.get("map") or ""), str(v.get("subarea") or ""))
+         for _k, v in sorted((st.domain("pois") or {}).items())
+         if isinstance(v, dict) and (v.get("effect") or {}).get("rest")), ("", ""))
 
     def _rich(**kw):
         """一口袋全物品 + 等级/族/职业都定过的档（背包 / 图鉴 / 配方 那几条要用）。"""
@@ -563,10 +569,16 @@ def main():
         ("搜查(有)", CG.search, "", {"loc": "belt_east", "node": "be_birch"}),
         # ★ P-27：上限只有面板一个来源 ⇒ 这几条要**定过职业**（没职业的档上限「未定」，
         #   回血 / 用药 / 战斗那些要数字的地方当场 fail-closed —— 见 probe_panel 那一节）。
-        ("歇脚(不累)", CG.rest, "", {"cls": "cls_knight", "hp": 999}),
-        ("歇脚(歇下了)", CG.rest, "", {"cls": "cls_knight", "hp": 40}),
+        ("歇脚(有篝火·不累)", CG.rest, "",
+         {"cls": "cls_knight", "hp": 999, "loc": _FIRE_MAP, "node": _FIRE_NODE}),
+        ("歇脚(有篝火·歇下了)", CG.rest, "",
+         {"cls": "cls_knight", "hp": 40, "loc": _FIRE_MAP, "node": _FIRE_NODE}),
+        # ★ B4-25：声明里那条守卫「有篝火」原先**没有执行面** ⇒ 「没有火的地方」这一档也进用例表
+        ("歇脚(这儿没篝火)", CG.rest, "", {"cls": "cls_knight", "hp": 40}),
         # ★ P-27：还没择业的档 —— 要数字的地方（打架 / 歇脚）**不出假数**，出一行点名行
-        ("歇脚(还没择业)", CG.rest, "", {"loc": "windmill_town", "node": "wt_gate_n"}),
+        #   ★ B4-25：这一档得站在**火边**，否则先被「没有篝火」那条守卫挡下、P-27 那一行走不到
+        ("歇脚(还没择业·有篝火)", CG.rest, "", {"loc": _FIRE_MAP, "node": _FIRE_NODE}),
+        ("歇脚(还没择业·没篝火)", CG.rest, "", {"loc": "windmill_town", "node": "wt_gate_n"}),
         ("攻击(还没择业)", CBL.attack, "",
          {"loc": "belt_north", "node": "bn_bone", "bag": {}, "codex": {}, "flags": {}}),
         ("拾取", CG.pick_up, "", {}),
