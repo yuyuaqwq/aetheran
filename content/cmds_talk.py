@@ -27,13 +27,14 @@ from __future__ import annotations
 import random
 
 from .cmds_ast import (_data, _p, _save, _map_of, _name_of_node, T, _texts, _npcs_here,
-                       hp_cap_or_line)
+                       hp_cap_or_line, npc_gone_lines)
 from . import argv as AV
 from .cmds_ast import egg_lines, title_lines
 from . import calendar as CAL
 from . import codex as CX
 from . import heard as HD
 from . import loot as LT
+from . import prog as PROG     # ★ 本波：对话旗标族（`main*_done` 那一族）的唯一判定口
 
 
 def _arg(env, default=""):
@@ -61,7 +62,12 @@ def _pick_indexed(lines, p, st=None):
         ok = True
         for k, v in need.items():
             if k == "flag":
-                if not flags.get(v):
+                # ★ 本波（g3-quests2）：走**真实进度**那一口（`content/prog.flag_ok`）——
+                #   改前这里只是 `bool(flags.get(v))`，而 `main04_done` 那一族**全仓没有写端**
+                #   ⇒ 域里 12 条台词永久出不来。现在：表里的 slug 以真实进度为准（老档里
+                #   进度在、旗标那格当年没写 ⇒ 照样成立；旗标写着而进度不成立 ⇒ 不算满足，
+                #   不刷出不该出的台词）；表外的 token（`card` / `lore_scripts` …）走老口径。
+                if not PROG.flag_ok(p, v):
                     ok = False
             elif k == "holding":
                 if not (p.get("bag") or {}).get(v):
@@ -283,7 +289,13 @@ async def talk(env, sink, uid, player):
     st = CAL.state()                       # 现在几时、什么天气（一次，全用它）
     here = _npcs_here(p["loc"], p["node"], st, p)          # ★ B3-5：世界级事件看主线进度（同一个口）
     if not here:
-        yield T("SYS_TALK_NOBODY")
+        # ★ g4-⑨（31_NPC作息 §四）：这一站的人按作息还没来 ⇒ 不只是一句「这儿没有别人」，
+        #   逐位说清「这个点他不在 + 他什么时候在」（与观察那一支同一处 · `npc_gone_lines`）。
+        _gone = npc_gone_lines(p["loc"], p["node"], p, st)
+        for _g in _gone:
+            yield _g
+        if not _gone:
+            yield T("SYS_TALK_NOBODY")
         return
     want = _arg(env)
     if not want:

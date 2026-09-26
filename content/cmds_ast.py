@@ -1260,9 +1260,13 @@ def _poi_cond(rec, p, st=None):
       · `no`      —— 门槛**判得出、且不成立** ⇒ 这一条这一刻不算在场（列表里不列、上手不上手）
                      + 那一行说清差什么（`SYS_POI_NOT_YET`）—— 不许静默不出现
       · `unknown` —— 门槛**判不了**（键不在词表里 / 值查不到对应的账：如「退潮」今天不是
-                     calendar 域的合法 token，「main06_done」这样的 flag 全仓没有写端）
+                     calendar 域的合法 token，或者 `quest` 那一格写的是一面**旗标的名字**
+                     （「main06_done」那种 slug）而不是一条委托的 id）
                      ⇒ **照旧在场可用**（把它藏起来 = 悄悄删内容）+ 那一行点名差什么
                      （`SYS_POI_COND_TODO`）—— 待真源定下刻度（台账 P-31 甲）
+                     ★ g3-quests2 备注：对话那一族的 slug（`main*_done` 那一族）本波起**有写端**了
+                       （`content/prog.py`），但那是**对话 need** 的口径；`quest` 这一格要的仍是
+                       **委托 id**（`q_main_06` 那种），别把旗标名写进来 —— 两者不是一个东西。
 
     `st` 省 = 现取（与 `npcs` 同一口径）；没写 `condition` 的条目**不碰钟**。
     """

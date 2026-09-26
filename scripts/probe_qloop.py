@@ -47,6 +47,13 @@
      正例：objective 含「试着读（读不懂）」· 读出来的正文含「一个也读不出来」。
      反证：把那句从正文槽位里拆掉 ⇒ 当场红（两边又打架）。
 
+★ g3-quests2（2026-09-26）加的两条（三件「差最后一步」里的两件 —— 悬赏池收窄那一件在
+  `scripts/probe_quests.py ㉛` 与本章 ② 里）：
+  ⑦ 支线「还石头」**接活时真发东西**：`接 25` 真给到手上（包里真多一件 + 屏上「得到：…」），
+     那件东西 = `15 §二` 彩蛋 2 那一行 `hold=` 现解析；反证：拿掉 `give` ⇒ 一个东西都不发。
+  ⑧ 对话旗标族**补写端**：域里 12 条 slug 全接上真实进度（`content/prog.py`）· 写端三拍
+     （接/交/放弃）· 读端真搭话 · 两条反证（没做到 ⇒ 不出 ｜ 只手塞脏旗标 ⇒ 照样不出）。
+
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_qloop.py
 """
 from __future__ import annotations
@@ -77,6 +84,7 @@ from content import cmds_talk as CT                                  # noqa: E40
 from content import facade as FC                                     # noqa: E402
 from content import heard as HD                                      # noqa: E402
 from content import loot as LT                                       # noqa: E402
+from content import prog as PROG                                     # noqa: E402  ★ g3-quests2
 
 QE = {k: v for k, v in st.domain("quests").items() if not str(k).startswith("_")}
 MON = st.domain("monsters")
@@ -225,7 +233,11 @@ for _ln in _l1:
     print("      %s" % _ln)
 
 # ══════════════════════════════════════════════════════════════
-# ② 悬赏 101：点名那只的出没地要落到屏幕上（七种日子逐日真敲）
+# ② 悬赏 101：点名那只**按这一档的标称等级真碰得上**，并把出没地落到屏幕上（逐日真敲）
+#    ★ g3-quests2：轮换池按**可遇性**收窄（旧规格 = 该档全部怪 ⇒ 可能点名一只 1 级档在
+#      「野狗窝」根本撞不上的怪 —— 报告 P1 BUG-2：杀成 4 回「拾荒野狗」而单子要的「野狗」
+#      一次没出）。尺子与实现各写一份：habitat 写明的**每一站**上，按该档 `min_level`
+#      都进得了「等级最近前 3」。
 # ══════════════════════════════════════════════════════════════
 _b2, _l2 = [], []
 _norm_ids = sorted(k for k, m in MON.items()
@@ -234,6 +246,57 @@ _norm_ids = sorted(k for k, m in MON.items()
 
 def _mon_name(mid):
     return (MON.get(mid) or {}).get("name") or mid
+
+
+def _tier_lv(role):
+    """这一档悬赏自己标的等级（那条单子的 `min_level`；认不出回 0）。"""
+    for _v in QE.values():
+        for _r in CQ._require_of(_v):
+            if _r.get("kind") == "kill" and str(_r.get("role") or "") == str(role or ""):
+                return int(_v.get("min_level") or 0)
+    return 0
+
+
+def _top3(loc, node, level):
+    """这一站上「说得上话的怪」按等级最近的前 3（照 `combat.pick_encounter` 自己写一遍）。"""
+    cand = [k for k, m in MON.items() if not str(k).startswith("_")
+            and loc in ((m.get("habitat") or {}).get("maps") or [])
+            and (not ((m.get("habitat") or {}).get("nodes") or [])
+                 or node in ((m.get("habitat") or {}).get("nodes") or []))]
+    cand.sort(key=lambda k: abs(int(MON[k].get("lv", 1)) - level))
+    return cand[:3]
+
+
+def _spots_spec(mid):
+    hb = (MON.get(mid) or {}).get("habitat") or {}
+    ns = [str(x) for x in (hb.get("nodes") or []) if x]
+    out = []
+    for m in (hb.get("maps") or []):
+        for nd in ((MAPS.get(str(m)) or {}).get("nodes") or []):
+            nid = str((nd or {}).get("id") or "")
+            if nid and (not ns or nid in ns):
+                out.append((str(m), nid))
+    return out
+
+
+def _pool_spec(role):
+    """★ 这一档的**可遇集合**（探针自己算）：每一站上都进得了「等级最近前 3」的那几只。"""
+    lv = _tier_lv(role)
+    out = []
+    for mid in sorted(k for k, m in MON.items()
+                      if not str(k).startswith("_") and m.get("role_key") == role):
+        spots = _spots_spec(mid)
+        if lv > 0 and spots and all(mid in _top3(_l, _n, lv) for _l, _n in spots):
+            out.append(mid)
+    return out
+
+
+_norm_pool = _pool_spec("normal")                      # ★ 新规格的池（不是全档）
+if _pool_spec("normal") != list(CQ._pool_of("normal")):
+    _b2.append(("规范池 %s ≠ 实现 %s" % (_norm_pool, list(CQ._pool_of("normal"))), ""))
+_cut_norm = [m for m in _norm_ids if m not in _norm_pool]
+if not _cut_norm:
+    _b2.append(("普通档一只都没被剔掉 —— 可遇性过滤没生效", ""))
 
 
 def _where_of(mid):
@@ -247,39 +310,60 @@ def _where_of(mid):
     return [CA._name_of_node(m, n) or n for m, n in out]
 
 
-for _d in range(1, len(_norm_ids) + 1):
+for _d in range(1, len(_norm_pool) + 1):
     _at_day(_d)
-    _spec = _norm_ids[(_d - 1) % len(_norm_ids)]                    # 探针自己算规格
+    _spec = _norm_pool[(_d - 1) % len(_norm_pool)]                  # 探针自己算规格
     _p = _player(level=1, day=_d, flags={"quests_active": ["q_bounty_normal"]})
     _out = _drive(CQ.quest_deliver, _p, "交 101")
     if not any(("还差" in ln) and _mon_name(_spec) in ln for ln in _out):
-        _b2.append(("第 %d 日的「还差」没点名 %s" % (_d, _mon_name(_spec)), _out[:4]))
+        _b2.append((("第 %d 日的「还差」没点名 %s" % (_d, _mon_name(_spec))), _out[:4]))
     _want = _where_of(_spec)
     _line = T("SYS_JOB_REQ_MON_WHERE", list=" · ".join(_want)) if _want else ""
     if _want and _line not in [ln.strip() for ln in _out]:
-        _b2.append(("第 %d 日没说 %s 出没在哪（该有「%s」）" % (_d, _mon_name(_spec), _line), _out[:5]))
+        _b2.append((("第 %d 日没说 %s 出没在哪（该有「%s」）" % (_d, _mon_name(_spec), _line)), _out[:5]))
     if not _want and any("出没在" in ln for ln in _out):
-        _b2.append(("第 %d 日没有出没地却硬塞了一行" % _d, _out[:5]))
+        _b2.append((("第 %d 日没有出没地却硬塞了一行" % _d), _out[:5]))
     for ln in _out:
         if "出没在" in ln and "还差" in ln:
             _b2.append(("新那一行含「还差」——会错位 ㉑/㉛ 的条数对账", ln))
-_l2.append("七种日子逐日：点名那只 + 出没地那一行都对上了（例：%s → %s）"
-           % (_mon_name(_norm_ids[6]), " · ".join(_where_of(_norm_ids[6]))))
-# 反证 ②：把 `_habitat_of` 关掉 ⇒ 那一行消失（判据不是恒真）
+_l2.append("普通档池 %d/%d 只 · 剔掉：%s ｜ 逐日真敲：点名那只 + 出没地那一行都对上了（例：%s → %s）"
+           % (len(_norm_pool), len(_norm_ids),
+              " · ".join(_mon_name(m) for m in _cut_norm) or "无",
+              _mon_name(_norm_pool[-1]), " · ".join(_where_of(_norm_pool[-1]))))
+# 反证 ②-a：把 `_habitat_of` 关掉 ⇒ 那一行消失（判据不是恒真）
 _keep_hab = CQ._habitat_of
 try:
     CQ._habitat_of = (lambda *_a: [])
-    _at_day(7)
-    _p = _player(level=1, day=7, flags={"quests_active": ["q_bounty_normal"]})
+    _at_day(len(_norm_pool))
+    _p = _player(level=1, day=len(_norm_pool), flags={"quests_active": ["q_bounty_normal"]})
     _out = _drive(CQ.quest_deliver, _p, "交 101")
 finally:
     CQ._habitat_of = _keep_hab
 if any("出没在" in ln for ln in _out) or not any("还差" in ln for ln in _out):
-    _b2.append(("反证没生效（关掉出没地还能出那一行 / 拦住都没拦住）", _out[:4]))
+    _b2.append((("反证没生效（关掉出没地还能出那一行 / 拦住都没拦住）"), _out[:4]))
+# 反证 ②-b（本波新增）：把可遇性过滤拿掉 ⇒ 池回到全档 ⇒ 逐个游戏日比至少一天点名不同
+#   （报告里那一只「野狗」就是这么冒出来的：它在全档里，但按 1 级档在任何一站都挑不出来）
+_keep_pool2 = CQ._pool_of
+_off = 0
+try:
+    CQ._pool_of = (lambda role: sorted(k for k, m in MON.items()
+                                       if not str(k).startswith("_") and m.get("role_key") == role))
+    for _d in range(1, len(_norm_ids) + 1):
+        _at_day(_d)
+        if CQ._daily_pick("normal", {}) != _norm_pool[(_d - 1) % len(_norm_pool)]:
+            _off += 1
+finally:
+    CQ._pool_of = _keep_pool2
+if not _off:
+    _b2.append(("★ 反证没生效：拿掉可遇性过滤后逐日比，竟然一天都不差（判据可能恒真）", ""))
+if "ms_wild_dog" in CQ._pool_of("normal"):
+    _b2.append(("★ 报告里那条：「野狗」还在普通档的池里（1 级档真挑不出来）", "ms_wild_dog"))
 (ok if not _b2 else bad)(
-    "② 悬赏 101：七种日子逐日真敲 —— 点名的**那一只**写进「还差」，紧接着一行说它出没在哪几站"
-    "（站名 = monsters.habitat × maps 现算 · 逐字相同）；关掉这一支那一行立刻消失（反证 · 坏 %s）"
-    % (_b2 or "无"))
+    "② 悬赏 101：池按**可遇性**收窄（普通档 %d/%d 只 · 剔掉 %s）—— 逐日真敲：点名的**那一只**"
+    "写进「还差」，紧接着一行说它出没在哪几站（站名 = monsters.habitat × maps 现算 · 逐字相同）；"
+    "关掉这一支那一行立刻消失（反证 a）· 关掉可遇性过滤逐日对不上 %d 天（反证 b · 坏 %s）"
+    % (len(_norm_pool), len(_norm_ids), "·".join(_mon_name(m) for m in _cut_norm) or "无",
+       _off, _b2 or "无"))
 for _ln in _l2:
     print("      %s" % _ln)
 
@@ -511,6 +595,177 @@ for _ln in _l6:
     print("      %s" % _ln)
 
 FC.bind_host(**_FC_SAVED)                                            # ★ 拨回真钟
+
+# ══════════════════════════════════════════════════════════════
+# ⑦ ★ g3-quests2：支线「还石头」—— **接活那一下真发东西**（`quests.<id>.give`）
+#   改前：`17 §QUEST_SIDE25_STORY` 写「**小满把那块石头塞给你** —— 它该回到缺着它的那块碑上去。」
+#     而 `接 25` **一个东西都不发**（玩家只能自己跑去骨田挖 30% 的 `unid_rare`）⇒ 那句话是空话。
+#   真源：`00_总纲/15_彩蛋域口径_v1.md §二` 第 2 行（彩蛋 2；依据栏自己写着「q_side_13「还石头」
+#     的交待就是彩蛋 2，**小满的石头 = 骨田捡的刻字石片**」）＋ `17 §QUEST_SIDE25_STORY`。
+#   判据（探针自己不抄实现）：
+#     ① 域里 `q_side_13.give` == 15 §二 那一行 `hold=` 那件东西（文档现解析）
+#     ② 真敲 `接 25` ⇒ 包里真多出那一件 + 屏上有 `SYS_JOB_GIVE` 那一行 + 档上写 `quests_active`
+#     ③ 别的条目一个字没变：域里只有那一条带 `give`（没写的条目接活不发东西）
+#     ④ **反证**：进程内把 `give` 拿掉（= 改前）⇒ 一个东西都不发、那一行也不出现
+# ══════════════════════════════════════════════════════════════
+import re as _re7                                                        # noqa: E402
+
+_b7, _l7 = [], []
+_DOC15 = os.path.join(PLAN, "00_总纲", "15_彩蛋域口径_v1.md")
+_D15 = io.open(_DOC15, encoding="utf-8", newline="").read() if os.path.exists(_DOC15) else ""
+_hold15 = ""
+for _ln15 in _D15.split("\n"):
+    _c = [x.strip() for x in _ln15.split("|")]
+    if len(_c) < 5 or "q_side_13" not in _ln15 or "的交待就是彩蛋" not in _ln15:
+        continue
+    for _cl in _c[3].split("&"):
+        _cl = _cl.strip()
+        if _cl.startswith("hold="):
+            _hold15 = _cl.split("=", 1)[1].strip()
+if not _hold15:
+    _b7.append(("15 §二 里解析不出 q_side_13 那一行的 hold= 那件东西", ""))
+_q13 = QE.get("q_side_13") or {}
+_want_give = [{"item": _hold15, "n": 1}] if _hold15 else []
+if list(_q13.get("give") or []) != _want_give:
+    _b7.append(("q_side_13.give = %s ≠ 15 §二 那一行 hold= 的 %s（两处口径）"
+                % (_q13.get("give"), _want_give), ""))
+_givers = sorted(k for k, v in QE.items() if v.get("give"))
+if _givers != ["q_side_13"]:
+    _b7.append(("带 `give` 的条目 = %s（今天只该有「还石头」一条 —— 多一条就是新开的形状没人裁）"
+                % _givers, ""))
+# ② 真敲「接 25」
+_p0 = _player(level=1, flags={"card": 1})
+_o0 = _drive(CQ.quest_accept, _p0, "接 25")
+_rec = LT.rec_of(_hold15) if _hold15 else {}
+_want_line = T("SYS_JOB_GIVE", icon=_rec.get("icon", "·"), name=_rec.get("name", _hold15), n=1)
+if int((_p0.get("bag") or {}).get(_hold15) or 0) != 1:
+    _b7.append(("接 25 之后包里没有那一件：bag=%s" % (_p0.get("bag"),), _o0[:4]))
+if _want_line not in _o0:
+    _b7.append(("接 25 的屏上没有那一行「%s」" % _want_line, _o0[:4]))
+if "q_side_13" not in ((_p0.get("flags") or {}).get("quests_active") or []):
+    _b7.append(("接 25 没落档", _p0.get("flags")))
+_l7.append("接 25 ⇒ 「%s」｜ 包里 %s" % (_want_line, _p0.get("bag")))
+# ④ 反证：把 `give` 拿掉（= 改前那一版）⇒ 一个东西都不发、那一行也不出现
+_p1 = _player(level=1, flags={"card": 1})
+_keep_q7 = CQ._quests
+try:
+    CQ._quests = (lambda: {k: ({kk: vv for kk, vv in v.items() if kk != "give"} if k == "q_side_13" else v)
+                           for k, v in _keep_q7().items()})
+    _o1 = _drive(CQ.quest_accept, _p1, "接 25")
+finally:
+    CQ._quests = _keep_q7
+if (_p1.get("bag") or {}) or any("得到" in ln for ln in _o1):
+    _b7.append(("★ 反证没生效（把 give 拿掉之后竟然还发了东西）", _o1[:4]))
+_l7.append("反证（拿掉 give）：包里 %s · 屏上 %s（= 改前那一版：一个东西都不发）"
+           % (_p1.get("bag") or "空", "没那行" if not any("得到" in ln for ln in _o1) else _o1[:2]))
+(ok if not _b7 else bad)(
+    "⑦ 支线「还石头」接活**真发东西**（源 15 §二 彩蛋 2 那一行 `hold=` ＋ `17 §QUEST_SIDE25_STORY`"
+    "「小满把那块石头塞给你」）：域里 give == 文档现解析 · 真敲接 25 ⇒ 包里有那件 + 屏上「%s」"
+    "· 只有这一条带 give · 反证拿掉 give ⇒ 一个东西都不发（坏 %s）"
+    % (_want_line, _b7 or "无"))
+for _ln in _l7:
+    print("      %s" % _ln)
+
+# ══════════════════════════════════════════════════════════════
+# ⑧ ★ g3-quests2：对话旗标族（`main*_done` / `main*_active` / `quest_*_done` / `nameline_done`）
+#   改前：那一族 slug 只有**读端**（`cmds_talk._pick_indexed` 的 `flag` 那一支）、**全仓没有写端**
+#     ⇒ dialogues 域里 12 条台词（哈根 meet 三段 · 格雷/娜娜/贝拉/德里克/莉安/杜林/玛莎 的 main 层 ·
+#       小满 daily · 艾德 hidden · 哈根 hidden）永久出不来（`grep` 零命中）。
+#   落法：读端 = `content/prog.flag_ok`（那一族**以真实进度为准**）· 写端 = `content/prog.resync`
+#     （接 / 交 / 放弃那三处照真实进度重写那一格）。
+#   判据（两边都判）：
+#     ① 域里用到的 slug **一个都不许落空**（`PROG.audit()` 空表）· 每条的 slug→委托映射现算得出 ·
+#        映射到的委托真在域里 · 写端真存在（静态守卫：`prog.resync` 在 `cmds_quest` 里被调 ≥3 处）
+#     ② 写端三拍：接 9 ⇒ `main09_active` 写 True ｜ 交 9 ⇒ `main09_active` 写回 False 且
+#        `main09_done` True ｜ 放弃 9 ⇒ `main09_active` 写回 False（档上不留幽灵旗标）
+#     ③ 读端真搭话（柯尔 · 熟了 · 手上有那块旧铁）：主 4 交掉 ⇒ 出的是「这不是这地方的铁」那一段
+#     ④ 反证 a：**没做到** ⇒ 那一格没写、那一句**真搭话出不来**（出的是 daily 兜底那一段）
+#     ⑤ 反证 b：只手塞一个**脏旗标**（`main04_done=True` 而进度不成立）⇒ 那一句**照样出不来**
+#        （fail-closed：脏旗标不许把台词刷出来）
+#     ⑥ 表外 token 照旧：`card` 那种走老口径（读那一格本身 —— 一个字没变）
+# ══════════════════════════════════════════════════════════════
+_b8, _l8 = [], []
+_slugs = PROG.domain_slugs()
+if not _slugs or PROG.audit():
+    _b8.append(("域里用到的 flag slug = %s，认不出的 %s" % (_slugs, PROG.audit()), ""))
+for _s in _slugs:
+    _mp = PROG.map_slug(_s)
+    if not _mp or _mp[0] not in QE or not PROG.why_of(_s):
+        _b8.append(("slug %s 的映射/依据不完整：%s / %s" % (_s, _mp, PROG.why_of(_s)), ""))
+# 写端真存在（静态守卫：那一族在 content 侧真有人写 —— 不是「只有读端」）
+_src_cq8 = io.open(os.path.join(REPO, "content", "cmds_quest.py"), encoding="utf-8").read()
+_n_write8 = _src_cq8.count("PROG.resync(")
+_src_pr8 = io.open(os.path.join(REPO, "content", "prog.py"), encoding="utf-8").read()
+if _n_write8 < 3 or "def resync(" not in _src_pr8:
+    _b8.append(("写端不在了：prog.resync 在 cmds_quest 里被调 %d 处（接/交/放弃三处都要）" % _n_write8, ""))
+# ② 写端三拍（真敲）
+_pa = _player(level=20, flags={"card": 1})
+_drive(CQ.quest_accept, _pa, "接 9")
+if (_pa.get("flags") or {}).get("main09_active") is not True:
+    _b8.append(("接 9 后 main09_active = %s（该写 True）" % (_pa.get("flags") or {}).get("main09_active"),
+                _pa.get("flags")))
+_pb = _player(level=20, flags={"card": 1, "quests_active": ["q_main_09"],
+                               "talked": {CQ._dlg_of("npc_grey"): 1}, "main09_active": True})
+_drive(CQ.quest_deliver, _pb, "交 9")
+_fb = _pb.get("flags") or {}
+if _fb.get("main09_done") is not True or _fb.get("main09_active") is not False:
+    _b8.append(("交 9 后那一族不对：main09_done=%s · main09_active=%s"
+                % (_fb.get("main09_done"), _fb.get("main09_active")), _fb))
+_at_day(6)                                                # 放弃的冷却看那根钟 ⇒ 造「第 6 日」
+_pc = _player(level=20, flags={"card": 1, "quests_active": ["q_main_09"], "main09_active": True})
+_drive(CQ.quest_abandon, _pc, "放弃 9")
+if (_pc.get("flags") or {}).get("main09_active") is not False:
+    _b8.append(("放弃 9 后 main09_active = %s（该写回 False）" % (_pc.get("flags") or {}).get("main09_active"),
+                _pc.get("flags")))
+_l8.append("写端三拍：接 9 ⇒ main09_active=True ｜ 交 9 ⇒ done=True/active=False ｜ 放弃 9 ⇒ active=False")
+# ③④⑤ 读端真搭话（柯尔：熟了 + 主 4 交掉 / 没交 / 只有脏旗标）
+_SPOT8 = ("windmill_town", "wt_forge")
+_DLG8 = str((NPCS.get("npc_cole") or {}).get("dialogue") or "")
+
+
+def _cole(flags):
+    return _player(level=9, loc=_SPOT8[0], node=_SPOT8[1],
+                   flags=dict({"card": 1, "talked": {_DLG8: 3}}, **flags))
+
+
+def _pick8(flags):
+    return CT._pick_layer((CT._data("dialogues").get(_DLG8) or {}).get("nodes") or {},
+                          _cole(flags), CAL.state(), _DLG8)
+
+
+_WITH = _pick8({"quests_done": ["q_main_04"]})              # ③ 真进度
+_NONE8 = _pick8({})                                          # ④ 没做到
+_DIRTY = _pick8({"main04_done": True})                       # ⑤ 脏旗标（进度不成立）
+if _WITH[0] != "daily" or "这不是这地方的铁" not in str(_WITH[2] or ""):
+    _b8.append(("③ 主 4 交掉之后，柯尔那一句没出（拿到的是 %s）" % (_WITH,), ""))
+if "这不是这地方的铁" in str(_NONE8[2] or ""):
+    _b8.append(("④ 没做到竟然也出了那一句（提前刷台词）%s" % (_NONE8,), ""))
+if "这不是这地方的铁" in str(_DIRTY[2] or ""):
+    _b8.append(("⑤ 只塞一个脏旗标就把那一句刷出来了（fail-closed 破了）%s" % (_DIRTY,), ""))
+if _NONE8[2] != _DIRTY[2]:
+    _b8.append(("⑤ 脏旗标那一档与「什么都没做」那一档竟然不一样：%s vs %s" % (_DIRTY, _NONE8), ""))
+_l8.append("读端（柯尔 · 熟了）：主 4 交掉 ⇒ 出「这不是这地方的铁…」｜ 没做 ⇒ 兜底那一句｜ "
+           "只手塞脏旗标 ⇒ 与「没做」逐字相同（都不出）")
+# 真搭话一遍（把「读端」也真敲一次 —— 不是只调 `_pick_layer`）
+_at_day(2)
+_o8 = _drive(CT.talk, _cole({"quests_done": ["q_main_04"]}), "搭话 柯尔")
+if not any("这不是这地方的铁" in ln for ln in _o8):
+    _b8.append(("真搭话那一趟没出那一句：%s" % (_o8[:4],), ""))
+# ⑥ 表外 token 照旧
+if PROG.flag_ok({"flags": {"card": 1}}, "card") is not True \
+        or PROG.flag_ok({"flags": {}}, "card") is not False \
+        or PROG.flag_ok({"flags": {"lore_scripts": True}}, "lore_scripts") is not True:
+    _b8.append(("表外 token 的老口径被动过了（card / lore_scripts）", ""))
+_l8.append("域里 %d 条 slug 全部接上真实进度（0 条落空）：%s"
+           % (len(_slugs), " · ".join(PROG.why_of(_s) for _s in sorted(_slugs))))
+_l8.append("表外 token（card / lore_scripts）照旧：走老口径读那一格本身")
+(ok if not _b8 else bad)(
+    "⑧ 对话旗标族**写端**（改前：只有读端、全仓没有写端 ⇒ 12 条台词永久出不来）："
+    "域里 %d 条 slug 全接上真实进度 · 写端三拍（接/交/放弃）· 读端真搭话 · 两条反证"
+    "（没做到 ⇒ 不出 ｜ 脏旗标 ⇒ 照样不出）· 表外 token 照旧（坏 %s）" % (len(_slugs), _b8 or "无"))
+for _ln in _l8:
+    print("      %s" % _ln)
+FC.bind_host(**_FC_SAVED)
 
 print()
 print("判据 %d 条：%s" % (CHECKS[0], "全绿 ✓" if not fails else "有红 ✗（%d 条）" % len(fails)))

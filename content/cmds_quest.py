@@ -163,6 +163,36 @@ P-25 §② 剩下的 11 条支线里，**能按真源文档补上正当条件的
   · ★ **「掉一点声望」这半没落**：全仓**没有声望这个容器**（`05 §一` 也没给数）⇒ 登记待裁
     （工作树 `_notes.md`「待鱼鱼拍板」），不自己造第二本账（K74 那一族：别跟 `评级` 开成两处口径）
   · 判据：`scripts/probe_quests.py` ㉞（三拍真敲 + 跨日 + 档上那格假的也不许影响判定）
+
+★ g3-quests2 三件（「差最后一步」那一批 · 2026-09-26）
+---------------------------------------------------
+① 悬赏轮换池按**可遇性**收窄（`_pool_of` / `_encounterable`）：
+   旧规格 = 该档**全部**怪按 id 排序取第 `(游戏日-1)%n+1` 只 ⇒ 可能点名一只按这一档标称等级
+   在它自己写明的站上**挑不出来**的怪（`normal` 档点到「野狗」，1 级档的玩家在野狗窝只能撞上
+   田鼠 / 拾荒野狗 / 林鸦 —— 玩家报告 P1 BUG-2）；前一轮只补了信息面（「它出没在：…」），
+   不够：**池子**要从「真碰得上的」里挑。
+   新规格 = 池 = 该档的怪 ∩ **可遇集合**（该怪 `habitat` 写明的**每一站**上，按**该档 `min_level`**
+   用 `combat.encounter_cand`（遇敌那一把尺子：habitat × 等级最近前 3）都挑得出来）；
+   轮换算法一个字没动（仍是「按 id 排序 + 游戏日取模」）—— 只把池子收窄。
+   真源：`24 §二 悬赏板`（「打掉**指定的**普通 / 精英 / 头目怪」＋「每天轮换挑一只」）·
+   `14_怪物原型_v1 §三`（每只怪在哪一档、出没在哪）· `05 §一`（按目标档位给报酬）。
+   判据：`scripts/probe_quests.py` ㉛（探针**另写一份**可遇集合 + 逐日对账 + 反证关掉过滤当场红）·
+   `scripts/probe_qloop.py` ②（逐日真敲「还差…」与出没地那一行）。
+
+② 支线「还石头」**接活时真发东西**（`quests.<id>.give` + `_hand_over`）：
+   改前 `接 25` 一个东西都不发（`QUEST_SIDE25_STORY` 那句「小满把那块石头塞给你」是空话，
+   玩家只能自己去骨田挖）；现在接活那一下真把这件东西给到手上（走唯一口 `loot.add_to_bag`，
+   并印一行「得到：…」）。真源 = `15_彩蛋域口径_v1 §二` 第 2 行（「q_side_13「还石头」的交待
+   就是彩蛋 2，**小满的石头 = 骨田捡的刻字石片**」）＋ `17 §QUEST_SIDE25_STORY`。
+   域里的 `give` 是**生成物**（`scripts/rebuild_quest_gates.py` 从同一份真源现取）。
+   判据：`scripts/probe_qloop.py` ⑧（正例 + 反证：拿掉 `give` ⇒ 一个东西都不发）。
+
+③ 对话旗标族（`main*_done` / `quest_*_done` / `main09_active` / `nameline_done`）**补写端**：
+   那一族 slug 只有读端（`cmds_talk._pick_indexed` 的 `flag` 那一支）、**全仓没有写端**
+   ⇒ 域里 12 条台词永久出不来。现在读端走 `content/prog.flag_ok`（表里的 slug 一律以
+   **真实进度**为准）、写端走 `content/prog.resync`（接 / 交 / 放弃那三处照真实进度重写）。
+   判据：`scripts/probe_qloop.py` ⑨（写端三拍 + 读端真搭话 + 两条反证：没做到 ⇒ 旗标没写且
+   那句出不来；只塞一个脏旗标 ⇒ 那句**照样**出不来）。
 """
 from __future__ import annotations
 
@@ -173,6 +203,8 @@ from .cmds_ast import _npcs_here
 from . import codex as CX            # 打怪记录（books.monster.kills）的**唯一**读口
 from . import loot as LT             # 东西的名字（呈现口不许漏机器键 —— 名字从这里取）
 from . import ranks as RK            # 评级那一档（档名/门槛的唯一读口 —— B4-16）
+from . import combat as CB           # ★ 本波：遇敌那把尺子（`encounter_cand`）—— 悬赏池按它收窄
+from . import prog as PROG           # ★ 本波：对话旗标族（`main*_done` 那一族）的写端
 
 
 def _mine(p):
@@ -429,20 +461,102 @@ def _role_name(role):
     return ""
 
 
+def _tier_level(role) -> int:
+    """这一档悬赏**自己标的等级**（= 那条单子的 `min_level`）—— 从 quests 域里现查。
+
+    ★ 为什么要有它：轮换池按「**这一档标称等级下真碰得上**」收窄（见 `_pool_of`），
+      而「这个等级」不能手打一个数 —— 它就是那条单子上印给玩家看的那个数
+      （`SYS_BOARD_BOUNTY_ROW` / `SYS_JOB_LOWLEVEL` 用的同一格）。
+      认不出（没有哪条悬赏点名这个档）⇒ 0 ⇒ 池空 ⇒ 一律没满足（fail-closed，不猜）。
+    """
+    for v in _quests().values():
+        for r in _require_of(v):
+            if r.get("kind") == "kill" and str(r.get("role") or "") == str(role or ""):
+                return int(v.get("min_level") or 0)
+    return 0
+
+
+def _spots_of(mid) -> list:
+    """这只怪 `habitat` 说得上话的**真图真节点**表 → `[(图, 节点)]`（取不到回空表）。
+
+    ★ 与挑怪那一边同一格（`habitat.maps` 必给，给了 `nodes` 再收窄）—— 不另开「怪在哪」的口径。
+    """
+    hb = (_data("monsters").get(str(mid or "")) or {}).get("habitat") or {}
+    nodes = [str(n) for n in (hb.get("nodes") or []) if n]
+    out = []
+    for m in (hb.get("maps") or []):
+        mv = _map_of(str(m)) or {}
+        for nd in (mv.get("nodes") or []):
+            nid = str((nd or {}).get("id") or "")
+            if not nid:
+                continue
+            if nodes and nid not in nodes:
+                continue
+            out.append((str(m), nid))
+    return out
+
+
+def _encounterable(mid, level) -> bool:
+    """★ 悬赏轮换池的**可遇性**：这只怪在它自己写明的**每一站**上、按这个等级，都挑得出来吗。
+
+    ★ 尺子 = `combat.encounter_cand`（玩家敲『攻击』那一下真挑怪用的**同一个口**）：
+      「这一站 habitat 说得上话的怪，按等级最近取前 3」——不在前 3 里 = 在这一站**碰不上**。
+    ★ 为什么是「每一站」而不是「有一站就行」：单子把它的出没地点**逐站列给玩家看**
+      （`_habitat_of` → `SYS_JOB_REQ_MON_WHERE`），所以每一站都得真碰得上；否则玩家照着
+      单子走到某一站，撞到的却是别人（报告 P1 BUG-2 的原样：在野狗窝杀成 4 回「拾荒野狗」
+      而单子要的「野狗」一次没出）。
+    ★ fail-closed：没有 habitat / 站表为空 / 等级取不到 ⇒ **不算可遇**（不猜）。
+    """
+    try:
+        lv = int(level)
+    except (TypeError, ValueError):
+        return False
+    if lv <= 0 or not mid:
+        return False
+    spots = _spots_of(mid)
+    if not spots:
+        return False
+    mon = _data("monsters")
+    for loc, nd in spots:
+        _cand, top = CB.encounter_cand(mon, loc, nd, lv)
+        if mid not in top:
+            return False
+    return True
+
+
+def _pool_of(role) -> list:
+    """★ 这一档的**轮换池** = 该档的怪 ∩ **可遇集合**（按 id 排序 —— 稳定序，与书写顺序无关）。
+
+    ★ 规格变更（本波 · g3-quests2）：**收窄**成「本地图真刷得出的怪」。
+      旧规格 = 该档**全部**怪（只看 `monsters.role_key`）按 id 排序取第 `(游戏日-1)%n+1` 只
+      ⇒ 可能点名一只**按这一档标称等级、在它自己写明的站上根本挑不出来**的怪
+      （`normal` 档点到 `ms_wild_dog`「野狗」时，1 级档的玩家在野狗窝只能撞上
+       田鼠 / 拾荒野狗 / 林鸦 —— 玩家报告 P1 BUG-2）。
+      新规格只把**池子**收窄，轮换算法一个字没动（仍是「按 id 排序 + 游戏日取模」）。
+      真源：`24_任务线_v1 §二 悬赏板`「打掉**指定的**普通 / 精英 / 头目怪」＋ 同条的
+      「每天轮换挑一只」＋ `14_怪物原型_v1 §三`（每只怪在哪儿、是哪一档）＋ `05 §一`
+      （悬赏按**目标档位**给报酬 ⇒ 单子点名的那只必须在**那一档**碰得上）。
+      ⇒ 「指定的」= 每天轮换挑一只 **碰得上的**。
+    """
+    lv = _tier_level(role)
+    return sorted(mid for mid in _role_ids(role) if _encounterable(mid, lv))
+
+
 def _daily_pick(role, p):
     """★ B3-13：今天这一档**点名**的那一只（「悬赏板每天轮换挑一只」的数据面）。
 
-    轮换 = 该档的怪按 **id 排序**（稳定序 —— 与域里的书写顺序无关）之后，按**游戏日**
-    取第 `(游戏日 - 1) % 档内只数 + 1` 只：
+    轮换 = 该档的**可遇集合**（`_pool_of` —— 本波按可遇性收窄；旧规格是该档全部怪）
+    按 **id 排序**（稳定序 —— 与域里的书写顺序无关）之后，按**游戏日**
+    取第 `(游戏日 - 1) % 池内只数 + 1` 只：
       · 同一日、同一档 ⇒ 必是同结果（两个进程也一样 —— 那一天由**那一根钟**唯一决定）
       · ★ B4-9：那一天的来源 = `codex.today(p)` = `calendar.day_now()`（**现算**）——
         原先读的是档上那格 `day`，可它只是 `tick()` 的跨日标记（只有「时间 / 采集 / 建号」
         几个入口在刷）⇒ 悬赏会卡在「上一回 tick 那天」甚至 0 上（今天日期戳那一族一起收的）
-      · 跨日 ⇒ 必换（档内只数 > 1；「轮换」的原意就是这个）
-      · 游戏日读不到（老档没那一格）= 0 ⇒ 退到档内最后一只：**仍然是确定值，不是随机**
-      · 认不出的档 / 空档 ⇒ 空串（调用方一律当「没满足」算 —— fail-closed）
+      · 跨日 ⇒ 必换（池内只数 > 1；「轮换」的原意就是这个）
+      · 游戏日读不到（老档没那一格）= 0 ⇒ 退到池内最后一只：**仍然是确定值，不是随机**
+      · 认不出的档 / 空池（该档一只都碰不上）⇒ 空串（调用方一律当「没满足」算 —— fail-closed）
     """
-    ids = sorted(_role_ids(str(role or "")))
+    ids = _pool_of(str(role or ""))
     if not ids:
         return ""
     return ids[(int(CX.today(p)) - 1) % len(ids)]
@@ -672,6 +786,32 @@ def _mark_done(p, k, step):
     _set(p, "quests", book)
 
 
+def _hand_over(p, x) -> list:
+    """★ 本波②：**接活时真发东西**（`quests.<id>.give`）→ 回那几行「得到：…」。
+
+    ★ 为什么非有不可：`17 §QUEST_SIDE25_STORY` 那句是「**小满把那块石头塞给你** —— 它该回到
+      缺着它的那块碑上去。」，而改前 `接 25` **一个东西都不发** —— 玩家只能自己去骨田挖
+      （30% 出 `unid_rare`）才走得通 ⇒ 接时那行字是空话（报告 P1 BUG-1 那一半）。
+      真源 `15_彩蛋域口径_v1 §二` 第 2 行的依据栏自己写着「**小满的石头 = 骨田捡的刻字石片**」
+      —— 石头是小满交到手上的，接到手那一下就该到包里。
+    ★ 唯一口 = `loot.add_to_bag`（与采集 / 掉落 / 烹饪 / 买同一条路 —— 顺手记 `codex`）。
+    ★ fail-closed：`give` 里认不出的 id / 非正的 n 一律跳过（不许把空 id 塞进背包）。
+    """
+    out = []
+    for g in (x.get("give") or []):
+        iid = str((g or {}).get("item") or "")
+        try:
+            n = int((g or {}).get("n") or 1)
+        except (TypeError, ValueError):
+            n = 0
+        if not iid or n <= 0:
+            continue
+        LT.add_to_bag(p, [{"id": iid, "n": n}])
+        rec = LT.rec_of(iid)
+        out.append(T("SYS_JOB_GIVE", icon=rec.get("icon", "·"), name=rec.get("name", iid), n=n))
+    return out
+
+
 async def guild(env, sink, uid, player):
     """`公会` —— 柜台（声明里的 `guard_desc` = 在镇上 · 那一站 = 挂板墙）。
 
@@ -794,12 +934,16 @@ async def quest_accept(env, sink, uid, player):
         yield T("SYS_JOB_MARTHA")
         return
     _set(p, "quests_active", _mine(p) + [k])
+    gained = _hand_over(p, x)                 # ★ 本波②：接活时**真发东西**（`quests.<id>.give`）
+    PROG.resync(p, k)                         # ★ 本波③：旗标族的**写端**（接活那一拍）
     if player is not None:
         player.update(p)
     _save(env)
     yield T("SYS_JOB_TAKEN", name=x["name"])
     # ★ B3-6c / B3-8：接时那一段（槽位自己的出处就写着「接时行文」）—— 四条链都取槽位。
     yield _beat(x, "STORY")
+    for _ln in gained:                        # 「得到：…」跟在接时行文之后（话说完，东西才到手）
+        yield _ln
     yield "  " + T("SYS_JOB_TODO", objective=x["objective"])
     if x.get("insight"):
         yield "  " + T("SYS_JOB_INSIGHT", insight=x["insight"])
@@ -843,6 +987,7 @@ async def quest_deliver(env, sink, uid, player):
     _set(p, "quests_active", [a for a in act if a != k])
     _set(p, "quests_done", _done(p) + [k])
     _mark_done(p, k, len(_require_of(x)))   # ★ P-25：done 记进 flags.quests（形状见文件抬头 ②）
+    PROG.resync(p, k)                       # ★ 本波③：旗标族的**写端**（交活那一拍：done 型 True）
     p["gold"] = p.get("gold", 0) + x["reward_gold"]
     # ★ B3-13：升级判定收成 `cmds_ast.add_exp` **一个口**（打怪给经验也走它）
     leveled = bool(add_exp(p, x["reward_exp"]))
@@ -916,6 +1061,7 @@ async def quest_abandon(env, sink, uid, player):
         return
     _set(p, "quests_active", [a for a in act if a != k])
     _set(p, "abandon_day", CX.today(p))
+    PROG.resync(p, k)                       # ★ 本波③：放掉了 ⇒ 名下「在手上」那种旗标写回 False
     if player is not None:
         player.update(p)
     _save(env)

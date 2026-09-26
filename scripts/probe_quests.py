@@ -62,6 +62,11 @@ B3-13 加的那一组（支线另外 6 条的条件 · 悬赏「指定的」落�
       都在 ⇒ 三档条件都必须带 `daily`；轮换**可复现**（同一日同档两次同结果 · 跨日必换 ·
       探针自己按「该档按 id 排序取第 (游戏日-1)%n+1 只」算一遍与实现比）；**宽口径已被拦住**
       （打掉同档的**另一只**不顶用 —— 这是判据加强的那一半）；认不出的档 ⇒ 没满足（fail-closed）。
+      ★ g3-quests2（本波）**规格收窄**：池从「该档**全部**怪」改成「该档的怪 ∩ **可遇集合**」
+      （该怪 `habitat` 写明的**每一站**上，按该档 `min_level` 都进得了「等级最近前 3」——
+      尺子 = 玩家敲『攻击』时挑怪用的那一把）。轮换算法一个字没动。新增三条判据（只加强）：
+      ① 三档的池子 == 探针自己算的可遇集合；② 被剔掉的**逐只点名** + 剔的理由现算；
+      ③ **反证**：把可遇性过滤拿掉 ⇒ 逐个游戏日比至少一天对不上（改回旧规格当场红）。
 
 B4-2 加的那一组（P-25 §① 主线收口 · P-37 曲线唯一口）：
   ⑧-b ★ P-37：本探针原先**手打了一份 `lv*lv*40`**（K59「曲线别在第三处再手打一个」的第 4 处）——
@@ -919,12 +924,68 @@ def _role_ids_of(role):
     return [k for k, m in MON.items() if not str(k).startswith("_") and m.get("role_key") == role]
 
 
-def _pick_of(role, day):
-    """★ B3-13 轮换的**规格**（探针自己实现一遍）：该档的怪按 id 排序，取第 `(游戏日-1)%n+1` 只。
+# ── ★ g3-quests2：轮换池的**可遇集合**（探针自己算一遍；与实现各写一份）──────────────
+def _tier_lv(role):
+    """这一档悬赏**自己标的等级**（那条单子的 `min_level`；认不出回 0）—— 从域里现查，不手打。"""
+    for _v in QE.values():
+        for _r in CQ._require_of(_v):
+            if _r.get("kind") == "kill" and str(_r.get("role") or "") == str(role or ""):
+                return int(_v.get("min_level") or 0)
+    return 0
 
+
+def _top3(loc, node, level):
+    """这一站上「说得上话的怪」按等级最近的前 3（照 `combat.pick_encounter` 那把尺子自己写一遍）。"""
+    cand = []
+    for _k, _m in MON.items():
+        if str(_k).startswith("_"):
+            continue
+        hb = _m.get("habitat") or {}
+        if loc not in (hb.get("maps") or []):
+            continue
+        ns = hb.get("nodes") or []
+        if ns and node not in ns:
+            continue
+        cand.append(_k)
+    cand.sort(key=lambda k: abs(int(MON[k].get("lv", 1)) - level))
+    return cand[:3]
+
+
+def _spots_spec(mid):
+    """这只怪 `habitat` 说得上话的**真图真节点**表（照域现算）。"""
+    hb = (MON.get(mid) or {}).get("habitat") or {}
+    ns = [str(x) for x in (hb.get("nodes") or []) if x]
+    out = []
+    for m in (hb.get("maps") or []):
+        for nd in ((MAPS.get(str(m)) or {}).get("nodes") or []):
+            nid = str((nd or {}).get("id") or "")
+            if not nid or (ns and nid not in ns):
+                continue
+            out.append((str(m), nid))
+    return out
+
+
+def _pool_spec(role):
+    """★ 这一档的**可遇集合**（规格 · 探针自己算）：该档的怪里，按该档 `min_level`
+    在它 `habitat` 写明的**每一站**上都进得了「等级最近前 3」的那几只（按 id 排序）。"""
+    lv = _tier_lv(role)
+    out = []
+    for mid in _role_ids_of(role):
+        spots = _spots_spec(mid)
+        if lv <= 0 or not spots:
+            continue
+        if all(mid in _top3(_l, _n, lv) for _l, _n in spots):
+            out.append(mid)
+    return sorted(out)
+
+
+def _pick_of(role, day):
+    """★ 轮换的**规格**（探针自己实现一遍）：该档的**可遇集合**按 id 排序，取第 `(游戏日-1)%n+1` 只。
+
+    ★ g3-quests2：池子从「该档全部怪」收窄成「可遇集合」（见 `_pool_spec`）—— 轮换算法一个字没变。
     与 `cmds_quest._daily_pick` **各写一遍**（共用一份等于把两处的错一起掩盖 —— 照 ⑬/⑳ 的老规矩）。
     """
-    ids = sorted(_role_ids_of(role))
+    ids = _pool_spec(role)
     return ids[(int(day) - 1) % len(ids)] if ids else ""
 
 
@@ -1374,9 +1435,17 @@ for _n in sorted(mainq):
             _lv_bad.append("主%d：条件 kind「%s」不在主线用的那一族里（visit/kill/item/talk）"
                            % (_n, _kind))
 # ④ 静态守卫：`_obj_ok` 主线那一支必须两半都在（`min_level` 与 `_req_ok`）
-_m_line = next((_s for _s in io.open(os.path.join(REPO, "content", "cmds_quest.py"),
-                                     encoding="utf-8").read().split("\n")
-                if _s.strip().startswith("return") and "min_level" in _s), "")
+#   ★ g3-quests2：本守卫原先在全文件里找**第一行** `return …min_level…` —— 那时它是 `_obj_ok`
+#     那一行；本波 `cmds_quest` 里多了一处同样带 `min_level` 的 `return`（`_tier_level`，
+#     与 `_obj_ok` 无关）⇒ 守卫会在**别人的函数**里找。判据一个字没松：**只把取行范围收窄到
+#     `_obj_ok` 这个函数体内**（它要钉的本来就是那一支）。
+_cq_lines = io.open(os.path.join(REPO, "content", "cmds_quest.py"),
+                    encoding="utf-8").read().split("\n")
+_a4 = next((i for i, _s in enumerate(_cq_lines) if _s.startswith("def _obj_ok(")), None)
+_b4 = next((i for i in range((_a4 or 0) + 1, len(_cq_lines))
+            if _cq_lines[i].startswith("def ")), len(_cq_lines))
+_m_line = next((_s for _s in _cq_lines[(_a4 or 0):_b4]
+                if _s.strip().startswith("return") and "min_level" in _s), "") if _a4 is not None else ""
 if not _m_line or "_req_ok" not in _m_line:
     _lv_bad.append("_obj_ok 主线那一支不再两半都在（读到的是「%s」）" % _m_line.strip())
 (ok if not _lv_bad else bad)(
@@ -1743,7 +1812,19 @@ for _qid in sorted(_EXP_KIND, key=lambda q: QE[q]["order"]):
 for _ln in _nk_lines:
     print("      %s" % _ln)
 
-# ── ㉛ ★ 悬赏「指定的」= 每天轮换挑一只（可复现 · 跨日必换 · **宽口径已被拦住** · fail-closed）
+# ── ㉛ ★ 悬赏「指定的」= 每天轮换挑一只（可复现 · 跨日必换 · **池按可遇性收窄** · fail-closed）
+#   ★ g3-quests2 规格变更（**只加强，不放宽**）：
+#     旧规格 = 池 = 该档**全部**怪（只看 `monsters.role_key`），按 id 排序取第 (游戏日-1)%n+1 只
+#       ⇒ 可能点名一只**按这一档标称等级、在它自己写明的站上根本挑不出来**的怪
+#         （玩家报告 P1 BUG-2：`normal` 档点到「野狗」ms_wild_dog，1 级档的玩家在野狗窝
+#          按 `pick_encounter` 只能撞上 田鼠 / 拾荒野狗 / 林鸦 —— 杀了 4 回也不算）。
+#     新规格 = 池 = 该档的怪 ∩ **可遇集合**（`_pool_spec`：该怪 `habitat` 写明的**每一站**上，
+#       按该档 `min_level` 都进得了「等级最近前 3」的那批）；轮换算法一个字没动。
+#     逐条判据（新增的都在这儿，原来的**一条没松**）：
+#       ① 三档的池子逐只与探针自己算的可遇集合**相等**（不是「按 id 排序的全档」）
+#       ② 被剔掉的那几只**逐只点名** + 剔的理由**现算**（它在自己哪一站进不了前 3）
+#       ③ 反证：把可遇性过滤拿掉（`_pool_of` 放行全档）⇒ 逐个游戏日比，至少有一天对不上
+#          （证明这一条判据真的载重 —— 改回旧规格当场红）
 _rot_bad, _rot_lines = [], []
 _CERTAIN = _re.search(r"打掉\s*\**\s*指定的", bounty_blk or "")
 _ROTATE = _re.search(r"每天轮换挑一只", bounty_blk or "")
@@ -1759,26 +1840,69 @@ for _k, _x in _bt:
                         % (_k, json.dumps(_x.get("require"), ensure_ascii=False)))
         continue
     _roles.append(str(_r0["role"]))
+_total_cut = []
 for _role in sorted(set(_roles)):
-    _pool = sorted(_role_ids_of(_role))
-    if len(_pool) < 2:
-        _rot_bad.append("档「%s」只有 %d 只怪 —— 「轮换」观察不到（池要 > 1）" % (_role, len(_pool)))
+    _lv_role = _tier_lv(_role)
+    _allids = sorted(_role_ids_of(_role))                  # 该档**全部**怪（= 旧规格的池）
+    _spec = _pool_spec(_role)                              # ★ 新规格：可遇集合（探针自己算）
+    if len(_spec) < 2:
+        _rot_bad.append("档「%s」的可遇集合只有 %d 只 —— 「轮换」观察不到（池要 > 1）"
+                        % (_role, len(_spec)))
         continue
-    for _d in range(1, 3 * len(_pool) + 2):
-        _spec = _pool[(_d - 1) % len(_pool)]
+    if list(CQ._pool_of(_role)) != _spec:
+        _rot_bad.append("档 %s 的池子 %s ≠ 探针自己算的可遇集合 %s"
+                        % (_role, list(CQ._pool_of(_role)), _spec))
+    _cut = [m for m in _allids if m not in _spec]
+    _total_cut += [(str(_role), m) for m in _cut]
+    if _lv_role <= 0:
+        _rot_bad.append("档 %s 取不到标称等级（`_tier_lv` 回 0）" % _role)
+    _why_lines = []
+    for _m in _cut:
+        _spots = _spots_spec(_m)
+        _bad = [(l, n) for l, n in _spots if _m not in _top3(l, n, _lv_role)]
+        if not _spots or not _bad:
+            _rot_bad.append("★ 档 %s 把「%s」剔了，但按规格它该在池里（现算是可遇的）"
+                            % (_role, _mon_name(_m)))
+            continue
+        _why_lines.append("%s（在 %s 进不了前 3）"
+                          % (_mon_name(_m), " · ".join("%s:%s" % (l, n) for l, n in _bad)))
+    for _d in range(1, 3 * len(_spec) + 2):
+        _want = _spec[(_d - 1) % len(_spec)]
         _at_day(_d)                                                   # ★ B4-9：造「第 d 日」= 拨钟
         _a = CQ._daily_pick(_role, {})
         _b = CQ._daily_pick(_role, {})                                # 同一日再来一次
         _at_day(_d + 1)                                               # ★ 跨日：钟推一个游戏日
         _n1 = CQ._daily_pick(_role, {})
-        if _a != _spec or _b != _spec:
-            _rot_bad.append("档 %s 第 %d 日：实现 %s/%s ≠ 规格 %s" % (_role, _d, _a, _b, _spec))
+        if _a != _want or _b != _want:
+            _rot_bad.append("档 %s 第 %d 日：实现 %s/%s ≠ 规格 %s" % (_role, _d, _a, _b, _want))
         if _n1 == _a:
             _rot_bad.append("档 %s 第 %d 日与第 %d 日挑了同一只（没轮换）" % (_role, _d, _d + 1))
-    _rot_lines.append("档 %-7s 池 %2d 只 · 第 1..%d 日的点名：%s → 第 %d 日回到 %s（循环 ✓ · "
+    _rot_lines.append("档 %-7s 池 %2d/%2d 只（标称 %d 级）· 剔掉：%s"
+                      % (_role, len(_spec), len(_allids), _lv_role,
+                         " · ".join(_why_lines) or "无"))
+    _rot_lines.append("档 %-7s · 第 1..%d 日的点名：%s → 第 %d 日回到 %s（循环 ✓ · "
                       "同一日两次同结果 ✓ · 跨日必换 ✓）"
-                      % (_role, len(_pool), len(_pool),
-                         "/".join(_mon_name(m) for m in _pool), len(_pool) + 1, _mon_name(_pool[0])))
+                      % (_role, len(_spec), "/".join(_mon_name(m) for m in _spec),
+                         len(_spec) + 1, _mon_name(_spec[0])))
+# ★ 反证（本波新增）：把可遇性过滤拿掉 ⇒ 实现那一头退回「该档全部怪」，逐日比**至少一天对不上**
+if not _total_cut:
+    _rot_bad.append("★ 三档一只都没被剔掉 —— 可遇性过滤没生效（判据可能恒真）")
+_keep_pool = CQ._pool_of
+_off_diff = 0
+try:
+    CQ._pool_of = (lambda role: sorted(_role_ids_of(str(role or ""))))
+    for _role in sorted(set(_roles)):
+        _spec = _pool_spec(_role)
+        if len(_spec) < 2:
+            continue
+        for _d in range(1, len(_spec) + 1):
+            _at_day(_d)
+            if CQ._daily_pick(_role, {}) != _spec[(_d - 1) % len(_spec)]:
+                _off_diff += 1
+finally:
+    CQ._pool_of = _keep_pool
+if not _off_diff:
+    _rot_bad.append("★ 反证没生效：把可遇性过滤拿掉后逐个游戏日比，竟然一天都不差（判据可能恒真）")
 # fail-closed：认不出的档
 _at_day(2)
 if CQ._daily_pick("no_such_role", {}) != "" \
@@ -1815,12 +1939,14 @@ if not any(ln.startswith("交了") for ln in _pay2):
     _rot_bad.append("打了点名的那只却交不掉：%s" % _pay2[:3])
 (ok if not _rot_bad and len(_roles) == 3 else bad)(
     "★ 悬赏「指定的」= 每天轮换挑一只（可复现 · 跨日必换〔拨钟造日〕· 探针自己算规格一致 · "
-    "**打同档另一只不算** · 认不出的档 fail-closed · 真跑拦得住也交得掉；坏 %s）" % (_rot_bad or "无"))
+    "★ **池按可遇性收窄**：池 == 探针自算的可遇集合 · 剔掉的逐只现算核过 · 反证关掉过滤 ⇒ "
+    "逐日至少一天对不上 · **打同档另一只不算** · 认不出的档 fail-closed · 真跑拦得住也交得掉；"
+    "坏 %s）" % (_rot_bad or "无"))
 for _ln in _rot_lines:
     print("      %s" % _ln)
-print("      真跑：没做到 →「%s」｜打了「%s」→「%s」"
+print("      真跑：没做到 →「%s」｜打了「%s」→「%s」｜反证（拿掉过滤）：逐日对不上 %d 天"
       % (_lack_line[:40], _mon_name(_bpick),
-         next((ln for ln in _pay2 if ln.startswith("交了")), "?")))
+         next((ln for ln in _pay2 if ln.startswith("交了")), "?"), _off_diff))
 FC_Q.bind_host(**_FC_SAVED)                                            # ★ B4-9：拨回真钟
 
 # ── ★ P-60（B4-25 顺手全扫记的那一笔 · 本批落）：每日轮换**只留一份写法**

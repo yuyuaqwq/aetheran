@@ -77,7 +77,7 @@
             "object",
             "array"
           ],
-          "$comment": "机器可读前置（P-25 · 只有需要前置的条目才写）：{kind: visit|kill|item, ...} 一条或一串；认不出的 kind 一律算没满足（fail-closed）。中文 objective 不解析 —— 条件真源是这里。★ B3-11：`kill` 两种写法 —— 点名一只（`monster` + `n`）或点**某一档**（`role` = monsters 域的 `role_key`，如 normal/elite/chief，+ `n`；合计击杀数达标即可）。★ B3-13 又加四种（都查档上现成的账，真源见 24 §二 / 21 §二）：`{\"kind\": \"enhance\", \"n\": <级>}` = 档上有一件装备强化到 ≥ n（账 p.enhance[<装备>].lv）；`{\"kind\": \"cook\", \"n\": <次>}` = 下过锅 ≥ n 次（账 flags.cooked[<配方>]），带 `quality` 时只数**用了那一品阶食材**的配方（品阶取 items 域的 quality）；`{\"kind\": \"talk\", \"npc\": <npc id>, \"n\": <次>}` = 跟这个人搭过 ≥ n 次话（账 flags.talked[<对话树>]，npc → 对话树走 npcs.dialogue）；`{\"kind\": \"ask\", \"n\": <人>}` = 搭过话的**人** ≥ n 个（同一本账，只数域里真有对话树的键）。★ B3-13 的轮换：`{\"kind\": \"kill\", \"role\": <role_key>, \"n\": <只>, \"daily\": true}` = 悬赏那条「指定的」——只算**当天点名的那一只**（该档的怪按 id 排序后取第 (游戏日-1) % 档内只数 + 1 只；同一日同档同结果、跨日必换）。★ B4-2：**主线 12 条也写 `require`**（解 P-25 §①：改前主线只看 `level >= min_level` ⇒ 1 级接 1 级主线一句「交 1」就过）；条件一律从 `24_任务线_v1.md §一` 各块的「步骤」行落（生成器 `scripts/rebuild_quest_gates.py` · 形状只用上面这几种，不加新形状），判据见 `scripts/probe_quests.py` ㉑㉜。",
+          "$comment": "机器可读前置（P-25 · 只有需要前置的条目才写）：{kind: visit|kill|item, ...} 一条或一串；认不出的 kind 一律算没满足（fail-closed）。中文 objective 不解析 —— 条件真源是这里。★ B3-11：`kill` 两种写法 —— 点名一只（`monster` + `n`）或点**某一档**（`role` = monsters 域的 `role_key`，如 normal/elite/chief，+ `n`；合计击杀数达标即可）。★ B3-13 又加四种（都查档上现成的账，真源见 24 §二 / 21 §二）：`{\"kind\": \"enhance\", \"n\": <级>}` = 档上有一件装备强化到 ≥ n（账 p.enhance[<装备>].lv）；`{\"kind\": \"cook\", \"n\": <次>}` = 下过锅 ≥ n 次（账 flags.cooked[<配方>]），带 `quality` 时只数**用了那一品阶食材**的配方（品阶取 items 域的 quality）；`{\"kind\": \"talk\", \"npc\": <npc id>, \"n\": <次>}` = 跟这个人搭过 ≥ n 次话（账 flags.talked[<对话树>]，npc → 对话树走 npcs.dialogue）；`{\"kind\": \"ask\", \"n\": <人>}` = 搭过话的**人** ≥ n 个（同一本账，只数域里真有对话树的键）。★ B3-13 的轮换：`{\"kind\": \"kill\", \"role\": <role_key>, \"n\": <只>, \"daily\": true}` = 悬赏那条「指定的」——只算**当天点名的那一只**（该档的怪按 id 排序后取第 (游戏日-1) % 档内只数 + 1 只；同一日同档同结果、跨日必换）。★ g3-quests2（2026-09-26）：「档内只数」改指**可遇集合**——池 = 该档的怪 ∩ 「按该档 min_level 在它自己写明的每一站上真挑得出来」的那批（尺子 = combat.encounter_cand：habitat × 等级最近前 3），凭据 24 §二 悬赏板「指定的」那两句 ＋ 14 §三 ＋ 05 §一；条件这一格与轮换算法**一个字没动**（池子的收窄在 cmds_quest._daily_pick 那一头）。★ B4-2：**主线 12 条也写 `require`**（解 P-25 §①：改前主线只看 `level >= min_level` ⇒ 1 级接 1 级主线一句「交 1」就过）；条件一律从 `24_任务线_v1.md §一` 各块的「步骤」行落（生成器 `scripts/rebuild_quest_gates.py` · 形状只用上面这几种，不加新形状），判据见 `scripts/probe_quests.py` ㉑㉜。",
           "items": {
             "type": "object",
             "required": [
@@ -94,6 +94,25 @@
                   "talk",
                   "ask"
                 ]
+              }
+            }
+          }
+        },
+        "give": {
+          "type": "array",
+          "description": "★ g3-quests2（接活那一下**真发到手**的东西）：[{\"item\": <items 域的 id>, \"n\": <件数>}, …]。写在**需要先发东西才能做**的条目上（今天只有 q_side_13「还石头」—— 接时行文 17 §QUEST_SIDE25_STORY 写「小满把那块石头塞给你」）。落法 = 生成器 scripts/rebuild_quest_gates.py 从 00_总纲/15_彩蛋域口径_v1.md §二 那一行的 hold= 现取；消费端 = content/cmds_quest.quest_accept → _hand_over（唯一口 loot.add_to_bag + 一行 SYS_JOB_GIVE）。没写 = 接活不发东西（老条目一个字不变）。",
+          "items": {
+            "type": "object",
+            "required": [
+              "item"
+            ],
+            "properties": {
+              "item": {
+                "type": "string"
+              },
+              "n": {
+                "type": "integer",
+                "minimum": 1
               }
             }
           }
