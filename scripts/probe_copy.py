@@ -792,6 +792,10 @@ def main():
         ("客栈(不在客栈)", CPLA.inn, "", {"loc": "windmill_town", "node": "wt_gate_n"}),
         ("客栈(住店)", CPLA.inn, "",
          {"loc": "windmill_town", "node": CMO.STASH_NODE, "cls": "cls_knight", "hp": 10}),
+        # ★ P-55 下半：住店收费那一支（钱不够 ⇒ 那一句 + 档不动）—— 呈现口一处不落地进用例表
+        ("客栈(钱不够)", CPLA.inn, "",
+         {"loc": "windmill_town", "node": CMO.STASH_NODE, "cls": "cls_knight", "hp": 10,
+          "gold": 0}),
         ("商队(车还在路上)", CPLA.caravan, "",
          {"loc": "windmill_town", "node": "wt_gate_n", "flags": {}}),
         ("商队(车到了)", CPLA.caravan, "",

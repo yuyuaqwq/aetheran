@@ -1589,25 +1589,49 @@ try:
         "%s（hp=%s/%s）" % ([x for x in _BAD16 if x[0].startswith("教堂")][:1],
                             _sv16().get("hp"), _cap16))
 
-    # ── 客栈：那一站 = 箱子那一站（同一个节点）· 住店回满 · 箱子那两句 ──────
+    # ── 客栈：那一站 = 箱子那一站（同一个节点）· 住店**收钱**（P-55）· 箱子那两句 ──────
     _cmp16("客栈（人在白烛堂）", _say16("客栈"), [_r("SYS_PLACE_AWAY", name=_nname16(_INN_NODE16))])
     _say16("去 %s" % _nname16(_INN_NODE16))
     _rowsI16, _lineI16 = _roster16(_INN_NODE16, _sv16())
     _whoI16 = str((_rowsI16[0].get("name") if _rowsI16 else ""))
+    _goldI16 = int(_sv16().get("gold") or 0)
     _cmp16("客栈（不疼也不困）", _say16("客栈"),
            [_r("SYS_PLACE_HEAD", name=_nname16(_INN_NODE16)), _r("SYS_LOOK_WHO", list=_lineI16),
             _r("SYS_INN_FULL"), _r("SYS_INN_BOX"), _r("SYS_TALK_HOW", name=_whoI16)])
+    _fullI16 = (int(_sv16().get("gold") or 0), int(_sv16().get("hp") or 0))
+    #: ★ P-55 下半：住一宿的价钱**从口径表现读**（不写死 8 —— 改一格这一条跟着走）
+    with open(os.path.join(str(REPO), "content", "rules", "inn.json"), encoding="utf-8") as _f:
+        _fee16 = int(json.load(_f)["fee"])
     _ad16.saved["hp"] = 20                              # 造一个带伤的档（真敲读回）
-    _cmp16("客栈（住店）", _say16("客栈"),
+    _ad16.saved["gold"] = _fee16 + 7                    # 钱刚够（剩下那 7 个给判据看着）
+    _cmp16("客栈（住店 · 钱够）", _say16("客栈"),
            [_r("SYS_PLACE_HEAD", name=_nname16(_INN_NODE16)), _r("SYS_LOOK_WHO", list=_lineI16),
             _r("SYS_INN_SLEEP"), _r("SYS_REST_HEAL", add=_cap16 - 20, hp=_cap16, max=_cap16),
-            _r("SYS_INN_BOX"), _r("SYS_TALK_HOW", name=_whoI16)])
-    chk("★ `客栈` 真敲三档：指路 / 不用住店 / 住店睡得血回满 —— 且那一站与『存放』认的是同一个节点"
+            _r("SYS_MONEY_POUCH", gold=7), _r("SYS_INN_BOX"), _r("SYS_TALK_HOW", name=_whoI16)])
+    _paidI16 = (int(_sv16().get("gold") or 0), int(_sv16().get("hp") or 0))
+    _ad16.saved["hp"] = 20                              # 再带一次伤；这回钱只够欠着
+    _ad16.saved["gold"] = _fee16 - 3
+    _snapI16 = json.dumps(_sv16(), ensure_ascii=False, sort_keys=True)
+    _cmp16("客栈（住店 · 钱不够）", _say16("客栈"),
+           [_r("SYS_PLACE_HEAD", name=_nname16(_INN_NODE16)), _r("SYS_LOOK_WHO", list=_lineI16),
+            _r("SYS_SHOP_POOR", lack=3), _r("SYS_INN_BOX"), _r("SYS_TALK_HOW", name=_whoI16)])
+    chk("★ `客栈` 真敲四档（指路 / 不用住店 / 住店 / 钱不够）—— 且那一站与『存放』认的是同一个节点"
         "（`cmds_more.STASH_NODE`，一处只写一份）",
-        not [x for x in _BAD16 if x[0].startswith("客栈")] and int(_sv16().get("hp") or 0) == _cap16
+        not [x for x in _BAD16 if x[0].startswith("客栈")] and _paidI16[1] == _cap16
         and _INN_NODE16 == _CM12.STASH_NODE,
-        "%s（hp=%s/%s · 客栈站=%s）" % ([x for x in _BAD16 if x[0].startswith("客栈")][:1],
-                                        _sv16().get("hp"), _cap16, _INN_NODE16))
+        "%s（住店那档 hp=%s/%s · 客栈站=%s）" % ([x for x in _BAD16 if x[0].startswith("客栈")][:1],
+                                                _paidI16[1], _cap16, _INN_NODE16))
+    chk("★ 住店**真收钱**（P-55 下半 · fee 从口径表现读 = %d）：满血那一档**一分不扣**（睡都没睡）· "
+        "住店那一档档上真扣 fee（gold %d → %d）且血回满 · 钱不够那一档**档一个字不动**"
+        "（不睡 / 不回血 / 不扣钱 —— fail-closed）"
+        % (_fee16, _fee16 + 7, _paidI16[0]),
+        _fullI16 == (_goldI16, _cap16) and _paidI16 == (7, _cap16)
+        and json.dumps(_sv16(), ensure_ascii=False, sort_keys=True) == _snapI16,
+        "满血档 %s（应 = %s）· 住店档 gold/hp %s（应 = (7, %s)）· 钱不够档 gold/hp %s（应 = (%d, 20)）"
+        % (_fullI16, (_goldI16, _cap16), _paidI16, _cap16,
+           (int(_sv16().get("gold") or 0), int(_sv16().get("hp") or 0)), _fee16 - 3))
+    _ad16.saved["hp"] = _cap16                          # 还原成进来时的样子（后面的用例不看血与钱）
+    _ad16.saved["gold"] = _goldI16
 
     # ── 旧货：收什么 = 域里有价的那些（逐件对账）· 看一眼 ≠ 动档 ────────────
     def _junk_want16(p):

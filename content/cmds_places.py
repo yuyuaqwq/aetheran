@@ -22,8 +22,10 @@
 ★ 为什么「回满」不算新数值：死亡那一路（`cmds_battle._wake_in_chapel`）本来就是
   「回白烛堂 · 血回满」—— 镇上这两处照同一个语义落地（治疗 / 睡一觉 = 回到上限），
   不另定一条曲线。
-★ 住店的**价钱**今天没有机器可读的一格（`apply.initial_save` 的注释里写着 8 铜板，
-  真源表里没有字段）⇒ 本批不收费，价目记进 `_notes.md` 的待补清单，不在这儿硬写一个数。
+★ 住店的**价钱**（P-55 下半 · 本批落的）：`content/rules/inn.json` 的 `fee` 那一格
+  （`content/inn.py::fee()` 现读，**本文件不写数**）—— 真源 `05 §七` 把「住店」算作
+  四个消耗口之一但没给数，取值理由与出处写在那份表里（乙档保守取：`initial_save` 头注
+  那句「30 枚铜板 = 活三天的钱（住店 8 / 一顿饭 2）」）。教堂 / 篝火那两条免费口不受影响。
 """
 from __future__ import annotations
 
@@ -31,6 +33,7 @@ from .cmds_ast import _data, _p, _save, T, _npcs_here, _name_of_node, hp_cap_or_
 from .town import _func_node, town_gate
 from .cmds_more import STASH_NODE
 from . import calendar as CAL
+from . import inn as INN
 from . import shop as SH
 
 #: ★ B4-12：镇子 id 收在基座 `cmds_ast`（`TOWN`）；「属于哪一站」（`_func_node`）与
@@ -106,6 +109,13 @@ async def inn(env, sink, uid, player):
 
     ★ 那一站 = **箱子那一站**（`cmds_more.STASH_NODE`：「客栈后院有个旧木箱」）——
       同一个节点不写第二份 id。站到了才住店（睡一觉 = 回到上限），并把箱子那两句递过去。
+    ★ P-55 下半（本批）：住店**收钱** —— 价在 `content/inn.json`（`content/inn.py::fee()` 现读，
+      本文件里一个数都没有）。三档各自照实说：
+        · 本来就满血 ⇒ **不收**（`SYS_INN_FULL`：睡都没睡，不该扣钱）
+        · 有伤但**钱不够** ⇒ 只回一句（复用现成槽位 `SYS_SHOP_POOR` —— 同一件事「钱不够」
+          同一句话）且**档一个字不动**：不睡、不回血、不扣钱（fail-closed，与『购买』同形）
+        · 真的睡下 ⇒ **先扣钱、再回血、一笔落档**（不会出现回了血却没扣钱的半截档），
+          再把剩下的钱报一句（`SYS_MONEY_POUCH` —— 就是『钱袋』那一句）
     """
     p = _p(player)
     node = STASH_NODE
@@ -117,14 +127,26 @@ async def inn(env, sink, uid, player):
     yield T("SYS_PLACE_HEAD", name=_node_name(node))
     if rows:
         yield T("SYS_LOOK_WHO", list=_roster_line(rows))
-    got = _heal_to_cap(p, env, player)
-    if got[0]:
-        yield got[0]
-    elif got[1] > 0:
-        yield T("SYS_INN_SLEEP")
-        yield T("SYS_REST_HEAL", add=got[1], hp=got[2], max=got[2])
-    else:
+    mx, fail = hp_cap_or_line(p)
+    if fail:
+        yield fail
+    elif int(p.get("hp") or mx) >= mx:
         yield T("SYS_INN_FULL")
+    else:
+        fee = INN.fee()
+        have = int(p.get("gold") or 0)
+        if have < fee:
+            yield T("SYS_SHOP_POOR", lack=fee - have)
+        else:
+            hp = int(p.get("hp") or mx)
+            p["gold"] = have - fee
+            p["hp"] = mx
+            if player is not None:
+                player.update(p)
+            _save(env)
+            yield T("SYS_INN_SLEEP")
+            yield T("SYS_REST_HEAL", add=max(0, mx - hp), hp=mx, max=mx)
+            yield T("SYS_MONEY_POUCH", gold=int(p.get("gold") or 0))
     yield T("SYS_INN_BOX")
     if rows:
         yield T("SYS_TALK_HOW", name=rows[0].get("name"))
