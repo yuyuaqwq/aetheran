@@ -482,10 +482,10 @@ def _const_line_ok(text, legacy_parts, const_val):
     return str(const_val) in _re2.findall(r"\d+", text)
 
 
-_c_f1 = (_re2.search(r"常量\s+K_def\(L\)\s*=\s*([^\n]+)", _DB).group(1)
-         if _re2.search(r"常量\s+K_def\(L\)\s*=\s*([^\n]+)", _DB) else "")
-_c_f3 = (_re2.search(r"常量\s+K_rate\(L\)\s*=\s*([^\n]+)", _DB).group(1)
-         if _re2.search(r"常量\s+K_rate\(L\)\s*=\s*([^\n]+)", _DB) else "")
+_c_f1 = (_re2.search(r"常量\s+K_def(?:\(L\))?\s*=\s*([^\n]+)", _DB).group(1)
+         if _re2.search(r"常量\s+K_def(?:\(L\))?\s*=\s*([^\n]+)", _DB) else "")
+_c_f3 = (_re2.search(r"常量\s+K_rate(?:\(L\))?\s*=\s*([^\n]+)", _DB).group(1)
+         if _re2.search(r"常量\s+K_rate(?:\(L\))?\s*=\s*([^\n]+)", _DB) else "")
 chk("★ P-58 ②：§F1/§F3 的**常量行**必须是两态之一 —— 旧案算式（随等级 `100 + 20L` / `300 + 30L`，"
     "未跟账）或与 `$const` 同值（跟账后）；第三态当场红"
     "（F1 行 = 「%s」· F3 行 = 「%s」）" % (_c_f1.strip()[:40], _c_f3.strip()[:40]),
@@ -584,10 +584,12 @@ _ref_line = _re2.search(r"目标击杀行动数（([^）]*)）", D12)          #
 _ref_pairs = dict(_re2.findall(r"([\u4e00-\u9fa5]+)\s*(\d+(?:\.\d+)?)", _ref_line.group(1))) if _ref_line else {}
 _n_elite_doc = _ref_pairs.get("精英")
 chk("★ P-65 换锚①：`12_` 抬头反推式里那个「精英 N 次」= **%s**（整行：%s）必须**要么**是旧案快照 %.0f"
-    "**要么**是现口径 %.1f（取整到个位）—— 第三个数当场红（文档跟账前后都成立 · 手打/改坏拦得住）"
-    % (_n_elite_doc, _ref_line.group(1) if _ref_line else "（没解析出）", _EL_V1, _EL_NOW),
+    "**要么**是现口径 %.1f（或它取整到个位 %.0f）—— 第三个数当场红（文档跟账前后都成立 · 手打/改坏拦得住）"
+    % (_n_elite_doc, _ref_line.group(1) if _ref_line else "（没解析出）", _EL_V1, _EL_NOW, round(_EL_NOW)),
     _n_elite_doc is not None
-    and (abs(float(_n_elite_doc) - _EL_V1) < 0.05 or abs(float(_n_elite_doc) - round(_EL_NOW)) < 0.05),
+    and (abs(float(_n_elite_doc) - _EL_V1) < 0.05
+         or abs(float(_n_elite_doc) - _EL_NOW) < 0.05
+         or abs(float(_n_elite_doc) - round(_EL_NOW)) < 0.05),
     "现算 %.3f 次 · 旧案 %.0f 次" % (_EL_NOW, _EL_V1))
 _x_d12 = _re2.findall(r"普通\s*([\d.]+)\s*倍", D12)                 # 读法② 那个「精英 hp 是普通 N 倍」
 chk("★ P-65 换锚②：`12_` 读法② 那个「精英 hp 是普通的 N 倍」（出现过 %s）必须**要么**是旧案 %.2f"
@@ -612,10 +614,9 @@ _hp_doc = _num(D14, r"旧誓哨兵（Lv19）：hp (\d+)", int)
 _hp_now = int(mo[_bkeys[0]]["panel"]["hp"]) if _bkeys else 0
 _hp_v1 = int(RB.panel_of_v1(19, "boss", "杂兵")["hp"])     # 旧案那行写的「不用原型偏移」
 chk("★ P-65 换锚③：两处文档写的 Boss hp 是同一个数（%s）· 且那个数 ∈ 两态"
-    "（旧案（不偏移）复算 %d / 域现行 %d，各 1%% 容差）—— 第三个数当场红"
+    "（旧案（不偏移）复算 %d / 域现行 %d，**逐字相等**）—— 第三个数当场红"
     % (_hp_doc, _hp_v1, _hp_now),
-    _hp_doc is not None and ("hp %s" % _hp_doc) in D12
-    and (abs(_hp_doc - _hp_v1) <= 0.01 * max(1, _hp_v1) or abs(_hp_doc - _hp_now) <= 0.01 * max(1, _hp_now)),
+    _hp_doc is not None and ("hp %s" % _hp_doc) in D12 and _hp_doc in (_hp_v1, _hp_now),
     "14 说 %s · 旧案复算 %s · 域 %s" % (_hp_doc, _hp_v1, _hp_now))
 # ★ P-64（2026-09-26）**BOSS 那一格的口径**：`02_数值宪法/03_全流程数值主干_v1.md` §四 的 BOSS
 #   那行写「12–18 次」，而域里 Boss 的基准 n_me = %.1f、实际怪（厚甲）≈ %.1f。
