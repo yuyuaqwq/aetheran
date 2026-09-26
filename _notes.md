@@ -9162,10 +9162,12 @@ scripts/_baseline_instance_solo.json  ★ 刷新（§四 的账）
 ## 四、门禁与真跑（逐字）
 
 ```text
-① 全量探针（bash Temp/w10/gorun.sh C:/Users/yuyu/ast-wt/fxd fxd5 · **落账提交之后的 tip**）
+① 全量探针（bash Temp/w10/gorun.sh C:/Users/yuyu/ast-wt/fxd <标签> · **改完之后那一轮的 tip**）
    ⇒ **TOTAL pass=52 fail=0**（52 支 · 含本批新增的 probe_gear_starter ⑱）
-   逐支 rc 与结果行都在 `C:/Users/yuyu/AppData/Local/Temp/w10/fxd5/summary.txt`
-   （另：改动最后一轮的 `fxd4` 同样 52/52 —— 两次都在 tip 附近、只差落账提交）
+   逐支 rc 与结果行都在 `C:/Users/yuyu/AppData/Local/Temp/w10/<标签>/summary.txt`
+   ★ 本分支最终那次 = `fxd7`（第二轮那四条修完之后）：**TOTAL pass=52 fail=0** · 工作树干净
+   （过程里 `fxd4` / `fxd5` 同样 52/52；`fxd6` 那轮有 3 条红 —— 是我**当时正在改文件**的假红：
+     `probe_copy` 报的正是刚加进代码、还没落进 texts 的 `SYS_SRC_GATHER_MORE`）
 ② 数值那支：`scripts/run_numeric_tests.py` **本仓没有这个文件**（aetheran 三个仓都没有；
    只有奥兰迪亚/dragonfall 那边有同名脚本）⇒ 用本包现成的数值门禁替代：
    `scripts/balance_experiment.py --seeds 24`（五档 × 六职业 · 单刷）改前（qa1）与改后（fxd）
