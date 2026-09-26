@@ -72,6 +72,12 @@ B4-2 加的那一组（P-25 §① 主线收口 · P-37 曲线唯一口）：
       行里点了名（探针现解析；不是从别条串台凑的）· **缺一步矩阵**（逐条少做那一件 ⇒ 拦住）·
       万事俱备 ⇒ 交得掉 + 奖励入档 + `flags.quests[<id>]` 的 `step == 条件条数`
 
+B4-27 加的那一组（P-25 §① 主线交活判据 · 按条目身份复核后钉住）：㉟（见 ㉜ 之后那一节）。
+★ 台账 P-25 那句「① 主线交活只判等级」**已经过期** —— B4-2 已把 12 条主线全落上 `require`、
+`_obj_ok` 主线那一支已是「等级 **且** 逐步记账」；本批 grep 消费者复核后**没有改行为**，
+只把结论钉成机器可验：等级那一半单独载重（万事俱备 + 等级压在门槛下 ⇒ 拦住）·
+每条条件的途径都存在（与支线 ⑮/㉚ 同一把尺子）· `_obj_ok` 主线那一支两半都在（静态守卫）。
+
 B4-27 加的那一组（P-25 §② 再收一条：支 7 白烛堂的灯）：
   ㉚（扩）★ 支 7「送灯油 → 陪他配一次」的后半截落成 `talk npc_ed ×1`（「陪」= 搭话，与
       「听他讲完（三次）」同一族；次数从那一句现取）⇒ `_EXP_KIND` 6 → **7**，于是 ㉘ 的
@@ -1226,6 +1232,84 @@ for _n in sorted(mainq):
     "**缺一步交不掉**（逐条矩阵）· 万事俱备交得掉且 flags.quests 写下 step=条件条数（坏 %s）"
     % (_main_bad or "无"))
 for _ln in _main_lines:
+    print("      %s" % _ln)
+
+# ══════════════════════════════════════════════════════════════
+# ㉟ ★ B4-27 ①（P-25 §① 那一条的收口）：主线交活 = **等级 + 逐步记账**（B4-2 已落）
+#   本批按**条目身份** grep 消费者复核之后，把结论钉成机器可验（台账那半句「主线交活只判等级」
+#   **已经过期** —— B4-2 落了 require、`_obj_ok` 主线那一支已是 `level >= min_level` **且**
+#   逐条 `_req_ok`；台账会过期，所以判据不能只写在注释里）：
+#     ① 等级那一半**单独**是载重的：万事俱备（条件全做上）但等级压在门槛之下 ⇒ 照样拦住、
+#        档一个字不动；同一个档把等级抬回门槛 ⇒ 立刻交得掉（差别**只**在等级）——
+#        把那半摘掉就当场红
+#     ② 逐步记账那一半：与支线走的是**同一条判定**（`all(_req_ok(...))`）—— 按条钉在 ㉜
+#        （每条都写了 require + 缺一步矩阵）
+#     ③ 每条条件的**途径都存在**（与支线 ⑮ / ㉚ 同一把尺子）：`visit` 的图与节点在 maps 域里 ·
+#        `kill` 的怪在 monsters 域里 · `item` 在 items 域里且**有出产渠道**（采集 / 掉落 / 配方
+#        三处汇总，探针自己重算）· `talk` 的人挂着对话树 —— 一条做不到的条件 = 这条主线永远交不掉
+#     ④ 静态守卫：`_obj_ok` 主线那一支**必须两半都在**（`min_level` 与 `_req_ok`）——
+#        「接了就交」与「等级变唯一判据」两个方向都堵死
+# ══════════════════════════════════════════════════════════════
+_lv_bad, _lv_lines = [], []
+for _n in sorted(mainq):
+    _k, _x = mainq[_n]
+    # ① 等级那一半：条件全做上、等级压到门槛之下 ⇒ 拦住且档不动；抬回门槛 ⇒ 交得掉
+    _low = _sat_player(_x, _k)
+    _low["level"] = int(_x["min_level"]) - 1
+    _lv_out = _drive(CQ.quest_deliver, _low, "交 %d" % _n)
+    if any(ln.startswith("交了") for ln in _lv_out) \
+            or _k in ((_low.get("flags") or {}).get("quests_done") or []):
+        _lv_bad.append("主%d：等级压到 %d（门槛 %d）竟然交得掉 —— 等级那一半不在载重"
+                       % (_n, _low["level"], _x["min_level"]))
+    elif not any(ln.startswith("还没做完") for ln in _lv_out):
+        _lv_bad.append("主%d：等级不够时没说「还没做完」：%s" % (_n, _lv_out[:2]))
+    _full1 = _sat_player(_x, _k)
+    _full1["level"] = int(_x["min_level"])
+    _pay1 = _drive(CQ.quest_deliver, _full1, "交 %d" % _n)
+    if not any(ln.startswith("交了") for ln in _pay1):
+        _lv_bad.append("主%d：等级刚够（%d）也交不掉：%s" % (_n, _x["min_level"], _pay1[:2]))
+    _lv_lines.append("主%-2d 门槛 %-2d：等级 %-2d（门槛下）拦住 · 等级 %-2d 交得掉 → 「%s…」"
+                     % (_n, _x["min_level"], int(_x["min_level"]) - 1, _x["min_level"],
+                        next((ln for ln in _pay1 if ln.startswith("交了")), "?")[:14]))
+    # ③ 条件途径存在（一把一个 kind）
+    for _r in CQ._require_of(_x):
+        _kind = _r.get("kind")
+        if _kind == "visit":
+            _mv = MAPS.get(str(_r.get("map")))
+            if not _mv:
+                _lv_bad.append("主%d：要去的图 %s 不在 maps 域里" % (_n, _r.get("map")))
+            elif _r.get("node") \
+                    and str(_r["node"]) not in [x["id"] for x in (_mv.get("nodes") or [])]:
+                _lv_bad.append("主%d：要去的节点 %s 不在图 %s 里"
+                               % (_n, _r.get("node"), _r.get("map")))
+        elif _kind == "kill":
+            if str(_r.get("monster")) not in MON:
+                _lv_bad.append("主%d：要打的怪 %s 不在 monsters 域里" % (_n, _r.get("monster")))
+        elif _kind == "item":
+            _iid = str(_r.get("item"))
+            if _iid not in ITEMS and not (_iid.startswith("unid_") and _iid in DP):
+                _lv_bad.append("主%d：要拿的 %s 不在 items 域里" % (_n, _iid))
+            elif _iid not in produced:
+                _lv_bad.append("主%d：要拿的 %s **没有任何出产渠道**（采集 / 掉落 / 配方都没有）"
+                               "⇒ 这条主线永远交不掉" % (_n, _iid))
+        elif _kind == "talk":
+            if not (NPCS.get(str(_r.get("npc"))) or {}).get("dialogue"):
+                _lv_bad.append("主%d：要搭话的 %s 没挂对话树" % (_n, _r.get("npc")))
+        else:
+            _lv_bad.append("主%d：条件 kind「%s」不在主线用的那一族里（visit/kill/item/talk）"
+                           % (_n, _kind))
+# ④ 静态守卫：`_obj_ok` 主线那一支必须两半都在（`min_level` 与 `_req_ok`）
+_m_line = next((_s for _s in io.open(os.path.join(REPO, "content", "cmds_quest.py"),
+                                     encoding="utf-8").read().split("\n")
+                if _s.strip().startswith("return") and "min_level" in _s), "")
+if not _m_line or "_req_ok" not in _m_line:
+    _lv_bad.append("_obj_ok 主线那一支不再两半都在（读到的是「%s」）" % _m_line.strip())
+(ok if not _lv_bad else bad)(
+    "★ P-25 §① 主线交活那一半（B4-2 已收口 · 台账那半句已过期）：**等级 + 逐步记账两条都在载重**"
+    "（万事俱备但等级压在门槛下 ⇒ 拦住且档原样 · 抬回门槛 ⇒ 交掉）· 每条条件的**途径都存在**"
+    "（图/节点 · 怪 · 物有出产渠道 · 对话树 —— 与支线 ⑮/㉚ 同一把尺子）· `_obj_ok` 主线那一支"
+    "两半都在（静态守卫；坏 %s）" % (_lv_bad or "无"))
+for _ln in _lv_lines:
     print("      %s" % _ln)
 
 _m_bad, _m_lines, _can, _cant = [], [], [], []
