@@ -1162,7 +1162,10 @@ def live_mp(env, uid, p):
       的余蓝，不是开打前那个（改前实测：放完两招敲 `状态`，报的还是 `85/85`）。
       拿不到（没在打 / 场里没这一格）⇒ 照**档上那一格**（= 与接线前逐字相同，不编数）。
 
-    血不在这儿读：血在**每一手**都落回档（`instance._write_back`），档上那一格本来就是活的。
+    ★ 血也在这儿读（`live_hp`）—— 原先这句写的是「血在每一手都落回档，档上那一格本来就是
+      活的」：**只对出手的那一位成立**。`instance._write_back` 只把**轮到我那一手**的血落回档，
+      而「别人出手那一手我挨的打」不在档上（实测 2 人同场：乙出手那一手甲挨 27，档上仍是 284）
+      ⇒ 甲敲『状态』报的是旧数。见 `live_hp`。
     """
     from . import instance as INST                 # 本地 import：与 `live_foe` 那一族同款
     st = INST.live(env, uid)
@@ -1172,6 +1175,29 @@ def live_mp(env, uid, p):
     if not isinstance(a, dict) or a.get("mp") is None:
         return p.get("mo")
     return a.get("mp")
+
+
+def live_hp(env, uid, p):
+    """打斗中途「我」的现血 —— **唯一口**：有「场」就按场里那一格 actor 现读。
+
+    ★ fix-q（试玩 · 与 `歇脚` 那条同源）：`instance._write_back` 的抬头明写「『不动档』那条
+      只对**没轮到我的那两敲**成立」—— 也就是说，**别人出手那一手我挨的打根本不在档上**。
+      实测（2 人同场 · 真宿主）：乙（后手）出手那一手甲挨了 27 点，甲档上仍是 `284` ⇒
+      甲敲『状态』报 `生命 284/284`，而场上它 `257/284`（下一手头行才见真数）——
+      「一人两套血」的读数那一面，与 `live_mp` 同一个理由。
+      拿不到（没在打 / 场里没这一格）⇒ 照**档上那一格**（= 与接线前逐字相同，不编数）。
+    ★ 倒地的这一档同样照档：0 不是「档上的血」，是这一场的处置（回白烛堂 / 回满）——
+      与 `_write_back` 不写 0 同口径，不许拿 0 顶替（否则面板上出现「生命 0/248」的活人）。
+    """
+    from . import instance as INST                 # 本地 import：与 `live_mp` 同款
+    st = INST.live(env, uid)
+    if st is None:
+        return p.get("hp")
+    a = INST.actor_of(st, uid)
+    if not isinstance(a, dict) or a.get("hp") is None:
+        return p.get("hp")
+    hp = int(a.get("hp") or 0)
+    return hp if hp > 0 else p.get("hp")
 
 
 async def status(env, sink, uid, player):
@@ -1189,7 +1215,9 @@ async def status(env, sink, uid, player):
         yield T("SYS_STATUS_VITALS", hp=T("SYS_UNSET"), hp_max=T("SYS_UNSET"),
                 mo=T("SYS_UNSET"), mo_max=T("SYS_UNSET"), gold=p.get("gold"))
     else:
-        yield T("SYS_STATUS_VITALS", hp=p.get("hp"), hp_max=cap,
+        # ★ fix-q：血与蓝都按**这一场那一格**现读（`live_hp` / `live_mp` 同一个口）——
+        #   档上那一格只对「刚出手的那一位」是活的，别人出手时我挨的打不在档上。
+        yield T("SYS_STATUS_VITALS", hp=live_hp(env, uid, p), hp_max=cap,
                 mo=live_mp(env, uid, p), mo_max=mcap, gold=p.get("gold"))
     yield T("SYS_STATUS_EXP", exp=p.get("exp"),
             place=_map_of(p["loc"]).get("name", p["loc"]) if _map_of(p["loc"]) else p["loc"])

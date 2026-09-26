@@ -25,7 +25,7 @@ import json
 import os
 
 from .cmds_ast import (_data, _p, _save, _map_of, _name_of_node, T, hp_cap_or_line,
-                        _pois_here, rest_places)
+                        _pois_here, rest_places, _in_fight)
 from .cmds_codex import new_lines
 from . import calendar as CAL
 from . import codex as CX
@@ -117,6 +117,18 @@ def _left_after(entries: list, nth: int) -> list:
 
 async def _do_gather(env, sink, uid, player, verb: str, word: str):
     p = _p(player)
+    # ★ fix-q（试玩 · 与 `歇脚` 那条同一条闸）：「采集 / 挖掘 / 垂钓 / 搜查」原先只判「脚下有没有
+    #   这个动词的点」，**战斗中照样放行** —— 实测（真宿主 · 骨田）：一场里敲 `挖掘` 照出
+    #   「铁屑 ×1 + 碎石 ×1」、`采集`/`搜查` 照进背包与旧物谱，档当场被改（`bag` / `flags.gather_used`
+    #   / `codex`），而这一手**不花**（场上那一手是另一条路）⇒ 等于给玩家一个战斗中的免费口。
+    #   处置 = 与出镇 / 带间 / 返回 / 去 / 塔门 / 歇脚同一道**持态闸**（`SYS_MOVE_IN_FIGHT`，
+    #   fail-closed）：先把这一场打完，或者『逃跑』/『后撤』脱身。
+    #   ★ `拾取` 不在这一闸里：那一支一个字都不写（`SYS_PICKUP_NONE`），拦它只会换一句话。
+    #   ★ 判据只紧：不打架时那四点照旧真出东西（`probe_cmds` ㉑③c 两态互锁）。
+    _lock = _in_fight(env, uid)
+    if _lock:
+        yield _lock
+        return
     pts = _points_here(p, verb)
     if not pts:
         yield T("SYS_GATHER_NONE", word=word)

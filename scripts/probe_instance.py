@@ -718,6 +718,65 @@ def main():
     chk("★ 区域 Boss 只能打一次（真源 `05_玩法数值口径_v1 §四` · 真敲）：打掉过 ⇒ 遇敌里不再出现；"
         "**只输过**（进谱但 kills=0）⇒ 照样遇得上", not _B9, "%s" % _B9[:2])
 
+    # ── ⑩ ★ fix-q：持态中敲『状态』报的是**这一场那一格血**（不是档上那一份）──────────
+    #   `instance._write_back` 只把**轮到我那一手**的血落回档 ⇒「别人出手那一手我挨的打」
+    #   不在档上（实测 2 人同场：乙出手那一手甲挨 27，档上仍是 284 ⇒ 甲敲『状态』报旧数，
+    #   下一手头行才见真数）。这里不靠「怪正好打谁」那种抽签：把这一场那一格**改成与档上
+    #   不同的一个数**（档一个字不动），再看『状态』报哪一个 —— 判据咬的是「读的是哪一份」。
+    print()
+    print("⑩ ★ fix-q：持态中敲『状态』报的是**这一场那一格血**（与 `live_mp` 同一个口）")
+    import ast as _ast10
+    from content import panel_build as _PB10
+    db = _fresh("q")
+    host, ad = _boot(db, "g_q")
+    _seed("g_q", "u_a", level=PARTY_LV, cls="cls_knight", name="甲")
+    _seed("g_q", "u_b", level=PARTY_LV, cls="cls_assassin", name="乙")
+    INST.party_members = lambda g, u: ["u_a", "u_b"] if g == "g_q" else [u]
+    saved = _pin_encounter(PARTY_MON)
+    _B10 = []
+    try:
+        _o_q = _drive(host, ad, "u_a", "攻击")               # 开场 + 甲先出一手
+        _st_q = INST.load("g_q")
+        if _st_q is None or not any(("遭遇" in x or "⚔" in x) for x in _o_q):
+            _B10.append(("攻击 没开成一场", _o_q[:2]))
+        else:
+            _pk_q = dict(PS.get_player("g_q", "u_a"))
+            _cap_q = int(_PB10.hp_cap(_pk_q))
+            _me_q = INST.actor_of(_st_q, "u_a")
+            _me_q["hp"] = _cap_q - 37                        # 场里那一格 ≠ 档上那一格
+            INST.save("g_q", _st_q)
+            _snap_q = dict(PS.get_player("g_q", "u_a"))
+            _o_q2 = _drive(host, ad, "u_a", "状态")
+            _txt_q = "\n".join(_o_q2)
+            if ("生命 %d/%d" % (_cap_q - 37, _cap_q)) not in _txt_q:
+                _B10.append(("状态 没报场里那一格血（该 %d/%d）" % (_cap_q - 37, _cap_q), _o_q2[:2]))
+            if ("生命 %d/%d" % (int(_pk_q.get("hp") or 0), _cap_q)) in _txt_q:
+                _B10.append(("状态 报的还是档上那一份（旧数 %s）" % (_pk_q.get("hp"),), _o_q2[:2]))
+            if dict(PS.get_player("g_q", "u_a")) != _snap_q:
+                _B10.append(("只读的口把档动了",))
+        # 两态互锁：**没有场**的那一位照旧报档上那一格（与接线前逐字相同）
+        db2 = _fresh("q2")
+        host2, ad2 = _boot(db2, "g_q2")
+        _seed("g_q2", "u_c", level=PARTY_LV, cls="cls_priest", name="丙")
+        _pk2 = dict(PS.get_player("g_q2", "u_c"))
+        _txt_q2 = "\n".join(_drive(host2, ad2, "u_c", "状态"))
+        if ("生命 %s/" % (_pk2.get("hp"),)) not in _txt_q2:
+            _B10.append(("没有场时没照档上那一格报", _txt_q2.splitlines()[:2]))
+        # 覆盖面（静态）：这一格的读数只走 `live_hp` 那一口（谁再直接拿 `p["hp"]` 顶上，这里红）
+        _src_q = (REPO / "content" / "cmds_ast.py").read_text(encoding="utf-8")
+        _st_fn_q = next((n for n in _ast10.walk(_ast10.parse(_src_q))
+                         if isinstance(n, _ast10.AsyncFunctionDef) and n.name == "status"), None)
+        _uses_q = [n for n in _ast10.walk(_st_fn_q) if isinstance(n, _ast10.Call)
+                   and getattr(n.func, "id", "") == "live_hp"] if _st_fn_q else []
+        if len(_uses_q) != 1:
+            _B10.append(("status 没走 live_hp 那一口（%d 处）" % len(_uses_q),))
+    finally:
+        _unpin(saved)
+        INST.party_members = None
+    chk("★ fix-q 持态中『状态』报**这一场那一格血**（档上那一格只对刚出手的那位是活的）· "
+        "只读的口**不动档** · 没有场时照旧报档上那一格 · 读数只走 `live_hp` 那一口"
+        "（坏 %s）" % (_B10[:2] or "无",), not _B10, "%s" % (_B10[:2],))
+
     print()
     print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
     return 0 if ok else 1

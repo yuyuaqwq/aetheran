@@ -2901,6 +2901,125 @@ except Exception as exc:                                                  # noqa
         "%s: %s" % (type(exc).__name__, exc))
 
 
+# ══════════════════════════════════════════════════════════════
+# ★ fix-q：野外那四条（采集 / 挖掘 / 垂钓 / 搜查）也吃「场在跑」那道闸
+#   （原先只判「脚下有没有这个动词的点」⇒ 战斗中照出东西、档当场被改、而这一手不花）
+# ══════════════════════════════════════════════════════════════
+print("㉓ ★ fix-q：战斗中『采集 / 挖掘 / 垂钓 / 搜查』一律拦下（持态闸 · 与 `歇脚` 同一条）")
+try:
+    import ast as _ast23
+
+    _G23 = st.domain("gathering") or {}
+    _MON23 = st.domain("monsters") or {}
+    _HB23 = {}
+    for _m23 in _MON23.values():
+        for _n23 in ((_m23 or {}).get("habitat") or {}).get("nodes") or []:
+            _HB23.setdefault(str(_n23), []).append(_m23)
+    # 每条动词挑一处「既有这个点、又有怪」的站 —— 两半（拦得下 / 平时照出东西）都跑得起来；
+    # ★ 优先挑**不带时辰/天气门**的那个点（例：`树根边的菌` 只在「雨」出 ⇒ 平时那一半会
+    #   回 `SYS_TIME_GATED`，判据就咬不住「平时照出东西」了）。
+    _NODE23 = {}
+    for _gid23, _v23 in _G23.items():
+        _verb23 = str(_v23.get("verb") or "")
+        _key23 = (str(_v23.get("map") or ""), str(_v23.get("subarea") or ""))
+        if _key23[1] not in _HB23:
+            continue
+        _rank23 = (1 if _v23.get("time") else 0, _key23)
+        if _verb23 not in _NODE23 or _rank23 < _NODE23[_verb23][0]:
+            _NODE23[_verb23] = (_rank23, _key23)
+    _NODE23 = {k: v[1] for k, v in _NODE23.items()}
+    _WORD23 = {"herb": "采集", "dig": "挖掘", "fish": "垂钓", "search": "搜查"}
+    chk("★ 四条动词各有一处「有采集点 + 有怪」的站（从 gathering / monsters 两域现算 —— "
+        "站名一个字都不手写）：%s"
+        % " · ".join("%s=%s/%s" % (_WORD23.get(k, k), v[0], v[1]) for k, v in sorted(_NODE23.items())),
+        set(_NODE23) >= set(_WORD23), sorted(_NODE23))
+
+    _SEED23 = {"cls": "cls_knight", "race": "human", "name": "试炼者", "level": 12, "exp": 0,
+               "gold": 0, "hp": 60, "loc": "belt_north", "node": "bn_bone",
+               "prev": [], "bag": {}, "equipped": {}, "codex": {}, "flags": {}}
+
+    def _two23(seed, texts):
+        """真宿主逐敲（同一份档连着走，每一步都给回话 + 那一刻的档）—— 与别处同形。"""
+        _db23 = os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp",
+                             "ast_probe_cmds_fixq.db")
+        try:
+            os.remove(_db23)
+        except OSError:
+            pass
+        _ad23 = _Ad([], seed=dict(seed))
+        _h23 = Host(_ad23, str(REPO), inject={"db_path": _db23, "clock": lambda: _FIXED})
+        _h23.boot()
+        _steps = []
+        for _t23 in texts:
+            _ad23.out.clear()
+            _h23.handle({"uid": "u_c", "group_id": "g_c", "text": _t23})
+            _steps.append((list(_ad23.out), dict(_ad23.saved or {})))
+        return _steps
+
+    # ── ① 战斗中：四条一律只回闸那一句 · 档**逐值不动**
+    _bad23 = []
+    for _verb23 in sorted(_NODE23):
+        _fm23, _fn23 = _NODE23[_verb23]
+        _w23 = _WORD23[_verb23]
+        _st23 = _two23(dict(_SEED23, loc=_fm23, node=_fn23), ["攻击", _w23])
+        _opened23 = any(("遭遇" in x or "⚔" in x) for x in _st23[0][0])
+        if not _opened23:
+            _bad23.append((_w23, "攻击 没开成一场", _st23[0][0][:2]))
+            continue
+        if _st23[1][0] != [_r("SYS_MOVE_IN_FIGHT")]:
+            _bad23.append((_w23, "回话不是闸那一句", _st23[1][0][:2]))
+        _diff23 = [k for k in set(list(_st23[0][1]) + list(_st23[1][1]))
+                   if _st23[0][1].get(k) != _st23[1][1].get(k)]
+        if _diff23:
+            _bad23.append((_w23, "档被动了", _diff23))
+    chk("★ ① 真宿主：开一场（`攻击`）之后敲这四条 —— 一律**只回** `SYS_MOVE_IN_FIGHT`"
+        "（与出镇 / 带间 / 塔门 / 歇脚同一句）· 档**逐值不动**（坏 %s）" % (_bad23 or "无",),
+        not _bad23, "%s" % (_bad23[:3],))
+
+    # ── ② 两态互锁：不打架时那四条**照旧真出东西**（判据只紧，不拿"一律拦下"顶过去）
+    _bad23b = []
+    for _verb23 in sorted(_NODE23):
+        _fm23, _fn23 = _NODE23[_verb23]
+        _w23 = _WORD23[_verb23]
+        _st23b = _two23(dict(_SEED23, loc=_fm23, node=_fn23), [_w23])[0]
+        if _r("SYS_MOVE_IN_FIGHT") in _st23b[0]:
+            _bad23b.append((_w23, "平时也被拦了", _st23b[0][:2]))
+        _moved23 = [k for k in ("bag", "flags", "codex")
+                    if _st23b[1].get(k) != _SEED23.get(k)]
+        if not _moved23:
+            _bad23b.append((_w23, "档没动（平时该真出东西）", _st23b[0][:2]))
+    chk("★ ② 两态互锁：**不打架时**同一站敲同一条 ⇒ 不是闸那一句、且档真被改"
+        "（`bag` / `flags.gather_used` / `codex` 至少动一格）（坏 %s）" % (_bad23b or "无",),
+        not _bad23b, "%s" % (_bad23b[:3],))
+
+    # ── ③ 覆盖面（静态）：这道闸**只写一处**、且落在 `_do_gather` 里（四条共用一条路）
+    _gf23 = (REPO / "content" / "cmds_gather.py").read_text(encoding="utf-8")
+    _t23 = _ast23.parse(_gf23)
+    _calls23 = [n.lineno for n in _ast23.walk(_t23)
+                if isinstance(n, _ast23.Call) and isinstance(n.func, _ast23.Name)
+                and n.func.id == "_in_fight"]
+    _do23 = next((n for n in _ast23.walk(_t23) if isinstance(n, _ast23.AsyncFunctionDef)
+                  and n.name == "_do_gather"), None)
+    _in_do23 = bool(_do23) and any(
+        isinstance(n, _ast23.Call) and isinstance(n.func, _ast23.Name)
+        and n.func.id == "_in_fight" and n.lineno >= _do23.lineno
+        for n in _ast23.walk(_do23))
+    _pick23 = next((n for n in _ast23.walk(_t23) if isinstance(n, _ast23.AsyncFunctionDef)
+                    and n.name == "pick_up"), None)
+    _pick_has23 = bool(_pick23) and any(
+        isinstance(n, _ast23.Call) and isinstance(n.func, _ast23.Name)
+        and n.func.id == "_in_fight"
+        for n in _ast23.walk(_pick23))
+    chk("★ ③ 覆盖面（静态）：`_in_fight` 在这个文件里**只有一处**、且就在 `_do_gather` 里"
+        "（四条动词共用那一支 = 一条闸罩住全族；%s 处调用）· `pick_up` **有意不拦**"
+        "（那一支一个字都不写，拦它只换一句话）"
+        % len(_calls23), len(_calls23) == 1 and _in_do23 and not _pick_has23,
+        "调用 %s · 在 _do_gather=%s · pick_up 带闸=%s" % (_calls23, _in_do23, _pick_has23))
+except Exception as exc:                                                  # noqa: BLE001
+    chk("★ fix-q 野外那四条那一道闸跑得起来（真宿主契约）", False,
+        "%s: %s" % (type(exc).__name__, exc))
+
+
 print("")
 print("结果：全绿 ✓" if ok else "结果：有红 ✗")
 sys.exit(0 if ok else 1)
