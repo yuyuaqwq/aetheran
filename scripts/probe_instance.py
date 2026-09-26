@@ -261,6 +261,17 @@ def solo_transcript():
 #     ⇒ 逐字对账里唯一变的一行是「…在 北带 · 骨田」→「…在 北带」（新旧两份 `--dump` 逐行 diff 过：
 #       5 条指令 · 5 条 row 只差这 1 行 · `save` 那几格逐字相同）。
 #     新口径的常驻判据在 `scripts/probe_maps.py` ⑨（图名是区域名 · 不含自己的节点名）+ 本分支 `_notes.md` §八。
+#
+#   ★ fix-a-screen（2026-09-27 · 显示层那一批）第六次刷新 —— 同样是**有意**的呈现变更
+#     （这一支一个字没动；改的是内容侧那一格文案）：`content/rules/battle_text.json` 新声明了
+#     引擎槽位 `battle.landing.blocked_amount` ⇒ 那句兜底模板的**半角括号**（全屏唯一一处，
+#     骑士路试玩报的「`(格挡后 N 点伤害)` 是全屏唯一的半角括号」）换成 texts 域里那一行。
+#     ⇒ 逐字对账里唯一变的一行是「(格挡后 2 点伤害)」→「（格挡后 2 点伤害）」
+#     （新旧两份 `--dump` 逐行 diff 过：5 条指令 · 共 37 行只差这 1 行 · `save` 那几格逐字相同；
+#       括号以外**逐字节**相同 —— 半角 1 字节 → 全角 3 字节，整份基线只差这 4 字节）。
+#     新口径的常驻判据：`scripts/probe_elements.py` ⑨-d（那一屏一个半角括号都不许有）
+#     + `scripts/probe_mech.py` ㉑（一笔自付只出一行）。
+#     口径依据：措辞归内容侧（引擎只给 key + 兜底模板 + 槽位，`landing.py:170`）。
 # ══════════════════════════════════════════════════════════════
 BASELINE_PATH = os.path.join(str(REPO), "scripts", "_baseline_instance_solo.json")
 

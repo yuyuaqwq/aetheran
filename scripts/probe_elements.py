@@ -18,6 +18,8 @@
   ⑧ 一键撤 / 零影响：关掉样例 ⇒ actor 上没有那两个字段（逐字相同）· 非样例怪两态逐字相同
   ⑨ 死槽位：声明的槽位（含 2026-09-25 补的 DoT 每跳那条）**真被引擎请求过**（`TextTable.unused()` 空）
      · ⑨-a 顺带钉死「DoT 那行不含状态机器键」（引擎兜底会打出 `bleeding`）
+     · ⑨-d ★ fix-a-screen（2026-09-27）：格挡后那条（`battle.landing.blocked_amount`）也走槽位
+       —— 引擎兜底那句是全屏**唯一**一处半角括号，这一屏一个半角括号都不许有
   ⑩ 渲染口绝不抛（纪律）：没声明的 key / 空表 ⇒ 一律回字符串 —— 引擎 `landing.py` 那 108 行
      包在 `except Exception: pass` 里，渲染口一抛，免疫会连「伤害归 0」一起静默失效
 
@@ -364,6 +366,38 @@ _nt_line = [x for x in _lg_nt if str(_tx[_nt_slot]["value"]) in x]
 chk("⑨-c 场上没有可攻击目标那一手 ⇒ 走槽位渲染（%s）—— 引擎兜底那句"
     "「但没有可攻击的目标！」不上屏" % (_nt_line[:1] or "（没出）"),
     bool(_nt_line) and not any("没有可攻击的目标" in x for x in _lg_nt))
+
+#: ★ fix-a-screen（2026-09-27 · ③）：再钉一格 —— 引擎那句 `battle.landing.blocked_amount`
+#:   （兜底模板 `(格挡后 {dmg} 点伤害)` 是全屏**唯一**一处半角括号，骑士路试玩报上来的）。
+#:   声明成自己的槽位之后，这一格同样得「真被引擎请求过」（否则下面 ⑨ 那条 `unused()` 会红），
+#:   并把「渲染出来的就是我们槽位里那一行 · 这一屏一个半角括号都不许有」写死。
+#:   ★ 闪避要归零得走**声明面**（`formula_skeleton_fn` 的 `dodge.cap`）：玩家 actor 的 dodge 是
+#:     面板聚合出来的，裸写 `actor["dodge"] = 0` 不管用（见 `_enemy` 那条注）；骑士这一格
+#:     原先靠「挑一颗恰好不闪的种子」站着 —— 判据不骑在掷骰上。
+from saintess_engine import config as _CFG                            # noqa: E402
+from ext_combat.battle import formulas as _F                          # noqa: E402
+
+_sd_saved = _CFG.optional_hook("formula_skeleton_fn")
+_sk_saved = dict(_F._skeleton() or {})
+_sk_saved["dodge"] = dict(_sk_saved.get("dodge") or {}, cap=0.0)
+_CFG.mount(formula_skeleton_fn=lambda: _sk_saved)
+try:
+    _bk = CB.build({"cls": "cls_knight", "level": 16, "name": "探", "uid": "u_blk"},
+                   [MID], MON, uid="u_blk")
+    _ck = _bk.focus()
+    _ck["defending"] = True                       # 引擎那条格挡减半只看这一格（landing.py:170）
+    _lg_bk = []
+    LD.deal_damage(_bk, None, _ck, 20, _lg_bk)
+finally:
+    _CFG.set_hook("formula_skeleton_fn", _sd_saved)
+_bk_slot = BT.slots()["battle.landing.blocked_amount"]
+_bk_pre = str(_tx[_bk_slot]["value"]).split("{")[0]                   # 前缀现算，别手写那句
+_bk_line = [x for x in _lg_bk if _bk_pre in x]
+chk("⑨-d 格挡后那行走**槽位**渲染（%s）—— 引擎兜底那句（半角括号）不上屏"
+    % (_bk_line[:1] or "（没出）"), bool(_bk_line))
+chk("⑨-d 那一屏里**一个半角括号都没有**（引擎兜底是全屏唯一一处半角括号；这一行全角）",
+    bool(_lg_bk) and not any(("(" in str(x) or ")" in str(x)) for x in _lg_bk),
+    "%r" % ([x for x in _lg_bk if ("(" in str(x) or ")" in str(x))][:1] or ""))
 
 _unused = BT.battle_text().unused()
 chk("⑨ 声明的槽位（%d 条）都被引擎真请求过（unused = %r）" % (len(BT.slots()), _unused), _unused == ())
