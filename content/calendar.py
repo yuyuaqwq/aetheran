@@ -234,8 +234,23 @@ def tick(p: dict, epoch=None) -> dict:
 
 
 # ── 门槛（采集点 / 对话 / 事件共用一套「名字 → 现看时辰还是天气」）──
+def token_alias() -> dict:
+    """★ P-31：散文 token → 合法 token 的**别名表**（唯一真源 = calendar 域的 `_token_alias`）。
+
+    真源里写着、而四时辰 / 四天气里没有的那些词（今天只有「退潮」）挂在它上面 ——
+    域里那些门槛（`pois.condition.time` / `npcs` 的出场条件）写的是**策划案原词**，一个字不用改。
+    口径与理由（为什么「退潮 = 夜」）见 `content/rules/calendar.json` 的 `_口径` ⑥；
+    落表 = `scripts/rebuild_calendar.py` ⑦（fail-closed：指向不存在的名字 / 与真名字撞名 ⇒ 当场抛）。
+    """
+    a = _d("calendar").get("_token_alias")
+    return {str(k): str(v) for k, v in (a or {}).items()} if isinstance(a, dict) else {}
+
+
 def resolve(token):
-    """名字（「夜」「雨」…）→ `("hour"|"weather", id)`；认不出 → `(None, None)`。"""
+    """名字（「夜」「雨」…）→ `("hour"|"weather", id)`；认不出 → `(None, None)`。
+
+    ★ P-31：**先查别名表**再查真名字 —— 别名不覆盖真名字（撞名在生成器那儿就被拦掉了）。
+    """
     global _NAME_MAP
     if _NAME_MAP is None:
         m = {}
@@ -243,8 +258,12 @@ def resolve(token):
             m[str(_slot_text(h["slot"]))] = ("hour", hid)
         for wid, w in weathers().items():
             m[str(_slot_text(w["slot"]))] = ("weather", wid)
+        for k, v in token_alias().items():
+            if k not in m and v in m:
+                m[k] = m[v]                          # 认不出目标的别名在这里静默跳过（生成器已拦）
         _NAME_MAP = m
-    return _NAME_MAP.get(str(token), (None, None))
+    kind, eid = _NAME_MAP.get(str(token), (None, None))
+    return kind, eid
 
 
 def allows(token, st: dict | None = None) -> bool:

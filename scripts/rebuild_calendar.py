@@ -169,11 +169,34 @@ if isinstance(gap, bool) or not isinstance(gap, int) or gap < 1:
 src_gap = ("content/rules/calendar.json::rain_max_gap_days = %d（新增口径 · 台账 ⏸ P-5"
            "「N 天内必有一场雨」；真源待补行见本分支 _notes.md §一）" % gap)
 
+# ── ⑦ ★ P-31：散文 token → 合法 token 的**别名表** ───────────────
+#: 为什么要有这一格：「退潮」是真源（`19 §三 D` / 西带那两条 POI）里写着的词，而 calendar 域
+#:   的四时辰 / 四天气里没有它 ⇒ 门槛判不了（POI 照旧在场 + 点名 `SYS_POI_COND_TODO`）。
+#:   别名表把散文词接到**真时辰**上 —— 域里那两条 POI 的 `time: ["退潮"]` 一个字不用改。
+#: 口径与理由（为什么「退潮 = 夜」）见 `content/rules/calendar.json` 的 `_口径` ⑥。
+#: fail-closed 两条：别名指向不存在的时辰/天气名 ⇒ 当场抛；别名与真名字撞名 ⇒ 当场抛
+#:   （撞名 = 悄悄改掉真门槛的含义）。
+alias = cal_rules.get("token_alias") or {}
+if not isinstance(alias, dict):
+    die("content/rules/calendar.json 的 token_alias 要是「散文词 → 时辰/天气名」的表：%r" % (alias,))
+_name2id = {str(nm): ("hour", hid) for (hid, _s), nm in zip(HOUR_IDS, h_names)}
+_name2id.update({str(nm): ("weather", wid) for (wid, _s), nm in zip(WEATHER_IDS, w_names)})
+_target_bad = ["%s→%s" % (k, v) for k, v in alias.items() if str(v) not in _name2id]
+if _target_bad:
+    die("token_alias 指向了不存在的时辰/天气名（认不出就不许静默当 False）：%s" % _target_bad)
+_shadow = [k for k in alias if str(k) in _name2id]
+if _shadow:
+    die("token_alias 与真名字撞名（会悄悄改掉那条真门槛的含义）：%s" % _shadow)
+
 # ── 写表 ─────────────────────────────────────────────────────
 calendar = {"_clock": {"zone": "Asia/Shanghai", "real_seconds_per_game_day": sec_per_day,
                        "source": src_day,
                        "note": "游戏时刻 = 宿主注入的 epoch × (86400 / real_seconds_per_game_day)；"
-                               "刻度在表里，调时间快慢只改这一个数"}}
+                               "刻度在表里，调时间快慢只改这一个数"},
+            # ★ P-31：散文 token → 合法 token（生成器从 content/rules/calendar.json 落；
+            #   消费端唯一读口 = `content/calendar.resolve`）
+            "_token_alias": dict(alias),
+            "_token_alias_source": "content/rules/calendar.json::token_alias（真源依据与理由见那份的 `_口径` ⑥）"}
 for (hid, slot), name in zip(HOUR_IDS, h_names):
     a, b = windows[hid]
     calendar[hid] = {"slot": slot, "desc_slot": slot + "_DESC",
