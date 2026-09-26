@@ -12,6 +12,8 @@
 ⑤ 游侠准星（每次出手 +1 · 封顶 6）· 修女祷言（一次受伤 > 上限 15% ⇒ +1 · 每 300 刻自然回 1 · 倒下清空）
 ⑥ 格挡（骑士被动「格挡回誓」）：掷中 ⇒ 这次承伤按真源 F10 打折 + 回守誓（账本 +12 + 被动 +8）·
    没掷中 ⇒ 不写字段 · 等级没到 16 ⇒ 不掷
+   ★ `g5-flake`：前两态原先**只跑「掷中」那一半**（`if _luck` 恒真 ⇒ `else` 支从没执行过）——
+     现在两态各钉一遍，且都不看手气（掷中 = 把骰子钉成 0.10 · 没掷中 = `block_chance` 压 0）
 ⑦ 反证（不装配 = 与接线前一字不差）：资源表读不到 ⇒ 一个字段都不写
 ⑧ 引擎零改动（硬指标）
 
@@ -353,28 +355,46 @@ _blk = float(ST.actor_stats(_b7, _c7).get("block", 0) or 0)
 _mit = float(_AP._table().eval("F10_block_mit", {"block": _blk}))
 _bonus = int((MECH.of("block_oath").get("oath_bonus") or {}).get("value") or 0)
 _acct = int(RES.gain_of("RES_OATH", "on_block"))
-put(_c7, "RES_OATH", 0)
-random.seed(SEED)
-_hp0 = int(_c7.get("hp") or 0)
-_lg7 = []
-LD.deal_damage(_b7, None, _c7, 100, _lg7)                          # source=None ⇒ 不掺等级压制
-_d7 = _hp0 - int(_c7.get("hp") or 0)
-_luck = any("举盾挡下" in x for x in _lg7)
 _want7 = max(1, int(100 * (1 - _mit)))
 chk("⑥ 骑士 16 级 block=%g ⇒ F10 减免 %.4f（求值 formula_table，不重写公式）" % (_blk, _mit),
     0 < _mit < 0.6, "⇒ %.4f" % _mit)
-if _luck:
-    chk("⑥ 掷中 ⇒ 承伤按 F10 打折（100 点应剩 %d）" % _want7, _d7 == _want7, "实测掉 %d 点" % _d7)
+# ★ g5-flake：这一档原先**只有「掷中」那一半真跑** —— `if _luck:` 恒真（种子 1 的头一枚骰子
+#   0.134 < 0.25），`else:` 那半（「没掷中 ⇒ 一个字都不写」）**从没被执行过** = 判据只跑一半
+#   （不叫的那种假绿）。现在**两态各钉一遍**，而且都不看手气（不是"换颗种子赌另一面"）。
+_chance = (MECH.of("block_oath").get("block_chance") or {}).get("value")
+_rand = random.random
+try:
+    # ① 掷中：把那一枚骰子钉成 0.10（< 声明的 block_chance）⇒ 必掷中，且与掷骰次序无关
+    random.random = lambda: 0.10
+    put(_c7, "RES_OATH", 0)
+    _hp0 = int(_c7.get("hp") or 0)
+    _lg7 = []
+    LD.deal_damage(_b7, None, _c7, 100, _lg7)                      # source=None ⇒ 不掺等级压制
+    _d7 = _hp0 - int(_c7.get("hp") or 0)
+    chk("⑥ 掷中（fixture 把骰子钉成 0.10 < %s）⇒ 承伤按 F10 打折（100 点应剩 %d）" % (_chance, _want7),
+        _d7 == _want7 and any("举盾挡下" in x for x in _lg7), "实测掉 %d 点" % _d7)
     chk("⑥ 掷中 ⇒ 回守誓 %d（账本 +%d + 本被动 +%d）+ 那一下的受击 +%d"
         % (_acct + _bonus + RES.gain_of("RES_OATH", "on_taken"), _acct, _bonus,
            RES.gain_of("RES_OATH", "on_taken")),
         stacks(_c7, "RES_OATH") == _acct + _bonus + RES.gain_of("RES_OATH", "on_taken"),
         "⇒ %d 层" % stacks(_c7, "RES_OATH"))
-else:
-    chk("⑥ 这一种子没掷中（概率 %s）—— 掉血 = 不打折的基线，且一个字都不写"
-        % (MECH.of("block_oath").get("block_chance") or {}).get("value"),
-        _d7 == 100 and stacks(_c7, "RES_OATH") == RES.gain_of("RES_OATH", "on_taken"),
-        "掉 %d 点 · 层 %d" % (_d7, stacks(_c7, "RES_OATH")))
+finally:
+    random.random = _rand
+# ② 没掷中：`block_chance` 压 0 ⇒ 机制第一行就 `return`（连骰子都不掷）⇒ 不打折、一个字都不写
+_sb7 = no_block()
+try:
+    put(_c7, "RES_OATH", 0)
+    _hp1 = int(_c7.get("hp") or 0)
+    _lg7b = []
+    LD.deal_damage(_b7, None, _c7, 100, _lg7b)
+finally:
+    restore_block(_sb7)
+_d7b = _hp1 - int(_c7.get("hp") or 0)
+chk("⑥ 没掷中（block_chance 压 0）⇒ 掉血 = 不打折的基线 100，且只写「受击」那一笔（+%d）"
+    % RES.gain_of("RES_OATH", "on_taken"),
+    _d7b == 100 and stacks(_c7, "RES_OATH") == RES.gain_of("RES_OATH", "on_taken")
+    and not any("举盾挡下" in x for x in _lg7b),
+    "掉 %d 点 · 层 %d" % (_d7b, stacks(_c7, "RES_OATH")))
 _b8 = build("cls_knight", 15, uid="u_res8")
 _c8 = focus(_b8)
 put(_c8, "RES_OATH", 0)
