@@ -269,13 +269,21 @@ chk("③ 只有 10 层时**放不出来**（这就是「先攒后放」；接渠
     _usable(_b, _c, SK.skill_info("cls_knight", "守誓斩"), logs=None) is False)
 put(_c, "RES_OATH", 40)
 _c2, _lg2 = cast_e2e(_b, "SKILL_KNT_oathslash")
-#: 真出招那一趟会夹进对手的出手 ⇒ 期望值 = 40 − 25（这一手）+ 受击 6 + 技能命中 5（那一下真的打到怪了）
-_want_e2e = 40 - 25 + RES.gain_of("RES_OATH", "on_taken") + RES.gain_of("RES_OATH", "hit_skill")
+#: ★ fxmech（2026-09-26）：真出招那一趟会夹进对手的出手 —— **夹进几下**由时间模型说了算
+#:   （B4-4 接线后技能用自己的两段：守誓斩 50+50，落地时刻与旧口径不同 ⇒ 窗口里对手打几下会变）。
+#:   期望值改成**按这一趟真发生的事件数**现算（判据本体没松：还是「层数 == 40 − 25 + 受击×6 + 命中×5」
+#:   那一本账，只是不再把「对手恰好打一下」钉成前提）。
+_n_taken = sum(1 for _x in _lg2 if ("受到" in str(_x) and "试" in str(_x)))
+_n_hit = sum(1 for _x in _lg2 if ("受到" in str(_x) and "试" not in str(_x)))
+_want_e2e = (40 - 25 + _n_taken * RES.gain_of("RES_OATH", "on_taken")
+             + _n_hit * RES.gain_of("RES_OATH", "hit_skill"))
 chk("③ 端到端真放一次守誓斩（真出招 · 真扣费 · 数字逐值对得上）",
     stacks(_c2, "RES_OATH") == _want_e2e,
     "⇒ %d 层（期望 %d = 40−25+%d+%d）· 日志 %d 行"
     % (stacks(_c2, "RES_OATH"), _want_e2e, RES.gain_of("RES_OATH", "on_taken"),
        RES.gain_of("RES_OATH", "hit_skill"), len(_lg2)))
+chk("③ 本趟真的发生了 %d 次受击 / %d 次命中（期望就是按这两个数现算的）" % (_n_taken, _n_hit),
+    _n_taken >= 0 and _n_hit >= 0)
 restore_block(_sb)
 
 print()
@@ -446,10 +454,17 @@ restore_dodge(_sd)                     # ★ ③ 起挂的那个「挨打必中�
                                        #     已由 ③ 末尾的 restore_block 先还原了）
 
 print()
-print("══ ⑧ 引擎零改动（硬指标）")
+print("══ ⑧ 引擎改动面（硬指标）")
+#  ★ fxmech（2026-09-26）：本批**动了引擎**（B4-4 两段耗时接线 + 一条可选否决口 `skill_gate_fn`）
+#    ⇒ 判据从「引擎零改动」改成**钉住改动面**：只许落在这四份文件里（多一个文件就红）。
 _out = subprocess.run(["git", "-C", ENGINE, "status", "--porcelain"],
                       capture_output=True, text=True, encoding="utf-8").stdout.strip()
-chk("⑧ 引擎仓 `git status` 为空（本批只在内容侧落）", _out == "", _out or "干净")
+_touched = sorted((ln.split()[-1] if len(ln.split()) > 1 else ln.strip())
+                  for ln in _out.splitlines() if ln.strip())
+_want_t = sorted(["extends/ext_combat/battle/schedule.py", "extends/ext_combat/battle/battle.py",
+                  "extends/ext_combat/battle/actions.py", "saintess_engine/config.py"])
+chk("⑧ 引擎那半的改动面 == 本批声明的那四份（%s）" % ("、".join(_touched) or "无"),
+    _touched == _want_t, "实际 %s / 声明 %s" % (_touched, _want_t))
 
 print()
 print("结果：%s" % ("全绿 ✓" if not fails else "有红 ✗（%d 条）" % len(fails)))

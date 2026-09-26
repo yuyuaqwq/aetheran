@@ -131,6 +131,17 @@ def _validate(t) -> dict:
         for k, r in (m.get("rules") or {}).items():
             if not isinstance(r, dict):
                 raise ValueError("机制 %r 的状态规则 %r 得是 dict：%r" % (name, k, r))
+        # ★ fxmech：出手前那道否决口读的两格 —— 形状不对当场抛（别让坏声明静默变成「不拦」）
+        _mp = m.get("min_hp_pct")
+        if _mp is not None:
+            _v = _mp.get("value") if isinstance(_mp, dict) else _mp
+            if not isinstance(_v, (int, float)) or not (0 < float(_v) <= 1):
+                raise ValueError("机制 %r 的 min_hp_pct 得是 (0, 1] 里的比例：%r" % (name, _mp))
+        _ob = m.get("once_per_battle")
+        if _ob is not None:
+            _v = _ob.get("value") if isinstance(_ob, dict) else _ob
+            if not isinstance(_v, bool):
+                raise ValueError("机制 %r 的 once_per_battle 得是布尔：%r" % (name, _ob))
     if cast_declared != set(_CAST_VERBS):
         raise ValueError("route=cast 的机制与实现对不上：表里 %s · 代码里 %s"
                          % (sorted(cast_declared), sorted(_CAST_VERBS)))
@@ -320,20 +331,12 @@ def _live(holder: dict, key: str, now: float) -> bool:
     return exp is None or float(exp) > now
 
 
-def _self_cut(battle, caster, m: dict, logs) -> int:
-    """**付血**（代价那一半的公共实现）—— 按机制表里 `self_dmg_pct` 扣自己。
+def _self_cut_raw(battle, caster, m: dict) -> int:
+    """这一笔**该付多少**（不含「保底留 1 血」那道闸）—— 血线门与扣血共用这一处算式。
 
-    三格全在声明里（本函数一个数都不写）：
-      · `self_dmg_base` —— 比例的**基数**：`max_hp`（缺省）＝ 生命上限的比例
-        （破势 8% / 狂斩 12% / 血债 / 狂态 / 横扫）；`hp` ＝ **当前生命**的比例
-        （焚身 35% —— 血越少付得越少，真源 §六③ 那条「满血放太浪费」就是这么来的）。
-      · `self_dmg_cap` —— 这一笔的**上限**（缺省 0 = 不设；焚身那句「最多 40 点」）。
-      · `self_dmg_pct` —— 比例本身。
-
-    真源口径（02_狂战士_v2.md §二「不能把自己打死」）：**保底留 1 血** —— 引擎没有
-    「按血线判某条技能此刻能不能放」的注入面 ⇒ 先兜住下限（那道**可用性门**的账见
-    `skill_mech.json` 里 rampage / immolate 的 `halves`）。破势（旧）/ 血债 / 狂态 / 横扫 /
-    狂斩 / 焚身 六条共用这一处。
+    ★ 为什么要与 `_self_cut_amount` 分开：`_self_cut_amount` 把金额夹到 `hp − 1`（保底留 1 血），
+      于是「付完还剩得下血」这个判据**恒真** ⇒ 血线门形同虚设。真源那句「血 < 12% 时这一手
+      不可用」说的是**该付的钱**（12% × 生命上限），不是夹完之后的钱。
     """
     pct = _num(m, "self_dmg_pct")
     if pct <= 0 or not isinstance(caster, dict) or caster.get("hp") is None:
@@ -348,7 +351,38 @@ def _self_cut(battle, caster, m: dict, logs) -> int:
     cap = _num(m, "self_dmg_cap")
     if cap > 0:
         cut = min(cut, int(cap))
-    cut = min(cut, max(0, hp - 1))
+    return max(0, int(cut))
+
+
+def _self_cut_amount(battle, caster, m: dict) -> int:
+    """这一笔付血**真扣多少** = min(该付的, hp − 1)。
+
+    真源 02_狂战士_v2 §二那句「不能把自己打死」是同一句话的两半：
+      · 这里那道 `hp − 1` 保证**不会**把自己打死（保底留 1 血）；
+      · `skill_gate` 的血线门（用 `_self_cut_raw`）保证**不该**在付不起的时候放出去
+        （「血 < 12% 时这一手不可用」）。
+    """
+    if not isinstance(caster, dict) or caster.get("hp") is None:
+        return 0
+    hp = int(caster.get("hp") or 0)
+    return min(_self_cut_raw(battle, caster, m), max(0, hp - 1))
+
+
+def _self_cut(battle, caster, m: dict, logs) -> int:
+    """**付血**（代价那一半的公共实现）—— 按机制表里 `self_dmg_pct` 扣自己。
+
+    三格全在声明里（本函数一个数都不写）：
+      · `self_dmg_base` —— 比例的**基数**：`max_hp`（缺省）＝ 生命上限的比例
+        （破势 8% / 狂斩 12% / 血债 / 狂态 / 横扫）；`hp` ＝ **当前生命**的比例
+        （焚身 35% —— 血越少付得越少，真源 §六③ 那条「满血放太浪费」就是这么来的）。
+      · `self_dmg_cap` —— 这一笔的**上限**（缺省 0 = 不设；焚身那句「最多 40 点」）。
+      · `self_dmg_pct` —— 比例本身。
+
+    真源口径（02_狂战士_v2.md §二「不能把自己打死」）：**保底留 1 血** —— 算式在
+    `_self_cut_amount` 里（与出手前那道血线门共用）。破势（旧）/ 血债 / 狂态 / 横扫 /
+    狂斩 / 焚身 六条共用这一处。
+    """
+    cut = _self_cut_amount(battle, caster, m)
     if cut > 0:
         LD.deal_damage(battle, None, caster, cut, logs)
         logs.append(T("COMBAT_MECH_SELF_CUT", n=cut))
@@ -903,6 +937,93 @@ def aeth_daze(battle, caster, target, params, logs):
         return
     _put(target, key, _now(battle) + turns, mode=mode)
     logs.append(T("COMBAT_MECH_DAZE", name=target.get("name", ""), turns=int(turns)))
+
+
+# ══════════════════════════════════════════════════════════════
+# 装配面：两条给引擎的供体（E5 两段耗时 · E6 出手前否决）
+# ══════════════════════════════════════════════════════════════
+#: 行动类别名「技能」—— 与 `content/rules/action_base.json` 的键同源，代码里不新造词
+_SEG_SKILL = "skill"
+
+
+def segment_plan(actor, action, entry):
+    """E5 `segment_plan_fn` 供体：**这一次行动的两段耗时**（技能 dict 自己声明的那两段）。
+
+    只在「行动类别 = 技能」且 `entry` 是技能 dict 时声明；其余一律 `None`
+    （引擎落回 `action_base.json` 的类别基准）。
+
+    ★ **普攻（`attack`）那条路今天不喂 entry** —— 本职业 basic 技能自己声明的那两段
+      （真源 00_重做总纲 §五·六 对 basic 也成立）**还没接**：开它会把难度底线顶开
+      （零加点骑士 vs 精英 lv9：0/40 → 33/40 · 层主低 4 级 0/36 → 9/36），而同一份真源的
+      「一次行动（F6）」六列是**类别 attack** 的账 ⇒ 单独立条、要真源先裁口径（D4）。
+
+    ★ **原样透传**（只剥掉没声明的那一段），不在内容侧判形状：形状守卫是引擎那**一个**口
+      （`saintess_engine/_validators.segment_of`），内容侧再判一遍就是双源
+      （`schemas/skills.schema.json` 的 anyOf 已经声明了那三形态）。
+
+    ★ 纯函数约束（引擎把同一份回执喂给「排落地时刻」与「推 ct」两处）：只依赖入参，
+      不读 `battle._now`、不写任何字段 —— 两次必须同值。
+    """
+    if not isinstance(entry, dict) or action != _SEG_SKILL:
+        return None
+    out = {}
+    for k in ("cast", "recover"):
+        v = entry.get(k)
+        if v is not None:
+            out[k] = v
+    return out or None
+
+
+def _used_of(battle) -> dict:
+    """本场「每场一次」那类机制的用量表 —— 挂在 battle 上（战斗对象一场一个 ⇒ 天然清零）。"""
+    box = getattr(battle, "_aeth_mech_used", None)
+    if not isinstance(box, dict):
+        box = {}
+        try:
+            setattr(battle, "_aeth_mech_used", box)
+        except Exception:                                   # noqa: BLE001
+            return {}                                       # 记账失败不许把出手也拦掉
+    return box
+
+
+def _flag(m: dict, key: str) -> bool:
+    """表里那个开关（`{"value": true, "_src": …}` 形态）。"""
+    d = m.get(key)
+    if isinstance(d, dict):
+        d = d.get("value")
+    return bool(d)
+
+
+def skill_gate(battle, actor, info):
+    """E6 `skill_gate_fn` 供体：**出手前**那一问（放不放 / 拦下说什么）—— 规则全在表里。
+
+    今天管两条（都在 `skill_mech.json` 的声明里，本函数一个数都不写）：
+
+      ① `min_hp_pct`（狂斩）：真源 02_狂战士_v2 §二「付：自伤 12% = 32.6 点（不能把自己打死
+         —— **血 < 12% 时这一手不可用**）」⇒ 判据 = 「付完还得剩得下血」：`hp − 这一笔 ≥ 1`
+         （这一笔的算式与 `_self_cut` 同源，见 `_self_cut_amount`）。
+      ② `once_per_battle`（焚身）：真源 §三「一场战斗最多一次，而且要看修女在不在」——
+         计数记在**放行那一刻**（引擎这个口回 `None` = 这一手真的会放）。
+
+    回执形状（引擎 `_use_gate_text` 那份契约）：`None` = 放行；非空 str/序列 = 拦下并回话。
+    """
+    m = of(str((info or {}).get("mech") or ""))
+    if not m:
+        return None
+    pct = _num(m, "min_hp_pct")
+    if pct > 0:
+        need = _self_cut_raw(battle, actor, m)          # 「该付多少」（不含保底那道闸）
+        hp = int((actor or {}).get("hp") or 0)
+        if hp < need:                                   # 真源「血 < 12% 时这一手不可用」
+            return [T("COMBAT_MECH_HP_GATE", name=str((info or {}).get("name") or ""),
+                      need=need, cur=hp)]
+    if _flag(m, "once_per_battle"):
+        key = str((info or {}).get("name") or "")
+        box = _used_of(battle)
+        if box.get(key):
+            return [T("COMBAT_MECH_ONCE", name=key)]
+        box[key] = 1
+    return None
 
 
 def player_triggers() -> dict:

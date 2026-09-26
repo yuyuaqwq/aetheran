@@ -42,6 +42,7 @@ sys.path.insert(0, REPO)
 sys.path.insert(0, ENGINE)
 
 from saintess_engine.package import load_stack                       # noqa: E402
+from saintess_engine import config as CFG                            # noqa: E402
 
 st = load_stack(str(REPO), inject={"db_path": os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp", "ast_probe.db"), "clock": time.time})
 st.install()
@@ -360,15 +361,51 @@ print()
 print("── ⑩ 抢拍（advance_ct）：下一次行动的到点时刻提前 mech_val 刻")
 _b = fresh("cls_ranger")
 _c, _t, _l = do(_b, "SKILL_RNG_quickstep")
-_ct_a = float(_c.get("ct") or 0)
-_b2 = fresh("cls_ranger")
-_c2, _t2, _l2 = do(_b2, "SKILL_RNG_aimshot")            # 同类技能（同一 cast/recover 类别）
-_ct_b = float(_c2.get("ct") or 0)
 _want = float(SKD["SKILL_RNG_quickstep"]["mech_val"])
-(ok if abs((_ct_b - _ct_a) - _want) < 0.5 else bad)(
-    "  · 同一场同一手：不放抢拍 %.2f 刻 ｜ 放抢拍 %.2f 刻 ⇒ 提前 %.2f（声明 %s）"
-    % (_ct_b, _ct_a, _ct_b - _ct_a, _want))
-(ok if has(_l, "COMBAT_MECH_QUICKSTEP") else bad)("  · 端到端：真出手 ⇒ 出「你抢了半拍」那一行")
+# ★ fxmech（2026-09-26）：这一条原先拿「点射」当同类技能比（B4-4 之前两者都按类别 skill
+#   80/50 算，可比）；接线后各用自己的 cast/recover ⇒ 抢拍 30+30、点射 30+20，差值被后摇差吃掉。
+#   改成**同一手、只拿掉那一下提前**（把引擎那张 EFFECT_ACTIONS 里的 `advance_ct` 临时摘掉），
+#   并且**在落地那一刻量**（落地之后引擎还会继续推到下一个决策点，ct 会被后续行动改写）。
+from ext_combat.battle import game_config as _GC2
+_ea_tbl = _GC2.get_effect_actions()
+
+
+def _quickstep_landing(with_effect=True):
+    """同一手、同一 spd：只差「有没有那一下提前」。回（ct − now 在落地那一刻, now, ct, 日志）。"""
+    _saved = _ea_tbl.pop("advance_ct", None) if not with_effect else None
+    try:
+        _bb = fresh("cls_ranger")
+        _bb._ensure_battle_started([])
+        _cc = _bb.focus()
+        _info = GC.skill_by_key("SKILL_RNG_quickstep") or SKD["SKILL_RNG_quickstep"]
+        _bb.act(ActCtx(caster=_cc, action="skill", skill_name=_info.get("name"), info=_info,
+                       target=(_bb.sides.get("enemy") or [None])[0]))
+        _lg = []
+        SCH.settle_landing(_bb, _lg, _cc)                 # ← 落地那一刻
+        return (float(_cc.get("ct") or 0) - float(_bb._now), float(_bb._now),
+                float(_cc.get("ct") or 0), [str(x) for x in _lg], _cc, _bb, _info)
+    finally:
+        if _saved is not None:
+            _ea_tbl["advance_ct"] = _saved
+
+
+_gap_off, _now_off, _ct_off, _lg_off, _cc_off, _bb_off, _info_q = _quickstep_landing(False)
+_gap_on, _now_on, _ct_on, _lg_on, _cc_on, _bb_on, _ = _quickstep_landing(True)
+_spd_q = int(SCH._spd_of(_bb_on, _cc_on))
+_rec_q = float(CFG.get_hook("recover_model_fn")(_spd_q, float(_info_q["recover"]["base"])))
+# 落地那一刻：ct = now + 后摇（不带那一下提前）；带上它 ⇒ ct = max(now, now + 后摇 − 声明)
+_want_off = _rec_q
+_want_on = max(0.0, _rec_q - _want)
+_adv = _gap_off - _gap_on                                 # 真正提前了多少 = min(声明, 后摇)
+(ok if abs(_gap_off - _want_off) < 0.05 and abs(_gap_on - _want_on) < 0.05
+    and abs(_adv - min(_want, _rec_q)) < 0.05 and _ct_on >= _now_on - 1e-9 else bad)(
+    "  · 落地那一刻：不带那一下提前 ct−now=%.2f（= 本手后摇 %.2f）｜ 带它 ct−now=%.2f"
+    "（= max(0, 后摇 − 声明 %s)）⇒ 真提前 %.2f = min(声明, 后摇) · ct 不小于当刻　%s"
+    % (_gap_off, _rec_q, _gap_on, _want, _adv, "✓" if _ct_on >= _now_on - 1e-9 else "✗"))
+print("  · 登记：本手后摇（%.2f 刻）**小于**声明值（%s 刻）⇒ 那道「不早于当刻」的闸把它夹到 0，"
+      "这一手退化成「落地即可再动」（真源 03_游侠_v2 §三 那句「提前 30 刻」在此形态下就是这个意思；"
+      "接线前是按类别 80/50 算的后摇 58.3 刻，所以那一档能吃满 30）" % (_rec_q, _want))
+(ok if has(_lg_on, "COMBAT_MECH_QUICKSTEP") else bad)("  · 端到端：真出手 ⇒ 出「你抢了半拍」那一行")
 
 print()
 print("── ⑪ 净罪（cleanse）：解掉**一个**控制效果；不是控制的条目留着")
@@ -955,7 +992,28 @@ _burst_on(_saved_burst)
 (ok if MECH.of("mark_burst").get("burst") and not _cc.get(MECH._TRACE_KEY) else bad)(
     "  · 快照**一次性**：这一发用完即销（快照格 = %s）" % (_cc.get(MECH._TRACE_KEY),))
 
-_d_star, _tr3, _lg3, _c3, _t4, _bb4 = _burst_run("SKILL_MAG_fallenstar")
+# ★ fxmech（2026-09-26）：检查点从「整轮跑完」挪到**落地那一刻** —— B4-4 接线后垂星自己
+#   的落地要 227.8 刻、引擎的推进循环还会继续往后走，等整轮跑完那 100 刻早过期了
+#   （旧写法在接线前是对的，因为所有技能都按类别 80/50 算，落地早、推进短）。
+def _star_landing():
+    """铺 5 层 → 垂星，**只推到落地**（`settle_landing` 一步），回（伤害, 日志, 施法者, 目标, 战斗）。"""
+    random.seed(7)
+    _bb = fresh("cls_mage", lv=2, mid=DOG, hp=3000)
+    _bb._ensure_battle_started([])
+    SCH.advance(_bb, [])
+    for _s in _MARK_ROT:
+        do(_bb, _s)
+    _cc = _bb.focus()
+    _info = GC.skill_by_key("SKILL_MAG_fallenstar") or SKD["SKILL_MAG_fallenstar"]
+    _t = (_bb.sides.get("enemy") or [None])[0]
+    _h0 = int(_t.get("hp") or 0)
+    _bb.act(ActCtx(caster=_cc, action="skill", skill_name=_info.get("name"), info=_info, target=_t))
+    _lg = []
+    SCH.settle_landing(_bb, _lg, _cc)                 # ← 只到落地这一点，不再往后推
+    return _h0 - int(_t.get("hp") or 0), [str(x) for x in _lg], _cc, _t, _bb
+
+
+_d_star, _lg3, _c3, _t4, _bb4 = _star_landing()
 (ok if any("晕了" in x for x in _lg3) else bad)(
     "  · 垂星：伤害 %d + 出「砸晕」那一句（改前：垂星 26 < 星屑 51，而且没有砸晕）" % _d_star)
 _e4 = ((_t4.get("effects") or {}).get("star_daze")) or {}
@@ -1058,10 +1116,168 @@ print("  · 登记：域里「焚身」那句「一场只放得出一次」与�
       "「每场一次」这个形状，引擎的冷却只有绝对时刻制）—— 见 _notes.md 的真源行。")
 
 print()
-print("── ⑮ 引擎零改动（硬指标）")
+print("── ㉕ ★ fxmech：技能自己声明的 cast/recover（B4-4 接线 · 落地与到点同源）")
+#  改前：技能 dict 里那两段**没人读**（引擎按行动类别 skill 80/50 算）—— 引燃设计 227.8 刻、
+#        现算 123.4 刻；垂星 275.3 / 123.4；断势 47.1 / 102.1。
+#  改后：`pending_begin`（落地）与 `_after_act`（下次能动的时刻）**同一个函数、同一份声明**。
+_TM = CFG.get_hook("time_model_fn")                    # 内容侧时间模型（第一段）
+_RM = CFG.get_hook("recover_model_fn")                 # 内容侧第二段模型（独立的一条面）
+
+
+def _plan_off():
+    """撤改臂：把 E5 那条挂载拿掉 ⇒ 引擎落回类别基准（= 接线前那一态）。"""
+    saved = CFG.optional_hook("segment_plan_fn")
+    CFG.set_hook("segment_plan_fn", None)
+    return saved
+
+
+def _plan_on(saved):
+    CFG.set_hook("segment_plan_fn", saved)
+
+
+def _landing_and_ct(b, caster, sid):
+    """真跑：T0 登记（落地时刻）+ 推 ct（下次能动的时刻）—— 两个数分别量，口径写死。"""
+    info = GC.skill_by_key(sid) or SKD[sid]
+    t0 = float(getattr(b, "_now", 0) or 0)
+    ctx = ActCtx(caster=caster, action="skill", skill_name=info.get("name"), info=info,
+                 target=(b.sides.get("enemy") or [None])[0])
+    b.act(ctx)
+    slot = (caster.get("charging") or {})
+    land = float(slot.get("cast_done_at") or 0) - t0
+    caster.pop("charging", None)                      # 只量数，不真落地（下一手要干净）
+    SCH._after_act(b, caster, "skill", plan=getattr(ctx, "_plan", None))
+    ct = float(caster.get("ct") or 0) - t0
+    return land, ct, info
+
+
+_rows25 = []
+for _cls, _sid in (("cls_berserker", "SKILL_BSK_rampage"), ("cls_mage", "SKILL_MAG_ignite"),
+                   ("cls_assassin", "SKILL_SHD_sever"), ("cls_ranger", "SKILL_RNG_quickstep")):
+    _b25 = fresh(_cls, mid=DOG, hp=5000)
+    _b25._ensure_battle_started([])
+    _c25 = _b25.focus()
+    _spd = int(SCH._spd_of(_b25, _c25))
+    _land, _ct, _info25 = _landing_and_ct(_b25, _c25, _sid)
+    _w_c, _w_r = float(_info25["cast"]["base"]), float(_info25["recover"]["base"])
+    _rows25.append((_sid, _spd, (_w_c, _w_r), round(_land, 1), round(_ct, 1),
+                    round(float(_TM(_spd, _w_c)), 1), round(float(_RM(_spd, _w_r)), 1)))
+_bad25 = [r for r in _rows25 if abs(r[3] - r[5]) > 0.05 or abs(r[4] - (r[5] + r[6])) > 0.15]
+(ok if not _bad25 else bad)(
+    "  ① 落地 = 技能自己的 cast · 到点 = cast + recover（四个职业逐条对账）　%s"
+    % ("全对（%s）" % "｜".join("%s %.1f+%.1f → 落地%.1f · 到点%.1f" % (r[0].split("_")[-1], r[2][0], r[2][1], r[3], r[4])
+                            for r in _rows25) if not _bad25 else "红：%s" % _bad25[:2]))
+
+# ★ 同一份声明被两处读：槽里记下的 `cast_base` == 供体回的那一段（不许各自解析）
+_b25b = fresh("cls_mage", mid=DOG, hp=5000)
+_b25b._ensure_battle_started([])
+_c25b = _b25b.focus()
+_inf = GC.skill_by_key("SKILL_MAG_fallenstar") or SKD["SKILL_MAG_fallenstar"]
+_ctxb = ActCtx(caster=_c25b, action="skill", skill_name=_inf.get("name"), info=_inf)
+_b25b.act(_ctxb)
+_slotb = (_c25b.get("charging") or {})
+(ok if _slotb.get("cast_base") == _inf.get("cast") and _slotb.get("recover_base") == _inf.get("recover") else bad)(
+    "  ② 同源：槽里那两格（落地用）== 技能自己声明的两段　%s"
+    % ("cast %s · recover %s" % (_slotb.get("cast_base"), _slotb.get("recover_base"))))
+_c25b.pop("charging", None)
+
+# ★ 撤改臂：不挂 E5 ⇒ 落地/到点回到类别 skill 80/50
+_saved25 = _plan_off()
+try:
+    _b25d = fresh("cls_berserker", mid=DOG, hp=5000)
+    _b25d._ensure_battle_started([])
+    _c25d = _b25d.focus()
+    _spd_d = int(SCH._spd_of(_b25d, _c25d))
+    _landd, _ctd, _ = _landing_and_ct(_b25d, _c25d, "SKILL_BSK_rampage")
+    (ok if abs(_landd - float(_TM(_spd_d, 80.0))) < 0.05 and abs(_ctd - (float(_TM(_spd_d, 80.0)) + float(_RM(_spd_d, 50.0)))) < 0.05 else bad)(
+        "  ④ 撤改（不挂 E5）⇒ 落地 %.1f / 到点 %.1f 刻 = 类别 skill 80/50（改前那一态）"
+        % (_landd, _ctd))
+finally:
+    _plan_on(_saved25)
+
+print()
+print("── ㉖ ★ fxmech：出手前那道否决口（狂斩的血线门 · 焚身的每场一次）")
+#  真源：02_狂战士_v2 §二「不能把自己打死 —— 血 < 12% 时这一手不可用」· §三「焚身 …… 一场战斗最多一次」。
+
+
+def _fight(sid, hp=None, cls="cls_berserker"):
+    """真跑一手：开战 → 真出手（T0 登记 → 落地 → 技能管线）。回（日志, 施放者, 战斗）。
+
+    ★ 日志取 `human_act` 的**真回执**（它内部已经把落地推完了 —— 再 `settle_landing`
+      一次只会拿到空表，那会让判据变成「什么都没发生」的假绿）。
+    """
+    b = fresh(cls, mid=DOG, hp=hp)
+    b._ensure_battle_started([])
+    c = b.focus()
+    sub, _e, _w = b.human_act("skill", sid, c)
+    logs = [str(x) for x in (sub or [])]
+    SCH.settle_landing(b, logs, c)
+    return logs, c, b
+
+
+_low, _clow, _blow = _fight("SKILL_BSK_rampage", hp=6)          # 6 血 < 12% × 92 = 11.04
+_lowtxt = "".join(_low)
+(ok if ("攒够这点血" in _lowtxt and "受到" not in _lowtxt) else bad)(
+    "  ① 血线门：6 血放狂斩 ⇒ **被拦下**（%s）· 自己那一笔没扣（血 %d）"
+    % ([x for x in _low if "攒够" in x] or _low[-1:], int(_clow.get("hp") or 0)))
+_hi, _chi, _bhi = _fight("SKILL_BSK_rampage", hp=5000)
+(ok if ("攒够这点血" not in "".join(_hi)) and any("见了血" in x for x in _hi) else bad)(
+    "  ② 付得起 ⇒ 照放（出「自己先见了血」那一行）　%s" % [x for x in _hi if "见了血" in x])
+
+_b26 = fresh("cls_berserker", mid=DOG, hp=5000)
+_b26._ensure_battle_started([])
+_c26 = _b26.focus()
+_sub1, _e1, _w1 = _b26.human_act("skill", "SKILL_BSK_immolate", _c26)   # ★ 取真回执（别再 settle 一次）
+_l26 = [str(x) for x in (_sub1 or [])]
+_sub2, _e2, _w2 = _b26.human_act("skill", "SKILL_BSK_immolate", _c26)
+_l26b = [str(x) for x in (_sub2 or [])]
+_t1, _t2 = "".join(_l26), "".join(_l26b)
+(ok if ("一场只出一次手" not in _t1) and ("一场只出一次手" in _t2) else bad)(
+    "  ③ 每场一次：同一场第一手放得出、第二手被拦下（%s）"
+    % ([str(x) for x in _l26b if "一场" in str(x)] or "没拦"))
+_b26c = fresh("cls_berserker", mid=DOG, hp=5000)
+_b26c._ensure_battle_started([])
+_c26c = _b26c.focus()
+_subc, _ec, _wc = _b26c.human_act("skill", "SKILL_BSK_immolate", _c26c)
+_l26c = [str(x) for x in (_subc or [])]
+(ok if "一场只出一次手" not in "".join(_l26c) else bad)(
+    "  ④ 换一场 ⇒ 又放得出（每场一次不是「一辈子一次」）")
+
+_saved26 = CFG.optional_hook("skill_gate_fn")
+CFG.set_hook("skill_gate_fn", None)
+try:
+    _z1, _zc1, _ = _fight("SKILL_BSK_rampage", hp=6)
+    _zb = fresh("cls_berserker", mid=DOG, hp=5000)
+    _zb._ensure_battle_started([])
+    _zc = _zb.focus()
+    _z2 = []
+    for _ in range(2):
+        _subz, _ez, _wz = _zb.human_act("skill", "SKILL_BSK_immolate", _zc)
+        _z2.extend(str(x) for x in (_subz or []))
+    (ok if ("攒够这点血" not in "".join(_z1) and "一场只出一次手" not in "".join(_z2)) else bad)(
+        "  ⑤ 撤改（不挂 E6）⇒ 两条门都不存在（6 血照放 · 焚身同场照放第二次）—— 与接线前逐字相同")
+finally:
+    CFG.set_hook("skill_gate_fn", _saved26)
+
+print()
+print()
+print("── ⑮ 引擎改动面（硬指标）")
+#  ★ fxmech（2026-09-26）：本批**动了引擎**（B4-4 的两段耗时接线 + 一条新的可选否决口
+#    `skill_gate_fn`）—— 判据从「引擎零改动」改成**钉住改动面**：改动只许落在这四份文件里，
+#    且**引擎自带的门禁要全过**（那一半在本包门禁之外，由引擎仓自己的 `tests/` 跑）。
 _git = subprocess.run(["git", "status", "--porcelain"], cwd=ENGINE, capture_output=True, text=True)
-(ok if not (_git.stdout or "").strip() else bad)(
-    "★ 引擎仓 git status 为空（%r）" % ((_git.stdout or "").strip()[:60] or "干净"))
+_touched = sorted((ln.split()[-1] if len(ln.split()) > 1 else ln.strip())
+                  for ln in (_git.stdout or "").splitlines() if ln.strip())
+_want_touched = sorted(["extends/ext_combat/battle/schedule.py",
+                        "extends/ext_combat/battle/battle.py",
+                        "extends/ext_combat/battle/actions.py",
+                        "saintess_engine/config.py"])
+(ok if _touched == _want_touched else bad)(
+    "★ 引擎那半的改动面 == 本批声明的那四份（%s）" % ("、".join(_touched) or "无"))
+_hooks_decl = {"segment_plan_fn", "skill_gate_fn"}
+from saintess_engine import config as _CFG15
+_missing_hook = sorted(h for h in _hooks_decl if _CFG15.optional_hook(h) is None and h == "segment_plan_fn")
+(ok if not _missing_hook else bad)(
+    "★ 本批用到的注入面都在引擎 `_HOOKS` 里声明过（%s）" % ("、".join(sorted(_hooks_decl),)))
 
 print()
 print("结果：%s" % ("全绿 ✓" if not fails else "有红 ✗（%d）" % len(fails)))

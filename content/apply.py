@@ -93,6 +93,7 @@ def install_engine():
     bind = _bindings()
     from ext_combat.battle import formulas as _formulas   # 引擎自带纯公式模块（引擎侧，非内容）
     from . import skills_lookup as _SL                     # 技能取件口 + kind 词表（同一份真源）
+    from . import mech as _MECH                            # ★ fxmech：E5/E6 两条供体在这个模块里
     config.mount(
         formulas=_formulas,                     # ★ 缺了它引擎走 _NullFormulas：伤害算不出来
         formula_table_fn=lambda: tbl,
@@ -115,6 +116,17 @@ def install_engine():
         #   B3-14：这条兜底同时是**怪物普攻**（怪没有 class_name ⇒ 走它），它必须带 `exprs`
         #   并走物理通道 —— 否则怪伤害恒为下限 1（matk=0 走魔法支）。
         #   `name`（SYS_BASIC_NAME）是「这条兜底技叫什么」的文案 —— ★ B4-19 已进 texts 槽位。
+        # ★ fxmech（2026-09-26）：技能 dict 自己声明的那两段耗时（E5）—— 引擎在
+        #   「排落地时刻」与「推下一次能动的时刻」两处问同一个口（落地与到点同源）；
+        #   **不挂 = 与接线前逐字相同**（引擎落回 `action_base.json` 的类别基准）。
+        #   供体 = `content/mech.py::segment_plan`（技能那一路 + 普攻那条 basic 技能那一路）。
+        segment_plan_fn=_MECH.segment_plan,
+        # ★ fxmech（2026-09-26）：「出手前的通用否决口」（E6 · 与 mp_gate_fn 同形状）——
+        #   管两件真源写明、而运行期一直没人管的事：狂斩的**血线门**（「血 < 12% 时这一手
+        #   不可用」）与焚身的**每场一次**（「一场战斗最多一次」）。判据与回话全在
+        #   `content/rules/skill_mech.json` 的声明 + `content/mech.py::skill_gate`；
+        #   **不挂 = 那两条不存在**（不拦、不回，与接线前逐字节相同）。
+        skill_gate_fn=_MECH.skill_gate,
         basic_fallback={"name": _basic_name(), "kind": _SL.basic_kind(), "power": 1.0, "cd": 0,
                         "exprs": ["atk*1"],
                         "cast": {"base": 60}, "recover": {"base": 0}, "range": 1, "mp": 0,

@@ -6150,5 +6150,23 @@
     "params": [],
     "category": "系统",
     "desc": "试玩复测 #1：场在跑时世界级移动的拦话"
+  },
+  "COMBAT_MECH_HP_GATE": {
+    "value": "你还没攒够这点血 —— 【{name}】要 {need} 点才付得起，你现在只剩 {cur} 点。",
+    "params": [
+      "name",
+      "need",
+      "cur"
+    ],
+    "category": "战斗",
+    "desc": "机制 · 出手前的血线门（狂斩：「不能把自己打死 —— 血 < 12% 时这一手不可用」，02_狂战士_v2 §二）· 真源槽位行见 fxmech/_notes.md §真源行"
+  },
+  "COMBAT_MECH_ONCE": {
+    "value": "这一场你已经放过了 —— 【{name}】一场只出一次手。",
+    "params": [
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "机制 · 每场一次（焚身：「一场战斗最多一次」，02_狂战士_v2 §三）· 真源槽位行见 fxmech/_notes.md §真源行"
   }
 }

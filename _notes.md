@@ -9796,3 +9796,135 @@ scripts/probe_resources.py         ★ ⑤ 加两条（每条主动都 +1 · 域
 **去重 + 合并**（保留一份、并入了对方`_cast_hot` 的 try/except 回落与 ㉔ 里那句「cd=10 万刻」的
 fixture 收口）。**当前树是干净且自洽的**（无重复 def / 无重复注册 · 语法 OK · 全量门禁 52/52），
 但若那个会话还在写，合入前请再核一遍「`git diff` 里没有第二份同名实现」。
+
+
+---
+
+# fxmech · 第二轮：把「还差的那半」接完（B4-4 两段耗时 · 出手前否决口 · 普攻那半的去留）
+
+> 起因：主线判「没做完全做完」。本轮把 **§四·甲（技能自己声明的 cast/recover）整条接上**，
+> 并把两条**真源写明、运行期一直没人管**的规则（狂斩的**血线门** · 焚身的**一场一次**）
+> 一并接上；另有一格（游侠准星资源表里那处第二源）收成单一源。
+> **引擎侧本批动了四份文件**（不再零改动 —— 判据从「引擎零改动」改成「改动面 == 声明的四份」）。
+> ★ 普攻那半（basic 技能自己那两段）**查到「能开、但不该由本批开」的硬理由**，见 §七·三。
+
+## 七·一 引擎那半（`C:/Users/yuyu/framework-engine` · 四份文件）
+
+| 文件 | 改了什么（逐条） |
+|---|---|
+| `extends/ext_combat/battle/schedule.py` | ① 新增 `segment_time(battle, actor, decl, kind)` = **一段耗时的唯一实现** —— `kind` 决定第一段/第二段各自的模型（`time_model_fn` / `recover_model_fn`，**不许共用**：引擎今天就是两条独立的面，第二段允许是另一个形状）；② `_segment_seconds` 降成一行转发（既有调用方签名与行为一字不改）；③ `_after_act(..., plan=None)` —— 收 T0 那份声明，**落地与到点从此同源**；`plan` 里没声明的那一段落回**本次行动的类别**（不是 `DEFAULT_ACTION`：不这样，E5 未装配时 `(action, None)` 会与「不传 plan」那条路算出两个数）；④ `pending_begin(cast=None)` 的实现对齐它自己的 docstring（`ctx.action`）—— 设计案 §三·D2 |
+| `extends/ext_combat/battle/battle.py` | ⑤ `Battle.act` 把解析好的 `(cast, recover)` 存进 `ctx._plan`（一份声明，两处共用）；⑥ `human_act` 非 override 那支透传 `plan=getattr(ctx, "_plan", None)`；⑦ `actor_auto` 透传 + **守卫**（`ctx.action` 被控制改写时不用 plan ⇒ 那个既有偏差逐字保留，设计案 §三·D1） |
+| `extends/ext_combat/battle/actions.py` · `saintess_engine/config.py` | ⑧ 新增**可选**的「出手前通用否决口」`skill_gate_fn`（与 `mp_gate_fn` **同位置、同形状**：`fn(battle, actor, info) -> str|序列|None` · 空回执抛 `EngineNotConfigured` · **未装配 ⇒ 那一整段不存在**）—— 引擎不知道「血线」「每场一次」这些规则：判据与回话全在内容侧 |
+
+三条老算式在 `plan=None` 下**逐字等价**（`_after_act` 那三条老调点）—— 探针 ㉕④ 的撤改臂现算钉着
+（不挂 E5 ⇒ 落地 74.3 / 到点 120.7 刻 = 类别 skill 80/50，与接线前同值）。
+
+## 七·二 内容那半
+
+```text
+content/apply.py           挂 segment_plan_fn=_MECH.segment_plan · skill_gate_fn=_MECH.skill_gate
+                           （★ 不挂 = 与接线前逐字相同 —— 两条都是「未装配 ⇒ 不存在」的形状）
+content/mech.py            segment_plan（原样透传技能自己那两段 · 纯函数 · 只认 action=="skill"）
+                           skill_gate（血线门 + 每场一次，规则全在表里，函数里零数字）
+                           _self_cut_raw（**该付多少**）· _self_cut_amount（真扣 = min(该付, hp−1)）
+                           —— 两格必须分开：不分，血线门就恒真、形同虚设
+content/rules/skill_mech.json   rampage.min_hp_pct = 0.12 · immolate.once_per_battle = true
+                           （两条都带 `_src` 指回 02_狂战士_v2 §二/§三；`_validate` 收这两格的形状）
+content/data/texts.json    +2 槽位：COMBAT_MECH_HP_GATE · COMBAT_MECH_ONCE（真源行见 §七·五）
+content/rules/resources.json    RES_AIM.gain.on_cast 1 → 0（那格**没有消费端** —— 同一个数在域里
+                           六条技能上各写一遍；与 RES_MARK 同款，收成单一源）
+scripts/probe_mech.py      新增 ㉕（两段耗时接线：四个职业逐条 + 同源 + 撤改）· ㉖（血线门 + 每场一次
+                           + 换一场 + 撤改）；⑩ 抢拍与 ㉒ 砸晕两条老判据的量法摆正；⑮ 改成钉改动面
+scripts/probe_resources.py ③ 期望值改成按**当场真发生的事件数**算（时序不再钉死）· ⑧ 同上改钉改动面
+```
+
+## 七·三 ★ 普攻那半（basic 技能自己那两段）：**能开，但本批没开**（开关位置 + 实测后果）
+
+真源 `00_重做总纲_v2.md §五·六` 那句「**技能自己写了自己的 cast/recover 就用技能自己的**」
+对 basic 技能（六职业的普攻）**也成立** —— 六份职业详案的技能表里，普攻那一行的 `cast` 列写的是
+类别名 `attack`、`recover` 列写的是自己的数（骑士横剑 **0** · 游侠短弓 10 · 法师星屑 20 …）。
+本批把这条**也接上去试过**（引擎 `act()` 里给 `action=="attack"` 现取本职业 basic 技能那份 dict +
+供体认 `entry["basic"]`），实测后果：
+
+```text
+① 难度底线被顶开（口径从「普攻走类别 attack 60+40」变成「走本职业两段」）：
+   · 零加点骑士 vs 精英（被咬过的伐木工 lv9）：**0/40 → 33/40 胜**（出手 16 → 24）—— 原本的
+     设计意图是「动手就倒地」（probe_panel P-34 那条判据的原文）。
+   · 层主（守塔的骨架 lv17）低 4 级单刷：**0/36 → 9/36 胜**（probe_combat ④ 的原文是「不该赢」）。
+   · 单人那一路的冻结基线（probe_instance ⑤）也整片变（到点时刻 157 → 118 刻等）。
+② 同一条真源的口径**自相矛盾**：`03_职业与技能/*_v2.md` 的「一次行动（F6）」那六列全是
+   **类别 attack** 的账（设计案 §三·D4 已经把这条登记过一次）⇒ 要让真源先裁「一次行动」
+   到底是哪一档，再谈普攻吃不吃自己的两段。
+③ 设计案 §三·D3 本身就写着：「**行为改动**（40 → 0/10/20）⇒ 单独立条，**不许混进 B4-4**」。
+
+⇒ 本批按设计案那条纪律办：**核对了它的全部后果，然后撤回**（五条门禁当场转绿）。
+要把这一格打开，改动只有两处（引擎 `battle.py::act` 里给 attack 现取 basic 技能 + 内容侧
+`segment_plan` 认 `entry["basic"]`）—— 但它必须先过真源那条口径 + 一次配平。
+```
+
+## 七·四 判据与门禁（本轮实跑）
+
+```text
+① 全量：bash Temp/w10/gorun.sh C:/Users/yuyu/ast-wt/fxmech fxmech-b44b ⇒ TOTAL pass=52 fail=0
+② 引擎自带门禁：$PY tests/run_all.py（framework-engine 仓）⇒ 见 §七·六
+③ 两态/撤改（判据里现算）：
+   · 不挂 E5 ⇒ 落地/到点回到类别 skill 80/50（㉕④）
+   · 不挂 E6 ⇒ 6 血照放狂斩 · 焚身同场照放第二次（㉖⑤）
+   · segment_time 的两段模型分开：cast 走 time_model_fn / recover 走 recover_model_fn
+④ 真机（player_client.py · 真宿主契约）：
+   · 狂斩 6 血 ⇒ 「你还没攒够这点血 —— 【狂斩】要 19 点才付得起，你现在只剩 6 点。」
+   · 焚身同场第二手 ⇒ 「这一场你已经放过了 —— 【焚身】一场只出一次手。」
+   · 引燃（出手前 3 层）落地时刻按自己的 200+40 走（真机回话里的到点时刻从 123 刻变 227 刻那一档）
+```
+
+## 七·五 真源行（本轮新增，请主线搬）
+
+**1）新槽位 2 条 → `00_总纲/17_文案收口口径_v1.md`**
+
+```text
+| COMBAT_MECH_HP_GATE | 你还没攒够这点血 —— 【{name}】要 {need} 点才付得起，你现在只剩 {cur} 点。 | name,need,cur | 战斗 | fxmech · 狂斩的**出手前血线门**（真源 02_狂战士_v2 §二「不能把自己打死 —— 血 < 12% 时这一手不可用」） |
+| COMBAT_MECH_ONCE | 这一场你已经放过了 —— 【{name}】一场只出一次手。 | name | 战斗 | fxmech · 焚身的**每场一次**（真源 02_狂战士_v2 §三「一场战斗最多一次，而且要看修女在不在」） |
+```
+
+**2）`02_数值宪法/02_战斗机制.md`（或 `00_重做总纲 §五·六`）两处口径请裁**
+
+```text
+① ★ 「技能自己声明的 cast/recover」这条今天**只落在「技能 <名>」那一路**；**普攻**（本职业 basic
+   技能）那两段还没吃（真源六份详案的普攻行写着 cast=`attack` + 自己的 recover）。开它的后果已实测
+   （见本文件 §七·三：零加点骑士 vs 精英 0/40 → 33/40 · 层主低 4 级 0/36 → 9/36）。
+   要裁的是：**普攻的后摇**归类别（今天的账，也是六份详案「一次行动 F6」那六列的算法）还是归技能自己？
+② 顺带一条实测：**抢拍那一下「提前 30 刻」在这套数下恒被那道「不早于当刻」的闸夹到 0**
+   （游侠 10 级 spd 148 ⇒ 本手后摇 24.66 刻 < 30）⇒ 它实际退化成「落地即可再动」。
+   真源 03_游侠_v2 §三 那句「把自己的下一次行动提前 30 刻」在**技能自己的两段生效之后**就是这个意思
+   —— 若要保留「真提前 30」，得让这一手自己的后摇 ≥ 30 刻（或把闸换成「插到目标之前」那一档，
+   域里那半今天标的是 pending）。
+```
+
+**3）`03_职业与技能/02_狂战士_v2.md §二` 那句「血 < 12% 时这一手不可用」的落法**
+
+```text
+已落成**出手前否决**（引擎新开的口 `skill_gate_fn` + 表里 `rampage.min_hp_pct = 0.12`）：
+判据 = 「付完还得剩得下血」（`hp − 该付的那一笔 ≥ 1`）。与「自伤按**生命上限**算」那份账自洽
+（§一 那句「当前生命」的口径登记见上一轮的真源行）。
+```
+
+## 七·六 引擎自带门禁（本批动了引擎 ⇒ 两边都跑）
+
+```text
+$PY tests/run_all.py（framework-engine 仓）⇒ 96 份、通过 94、失败 2 —— 两条**都核过**：
+  ① tests/test_editor_wiki.py  ✗（wiki README 那句「共 64 个 .py / 12 862 行」被我加的行顶旧了）
+     ⇒ 已跟账成 **12 874** ⇒ 重跑 37/0 通过 ✓
+  ② tests/test_wiki_refs.py    ✗（**改前就红**：另开一个干净 worktree 跑 HEAD ⇒ 同样「drift 1 处」，
+     那 1 处指的是**旧引擎**的文件 `class_mech_proc.py` —— 与本次改动无关，已按原样留在仓里）
+  ③ tools/remap_wiki_refs.py --files=<本批四份> ⇒ 引擎 wiki 里那些行号引用已按**内容锚**整体重定位
+     （docs/engine-wiki/**.md 一并更新；剩下 8 处 unresolved 是原文档指到被我改写的行上，
+      工具不改、列清单 —— 都在 `--check` 的清单里，没藏）
+```
+
+## 七·七 一条**协作事故**的续账（第二轮）
+
+第二轮开始前，本工作树里那**第二个写者**（工具报 `sibling subagent sa-1-c225dc71`）仍在动
+`scripts/probe_mech.py`（它把我插入的 ㉕/㉖ 与自己那几条并行改）。本轮的收口办法：每次改完立刻
+**回读 + 逐段比对**（`git diff` 看有没有第二份同名实现），并把「同源」「撤改」两类判据写进探针
+—— 它们是**唯一**能自动发现「两份实现各算各的」的东西（例如 `_after_act` 与 `pending_begin`
+必须读同一份声明：判据 ㉕② 就是钉这个）。
