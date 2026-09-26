@@ -11263,3 +11263,148 @@ scripts/_baseline_instance_solo.json  第六次刷新的那份快照
 （`_skill_pay_of` 折算 / `mana.py` / 上限钳制三处都没问题）。
 ⇒ **不改代码**。残留的是**呈现**上的诉求（战斗屏给一行只读回蓝读数，或技能页把耗法标成「净耗」）
 —— 那是「每手回蓝读数」那条独立工单，不在本条里夹带。
+
+# 分支 fix-e-itemuse（2026-09-27 夜班 · 试玩报告「道具使用」那两条）：两条都真复现 ⇒ 两条都修（**包内** · 引擎一行不动）
+
+基 `ddf7f7e`（夜班基线 `nightplay`）· 车道 `C:/Users/yuyu/ast-wt/fix-e-itemuse` ·
+判据只紧不松（`scripts/probe_battle_turns.py` 新增 ③b 六条 · 见 §四）。
+
+## 一 · ①【⛔致死 · 职业无关】`使用 <药>` 之后敲 `自动` ⇒ 玩家一手不出、被活活打死 —— **真 bug（不是过期误报）· 已修**
+
+### 现象（本车真宿主真敲 · 真跑原文）
+```
+» 攻击            （遭遇：林鸦；第 1 手 你 130/140）→ 这一敲收在手里（手 1）
+» 使用 伤药        「伤药」备在手边 —— 这一场有空就用它。 / 你喝下伤药。生命 +10（140/140）。
+» 自动            🌀 修eb 开始出招… / —— 林鸦 行动 —— / 🌀 林鸦 开始出招… /
+                  未知行动类型：item / 💥 修eb 受到 10 点伤害！ / 🌀 修eb 开始出招… /
+                  未知行动类型：item / …（还有 57 条）→ 💀 眼前一黑。（掉 10% 经验）
+```
+一手都不出（`未知行动类型：item` 一行接一行）、被活活打死 —— 与报告逐字同形。
+对照照旧：`自动` 不带道具（先 `攻击` 再 `自动`）一切正常、`使用 <药>` 单独用也正常。
+
+### 根因（字段级 · 两侧都是本车自己复现的，不是照抄报告）
+
+写入侧（**包内**两处，同款）：
+* `content/instance.py:478`（`take_turn`）：`caster["auto_act"] = {"act": {"type": "item", "skill": hand.item}}`
+* `content/cmds_battle.py:417`（`_run_hand`）：同款
+
+读出侧（引擎 · 只读核）：
+* `extends/ext_combat/battle/battle.py:343-357` `auto_run` ⇒ **人控 actor 也会**走 `actor_auto`
+* `battle.py:386-394` `actor_auto`：从 `caster["auto_act"]["act"]` 取 `type` = `"item"`
+* `battle.py:516-539` `act()`：`action not in ("attack","skill","defend","flee")` ⇒ 问 `self.action_override`；
+  **它是 None** ⇒ `battle.core.unknown_action`（「未知行动类型：{action}」）。
+  ⇒ 引擎认得的内置动作只有**四种**（attack / skill / defend / flee）。
+
+`action_override` 为什么是 None：它**不可序列化**。`take_turn`（`content/instance.py:467-468`）
+自己按手重挂；而 `自动` 走 `take_auto`（`instance.py:518-539`）——**没有「手」可挂**，
+`_restore`（`instance.py:726-748`）只把面板栈与导演钩子重挂回来。本车实跑读数：
+```
+▶ 场里玩家 actor 的 auto_act = {'act': {'type': 'item', 'skill': 'i_potion_minor'}}
+▶ 从场里恢复出来的 Battle.action_override = None
+▶ 恢复出来的玩家 actor auto_act = {'act': {'type': 'item', 'skill': 'i_potion_minor'}}
+```
+⇒ **道具队列 + 自动 = 引擎认得的那四种一个都不是** ⇒ 那一手整手废掉。
+而 `item_uses_per_battle` = 1（`content/rules/battle_cmds.json`）⇒ 这门「用物的立场」**连一次都多喝不成**：
+没多喝一口，只把整场废了（玩家零动作）。
+
+### 改法（包内 · 两处都改）
+自动那条路认得的内置动作 ⇒ 写 `{"act": {"type": "attack"}}`：
+* `content/instance.py:488`（`take_turn`）· `content/cmds_battle.py:422`（`_run_hand`）—— 理由写进注释。
+* 依据：`item_uses_per_battle` = 1 ⇒ 用满之后那一手本来就是「回落普攻」（`battle_acts.Hand._item`
+  的上限那一支）⇒ **立场与普攻在这一档等价**；写法上只声明引擎认得的动作。
+* 「显式点名再吃一瓶 ⇒ `COMBAT_ITEM_CAP` + 回落普攻」那一条**一字未动**（走 `Hand._item` 的上限支；
+  `probe_cmds` 四 与 `probe_battle_turns` ② 照旧绿）。
+* **没有**把引擎那句「未知行动类型」换成包内自造文案（那是把 bug 藏起来）—— 引擎那一支一个字没碰。
+* 为什么**不**在 `take_auto` 里按 `auto_act` 重挂一份 override：① 上限 = 1 ⇒ 那一手本来就要回落普攻，
+  重挂只会让「自动」每一手都印一行「这一场用过了」；② 一个 `Hand` 要重建 `p` / `item` / `used` 三样，
+  等于多一条只在自动那条路上活的分支；③ 内容侧动作类型塞进 `auto_act` 这个**引擎字段**本身就违反
+  「引擎只认那四种」这条契约 —— 修在**写端**最小、也最不藏事。
+
+### 改后实跑（同一套动作 · 真宿主真敲）
+```
+» 使用 伤药   ⚔ 第 2 手 …「伤药」备在手边 —— 这一场有空就用它。 / 你喝下伤药。生命 +4（188/188）。
+» 自动        💥 田鼠 受到 16 点伤害！ / 💥 修eb2 受到 4 点伤害！ / 🌀 修eb2 开始出招… /
+              —— 田鼠 行动 —— / …（还有 2 条）/ ━━ / ✔ 打完了。 / 💰 金币 +9，✨ 经验 +9
+```
+「未知行动类型」**零行**（改前每手一行）、我方**每手真出招**、这一场**真打完**（不是必死）。
+
+### 反证（把修好那两行换回 `nightplay` 版 ⇒ 新增的判据当场红）
+```
+X 满血…药一瓶不动（3 → 2）· 账上一件都没用掉（{'i_potion_minor': 1}）
+X 这一场里玩家 actor 的 auto_act 只能是引擎内置动作 … —— {'type': 'item', 'skill': 'i_potion_minor'}
+X 用过道具之后敲 `自动`：…「未知行动类型」一个字都不许出 —— ['未知行动类型：item', '未知行动类型：item']
+X 我方每手真有动作（对面挨了 0 下）· 这一场真打完 … —— ['💀 眼前一黑。\n（你在白烛堂醒来。艾德在拨灯芯。）', …]
+RC=1
+```
+
+## 二 · ②【⚠️资源损失】满血 `使用 <药>` 照样把药吃掉、只回一句 `生命 +0` —— **真 bug · 已修**
+
+### 现象（本车真跑原文 · 只有「活体 actor 此刻多少血」这一格是夹具摆的，明写不藏）
+```
+▶ 上限 188 ｜ 敲之前 hp=188 ｜ 敲之后 hp=184
+▶ 背包 3 → 2
+▶ 场里 items_used = {'i_potion_minor': 1} ｜ 手数 = 2
+回话：你喝下伤药。生命 +0（188/188）。
+```
+一瓶伤药 24 铜板 ≈ 同档 3~4 只怪的全部收入（`scripts/rebuild_shop.py` 那条量级的原话）⇒ 白扔。
+
+### 根因
+战斗里吃药的结算口只有一个：`content/battle_acts.py::Hand._item`。它只判两件
+（`gain is None` = 认不出效果 · 上限用满没有），**不判「这一手真能回多少」** ⇒ 满血照吃、照扣。
+离战斗那条老路（`content/cmds_recipe.py:550-555`）**早就有**这一档（`SYS_USE_FULL` ·
+P1 BUG-8「满血不吃药」）—— 战斗那一半当年没跟上（回血口径 `_heal_gain` 两口本来就共用）。
+
+### 改法（包内 · 一处）
+`content/battle_acts.py::_item`，在上限那一支**之后**、结算**之前**加一道：
+```python
+eff = min(int(mx), hp0 + int(gain)) - hp0
+if eff <= 0:
+    return ([T("SYS_USE_FULL", name=name)] + _plain_attack(battle, actor), "attack", None)
+```
+* 判据只看**真能回多少 ≤ 0** ⇒ **不消耗**（`_take` 与 `used` 都不动）—— 上限钳制 / 减伤那类
+  正当结算**一格不动**：真能回一点的（含被上限截掉一半的）照旧结算。
+* 文案走**唯一真源** `content/data/texts.json` 的 `SYS_USE_FULL`（与 `使用` 那条老路**同一句**，
+  本文件零中文、没新增槽位、没内联）。
+* 这一手**不白花**：照「上限用满」那一支的形状**回落成普攻**（`COMBAT_ITEM_CAP` 那支同形）。
+* 顺序：上限那一支仍在**前**（先问「这一场用过了吗」）⇒ `probe_cmds` 四 · `probe_battle_turns` ②
+  那两条判据逐字不变（没放宽）。
+
+### 改后实跑
+```
+满血 188/188 → 「你身上一点伤都没有 —— 伤药先留着。」 + 💥 田鼠 受到 20 点伤害！（回落普攻）
+背包 3 → 3 ｜ items_used = {} ｜ 手数照花（2）
+端到端（player_client）：买的那瓶药打完还在背包里（`e.json` bag = {'i_potion_minor': 1, …}）
+```
+
+## 三 · 本波动的文件
+| 文件 | 改动 |
+|---|---|
+| `content/instance.py` | `take_turn` 里的 `auto_act`：内容侧 `item` → 引擎内置 `attack`（+ 理由注释） |
+| `content/cmds_battle.py` | `_run_hand` 同款一处（同上） |
+| `content/battle_acts.py` | `_item`：真能回多少 ≤ 0 ⇒ 不吃（`SYS_USE_FULL`）+ 回落普攻 |
+| `scripts/probe_battle_turns.py` | 新增 ③b 六条（判据**加强**，旧判据一条不动） |
+
+`content/data/texts.json`：**未动**（复用现成 `SYS_USE_FULL`，没有新文案）。引擎：**未动**。
+
+## 四 · 门禁账（本车实跑）
+`bash C:/Users/yuyu/AppData/Local/Temp/w10/gate_locked.sh C:/Users/yuyu/ast-wt/fix-e-itemuse fix-e-itemuse`
+⇒ `w10/fix-e-itemuse/summary.txt` 末行 **TOTAL pass=52 fail=0**（与基线 `nightplay-d-oathwall`
+逐支同值：`scripts/probe_*.py` 仍是 52 支 —— 新判据加在既有那一支 `probe_battle_turns` 里，
+失败集合两边都是空）。
+
+## 五 · 真源行（本轮新增，请主线搬）
+* `06_第一阶段垂直切片/04_指令总表 §五`「药与道具」那一行需要补**满血那一档**：
+  「身上没伤 ⇒ 不吃（道具一件不动），这一手回落普攻」—— 实现照
+  `00_总纲/17_文案收口口径_v1.md` 的 `SYS_USE_FULL`（离战斗那条路 2026-09-24 已落）**同一句**，
+  战斗那一半本波跟上（P1 BUG-8 的补账）。
+* `02_数值宪法/02_战斗机制 §〇·五`（一条指令 = 你的一个行动机会）在这一档上的读法：
+  「不吃」也得说得出口（不许静默白花、也不许扣了东西什么都没发生）—— 本波按这个读法落地
+  （一句实话 + 回落普攻）。
+
+## 六 · 一条**引擎侧**的观察（本波**没动**引擎 · 留主线裁）
+`extends/ext_combat/battle/battle.py:413-424` 只给 `action == "skill"` 做了「此刻放不出 ⇒ 回落普攻」的
+**可执行性兜底**；而 `auto_act` 里放一个**引擎不认识的 `type`**（如内容侧 `item`）时
+（`battle.py:516-539`）只回一行「未知行动类型：{action}」、**那一手直接废掉**（不回落普攻）。
+本包今天起不再往里放内容侧动作（本波）；但**别的接入方**（第三方包）照样可能踩。
+「自动那条路遇到不认识的 type 要不要回落普攻」是**跨游戏**的口径，不在本包内 ⇒ 判 **[裁]**、不动引擎。
+

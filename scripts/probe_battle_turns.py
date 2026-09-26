@@ -330,6 +330,92 @@ def main():
     finally:
         _unpin(saved)
 
+    # ── ③b ★ fxe（修 e·道具使用）：道具那一手本身的两档 ───────────────────────
+    #   真源两份（只读）：`06_第一阶段垂直切片/04_指令总表 §五`（药与道具 · 一场每件一次）·
+    #   `02_数值宪法/02_战斗机制 §〇·五`（一条指令 = 你的一个行动机会 —— 所以「不吃」也要说话）。
+    #   ★ 两档都是**真宿主真敲**跑出来的；只有「活体 actor 此刻多少血」这一格是夹具摆的
+    #     （`INST.save` 写回这一场 · 明写在这儿，不藏）：要的就是「满血」与「挂彩」两个**确定**状态。
+    #   ① 满血敲 `使用 <药>` ⇒ 一句实话 + 药一瓶不动 + 这一手**回落普攻**（不白花）
+    #   ② 挂彩敲 `使用 <药>` ⇒ 真回血、药真扣；**接着敲 `自动`**：引擎那条
+    #      「未知行动类型」一个字都不许出（改前实跑：玩家一手都不出、被活活打完）、
+    #      我方每手真出招、这一场真打完；且这一场里玩家 actor 的 `auto_act` 只能是**引擎内置动作**。
+    print()
+    print("③b 道具那一手：满血**不吃**（回落普攻）· 用过之后敲 `自动` 我方照样每手出招")
+    db = _fresh("pill2")
+    host, ad = _boot(db, "g_pill2")
+    _seed("g_pill2", "u_q")
+    env = _E("g_pill2")
+    saved = _pin()
+
+    def _foe_hp(state):
+        """这一场敌方还剩多少血（读场里那份战斗态 —— 只读，不改）。"""
+        _b = (state or {}).get("battle") or {}
+        return sum(int((x or {}).get("hp") or 0)
+                   for x in (((_b.get("sides") or {}).get("enemy")) or []))
+
+    def _bag(gid, uid, iid):
+        return int(((PS.get_player(gid, uid) or {}).get("bag") or {}).get(iid) or 0)
+
+    try:
+        random.seed(20260926)
+        _drive(host, ad, "u_q", "攻击")
+        _key = INST.battle_key(env, "u_q")
+        _s = INST.live(env, "u_q")
+        _a = INST.actor_of(_s, "u_q")
+        _mx = int(_a.get("max_hp") or 0)
+        # ① 满血那一档
+        _a["hp"] = _mx
+        INST.save(_key, _s)
+        _b0 = _bag("g_pill2", "u_q", "i_potion_minor")
+        _f0 = _foe_hp(_s)
+        random.seed(20260926)
+        _o_full = _drive(host, ad, "u_q", "使用 伤药")
+        _s1 = INST.live(env, "u_q")
+        _b1 = _bag("g_pill2", "u_q", "i_potion_minor")
+        chk("★ 满血（%d/%d）敲 `使用 伤药` ⇒ 照实说「%s」+ **药一瓶不动**（%d → %d）· "
+            "账上一件都没用掉（%s）"
+            % (_mx, _mx, slot("SYS_USE_FULL")[:12], _b0, _b1, (INST.live(env, "u_q") or {}).get("items_used")),
+            _has(_o_full, "SYS_USE_FULL")
+            and _b1 == _b0
+            and not ((_s1 or {}).get("items_used") or {}).get("i_potion_minor"),
+            _o_full[-4:])
+        chk("★ 这一手**不白花**：照「上限用满」那一支的形状回落成普攻（对面这一手真掉血 %s → %s）"
+            % (_f0, _foe_hp(_s1)),
+            _foe_hp(_s1) < _f0,
+            None if _s1 is None else (_s1.get("hands"), _s1.get("items_used")))
+        # ② 挂彩那一档 + 接着 `自动`
+        _s2 = INST.live(env, "u_q")
+        _a2 = INST.actor_of(_s2, "u_q")
+        _a2["hp"] = max(1, _mx - 30)
+        INST.save(_key, _s2)
+        _b2 = _bag("g_pill2", "u_q", "i_potion_minor")
+        random.seed(20260926)
+        _o_use = _drive(host, ad, "u_q", "使用 伤药")
+        _s3 = INST.live(env, "u_q")
+        _b3 = _bag("g_pill2", "u_q", "i_potion_minor")
+        chk("★ 挂彩（上限 −30）敲 `使用 伤药` ⇒ 真回血那一行 + 药真扣（%d → %d）"
+            % (_b2, _b3),
+            _has(_o_use, "SYS_USE_HEAL") and _b3 == _b2 - 1, _o_use[-3:])
+        _aa = ((INST.actor_of(_s3, "u_q") or {}).get("auto_act") or {}).get("act") or {}
+        chk("★ 这一场里玩家 actor 的 `auto_act` 只能是引擎内置动作（attack/skill/defend/flee）"
+            "—— 内容侧动作（如 `item`）在**从场里恢复出来的**那一场 Battle 上没有 "
+            "`action_override`（不可序列化）⇒ 引擎只会回「未知行动类型」、玩家一手都不出",
+            str(_aa.get("type")) in ("attack", "skill", "defend", "flee"), _aa)
+        random.seed(20260926)
+        _o_auto = _drive(host, ad, "u_q", "自动")
+        _foe_name = str((MON[MID] or {}).get("name") or MID)
+        _hits = [ln for ln in _o_auto if _foe_name in str(ln) and "受到" in str(ln)]
+        chk("★ 用过道具之后敲 `自动`：引擎那条 `battle.core.unknown_action`（「未知行动类型」）"
+            "**一个字都不许出**（改前：每手一条、我方零动作）",
+            not [ln for ln in _o_auto if "未知行动类型" in str(ln)],
+            [str(ln) for ln in _o_auto if "未知行动类型" in str(ln)][:2])
+        chk("★ 我方每手真有动作（对面挨了 %d 下）· 这一场真打完（`✔ 打完了`）· 场清干净"
+            % len(_hits),
+            _hits and _has(_o_auto, "COMBAT_DONE") and INST.live(env, "u_q") is None,
+            _o_auto[-4:])
+    finally:
+        _unpin(saved)
+
     # ── ④ 逃跑两态 + 同一场重掷 ──────────────────────────────────
     print()
     print("④ `逃跑` 失败率两态（探针自己现算种子）+ 同一场里再敲会**重掷**")
