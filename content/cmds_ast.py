@@ -180,15 +180,19 @@ def _p(player):
         p["hp"] = max(1, min(int(p.get("hp") or cap), cap))   # 现血跟着同一个上限（满血起手）
     # ★ B4-8：**法力上限**同样只有面板一个来源（`mp_cap`，与生命那把尺同一把）——
     #   档上 `mo_max` 这一格原先零写端（两个初始档都写死 0）⇒ `状态` 恒显示「法力 0/0」，
-    #   而面板里骑士是 50 ⇒ 同一件事两处口径。现蓝读档（缺省 0）—— 与战斗 actor 的起手
-    #   （`combat.player_actor` 的 `setdefault("mp", 0)`）对得上，不发明「开战满蓝」这种
-    #   真源没写的规矩（法力要不要真做 = 台账 §3 新记的那笔）。
+    #   而面板里骑士是 50 ⇒ 同一件事两处口径。
+    # ★ P-51（2026-09-26）：现蓝的口径**已定**（不再挂账）—— 走唯一一口 `mana.initial_mp`
+    #   （档上有那一格 ⇒ 照它并钳到上限；**缺格** ⇒ 面板上限满池）。原先写
+    #   `int(p.get("mo") or 0)` = 「每场仗都从 0 起手」⇒ 耗法技能开局一个都放不出来
+    #   （与技能表印着「耗法」自相矛盾）。与战斗 actor 的起手（`combat.player_actor`）
+    #   **同一口** ⇒ 面板 / 档 / actor 三处一个数；口径与理由见 `content/rules/mana.json`。
     mcap = _PB.mp_cap(p, strict=False)
     if mcap is None:
         p.pop("mo_max", None)                              # 无职业 ⇒ 这一格也不留（照实说未定）
     else:
+        from . import mana as _MANA
         p["mo_max"] = mcap
-        p["mo"] = max(0, min(int(p.get("mo") or 0), mcap))
+        p["mo"] = _MANA.initial_mp(p.get("mo"), mcap)
     return p
 
 

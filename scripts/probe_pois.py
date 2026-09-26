@@ -204,8 +204,8 @@ def _sat10(p10, rec):
 
     · `quest` → 算已交（交活那一刻写的就是 `flags.quests_done`）
     · `read`  → 旧物谱里那条已在（`codex.note_read` 写的就是它）
-    · `time` / `weather` **不补** —— 那是真门槛（今天那两条写的是「退潮」，calendar 域里没有这个 token
-      ⇒ 判不了 ⇒ 照旧可读，见 ⑫）
+    · `time` / `weather` **不补账**（补不了）—— ★ P-31（本批）：那两条**拨钟**去满足它
+      （`_epoch_sat`），见下面那一段：门槛满足时照样一条都不许少。
     """
     cond = rec.get("condition") or {}
     if cond.get("quest"):
@@ -215,13 +215,45 @@ def _sat10(p10, rec):
     return p10
 
 
-read_bad, read_ok = [], {"进谱": 0, "就地线索": 0, "带门槛": 0}
+#: ★ P-31（2026-09-26）：这一段以前跟着**真钟**跑（K79 那一族：判据不许看真钟）—— 现在拨到
+#:   固定的一天正午；带时辰/天气门槛的那几条再按门槛把钟拨到**满足**它的那一刻。
+from content import calendar as _CAL0                                     # noqa: E402
+
+_DAY0 = 200
+_EPOCH0 = _DAY0 * _CAL0.scale_seconds() + (12.0 / 24.0) * _CAL0.scale_seconds()
+
+
+def _epoch_sat(rec):
+    """这条 POI 的时辰 / 天气门槛**满足了的那一刻**的 epoch（没有门槛 / 找不到 ⇒ None）。
+
+    现算：扫这一天之后的每一天、每小时，取第一个 `calendar.allows` 两路都真的时刻。
+    """
+    cond = rec.get("condition") or {}
+    if not (cond.get("time") or cond.get("weather")):
+        return None
+    for _d in range(_DAY0, _DAY0 + 30):
+        for _h in range(24):
+            _e = _d * _CAL0.scale_seconds() + (_h + 0.5) / 24.0 * _CAL0.scale_seconds()
+            _CAL0.facade.bind_host(clock=lambda _e=_e: _e)
+            _st = _CAL0.state()
+            if _CAL0.allows(cond.get("time"), _st) and _CAL0.allows(cond.get("weather"), _st):
+                return _e
+    return None
+
+
+read_bad, read_ok = [], {"进谱": 0, "就地线索": 0, "带门槛": 0, "拨钟满足": 0}
 for pid in sorted(reads):
     body = str((tx.get(po[pid].get("read_text")) or {}).get("value") or "")
-    p10 = _sat10({"day": 1, "loc": po[pid].get("map"), "node": po[pid].get("subarea"),
+    p10 = _sat10({"day": _DAY0, "loc": po[pid].get("map"), "node": po[pid].get("subarea"),
                   "books": {"relic": {}}, "foot": {}}, po[pid])
     if po[pid].get("condition"):
         read_ok["带门槛"] += 1
+    _e_sat = _epoch_sat(po[pid])
+    if _e_sat is not None:
+        read_ok["拨钟满足"] += 1
+        _CAL0.facade.bind_host(clock=lambda _e=_e_sat: _e)
+    else:
+        _CAL0.facade.bind_host(clock=lambda: _EPOCH0)
     got = _run10(p10, "读 %s" % po[pid].get("name"))
     books = ((p10.get("books") or {}).get("relic") or {})
     if not body or CA10.T("SYS_READ_HEAD", name=po[pid].get("name")) not in got or body not in got:
@@ -239,8 +271,8 @@ for pid in sorted(reads):
             continue
         read_ok["就地线索"] += 1
 chk("★ 18 条可读物逐条真敲『读』：正文逐字拿到（%d 条进谱 → 问号起步 · %d 条就地线索 → 不留痕 · "
-    "其中 %d 条带门槛，账补上了照样读得到）"
-    % (read_ok["进谱"], read_ok["就地线索"], read_ok["带门槛"]),
+    "其中 %d 条带门槛：账补上 / **拨钟到门槛满足**的 %d 条照样一条都不少）"
+    % (read_ok["进谱"], read_ok["就地线索"], read_ok["带门槛"], read_ok["拨钟满足"]),
     not read_bad and read_ok["进谱"] == len(codexed)
     and read_ok["就地线索"] == len(reads) - len(codexed)
     and read_ok["带门槛"] == len([k for k in reads if po[k].get("condition")]),
@@ -485,40 +517,60 @@ else:
         any(po[_r_pid]["name"] in x for x in _l_yes2)
         and not any(_no2 in x for x in _l_yes2), "%s" % _l_yes2[3:5])
 
-# ③-c `time` 门槛（合法 token · 假钟两档）：合成一条记录，证明合法 token 是**真门槛**
+# ③-c `time` 门槛（合法 token · 假钟两档）：★ P-31（2026-09-26）**用域里那条真的**（「退潮」）
+#   —— 别名表把它接到真时辰上之后，它就是一条**真门槛**：不满足挡得下、满足放得开。
 _t_pid = next((k for k, v in sorted(po.items()) if (v.get("condition") or {}).get("time")), "")
-_syn = dict(po[_t_pid] or {})
-_syn["condition"] = {"time": [str(CAL11.name(CAL11.hour_at(22.0)))]}     # 取表里那个「夜」的名字（不写死中文）
-_t_night = CAL11.hour_at(22.0)
+_t_tok = str((po[_t_pid].get("condition") or {}).get("time", [""])[0]) if _t_pid else ""
+_kind_t, _eid_t = CAL11.resolve(_t_tok)
+_alias_t = CAL11.token_alias()
+# ★ 三处对账（别名表只有一份）：`rules/calendar.json` ↔ calendar 域 + `resolve` 认得它
+_rules_cal = _json12.load(_io12.open(os.path.join(REPO, "content", "rules", "calendar.json"),
+                                    encoding="utf-8"))
+chk("★ P-31 别名表三处对账：`content/rules/calendar.json` 的 token_alias %s == calendar 域的 `_token_alias` %s"
+    "，且 `resolve(%s)` 真认得它 → %s（域里那条 POI 写的**真源原词**因此成了真门槛）"
+    % (_rules_cal.get("token_alias"), _alias_t, _t_tok, (_kind_t, _eid_t)),
+    bool(_alias_t) and _rules_cal.get("token_alias") == _alias_t and _kind_t is not None,
+    "域里用到的 time token = %s" % _t_tok)
+# ★ 别名**不覆盖**真名字（撞名 = 悄悄改掉真门槛的含义）：每个真名字 resolve 出来的还是它自己
+_real_toks = [(CAL11.name(h), h) for h in CAL11.hours()] + [(CAL11.name(w), w) for w in CAL11.weathers()]
+_shadow = [(nm, CAL11.resolve(nm)) for nm, eid in _real_toks if CAL11.resolve(nm)[1] != eid]
+chk("★ P-31 别名**不覆盖真名字**：四时辰 + 四天气逐个 `resolve` 出来的还是它自己（%s ｜ 别名那一格：%s→%s）"
+    % (" · ".join("%s→%s" % t for t in _real_toks), _t_tok, _eid_t),
+    not _shadow, "%s" % _shadow)
 _cases12 = []
 for _hod in (12.0, 22.0):
-    _e12 = 100 * CAL11.scale_seconds() + (_hod / 24.0) * CAL11.scale_seconds()
+    _e12 = _DAY0 * CAL11.scale_seconds() + (_hod / 24.0) * CAL11.scale_seconds()
     CAL11.facade.bind_host(clock=lambda _e12=_e12: _e12)
-    _cases12.append((_hod, CAL11.state()["hour"], CA10._poi_cond(_syn, _player12(), None)))
+    _cases12.append((_hod, CAL11.state()["hour"], CA10._poi_cond(po[_t_pid], _player12(), None)))
 CAL11.facade.bind_host(clock=lambda: FIX11)
-chk("★ 合法的时辰 token 是**真门槛**（假钟两档 · 同一条记录）：昼 = %s ⟶ %s ｜ 夜 = %s ⟶ %s"
-    % (_cases12[0][1], _cases12[0][2][0], _cases12[1][1], _cases12[1][2][0]),
+#: 点名那一句里的 token **用域里那个词**（`_poi_cond` 就是这么渲染的：写「退潮」不写「夜」）
+chk("★ P-31 「%s → %s」是**真门槛**（域里那条 POI · 假钟两档）：昼 = %s ⟶ %s ｜ 夜 = %s ⟶ %s"
+    % (_t_tok, CAL11.name(_eid_t), _cases12[0][1], _cases12[0][2][0],
+       _cases12[1][1], _cases12[1][2][0]),
     _cases12[0][2][0] == "no" and _cases12[1][2][0] == "ok"
-    and CA10.T("SYS_POI_WHY_TIME", token=CAL11.name(_t_night)) in _cases12[0][2][1],
+    and CA10.T("SYS_POI_WHY_TIME", token=_t_tok) in _cases12[0][2][1],
     "%s" % _cases12)
 
-# ④ 判不了的那两条（「退潮」）：点名行出得来，且**照旧能读**（不许悄悄藏内容）
+# ④ ★ P-31（2026-09-26）**换锚**：原先这一条要求「判不了的那两条」在场（= 把「真源写着、刻度没有」
+#   这个**欠账状态**钉成了判据）。现在那两条判得了（别名表），判据换成更强的一条：
+#     · 域里带门槛的 POI **一条都不许判不了**（`unknown` 必须是 0 —— 欠账清零）；
+#     · 「判不了就点名」那条**路**仍然在：拿一条**合成记录**（脏 token）证它还活着。
 _unk = [_pid for _pid in _cond_pids if CA10._poi_cond(po[_pid], _player12(), None)[0] == "unknown"]
-_unk_bad = []
-for _pid in _unk:
-    _line = CA10._poi_cond(po[_pid], _player12(), None)[1]
-    _p_u = _player12(loc=po[_pid]["map"], node=po[_pid]["subarea"])
-    if po[_pid].get("read_text"):
-        _o_u = _run12(CA10.read_thing, _p_u, "读 %s" % po[_pid]["name"])
-        if _line not in _o_u or str((tx.get(po[_pid]["read_text"]) or {}).get("value") or "") not in _o_u:
-            _unk_bad.append((_pid, _o_u[:2]))
-    else:
-        _o_u = _run12(CA10.touch, _p_u)
-        if _line not in _o_u:
-            _unk_bad.append((_pid, _o_u[:2]))
-chk("★ 判不了门槛的那 %d 条（%s）：点名行出得来、且**照旧可用**（藏起来 = 静默删内容 · 台账 P-31 甲待真源定刻度）"
-    % (len(_unk), " · ".join(str(po[k]["name"]) for k in _unk)),
-    bool(_unk) and not _unk_bad, "%s" % _unk_bad[:2])
+chk("★ P-31 换锚④：域里带门槛的 %d 条 POI **一条都不许判不了**（`unknown` = %s —— 真源写着的词都得有刻度）"
+    % (len(_cond_pids), _unk or "0 条"),
+    not _unk, "%s" % [po[k]["name"] for k in _unk])
+_syn_unk = dict(po[_cond_pids[0]] or {})
+_syn_unk["condition"] = {"time": ["涨潮"]}                 # 词表外的 token（真源没有这一档）
+_st_u, _ln_u = CA10._poi_cond(_syn_unk, _player12(), None)
+_p_u = _player12(loc=_syn_unk["map"], node=_syn_unk["subarea"])
+_o_u = _run12(CA10.read_thing, _p_u, "读 %s" % _syn_unk["name"]) if _syn_unk.get("read_text") else []
+chk("★ P-31 「判不了就点名 + 照旧可用」那条**路**仍在（合成一条脏 token「涨潮」）：状态 = %s · 点名行 = 「%s」· "
+    "正文照样拿得到（不许静默删内容）"
+    % (_st_u, str(_ln_u)[:42]),
+    _st_u == "unknown" and _ln_u.startswith(CA10.T("SYS_POI_COND_TODO", name=_syn_unk["name"]).split("{")[0])
+    and (not _syn_unk.get("read_text")
+         or str((tx.get(_syn_unk["read_text"]) or {}).get("value") or "") in _o_u),
+    "%s" % (_o_u[:2] if _o_u else "（不可读物 · 只看点名行）"))
 
 print()
 print("⑬ 隐藏点的产出引用 —— `effect.loot` 不许悬空（B3-28 ②）")

@@ -386,8 +386,12 @@ for _cid in sorted(_BASIS):
 (ok if all(v[0] in ("victory", "defeat") for v in _BS_OUT.values()) else bad)(
     "★ Boss 单刷**一定出结果**（不再撞 500 步护栏返回 None ⇒ 命令层只会回「（战斗结束：None）」）"
     "　%s" % " · ".join("%s=%s/%d 次" % (c.split("_")[-1], v[0], v[1]) for c, v in sorted(_BS_OUT.items())))
-(ok if all(v[0] == "defeat" for v in _BS_OUT.values()) else bad)(
-    "★ Boss 单人 **20 级 + 满强化对不上**（设计：4 人队内容 —— 单人必倒地，6 职业全 defeat）")
+# ★ P-63（2026-09-26）：这一条原先写的是「单人 **20 级 + 满强化对不上**（6 职业全 defeat）」——
+#   那是 ÷2 那个数的**结论**（真跑 0/96）。P-63 把 1 人档改成扫描出来的可过档（÷4）之后，
+#   这里的口径跟着换：**单人档下 20 级 6 职业真打 ⇒ 至少有人赢得下**（固定种子 5150 那一组）。
+(ok if any(v[0] == "victory" for v in _BS_OUT.values()) else bad)(
+    "★ P-63 单人档真打（lv20 · 固定种子 5150 · 6 职业）：**至少有人赢得下**"
+    "　%s" % " · ".join("%s=%s" % (c.split("_")[-1], v[0]) for c, v in sorted(_BS_OUT.items())))
 _BP = ["cls_knight", "cls_berserker", "cls_ranger", "cls_mage"]
 _BW = 0
 for _s in range(8):
@@ -423,10 +427,10 @@ _BH = MON[_BOSS]["panel"]
 _a1 = CB.monster_actor(_BOSS, MON[_BOSS], party=1)
 _a4 = CB.monster_actor(_BOSS, MON[_BOSS], party=4)
 _an = CB.monster_actor(_BOSS, MON[_BOSS])
-_want1 = int(round(float(_BH["hp"]) * 0.5))
+_want1 = int(round(float(_BH["hp"]) * float(_RBM.SOLO_ANCHOR)))
 (ok if int(_a1.get("max_hp")) == _want1 else bad)(
-    "★ 单人（party=1）Boss 的面板血 = 面板 ÷2（%s → %s · 期望 %s）"
-    % (_BH["hp"], _a1.get("max_hp"), _want1))
+    "★ 单人（party=1）Boss 的面板血 = 面板 × %s（= ÷%s · **P-63 的可过档**）：%s → %s（期望 %s）"
+    % (_RBM.SOLO_ANCHOR, int(round(1 / float(_RBM.SOLO_ANCHOR))), _BH["hp"], _a1.get("max_hp"), _want1))
 (ok if int(_a1.get("atk")) == int(_BH["atk"]) else bad)(
     "★ 单人档**只动血那一项**（文档两处字面都只说「**血**按 ÷2 看」）—— atk 仍是 %s"
     % _a1.get("atk"))
@@ -501,12 +505,24 @@ for _lv in (18, 19, 20):
     _BST.append((_lv, _arm[1], _arm[None]))
     print("     lv%-3d ｜ 单人档 胜 %2d/%-2d 出手 med=%-3d ｜ 设计档 胜 %2d/%-2d 出手 med=%d"
           % (_lv, _arm[1][0], _arm[1][1], _arm[1][2], _arm[None][0], _arm[None][1], _arm[None][2]))
-(ok if all(b[0] >= a[0] for _lv, a, b in _BST) else bad)(
+(ok if all(a[0] >= b[0] for _lv, a, b in _BST) else bad)(
     "★ 单人档**只会更宽松**（同种子同配置：单人档胜场 ≥ 设计档 —— 缩放方向不许反）　%s"
-    % " · ".join("lv%d %d≥%d" % (lv, b[0], a[0]) for lv, a, b in _BST))
-print("     · ★ 但**单人仍然全败**（%s）⇒ 「÷2」这条口径落了、也没落错，可它**没达到**"
-      " `17_ §五`「单人能过」 / `22_ §三④`「P1 单人也能过」那句 —— 见 `_notes.md` §二·1（附实测对照）"
-      % " · ".join("lv%d %d/96" % (lv, b[0]) for lv, _a, b in _BST))
+    % " · ".join("lv%d %d≥%d" % (lv, a[0], b[0]) for lv, a, b in _BST))
+# ★ P-63（2026-09-26）**这条判据换锚了**：原先这里是一句 print「但单人仍然全败」——
+#   那等于把「文档写着单人能过、数据做不到」这件事**当成了可以接受的状态**。现在它是判据：
+#     · 正面：**1 人档真跑要赢得下**（Boss 自己那一级 lv19 ≥ 50% —— 判据口径就是那次扫描
+#       `rebuild_monsters.PARTY_SCALE` 的「扫描口径」：以 lv19 ≥ 50% 为准取**最大**倍数 ⇒ ÷4）
+#     · 反面：**设计档（不缩放 = 4 人档）单人仍然全败**（它是团队内容，这个方向不许反）
+_p63 = {lv: (a[0], b[0]) for lv, a, b in _BST}          # lv → (单人档胜场, 设计档胜场)
+_p63_n = int(_BST[0][1][1] or 96)
+(ok if _p63.get(19, (0, 0))[0] * 2 >= _p63_n else bad)(
+    "★ P-63 单人档真跑**赢得下**：lv19 胜 %d/%d（≥ 半数 —— `17_ §五`「单人 能过」/`22_ §三④`"
+    "「P1 单人也能过」这两句真源**兑现了**）· 其余两级 %s"
+    % (_p63.get(19, (0, 0))[0], _p63_n,
+       " · ".join("lv%d %d/%d" % (lv, v[0], _p63_n) for lv, v in sorted(_p63.items()))))
+(ok if all(v[1] == 0 for v in _p63.values()) else bad)(
+    "★ 反面：**设计档（不缩放）单人仍然全败**（%s）—— Boss 是团队内容，缩放之前单人过不了"
+    % " · ".join("lv%d %d/%d" % (lv, v[1], _p63_n) for lv, v in sorted(_p63.items())))
 # ③ 三头对账：生成器那张表 ↔ schema 的键形状 ↔ 域里那一格（按人数缩放只有**一个**来源）
 #   ★ B3-25：从「表里只有 1 人档」加强成「四档阶梯 + 两边锚点不许动」——
 #     1 人 = 真源写死的 ÷2 · 4 人 = 设计值 ×1 · 2/3 人按递减排法（真源待补行，见 _notes.md）；
@@ -521,12 +537,13 @@ _PS_OK = (_PS_TBL == {n: dict(v) for n, v in _RBM.PARTY_SCALE.items()}
           and _PS_KEYS == list(range(1, int(_PJ.get("max_members") or 0) + 1))
           and all(set(v) == {"hp"} for v in _RBM.PARTY_SCALE.values())
           and all(_PS_VALS[i] < _PS_VALS[i + 1] for i in range(len(_PS_VALS) - 1))
-          and abs(_PS_VALS[0] - 0.5) < 1e-9 and abs(_PS_VALS[-1] - 1.0) < 1e-9
+          and abs(_PS_VALS[0] - float(_RBM.SOLO_ANCHOR)) < 1e-9 and abs(_PS_VALS[-1] - 1.0) < 1e-9
           and _PS_NEEDLE in _PS_SCHEMA and "^[1-9][0-9]*$" in _PS_SCHEMA)
 (ok if _PS_OK else bad)(
-    "★ B3-25 三头对账：生成器 `RBM.PARTY_SCALE` == 域 `mods.party_scale` == schema 那一格"
+    "★ B3-25/P-63 三头对账：生成器 `RBM.PARTY_SCALE` == 域 `mods.party_scale` == schema 那一格"
     "（键形状 `^[1-9][0-9]*$`）· 四档阶梯只收 hp、递减排法、两边锚点"
-    "（1 人 ÷2 / 4 人 设计值）· 档位集合 == party 域的上限（%s）" % _PS_TBL)
+    "（1 人 = 扫描出来的可过档 ×%s / 4 人 = 设计值）· 档位集合 == party 域的上限（%s）"
+    % (_RBM.SOLO_ANCHOR, _PS_TBL))
 
 print()
 print("结果：%s" % ("全绿 ✓" if not fails else "有红 ✗"))

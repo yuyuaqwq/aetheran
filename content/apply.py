@@ -144,6 +144,17 @@ def install_engine():
     #   答不上来当场抛（认不得的资源不许静默不涨）。数据表本身由 `content/resources.py` 现读。
     from . import resources as _RES
     _RES.check_domain()
+    # ★ P-51（2026-09-26）法力渠道：**基础回复 + 蓝不够就拦**两个入口（引擎 `a49422a` 已开好，
+    #   未装配 = 与接线前逐字节相同）。数值全在 `content/rules/mana.json`（唯一真源），
+    #   本包只把两个供体挂上 —— 引擎零数值、零玩家文案：
+    #     · `mp_regen_fn` —— 每次时间推进结算问一次「这一拍回多少」（每刻问 · 多久回一次
+    #       由内容侧按 `battle._now` 自己判）；
+    #     · `mp_gate_fn`  —— 出手前问一次「这一手放不放」（不够 ⇒ 拦下 + 一句玩家看得见的话）。
+    #   那句拦下的话走 texts 槽位（`gate.slot`，已有槽位 `COMBAT_RES_LACK`）—— 代码里零文案。
+    from . import mana as _MANA
+    _MANA.check_domain()
+    if _MANA.installed():
+        config.mount(mp_regen_fn=_MANA.regen_amount, mp_gate_fn=_MANA.gate_line)
     _MOUNTED = True
 
 

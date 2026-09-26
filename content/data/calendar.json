@@ -5,6 +5,10 @@
     "source": "06_第一阶段垂直切片/05_玩法数值口径_v1.md §七：游戏内 1 天 = 现实 2 小时（可调）",
     "note": "游戏时刻 = 宿主注入的 epoch × (86400 / real_seconds_per_game_day)；刻度在表里，调时间快慢只改这一个数"
   },
+  "_token_alias": {
+    "退潮": "夜"
+  },
+  "_token_alias_source": "content/rules/calendar.json::token_alias（真源依据与理由见那份的 `_口径` ⑥）",
   "hr_dawn": {
     "slot": "HOUR_DAWN",
     "desc_slot": "HOUR_DAWN_DESC",
