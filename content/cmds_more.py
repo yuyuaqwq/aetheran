@@ -135,10 +135,6 @@ async def board_show(env, sink, uid, player):
       一直都在判脚下）⇒ 同一条 `guard_desc` 两种实现的根就在这句里，已收口。
     """
     p = _p(player)
-    line = town_gate(p, _func_node("board"))
-    if line:
-        yield line
-        return
     want, _n = _split_n(AV.arg_of(env, "board_show"))
     qs = _quests()
     hit = None
@@ -146,8 +142,19 @@ async def board_show(env, sink, uid, player):
         if str(qs[k].get("order")) == want:
             hit = (k, qs[k])
             break
+    # ★ fix-h-small（真人试玩 b24 野外 / b32 镇上对照）：**认不出**先答「没有这条」那一族，
+    #   再判地点门。理由：「这几处都在镇上 —— 出了镇就找不到了。」是 `town_gate` 给
+    #   『去 <铺子>』那一族的地点门，它答的是「这一屏在哪儿看得到」，**答不了**
+    #   「板上有没有这一条」。改前野外 `看 999` 回的就是那句地点门 ⇒ 与「看」无关
+    #   （同一条在镇上回的是「板上没有「999」这条。」—— 同一个词两处口径不一致）。
+    #   ★ 认得出编号的那一支**照旧**先吃地点门：野外 `看 1` 仍回那句「这几处都在镇上」
+    #     （地点这一档一个字没松，`probe_cmds ⑰` 三档钉着）—— 两条判据各自只在自己那一支生效。
     if hit is None:
         yield T("SYS_JOB_NOSUCH", name=want)
+        return
+    line = town_gate(p, _func_node("board"))
+    if line:
+        yield line
         return
     k, x = hit
     yield T("SYS_BSHOW_HEAD", order=x.get("order"), name=x.get("name"),

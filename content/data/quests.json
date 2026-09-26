@@ -63,7 +63,7 @@
     "map": "windmill_town",
     "min_level": 2,
     "need": "q_main_01",
-    "objective": "去白烛堂侧屋找莉安（她只说「……守着。」）→ 问老陶（他说不清）→ 回玛莎处接第一个正式委托",
+    "objective": "去白烛堂找莉安（她只说「……守着。」）→ 问老陶（他说不清）→ 回玛莎处接第一个正式委托",
     "require": [
       {
         "kind": "visit",
