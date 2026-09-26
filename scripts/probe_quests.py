@@ -258,14 +258,27 @@ for _r7 in ("content", "scripts"):
             _src7 = io.open(_fp7, encoding="utf-8").read()
             if _SQ7.search(_src7):                       # 文本层命中 = 只在注释/串里也记一笔
                 _mention7.append(_rel7)
-            for _n7 in _ast7.walk(_ast7.parse(_src7)):
+            _tree7 = _ast7.parse(_src7)
+            # ★ 落点认**在哪个函数里**，不认行号（行号谁在上面加几行就漂 —— 本波就漂过一次）：
+            #   取包住这个式子的**最内层**函数名；找不到 = 写在模块级（那也算「别处」）。
+            _fnr7 = [(getattr(_d7, "lineno", 0), getattr(_d7, "end_lineno", _d7.lineno), _d7.name)
+                     for _d7 in _ast7.walk(_tree7)
+                     if isinstance(_d7, (_ast7.FunctionDef, _ast7.AsyncFunctionDef))]
+            for _n7 in _ast7.walk(_tree7):
                 if (isinstance(_n7, _ast7.BinOp) and isinstance(_n7.op, _ast7.Mult)
                         and isinstance(_n7.left, _ast7.Name) and isinstance(_n7.right, _ast7.Name)
                         and _n7.left.id in _STAT7 and _n7.right.id in _STAT7):
-                    _code7.append("%s:%d" % (_rel7, _n7.lineno))
-(ok if sorted(_code7) == ["content/cmds_ast.py:100"] else bad)(
+                    _own7 = ""
+                    for _a7, _b7, _nm7 in _fnr7:         # 最内层：起点最大的那个包得住它的
+                        if _a7 <= _n7.lineno <= _b7 and (_own7 == "" or _a7 > _own7[0]):
+                            _own7 = (_a7, _nm7)
+                    _code7.append("%s:%s@L%d" % (_rel7, (_own7[1] if _own7 else "（模块级）"),
+                                                 _n7.lineno))
+_OWN7 = {_c7.split("@")[0] for _c7 in _code7}
+(ok if len(_code7) == 1 and _OWN7 == {"content/cmds_ast.py:exp_need"} else bad)(
     "★ P-37：「等级平方」那种式子的**代码落点只有一处** = `content/cmds_ast.exp_need`"
-    "（按 AST 取 · 实得 %s）· 文本层提到过它的文件（注释/文档串，不算）：%s"
+    "（按 AST 取「在哪个函数里」—— **不认行号**，行号谁在上面加几行就漂）"
+    "· 实得 %s · 文本层提到过它的文件（注释/文档串，不算）：%s"
     % (_code7 or "无", _mention7 or "无"))
 
 # ⑨ 交付文案不为空（三段式的第三段）
