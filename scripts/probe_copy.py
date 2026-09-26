@@ -1106,6 +1106,16 @@ def main():
         bool(here_out) and here_out[0] == here_want and far_txt not in chr(10).join(here_out),
         "%s" % (here_out[:2] if here_out else ["(空)"]))
 
+    # ★ Q-22（顺手治的一条抖动）：上面那张用例表里那几条「野外战斗」（攻击 / 打断 / 放技能 /
+    #   后撤 / 逃跑）跑在**同一条 uid**（`u_copy`）上，会留下一场**没落地**的仗 —— 而 6f20265
+    #   给移动族补的那道「场在跑」闸（试玩复测 #1）会让 ⑫ 的每一条都被拦成「这一场还没打完」。
+    #   那一场是**真的**（移动族拦得对），可 ⑫ 要核的是「脚下这一站」⇒ 先把这一格清掉再看。
+    #   ★ 为什么必须清：战斗的种子含**游戏日 / 时辰** ⇒ 不清的话 ⑫ 会随钟点翻红绿
+    #     （实测：同一棵树两个钟点跑出两种结果）—— 与上面 `PG.forget` 那条同族：
+    #     判据不看别人留下的状态。
+    from content import instance as _INSTQ                                    # noqa: E402
+    _INSTQ.clear(_INSTQ.battle_key(_E(""), "u_copy"))
+
     # ⑫ B3-11 ★ 四条出口的「脚下这一站」（K60 家族）：站在目的地再敲一次 —— 不许演「又走了一趟」
     _EXITS = [("往北", "belt_north", "bn_bone", "SYS_MOVE_OUT_NORTH", CA.go_north),
               ("往东", "belt_east", "be_birch", "SYS_MOVE_OUT_EAST", CA.go_east),
