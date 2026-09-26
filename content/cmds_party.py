@@ -170,6 +170,13 @@ async def party(env, sink, group_id, uid, player):
     """`队伍`（别名 组队）—— 单人敲 = 起个队（发起人即队长）；在队里敲 = 看这一队。
 
     ★ 队长走了 / 队名对不上（`stale`）⇒ 我这一格**自愈**清掉并说明（只动自己的档）。
+    ★ 本波：**身上有一封活着的邀请**（别人正在邀我）时**不起队** —— 自愈之后只回
+      「你没在队里」+ 那一封邀请，**不把只想看一眼的人立成队长**。
+      为什么：原先那一刻会顺手 `create`（「你起了个队（队长：你）」）⇒ 那位被邀的人
+      一回「队伍」就成了新队长，邀他的人再邀他就撞「他在别人的队里」（试玩实测被卡了一轮）。
+      判据：`party.pending(...)` 非空 = 此刻真有指向我的邀请（过期的现算不算）。
+      ★ 「建队」与「看队」共用一个入口（声明里 `^队伍$` / `^组队$` 同一格），所以这一档
+      对两个词一起生效；要建队就先应下 / 等邀请过期（见 `_notes.md §真源行`）。
     """
     p = _p(player)
     rows = _load_rows(group_id)
@@ -184,6 +191,13 @@ async def party(env, sink, group_id, uid, player):
                 or mem["captain"])
         mem = PT.membership(rows, p, uid)
     if mem["role"] is None:
+        pend = PT.pending(rows, uid, PT.now_ticks(), p=p)
+        if pend:
+            yield T("SYS_PARTY_LV_NONE")           # 只看一眼：报「没在队里」（不建队 —— 见抬头）
+            yield T("SYS_PARTY_PEND",
+                    cap=PT.name_in(PT.index(rows), pend[0]["captain"]) or pend[0]["captain"],
+                    left=int(pend[0]["left"]))
+            return
         PT.create(p, uid, PT.now_ticks())
         _commit(env, player, p)
         yield T("SYS_PARTY_MAKE", max=PT.max_members())

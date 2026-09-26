@@ -112,15 +112,38 @@ def _drive(fn, p, uid="u_die"):
     return out
 
 
-def _lose_once(p):
-    """下一场遭遇钉死在最强的那只怪上 —— 1 血必输，好验死亡那条线。"""
+def _drive_nokeep(fn, p, uid="u_die"):
+    """同一「场」接着推一手（**不清场** —— `_drive` 是「从零开一场」用的）。"""
+    out = []
+
+    async def _go():
+        async for line in fn(_E(), None, uid, p):
+            out.append(line)
+
+    asyncio.run(_go())
+    return out
+
+
+def _lose_once(p, cap=8):
+    """下一场遭遇钉死在最强的那只怪上 —— 1 血必输，好验死亡那条线。
+
+    ★ G2 起：一条 `攻击` = **一手**（这一场落盘、跨指令接着打）⇒ 原来那句「一敲就死」
+      不再成立：塔顶那只是**阶段卡**的第一阶「站桩」（它不先动手），要**多推几手**
+      （它进了「列阵」才会还手）才轮到那条死亡线。断言一个字没松 —— 收口的是夹具。
+    """
     strongest = max(MON, key=lambda k: int(MON[k].get("lv", 1) or 1))
     real = CBmod.pick_encounter
     CBmod.pick_encounter = lambda *a, **k: [strongest]
+    out = []
+    _clear_duel(p.get("uid") or "u_die")
     try:
-        return _drive(CBAT.attack, p)
+        for _ in range(int(cap)):
+            out += _drive_nokeep(CBAT.attack, p)
+            if (p.get("loc"), p.get("node")) == CA.CHAPEL:
+                break
     finally:
         CBmod.pick_encounter = real
+    return out
 
 
 _DIE = dict(CA.DEFAULT_PLAYER)
@@ -555,6 +578,129 @@ _PS_OK = (_PS_TBL == {n: dict(v) for n, v in _RBM.PARTY_SCALE.items()}
     "（键形状 `^[1-9][0-9]*$`）· 四档阶梯只收 hp、递减排法、两边锚点"
     "（1 人 = 扫描出来的可过档 ×%s / 4 人 = 设计值）· 档位集合 == party 域的上限（%s）"
     % (_RBM.SOLO_ANCHOR, _PS_TBL))
+
+print()
+print("── ★ 本波：Boss 阶段卡**真跑起来了**（原先 `mods.phases` 是死数据 —— 运行期没人读）")
+#   真源：`22_旧哨塔_逐间设计_v1 §二·12`（四阶段卡）· `14_怪物原型_v1 §四`（Boss 用阶段卡）·
+#         `00_第一阶段内容总纲_v1 §四`（「触发」那一列 = 四条血带）
+#   判据（都真跑 · 源码 + 运行期两态）：
+#     ① 引擎那个注入点真挂上了：带阶段卡的怪 ⇒ `battle.script_hook` 不是 None；
+#        **不带**阶段卡的怪 ⇒ 还是 None（= 与接线前逐字相同）
+#     ② 四阶真按血带换、演出逐条出声（顺序 = 站桩 → 列阵 → 散架 → 回塔），且走的是槽位
+#     ③ 每阶的面板真落上去：列阵 def+60 / atk×1.3 · 散架 def−120 / 受伤×1.4 / 频率×0.5
+#     ④ `hold` 那两阶真不出手（站桩 / 回塔 = 钩子回 True 拦下本刻；列阵 / 散架回 False）
+#     ⑤ fail-closed：阶段卡缺 `name`/`line`/`tip`、或血带不严格递减 ⇒ **装配期**当场抛
+#     ⑥ ★ 钩子**恢复之后还在**（`instance._restore` 那一半 —— 引擎明写「钩子要恢复方自己重挂」：
+#        不重挂 ⇒ 阶段卡只在开场那一手有效，后面每手静默退回「没有钩子」）
+_PH_TX = st.domain("texts") or {}
+import json                                                            # noqa: E402
+_BOSS_NM = str((MON[_BOSS] or {}).get("name") or _BOSS)
+_PH0 = (MON[_BOSS]["mods"]["phases"])[0]
+_PH_NOTE0, _PH_TIP0 = _PH0["line"], _PH0["tip"]
+
+
+def _ph_slot(**kw):
+    s = (_PH_TX.get("COMBAT_BOSS_PHASE") or {}).get("value", "")
+    for k, v in kw.items():
+        s = s.replace("{%s}" % k, str(v))
+    return s
+
+
+_PH_PL = {"cls": "cls_knight", "level": 20, "uid": "u_ph", "name": "试",
+          "alloc": _RBM.alloc_of(20, "cls_knight")}
+_PH_PL["hp"] = CA.hp_cap(_PH_PL)
+# ① 不带阶段卡的怪：钩子一个都不挂（与接线前逐字相同）
+(ok if CBmod.build(_PH_PL, ["ms_field_mouse"], MON, party=1).script_hook is None else bad)(
+    "★ 不带阶段卡的怪：`script_hook` 一个都不挂（= 与接线前逐字相同）")
+_b = CBmod.build(_PH_PL, [_BOSS], MON, party=1)
+_bo = _b.sides["enemy"][0]
+_bh = MON[_BOSS]["panel"]
+(ok if _b.script_hook is not None else bad)("★ 带阶段卡的怪：`script_hook` 真挂上了（引擎那个注入点）")
+
+_PHB = []
+_PLG = []
+try:
+    # ② 第 0 阶（站桩）：第一次调用就进它；`hold` ⇒ 拦下本刻
+    _ph0 = [_bo["atk"], _bo["def"], _bo["spd"]]
+    _r0 = _b.script_hook(_b, _bo, _PLG)
+    if not (_r0 is True and len(_PLG) == 1
+            and _PLG[0] == _ph_slot(name=_BOSS_NM, phase="站桩", note=_PH_NOTE0, tip=_PH_TIP0)):
+        _PHB.append(("第 0 阶站桩", _r0, _PLG[:1]))
+    # ③ 血掉到 90% ⇒ 列阵：def+60 / atk×1.3；这一阶**会出手**（钩子回 False）
+    _bo["hp"] = int(int(_bo["max_hp"]) * 0.9)
+    _r1 = _b.script_hook(_b, _bo, _PLG)
+    _w1 = [round(float(_bh["atk"]) * 1.3), float(_bh["def"]) + 60, round(float(_bh["spd"]))]
+    if not (_r1 is True and [_bo["atk"], _bo["def"], _bo["spd"]] == _w1
+            and _PLG[-1].split("\n")[0].endswith("「列阵」")):
+        _PHB.append(("列阵那一阶", _r1, (_bo["atk"], _bo["def"], _bo["spd"]), _w1))
+    if _b.script_hook(_b, _bo, _PLG) is not False:
+        _PHB.append(("列阵不出手？", "回的不是 False ⇒ 不还手"))
+    # ④ 血掉到 45% ⇒ 散架：def−120 / atk×0.8 / 受伤×1.4 / 频率×0.5；这一阶也会出手
+    _bo["hp"] = int(int(_bo["max_hp"]) * 0.45)
+    _r2 = _b.script_hook(_b, _bo, _PLG)
+    _w2 = [round(float(_bh["atk"]) * 0.8), float(_bh["def"]) - 120, round(float(_bh["spd"]) * 0.5)]
+    if not (_r2 is True and [_bo["atk"], _bo["def"], _bo["spd"]] == _w2
+            and abs(float(_bo.get("_dmg_taken_mult") or 0) - 1.4) < 1e-9
+            and _PLG[-1].split("\n")[0].endswith("「散架」")):
+        _PHB.append(("散架那一阶", _r2, (_bo["atk"], _bo["def"], _bo["spd"],
+                                       _bo.get("_dmg_taken_mult")), _w2))
+    # ⑤ 血掉到 15% ⇒ 回塔（终局）：不再出手（hold），面板沿用散架那一套
+    _bo["hp"] = int(int(_bo["max_hp"]) * 0.15)
+    _r3 = _b.script_hook(_b, _bo, _PLG)
+    if not (_r3 is True and [_bo["atk"], _bo["def"], _bo["spd"]] == _w2
+            and _PLG[-1].split("\n")[0].endswith("「回塔」")):
+        _PHB.append(("回塔那一阶", _r3, (_bo["atk"], _bo["def"], _bo["spd"]), _w2))
+    _n_before = len(_PLG)
+    if _b.script_hook(_b, _bo, _PLG) is not True or len(_PLG) != _n_before:
+        _PHB.append(("回塔之后还在出手 / 又演了一遍", _PLG[-1] if _PLG else ""))
+except Exception as _e:                                                # noqa: BLE001
+    _PHB.append(("阶段钩子真跑时抛了", repr(_e)))
+_ph_seq = [x.split("\n")[0] for x in _PLG]
+(ok if not _PHB else bad)(
+    "★ 阶段卡真按血带换 + 面板逐阶落上去（半路真跑：%s）· `hold` 那两阶真不出手"
+    % " → ".join(x.split("「")[-1].rstrip("」") for x in _ph_seq))
+
+# ⑤ fail-closed：缺演出行 / 血带不递减 ⇒ 装配期当场抛（不许静默出一行空话）
+def _ph_broken(mut):
+    m = json.loads(json.dumps(MON[_BOSS], ensure_ascii=False))
+    for i, patch in mut.items():
+        for k, v in patch.items():
+            if v is None:
+                m["mods"]["phases"][i].pop(k, None)
+            else:
+                m["mods"]["phases"][i][k] = v
+    return dict(MON, **{_BOSS: m})
+
+
+_PHF = []
+for _why, _mut in (("缺 line", {1: {"line": None}}),
+                   ("缺 tip", {2: {"tip": None}}),
+                   ("血带不递减", {0: {"hp_below": 0.1}})):
+    try:
+        CBmod.build(_PH_PL, [_BOSS], _ph_broken(_mut), party=1)
+        _PHF.append(_why)
+    except ValueError:
+        pass
+(ok if not _PHF else bad)("★ fail-closed：阶段卡缺 `line`/`tip` 或血带不递增 ⇒ 装配期当场抛"
+                          "（%s）" % ("全对" if not _PHF else "没抛：%s" % _PHF))
+
+# ⑥ ★ 钩子恢复之后还在（`instance._restore`）—— 引擎明写「钩子要恢复方自己重挂」
+from content import instance as _INST                                  # noqa: E402
+#   一半：**从零那一场**存档 → 恢复 ⇒ 钩子照样能把第 0 阶踢起来（真出一句演出）
+_b6 = _INST._restore({"battle": CBmod.build(_PH_PL, [_BOSS], MON, party=1).to_state()})
+_bo6 = _b6.sides["enemy"][0]
+_lg6 = []
+_f6a = _b6.script_hook is not None and _b6.script_hook(_b6, _bo6, _lg6) is True \
+    and bool(_lg6) and "「站桩」" in _lg6[-1]
+#   另一半：**已经走到「回塔」的那一场**存档 → 恢复 ⇒ 阶号也随档回来（不许重演第 0 阶）
+_b7 = _INST._restore({"battle": _b.to_state()})
+_bo7 = _b7.sides["enemy"][0]
+_lg7 = []
+_f6b = _b7.script_hook is not None and _b7.script_hook(_b7, _bo7, _lg7) is True and not _lg7
+(ok if (_f6a and _f6b) else bad)(
+    "★ 钩子**恢复之后还在**（`instance._restore` 重挂）：从零那一场接回来 ⇒ 第 0 阶照样踢得起来"
+    "（%s）· 已经走到「回塔」那一场接回来 ⇒ 阶号也随档回来、不重演（%s）"
+    % (repr(_lg6[-1])[:40] if _lg6 else "什么都没出", "没重演" if _f6b else "重演了 / 钩子没了"))
 
 print()
 print("结果：%s" % ("全绿 ✓" if not fails else "有红 ✗"))

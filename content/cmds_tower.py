@@ -231,7 +231,15 @@ async def tower_next(env, sink, uid, player):
 
     下一层的开头那一间就是新的一屏（照「先给一屏，再看细节」的次序）。
     塔顶再敲：没有上一层了 —— 说清楚（要出塔是『撤退』）。
+
+    ★ 本波：**手上还留着一场没打完**（`instance.fighting()`）⇒ 与出镇 / 带间 / 返回同一档拦下
+      （`SYS_MOVE_IN_FIGHT`，位置与历史一个字不动）—— 这一条也动位置（换一间房），
+      跟『撤退』那个洞是同一个（试玩报告 §5④：闸原先只接在世界级移动上）。
     """
+    _lock = _in_fight(env, uid)
+    if _lock:
+        yield _lock
+        return
     p = _p(player)
     if not _inside(p):
         yield T("SYS_TOWER_NOT_IN", name=_name_of_node(*_entrance()))
@@ -328,6 +336,11 @@ async def tower_leave(env, sink, uid, player):
     这一条是真的走到塔下 —— 与进塔那一步（`_move` 记的是塔里那一间）分开算。
     ★ fxa：**手上还有一场没打完就不让出门** —— 与 `进塔` 及移动族同一道闸（`_in_fight`）；
       不然塔里那一场会跟着玩家出塔（人在塔门口接着打塔里那一只）。
+
+    ★ 本波：**手上还留着一场没打完** ⇒ 与出镇 / 带间 / 返回**同一档**拦下（同一句槽位、
+      位置与历史一个字不动）。原先这一闸只接在世界级移动上，副本出口没接 ——
+      实测「打着一场就走出了塔，那一场跟着人跨图继续」（试玩报告 §5④：人在塔外
+      「旧哨塔下」，照样在打塔顶的 Boss）。
     """
     _lock = _in_fight(env, uid)
     if _lock:

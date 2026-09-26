@@ -589,6 +589,135 @@ def main():
         _unpin(saved)
         INST.party_members = None
 
+    # ── ⑧ ★ 本波：实例/组队/战斗结那一族的四处收口（真宿主真敲 · 两人同场）
+    print()
+    print("⑧ 本波收口：「你」= 敲指令的人 · 结算一人一段 · 倒下的人那句话 · 败仗不记击杀")
+    db = _fresh("fx")
+    host, ad = _boot(db, "g_fx")
+    _seed("g_fx", "u_a", level=PARTY_LV, cls="cls_knight", name="甲")
+    _seed("g_fx", "u_b", level=PARTY_LV + 1, cls="cls_assassin", name="乙")   # 乙快一档（先手好摆）
+    INST.party_members = lambda g, u: ["u_a", "u_b"] if g == "g_fx" else [u]
+    saved = _pin_encounter("ms_boss_oath_sentry")          # 血厚 ⇒ 够走到「有人倒下 / 全灭」
+    _B8 = []
+    try:
+        random.seed(20260926)
+        _drive(host, ad, "u_a", "攻击")                     # 开场那一敲（遇敌只来一次）
+        s0 = INST.load("g_fx")
+        # ① ★「你」那一格 = **敲指令的人**（直调那一口：两人**各报各的**血）
+        _hp_a = INST.hp_of(s0, "u_a")
+        _hp_b = INST.hp_of(s0, "u_b")
+        _t_a = "".join(INST.turn_lines(s0, "u_a"))
+        _t_b = "".join(INST.turn_lines(s0, "u_b"))
+        _mx_a = int(INST.actor_of(s0, "u_a")["max_hp"])
+        _mx_b = int(INST.actor_of(s0, "u_b")["max_hp"])
+        if ("%d/%d" % (_hp_a, _mx_a)) not in _t_a or ("%d/%d" % (_hp_b, _mx_b)) not in _t_b:
+            _B8.append(("turn_lines 没按请求者报血", _t_a[:40], _t_b[:40]))
+        if _t_a == _t_b:
+            _B8.append(("两个人的那一屏一模一样（= 还在报同一个人的血）", _t_a[:40]))
+        #   真敲一半：让「第二个人」也真出手 ⇒ 回话里那一行必须是他自己的血
+        _o_b1 = _drive(host, ad, "u_b", "攻击")
+        if not any(("第 " in x and "手" in x) for x in _o_b1):     # 没轮到他 ⇒ 先让先手那位推一手
+            _drive(host, ad, "u_a", "攻击")
+            _o_b1 = _drive(host, ad, "u_b", "攻击")
+        s1 = INST.load("g_fx")
+        _me1 = INST.actor_of(s1, "u_b") if s1 else None
+        if _me1 is not None:
+            _line1 = [x for x in _o_b1 if ("第 " in x and "手" in x)]
+            if not _line1 or ("%d/%d" % (int(_me1["hp"]), int(_me1["max_hp"]))) not in _line1[0]:
+                _B8.append(("乙真出手那一敲，报的不是乙自己的血", _line1[:1],
+                            int(_me1["hp"]), int(_me1["max_hp"])))
+        # ② / ③ / ④：一路打到有人倒下 → 倒下的人敲一条 → 再打到全灭
+        _dead_seen, _wipe_lines = None, []
+        _n = 0
+        while _n < 90:
+            _n += 1
+            s = INST.load("g_fx")
+            if s is None:
+                break
+            _alive = [m for m in ("u_a", "u_b") if INST.hp_of(s, m) > 0]
+            if _dead_seen is None and len(_alive) == 1:
+                # ③ 倒下的人敲战斗指令 ⇒ 回的是「倒下了」那句（不是「还没轮到你」）
+                _dead_seen = [m for m in ("u_a", "u_b") if m not in _alive][0]
+                _od = _drive(host, ad, _dead_seen, "攻击")
+                _want = slot("COMBAT_FALL",
+                             who=(PS.get_player("g_fx", _dead_seen) or {}).get("name"))
+                if _od != [_want]:
+                    _B8.append(("倒下的人那一敲", _dead_seen, _od[:3], _want))
+                if INST.load("g_fx") is None:
+                    break
+                continue
+            # ★ 全灭（没有站着的了）也是**人敲一下**才收场 —— 那一敲的产出就是「结算那一段」
+            _actor = INST.next_actor_key(s) or (_alive[0] if _alive else "u_a")
+            _out = _drive(host, ad, _actor, "攻击")
+            if INST.load("g_fx") is None:
+                _wipe_lines = _out
+                break
+        # ② ★ 结算**一人一段**（全灭那一下只出一段「眼前一黑」—— 原先 2 人场连着两遍）
+        _died = [x for x in _wipe_lines if "眼前一黑" in x]
+        if len(_died) != 1 or INST.load("g_fx") is not None:
+            _B8.append(("全灭那一下的结算", len(_died), INST.load("g_fx") is not None))
+        # ④ ★ 败仗不记击杀（但还是进谱 —— 「见过就是见过」）
+        _pk = PS.get_player("g_fx", _dead_seen or "u_a") or {}
+        _bk = ((_pk.get("books") or {}).get("monster") or {}).get("ms_boss_oath_sentry")
+        if not _bk:
+            _B8.append(("输了一场却没进谱（见过的怪照样进）", _bk))
+        elif int((_bk or {}).get("kills") or 0) != 0:
+            _B8.append(("败仗被记成击杀", _bk))
+        if int(((_pk.get("foot") or {}).get("kills") or 0)) != 0:
+            _B8.append(("败仗把足迹那本账也加了", (_pk.get("foot") or {}).get("kills")))
+    finally:
+        _unpin(saved)
+        INST.party_members = None
+    chk("★ 本波四处收口：「你」= 敲指令的人（直调两人各报各的 + 真敲）· 全灭结算**一人一段**"
+        "（只出一段「眼前一黑」）· 倒下的人那一敲出「倒下了」· 败仗**不记击杀**（但进谱）",
+        not _B8, "%s" % _B8[:2])
+
+    # ── ⑨ ★ 本波：区域 Boss「只能打一次」（真源 05 §四）——打掉过就不再遇得上
+    print()
+    print("⑨ 本波：区域 Boss 只能打一次（打掉过 ⇒ 遇敌里不再出现；输掉不算）")
+    db = _fresh("boss1")
+    host, ad = _boot(db, "g_b1")
+    _seed("g_b1", "u_x", level=20, cls="cls_knight", name="甲",
+          loc="old_watchtower", node="tower_top")
+    saved = _pin_encounter("ms_boss_oath_sentry")
+    _B9 = []
+    try:
+        def _boss_here():
+            """真敲一次 `攻击`（先清场 —— 不然第二敲接着上一场打、遇敌那一步根本不走）。
+
+            ★ 清场用的键要走**真宿主那两个参数**（群 + 人）：`_Ad` 只有 `gid` 那个属性，
+              `instance.group_of()` 读的是 `env.group_id` —— 拿适配器当 env 会算出 `#u_x`
+              这一格，清不着真那一格（第一版就是这么写的，第二敲接着「第 2 手」打）。
+            """
+            INST.clear(INST.battle_key(types.SimpleNamespace(group_id="g_b1"), "u_x"))
+            return _drive(host, ad, "u_x", "攻击")
+
+        def _slain(n):
+            """把怪物谱上那一格改成「打过 n 回」（进谱 + 击杀数 —— 这就是那一闸读的账）。"""
+            d = dict(PS.get_player("g_b1", "u_x"))
+            b = dict(d.get("books") or {})
+            b["monster"] = dict(b.get("monster") or {})
+            b["monster"]["ms_boss_oath_sentry"] = {"day": 1, "kills": int(n)}
+            d["books"] = b
+            PS.update_player("g_b1", "u_x", **{k: v for k, v in d.items()})
+
+        _meet_line = slot("COMBAT_MEET", name=MON["ms_boss_oath_sentry"]["name"])
+        _o0 = _boss_here()
+        if _meet_line not in _o0:
+            _B9.append(("打掉之前遇不上", _o0[:2]))
+        _slain(1)                                     # 打掉过 ⇒ 这一只不再出现在遇敌里
+        _o1 = _boss_here()
+        if any(_meet_line in x for x in _o1):
+            _B9.append(("打掉过之后还遇得上", _o1[:2]))
+        _slain(0)                                     # 只输过（进谱、击杀 0）⇒ 照样遇得上
+        _o2 = _boss_here()
+        if _meet_line not in _o2:
+            _B9.append(("只输过那一场（kills=0）就不让打了", _o2[:2]))
+    finally:
+        _unpin(saved)
+    chk("★ 区域 Boss 只能打一次（真源 `05_玩法数值口径_v1 §四` · 真敲）：打掉过 ⇒ 遇敌里不再出现；"
+        "**只输过**（进谱但 kills=0）⇒ 照样遇得上", not _B9, "%s" % _B9[:2])
+
     print()
     print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
     return 0 if ok else 1

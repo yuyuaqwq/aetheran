@@ -2099,11 +2099,16 @@ try:
                        for _a in (_b.sides.get(CBO23.ENEMY_SIDE) or []) if _a.get("hp", 0) > 0)
 
     _exp_slow, _exp_fast = _can_flee23(_MS23), _can_flee23(_MF23)
-    #   ★ 第三个 pin = 塔顶 Boss（spd 136 > 玩家）：它**先动** ⇒ 到你决策点时它正押着一手
-    #     ⇒ 走「退不开」那一档（两档都真出现，判据才叫把分支盖住）
+    #   ★ 本波（Boss 阶段卡接上之后）：**原先第三个 pin = 塔顶 Boss** —— 它靠的是
+    #     「spd 136 ⇒ 它先动 ⇒ 到你决策点时它正押着一手」。可 Boss 的第一阶是
+    #     **站桩（只挡）**：那一拍它只是把甲横起来（出的是「防御」，不进前摇窗口）
+    #     ⇒ 那条前提没了（真跑三只 pin 全成了「跑得掉」）。
+    #     判据**不松**：`退不开` 那一档改成**直调注入前摇** —— 把对方塞进 `charging`，
+    #     再让**同一条判据函数**（`cmds_battle._retreat_decide`，命令那一拍用的就是它）
+    #     现算；清掉前摇再算一遍（走得掉）。两档照旧都真跑到，且不再靠引擎排期的巧合。
     _MB23 = "ms_boss_oath_sentry"
     _saw23 = set()
-    for _pin, _exp in ((_MS23, _exp_slow), (_MF23, _exp_fast), (_MB23, _can_flee23(_MB23))):
+    for _pin, _exp in ((_MS23, _exp_slow), (_MF23, _exp_fast)):
         _o, _s = _say23(dict(_BASE23), "后撤", pin=_pin)
         _fled = (_s.get("flags") or {}).get("last_battle", {}).get("result") == "fled"
         _saw23.add(_fled)
@@ -2117,10 +2122,30 @@ try:
             _B23.append(("后撤 跑掉了却拿了收益", _pin, _s))
         if not _fled and _s.get("flags", {}).get("last_battle", {}).get("result") == "fled":
             _B23.append(("后撤 没跑掉却记成 fled", _pin))
-    chk("★ `后撤`：**能跑掉才跑得掉**（三个 pin 各自现算：田鼠 %s / 林鸦 %s / 塔顶 Boss %s）"
+    #   第三档（直调）：注入前摇 ⇒ 退不开；清掉 ⇒ 走得掉（同一个口、同一场）
+    _fd23 = CBO23.build(dict(_BASE23), [_MS23], _MON23)
+    _S23.advance(_fd23, [])
+    _fe23 = _fd23.sides[CBO23.ENEMY_SIDE][0]
+    _pl23f = _fd23.focus()
+    _nm23 = str((_MON23[_MS23] or {}).get("name") or _MS23)
+    _dec23 = CBAT23._retreat_decide(_nm23)
+    _t23 = float(getattr(_fd23, "_now", 0) or 0)
+    _fe23["charging"] = {"action": "attack", "cast_done_at": _t23 + 30}
+    _lg_inj = []
+    _r_inj = _dec23(_fd23, _pl23f, _lg_inj, {})
+    _saw23.add(False if _r_inj is None else True)
+    if _r_inj is not None or _lg_inj != [_r("COMBAT_RETREAT_BLOCK", name=_nm23)]:
+        _B23.append(("后撤 注入前摇那一档没拦住", _r_inj, _lg_inj))
+    _fe23["charging"] = None
+    _lg_free = []
+    _r_free = _dec23(_fd23, _pl23f, _lg_free, {})
+    _saw23.add(True if _r_free == "fled" else False)
+    if _r_free != "fled" or _lg_free != [_r("COMBAT_RETREAT_OK")]:
+        _B23.append(("后撤 清掉前摇之后没走得掉", _r_free, _lg_free))
+    chk("★ `后撤`：**能跑掉才跑得掉**（两个 pin 真敲各自现算：田鼠 %s / 林鸦 %s；第三档"
+        "**直调注入前摇**（塔顶 Boss 那一族的场）⇒ 退不开、清掉 ⇒ 走得掉）"
         "—— 退掉了那一档记成 `fled`、**没有掉落没有经验**；退不开那一档白花一手、这一场照打"
-        % ("跑得掉" if _exp_slow else "退不开", "跑得掉" if _exp_fast else "退不开",
-           "跑得掉" if _can_flee23(_MB23) else "退不开"),
+        % ("跑得掉" if _exp_slow else "退不开", "跑得掉" if _exp_fast else "退不开"),
         not [x for x in _B23 if x[0].startswith("后撤")] and len(_saw23) == 2,
         "" if (not [x for x in _B23 if x[0].startswith("后撤")] and len(_saw23) == 2)
         else "%s" % ([x for x in _B23 if x[0].startswith("后撤")][:2]

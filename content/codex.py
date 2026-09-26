@@ -194,45 +194,34 @@ def sync_bag(p: dict) -> list:
     return out
 
 
-def note_seen(p: dict, mid: str) -> bool:
-    """遇上一只怪 → **进谱**（返回这一条是不是头一回进来）。
+def note_kill(p: dict, mid: str, *, win: bool = True) -> bool:
+    """打过一只怪（★ 输了也算见过 —— 见过就是见过，由调用方决定记不记）。
 
-    ★ 真源 `00_总纲/14_图鉴四谱口径_v1.md §一`：「怪物 —— 打过一次（输了也算「见过」——
-      见过就是见过）」⇒ **交上手就进谱**，逃跑 / 战死照样进（这一段一个字没变）。
-
-    ★ 与 `note_kill` 的分工（试玩报告 P1 BUG-1 / P3 F3「逃跑也算打掉」）：
-      进谱（见过）与**击杀数**是两回事 —— 改前两个口径共用 `note_kill` 一处、而且是在
-      **开打之前**就记一笔 ⇒ 一场没打完（逃跑 / 阵亡）也算「打掉过一只」，委托 / 彩蛋 /
-      称号那些 `kill` 条件全部跟着错（零击杀白交悬赏）。现在：
-        · 进谱（见没见过）= 本函数，**在开打那一下**记，`kills` 从 0 起；
-        · 击杀（打掉过几只）= `note_kill`，只在**真打掉**那一下记（`_settle` 的 `victory`）。
+    ★ 本波：`win=False` = **这一场输了** —— 真源 `00_总纲/14_图鉴四谱口径_v1.md §四`
+      「怪物谱（17 条）… 见过的怪」说的是**见过**，而呈现口那一行印的是「打过 {kills} 回」
+      （`SYS_CODEX_ENTRY_KILL`）⇒ 两件事得分开：
+        · 输的那一场照样**进谱**（见过的怪进谱，进谱那句「★ 新进谱」照旧出）、`kills` 不动；
+        · 赢的那一场才是 `kills += 1`。
+      为什么不能「输了就不进谱」：塔里挡路的门读的就是「怪物谱上有它」
+      （`cmds_tower._blocked_by`），真源 `22_ §二·4` 写的是「战斗后上楼」——**过一手就开**
+      （试玩报告 §5⑤ 的裁决原话）⇒ 那份「见过」必须还在。
+      而 `kills` 那一格是**悬赏进度 / 评级头目数 / 图鉴那一行**的读源：败仗记成击杀 = 那三处全虚高。
     """
     mark_here(p)
     b = _books(p)
     if mid not in book("monster"):
         return False
-    if b["monster"].get(mid) is None:
-        b["monster"][mid] = {"day": today(p), "kills": 0}     # ★ 见过 ≠ 打掉过（击杀从 0 起）
-        return True
-    return False
-
-
-def note_kill(p: dict, mid: str) -> bool:
-    """**真打掉**一只怪 → 记一次击杀（返回这一条是不是头一回进谱）。
-
-    `books.monster[<怪>].kills` 就是「打掉过几只」—— 委托 / 彩蛋 / 称号的 `kill` 条件
-    读的都是这一格（`kills_of`），所以它**只许在真打掉那一下加**（见 `note_seen` 抬头）。
-    """
-    first = note_seen(p, mid)
-    b = _books(p)
-    if mid not in book("monster"):
-        return False
+    n = 1 if win else 0
     rec = b["monster"].get(mid)
-    if rec is None:
+    if rec:
+        if n:
+            rec["kills"] = int(rec.get("kills") or 0) + n
+            _foot(p)["kills"] += n
         return False
-    rec["kills"] = int(rec.get("kills") or 0) + 1
-    _foot(p)["kills"] += 1
-    return first
+    b["monster"][mid] = {"day": today(p), "kills": n}
+    if n:
+        _foot(p)["kills"] += n
+    return True
 
 
 def note_read(p: dict, poi_id: str) -> bool:
