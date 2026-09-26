@@ -566,10 +566,48 @@ def _focus_actor(b, st):
     return a
 
 
+def _res_rows(a) -> list:
+    """★ 夜班试玩 w3（mage/p3 两条都撞到）：战斗屏上「法力 + 职业资源」那两条读数。
+
+    原先那一屏只有血（`COMBAT_TURN_STATE`）—— 法师的两个命根子（法力 / 印记）在打的时候
+    一条都看不见：法力要退出去敲『状态』，印记**任何一页都没有**（唯一读法是敲一个付不起的
+    技能看它拒绝）。这里只**读 actor 身上现成的两格**，不新开账：
+
+      · 法力 = 引擎 actor 的 `mp` / `max_mp`（与 `状态`、档上那一格同源，`combat.player_actor` 写的）
+      · 资源 = `content/rules/resources.json` 里声明的资源码 → 层数取自 `actor["effects"][码].stacks`
+        （`resources.set_to / add` 写的就是这个容器 —— 开战摆 0 层那条）
+
+    没这两格（没有职业 / 表读不到 / 这一档还没接线）⇒ **一行都不出**（不装配 = 与接线前逐字相同）。
+    """
+    out = []
+    try:
+        _mx = int(a.get("max_mp") or 0)
+    except (TypeError, ValueError):                                     # noqa: BLE001
+        _mx = 0
+    if _mx > 0:
+        out.append(T("COMBAT_TURN_MP", mp=int(a.get("mp") or 0), mp_max=_mx))
+    try:
+        from . import resources as _RES
+        _tbl = _RES.resources()
+    except Exception:                                                   # noqa: BLE001
+        _tbl = {}
+    _ef = a.get("effects") or {}
+    for _code in sorted(_tbl):
+        _entry = _ef.get(_code)
+        if not isinstance(_entry, dict):
+            continue
+        _rec = _tbl.get(_code) or {}
+        out.append(T("COMBAT_TURN_RES", name=_rec.get("name") or _code,
+                     n=int(_entry.get("stacks") or 0),
+                     mx=int(_RES.max_of(_code) or _rec.get("max") or 0)))
+    return out
+
+
 def turn_lines(st, uid) -> list:
     """★ G2 四段式的 ①②③ —— **只读那一份场**（不重开引擎），给每一次出手之后看。
 
-    ① 现状 + 谁先动（`COMBAT_TURN_STATE` + `COMBAT_TURN_I_FIRST` / `COMBAT_TURN_FOE_FIRST`）
+    ① 现状 + 谁先动（`COMBAT_TURN_STATE` + `COMBAT_TURN_MP` / `COMBAT_TURN_RES`（本波起）+
+       `COMBAT_TURN_I_FIRST` / `COMBAT_TURN_FOE_FIRST`）
     ② 对方在干什么（`COMBAT_TURN_FOE_DOING` / `COMBAT_TURN_FOE_IDLE`）
     ③ 你的选项（`COMBAT_TURN_MENU`）
 
@@ -600,6 +638,9 @@ def turn_lines(st, uid) -> list:
     out = [T("COMBAT_TURN_STATE", n=int(st.get("hands") or 0),
              hp=int(_my_hp or 0), hp_max=int(_my_mx or 0),
              name=nm, foe_hp=int(_fo_hp or 0), foe_hp_max=int(_fo_mx or 0))]
+    # ★ 夜班试玩 w3：血那一行后面补「法力 + 职业资源」两行（只读 actor 现成的格子；
+    #   没有那两格 ⇒ 一行都不出 —— 与接线前逐字相同，见 `_res_rows` 的抬头）。
+    out.extend(_res_rows(me))
     if my_ct <= foe_ct:
         out.append(T("COMBAT_TURN_I_FIRST", my_ct=int(round(my_ct)), foe_ct=int(round(foe_ct))))
     else:

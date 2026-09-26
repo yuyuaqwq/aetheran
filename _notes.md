@@ -10844,3 +10844,83 @@ $PY tests/run_all.py（framework-engine 仓）⇒ 96 份、通过 94、失败 2 
 **回读 + 逐段比对**（`git diff` 看有没有第二份同名实现），并把「同源」「撤改」两类判据写进探针
 —— 它们是**唯一**能自动发现「两份实现各算各的」的东西（例如 `_after_act` 与 `pending_begin`
 必须读同一份声明：判据 ㉕② 就是钉这个）。
+
+## w3（2026-09-27 夜班 · 分支 `fix-qa1`）：六路真人试玩报回来的四条 · 修 + 判据只紧不松
+
+来源 = `C:/Users/yuyu/AppData/Local/Temp/qa/w3/*/report.md`（六路，在 `fef4a62` 上玩的）与
+发现队列 `AETHERAN_夜班发现.md` 的 Wave-3 段。**逐条先核实**再动手（skill `legacy-debt-triage`）：
+「焚身一场只出一次手」那条归主线（跨手状态的合法落点 = 引擎/宿主口径）—— 本批**一个字没动**。
+
+### 一、修了四条（每条都复现过 + 端到端真客户端看过）
+
+| # | 现象（试玩原文） | 根因（核实后） | 修法 |
+|---|---|---|---|
+| 1 | `💫 游荡的骸骨 被【star_daze】控制，无法行动！` | 引擎 `battle.core.controlled` 那句**兜底模板**把状态机器键 `{tag}` 摊在玩家脸上（`extends/ext_combat/battle/battle.py:503`）—— 与本包 `battle.landing.element_immune` 那批同一个形状（`content/battle_text.py` 就是为这一类建的） | 声明槽位 `battle.core.controlled → COMBAT_CONTROLLED`（`content/rules/battle_text.json`）· 本包文案**不用** `{tag}` ⇒ `💫 {name} 晕着 —— 这一手什么都做不了！` |
+| 2 | 经验 0 也报「💀 掉了一些经验（当前等级的 10%）」 | `content/cmds_battle.py` 那一屏**照报**：`_wake_in_chapel` 的返回值（真掉多少）原本没人接 ⇒ 空头罚 | 掉没掉由**同一口**说了算（不另判一套）：`_lost > 0` ⇒ 老那句；`= 0` ⇒ 新槽位 `SYS_DEATH_NO_LOSS`（`💀 经验一点没掉（你这一级还没攒下什么）—— 装备没丢`） |
+| 3 | 战斗屏只有血 —— 法师的「法力 / 印记」一条读数都没有 | `content/instance.turn_lines` 只出 `COMBAT_TURN_STATE`（血那一行） | 血那一行之后补两条**只读 actor 现成格子**的读数：`COMBAT_TURN_MP`（引擎 actor 的 `mp`/`max_mp`）+ `COMBAT_TURN_RES`（`content/rules/resources.json` 声明的码 → `effects[码].stacks`，名字与上限现取表）⇒ `⚡ 法力 20/145` · `🔹【印记】5/6`；这两格没有 ⇒ **一行都不出**（= 与接线前逐字相同） |
+| 4 | 裸 `看` 只把人推给背包那一族；`问路` 只报 3 处、也不说按什么挑的 | `content/data/commands.json` 里 `^看$` 是 `查看 <东西>` 的别名，而帮助里 `看` 同时挂着公会『看 <编号>』；`cmds_talk.ask_way` 的 `nb[:3]` 截断没有任何交代 | ① `SYS_ITEM_SHOW_ASK` 改成两族入口都说清（真源那一行待主线跟账 ⇒ **已登记 `scripts/rebuild_syscopy.py::DOC_PENDING`**，两态互锁）② `ask_way` 补一行 `SYS_ASK_MORE`（`（他先报了近的三处 —— 这一带走得通的一共 {n} 处，打『地图』看全。）`）—— 三处的取舍与屏宽一个字没动 |
+
+端到端（真客户端 `player_client.py` · 真库真档 · 本工作树）：新建法师 → `观察`/`问路` ✓ → `往北` →
+`攻击` / `技能 星屑` ⇒ 战斗屏逐手打出 `⚡ 法力 128/128` · `🔹【印记】1/6 → 2/6`；裸 `看` = 新那句；
+`问路` = 多出的那一行。**⛔异常 0 · ⚠️静默 0**。
+
+### 二、判据**只加不减**（这一批动了四处判据，没有一处放宽）
+
+```text
+scripts/probe_elements.py      ⑨-d 新加：挂 mode=skip 的效果 → 真驱动一次 actor_auto ⇒ 那行
+                               **走槽位渲染**、机器键 star_daze 不上屏（引擎兜底会漏）；
+                               ⑨ 的 `unused() == ()` 照旧（新槽位必须真被引擎请求过）
+scripts/probe_mech.py          「这 100 刻里轮到它 ⇒ 整手跳过」那条原先 grep 写死的中文
+                               （= 引擎兜底模板里的字）⇒ 改成按槽位对 + 机器键不上屏
+                               （与 ⑨-a DoT 那条同款）
+scripts/probe_battle_turns.py  新加两条：资源读数在不在 + 那两行的数**逐字** = actor 那两格
+                               （法力 `mp`/`max_mp` · 资源按 `resources.json` 现算）
+scripts/probe_instance.py      ⑤ 冻结基线**第六次刷新**（有意差异 · 该文件抬头已跟账）：
+                               37 行 → 43 行，只多出 6 行（3 条指令各 2 行），**删/改 0 行**，
+                               命令序列与 `save` 那几格逐字相同（新旧两份 `--dump` 逐行 diff 过）
+```
+
+### 三、门禁（实跑）
+
+```text
+$ rm -f "$LOCALAPPDATA/Temp/ast_probe"*.db && bash …/gorun.sh C:/Users/yuyu/ast-wt/fix-qa1 fix-qa1b
+⇒ TOTAL pass=52 fail=0
+   首轮 47/5：probe_copy · probe_elements · probe_generators · probe_instance · probe_mech
+   五条红**全部由本批引起**（逐条看日志核实：SYS_ITEM_SHOW_ASK 真源行 / 新槽位未被请求 /
+   基线快照 / 写死的中文），逐条修到绿 —— 没有一条判据被放宽。
+```
+
+### 四、真源行（新增 5 个槽位 + 1 处改值 · 请主线搬进 `17_文案收口口径_v1.md`）
+
+```text
+COMBAT_CONTROLLED   💫 {name} 晕着 —— 这一手什么都做不了！
+                    战斗 · 引擎 `battle.core.controlled`（收掉兜底里的 {tag} 机器键）
+COMBAT_TURN_MP      ⚡ 法力 {mp}/{mp_max}          战斗 · 战斗屏读数（本波新形状）
+COMBAT_TURN_RES     🔹【{name}】{n}/{mx}           战斗 · 战斗屏读数（本波新形状 · 资源码/名字/上限现取 resources.json）
+SYS_DEATH_NO_LOSS   💀 经验一点没掉（你这一级还没攒下什么）—— 装备没丢
+                    系统 · 死亡惩罚说明（经验 0 那一档）
+SYS_ASK_MORE        （他先报了近的三处 —— 这一带走得通的一共 {n} 处，打『地图』看全。）
+                    系统 · 问路
+SYS_ITEM_SHOW_ASK   （**改值**）看哪一件？打『查看 <东西>』；委托全文是『看 <编号>』——先在公会敲『悬赏』。
+                    ⇒ 已登记 `rebuild_syscopy.DOC_PENDING`（旧值/新值两态互锁，第三态当场抛）
+```
+
+### 五、本批**没**动的（逐条为什么 —— 队列里留 `[裁]`）
+
+- **「焚身一场只出一次手」** = 跨手状态的**合法落点**（`_used_of` 挂在战斗对象上，而每一手都要
+  `to_state`/`from_state` 往返一次 ⇒ 计数每手清零）→ 队列原文已点名归主线，本批不碰。
+- **「暴击从不上屏」**：`COMBAT_CRIT` 全仓零引用**属实**（静态复核过）。但要接上得先定
+  **`{act}` 那个动词口径**（真源模板里那一格是「劈向…」这种动词，本包没有按技能存的动词面），
+  再有一条常驻判据 —— 三样一起才是立项，不是夜班一条车道能收的。
+- **「战斗中换装白给且不可见」**：`04_指令总表 §五` 只给 `换武器` 写了「吃一次行动」，
+  战斗里 `装备` 算不算一手、⚔ 面板要不要报身上那件 ⇒ 口径未定。
+- **「新手教程第一条判据三处不一致」**：`scripts/rebuild_quest_gates.py` 抬头写死「形状只用域里现成的
+  那几种 …… **不加新形状**（新形状要单独立项 + 鱼鱼点头）」⇒ 今天是有意留下的口径。
+  ★ 但那份注释里有一句**已过时**：「『观察』『试着读』这类档上**没有账**」—— `read` 的账
+  **其实存在**（`codex` 旧物谱 `CX.note_read`；POI 条件键 `read`，见 `cmds_ast.POI_COND_KEYS`）
+  ⇒ 「读石头」这一步落成 `{"kind": "read", "poi": "poi_stone_scripts"}` 是**有账可依**的
+  （观察那一步仍无账），只差立项。
+- **「加点后上限涨、当前血不涨」**：法力早有先例（`mana.on_cap` 差量补）⇒ 生命跟不跟是**口径**。
+- **「自付血吃防御的承伤减半」**：真源里没有一句话 ⇒ 口径。
+- **「一批文案物点不动」**：报告里只有一句结论、**没有逐条的敲法与原文** ⇒ 退回补证据再核
+  （队列里原文保留，不改）。
