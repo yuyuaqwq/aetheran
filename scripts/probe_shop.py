@@ -31,6 +31,8 @@
   ⑬ 覆盖面：两条 handler 都**真调** `town_gate`（与 `probe_cmds ⑰` 同一套口径）
   ⑭ ★ 撤改验证（跑之前手工核过一遍 · 写在这儿给下一轮）：`buy_markup` 改回 1 ⇒ ① 与 ③
      当场红（买价 == 收价）；摘掉 `item_buy` 的 bind ⇒ ⑥⑦ 红
+  ⑮ ★ P-16：**物价倍数**（世界事件效果栏 `price_mul`）真接在买价上 —— 注入一条假事件 ⇒
+     面板那一行与『购买』扣的钱**同一眼同一个价**（都 ×1.25）、收价一个字不动；拿掉 ⇒ 回原价
 
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_shop.py
 """
@@ -322,6 +324,46 @@ def main():
         ok("连写『购买%s』== 『购买 %s』（回话与档上副作用逐字相同）" % (gname, gname))
     else:
         bad("连写取参不一致：%s / %s · %r / %r" % (a_lines[:1], b_lines[:1], a_state, b_state))
+
+    # ── ⑮ ★ P-16：物价倍数接在买价上（注入一条带 `price_mul` 的假事件 —— 与 probe_events ⑪ 同一个手法）
+    from content import calendar as CALP                              # noqa: E402
+    _PM = 1.25
+    _rawP = CALP._d("events")                     # ★ 缓存里那张表本体（注入要动它）
+    _shelfA = [(g["id"], g["gold"]) for g in SH.goods(ad.saved[UID])]
+    _rawP["ev_probe_price_shop"] = {"no": 98, "name": "probe", "scale": "每日", "scale_key": "daily",
+                                    "period": {"daily": True}, "text": "SYS_EV_NONE", "where": [],
+                                    "effects": {"price_mul": _PM}}
+    try:
+        _shelfB = [(g["id"], g["gold"]) for g in SH.goods(ad.saved[UID])]
+        ad.saved[UID]["gold"] = 999
+        ad.saved[UID]["bag"] = {}
+        _panelB = drive(ad, host, "药铺")
+        ad.saved[UID]["gold"] = 999
+        ad.saved[UID]["bag"] = {}
+        _buyB = drive(ad, host, "购买 " + gname)
+        _buyB_state = snap()
+    finally:
+        _rawP.pop("ev_probe_price_shop", None)
+    _shelfC = [(g["id"], g["gold"]) for g in SH.goods(ad.saved[UID])]
+    _paidB = 999 - int(_buyB_state[0] or 0)
+    _wantB = [(i, int(round(v * _PM))) for i, v in _shelfA]
+    _upB = int(round(g0["gold"] * _PM))
+    _rowB = T("SYS_SHOP_ROW", icon=g0["rec"].get("icon") or "", name=gname,
+              gold=_upB)
+    _wantBuyB = [T("SYS_SHOP_BUY_OK", icon=g0["rec"].get("icon") or "", name=gname,
+                   n=1, gold=_upB, left=999 - _upB)]
+    _price_now = [int(g["rec"]["price"]) for g in SH.goods(ad.saved[UID])]
+    _price0 = [int(x["rec"]["price"]) for x in got]
+    if (_shelfB == _wantB and _shelfC == _shelfA and _rowB in _panelB and _buyB == _wantBuyB
+            and _buyB_state == (999 - _upB, {g0["id"]: 1}) and _price_now == _price0):
+        ok("★ 物价倍数真接在买价上（P-16 · 注入 `price_mul` = %s）：判定口给 %s ⇒ 每件买价 ×%s"
+           "（%s → %s）· 面板那一行与『购买』扣的钱是**同一眼同一个价**（那一下扣 %d）· "
+           "拿掉 ⇒ 回原价 · **收价一个字不动**（%s）"
+           % (_PM, _PM, _PM, [v for _i, v in _shelfA], [v for _i, v in _shelfB],
+              _paidB, _price_now))
+    else:
+        bad("物价倍数那条对不上：A %s · B %s · C %s · 面板有那行=%s · 那一下 %s · 收价 %s/%s"
+            % (_shelfA, _shelfB, _shelfC, _rowB in _panelB, _buyB[:1], _price_now, _price0))
 
     # ── ⑫ 静态守卫（价与货架只许在一处算 · 代码里不许写死货架 id）
     algo, literals, readers, marks = [], [], [], []

@@ -205,7 +205,7 @@ async def herbalist(env, sink, uid, player):
     rows = _roster(SH.station(), p)
     if rows:
         yield T("SYS_LOOK_WHO", list=_roster_line(rows))
-    for g in SH.goods():
+    for g in SH.goods(p):
         rec = g["rec"]
         yield T("SYS_SHOP_ROW", icon=rec.get("icon") or "", name=rec.get("name") or g["id"],
                 gold=g["gold"])

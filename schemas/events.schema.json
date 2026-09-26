@@ -68,9 +68,9 @@
               "additionalProperties": {"type": "integer", "minimum": 0}
             },
             "price_mul": {
-              "type": "object",
-              "description": "★ 未接（没有铺子 / 价目表）—— 谁写进来，probe_events 会点名「这份数据今天没人读」",
-              "additionalProperties": true
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "★ 物价倍数（P-16 已接）：买价 ×= 这个数（判定口 calendar.price_mul · 消费端 content/shop.py 的铺子买价）。1.2 = 「价格 +20%」（真源 21 §二）；没给 = 1.0 零变化"
             }
           },
           "additionalProperties": false

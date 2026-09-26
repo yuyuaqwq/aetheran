@@ -440,3 +440,29 @@ def _mul_effect(key, st, p) -> dict:
 def encounter_mul(st: dict | None = None, p=None) -> dict:
     """遇敌候选加权（怪 id → 倍数）—— 消费端 `combat.pick_encounter`（空 = 零变化）。"""
     return _mul_effect("encounter_mul", st or state(), p)
+
+
+def price_mul(st: dict | None = None, p=None) -> float:
+    """物价倍数（**一个数**，不是按目标分的表）—— ★ 唯一口，消费端 = 铺子的买价。
+
+    ★ P-16（本批接的那半边）：真源 `06_…/21_长期目标层_v1.md §二` 世界事件表那一行
+      「北边的路封了 —— 商队不再来（铺子缺货、**价格 +20%**）」⇒ 效果栏里就是
+      `"price_mul": 1.2`（**乘数**，不是百分数）。29 §四① 当初因为「没有铺子系统」把它
+      诚实标成未接；B4-15 落了『药铺 · 购买』之后，这一格终于有地方生效了。
+    · 多条事件同时给 ⇒ **依次相乘**（按事件 id 序，可复现；与 `_mul_effect` 同一口径）。
+    · 没给 = **1.0**（零变化 —— 数据里今天一条都没有，买价与改前逐字相同）。
+    · 形状与 `encounter_mul` / `weather_mul` 不同：物价没有「按目标」这一层（真源就一句
+      「价格 +20%」）⇒ 这一格是一个数；不是一个正数 = 抛（表错了，探针会拦 —— K68）。
+    · ★ 调用方**都要把档传进来**（世界级事件看主线：`_on` 要 `p`）—— 与 `event_on` 同一句纪律。
+    """
+    mul = 1.0
+    for eid, rec in sorted(events().items()):
+        if not _on(eid, rec, st or state(), p):
+            continue
+        v = (rec.get("effects") or {}).get("price_mul")
+        if v is None:
+            continue
+        if isinstance(v, bool) or not isinstance(v, (int, float)) or float(v) <= 0:
+            raise ValueError("events 域 %r 的 price_mul 不是正数：%r（表错了，探针会拦）" % (eid, v))
+        mul *= float(v)
+    return mul
