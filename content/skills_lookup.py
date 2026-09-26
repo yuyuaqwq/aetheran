@@ -37,6 +37,10 @@ _C: dict = {}
 #: 引擎那份 kind 词表的键（`ext_combat/battle/actions.py` 比对的 5 个语义名）
 KIND_NAMES = ("phys", "magi", "true", "heal", "buff")
 
+#: 上面那 5 档里**吃「指定目标」**的一档（伤害三通道）—— 治疗 / 增益不吃（★ fix-j）。
+#: ★ 键也是**引擎语义名**（不是域内用词），域内用词由 `kind_value()` 现算 ⇒ 代码里不写中文枚举。
+TARGET_KINDS = ("phys", "magi", "true")
+
 
 def _load(name: str):
     if name not in _C:
@@ -82,6 +86,24 @@ def engine_kind(rec: dict) -> str:
             "技能 %r 的 `kind_override` = %r 不在 kinds.json 的值域里（有的：%s）"
             "—— 跑 `python scripts/rebuild_skills.py` 重算" % (rec.get("name") or rec, v, " · ".join(sorted(vals))))
     return str(v)
+
+
+def takes_target(rec: dict) -> bool:
+    """这条技能**吃不吃「指定目标」** —— 只有伤害那一档吃，治疗 / 增益不吃（★ fix-j）。
+
+    ★ 为什么按这条轴分档：引擎 `actions.do_skill` 的分派就是它 ——
+      `kind == 治疗` ⇒ `_do_heal`（`target` = **受疗对象**，缺省施法者自己）；
+      `kind == 增益` ⇒ `_do_buff`（`target` = 挂机制的落点，内容侧那几条 `route=cast`
+      的机制一律挂**施法者**自己）；**其余**（伤害三通道）⇒ 拿 `target` 当**打击对象**。
+      ⇒ 「集火」锁着的那一格是**敌方 actor**，它只对**打击对象**这一档合法。
+      真源：`04_指令总表 §五`「集火 <目标> | 多人时指定」· `17_组队与策略配合 §三·8`
+      「集火 —— 一起**打掉**一个」。
+
+    与 `engine_kind` **同一格**（同一份 `kind_override`、同一条 fail-closed：缺 / 非法 ⇒ 抛）——
+    不另抄一份「哪些算攻击」的名单；哪几档吃目标只有一个来源 =
+    `TARGET_KINDS`（引擎语义名，配 `kinds.json` 现算域内用词）。
+    """
+    return engine_kind(rec) in {kind_value(n) for n in TARGET_KINDS}
 
 
 def _norm_class(class_name: str | None) -> str | None:

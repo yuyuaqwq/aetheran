@@ -119,9 +119,14 @@ def _take(p, iid, n=1) -> None:
     (p or {})["bag"] = bag
 
 
-def _plain_attack(battle, actor) -> list:
-    """普攻那一条路（引擎自己那条 `actions.do_attack`）—— 用物超限时那一手照打。"""
-    ctx = ActCtx(caster=actor, action="attack", target=pick_target(battle))
+def _plain_attack(battle, actor, target=None) -> list:
+    """普攻那一条路（引擎自己那条 `actions.do_attack`）—— 用物超限时那一手照打。
+
+    ★ fix-j：`target` 由调用方给（**集火锁着的那一格**）—— 它是**攻击**，与「后面的手都往它
+      身上招呼」同一条规则；不给 / 给的那只已经倒了 ⇒ `pick_target` 落回敌方还有气的第一个
+      （与接线前逐字相同）。
+    """
+    ctx = ActCtx(caster=actor, action="attack", target=pick_target(battle, target))
     return list(ACT.do_attack(battle, ctx))
 
 
@@ -177,7 +182,7 @@ class Hand:
         if self.kind == "interrupt":
             return self._interrupt(battle, actor, target)
         if self.kind == "item":
-            return self._item(battle, actor, skill_name or self.item)
+            return self._item(battle, actor, skill_name or self.item, target)
         if self.kind == "swap":
             repanel(actor, self.p)                  # ★ G2：换手**当场**生效（重挂面板那一族键）
             return (list(self.lines), CAT["swap"], None)
@@ -204,14 +209,16 @@ class Hand:
         return ([line], cat, None)
 
     # ---------------------------------------------------------- 战斗中用物
-    def _item(self, battle, actor, iid):
+    def _item(self, battle, actor, iid, target=None):
         cat = CAT["item"]
         cap = int(rules().get("item_uses_per_battle") or 1)
         rec = _item_rec(iid)
         name = str(rec.get("name") or iid)
         if int(self.used.get(iid, 0)) >= cap:
             # 上限用满：这一手**回落成普攻**（白纸黑字，不静默、也不白花）
-            return ([T("COMBAT_ITEM_CAP", name=name)] + _plain_attack(battle, actor), "attack", None)
+            # ★ fix-j：回落的那一手是**攻击** ⇒ 吃集火目标（`target` 由调用方传进来）
+            return ([T("COMBAT_ITEM_CAP", name=name)] + _plain_attack(battle, actor, target),
+                    "attack", None)
         from .cmds_recipe import _heal_gain                  # 回血口径唯一一口
         mx = ST.actor_max_hp(battle, actor)
         gain = _heal_gain(self.p, rec, mx)
