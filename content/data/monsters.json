@@ -100,7 +100,6 @@
         "old_watchtower"
       ],
       "nodes": [
-        "bn_bone",
         "bn_tower",
         "tower_hall",
         "tower_stair2"
