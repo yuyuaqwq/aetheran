@@ -157,15 +157,22 @@ def samples(pattern):
 
 
 # ── 文档点名的触发词（`04_指令总表` 各节；别名一律算）──────────────
+# ★ F6（QA P4 E-7）：`看` 这个单字别名原先**同时**挂在观察（§一）与查看（§四）上，
+#   裸 `看` 走的是 §一那一支（= 一整段场景描写）⇒ 玩家敲「看」看不出自己少写了参数，
+#   而 `看 abc` 又悄悄当成「查看」回「背包里没有…」。本批收敛成：**裸 `看` 归查看**
+#   （照 §〇⑥「单字只做别名」+ §四 `查看 <物品>`（别名 看）），`看 <编号>` 照 §二 归委托。
+#   ⇒ 工作树 `_notes.md` §F6 记着「真源 §一 那一行的 `看` 待摘」（真源仓单写，本分支只改包）。
 DOC = (
     ("§一 移动与世界", (
         ("进镇", "enter_town"), ("风车镇", "enter_town"), ("回镇", "enter_town"),
-        ("北口", "go_north"), ("往北", "go_north"), ("出北门", "go_north"),
+        # ★ fix5-nav：`北口` 归**站点名**那一族（= 『去 北口』）—— 拍定口径「站名归站点」，
+        #   出镇口令 = `往北` / `出北门`（真源 04 §一 那一行的后两个词照旧）。见 probe_nav ①。
+        ("北口", "go_to"), ("往北", "go_north"), ("出北门", "go_north"),
         ("往东", "go_east"), ("东边", "go_east"),
         ("往西", "go_west"), ("西边", "go_west"),
         ("返回", "go_back"), ("回", "go_back"), ("退回去", "go_back"),
         ("地图", "map"), ("m", "map"),
-        ("观察", "look"), ("看", "look"), ("看四周", "look"),
+        ("观察", "look"), ("看四周", "look"),
         ("触摸", "touch"), ("摸", "touch"), ("碰", "touch"),
         ("聆听", "listen"), ("听", "listen"),
         ("问路", "ask_way"), ("打听", "ask_way"),
@@ -201,6 +208,8 @@ DOC = (
     ("§四 背包与物品", (
         ("背包", "bag"), ("包", "bag"), ("包裹", "bag"), ("inv", "bag"),
         ("查看 伤药", "item_show"),
+        ("看", "item_show"),                     # ★ F6：裸 `看` 收敛到「查看」
+        ("看 伤药", "item_show"),                #   与 `^看\s*(.+)$` 同一个口
         ("使用 伤药", "item_use"), ("用 伤药", "item_use"), ("吃 伤药", "item_use"),
         ("丢弃 伤药", "item_drop"), ("丢 伤药", "item_drop"),
         ("卖出 伤药", "item_sell"), ("卖 伤药", "item_sell"),
@@ -509,11 +518,40 @@ try:
             _read_bad.append((_t, _loc, _got[:2], _head))
     chk("★ 真敲 %d 条「读」：抬头与正文都对（含同一处两个可读物时按名字挑）" % len(_READS),
         not _read_bad, "%s" % _read_bad[:2])
+    # ★ QB-6（本波 fix1-quests · 试玩报告 P2 BUG⑨）：这一条原先钉的是「点错名 ⇒ 回
+    #   `SYS_READ_NONE`（这里没有能读的东西）」。报告实测：站在**有两件可读物**的骨田敲
+    #   `读 不存在的东西`，玩家照这句会以为「这站本来就没东西」，转身走掉。
+    #   ⇒ 判据**换锚不降强度**（P-31 换锚④那一族的做法）：点错名时
+    #     ① 不许给任何一件的正文（原来那条「不塞东西」照钉）
+    #     ② 必须点名说对不上（`SYS_READ_NOSUCH` · 填进玩家敲的那个名字）
+    #     ③ 必须把这站**现在真能读的**列出来（`SYS_READ_HERE` · 名字从 pois 域现取）
+    #     ④ **不许**再回那句「这里没有能读的东西」—— 那句只留给「这站真没有可读物」（两态里的另一态，
+    #        判据在 scripts/probe_qloop.py ⑤）。
     _ad.saved = dict(_ad.saved or {}, loc="windmill_town", node="wt_gate_n")
     _ad.out.clear()
     _host.handle({"uid": "u_c", "group_id": "g_c", "text": "读 这儿没有的东西"})
+    _got = list(_ad.out)
     _none = (TX.get("SYS_READ_NONE") or {}).get("value", "")
-    chk("★ 点错名不塞东西：回的是「%s」" % _none, list(_ad.out) == [_none], list(_ad.out))
+    _nosuch = (TX.get("SYS_READ_NOSUCH") or {}).get("value", "").replace("{name}", "这儿没有的东西")
+    _po = st.domain("pois") or {}
+    _here_names = [v.get("name") for v in _po.values()
+                   if v.get("map") == "windmill_town" and v.get("subarea") == "wt_gate_n"
+                   and v.get("read_text") and v.get("name")]
+    _here = (TX.get("SYS_READ_HERE") or {}).get("value", "").replace("{list}", " · ".join(_here_names))
+    _any_body = [k for v in _po.values() if v.get("read_text")
+                 for k in [(TX.get(str(v.get("read_text"))) or {}).get("value", "")]
+                 if k and k in _got]
+    _read_bad2 = []
+    if _any_body:
+        _read_bad2.append("点错名却给了某一件的正文")
+    if _nosuch not in _got:
+        _read_bad2.append("没点名说对不上（该有「%s」）" % _nosuch)
+    if _here not in _got:
+        _read_bad2.append("没把这站能读的列出来（该有「%s」）" % _here)
+    if _none and _none in _got:
+        _read_bad2.append("又回了那句「%s」（玩家会以为这站本来就没东西）" % _none)
+    chk("★ 点错名不塞东西（换锚不降强度 · QB-6）：「%s」+「%s」· 一件正文都不给 · "
+        "不糊「%s」" % (_nosuch, _here, _none), not _read_bad2, "%s" % (_read_bad2 or _got[:3]))
 except Exception as exc:                                               # noqa: BLE001
     chk("★ P-23 3/3「读」那条接上了（真宿主契约）", False, "%s: %s" % (type(exc).__name__, exc))
 
@@ -1023,6 +1061,8 @@ try:
     _QS12 = _CQ12._quests()
     _NPCS12 = st.domain("npcs") or {}
     _POT12, _SCRAP12, _BONE12 = "i_potion_heal", "i_material_iron_scrap", "i_junk_bone"
+    # ★ g4：那一件的**名字从域里现取**（本批改名：骨头 → 残骸）—— 别在探针里手打玩家词
+    _BONE_NM12 = str((CA9._data("items").get(_BONE12) or {}).get("name") or _BONE12)
     _WPN12 = _W1
     _SEED12 = {"cls": "cls_knight", "race": "human", "level": 3, "exp": 0, "hp": 100,
                "gold": 30, "loc": "windmill_town", "node": "wt_inn", "prev": [],
@@ -1288,15 +1328,23 @@ try:
         "%s" % [x for x in _BAD12 if x[0].startswith("丢弃")][:3])
 
     # ── 卖出：价来自域 · 装备不收 · 野外不卖 ────────────────────────────
-    _gS = _say12("卖出 骨头")
+    _gS = _say12("卖出 %s" % _BONE_NM12)
     _wS = [_r("SYS_SELL_OK", icon=_IT9[_BONE12].get("icon", ""), name=_IT9[_BONE12]["name"],
               n=1, gold=int(_IT9[_BONE12]["price"]))]
     if _gS != _wS or int(_sv12().get("gold") or 0) != 30 + int(_IT9[_BONE12]["price"]) \
             or int((_sv12().get("bag") or {}).get(_BONE12) or 0) != 2:
-        _BAD12.append(("卖出 骨头", _gS, _sv12().get("gold"), _sv12().get("bag")))
+        _BAD12.append(("卖出 %s" % _BONE_NM12, _gS, _sv12().get("gold"), _sv12().get("bag")))
     _gS2 = _say12("卖出 %s" % _wpn["name"])
-    if _gS2 != [_r("SYS_SELL_NOPRICE", name=_wpn["name"])]:
-        _BAD12.append(("卖出 没价的（域里没写 price）", _gS2))
+    # ★ P3 BUG-4（本波 f4）：**装备现在有收价** —— 唯一一口 `content/shop.py::sell_price_of`
+    #   （品阶 × 等级档；材料 / 旧物那一格照旧 = `items.price`）。原先装备域里一个价都没有
+    #   ⇒ 这里回的是「这东西没价」，打到的多余装备只能占背包（实测三把同名剑）。
+    _wpn_gold12 = int(_SH15.sell_price_of(_wpn))
+    if _gS2 != [_r("SYS_SELL_OK", icon=_wpn.get("icon") or "", name=_wpn["name"], n=1,
+                   gold=_wpn_gold12)] \
+            or _WPN12 in (_sv12().get("bag") or {}) \
+            or int(_sv12().get("gold") or 0) != 30 + int(_IT9[_BONE12]["price"]) + _wpn_gold12:
+        _BAD12.append(("卖出 装备（收价表现算）", _gS2, _wpn_gold12, _sv12().get("bag"),
+                       _sv12().get("gold")))
     _db12b = os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp", "ast_probe_cmds_more_b.db")
     try:
         os.remove(_db12b)
@@ -1306,11 +1354,12 @@ try:
     _h12b = Host(_ad12b, str(REPO), inject={"db_path": _db12b, "clock": lambda: _FIXED})
     _h12b.boot()
     _ad12b.out.clear()
-    _h12b.handle({"uid": "u_c", "group_id": "g_c", "text": "卖出 骨头"})
+    _h12b.handle({"uid": "u_c", "group_id": "g_c", "text": "卖出 %s" % _BONE_NM12})
     _gS3 = list(_ad12b.out)
     if _gS3 != [_r("SYS_SELL_AWAY")] or (_ad12b.saved or {}).get("bag") != _SEED12["bag"]:
         _BAD12.append(("野外卖出", _gS3, (_ad12b.saved or {}).get("bag")))
-    chk("★ `卖出` 真敲三档：域里有价 ⇒ 钱与背包同时变 / 域里没价（拿在手上的）⇒ 不收 / "
+    chk("★ `卖出` 真敲三档：域里有价 ⇒ 钱与背包同时变 / **装备按收价表现算的价真收到**"
+        "（P3 BUG-4 · 与『旧货』同一个口）/ "
         "人在野外 ⇒ 明说铺子在镇上且**不动档**",
         not [x for x in _BAD12 if x[0].startswith("卖出")],
         "%s" % [x for x in _BAD12 if x[0].startswith("卖出")][:3])
@@ -1362,14 +1411,14 @@ try:
             or int((_sv12().get("bag") or {}).get(_POT12) or 0) != 2:
         _BAD12.append(("取出 药水 · 掏空箱子摘掉那一格", _gO2,
                        (_sv12().get("flags") or {}).get("stash"), _sv12().get("bag")))
-    _gE = _say12("取出 骨头")
+    _gE = _say12("取出 %s" % _BONE_NM12)
     _stash_now = (_sv12().get("flags") or {}).get("stash") or {}
     _wE = (_r("SYS_STASH_EMPTY") if not _stash_now
            else _r("SYS_STASH_MISS", name=_IT9[_BONE12]["name"]))
     if _gE != [_wE]:
         _BAD12.append(("取出 空箱里没有的", _gE, _wE))
     _ad12b.out.clear()
-    _h12b.handle({"uid": "u_c", "group_id": "g_c", "text": "存放 骨头"})
+    _h12b.handle({"uid": "u_c", "group_id": "g_c", "text": "存放 %s" % _BONE_NM12})
     _gAway = list(_ad12b.out)
     if _gAway != [_r("SYS_STASH_AWAY")] or (_ad12b.saved or {}).get("bag") != _SEED12["bag"] \
             or ((_ad12b.saved or {}).get("flags") or {}).get("stash"):
@@ -1436,7 +1485,7 @@ try:
     _g13c = _say12("加点")
     _w13c = [_r("SYS_ALLOC_ASK", usage=_decl_usage_full("alloc"), left=_tot13 - 5,
                 list=_statlist13()),
-             _r("SYS_ALLOC_SUGGEST", total=_tot13,
+             _r("SYS_ALLOC_PLAN", total=_tot13,
                 list=" · ".join("%s %d" % (_r("SYS_STAT_%s" % _s), _n)
                                 for _s, _n in _AL13.plan(_lv13, "cls_knight").items() if _n))]
     if _g13c != _w13c or _alloc13() != {"STR": 5}:
@@ -1638,11 +1687,14 @@ try:
         rows = []
         for iid in sorted(p.get("bag") or {}):
             rec = LT16.rec_of(iid)
-            price = rec.get("price")
-            if not isinstance(price, (int, float)) or isinstance(price, bool) or price <= 0:
+            # ★ P3 BUG-4（本波 f4）：收价走**唯一一口**（`content/shop.py::sell_price_of`）——
+            #   材料 / 旧物那一格照旧 = `items.price`，**装备**按品阶 × 等级档现算
+            #   （原先这里是 `rec.get("price")`：装备域里没价 ⇒ 永远不列它）
+            price = _SH15.sell_price_of(rec)
+            if price <= 0:
                 continue
             n = int((p.get("bag") or {}).get(iid) or 0)
-            rows.append((str(rec.get("name") or iid), n, int(price) * n))
+            rows.append((LT16.label_of(iid), n, int(price) * n))   # 名字也走那一口（重名的缀品阶）
         out = [_r("SYS_JUNK_HEAD")]
         if rows:
             out.append(_r("SYS_JUNK_MINE"))
@@ -1659,8 +1711,15 @@ try:
     _cmp16("旧货（包里有东西）", _say16("旧货"), _junk_want16(_sv16()))
     _ad16.saved["bag"] = {}
     _cmp16("旧货（包里空的）", _say16("旧货"), _junk_want16(_sv16()))
+    # ★ P3 BUG-4（本波 f4）：**装备那一档** —— 包里一件装备时，`旧货` 也得照收价表列出来
+    #   （原先装备没价 ⇒ 这一页永远不列它，玩家以为铺子不收装备）
+    _GEAR16 = next((k for k, v in (st.domain("items") or {}).items()
+                    if isinstance(v, dict) and v.get("slot") and not v.get("price")), "")
+    if _GEAR16:
+        _ad16.saved["bag"] = {_GEAR16: 1}
+        _cmp16("旧货（包里一件装备）", _say16("旧货"), _junk_want16(_sv16()))
     _ad16.saved["bag"] = _bag16
-    chk("★ `旧货` 真敲两档（有东西 / 空的）：逐件与 `items.price` 现算的期望逐字一致，"
+    chk("★ `旧货` 真敲三档（有东西 / 空的 / **一件装备**）：逐件与收价那一口现算的期望逐字一致，"
         "且**看一眼旧货铺不动档**（bag / flags 原样）",
         not [x for x in _BAD16 if x[0].startswith("旧货")]
         and (_sv16().get("bag") or {}) == (_snap16.get("bag") or {}),
@@ -1675,6 +1734,32 @@ try:
         out += [_r(str(r["text"])) for r in news if r.get("text")]
         if not news:
             out.append(_r("SYS_CARAVAN_QUIET"))
+        # ★ fix7-gear：商队那一家**真到货** —— 车没到 ⇒ 说清在等哪条委托；到了 ⇒ 柜上那几件
+        #   （一家一家现算：`shop == 键` + 等级那一刀；条件从 `events.period` 现取，不写死委托名）
+        #   位置：与 `cmds_places.caravan` 同序 —— **在「外人在哪一站」之前**
+        from content import shop as _SH16                                     # noqa: E402
+        for _ck16 in _SH16.shelf_keys():
+            _ev16 = str(_SH16.shelf_rec(_ck16).get("event") or "")
+            if not _ev16:
+                continue
+            if not CAL16.event_on(_ev16, p=p):
+                _who16 = _SH16.event_wait(_ck16)
+                if _who16:
+                    out.append(_r("SYS_CARAVAN_WHY", name=_who16))
+                continue
+            _rows16 = _SH16.goods(p, shelf=_ck16)
+            if _rows16:
+                out.append(_r("SYS_CARAVAN_GOODS"))
+                for _g16 in _rows16:
+                    out.append(_r("SYS_SHELF_ROW", icon=_g16["rec"].get("icon") or "",
+                                  name=_g16["rec"].get("name") or _g16["id"], gold=_g16["gold"],
+                                  level=_SH16.level_need(_g16["rec"])))
+                continue
+            for _g16 in _SH16.goods_at(_ck16, p):
+                out.append(_r("SYS_SHELF_LOCK", name=_g16["rec"].get("name") or _g16["id"],
+                              level=_SH16.level_need(_g16["rec"]),
+                              now=int((p or {}).get("level") or 0)))
+                break
         who = []
         for nd in ((st.domain("maps") or {}).get("windmill_town") or {}).get("nodes") or []:
             nid = str(nd.get("id") or "")
@@ -1764,16 +1849,17 @@ try:
         and dict(_sv16()) == _snapP16,
         "%s（库里=%s）" % ([x for x in _BAD16 if x[0].startswith("排行")][:1], _rank_db16))
 
-    # ── 公告：包名 / 版本 / 已接条数（现点声明表）────────────────────────
+    # ── 公告：包名 / 版本 / 手边能敲什么 ────────────────────────────────
+    #   ★ fix3-⑥：原先这里还印一行「已经接上的指令：N / M 条」（内部完成度 · P1 BUG-15）
+    #     ⇒ 换成 SYS_NOTICE_WHAT；旧槽位退役登记见 `scripts/probe_copy.py::RETIRED_DOC`。
     _mf16 = json.loads((Path(str(REPO)) / "game.json").read_text(encoding="utf-8"))
-    _nb16 = len([1 for v in DECL.values() if (v or {}).get("bind")])
     _cmp16("公告", _say16("公告"),
            [_r("SYS_NOTICE_HEAD"),
             _r("SYS_NOTICE_PKG", name=_mf16.get("name") or "", ver=_mf16.get("version") or ""),
-            _r("SYS_NOTICE_CMDS", n=_nb16, total=len(DECL)),
+            _r("SYS_NOTICE_WHAT"),
             _r("SYS_NOTICE_TAIL")])
-    chk("★ `公告` 真敲：包名 / 版本取自 `game.json`、已接条数**现点**声明表里真有 `bind` 的那几条"
-        "（与『帮助』同一批口径）",
+    chk("★ `公告` 真敲：包名 / 版本取自 `game.json` · **不再报内部完成度**"
+        "（「N / M 条」这种构建期计数不上屏）",
         not [x for x in _BAD16 if x[0].startswith("公告")],
         "%s" % [x for x in _BAD16 if x[0].startswith("公告")][:2])
 
@@ -1948,15 +2034,30 @@ try:
     _MEET23 = _r("COMBAT_MEET", name=_MON23[_MS23]["name"])
     _INT_NAME = (BA23.interrupt_action_of(_BASE23) or {}).get("name", "")
 
+    # ★ G2（2026-09-26）：战斗改成**一手一推进** ⇒ 「这一场」跨指令落盘
+    #   （`_say23` 走群 `g_c` + uid `u_c` ⇒ 单人键 `g_c#u_c`；直调那一支 `_E9` 没有群 ⇒ 键 `#u_c`）
+    def _field23(uid="u_c", gid="g_c"):
+        from content import instance as _INST23
+        return _INST23.load(_INST23.key_of(gid, uid, [uid]))
+
+    def _clear23(uid="u_c", gid=""):
+        from content import instance as _INST23
+        _INST23.clear(_INST23.key_of(gid, uid, [uid]))
+
     # ── 一、打断：本门的动作名 + 真做出来（断成 / 压后 两种情形直调钉住）──────────
+    #   ★ G2：一条战斗指令 = **推一手** ⇒ 真敲那一档看的是「这一场真起来了吗 + 那两句在不在」
+    #     （不再看 `last_battle` —— 那是**结算期**才写的账，这一场还没打完）
     _o_int, _s_int = _say23(dict(_BASE23), "打断")
+    _f_int = _field23()
     _PUSH23 = (TX.get("COMBAT_INT_PUSH") or {}).get("value", "").split("{ticks}")[0]
-    if _o_int[:2] != [_MEET23, _r("COMBAT_INT_HEAD", skill=_INT_NAME)] \
+    if _o_int[:1] != [_MEET23] \
+            or _r("COMBAT_INT_HEAD", skill=_INT_NAME) not in _o_int \
             or not (_r("COMBAT_INT_BREAK") in _o_int
                     or any(ln.startswith(_PUSH23) for ln in _o_int)):
         _B23.append(("打断 真敲", _o_int[:3]))
-    if not (_s_int.get("flags") or {}).get("last_battle"):
-        _B23.append(("打断 真敲没写 last_battle", _s_int.get("flags")))
+    if _f_int is None or int(_f_int.get("hands") or 0) != 1:
+        _B23.append(("打断 真敲没把这一场推起来（手数 = %s）"
+                     % (None if _f_int is None else _f_int.get("hands"))))
     # 受控两档（直调回调本体）：对方**在出招窗口里** ⇒ 那一手作废；没在窗口里 ⇒ 只压后
     _rec23 = dict(_BASE23)
     _b23a = CBO23.build(dict(_BASE23), [_MS23], _MON23)
@@ -2033,43 +2134,61 @@ try:
         _B23.append(("放技能 认不出", _o_sk_bad))
     if _o_sk_nocls != [_r("SYS_SKILL_NOCLS")]:
         _B23.append(("放技能 没择业", _o_sk_nocls))
-    if _o_sk_ok[:2] != [_MEET23, _r("COMBAT_SKILL_HEAD", name=_INT_NAME)] \
-            or not (_s_sk_ok.get("flags") or {}).get("last_battle") or len(_o_sk_ok) < 6:
+    if _o_sk_ok[:1] != [_MEET23] \
+            or _r("COMBAT_SKILL_HEAD", name=_INT_NAME) not in _o_sk_ok \
+            or _field23() is None or int((_field23() or {}).get("hands") or 0) != 1 \
+            or len(_o_sk_ok) < 6:
         _B23.append(("放技能 真放", _o_sk_ok[:3]))
     chk("★ `技能 <名>`：认不出 / 没择业 各回各自那句（逐字）· 本门「%s」真放出来"
-        "（这一场真打完、写 last_battle）" % _INT_NAME,
+        "（这一手真花掉、这一场真起来）" % _INT_NAME,
         not [x for x in _B23 if x[0].startswith("放技能")],
         "%s" % [x for x in _B23 if x[0].startswith("放技能")][:2])
 
     # ── 四、战斗中用物：一场每件只算一次（带得多 ≠ 用得多）──────────────────────
+    #   ★ G2：一条指令 = 一手 ⇒ 这一档要**在同一个场里敲两次**才看得见「上限」
+    #     （清一次场 → 第 1 次真喝、第 2 次照实说「这一场用过了」并回落普攻）
     _p_item = dict(_BASE23, hp=20)
+    _clear23(gid="")                              # 直调那一支 env 没有群 ⇒ 键 `#u_c`
     _o_item = _direct23(CBAT23.battle_item, _p_item, "使用 伤药")
     _used_left = (_p_item.get("bag") or {}).get(_POT23)
+    _f_item = _field23(gid="")
+    _o_item2 = _direct23(CBAT23.battle_item, _p_item, "使用 伤药")
+    _used_left2 = (_p_item.get("bag") or {}).get(_POT23)
     _o_none = _direct23(CBAT23.battle_item, dict(_BASE23, bag={}), "使用 伤药")
-    if _o_item[:2] != [_MEET23, _r("COMBAT_ITEM_HEAD", name="伤药")] \
+    if _o_item[:1] != [_MEET23] \
+            or _r("COMBAT_ITEM_HEAD", name="伤药") not in _o_item \
             or _used_left != 2 \
-            or not (_r("COMBAT_ITEM_CAP", name="伤药") in _o_item) \
+            or not (_r("COMBAT_ITEM_CAP", name="伤药") in _o_item2) \
+            or _used_left2 != 2 \
+            or _f_item is None or int(_f_item.get("items_used", {}).get(_POT23, 0)) != 1 \
             or len([ln for ln in _o_item if "伤药" in ln and "喝下" in ln]) != 1:
-        _B23.append(("用物 上限那一档", _o_item[:3], _used_left,
+        _B23.append(("用物 上限那一档", _o_item[:3], _used_left, _used_left2,
                      [ln for ln in _o_item if "喝下" in ln]))
     if _o_none != [_r("COMBAT_ITEM_BAD", name="伤药")]:
         _B23.append(("用物 没带", _o_none))
-    chk("★ `使用 <药>`（战斗口径 · 直调）：这一手真喝（%s）· **一场只算一次**（背包 3 → %s，"
-        "后面的手出「%s」并回落成普攻）· 没带就一句实话（不开打）"
-        % ((TX.get("SYS_USE_HEAL") or {}).get("value", "")[:6], _used_left,
-           (TX.get("COMBAT_ITEM_CAP") or {}).get("value", "")[:10]),
-        not [x for x in _B23 if x[0].startswith("用物")],
-        "%s" % [x for x in _B23 if x[0].startswith("用物")][:2])
+    _clear23(gid="")
+    chk("★ `使用 <药>`（战斗口径 · 直调 · G2 起一手一手）：第 1 手真喝（背包 3 → %s）· "
+        "同一场第 2 手出「%s」并回落成普攻（背包仍是 %s）· 没带就一句实话（不开打）"
+        % (_used_left, (TX.get("COMBAT_ITEM_CAP") or {}).get("value", "")[:10], _used_left2),
+        not [x for x in _B23 if str(x[0]).startswith("用物")],
+        "%s" % [x for x in _B23 if str(x[0]).startswith("用物")][:2])
 
     # ── 五、集火：单人明确回话（不动档、不开战斗）────────────────────────────────
+    #   ★ F6（QA P3）：**三档分得开** —— 认得出 / 认不出这个名字 / 空着没点名。
+    #     改前「认不出」与「空着」回的是**同一句**（掉进「没组队」那句），玩家以为自己点对了。
     _o_focus1, _s_focus1 = _say23(dict(_BASE23), "集火 %s" % _MON23[_MS23]["name"])
     _o_focus2, _s_focus2 = _say23(dict(_BASE23), "集火 谁都不认识的名字")
+    _o_focus3, _s_focus3 = _say23(dict(_BASE23), "集火")
     if _o_focus1 != [_r("COMBAT_FOCUS_NAMED", name=_MON23[_MS23]["name"])] \
-            or _o_focus2 != [_r("COMBAT_FOCUS_SOLO")] \
-            or _s_focus1 != dict(_BASE23) or _s_focus2 != dict(_BASE23):
-        _B23.append(("集火", _o_focus1, _o_focus2))
+            or _o_focus2 != [_r("COMBAT_FOCUS_MISS", name="谁都不认识的名字")] \
+            or _o_focus3 != [_r("COMBAT_FOCUS_SOLO")] \
+            or _o_focus1 == _o_focus2 or _o_focus2 == _o_focus3 \
+            or _s_focus1 != dict(_BASE23) or _s_focus2 != dict(_BASE23) \
+            or _s_focus3 != dict(_BASE23):
+        _B23.append(("集火", _o_focus1, _o_focus2, _o_focus3))
     chk("★ `集火 <目标>`：域里认得出来的那只 ⇒ 一句明确回话（不假装锁上了谁）· 认不出 ⇒ 另一句 ·"
-        "**两档都不动档、都不开战斗**", not [x for x in _B23 if x[0].startswith("集火")],
+        "**三档三句话各不相同**（认得出 / 认不出 / 空着）· **三档都不动档、都不开战斗**",
+        not [x for x in _B23 if x[0].startswith("集火")],
         "%s" % [x for x in _B23 if x[0].startswith("集火")][:2])
 
     # ── 六、换武器：真换上 + 吃一手（野外）/ 只换手（镇里）──────────────────────
@@ -2079,6 +2198,7 @@ try:
     _o_town, _s_town = _say23(dict(_BASE23, loc="windmill_town", node="wt_gate_n",
                                    bag={_WPN23: 1}), "换武器", pin=None)
     _o_wild, _s_wild = _say23(dict(_BASE23, bag={_WPN23: 1}), "换武器")
+    _f_wild = _field23()
     _o_none2, _s_none2 = _say23(dict(_BASE23), "换武器")
     _o_ask, _s_ask = _say23(dict(_BASE23), "换武器", pin=None)
     if _o_town[:1] != [_r("SYS_GEAR_EQUIP_OK", icon=(_IT9.get(_WPN23) or {}).get("icon", ""),
@@ -2088,11 +2208,12 @@ try:
             or (_s_town.get("bag") or {}):
         _B23.append(("换武器 镇里", _o_town[:2], _s_town.get("equipped")))
     if (_s_wild.get("equipped") or {}).get("weapon") != _WPN23 \
-            or not (_s_wild.get("flags") or {}).get("last_battle") \
+            or _f_wild is None or int(_f_wild.get("hands") or 0) != 1 \
             or _o_wild[:1] != [_MEET23] \
             or not any(ln.startswith((TX.get("COMBAT_SWAP_OK") or {}).get("value", "")
                                      .split("{icon}")[0] or "\0") for ln in _o_wild):
-        _B23.append(("换武器 野外·吃一手", _o_wild[:3], _s_wild.get("equipped")))
+        _B23.append(("换武器 野外·吃一手", _o_wild[:3], _s_wild.get("equipped"),
+                     None if _f_wild is None else _f_wild.get("hands")))
     # 带两件 ⇒ 换上 id 序第一件、另一件只提示（不静默吞掉）
     _wpn2 = sorted(k for k, v in (_IT9 or {}).items()
                    if isinstance(v, dict) and v.get("slot") == "weapon" and k < _WPN23)[:1]
@@ -2106,23 +2227,29 @@ try:
     if _o_ask != [_r("COMBAT_SWAP_NONE")] or _s_ask.get("equipped"):
         _B23.append(("换武器 背包里没武器", _o_ask))
     chk("★ `换武器` 真敲：没得打那儿只换手（%s · 回现成的装备那一句）· 野外**换上了 + 这一手"
-        "花在换手上**（这一场照打、写 last_battle）· 带两件时换第一件并把另一件列出来 · "
+        "花在换手上**（这一场真起来、真花掉一手）· 带两件时换第一件并把另一件列出来 · "
         "没得换一句实话" % _wpn_name,
         not [x for x in _B23 if x[0].startswith("换武器")],
         "%s" % [x for x in _B23 if x[0].startswith("换武器")][:2])
 
-    # ── 七、没遇敌那一档 + 老路没被撞坏（`攻击` 对照）+ 文案面扫一遍 ──────────────
+    # ── 七、没遇敌那一档 + `攻击` 那一支 + 文案面扫一遍 ──────────────────────────
     _o_nofoe, _s_nofoe = _say23(dict(_BASE23), "打断", pin=None)
     if _o_nofoe != [_r("COMBAT_NEED_FOE")] or _s_nofoe != dict(_BASE23):
         _B23.append(("没遇敌那一档", _o_nofoe))
+    # ★ G2 换向：`攻击` 不再一次打完 —— 判据改成「同一套：遇敌 + 四段式那一屏 + 这一场起来」
+    #   （改前那两条读法：`打完` / 死亡那一行 + 写 `last_battle`；分段之后那是**结算期**的事）
     _o_atk, _s_atk = _say23(dict(_BASE23), "攻击")
-    if not any("打完" in ln or (TX.get("SYS_DEATH_WILD") or {}).get("value", "")[:4] in ln
-               for ln in _o_atk) or not (_s_atk.get("flags") or {}).get("last_battle"):
-        _B23.append(("攻击 对照（老路）", _o_atk[:2]))
-    chk("★ 没遇敌 ⇒ 一句「%s」（**档一个字不动**）· `攻击` 老路仍照旧（打完 / 写 last_battle）"
+    _f_atk = _field23()
+    _TURN_PRE23 = (TX.get("COMBAT_TURN_STATE") or {}).get("value", "").split("{")[0]
+    if _o_atk[:1] != [_MEET23] or _f_atk is None \
+            or int(_f_atk.get("hands") or 0) != 1 \
+            or not any(str(ln).startswith(_TURN_PRE23) for ln in _o_atk):
+        _B23.append(("攻击 那一支", _o_atk[:3]))
+    chk("★ 没遇敌 ⇒ 一句「%s」（**档一个字不动**）· `攻击` 那一支照同一套（遇敌 + 四段式那一屏"
+        "«现状/谁先动/对方在干什么/你的选项» + 这一场起来、真花掉一手）"
         % (TX.get("COMBAT_NEED_FOE") or {}).get("value", "")[:12],
-        not [x for x in _B23 if x[0] in ("没遇敌那一档", "攻击 对照（老路）")],
-        "%s" % [x for x in _B23 if x[0] in ("没遇敌那一档", "攻击 对照（老路）")][:2])
+        not [x for x in _B23 if x[0] in ("没遇敌那一档", "攻击 那一支")],
+        "%s" % [x for x in _B23 if x[0] in ("没遇敌那一档", "攻击 那一支")][:2])
 
     _ALL23 = (_o_int + _o_sk_bad + _o_sk_nocls + _o_sk_ok + _o_item + _o_none
               + _o_focus1 + _o_focus2 + _o_ask + _o_town + _o_wild + _o_none2
@@ -2473,6 +2600,18 @@ try:
                "exp": 0, "gold": 100, "hp": 116, "loc": "windmill_town", "node": "wt_inn",
                "prev": [], "bag": {}, "equipped": {}, "codex": {}, "flags": {}}
     _DIRTY18 = ("没有命中包内任何指令声明", "/help", "content/", "commands.py", "『』")
+    # ★ fix5-nav：屏幕上的**站名**也是一族裸触发词（敲了 = 『去 <名>』，名字从 maps 现读）——
+    #   它们**本来就该动档**，动的是「人在哪」那几格。于是这一条判据**加严**成两档：
+    #     · 站名        ⇒ 只许动移动那四格（loc / node / prev / foot），别的格一个字不许动；
+    #     · 其余裸触发词 ⇒ 照旧**一个字不动**（裸「放弃」拿 act[0] 顶上那类会当场红）。
+    _PLACE18 = {str(_n.get("name")) for _m in (st.domain("maps") or {}).values()
+                for _n in (_m.get("nodes") or [])}
+    _MOVE18 = ("loc", "node", "prev", "foot")
+    # ★ fix5-nav：`_p()` 出档时会**派生**几格（生命/法力上限与现值 —— 唯一来源是职业面板）。
+    #   那不是「这条指令动了档」，是出档口按面板算出来的 ⇒ 逐键对账时把这几格排除
+    #   （排除的是**派生键**这个集合本身，不是某一个写死的名字）。
+    from content.cmds_ast import _p as _p18
+    _DERIVED18 = set(_p18(dict(_SEED18))) - set(_SEED18)
     _bad18, _n18 = [], 0
     for _w in _batch18:
         _o18, _s18 = _say15(_SEED18, _w)
@@ -2480,12 +2619,14 @@ try:
         _txt = "\n".join(_o18)
         _dirty = [d for d in _DIRTY18 if d in _txt]
         _moved = [k for k in set(list(_SEED18) + list(_s18 or {}))
-                  if (_s18 or {}).get(k) != _SEED18.get(k)]
-        if not _o18 or _dirty or _moved:
-            _bad18.append((_w, _dirty, _o18[:2], _moved))
+                  if k not in _DERIVED18 and (_s18 or {}).get(k) != _SEED18.get(k)]
+        _illegal = [k for k in _moved if not (_w in _PLACE18 and k in _MOVE18)]
+        if not _o18 or _dirty or _illegal:
+            _bad18.append((_w, _dirty, _o18[:2], _illegal))
     chk("★ 真敲这一批的 %d 个裸触发词：回话都是人话（没漏宿主那句兜底 / `/help` / 内部路径 / "
-        "空引号「『』」），且**档一个字不动** —— 裸「放弃」原先会拿 `act[0]` 顶上 ⇒ 当场丢一条委托"
-        % _n18, not _bad18, "%s" % (_bad18[:4],))
+        "空引号「『』」）—— 站名只许动移动那四格（%s），其余裸触发词**档一个字不动**"
+        "（裸「放弃」原先会拿 `act[0]` 顶上 ⇒ 当场丢一条委托）"
+        % (_n18, " / ".join(_MOVE18)), not _bad18, "%s" % (_bad18[:4],))
 except Exception as exc:                                                  # noqa: BLE001
     chk("★ B4-13 裸触发词那一族跑得起来（真宿主契约）", False,
         "%s: %s" % (type(exc).__name__, exc))
@@ -2585,6 +2726,20 @@ try:
         return list(_ad21.out), (_ad21.saved or {})
 
     _NOFIRE21 = _r("SYS_REST_NOFIRE")
+    # ★ F6（QA P4 E-3）：没有火时**还要指出哪儿有火** —— 名单照 ㉑④ 同一口径**现算**
+    #   （pois 域里挂 `effect.rest` 的那几处 → 它们所在节点的名字走 maps 域现读，一个字都不手写）。
+    _FIRE_NODES21 = []
+    for _v21 in _POIS21.values():
+        if not (isinstance(_v21, dict) and (_v21.get("effect") or {}).get("rest")):
+            continue
+        _nm21 = next((str(n.get("name")) for n in
+                      ((_MAP21.get(str(_v21.get("map") or "")) or {}).get("nodes") or [])
+                      if n.get("id") == _v21.get("subarea")), "")
+        if _nm21 and _nm21 not in _FIRE_NODES21:
+            _FIRE_NODES21.append(_nm21)
+    _HINT21 = _r("SYS_REST_FIRE_HINT", list=" · ".join("『%s』" % x for x in _FIRE_NODES21))
+    chk("★ F6：没火那几档的回话里**指名哪儿有火**（名单现算 = %s；一个节点名都不手写）"
+        % (" · ".join(_FIRE_NODES21) or "（域里没有火？）"), bool(_FIRE_NODES21), _HINT21)
 
     # ── ① 没有篝火的三档（镇上 / 骨田 / 塔里）⇒ 逐字回那一句 · 档一个字不动
     _bad21 = []
@@ -2592,9 +2747,10 @@ try:
                                   ("骨田", "belt_north", "bn_bone"),
                                   ("塔里（塔门）", "old_watchtower", "tower_gate")):
         _o21, _s21 = _say21(dict(_SEED21, loc=_loc21, node=_nd21), "歇脚")
-        if _o21 != [_NOFIRE21] or _s21.get("hp") != 60:
+        if _o21 != [_NOFIRE21, _HINT21] or _s21.get("hp") != 60:
             _bad21.append((_lab21, _o21[:2], _s21.get("hp")))
-    chk("★ 没有篝火的三档（镇上 / 骨田 / 塔里）⇒ 逐字回 `SYS_REST_NOFIRE`，"
+    chk("★ 没有篝火的三档（镇上 / 骨田 / 塔里）⇒ 逐字回 `SYS_REST_NOFIRE` **+ 指路那一行**"
+        "（★ F6：`歇脚棚` 那类地名会让人以为能歇 —— 光说「这儿没有」不够，得说清哪儿有），"
         "档**一个字不动**（血还是 60）—— 原先这三档一律回「生命 +20%」", not _bad21,
         "%s" % (_bad21[:2],))
 
@@ -2635,6 +2791,84 @@ try:
         "自扫 pois %s · rest 里真调 %s" % (_scan21, _in_rest21))
 except Exception as exc:                                                  # noqa: BLE001
     chk("★ B4-25 歇脚那一条守卫跑得起来（真宿主契约）", False,
+        "%s: %s" % (type(exc).__name__, exc))
+
+
+# ══════════════════════════════════════════════════════════════
+# ★ F6（QA P2 BUG⑧）：`触摸` 吃参数 —— 与同一 POI 上的 `读` 同一待遇
+#   改前：`触摸 半埋的碑` 回「这句我没接住」，而 `读 半埋的碑` 通 ——
+#   玩家想只摸某一件做不到，还得连带把整站的增益/消耗一并领走。
+# ══════════════════════════════════════════════════════════════
+print("㉒ ★ F6：`触摸 <东西>` 点名只摸那一件 · 名字对不上照实说（不静默换成「这儿没有可以上手的」）")
+try:
+    _POIS22 = st.domain("pois") or {}
+    _by22 = {}
+    for _pid22, _v22 in _POIS22.items():
+        if isinstance(_v22, dict):
+            _by22.setdefault((str(_v22.get("map") or ""), str(_v22.get("subarea") or "")),
+                             []).append((str(_pid22), _v22))
+    _spot22 = next((k for k, v in sorted(_by22.items()) if len(v) >= 2), None)
+    chk("★ ① 域里真有「同一站两件以上」的地方（现算 · 不手写节点 id）：%s / %s ⇒ %d 件"
+        % ((_spot22 or ("?", "?"))[0], (_spot22 or ("?", "?"))[1],
+           len(_by22.get(_spot22) or [])),
+        _spot22 is not None)
+
+    # ── ② 声明面：`触摸` 与 `读` 取参的形状**一致**（都有带参的写法）
+    _tp22 = list((DECL.get("touch") or {}).get("patterns") or [])
+    _rp22 = list((DECL.get("read") or {}).get("patterns") or [])
+    chk("★ ② 声明面：`触摸` 与 `读` 都带「点名」那一支（触摸 %d 条 / 读 %d 条 pattern · 都含 `(.+)`）"
+        % (len(_tp22), len(_rp22)),
+        any("(" in p for p in _tp22) and any("(" in p for p in _rp22), "%s" % (_tp22,))
+
+    _SEED22 = {"cls": "cls_knight", "race": "human", "name": "试炼者", "level": 5, "exp": 0,
+               "gold": 100, "hp": 116, "loc": _spot22[0], "node": _spot22[1],
+               "prev": [], "bag": {}, "equipped": {}, "codex": {}, "flags": {}}
+    _db22 = os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp", "ast_probe_cmds_f6.db")
+
+    def _say22(text, loc=None, node=None):
+        _ad22 = _Ad([], seed=dict(_SEED22, loc=loc or _SEED22["loc"], node=node or _SEED22["node"]))
+        _h22 = Host(_ad22, str(REPO), inject={"db_path": _db22, "clock": lambda: _FIXED})
+        _h22.boot()
+        _ad22.out.clear()
+        _h22.handle({"uid": "u_c", "group_id": "g_c", "text": text})
+        return list(_ad22.out)
+
+    # ★ 挑地方：**不手写节点 id**，也不假定第一处两件都能上手（带门槛的那几件在这一刻可能
+    #   `state == "no"`）—— 现算一个「裸『触摸』真摸到两件」的地方，再考取参那一支。
+    _PREFIX22 = _r("SYS_TOUCH_GET", icon="\u0000", name="\u0000").split("\u0000")[0]
+    _spot2 = _hit2 = None
+    for _k22 in sorted(_by22):
+        if len(_by22[_k22]) < 2:
+            continue
+        _o22 = _say22("触摸", loc=_k22[0], node=_k22[1])
+        _hits22 = [_v for _pid, _v in _by22[_k22]
+                   if any(x.startswith(_PREFIX22) and str(_v.get("name")) in x for x in _o22)]
+        if len(_hits22) >= 2:
+            _spot2, _hit2 = _k22, _hits22
+            break
+    chk("★ ① 现算出一个「裸『触摸』真摸到两件以上」的地方（不手写节点 id）：%s / %s ⇒ %s"
+        % ((_spot2 or ("?", "?"))[0], (_spot2 or ("?", "?"))[1],
+           " · ".join(str(v.get("name")) for v in (_hit2 or [])) or "（一处都没摸到两件？）"),
+        _hit2 is not None)
+
+    _one22 = _hit2[0].get("name")
+    _other22 = _hit2[1].get("name")
+    _got22 = _say22("触摸 %s" % _one22, loc=_spot2[0], node=_spot2[1])
+    chk("★ ③ 点名 `触摸 %s` ⇒ **只**摸这一件（另一件「%s」一个字都不出）"
+        % (_one22, _other22),
+        _r("SYS_TOUCH_GET", icon=_hit2[0].get("icon", ""), name=_one22) in _got22
+        and not any(_other22 in x for x in _got22), _got22)
+    _all22 = _say22("触摸", loc=_spot2[0], node=_spot2[1])
+    chk("★ ④ 反证：不带参照旧**全摸**（两件都在 ⇒ 取参那一支没把老口径顶掉）",
+        _r("SYS_TOUCH_GET", icon=_hit2[0].get("icon", ""), name=_one22) in _all22
+        and any(_other22 in x for x in _all22), _all22)
+    _miss22 = _say22("触摸 压根没有这一件", loc=_spot2[0], node=_spot2[1])
+    chk("★ ⑤ 名字对不上 ⇒ 自己的槽位（点名 + 把**能上手的**列出来），不是「这儿没有可以上手的」",
+        _miss22 == [_r("SYS_TOUCH_MISS", name="压根没有这一件",
+                       list=" · ".join("『%s』" % v.get("name") for v in _hit2))]
+        and _r("SYS_TOUCH_NONE") not in _miss22, _miss22)
+except Exception as exc:                                                  # noqa: BLE001
+    chk("★ F6 `触摸` 取参那一族跑得起来（真宿主契约）", False,
         "%s: %s" % (type(exc).__name__, exc))
 
 

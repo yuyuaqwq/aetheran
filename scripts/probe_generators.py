@@ -47,6 +47,7 @@ EXPECT = [
     "rebuild_item_reqs.py",
     "rebuild_kind_keys.py",
     "rebuild_monsters.py",
+    "rebuild_place_alias.py",
     "rebuild_prof_quests.py",
     "rebuild_quest_gates.py",
     "rebuild_ranks.py",

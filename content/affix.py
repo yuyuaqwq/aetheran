@@ -194,6 +194,28 @@ def thresholds_of(aids) -> list:
     return [(aid, m) for aid, m in _mods(aids, CH_THRESHOLD)]
 
 
+def reward_of(aids) -> dict:
+    """★ P3 BUG-3（本波 f4）：精英那一场的**钱 / 经验 / 掉落轮数** —— 三格都在 `rules/elite.json::reward`。
+
+    病根：原先 `_settle` 里那一档比的是**怪自己的 `role_key`**（`elite` / `chief` …），
+    而词条精英（`† 群居的田鼠 †`）`role_key` 仍是 `normal` ⇒ 打 3 只精英与打 1 只普通怪
+    钱/经验一字不差 —— 精英成了纯亏（真源 `09_ §六③` 明写「精英奖励只多 40–50%」）。
+    ⇒ 这一格由**词条在不在**说话（`affixes` 非空 = 这一场是精英），不看 `role_key`
+    （`role_key` 那一档照旧管**精英档怪**，两条路各管各的）。
+
+    没词条 ⇒ 全 1（= 与接线前逐字相同）。
+    """
+    if not aids:
+        return {"gold_mult": 1.0, "exp_mult": 1.0, "drop_rounds": 1}
+    r = rules().get("reward")
+    if not isinstance(r, dict):
+        raise AffixError("精英口径表缺 `reward` 那一块：%s"
+                         % os.path.join(_RULES_DIR, "elite.json"))
+    return {"gold_mult": float(r["gold_mult"]),
+            "exp_mult": float(r["exp_mult"]),
+            "drop_rounds": int(r["drop_rounds"])}
+
+
 def spawn_plan(mid: str, aids) -> tuple:
     """多只（改行为 群居）：`([怪 id...], [每只的生命倍数])` —— 没有就打一只（倍数全 None）。"""
     got = _mods(aids, CH_SPAWN)
@@ -235,7 +257,14 @@ def scale_drops(drops, aids) -> list:
 
 
 # ══════════════════════════════════════════════════════════════
-# ③ 名字与那一行（全部走 texts 槽位；代码不写文案）
+# ── 「句末那一枚标点」的认词表（★ g4-⑥）─────────────────────────────
+#: 拼接前要摘掉的**句末**标点（只摘末尾一枚；行内的 `——` / `、` 一个字不动）。
+#: 为什么在代码里也留一份：这是**排版**（句末标点摘掉，末尾由表里的 `line_end` 补一枚），
+#: 不是文案；真正的「用哪一枚」仍然只在 `content/rules/elite.json` 的 `label.line_end`。
+_END_MARKS = "。！？…；·"
+
+
+# ── ③ 名字与那一行（全部走 texts 槽位；代码不写文案）
 # ══════════════════════════════════════════════════════════════
 def display_name(mon_name: str, aids) -> str:
     """`† 硬壳的田鼠 †` —— 走槽位 `COMBAT_ELITE_SPAWN`（名字 + hint 两行一起给）。
@@ -245,13 +274,30 @@ def display_name(mon_name: str, aids) -> str:
     return mon_name if not aids else _spawn_line(mon_name, aids)[0]
 
 
+def _join_lines(lines, lab) -> str:
+    """几条词条的 `line` → 一行效果（★ g4-⑥：句末那一枚标点只留一枚）。
+
+    实机原状（p2/p3 报告 + fix2 §七5 顺手核到）：`af_frenzy` 那句自带句号，用 `line_sep`（`；`）
+    接上 `af_swarm` ⇒ 屏幕上成了「…它下手更重。；它身后还有两只…」（**多一枚标点**）。
+    口径：每条各自的**句末标点先摘掉**（`_END_MARKS`），用 `line_sep` 连起来，末尾补**一枚**
+    `label.line_end`（表里的值，不是代码里写死的中文）。只摘句末那一枚 ——
+    `——` 这种行内停顿一个字不动（`af_swarm` 那句的破折号照旧）。
+    """
+    parts = [str(x).strip() for x in (lines or []) if str(x).strip()]
+    if not parts:
+        return ""
+    end = str(lab.get("line_end") or "")
+    marks = _END_MARKS
+    parts = [p[:-1] if p and p[-1] in marks else p for p in parts]
+    return str(lab["line_sep"]).join(parts) + end
+
+
 def _spawn_line(mon_name: str, aids) -> tuple:
     """(名字那一行, hint 那一行) —— 槽位 `COMBAT_ELITE_SPAWN` 的渲染结果按行拆。"""
     from .cmds_ast import T
     lab = rules()["label"]
     names = [str(rec_of(a).get("name") or a) for a in aids]
-    lines = [str((rec_of(a).get("line") or "")).strip() for a in aids]
-    hint = str(lab["line_sep"]).join(x for x in lines if x)
+    hint = _join_lines([rec_of(a).get("line") for a in aids], lab)
     s = T("COMBAT_ELITE_SPAWN", affix=str(lab["sep"]).join(names), name=mon_name, hint=hint)
     parts = str(s).split("\n")
     return parts[0], (parts[1] if len(parts) > 1 else "")
@@ -264,9 +310,7 @@ def elite_line(mon_name: str, aids) -> str:
 
 def hint_of(aids) -> str:
     """那一行效果（词条自己的 `line` 拼起来 —— 域里的话，不是代码里的话）。"""
-    lab = rules()["label"]
-    return str(lab["line_sep"]).join(
-        str(rec_of(a).get("line") or "").strip() for a in aids or [] if rec_of(a).get("line"))
+    return _join_lines([rec_of(a).get("line") for a in aids or []], rules()["label"])
 
 
 # ══════════════════════════════════════════════════════════════

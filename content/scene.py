@@ -33,6 +33,50 @@ def map_key(loc):
     return slot_key(loc)
 
 
+#: 「这一站的人此刻都不在」那一版的键尾（`SCENE_<节点>_EMPTY`）—— 口径见 `resolve` 的 `empty`。
+#: ★ 这个字面量带 `%s`：`scripts/probe_copy` 的「模板拼出来的键也算被引用」认的是 `"%s_…"` 这种写法
+#:   （与 `slot_key` 的 `"SCENE_%s"` 同一手）—— 写成 `+ "_EMPTY"` 会让那一条查不出「谁引用了它」。
+EMPTY_SUFFIX = "_EMPTY"
+
+
+def empty_key(node):
+    """节点级 · **人不在那一版**：`SCENE_<节点>_EMPTY`（口径 31_NPC作息 §四「人不在也要有戏」）。
+
+    为什么要在下一版场景：节点级场景是**静态文本**，可这一站的人有作息（哈根只在昏/夜、
+    老陶集日被吸去挂板墙）⇒ 画面写「有人在旁边坐着」而名册里一个人都没有，
+    玩家照着画面去『搭话』只得到「这儿没有别人」（P1 BUG-5）。空版只在这一站**本该有人、
+    此刻一个都没到场**时才用（判定 = `content/town.py::station_empty`）。
+    """
+    return "%s_EMPTY" % node_key(node)
+
+
+#: ★ g4-⑤：「按状态分支」那一档的变体后缀（`SCENE_<节点>__<状态>`）。
+#:   今天只有一处：白烛堂那句「你把伤口给他看」对**满血**的玩家同样别扭（P1 BUG-7 同族），
+#:   满血那一版走 `SCENE_WT_CHAPEL__FULL`。状态名由调用方给（`cmds_ast.look` 按面板判），
+#:   本模块不认识「血」这件事 —— 它只管「哪条键」。
+VARIANT_FULL = "FULL"
+
+
+def variant_key(base: str, tag) -> str:
+    """`<基础槽位>__<状态名大写>` —— 变体槽位的**唯一写法**（P-19 / K65）。
+
+    ★ 与 `content/calendar.py::variant_key` 是**同一个拼法**（那边传的是条件条目 id，
+      这边传的是状态名）—— 那边只是转发到这一个函数，别在两处各写一遍 `%s__%s`。
+    """
+    return "%s__%s" % (str(base), str(tag).upper())
+
+
+def variant_slot(texts, base: str, tag) -> str | None:
+    """基础槽位的变体（表里有这一条、且非空）→ 那个键；没有 ⇒ None（回落基础槽位）。"""
+    if not (base and tag):
+        return None
+    k = variant_key(base, tag)
+    rec = texts.get(k)
+    if rec and (rec.get("value") or "").strip():
+        return k
+    return None
+
+
 def resolve_map(texts, loc):
     """只取地图级（「踏进这张图的第一眼」）—— 取不到回 None。"""
     k = map_key(loc)
@@ -42,9 +86,25 @@ def resolve_map(texts, loc):
     return None
 
 
-def resolve(texts, loc, node):
-    """节点级 → 地图级 —— 取不到回 None。"""
-    for k in (node_key(node), map_key(loc)):
+def resolve(texts, loc, node, empty=False, variant=None):
+    """节点级 → 地图级 —— 取不到回 None。
+
+    `empty=True`（★ 本波）：先试**人不在那一版**（`SCENE_<节点>_EMPTY`），再退老那一套。
+      ★ 空版**不退地图级** —— 退过去就是把「踏进这张图的第一眼」（写着镇子北口那块石头）
+        拿来当这一站的近景，正是 P1 BUG-4 / P4 BUG-1 那一族（东口读到「风车在镇子北口」）。
+        空版取不到就照老的那一套走（不静默给空字符串）。
+    `variant`（★ g4-⑤）：**按状态分支**那一档 —— 先试 `SCENE_<节点>__<状态大写>`（例：
+      `SCENE_WT_CHAPEL__FULL` 满血那一版），取不到就照老那一套走。状态名由调用方判好传进来。
+    """
+    keys = [node_key(node)]
+    if variant:
+        v = variant_slot(texts, node_key(node), variant)
+        if v:
+            keys.insert(0, v)
+    if empty:
+        keys.insert(0, empty_key(node))
+    keys.append(map_key(loc))
+    for k in keys:
         rec = texts.get(k)
         if rec and (rec.get("value") or "").strip():
             return k

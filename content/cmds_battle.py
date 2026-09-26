@@ -25,15 +25,17 @@
       · 集火     组队概念（`04_指令总表 §五`「多人时指定」）—— 单人给明确回话，
                  不假装锁定了谁。
 
-★ 这一批**没做**的（写在这儿免得下一轮当成已完，台账在 `_notes.md`）：
+★ 这一批**没做**的（写在这儿免得下一轮当成已完，台账在 `_notes.md`）——★ G2 已把它们接上，
+  这一段的每一条都点名了落点（下一轮别再当成没做）：
   · 真源 `03_风车镇_指令与回复 §二` 那四段式战斗回复（「◆ 野狗正在蓄力…还剩 N 刻 / ① 攻击
-    ② 打断…」）要**一场战斗跨多条指令**的持久状态 —— 那是「轮流制」（组队那批，`_notes.md`
-    留问）。本批是「一条指令 = 一场遭遇」，六条各自真生效、可观测、可判据。
-  · ★ P-57 已落（2026-09-26 · 本波）：`逃跑` 不再是桩句 —— 野外 / 单人那条老路上它掷一次定
-    成败（失败率 **30%**，唯一声明处 `content/rules/battle_cmds.json::flee_fail_pct`）：
-    跑成 ⇒ 脱离（这一场没打）；被拦下 ⇒ 那一手白花、这一场照打（不额外挨打）。
+    ② 打断…」）要**一场战斗跨多条指令**的持久状态 ⇒ **★ G2 落了**：那一层就是「场」
+    （`content/instance.py`），单人也有自己那一场；四段式那一屏在 `instance.turn_lines`。
+  · ★ P-57 已落（2026-09-26 · 本波之前）：`逃跑` 掷一次定成败（失败率 **30%**，唯一声明处
+    `content/rules/battle_cmds.json::flee_fail_pct`）。
     ★ **多人场那一层仍没做**（`17_组队与策略配合 §三·8` 的口径真源没写）：有队时照旧回
       `COMBAT_FLEE_TODO`（照实说，不假装做了）—— 与 `content/instance.py` 抬头那条纪律一致。
+    ★ G2 起：**同一次逃跑**再敲一次会**重掷**（种子带上「这一场里第几次跑」的那一格，
+      存在场里），不再「今天在这儿跑不掉就永远跑不掉」。
 
 ★ B3-8 战斗收尾：输了要**真的落地**（回白烛堂 · 血回满 · 掉当前等级经验的 10% ·
   不掉装备 —— 口径 `00_总纲/03_主要玩法 §4.9`，曲线走 `cmds_ast.exp_need` 一个口）；
@@ -85,6 +87,20 @@ def _flags(p):
     return f
 
 
+def drop_seed(uid, mid, nth: int, round_i: int = 0) -> str:
+    """★ P3 BUG-1（本波 f4）：**掉落那一颗种子的唯一一口** —— 生产端（`_settle`）与探针都走它。
+
+    种子 = `uid : 怪 id : 这一只打过几回 : 第几轮`。
+      · 「第几次」是**非有不可**的那一维：只有 `uid:怪 id` 时，同一只怪对同一个人
+        **每次都掉同一件**（实测：田鼠 4 次全铁渣、骸骨 3 次全短刃；强化要的「硬骨」
+        对本档永远刷不出来）—— 那是「随机」变成了「算死的」。
+      · 「第几轮」是给精英那条 `drop_rounds` 用的（同一次战斗里两轮各要一份种子，
+        否则两轮同结果 = 白多一轮）。
+    ⇒ 谁要复现「这个人打这只怪第 n 次掉什么」，都调这一口，别自己拼一份（拼错就是两处口径）。
+    """
+    return "%s:%s:%d:%d" % (uid, mid, int(nth), int(round_i))
+
+
 def encounter_lines(monster, p):
     """怪身上的战内台词（B3-4 装备事件）—— 它**先开口**的那几句。
 
@@ -124,9 +140,20 @@ def _encounter(p, uid, seed=None):
 
     ★ B3-5：遇敌权重那一层挂上来了 —— 现在开场的事件给了 `encounter_mul` 就按它加权；
       **没给 / 没有事件 = 与改前逐字相同**（同一个种子挑出同一只）。
+    ★ fxa（P2 试玩 #2 「说的和打的对不上」）：**副本那一张图上那一只由稳定标识定下来**
+      —— 图 / 这一间 / 这个人 / 这一游戏日 ⇒ 同一只（写法与精英那条 `affix.seed_of`
+      **逐字同一套**：`sha1(uid|图|节点|游戏日)`，不是每进程加盐的内置 `hash`）。
+      这么定的理由：副本里「说的那一只」（『下一层』点名的守卫 · 塔里『观察』那一栏）
+      与「打的那一只」（『攻击』真开的那一场）是**两条指令**，只有把这一格的那只解成
+      **同一个函数值**，两句话才可能指同一只 —— 「同一个口只抽一次」的那条纪律。
+      · 野外 / 镇上照旧 `seed=None` ⇒ **与改前逐字相同**（每一次敲都现抽，可遇不可求）。
+      · 「哪张图是副本」也**不写死图名**：按数据说话 —— 声明了 `floors` 的图 = 副本
+        （`maps.<图>.floors` 是『下一层』那张分层表的同一格）。
     """
     ms = _data("monsters")
     mul = CAL.encounter_mul(p=p)
+    if seed is None and (_map_of(p["loc"]) or {}).get("floors"):
+        seed = AFFIX.seed_of(uid, p["loc"], p["node"], CAL.state().get("game_day"))
     return CB.pick_encounter(ms, p["loc"], p["node"], int(p.get("level", 1)),
                              seed=seed, mul=mul or None)
 
@@ -140,17 +167,112 @@ def _fmt(logs, limit=12):
 
 
 # ══════════════════════════════════════════════════════════════
+# ★ G2：分段推进的三件小件（条件那一手 / 对手名 / 只读的口）
+# ══════════════════════════════════════════════════════════════
+def _foe_name_in(st) -> str:
+    """**这一场里**对手的名字（精英带 `† … †`，名字是它在场上的名字）—— 只从场里现读。
+
+    ★ fxa（P3/P4 试玩 #4「同一屏报两只）：『逃跑』/『后撤』原先在**开场之前**先抽一次
+      （旧 `_foe_name` + `_foe_mid`），开场那一敲（`instance.take_turn` → `_open`）自己
+      又抽一次 ⇒ 同一屏上「⚠️ 遭遇」报一只、那句话里的名字是另一只
+      （P3：`遭遇：田鼠` 与 `把 游荡的骸骨 甩在了后头`；P4：`遭遇：摆渡人` 与
+      `石滩螃蟹 先一步拦住了退路`），而且那一条**进了这一场的日志**（『战斗日志』复盘也串）。
+      现在名字只有一个来源 = 场上那一格 actor（`instance.foe_of`）⇒ 与「对手在干什么」
+      那一屏是同一只；开不了场的时候（没得打）由调用方先出 `COMBAT_NEED_FOE`，走不到这儿。
+    """
+    from . import instance as INST
+    foe = INST.foe_of(st) if st else None
+    return str((foe or {}).get("name") or "")
+
+
+def _need_foe(env, p, uid) -> bool:
+    """这一手现在**能不能用**（★ G2 起走「场」之后，这条判据要单独拿一次）。
+
+    · 已经有一场在跑 ⇒ 能（接着打，`_meet` 不必再抽一次）；
+    · 没有场 ⇒ 看这一带有没有得打（`_meet` 挑得出来 ⇒ 这一敲就是开场那一敲）。
+    `False` ⇒ 调用方出 `COMBAT_NEED_FOE`（战斗族那一句），**什么都不动**（fail-closed）——
+    这是 P4 收口的那条口径：打断 / 防御 / 后撤 / 逃跑 / 自动 在没得打的地方说**同一句**。
+    """
+    from . import instance as INST
+    if INST.live(env, uid) is not None:
+        return True
+    return bool(_meet(p, uid)[0])
+
+
+def _match_foe(st, want):
+    """这一场里被点了名的那只怪（认不出 ⇒ None）—— 名字按**场上的显示名**对。
+
+    精英那一只场上的名字带 `† … †` ⇒ 点名写「田鼠」也点得中（`want in nm` 那条）。
+    """
+    w = str(want or "").strip()
+    if not w:
+        return None
+    for a in ((st.get("battle") or {}).get("sides") or {}).get("enemy") or []:
+        if not isinstance(a, dict) or int(a.get("hp", 0) or 0) <= 0:
+            continue
+        nm = str(a.get("name") or "")
+        if w == str(a.get("uid") or "") or (nm and (w == nm or (len(w) >= 2 and w in nm))):
+            return a
+    return None
+
+
+def _retreat_decide():
+    """`后撤` 的条件那一手（★ G2 起走「场」，判据与 B3-23 逐字同一套）。
+
+    对方**这一刻押没押着手**（引擎现成状态 `actor["charging"]`，不编数）：
+      · 没押着 ⇒ 回 `"fled"`：这一场到此为止，**这一手不花**（`COMBAT_RETREAT_OK` 进日志）；
+      · 正押着 ⇒ 回 `None`：这一手白花、这一场照打（`COMBAT_RETREAT_BLOCK` 进日志）。
+    ★ fxa（试玩 #4）：名字**从这一场现读**（`_foe_name_in`）—— 不收调用方在开场之前
+      算好的那个名字（那时场上还没有对手，那个名字是另抽的一只）。
+    """
+    def _d(b, caster, logs, st):
+        from ext_combat.battle import schedule as SCH
+        from ext_combat.battle.actors import actor_alive
+        name = _foe_name_in(st)
+        now0 = float(getattr(b, "_now", 0) or 0)
+        for a in (b.sides.get(CB.ENEMY_SIDE) or []):
+            if actor_alive(a) and SCH.pending_left(a, now0) > 0:
+                logs.append(T("COMBAT_RETREAT_BLOCK", name=name))
+                return None
+        logs.append(T("COMBAT_RETREAT_OK"))
+        return "fled"
+    return _d
+
+
+def _flee_decide(uid, p):
+    """`逃跑` 的条件那一手（★ G2 起走「场」）—— 失败率 **30%**，唯一声明处见 `battle_acts`。
+
+    ★ 从「一次结算」改成「一手一手来」之后多了一件真事：**同一场里再敲一次会重掷**
+      （种子里带上「这一场第几次跑」那一格 `st["flee_tries"]`，存在场里）——
+      不然「今天在这儿跑不掉」= **永远跑不掉**，那是把随机算成了死数。
+    ★ fxa（试玩 #4）：那一只（掷骰的种子）与那个名字**都从这一场现读** —— 场里那一格
+      `pick` 就是这一场真正开打的那一只；名字走 `_foe_name_in`（同一只）。
+    """
+    def _d(b, caster, logs, st):
+        m = str((st.get("pick") or [""])[0])             # 场里那一只（这一手开场时它才存在）
+        name = _foe_name_in(st)
+        n = int(st.get("flee_tries") or 0)
+        st["flee_tries"] = n + 1
+        if _flee_roll(uid, p, m, n) >= BA.flee_fail_pct():
+            logs.append(T("COMBAT_FLEE_OK", name=name))
+            return "fled"
+        logs.append(T("COMBAT_FLEE_BLOCK", name=name))
+        return None
+    return _d
+
+
+# ══════════════════════════════════════════════════════════════
 # ★ B3-23：一场遭遇 · 你的第一手 · 落账（六条指令共用这一条路径）
 # ══════════════════════════════════════════════════════════════
-def _meet(p, uid):
-    """遇敌那一步 —— 返回 `(pick, monsters)`；`pick` 空 = 这一带没有能打的东西。"""
-    ms = _data("monsters")
 def _meet(p, uid):
     """遇敌那一步 —— 返回 `(pick, monsters, affixes, 开场那行)`；`pick` 空 = 这一带没有能打的东西。
 
     ★ B3-24：这一格今天出精英 ⇒ 遭遇就是它（怪与词条都由 `affix.elite_of` 现算；
       「观察」读的是**同一个口**（同一 uid / 图 / 节点 / 游戏日 ⇒ 同一个种子）——
       所以观察那行是真预告，不是另抽一次。词条池里一条都没接线 ⇒ 回 `[]`（不出精英）。
+    ★ fxa：旧版这儿留着一条**被下面这条盖住的空壳**（同一函数名写了两遍，头一条的
+      `return` 都没有 —— 死的）。删掉：本波起 `_encounter` 在副本里也吃稳定种子
+      （见 `_encounter` 抬头），两条同名定义并存最容易让「哪一条在跑」看错。
     """
     ms = _data("monsters")
     pick = _encounter(p, uid)
@@ -164,6 +286,23 @@ def _meet(p, uid):
     if affixes:                                    # 精英：名字行 + 一句话效果（逐字走 texts 槽位）
         return pick, ms, affixes, AFFIX.elite_line(str(ms[pick[0]].get("name", pick[0])), affixes)
     return pick, ms, affixes, T("COMBAT_MEET", name=ms[pick[0]].get("name", pick[0]))
+
+
+def foe_here(p, uid) -> str:
+    """这一格**定下来的那一只**（显示名；空串 = 这一带没有能打的）。
+
+    ★ fxa（P2 试玩 #2）：「说的那一只」与「打的那一只」的**唯一一口** ——
+      副本守卫点名（`cmds_tower._blocked_by`）、塔里『观察』那一栏
+      （`cmds_tower.foe_lines_here`）与『攻击』真开的那一场（`_meet`）**都问它**。
+      副本里 `_encounter` 那一格由稳定标识定下来 ⇒ 这几处问出来的是同一只；
+      野外照旧是「现抽一次」（每次敲都可能换一只 —— 与改前逐字相同）。
+      原先这副算名字的活在本文件里有两份（`_foe_name` 一份 · `_meet` 一份），
+      副本守卫那儿还拼了第三份（`habitat` 名单直接连起来）⇒ 三处各说一只。
+    """
+    pick, ms, affixes, _line = _meet(p, uid)
+    if not pick:
+        return ""
+    return AFFIX.display_name(str(ms[pick[0]].get("name", pick[0])), list(affixes))
 
 
 def _run_hand(p, pick, ms, affixes=(), hand=None, action=None, skill=None, party=None, uid=None):
@@ -217,24 +356,53 @@ async def _settle(env, p, uid, pick, ms, res, logs, hp_after, seen, player, affi
         lv = int(m.get("lv", 1))
         rk = m.get("role_key")
         gold = lv * (8 if rk == "elite" else (20 if rk in ("chief", "warden", "boss") else 3))
+        # ★ P3 BUG-3（本波 f4）：**词条精英**那一档加成 —— 原先这里只有 `role_key` 那一档，
+        #   而 `† 群居的田鼠 †`（3 只）的 `role_key` 仍是 `normal` ⇒ 精英与打 1 只普通怪
+        #   钱/经验一字不差（精英纯亏）。倍数在 `rules/elite.json::reward`（真源 09_ §四/§六③），
+        #   没词条 ⇒ 全 1（= 与接线前逐字相同）。
+        rw = AFFIX.reward_of(affixes)
+        gold = int(round(gold * float(rw["gold_mult"])))
         p["gold"] = int(p.get("gold", 0)) + gold
         p["hp"] = hp_after
         # ★ B3-13：打怪给经验（原先只有交活给 —— 「接活→出门→打怪→交活」这条循环里，
         #   打怪那一半是白打的）。公式走 `exp_of_kill`，升级走 `add_exp` —— 都只有一个口。
-        exp_gain = exp_of_kill(lv)
+        exp_gain = int(round(exp_of_kill(lv) * float(rw["exp_mult"])))
         ups = add_exp(p, exp_gain)
-        # ★ 掉落（B2-3）：按怪身上的 dp_* 池抽（可复现：种子 = 玩家 uid + 怪 id）
+        # ★ 掉落（B2-3）：按怪身上的 dp_* 池抽（可复现：种子 = 玩家 uid + 怪 id + **这一只的第几次**）
         # ★ P-60：`level` 这一格原先传的是**怪的等级**（而且 `loot` 收了从来没用 —— 死参数）
         #   ⇒ 现在传**玩家自己的等级**：带 `level_gated` 的池（`dp_elite_gear`「按等级抽一件」）
         #   只在玩家这一级穿得上的那批里挑，3 级的人再也抽不到 17 级的遗物。
         #   （怪的等级另有用处：上面掉钱那两行 `lv * …` 照旧。）
+        # ★ P3 BUG-1（本波 f4）：**种子原先只有 `uid:怪 id`** —— 不含次数/日期 ⇒ 同一只怪对同一个
+        #   人**每次都掉同一件**（实测：田鼠 4 次全 `铁渣 ×2`、游荡的骸骨 3 次全 `拾荒者的短刃 ×1`；
+        #   强化要的「硬骨」对本档永远刷不出来）。现在把「**这一只打过几回**」记进
+        #   `flags.drops_seen`（与 `flags.enhance_tries` 同族的计数格），一轮一份种子；
+        #   精英那一场由 `rules/elite.json::reward.drop_rounds` 多跑一轮（每轮种子不同 ⇒ 不重样）。
         plv = int(p.get("level") or 1)
+        f = _flags(p)
+        seen_n = dict(f.get("drops_seen") or {})
+        nth = int(seen_n.get(pick[0], 0))
+        seen_n[pick[0]] = nth + 1
+        f["drops_seen"] = seen_n
         drops = []
-        for pool_id in (m.get("drops") or []):
-            drops.extend(LT.roll_pool(pool_id, level=plv,
-                                     rnd=__import__("random").Random("%s:%s" % (uid, pick[0]))))
+        for round_i in range(max(1, int(rw["drop_rounds"]))):
+            _dseed = drop_seed(uid, pick[0], nth, round_i)
+            for pool_id in (m.get("drops") or []):
+                drops.extend(LT.roll_pool(pool_id, level=plv,
+                                         rnd=__import__("random").Random(_dseed)))
         # ★ B3-24：掉落按词条 PE 等比上调 + 富饶那条的「材料翻倍」（倍数在 rules/elite.json）
         drops = AFFIX.scale_drops(drops, affixes)
+        # ★ P3 BUG-3（本波 f4）：多轮那个口子会把**同一件**抽出来两次 ⇒ 同名合并成一行
+        #   （`add_to_bag` 本来就是按 id 累加的 —— 背包一行、掉落也一行，不印两行一样的）。
+        if len(drops) > 1:
+            _m: dict = {}
+            for _d in drops:
+                _k = _d["id"]
+                if _k in _m:
+                    _m[_k]["n"] = int(_m[_k].get("n", 1) or 1) + int(_d.get("n", 1) or 1)
+                else:
+                    _m[_k] = dict(_d)
+            drops = list(_m.values())
         if drops:
             LT.add_to_bag(p, drops)
         new = CX.note_items(p, [d["id"] for d in drops]) if drops else []
@@ -363,8 +531,12 @@ async def interrupt(env, sink, uid, player):
     head = T("COMBAT_INT_HEAD", skill=act.get("name", "")) if act else T("COMBAT_INT_PLAIN")
     hand = BA.Hand("interrupt", p=p)
     # ★ B3-26：在场里 ⇒ 走「场」那道（打断要「花掉你这一手」，得先轮到你）
+    #   ★ G2：没得打的地方先说**同族那一句**（`COMBAT_NEED_FOE`，与 P4 收口的口径一致）
     from . import instance as INST
     if INST.route_needed(env, uid):
+        if not _need_foe(env, p, uid):
+            yield T("COMBAT_NEED_FOE")
+            return
         async for line in INST.take_turn(env, p, uid, player, head=head, hand=hand):
             yield line
         return
@@ -391,6 +563,19 @@ async def retreat(env, sink, uid, player):
     _mx, _line = hp_cap_or_line(p)
     if _line:
         yield _line
+        return
+    # ★ G2：分段推进 —— 走「场」，这一手 = 你的一手（判据仍由 `_retreat_decide` 现算）
+    from . import instance as INST
+    if INST.route_needed(env, uid):
+        # ★ fxa（试玩 #4）：**别在开场之前先抽一只**（那会把名字抽成另一只）——
+        #   这一带有没有得打（`_need_foe`）与名字（`_retreat_decide` 从场里现读）分开问。
+        if not _need_foe(env, p, uid):
+            yield T("COMBAT_NEED_FOE")
+            return
+        hand = BA.Hand("retreat", p=p)
+        async for line in INST.take_turn(env, p, uid, player, head=T("COMBAT_RETREAT_HEAD"),
+                                         hand=hand, decide=_retreat_decide()):
+            yield line
         return
     pick, ms, affixes, _mline = _meet(p, uid)
     if not pick:
@@ -439,7 +624,7 @@ async def retreat(env, sink, uid, player):
     for line in _fmt([str(x) for x in logs]):
         yield line
     async for line in _settle(env, p, uid, pick, ms, b.result, [str(x) for x in logs],
-                              int(pa.get("hp", 0)), seen, player):
+                              int(pa.get("hp", 0)), seen, player, affixes=affixes):
         yield line
 
 
@@ -491,8 +676,12 @@ async def skill_cast(env, sink, uid, player):
         return
     _head = T("COMBAT_SKILL_HEAD", name=rec.get("name", sid))
     # ★ B3-26：在场里 ⇒ 走「场」那道（放技能要「花掉你这一手」，得先轮到你）
+    #   ★ G2：没得打的地方先说**同族那一句**
     from . import instance as INST
     if INST.route_needed(env, uid):
+        if not _need_foe(env, p, uid):
+            yield T("COMBAT_NEED_FOE")
+            return
         async for line in INST.take_turn(env, p, uid, player, head=_head,
                                          action="skill", skill=sid):
             yield line
@@ -529,8 +718,12 @@ async def battle_item(env, sink, uid, player):
     hand = BA.Hand("item", p=p, item=iid)
     _head = T("COMBAT_ITEM_HEAD", name=rec.get("name", iid))
     # ★ B3-26：在场里 ⇒ 走「场」那道（用物要「花掉你这一手」，得先轮到你）
+    #   ★ G2：没得打的地方先说**同族那一句**
     from . import instance as INST
     if INST.route_needed(env, uid):
+        if not _need_foe(env, p, uid):
+            yield T("COMBAT_NEED_FOE")
+            return
         async for line in INST.take_turn(env, p, uid, player, head=_head, hand=hand):
             yield line
         return
@@ -562,6 +755,20 @@ async def focus_fire(env, sink, uid, player):
     if _party_now(env, p, uid) != 1:
         yield T("COMBAT_FOCUS_PARTY")
         return
+    # ★ G2：**在打的时候**这条指令真接上了 —— 把对手里的一只锁成后面的目标（不吃行动）
+    from . import instance as INST
+    st = INST.live(env, uid)
+    if st is not None:
+        foe = _match_foe(st, want)
+        if foe is None:
+            yield T("COMBAT_FOCUS_MISS", name=want) if want else T("COMBAT_FOCUS_SOLO")
+            return
+        INST.set_focus(env, uid, foe.get("uid"))
+        yield T("COMBAT_FOCUS_LOCK", name=foe.get("name") or foe.get("uid") or "")
+        # ★ 这条不吃行动 ⇒ 顺手把「现在什么局势」再报一遍（与出手那一屏同一个口）
+        for line in INST.turn_lines(st):
+            yield line
+        return
     ms = _data("monsters")
     hit = None
     for mid, m in ms.items():
@@ -573,6 +780,11 @@ async def focus_fire(env, sink, uid, player):
             break
     if hit:
         yield T("COMBAT_FOCUS_NAMED", name=hit[1].get("name", hit[0]))
+        return
+    # ★ F6（QA P3）：点了名却认不出 —— 与「空着没点」分开说。原先两句回的是同一句话，
+    #   玩家以为「集火 不存在的怪」被听懂了（其实只是掉进了「没组队」那一句）。
+    if want:
+        yield T("COMBAT_FOCUS_MISS", name=want)
         return
     yield T("COMBAT_FOCUS_SOLO")
 
@@ -617,6 +829,25 @@ async def swap_weapon(env, sink, uid, player):
     p = _p(p)                                  # ★ 上限/现血按新的 equipped 重新派生（P-27）
     ok = T("COMBAT_SWAP_OK", icon=rec.get("icon", ""), name=LT.label_of(iid),   # ★ B4-20 同一个显示名口
            kind=rec.get("kind", ""))
+    # ★ G2：分段推进 —— 这一手花在换手上（场里那一格的面板由 `Hand("swap")` 当场重挂，
+    #   换完就轮到对方那一手；换下来的那件已经回背包了）
+    from . import instance as INST
+    if INST.route_needed(env, uid):
+        if not _need_foe(env, p, uid):
+            # 没在打、这一带也没得打 ⇒ 只换手（回老路那一句），不硬开一场
+            if player is not None:
+                player.update(p)
+            _save(env)
+            yield T("SYS_GEAR_EQUIP_OK", icon=rec.get("icon", ""), name=LT.label_of(iid),
+                    kind=rec.get("kind", ""))
+            return
+        if len(cand) > 1:                          # 还有别的能换（只提示 —— 换哪一件由数据说话）
+            yield T("COMBAT_SWAP_ASK", list=" · ".join(
+                "『%s』" % LT.label_of(k) for k in cand[1:]))
+        hand = BA.Hand("swap", p=p, lines=[ok])
+        async for line in INST.take_turn(env, p, uid, player, hand=hand):
+            yield line
+        return
     pick, ms, affixes, _mline = _meet(p, uid)
     if not pick:
         # 这一带没有能打的东西 ⇒ 手换上了，没处花（不硬开一场）
@@ -660,8 +891,12 @@ async def defend(env, sink, uid, player):
         yield _line
         return
     # ★ B3-26：在场里 ⇒ 走「场」那道（防御也是「你这一手」；超时保底就是它）
+    #   ★ G2：没得打的地方先说**同族那一句**
     from . import instance as INST
     if INST.route_needed(env, uid):
+        if not _need_foe(env, p, uid):
+            yield T("COMBAT_NEED_FOE")
+            return
         async for line in INST.take_turn(env, p, uid, player, action="defend"):
             yield line
         return
@@ -670,12 +905,63 @@ async def defend(env, sink, uid, player):
 
 
 async def auto_battle(env, sink, uid, player):
+    """`自动` —— 与『攻击』同一条路（一条指令打完整场）。
+
+    ★ P2 体验（本波 f4）：**没仗打时那句话**原先掉进了场景口吻的 `COMBAT_NONE`
+      （「这一带暂时没有遇到什么。」）——「自动」是**开打之后**的指令，同族的
+      打断 / 防御 / 后撤 / 逃跑 都回 `COMBAT_NEED_FOE`（「这一手得在打起来的时候用 ——
+      这一带没有能打的东西。」），只有它一个不一样（P4 报告里点名的「同族指令错话术不统一」）。
+      ⇒ 先按同一条遇敌口径看一眼：这一带根本没有能打的 ⇒ 回同族那一句，**什么都不动**；
+      有得打 ⇒ 原样走 `attack`（一个字不变）。
+    """
+    p = _p(player)
+    _mx, _line = hp_cap_or_line(p)
+    if _line:                       # 档上还没择业 ⇒ 与『攻击』同一条 fail-closed 行
+        yield _line
+        return
+    from . import instance as INST
+    if INST.route_needed(env, uid):
+        # ★ G2：`自动` = **一直推到分出胜负**（分段制里唯一允许一次打完的那条），
+        #   走 `instance.take_auto`（与手动那条同一套骨架 / 同一套落账）。
+        #   没得打的地方先说**同族那一句**（不许掉进 `_open` 那句场景口吻的 `COMBAT_NONE`）。
+        if not _need_foe(env, p, uid):
+            yield T("COMBAT_NEED_FOE")
+            return
+        async for line in INST.take_auto(env, p, uid, player):
+            yield line
+        return
+    if not _meet(p, uid)[0]:        # 空列表 = 这一带的 `habitat` 里一只都挑不出来
+        yield T("COMBAT_NEED_FOE")
+        return
     async for line in attack(env, sink, uid, player):
         yield line
 
 
-async def battle_log(env, sink, uid, player):
+async def battle_log(env, sink, uid, player, page=None):
+    """`战斗日志` —— 复盘（`04_指令总表 §五`「谁打断过谁」）。
+
+    ★ G2 两档（**先看在打的这一场**）：
+      · 正在打 ⇒ 出**这一场到现在为止**的全部过程（抬头带「打到第几手」）；
+        这一档**分页**（`03_ §〇` 排版纪律：一次回复不超过一屏）—— `下一页` / `回 <页码>` 翻；
+      · 没在打 ⇒ 老路：`flags.last_battle`（上一场）那一条，**全文照出**（一条都不藏）。
+    """
     p = _p(player)
+    from . import instance as INST
+    st = INST.live(env, uid)
+    if st is not None:
+        from . import pager as PG
+        foe = INST.foe_of(st)
+        head = [T("COMBAT_LOG_LIVE_HEAD",
+                  enemy=str((foe or {}).get("name") or ""),
+                  n=int(st.get("hands") or 0))]
+        rows = [str(x) for x in (st.get("logs") or [])]
+        if not rows:
+            yield head[0]
+            yield T("COMBAT_LOG_NONE")
+            return
+        for line in PG.render(env, "battle_log", head, rows, page=page):
+            yield line
+        return
     last = (p.get("flags") or {}).get("last_battle")
     if not last:
         yield T("COMBAT_LOG_NONE")
@@ -708,6 +994,20 @@ async def flee(env, sink, uid, player):
         return
     if _party_now(env, p, uid) != 1:           # ★ 多人场那一层：口径真源没写 ⇒ 照实说（不假装做了）
         yield T("COMBAT_FLEE_TODO")
+        return
+    # ★ G2：分段推进 —— 走「场」，这一手 = 你的一手（30% 被拦下，掷骰走 `_flee_decide`）
+    from . import instance as INST
+    if INST.route_needed(env, uid):
+        # ★ fxa（试玩 #4）：这一带有没有得打问 `_need_foe`（原先问 `_foe_name`，
+        #   那会在开场之前**先抽一只**，名字随后被开场那一抽换成另一只）。
+        if not _need_foe(env, p, uid):
+            yield T("COMBAT_NEED_FOE")
+            return
+        # ★ 跑成/被拦下都由 `_flee_decide` 说（它拿得到场，能记「这一场第几次跑」）
+        hand = BA.Hand("retreat", p=p)
+        async for line in INST.take_turn(env, p, uid, player, hand=hand,
+                                         decide=_flee_decide(uid, p)):
+            yield line
         return
     pick, ms, affixes, _mline = _meet(p, uid)
     if not pick:
@@ -755,21 +1055,27 @@ async def flee(env, sink, uid, player):
     for line in _fmt([str(x) for x in logs]):
         yield line
     async for line in _settle(env, p, uid, pick, ms, b.result, [str(x) for x in logs],
-                              int(pa.get("hp", 0)), seen, player):
+                              int(pa.get("hp", 0)), seen, player, affixes=affixes):
         yield line
 
 
-def _flee_roll(uid, p, mid) -> float:
+def _flee_roll(uid, p, mid, nth: int = 0) -> float:
     """这一手逃跑的手气（`0 ≤ x < 1`）—— ★ P-57 的唯一随机口。
 
-    种子 = `uid + 那一只 + 这一处 + 游戏日`（与「悬赏每日轮换」「采集当日第几次」同一族写法：
-    种子必须由**现成的稳定标识**拼出来，不许 `random.random()` 那种不可复现的口）：
-      · 同一日 / 同一处 / 同一只 / 同一个人 ⇒ **必是同一个手气**（两个进程也一样）；
-      · 要判成/败两态，换人、换日、换地方或换一只都能翻面（探针就是照这条现算的）；
-      · 「这一手」与「上一手」用同一颗种子是本波**有意**的取舍（真源没给计数格）——
-        登记在 `_notes.md`；要「连试两次不一样」得先有 nth 那一格。
+    种子 = `uid + 那一只 + 这一处 + 游戏日 + **这一场第几次跑**`（与「悬赏每日轮换」
+    「采集当日第几次」同一族写法：种子必须由**现成的稳定标识**拼出来，不许 `random.random()`
+    那种不可复现的口）：
+      · 同一日 / 同一处 / 同一只 / 同一个人 / **同一次** ⇒ 必是同一个手气（两个进程也一样）；
+      · 要判成/败两态，换人、换日、换地方、换一只或**换一次**都能翻面（探针就是照这条现算的）。
+    ★ G2：`nth` = 这一场里**第几次跑**（0 起）—— 那一格存在场里（`st["flee_tries"]`），
+      由 `_flee_decide` 现读现写。从「一次结算」改成「一手一手来」之后，少了它就会
+      「这一场跑不掉 = 永远跑不掉」（同一颗种子掷到底）——那是把随机算成了死数。
+      ★ `nth == 0` 那一档拼出来的种子与 P-57 **逐字相同**（老路一字不变、`probe_party ⑦`
+        那一支自己现算的种子照旧对得上）；**第 2 次起**才多一节后缀。
     判定只由调用方做（`>= battle_acts.flee_fail_pct()` 就是被拦下）—— 这里不写任何阈值。
     """
     day = int((CAL.state() or {}).get("game_day") or 0)
-    return random.Random("%s:flee:%s:%s:%s:%d" % (uid, mid, p.get("loc") or "",
-                                                  p.get("node") or "", day)).random()
+    seed = "%s:flee:%s:%s:%s:%d" % (uid, mid, p.get("loc") or "", p.get("node") or "", day)
+    if int(nth):
+        seed += ":%d" % int(nth)
+    return random.Random(seed).random()

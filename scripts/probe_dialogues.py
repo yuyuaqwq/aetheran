@@ -24,8 +24,10 @@ sys.path.insert(0, ENGINE)
 from saintess_engine.package import load_stack                       # noqa: E402
 
 ok = True
+#: ★ 本波（P1 BUG-7）加的两个：`hurt`（有伤 —— 生命没满）· `equipped`（那一格上有东西）。
+#:   两个字都在 `content/cmds_talk._pick_indexed` 里各有一支（下面 ③ 的静态守卫钉着）。
 NEED_KINDS = {"flag", "quest_done", "quest_active", "time", "event", "holding",
-              "weather", "codex", "flag_not"}
+              "weather", "codex", "flag_not", "hurt", "equipped"}
 MAX_CHARS = 400          # 一屏字数硬约束（消息模板 §优化 3）
 
 
@@ -61,21 +63,41 @@ bad1 = [k for k, v in dl.items()
 chk("每棵树都有节点 · 且有层序排头那一层（%s —— 取句顺序的唯一口 `cmds_talk.LAYERS`）" % _head_layer,
     not bad1, " · ".join(bad1))
 
-# ② ★ 与 npcs 双向对账
+# ② ★ 与 npcs 双向对账 —— ★ 本波起「落点」多一处：`pois.effect.talk` 指的那棵树
+#   （三处篝火的夜谈：那棵树没有 NPC，玩家是在**那一处东西**上听到它的）。
+#   ⇒ ① 「NPC 指向的树都存在」② 「POI 指向的树都存在」（悬空当场红 —— 原先那三条
+#      `talk_campfire_*` 全仓没有定义处，上手只吐一行「（…边的话还没写下来。）」）③ 没有孤立的树。
+po_d = st.domain("pois") or {}
 a = {v["dialogue"] for v in np_.values()}
+c = set()
+for _v in po_d.values():
+    _t = (_v.get("effect") or {})
+    if isinstance(_t, dict) and _t.get("talk"):
+        c.add(str(_t["talk"]))
 b = set(dl)
 chk("★ NPC 指向的对话树都存在", not (a - b), "缺：%s" % (a - b))
-chk("★ 没有孤立的对话树", not (b - a), "孤立：%s" % (b - a))
+chk("★ POI 的 `effect.talk` 指向的树都存在（悬空 = 上手吐「…边的话还没写下来。」）",
+    not (c - b), "缺：%s" % (c - b))
+chk("★ 没有孤立的对话树（NPC 或 POI 至少一处引得到）", not (b - a - c), "孤立：%s" % (b - a - c))
 
-# ③ need 条件合法
+# ③ need 条件合法 —— ★ 本波加强：从「至少要认得一个键」改成「**每个**键都得在词表里
+#   （欠一个就是落到 `else: ok = True` 的静默兜底：那一句会被**所有**档听到）」
+#   + 静态守卫：域里用到的每个键，在 `content/cmds_talk.py` 里都得有它自己的分支。
 bad3 = []
 for k, v in dl.items():
     for nk, nd in v["nodes"].items():
         for t in nd["texts"]:
             nd_ = t.get("need")
-            if nd_ and not (set(nd_) & NEED_KINDS):
-                bad3.append("%s/%s=%s" % (k, nk, list(nd_)))
-chk("need 条件都是合法类型", not bad3, " · ".join(bad3))
+            if nd_ and (set(nd_) - NEED_KINDS):
+                bad3.append("%s/%s=%s" % (k, nk, sorted(set(nd_) - NEED_KINDS)))
+chk("★ need 条件的**每个**键都在词表里（%s）" % " · ".join(sorted(NEED_KINDS)),
+    not bad3, " · ".join(bad3))
+_ct_src = (REPO / "content" / "cmds_talk.py").read_text(encoding="utf-8")
+_used_kinds = {kk for v in dl.values() for nd in v["nodes"].values()
+               for t in nd["texts"] for kk in (t.get("need") or {})}
+_nobranch = sorted(kk for kk in _used_kinds if ('k == "%s"' % kk) not in _ct_src)
+chk("★ 域里用到的 need 键在 `_pick_indexed` 里各有一支（没分支 = 写了等于没写：静默满足）",
+    not _nobranch, "没分支：%s" % _nobranch)
 
 # ④ 每节点至少一条 + 台词非空
 bad4 = [("%s/%s" % (k, nk)) for k, v in dl.items() for nk, nd in v["nodes"].items()
@@ -179,6 +201,60 @@ chk("★ P-12 取句顺序（层序 %s · 熟门槛 %s）：不熟只有 meet ·
     % (" → ".join(CT.LAYERS), CT.FAMILIAR_TALKS), not bad8, "；".join(bad8))
 print("      假树五层真调 `_pick_layer`：搭 0/2 次 ⇒ meet ｜ 搭 3 次 ⇒ daily ｜ daily 听过 ⇒ main "
       "⇒ hidden ⇒ idle ⇒ 全说过回 daily ｜ 14 棵树都有层序排头那一层、`start` 已撤（域里 0 处）")
+
+# ⑨ ★ fix3-⑤：**一句一行** —— 台词在**域里**就分好行（排版随文案走，与 SCENE_* 同一条路）
+#   玩家报的原状（P1 体验-5）：`搭话 杜林` 一整段 130 字、6 组「」挤在一行，界面上读成一坨；
+#   而『观察』（SCENE_* 正文自带换行）与『悬赏』（一行一条槽位）早就做到一句一行。
+#   落法 = `scripts/normalize_dialogue_lines.py`（一次性归一化，域里存的就是多行文本）；
+#   判据 = 逐条台词按 `\n` 拆完自查 + **幂等**（再跑一遍归一化不许有改动）+ 反证。
+sys.path.insert(0, os.path.join(str(REPO), "scripts"))                    # noqa: E402
+import normalize_dialogue_lines as _NL                                    # noqa: E402
+
+MAX_LINE = 72
+
+
+def _line_bad(text):
+    """这一条台词切完还有没有坏行 —— 空表 = 合规。"""
+    bad = []
+    for ln in str(text).split("\n"):
+        if not ln.strip():
+            bad.append(("空行", ln))
+        elif len(ln) > MAX_LINE:
+            bad.append(("超 %d 字" % MAX_LINE, ln[:24]))
+        elif ln.count("「") > 1:
+            bad.append(("一行挤了 %d 组引号" % ln.count("「"), ln[:24]))
+    return bad
+
+
+_ln9, _ib9, _idem9 = [], [], []
+for _k, _v in dl.items():
+    for _nk, _nd in _v["nodes"].items():
+        for _t in _nd["texts"]:
+            _s = _t["text"]
+            _ln9.append(len(_s.split("\n")))
+            _b = _line_bad(_s)
+            if _b:
+                _ib9.append(("%s/%s" % (_k, _nk), _b[:2]))
+            if "\n".join(_NL.speak(_s)) != _s:
+                _idem9.append("%s/%s" % (_k, _nk))
+chk("★ 一句一行：%d 条台词的每一行都 ≤ %d 字、且每行最多一组「」"
+    "（最长一行 %d 字 · 平均 %.1f 行/条）"
+    % (n_texts, MAX_LINE, max((max((len(x) for x in t["text"].split("\n")), default=0)
+                               for _v in dl.values() for _nd in _v["nodes"].values()
+                               for t in _nd["texts"]), default=0),
+       sum(_ln9) / float(len(_ln9) or 1)), not _ib9, "%s" % (_ib9[:3] or "全合规"))
+chk("★ 幂等：再跑一遍 `scripts/normalize_dialogue_lines.py` 的切行 ⇒ 一条都不动"
+    "（域里存的就是切好的形态）", not _idem9, "%s" % (_idem9[:3] or "0 条要改"))
+
+# 反证：这条判据抓得住玩家报的那条原状（杜林·初次 · 逐字抄自 P1 报告，130 字 / 6 组引号）
+_OLD_DURIN = ("「旧东西？拿来我看。」「……」（他翻了两下，忽然不出声了）（压低声音）"
+              "「你知道这是什么吗。」「三百年前的形制。这种扣法，只有那一家作坊用。」"
+              "（他抬头看你）「你在哪儿捡的。」「……行，你不说也行。但这个价，我给你翻倍。」")
+_ob9 = _line_bad(_OLD_DURIN)
+chk("★ 反证：旧形态（%d 字一行 · %d 组引号）会被判红；切完 %d 行全合规"
+    % (len(_OLD_DURIN), _OLD_DURIN.count("「"), len(_NL.speak(_OLD_DURIN))),
+    bool(_ob9) and not _line_bad("\n".join(_NL.speak(_OLD_DURIN))),
+    "%s" % (_ob9[:1] or "没抓住"))
 
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))

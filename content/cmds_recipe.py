@@ -21,11 +21,12 @@ import random
 from .cmds_ast import _data, _p, _save, T, hp_cap_or_line
 from .town import _func_node, town_gate
 from .cmds_talk import _arg
-from .cmds_gear import ambig_line
+from .cmds_gear import affix_lines, ambig_line
 from .cmds_codex import new_lines
 from . import codex as CX
 from . import loot as LT
 from . import gear as GB
+from . import shop as SH
 
 
 def _recipes() -> dict:
@@ -64,6 +65,37 @@ def _take(p, iid: str, n: int) -> None:
 
 def _need_str(entries) -> str:
     return " · ".join("%s ×%d" % (_item(e["id"]).get("name", e["id"]), int(e["n"])) for e in entries)
+
+
+def _name_set(entries) -> str:
+    """几样料的名字（去重、按出现序）—— 给「哪条线吃哪几样」那一行用（**不报数量**）。"""
+    out = []
+    for e in entries:
+        nm = str(_item(e["id"]).get("name", e["id"]))
+        if nm and nm not in out:
+            out.append(nm)
+    return " · ".join(out)
+
+
+def _forge() -> dict:
+    """能打的东西 —— items 域里带 `forge` 那一格的那些（域里现取，**代码不写死 id**）。"""
+    return {k: v for k, v in _data("items").items()
+            if isinstance(v, dict) and not str(k).startswith("_") and v.get("forge")}
+
+
+def _forge_rec(iid) -> dict:
+    """打造的那一格（`{"level","gold","inputs"}`）—— 缺格 / 形状不对 ⇒ 当场抛（fail-closed）。"""
+    r = dict((_item(iid) or {}).get("forge") or {})
+    ins = r.get("inputs")
+    if not isinstance(ins, list) or not ins or not isinstance(r.get("gold"), int) \
+            or isinstance(r.get("gold"), bool) or not isinstance(r.get("level"), int) \
+            or isinstance(r.get("level"), bool):
+        raise ValueError("物品 %s 的 forge 那一格坏了：%r —— 打造配方判不了（fail-closed）"
+                         % (iid, r))
+    for e in ins:
+        if not isinstance(e, dict) or not e.get("id") or not isinstance(e.get("n"), int):
+            raise ValueError("物品 %s 的 forge.inputs 有一条坏的：%r" % (iid, e))
+    return {"level": int(r["level"]), "gold": int(r["gold"]), "inputs": ins}
 
 
 def _lack_str(p, entries) -> str:
@@ -173,6 +205,10 @@ async def smith(env, sink, uid, player):
 
     ★ B4-12：原先这一条不判脚下 ⇒ 人站在骨田也能把强化价目表看个遍（镇上其它几处都判）。
       守卫走唯一执行面 `cmds_ast.town_gate`，那一站从 `npcs.funcs` 的 `smith` 现取（不写死节点 id）。
+    ★ fix7-gear（2026-09-26 · 第一件装备那条线）：这一屏从「一张强化表」补成**三条**——
+      ① 强化（原有那一张，一个字不动）② 柜上柯尔自己打的**粗货**（按等级卖）
+      ③ **打造**（材料 + 钱 ⇒ 一件；料与产物全从 items 域现取）。
+      两样料的名单摆在一起（`SYS_SMITH_MATS`）—— 名字像的那几样从此各自归哪条线一眼看得清。
     """
     p = _p(player)
     line = town_gate(p, _func_node("smith"))
@@ -187,6 +223,87 @@ async def smith(env, sink, uid, player):
         yield T("SYS_ENHANCE_ROW", lv=lv, need=_need_str(step.get("inputs") or []),
                 gold=int(step.get("gold") or 0),
                 rate="%d%%" % round(float(step.get("rate") or 0) * 100))
+    _shelf = SH.goods(p, shelf="smith")
+    if _shelf:                                     # 柜上空的就不摆这一段（照实：一件都没有）
+        yield T("SYS_SMITH_GOODS")
+        for _g in _shelf:
+            yield T("SYS_SHELF_ROW", icon=_g["rec"].get("icon") or "",
+                    name=_g["rec"].get("name") or _g["id"], gold=_g["gold"],
+                    level=SH.level_need(_g["rec"]))
+    _step1 = _recipes().get("rc_enh_01") or {}
+    _forge_names = [_name_set(_forge_rec(i)["inputs"]) for i in sorted(_forge())]
+    yield T("SYS_SMITH_MATS", enh=_name_set(_step1.get("inputs") or []),
+            craft=" · ".join(x for x in _forge_names if x))
+    yield T("SYS_SMITH_CRAFT_HEAD")
+    for _iid in sorted(_forge()):
+        _f = _forge_rec(_iid)
+        yield T("SYS_SMITH_CRAFT_ROW", name=_item(_iid).get("name", _iid),
+                need=_need_str(_f["inputs"]), gold=_f["gold"], level=_f["level"])
+    yield T("SYS_SMITH_CRAFT_ASK")
+
+
+# ══════════════════════════════════════════════════════════════
+# 四之二、打造（fix7-gear）—— 材料 + 钱 ⇒ 一件
+# ══════════════════════════════════════════════════════════════
+async def forge(env, sink, uid, player):
+    """`打造 <东西>` —— 在柯尔的炉子上用**材料 + 钱**打出一件（真源 `06_…/06_装备获取…§5.3`）。
+
+    口径（三条，都不是新编的）：
+      · 产物**不比掉落强** —— 那一档的逐件数值照 `15_装备逐件数值 §二` 的槽位预算配（同档总量、
+        分布不同 ⇒ 是取舍不是升级）；材料与钱只是把「做事」那一步补上（§5.3「定向补短板」）；
+      · 料与钱只许来自**域**（产物自己的 `forge` 那一格：`level` / `gold` / `inputs`）——
+        本文件不写 id、不写价、不写数量；
+      · 四条 fail-closed：认不出名字 ⇒ 照实说；不够级 ⇒ 那一句；料不够 / 钱不够 ⇒ 合在一句里说清，
+        **档一个字不动**（不给货、不扣料、不扣钱）。
+    """
+    p = _p(player)
+    line = town_gate(p, _func_node("smith"))
+    if line:
+        yield line
+        return
+    want = _arg(env)
+    table = _forge()
+    if not want:
+        yield T("SYS_SMITH_CRAFT_HEAD")
+        for iid in sorted(table):
+            f = _forge_rec(iid)
+            yield T("SYS_SMITH_CRAFT_ROW", name=_item(iid).get("name", iid),
+                    need=_need_str(f["inputs"]), gold=f["gold"], level=f["level"])
+        yield T("SYS_SMITH_CRAFT_ASK")
+        return
+    hit = None
+    for iid, rec in table.items():
+        nm = str(rec.get("name") or "")
+        if want == nm or (len(want) >= 2 and want in nm):
+            hit = (iid, rec)
+            break
+    if not hit:
+        yield T("SYS_FORGE_NOSUCH", name=want)
+        return
+    iid, rec = hit
+    f = _forge_rec(iid)
+    now = int(p.get("level") or 0)
+    if now < f["level"]:
+        yield T("SYS_SHELF_LOCK", name=rec.get("name", iid), level=f["level"], now=now)
+        return
+    lack = _lack_str(p, f["inputs"])
+    if f["gold"] > int(p.get("gold") or 0):
+        lack += (" · " if lack else "") + T("SYS_GOLD_X", n=f["gold"] - int(p.get("gold") or 0))
+    if lack:
+        yield T("SYS_SMITH_CRAFT_MISSING", name=rec.get("name", iid),
+                need=_need_str(f["inputs"]), gold=f["gold"], lack=lack)
+        return
+    for e in f["inputs"]:                              # 料：先扣（这一段只走一次，不会扣一半）
+        _take(p, e["id"], int(e["n"]))
+    p["gold"] = int(p.get("gold") or 0) - f["gold"]
+    LT.add_to_bag(p, [{"id": iid, "n": 1}])
+    if player is not None:
+        player.update(p)
+    _save(env)
+    yield T("SYS_SMITH_CRAFT_OK", icon=rec.get("icon") or "", name=rec.get("name", iid))
+    for ln in affix_lines(rec):                        # 打出来的是什么，当场摊给玩家看
+        yield ln
+    yield T("SYS_MONEY", gold=int(p.get("gold") or 0))
 
 
 # ══════════════════════════════════════════════════════════════
@@ -194,6 +311,15 @@ async def smith(env, sink, uid, player):
 # ══════════════════════════════════════════════════════════════
 async def enhance(env, sink, uid, player):
     p = _p(player)
+    # ★ P3 BUG-2（本波 f4）：**地点门禁** —— 强化是铁匠铺的服务，本该与『铁匠铺』同口径。
+    #   原先这一条一句都不判脚下 ⇒ 人站在骨田（野外）敲 `强化 <装备>` 照样把报价与缺料
+    #   摊出来（同一批里『铁匠铺』却正确拦下 —— 规则不一致）。守卫走唯一执行面
+    #   `cmds_ast.town_gate`，那一站从 `npcs.funcs` 的 `smith` 现取（不写死节点 id；
+    #   与 `cmds_recipe.smith` 逐字同一条口）。空参那一支（报价表）也一并拦 —— 它就是那张表。
+    line = town_gate(p, _func_node("smith"))
+    if line:
+        yield line
+        return
     want = _arg(env)
     if not want:
         yield T("SYS_ENHANCE_SHOP")
@@ -314,6 +440,20 @@ async def item_use(env, sink, uid, player):
         yield T("SYS_GEAR_IN_BAG", name=want)
         return
     iid, rec = hit
+    # ★ G2：**打起来的时候**这一手走战斗那一条（花掉你这一手、当场回血、记每场上限）
+    #   —— 判据只有一个：此刻**真有一场在跑**（`instance.live`，与战斗那边同一个口）。
+    #   面板在开战时固化 ⇒ 战斗里只认**回血**那一类；别的（食物 / 增益）照实说，
+    #   **不消耗、不动档**（吃掉却没效果 = 骗人）。
+    from . import instance as INST
+    if INST.live(env, uid) is not None:
+        _mx0 = hp_cap_or_line(p)[0] or 0        # 没面板 ⇒ 0（只影响 hp_pct 那一类的估值）
+        if _heal_gain(p, rec, _mx0) is None:
+            yield T("COMBAT_ITEM_ONLY_HEAL", name=rec.get("name", iid))
+            return
+        from . import cmds_battle as CBAT
+        async for line in CBAT.battle_item(env, sink, uid, player):
+            yield line
+        return
     food = rec.get("food") or {}
     if food:
         from . import facade
@@ -337,6 +477,12 @@ async def item_use(env, sink, uid, player):
             yield _line
             return
         hp0 = int(p.get("hp") or mx)
+        # ★ P1 BUG-8（本波 f4）：**满血不吃药** —— 原先 `使用 伤药`（112/112）照样把药吃掉、
+        #   只回一句「生命 +0（112/112）」：24 铜板一次，新手钱很少（实测同一档踩了两次）。
+        #   现在满血 ⇒ 照实说一句、**道具一件不动**（不扣、不落档）；缺那一句就退回现在这毛病。
+        if hp0 >= mx:
+            yield T("SYS_USE_FULL", name=rec.get("name", iid))
+            return
         hp = min(mx, hp0 + gain)                 # ★ 回血封顶：不许超过上限
         p["hp"] = hp
         _take(p, iid, 1)                         # ★ 用了就消耗（减到 0 由 _take 摘掉条目）

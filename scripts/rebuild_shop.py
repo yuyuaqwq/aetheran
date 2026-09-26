@@ -7,6 +7,10 @@
   · `06_第一阶段垂直切片/03_风车镇_指令与回复 §一` —— `药铺`（在镇上 · 买药）
   · `06_第一阶段垂直切片/04_指令总表 §物品` —— `购买 <物品>`（别名 买 · 守卫 在铺子且钱够）
   · `06_第一阶段垂直切片/05_玩法数值口径 §六` —— 「铺子｜镇上 3 家；价 = 基础价 × 品阶系数」
+ ★ P3 BUG-4（本波 f4）那一格（`sell_gear`）：**装备的收价** —— 真源 `05 §七` 只给了取向
+  （「钱从哪来：悬赏 + 卖材料 + 卖旧物（**不靠卖装备**）」），这一块真源**没给数** ⇒
+  按那条取向取小价（普通档 1 级 = 6 铜板，低于一瓶伤药 24）；级档读 `items.req.level`。
+  收价一个字不动的是**材料 / 旧物**那一路（B3-12 落的『卖出』= `items.price`）。
 ★ P-55 那一格（本批加的）：**固定加价** `buy_markup` —— 真源 05 §六 只给了方向
   （「价 = 基础价 × 品阶系数」），这一格真源**没给数** ⇒ 乙档保守取：
   台账 ⏸ P-55 的倾向（「例：买价 = 收价 × 2」）+ 本路作业书同一句 ⇒ 普通档（系数 1.00）
@@ -14,6 +18,9 @@
   收价一个字不动（B3-12 落的『卖出』= `items.price`）。要调只改下面这一格 + 重跑本脚本。
 口径：`00_总纲/18_铺子买卖口径_v1.md`（B4-15 那四条 + 加价与物价倍率两格 · 待主线落）
 落点：`content/rules/shop.json`（`content/shop.py` 只读它；代码里不写数、不写价、不写 id）
+★ fix7-gear（2026-09-26）：这一份从「药铺一家」扩成「几家」—— 本脚本仍然只生成**真源派生的那几格**
+  （四个系数 / 固定加价 / 药铺那一家 = 顶层那两格），**手写的 `shelves`（柯尔那家 · 商队那家）
+  照原样带过去**（见 `merge_hand_shelves`：冲掉它 = 铁匠铺那一屏整段消失，那是静默丢功能）。
 
 规矩：LF 落盘 · 原序 · 末尾一个换行 · 连跑两次数据不变（幂等自检）· `--dry` 一个字节都不写
 
@@ -46,6 +53,21 @@ STATION_FUNC = "herb"
 #: ★ 铺子的固定加价（P-55）：买价 = 基础价 × 品阶系数 × 这一格。
 #:   真源没给这个数（05 §六 只有方向）⇒ 口径来源与理由见本文件头注（台账 ⏸ P-55 的倾向）。
 BUY_MARKUP = 2
+
+#: ★ P3 BUG-4（本波 f4）：**装备的收价**表 —— 『卖出』/『旧货』认的是同一个口
+#:   （`content/shop.py::sell_price_of`）。材料 / 旧物那一路照旧走 `items.price`（B3-12 落的那一格，
+#:   一个字不动）；**装备**域里一个价都没有 ⇒ 原先收价恒 0，铺子永远回「这东西没价」。
+#:   真源 `05 §七` 只给了**取向**（「钱从哪来：悬赏 + 卖材料 + 卖旧物 —— **不靠卖装备**」），
+#:   没给数 ⇒ 本表按那条取向取**小价**（普通档 1 级 = 6 铜板，低于一瓶伤药 24）：
+#:   装备能变现、但绝不成「钱的来源」；等级档用 `items.req.level`（穿戴门槛，域里现成那一格）。
+#:   要调只改下面这两块 + 重跑本脚本。真源待补行见本分支 `_notes.md §真源行`。
+SELL_GEAR_SLOT_FIELD = "slot"
+SELL_GEAR_BASE_BY_QUALITY = {"普通": 6, "精制": 15, "稀有": 36, "遗物": 80}
+SELL_GEAR_LEVEL_BANDS = ((0, 5, 1.0), (6, 10, 1.5), (11, 15, 2.5), (16, 20, 4.0))
+SELL_GEAR_SRC = ("aetheran-plan/06_第一阶段垂直切片/05_玩法数值口径_v1.md §七"
+                 "「钱从哪来：悬赏 + 卖材料 + 卖旧物（**不靠卖装备**）」—— 真源给了取向、**没给数**；"
+                 "品阶四档的词表来自 items 域的 `quality`（`loot.quality_words()`），"
+                 "等级那一格来自 `items.req.level`（`loot._req_level`）⇒ 本表不抄第二份词表、也不新造字段")
 
 
 def die(msg):
@@ -104,8 +126,9 @@ def build(coeffs, items, npcs):
     if not keys:
         die("items 域里没有 kind_key == %r 的条目" % STOCK_KIND)
     return {
-        "_note": "药铺那一家：货架 + 买价口径 —— **唯一真源**，`content/shop.py` 现读"
-                 "（代码里不写数、不写价、不写 id）。",
+        "_note": "铺子那几家：货架 + 买价口径 —— **唯一真源**，`content/shop.py` 现读"
+                 "（代码里不写数、不写价、不写 id）。顶层那几格 = **药铺那一家**（本脚本生成）；"
+                 "`shelves` 那几格 = 其余几家（手写 · 重跑时照原样带过去）。",
         "_src": {
             "真源": "aetheran-plan/06_第一阶段垂直切片/00_第一阶段内容总纲_v1.md §六（品阶四档）"
                     " · 03_风车镇_指令与回复 §一（`药铺` 在镇上 · 买药）"
@@ -114,13 +137,53 @@ def build(coeffs, items, npcs):
             "口径": "aetheran-plan/00_总纲/18_铺子买卖口径_v1.md（B4-15 那四条 + P-55 落的加价那一格）",
             "生成": "scripts/rebuild_shop.py（四个系数从 00 总纲 §六 现解析；`buy_markup` 那一格"
                     "真源没给数，取值理由写在脚本头注里 —— 本文件不手打）",
+            "加几家（fix7-gear · 手写那几格）":
+                    "`shelves` = 除药铺之外的几家（柯尔那家 · 商队那家）—— **不是本脚本生成**"
+                    "（重跑时照原样带过去，见 `merge_hand_shelves`）。依据：真源 "
+                    "`06_第一阶段垂直切片/06_装备获取与支线玩法_v1.md §一 1.1 + §5.4 + §5.3`"
+                    "（普通档 = 镇上铺子直接买 · 兜底 · 制作是「同档不同形状」）· "
+                    "`07_装备体系_v2 §四`（低阶铺子能买）· "
+                    "`00_总纲/06_阶段交接指南_v3.md §3.1③`（凑整 · 费用按等级）· "
+                    "`06_第一阶段垂直切片/29_世界事件_设计_v1.md §五`（商队到货才有货）。"
+                    "逐条裁决与逐件数值写在包 `_notes.md`「fix7-gear」那一节。",
         },
         "quality_mult": {q: coeffs[q] for q in QUAL_ORDER},
         "quality_default": "普通",
         "buy_markup": BUY_MARKUP,
+        # ★ P3 BUG-4（本波 f4）：装备的收价（`content/shop.py::sell_price_of` 现读）
+        "sell_gear": {
+            "_src": SELL_GEAR_SRC,
+            "slot_field": SELL_GEAR_SLOT_FIELD,
+            "base_by_quality": dict(SELL_GEAR_BASE_BY_QUALITY),
+            "level_mult_by_band": [{"min_lv": a, "max_lv": b, "mul": m}
+                                   for a, b, m in SELL_GEAR_LEVEL_BANDS],
+        },
         "stock_kind": STOCK_KIND,
         "station_func": STATION_FUNC,
     }
+
+
+def merge_hand_shelves(obj, old):
+    """★ fix7-gear：把**手写**的那一格（`shelves` = 除药铺之外的几家）原样带过去。
+
+    为什么：本脚本是**生成物**（只重算真源派生的那几格：四个系数 / 加价 / 药铺那一家）；
+    `shelves` 不是真源那张表派生的（真源只给「普通档铺子能买」这条口径，逐家怎么收写在
+    `_notes.md`）⇒ 重跑本脚本**不许把它冲掉**（冲掉 = `content/shop.py` 当场抛，
+    铁匠铺那一屏整段消失 —— 那是「静默丢功能」，比报错还坏）。
+    规矩：旧文件里有 `shelves` 就照原样带过去（顺序也不动 —— 货架的顺序是判据的一部分）；
+    形状不对（缺收法）⇒ **当场抛**（fail-closed，不许带一份坏表过去）。
+    """
+    sh = (old or {}).get("shelves")
+    if sh is None:
+        return obj
+    if not isinstance(sh, dict) or not sh:
+        die("旧文件里的 `shelves` 形状不对：%r（不带着它落盘，先改对）" % (sh,))
+    for k, v in sh.items():
+        if not isinstance(v, dict) or not (v.get("stock_kind") or v.get("shop_key")):
+            die("`shelves.%s` 既没写 `stock_kind` 也没写 `shop_key` —— 收什么货判不了" % k)
+    obj = dict(obj)
+    obj["shelves"] = sh
+    return obj
 
 
 def dump(obj, path):
@@ -135,6 +198,13 @@ def main(argv):
     items = _load(ITEMS)
     npcs = _load(NPCS)
     obj = build(coeffs, items, npcs)
+    old = None
+    if os.path.exists(OUT):
+        try:
+            old = json.load(io.open(OUT, encoding="utf-8"))
+        except ValueError:
+            old = None
+    obj = merge_hand_shelves(obj, old)                       # ★ 手写那几家带过去
     rows = shelf(coeffs, items)
     print("品阶系数（源：%s §六）：%s" % (os.path.basename(DOC),
                                       " / ".join("%s %.2f" % (q, coeffs[q]) for q in QUAL_ORDER)))
@@ -142,12 +212,9 @@ def main(argv):
     print("药铺那一站：%s（npcs.funcs 带 %r 的人所在节点）" % (obj["station_func"], STATION_FUNC))
     for iid, name, gold, base in rows:
         print("  柜上：%-18s %s  —— %d 铜板（收价 %d × %d）" % (iid, name, gold, base, BUY_MARKUP))
-    old = None
-    if os.path.exists(OUT):
-        try:
-            old = json.load(io.open(OUT, encoding="utf-8"))
-        except ValueError:
-            old = None
+    if obj.get("shelves"):
+        print("  ★ 手写那几家（`shelves` · 不是本脚本生成，照原样带过去）：%s"
+              % " · ".join(sorted(obj["shelves"])))
     same = old == obj
     if dry:
         print("（--dry：没落盘；%s）" % ("与现文件一致" if same else "会改写 content/rules/shop.json"))

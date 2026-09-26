@@ -179,6 +179,7 @@
     "kind": "隐藏点",
     "map": "belt_north",
     "subarea": "bn_camp",
+    "read_text": "READ_HIDDEN_CAMP",
     "effect": {
       "need": "search"
     }
@@ -189,6 +190,7 @@
     "kind": "隐藏点",
     "map": "belt_east",
     "subarea": "be_dogs",
+    "read_text": "READ_HIDDEN_BIRCH",
     "effect": {
       "need": "search"
     },
@@ -202,6 +204,7 @@
     "kind": "隐藏点",
     "map": "belt_west",
     "subarea": "bw_shoal",
+    "read_text": "READ_HIDDEN_SHOAL",
     "effect": {
       "need": "search"
     },
@@ -249,7 +252,10 @@
     "subarea": "tower_horn_room",
     "hint": "碑上的名字一排排往下刻",
     "read_text": "READ_TOWER_STELE_NAMES",
-    "into_codex": ""
+    "into_codex": "",
+    "text_variant": {
+      "read": "poi_named_birch"
+    }
   },
   "poi_top_words": {
     "name": "塔顶那行字",
@@ -270,5 +276,25 @@
     "hint": "北边的天边上有一道口子",
     "read_text": "READ_TOWER_NORTH_RIFT",
     "into_codex": ""
+  },
+  "poi_gate_east_stake": {
+    "name": "路口那两根木桩",
+    "icon": "🚧",
+    "kind": "触摸",
+    "map": "windmill_town",
+    "subarea": "wt_gate_e",
+    "effect": {
+      "talk": "talk_gate_east"
+    }
+  },
+  "poi_gate_west_plank": {
+    "name": "靠在墙上的门板",
+    "icon": "🚪",
+    "kind": "触摸",
+    "map": "windmill_town",
+    "subarea": "wt_gate_w",
+    "effect": {
+      "talk": "talk_gate_west"
+    }
   }
 }

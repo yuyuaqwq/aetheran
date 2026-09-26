@@ -260,6 +260,41 @@ def stacks() -> dict:
     return _REGISTRY
 
 
+#: 面板栈声明里「引擎认的那几个面板键」（= `KEYMAP` 的值域 + 两个率）——
+#: `ensure_stack` 补登记时照这一份取（只取 actor 身上真有的）
+_PANEL_KEYS = tuple(sorted(set(KEYMAP.values()) | set(RATE_KEYS)))
+
+
+def ensure_stack(actor) -> bool:
+    """★ G2：把 actor 身上那个栈 id **补登记**回 `_REGISTRY`（回 True = 现在这一步在册）。
+
+    什么时候会缺（实测 · 端到端跑出来）：栈声明只活在**造它的那个进程**里，而「场」
+    （`content/instance.py`）是**落盘**的 —— 机器人重启 / 换一个进程接着打 / 探针换一次夹具，
+    恢复出来的 actor 带着一个**旧进程的栈 id** ⇒ 引擎 `stats.py` 查不到就抛
+    `panel_layers 无此栈`（战斗在那一下当场崩）。
+
+    补登记的声明 = **单层 `base`**，值取 actor 身上那一份**已经解析好的**面板键 ——
+    所以续战读到的数与开战那一刻**逐键相同**（不按档重算：那一场不会因为中间换了装备 /
+    升了级而悄悄漂）。
+
+    这个口**只补不覆盖**：id 在册就原样返回（在册的那一份是**真**声明，可能带层与归因）。
+    """
+    sid = str((actor or {}).get("panel_stack") or "")
+    if not sid:
+        return False
+    if sid in _REGISTRY:
+        return True
+    vals = {k: actor[k] for k in _PANEL_KEYS
+            if k in actor and isinstance(actor[k], (int, float)) and not isinstance(actor[k], bool)}
+    _REGISTRY[sid] = {
+        "version": 1,
+        "base": {"mode": "value", "value": dict(vals)},
+        "layers": [],
+        "emit": {"int_keys": [k for k in INT_KEYS if k in vals], "round": 4},
+    }
+    return True
+
+
 def rate_layer(actor) -> dict:
     """这个 actor 身上那条「率」层（`crit` / `dodge` 的唯一写入点）—— 按 id 找，找不到回空。
 

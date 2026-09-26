@@ -934,6 +934,10 @@ if _el_n:
     _want2 = _AF.elite_line(str(mo[_el_n[0]]["name"]), _el_n[1])
 
     async def _go2():
+        # ★ G2：战斗改**一手一推进** ⇒ 「这一场」跨指令落盘（夹具用的 key = 空群 + uid）
+        #   —— 真敲之前先清掉（不清的话上一次运行留下的场会被接着打：那一敲就**没有遭遇那两行**）
+        from content import instance as _INST23
+        _INST23.clear(_INST23.key_of("", _found_uid, [_found_uid]))
         async for _l in _CBAT.attack(_E(), None, _found_uid, _pl2):
             _at.append(_l)
     asyncio.run(_go2())
@@ -942,6 +946,45 @@ chk("★ 「观察能提前看到」是**真的**：同一 uid/图/节点/日 �
     "（找出来的那一档：%s/%s uid=%s → %s）"
     % (_f_loc if _el_n else "—", _f_nd if _el_n else "—", _found_uid, _el_n[1] if _el_n else "—"),
     bool(_el_n) and _same_ok, "遭遇前两行：%s" % str(_at[:2])[:70])
+
+# ══════════════════════════════════════════════════════════════
+# ★ g4-⑥：多条词条的 `hint` 拼接 —— 句末**只留一枚**标点
+#   实机原状（fix2 §七5 顺手核到 · p2/p3 报告）：`af_frenzy` 那句自带句号，
+#   用 `line_sep`（`；`）接上 `af_swarm` ⇒ 屏幕上成了「…它下手更重。；它身后还有两只…」。
+#   判据三态：① 真实数据里那两条拼出来**没有 `。；`**、且末尾正好一枚句末标点；
+#             ② 从表里现取 `label.line_end` / `label.line_sep`（代码不写死那一枚）；
+#             ③ **反证**：照旧拼法（拿原始 `line` 直接 join）当场拼出 `。；` 这个坏形态。
+# ══════════════════════════════════════════════════════════════
+print("")
+print("★ g4-⑥：多条词条的 hint 拼接（句末那一枚标点）")
+_lab22 = _AF.rules()["label"]
+_reals22 = []
+for _k22, _v22 in sorted(mo.items()):
+    _ids22 = _AF.rollable(_v22.get("elite_pool") or [])
+    _both22 = [a for a in _ids22 if str((_AF.rec_of(a) or {}).get("line") or "").endswith("。")]
+    if len(_both22) >= 2:
+        _reals22.append((_k22, _both22[:2]))
+    if len(_reals22) >= 3:
+        break
+_bad22, _raw22 = [], []
+for _k22, _ids22 in _reals22:
+    _hint22 = _AF.hint_of(_ids22)
+    if "。；" in _hint22 or "；。" in _hint22 or _hint22.count("。；"):
+        _bad22.append((_k22, _hint22))
+    if not _hint22.endswith(str(_lab22.get("line_end") or "")):
+        _bad22.append((_k22, "末尾不是表里那一枚标点：" + _hint22))
+    _raw22.append(str(_lab22["line_sep"]).join(
+        str((_AF.rec_of(a) or {}).get("line") or "").strip() for a in _ids22))
+chk("★ 真数据里每只怪的精英词条拼出来：**没有 `。；`**、末尾正好一枚 `line_end`"
+    "（表里的值 = %r · 抽查 %d 只怪的词条对）"
+    % (str(_lab22.get("line_end")), len(_reals22)),
+    bool(_reals22) and not _bad22, "%s" % (_bad22[:2],))
+chk("★ 反证（旧拼法有牙）：把原始 `line` 直接 join（改前那一行）⇒ 当场拼出 `。；` 坏形态",
+    bool(_raw22) and all("。；" in x for x in _raw22), "%s" % (_raw22[:1],))
+chk("★ 状态那一档不许被摘掉：`af_swarm` 行内的破折号一个字不动（只摘**句末**那一枚）",
+    all("——" in _AF.hint_of([_k23]) for _k23 in ("af_swarm", "af_frenzy")
+        if str((_AF.rec_of(_k23) or {}).get("line") or "").find("——") >= 0),
+    "%s" % (_AF.hint_of(["af_swarm"]),))
 
 # ㉓ ★ 覆盖快照（**只许变长**）：有池子的怪里，池子至少含一条 `on` 的只数
 _cov = _AF.coverage(mo)

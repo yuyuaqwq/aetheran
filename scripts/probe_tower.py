@@ -31,6 +31,10 @@ r"""探针：旧哨塔副本（B3-6）—— 12 间房真能走一遍 · 五条�
   ⑬ ★ P-66（2026-09-26 · 本波 w-h-ux · **裁决：两级槽位「不并」**）：每张图都有地图级槽位
      （「每图一条」的对称）· 节点级与地图级**是两条键**（不许一条退化成另一条的别名）·
      同一处两粒度两条都在、逐字不同（依据与真源行见本分支 `_notes.md §五`）
+  ⑭ ★ fxa（P2 试玩 #2/#3）：**上楼那一道门两条路一起拦** —— 本层尽头那一间
+     『下一层』与**房间级那一步**（`去 <上一层第一间>`）走同一个门（`_blocked_by` ⇒ 怪物谱）：
+     没过手两处都拦（逐字同一句 · 位置不动）· 过了手两处都放行 · 往回走不拦（③-b 那一对）。
+     且每一间『观察』都印「遇敌：」那一栏，**印出来的就是这一手真打的那只**（⑩ 里逐间比）。
 
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_tower.py
 """
@@ -338,6 +342,33 @@ def send_as(uid, text):
     return got
 
 
+# ★ G2（2026-09-26）：战斗改成**一手一推进** ⇒ 「这一场」跨指令落盘（单人的键 = `<群>#<uid>`）
+_GID, _TUID = "g_t", "u_t"
+
+
+def _field():
+    """这一群里的那场（单人按人的那一格；没有 ⇒ None）。"""
+    from content import instance as _INST
+    return _INST.load(_INST.key_of(_GID, _TUID, [_TUID]))
+
+
+def _clear_field():
+    from content import instance as _INST
+    _INST.clear(_INST.key_of(_GID, _TUID, [_TUID]))
+
+
+def fight_over(cap=60):
+    """把当前这一场**真收掉**（一条 `攻击` 只推一手）—— 返回收尾那几行。
+
+    ★ 不收掉的话，下一间敲 `攻击` 会**接着上一场打**（遇不到这一间那只怪）。
+    """
+    got, n = [], 0
+    while _field() is not None and n < cap:
+        n += 1
+        got += send("自动")
+    return got
+
+
 def txt(slot, **kw):
     s = (TX.get(slot) or {}).get("value") or ""
     for k, v in kw.items():
@@ -415,7 +446,25 @@ chk("★ 水房『触摸』把这一间的两项都念出来（%s）" % " · ".j
 
 # ③ 12 间逐间走（从塔门起，按文档顺序）+ 每间的出口对账
 print("③ 真走：12 间逐间『去』+ 每间出口与 §二 逐条对")
-ad.saved = dict(ad.saved, loc=TOWER, node=NODES[0], prev=[], bag={}, equipped={})
+# ★ fxa（P2 试玩 #2/#3）：本层尽头那三间的**上楼闸**现在两条路都拦 —— 『下一层』
+#   （fix5-nav 那一支）与**房间级那一步**（`去 <上一层第一间>`；原先直通，绕一步就把整层
+#   守卫跳过去了）。所以这一节验的是**链本身**（12 间可达 / 无锁 / 每间出口对得上），
+#   前提是**每层的守卫已经过手**（怪物谱那本账 —— 与 `_blocked_by` 判的是同一本账，
+#   与『下一层』过了手才上得去那一支同理）。两态本身另有判据（下面 ③-b 那一对）。
+_GUARDS = [f[1][-1] for f in fl]                       # 每一层尽头那一间（按数据现算）
+_MID_ALL = st.domain("monsters") or {}
+
+
+def _room_cands(node):
+    """这一间按 `habitat` 算得出的候选（与 `combat.pick_encounter` 同一套规则）。"""
+    return sorted(mid for mid, m in _MID_ALL.items()
+                  if TOWER in [str(x) for x in ((m.get("habitat") or {}).get("maps") or [])]
+                  and node in [str(x) for x in ((m.get("habitat") or {}).get("nodes") or [])])
+
+
+_GUARD_MIDS = sorted({mid for _g in _GUARDS for mid in _room_cands(_g)})
+ad.saved = dict(ad.saved, loc=TOWER, node=NODES[0], prev=[], bag={}, equipped={},
+                books={"monster": {mid: {"day": 1, "kills": 1} for mid in _GUARD_MIDS}})
 _bag_before = dict(ad.saved.get("bag") or {})
 walk_bad, walked = [], [NODES[0]]
 from content import cmds_ast as CA                                  # noqa: E402
@@ -438,6 +487,40 @@ chk("★ 从塔门逐间走得到全部 12 间（按文档顺序 · 每一间都
 #   ⇒ 空手（`bag` 空）走完全 12 间那一条（上面那条判据）就是「无锁」的实证。
 chk("★ 空手走完 12 间（没有任何锁 / 钥匙拦着 —— P1 链式的实证）",
     not _bag_before and not ad.saved.get("bag"), "走之前背包 %s" % _bag_before)
+
+# ③-b ★ fxa（P2 试玩 #3「楼梯前那道守卫能整条绕过」）：**本层尽头那一步**的两态 ——
+#   同一时刻『下一层』被挡着、`去 <上一层第一间>` 却直通 = 两条路给出互相矛盾的规则。
+#   现在两处走**同一个门**（`_blocked_by` ⇒ 怪物谱那本账 · 名字同一个口 `foe_here`）：
+#     · 没过手 ⇒ 同一句拦下（位置与历史一个字不动）；
+#     · 过了手 ⇒ 真上到上一层第一间（反证：这一句不是「一律拦」）；
+#     · 往回走那一步（不通往上一层）⇒ 一个字都不拦（反证：闸不是「这一间一律不许走」）。
+print("③-b 本层尽头那一步（『去 <上一层第一间>』）的两态 + 往回走不拦")
+step_bad = []
+for fi in range(len(fl) - 1):
+    _g = fl[fi][1][-1]                         # 这一层尽头那一间（楼梯口）
+    _nxt, _prev = fl[fi + 1][1][0], fl[fi][1][-2]
+    _gids = _room_cands(_g)
+    if len(_gids) != 1:                        # 点名要点得准 ⇒ 守卫房只该有一只候选
+        step_bad.append((_g, "这一间的候选不是一只（点名点不准）", _gids))
+        continue
+    _gname = str((_MID_ALL.get(_gids[0]) or {}).get("name") or _gids[0])
+    _where, _want_blk = NAME_OF[_nxt], txt("SYS_TOWER_BLOCKED", name=_gname)
+    ad.saved = dict(ad.saved, loc=TOWER, node=_g, books={}, prev=[])
+    _blk = send("去 %s" % _where)
+    if _blk != [_want_blk] or ad.saved.get("node") != _g:
+        step_bad.append((_g, "没过手却走得动", _blk[:2], ad.saved.get("node")))
+    ad.saved = dict(ad.saved, loc=TOWER, node=_g, prev=[],
+                    books={"monster": {_gids[0]: {"day": 1, "kills": 1}}})
+    _up = send("去 %s" % _where)
+    if ad.saved.get("node") != _nxt or txt("SYS_MOVE_TO", name=_where) not in _up:
+        step_bad.append((_g, "过了手却走不动", _up[:2], ad.saved.get("node")))
+    ad.saved = dict(ad.saved, loc=TOWER, node=_g, books={}, prev=[])
+    send("去 %s" % NAME_OF[_prev])
+    if ad.saved.get("node") != _prev:
+        step_bad.append((_g, "往回走那一步也被拦了（那一步不通往上一层）", NAME_OF[_prev]))
+chk("★ fxa：本层尽头那一步（『去 <上一层第一间>』）与『下一层』**同一个门** —— "
+    "没过手拦住（逐字同一句 · 位置不动）· 过了手真上到上一层第一间 · 往回走不拦",
+    not step_bad, "%s" % (step_bad[:2] or "无"))
 
 exit_bad = []
 for no in sorted(rooms):
@@ -464,21 +547,68 @@ chk("★ 每间的出口与 §二 逐条对得上（一步邻居 / 二选一两�
     not exit_bad, "%s" % exit_bad[:3])
 
 # ⑧ 下一层：没站到本层最后一间 · 已经在塔顶
-ad.saved = dict(ad.saved, loc=TOWER, node=NODES[1])
+ad.saved = dict(ad.saved, loc=TOWER, node=NODES[1], books={})
 far = send("下一层")
 chk("★ 没站到本层尽头：『下一层』说清最后一间是「%s」" % rooms[4]["name"],
     far == [txt("SYS_TOWER_NEXT_FAR", room=rooms[4]["name"])], "%s" % far[:1])
-ad.saved = dict(ad.saved, loc=TOWER, node=NODES[3])
+# ★ fix5-nav（P2 体验）：最后一间**挡着东西**时真拦 —— 真源 22 §二·4 写的是「可做 战斗后上楼」
+#   （那一屏正文也写着「楼梯口堵着一个人……从他身边过不去」）。原先『下一层』一律放行 = 话白说。
+_ms = st.domain("monsters") or {}
+_block_node = NODES[3]
+_foes = sorted(mid for mid, m in _ms.items()
+               if TOWER in [str(x) for x in ((m.get("habitat") or {}).get("maps") or [])]
+               and _block_node in [str(x) for x in ((m.get("habitat") or {}).get("nodes") or [])])
+chk("★ fix5-nav：本层尽头那一间（%s）确实有挡路的怪（%d 只 · 怪物谱那本账按它判）"
+    % (rooms[4]["name"], len(_foes)), bool(_foes), "%s" % _foes)
+ad.saved = dict(ad.saved, loc=TOWER, node=_block_node, books={}, prev=[])
+_blocked = send("下一层")
+_want_blk = txt("SYS_TOWER_BLOCKED", name=" · ".join(
+    str((_ms.get(_m) or {}).get("name") or _m) for _m in _foes))
+chk("★ fix5-nav：挡路的**没打过** ⇒ 『下一层』拦下并点名（不是照样上去）",
+    _blocked == [_want_blk] and ad.saved.get("node") == _block_node,
+    "%s" % _blocked[:1])
+# 反证：把那一间的怪记进怪物谱（= 在那一间真动过手）⇒ 同一句不再出、那一层真上得去
+ad.saved = dict(ad.saved, loc=TOWER, node=_block_node,
+                books={"monster": {_foes[0]: {"day": 1, "kills": 1}}}, prev=[])
 up = send("下一层")
-chk("★ 站到本层尽头：『下一层』上到 %s 的「%s」（并给新一屏）"
+chk("★ fix5-nav 反证：打过了（怪物谱上有它）⇒ 拦那一句一个字不出、真上到 %s 的「%s」（并给新一屏）"
     % (FLOORS[1], rooms[5]["name"]),
-    up[0] == txt("SYS_TOWER_UP", floor=FLOORS[1], room=rooms[5]["name"])
+    _want_blk not in up
+    and up[0] == txt("SYS_TOWER_UP", floor=FLOORS[1], room=rooms[5]["name"])
     and (TX.get("SCENE_%s" % NODES[4].upper()) or {}).get("value") in up
     and ad.saved.get("node") == NODES[4], "%s" % up[:2])
 ad.saved = dict(ad.saved, loc=TOWER, node=NODES[11])
 top = send("下一层")
 chk("★ 已经在塔顶：说「没有上一层了」（不是沉默 / 不是报错）",
     top == [txt("SYS_TOWER_TOP_NONE")], "%s" % top[:1])
+
+# ③-c ★ fxa：**塔门那两条**（『进塔』/『撤退』）也吃「场在跑」那道闸（`SYS_MOVE_IN_FIGHT`，
+#   与移动族同一条）—— 原先这两条落在塔外那一族之外：一场没结也能进塔 / 出塔，
+#   没结的那一场跟着玩家跨图（P2 那条链就是从野外打进来、在塔里接着打的）。
+#   两态：场在跑 ⇒ 两条都拦（只那一句 · 位置不动）· 收掉之后两条真放行（反证）。
+print("③-c 塔门那两条（『进塔』/『撤退』）在「场在跑」时拦下 · 收掉之后放行")
+_FIGHT = dict(ad.saved, cls="cls_knight", level=14, hp=999, exp=0, gold=0, bag={}, flags={},
+              prev=[])
+ad.saved = dict(_FIGHT, loc=TOWER, node=NODES[1])          # 门厅（这一间有怪）
+send("攻击")                                               # 一条 `攻击` 只推一手 ⇒ 场留在库里
+_door_bad = []
+_li = send("撤退")
+if _li != [txt("SYS_MOVE_IN_FIGHT")] or ad.saved.get("node") != NODES[1]:
+    _door_bad.append(("撤退", _li[:1], ad.saved.get("node")))
+ad.saved = dict(ad.saved, loc=ent.get("map"), node=ent.get("node"))    # 人挪到塔门口（场照留）
+_en = send("进塔")
+if _en != [txt("SYS_MOVE_IN_FIGHT")] \
+        or (ad.saved.get("loc"), ad.saved.get("node")) != (ent.get("map"), ent.get("node")):
+    _door_bad.append(("进塔", _en[:1], (ad.saved.get("loc"), ad.saved.get("node"))))
+_clear_field()                                             # 反证：这一场收掉 ⇒ 两条都放行
+_go_in = send("进塔")
+if ad.saved.get("loc") != TOWER or txt("SYS_TOWER_ENTER") not in _go_in:
+    _door_bad.append(("进塔（收掉之后该放行）", _go_in[:1], ad.saved.get("loc")))
+_out = send("撤退")
+if (ad.saved.get("loc"), ad.saved.get("node")) != (ent.get("map"), ent.get("node")):
+    _door_bad.append(("撤退（收掉之后该放行）", _out[:1], ad.saved.get("loc")))
+chk("★ fxa：手上还有一场没打完 ⇒ 『进塔』/『撤退』一律拦下（只那一句 · 位置不动）· "
+    "收掉之后两条真放行", not _door_bad, "%s" % (_door_bad[:2] or "无"))
 
 # 副本地图：抬头 + 这一层那几间 + 走过标记 + 尾注
 ad.saved = dict(ad.saved, loc=TOWER, node=NODES[0], foot={"nodes": {"%s:%s" % (TOWER, NODES[1]): 1}})
@@ -591,12 +721,29 @@ print("  · 逐间候选：" + " · ".join("%s=%s" % (r, "+".join(MS[k]["name"] 
 print("⑩ 真敲『攻击』（12 间逐间 · 村镇仍是安全区）")
 FIGHT = dict(ad.saved, cls="cls_knight", level=14, hp=999, gold=0, exp=0, flags={})
 fight_bad, fight_seen = [], []
+look_bad = []                      # ★ fxa：这一间的『观察』与真开打的那只对不对得上
+_clear_field()                     # ★ G2：上一次运行 / 上一节留下的场先清掉
 for _f, _no, rname, _teach, enemy, _reads in overview:
     nd = ID_OF.get(rname)
     toks = enemy_tokens(enemy)
     ad.saved = dict(FIGHT, loc=TOWER, node=nd, prev=[])
+    # ★ fxa（P2 试玩 #2）：这一间的『观察』也要把「遇敌」写在屏幕上（塔内不刷精英 ⇒
+    #   原先这一栏一格不出），而且写的就是**这一手真要打的那只** —— 两句话放在同一次
+    #   真跑里比：『观察』「遇敌：」下面那一行 vs『攻击』那一条「⚠️ 遭遇」。
+    _obs = send("观察")
+    _hdr = txt("SYS_LOOK_FOE")
+    _obs_foe = _obs[_obs.index(_hdr) + 1].strip() if _hdr in _obs else ""
+    if bool(toks) != bool(_obs_foe):
+        look_bad.append((rname, "有怪的没印遇敌行 / 没怪的印了", _obs_foe, toks))
+    elif _obs_foe and _obs_foe not in [str((_MID_ALL.get(k) or {}).get("name") or k)
+                                       for k in cands_at(nd)]:
+        look_bad.append((rname, "遇敌行印的不是这一间的怪", _obs_foe))
     got = send("攻击")
+    # ★ G2：一条 `攻击` = 推一手 ⇒ 逐间这一场要**真收掉**（下一间才是新的一间）
+    got += fight_over()
     head = [x for x in got if "遭遇" in x]
+    if toks and _obs_foe and head and _obs_foe not in head[0]:
+        look_bad.append((rname, "『观察』说的那只 ≠『攻击』真打的那只", _obs_foe, head[0]))
     if not toks:
         if head or len(got) != 1:
             fight_bad.append((rname, "文档写「无」却打起来了", got[:1]))
@@ -614,9 +761,13 @@ for _f, _no, rname, _teach, enemy, _reads in overview:
         else:
             fight_seen[-1] = (rname, MS[mid]["name"], "%s · %s" % (ROLE_OF[mid], end[0].strip()))
 ad.saved = dict(FIGHT, loc="windmill_town", node="wt_gate_n", prev=[])
+_clear_field()                     # ★ G2：镇上那一敲要的是「安全区」这一档 ⇒ 先清干净
 _safe = send("攻击")
 chk("★ 12 间逐间真敲『攻击』：遇上的就是文档说的那只（层主 / Boss 也真打完一场）",
     not fight_bad, "%s" % fight_bad[:3])
+chk("★ fxa：塔内每一间『观察』都印「遇敌：」那一栏（有怪的那几间）· 没怪的那两间不印 · "
+    "**印出来的就是这一手真打的那只**（与『攻击』的「⚠️ 遭遇」逐间比 —— P2 试玩 #2）",
+    not look_bad, "%s" % (look_bad[:3] or "无"))
 chk("★ 镇上（安全区）敲『攻击』一条「遭遇」都没有",
     len(_safe) == 1 and not any("遭遇" in x for x in _safe), "%s" % _safe[:1])
 print("  · 逐间遭遇：" + " · ".join("%s→%s(%s)" % x for x in fight_seen))

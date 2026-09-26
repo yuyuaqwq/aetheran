@@ -231,6 +231,10 @@
     ],
     "hint": "硬的。有点锈。埋在下面很久了。",
     "seen_after": "unid_common",
+    "identify_by": [
+      "npc_durin",
+      "npc_cole"
+    ],
     "pool": [
       {
         "out": "i_material_iron_chip",
@@ -334,6 +338,10 @@
     ],
     "hint": "凉的。灰被抹掉过一道，露出底下亮的那一层 —— 有人最近翻过它。",
     "seen_after": "unid_tower",
+    "identify_by": [
+      "npc_grey",
+      "npc_durin"
+    ],
     "pool": [
       {
         "out": "i_material_old_iron",

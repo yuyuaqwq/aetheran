@@ -95,16 +95,61 @@ def _origin_home_line(rec):
     return _pending_line(PENDING_SLOTS["origin_home"], home=home, life=life)
 
 
-def _scene_line(loc, node, m=None):
+def _scene_line(loc, node, m=None, empty=False, variant=None):
     """观察那一段场景 —— 节点级 SCENE_<节点>（近景）→ 退 SCENE_<地图>（这张图的第一眼）。
 
     ★ 解析口只有一处（content/scene.py）—— 落域脚本与这里共用，别各写一遍。
+    ★ `empty=True`（本波）：先试「这一站的人都不在」那一版（`SCENE_<节点>_EMPTY`）——
+      由调用方按 `content/town.py::station_empty` 判好传进来（画面与名册不许打架，P1 BUG-5）。
+    ★ `variant`（★ g4-⑤）：**按状态分支**那一档 —— 先试 `SCENE_<节点>__<状态大写>`
+      （今天只有白烛堂的满血版）；状态名由调用方判好传进来，这一层不认识「血」。
     """
-    sk = SC.resolve(_texts(), loc, node)
+    sk = SC.resolve(_texts(), loc, node, empty=empty, variant=variant)
     m = m if m is not None else (_map_of(loc) or {})
     if sk:
         return T(sk, name=m.get("name", loc))
     return "【%s · %s】" % (m.get("name", loc), _name_of_node(loc, node))
+
+
+def scene_variant_of(p):
+    """观察那一段场景要不要走「按状态分支」那一档（★ g4-⑤）—— 今天这一档 = **满血**。
+
+    为什么在 `cmds_ast`（不在 `scene`）：判断要看**面板**（上限的唯一来源 = `hp_cap_or_line`），
+    而 `content/scene.py` 是零依赖模块（落域脚本要用它）。
+    判不了的档（还没择业 / 档上没有 hp）⇒ `None`（回落基础那一段，fail-closed：不假装满血）。
+    """
+    cap, _line = hp_cap_or_line(p)
+    if cap is None or p.get("hp") is None:
+        return None
+    try:
+        return SC.VARIANT_FULL if int(p.get("hp")) >= int(cap) else None
+    except (TypeError, ValueError):
+        return None
+
+
+def npc_when_slot(nid) -> str:
+    """这一位「他什么时候在」的槽位键 —— `NPC_WHEN_<id 去掉 npc_ 前缀 · 大写>`（唯一写法）。"""
+    tail = str(nid).upper()
+    if tail.startswith("NPC_"):
+        tail = tail[4:]
+    return "NPC_WHEN_%s" % tail
+
+
+def npc_gone_lines(loc, node, p, st=None) -> list:
+    """这一站**按作息还没来**的那几位 —— 每人一行（31_NPC作息 §四「人不在也要有戏」）。
+
+    ★ 与「人不在那一版场景」（`SCENE_<节点>_EMPTY`）同一个判据来源（`town.absent_here`）——
+      画面 / 名册 / 这一行三处不许各说一套（P1 BUG-5 那一族）。
+    ★ 只对**基位在这一站**的人说（路过的人不在此列）；一位都不欠 ⇒ 空表（调用方走原来那句）。
+    """
+    from .town import absent_here
+    out = []
+    for nid, rec in absent_here(loc, node, p, st):
+        slot = npc_when_slot(nid)
+        if slot not in _texts():
+            continue                                  # 没写「他什么时候在」的位不出声（不编）
+        out.append(T("SYS_WHO_GONE", name=_poi_label(rec), when=T(slot)))
+    return out
 
 
 def _map_scene(loc):
@@ -412,8 +457,14 @@ def _cls_star(p, rec):
 
 
 def class_menu(p) -> list:
-    """建号第二步那一眼：每种打法两行（一行是什么人 · 一行什么节奏）。文案一个字都不在这里写。"""
-    out = [T("SYS_CLS_HEAD", race=_race_label(p.get("race")))]
+    """建号第二步那一眼：每种打法两行（一行是什么人 · 一行什么节奏）。文案一个字都不在这里写。
+
+    ★ fix3-⑦：菜单头原先读 `SYS_CLS_HEAD`（「你是{race}了 —— 还没定下怎么打。」）——
+      族是**上一步**刚定过的，这一步再说一遍就是重报（玩家报告 P1 体验-2）。
+      换成 `SYS_CLS_LEAD`（「族定了 —— 还没定下怎么打。」）；旧槽位退役登记见
+      `scripts/probe_copy.py::RETIRED_DOC`（真源那一行待主线改）。
+    """
+    out = [T("SYS_CLS_LEAD")]
     for i, (k, v) in enumerate(_cls_all(), 1):
         out.append(T("SYS_CLS_ROW", i="①②③④⑤⑥"[i - 1] if i <= 6 else str(i),
                      star=_cls_star(p, v), icon=v.get("icon", ""), name=v.get("name", k),
@@ -590,6 +641,24 @@ def _name_of_node(loc, node):
     return (n or {}).get("name") or node
 
 
+def _place_at(name):
+    """这个名字（或节点 id）在**哪张图**上 → `(loc, 显示名)`；五张图都没有 → `(None, "")`。
+
+    ★ fix5-nav：**裸站名**那一支要用它 —— 屏幕把地点名用『』写出来（`观察` 的「往哪走」、
+      `进镇` 的「能去的地方」），敲下去就该等于 `去 <名>`（P1 BUG-12 / P2 BUG① / P3 体验，
+      三个玩家里有三个独立撞上）。名字的真源只有 `maps` 域：逐个图现扫，
+      **不手抄一份名字表**（`scripts/rebuild_place_alias.py` 补的别名 pattern 也从同一份现读）。
+    """
+    want = str(name or "").strip()
+    if not want:
+        return (None, "")
+    for loc, m in (_data("maps") or {}).items():
+        for n in (m.get("nodes") or []):
+            if want in (n.get("id"), n.get("name")):
+                return (str(loc), str(n.get("name") or want))
+    return (None, "")
+
+
 
 def _move(p, loc, node, sink_lines):
     p["prev"] = (p.get("prev") or [])[-8:] + [(p.get("loc"), p.get("node"))]
@@ -672,10 +741,21 @@ async def look(env, sink, uid, player):
         yield name_with_title(p)
     loc, node = p["loc"], p["node"]
     m = _map_of(loc) or {}
-    yield _scene_line(loc, node, m)           # ★ B3-6a：节点级近景 → 退地图级第一眼
+    # ★ 本波：这一站的人一个都不在 ⇒ 走「人不在那一版」场景（画面与名册不许打架 —— P1 BUG-5）。
+    #   判据在 `content/town.py::station_empty`（基位在这一站、此刻一个都没到场），
+    #   与下面那行「人在」走的是**同一个** `_npcs_here`。
+    from .town import station_empty                 # 本地 import：town 要 import 本模块，模块级会成环
+    yield _scene_line(loc, node, m, empty=station_empty(loc, node, p),
+                      variant=scene_variant_of(p))   # ★ g4-⑤：满血那一站走变体那一段
     yield "━" * 12
     nb = [_name_of_node(loc, x) for x in _neighbors(loc, node)]
     yield T("SYS_LOOK_WAY", list=" · ".join("『%s』" % x for x in nb)) if nb else T("SYS_LOOK_DEAD_END")
+    # ★ fix5-nav（P2 体验）：塔门口那一站多一句「门就在跟前 —— 敲『进塔』推门进去。」
+    #   （门在哪一格从 `maps.old_watchtower.entrance` 现读 —— 见 `door_hint_lines`；
+    #    本地 import：`cmds_tower` 要 import 本模块，模块级 import 会成环。）
+    from .cmds_tower import door_hint_lines
+    for _door in door_hint_lines(p):
+        yield _door
     # ★ P-31：列 poi 走唯一一口（`_pois_here` 现看门槛）—— 门槛判得出不成立的这一刻不算在场，
     #   但**不静默**：逐条点名说清差什么；判不了的（如「退潮」）照旧在场 + 点名。
     poi_here = _pois_here(loc, node, p)
@@ -687,6 +767,11 @@ async def look(env, sink, uid, player):
     npc_here = [v for _k, v in _npcs_here(loc, node, p=p)]
     if npc_here:
         yield T("SYS_LOOK_WHO", list=" · ".join("『%s』%s" % (v.get("name"), v.get("icon", "")) for v in npc_here))
+    else:
+        # ★ g4-⑨（31_NPC作息 §四）：这一站一个人都没有、可**基位**上本来有人 ⇒
+        #   不再一片空白，逐位说清「这个点他不在 + 他什么时候在」（与空版场景同一判据）。
+        for _gone in npc_gone_lines(loc, node, p):
+            yield _gone
     for line in event_lines(p, loc, node):      # ★ B3-5：这一站聚人那一下（集日）
         yield line
     # ★ B3-24：这一格今天的精英 —— 观察**提前看到**（09_ §二「玩家在「观察」时能提前看到」）。
@@ -695,7 +780,18 @@ async def look(env, sink, uid, player):
     _el = AFFIX.elite_of(_data("monsters"), loc, node, uid,
                          CAL.state().get("game_day"), int(p.get("level", 1) or 1))
     if _el:
+        # ★ 本波：这一栏原先**裸着**（「看得见」「人在」都有表头，只有它没有）——
+        #   现在先出一行表头（`SYS_LOOK_FOE`），怪那一行照旧走 `COMBAT_ELITE_SPAWN`。
+        yield T("SYS_LOOK_FOE")
         yield AFFIX.elite_line(str((_data("monsters")[_el[0]] or {}).get("name", _el[0])), _el[1])
+    # ★ fxa（P2 试玩 #2）：**副本房间里也把「遇敌」写在屏幕上** —— 塔内不刷精英（见
+    #   `rules/elite.json` 的 `eligible_node_roles`），上面那一支在塔里一格都不出，玩家按
+    #   『下一层』那句去「打它」却看不见目标。这一栏与『攻击』**同一次抽**（名字从
+    #   `cmds_battle.foe_here` 来）⇒ 看见的就是会开打的那只。本地 import：`cmds_tower`
+    #   要 import 本模块（模块级 import 会成环）。
+    from .cmds_tower import foe_lines_here
+    for _foe in foe_lines_here(p, uid):
+        yield _foe
     yield T("SYS_LOOK_HINT")
     for line in egg_lines(p, player, env):      # ★ B3-1：看四周那一下可能把两件事连起来
         yield line
@@ -720,13 +816,30 @@ async def map_view(env, sink, uid, player):
 
 
 async def listen(env, sink, uid, player):
+    """★ fix3-④：听这一站 —— **先本节点、再本图、最后才通用句**。
+
+    原先只按 `p["loc"]`（图）取 `WORLD_LISHEN_<图>`，而 texts 域里一张图都没有这一族
+    ⇒ 玩家在镇上 11 个站点听到的是同一句 `SYS_LISTEN_DEFAULT`（玩家报告 P1 体验-3：与
+    同站『观察』写的东西对不上）。现在口径与 `scene.resolve` 一致：节点级 → 地图级 → 默认；
+    句子都在 texts 域，本文件一个字不写（呈现口只传槽位）。
+    """
     p = _p(player)
-    yield T("WORLD_LISHEN_%s" % p["loc"].upper()) if ("WORLD_LISHEN_%s" % p["loc"].upper()) in _texts() \
-        else T("SYS_LISTEN_DEFAULT")
+    for key in ("WORLD_LISHEN_%s" % str(p["node"]).upper(),
+                "WORLD_LISHEN_%s" % str(p["loc"]).upper()):
+        if key in _texts():
+            yield T(key)
+            return
+    yield T("SYS_LISTEN_DEFAULT")
 
 
 async def time_now(env, sink, uid, player):
-    """★ 时辰与天气的唯一呈现口（模板 SYS_WEATHER_CHANGE = 26 消息模板第 13 类）。"""
+    """★ 时辰与天气的唯一呈现口（模板 SYS_WEATHER_CHANGE = 26 消息模板第 13 类）。
+
+    ★ fix3-①②：天气风味行与时辰风味行**同屏**，两句各自只认自己那一轴 ⇒ 原先
+      `昼 · 雨` 的正文里写「日头正」、`夜 · 晴` 的正文里写「太阳晒到石头上」（两个玩家
+      独立撞上：P1 BUG + P4 BUG-2 / P2 BUG⑤）。现在两句都走 `CAL.desc_slot(条目, st)`：
+      基础句已按对轴中立，另外**夜里还有一种自己的晴**（变体槽位 `WEATHER_SUNNY_DESC__HR_NIGHT`）。
+    """
     p = _p(player)
     st = CAL.tick(p)                       # 钟源 = 宿主注入（facade.clock），本模块不自己取钟
     if player is not None:
@@ -734,8 +847,8 @@ async def time_now(env, sink, uid, player):
     _save(env)
     yield T("SYS_WEATHER_CHANGE", place=_name_of_node(p["loc"], p["node"]),
             hour=st["hour_name"], weather=st["weather_name"],
-            flavor=T(CAL.desc_slot(st["weather"])))
-    yield T(CAL.desc_slot(st["hour"]))
+            flavor=T(CAL.desc_slot(st["weather"], st)))
+    yield T(CAL.desc_slot(st["hour"], st))
 
 
 async def event_now(env, sink, uid, player):
@@ -773,6 +886,10 @@ async def event_now(env, sink, uid, player):
 
 
 async def go_north(env, sink, uid, player):
+    _lock = _in_fight(env, uid)
+    if _lock:
+        yield _lock
+        return
     p = _p(player)
     if (p["loc"], p["node"]) == ("belt_north", "bn_bone"):        # ★ B3-11：脚下这一站（K60）
         for line in _here_lines(p):
@@ -797,6 +914,10 @@ async def go_north(env, sink, uid, player):
 
 
 async def go_east(env, sink, uid, player):
+    _lock = _in_fight(env, uid)
+    if _lock:
+        yield _lock
+        return
     p = _p(player)
     if (p["loc"], p["node"]) == ("belt_east", "be_birch"):        # ★ B3-11：脚下这一站（K60）
         for line in _here_lines(p):
@@ -818,6 +939,10 @@ async def go_east(env, sink, uid, player):
 
 
 async def go_west(env, sink, uid, player):
+    _lock = _in_fight(env, uid)
+    if _lock:
+        yield _lock
+        return
     p = _p(player)
     if (p["loc"], p["node"]) == ("belt_west", "bw_old_ferry"):        # ★ B3-11：脚下这一站（K60）
         for line in _here_lines(p):
@@ -838,7 +963,23 @@ async def go_west(env, sink, uid, player):
         yield line
 
 
+def _in_fight(env, uid) -> str:
+    """手上还留着一场没打完吗 —— 有就返回拦下那句话（没有 ⇒ 空串）。
+
+    ★ 试玩复测 #1（2026-09-26）：一场没结就走不了（出镇 / 带间 / 返回 / 去 / 进镇）。
+      要走先『逃跑』/『后撤』脱身，或者把它打完。拦下时**位置与历史一个字不动**。
+    """
+    from . import instance as INST
+    if not INST.fighting(env, uid):
+        return ""
+    return T("SYS_MOVE_IN_FIGHT")
+
+
 async def enter_town(env, sink, uid, player):
+    _lock = _in_fight(env, uid)
+    if _lock:
+        yield _lock
+        return
     p = _p(player)
     if (p["loc"], p["node"]) == (TOWN, "wt_gate_n"):             # ★ B3-11：脚下这一站（K60）
         for line in _here_lines(p):
@@ -854,11 +995,20 @@ async def enter_town(env, sink, uid, player):
     _save(env)
     yield _map_scene(TOWN)                                      # ★ B3-6a：进镇那一屏从 texts 来（原内联）
     yield T("SYS_TOWN_ENTER_HINT")
+    # ★ fix5-nav（P1 BUG-11 / P3 体验）：`北口` 归站点（站名那一族）之后，「出镇走哪个词」要当面说清 ——
+    #   上面那一句 `SYS_TOWN_ENTER_HINT`（真源 `17_文案收口口径_v1.md` 锁着、一字不动）
+    #   把『北口』列在「出门」里；这一句把口径补齐：北口 是镇口那一站，出镇是 往北 / 往东 / 往西。
+    #   （真源那一行该改成「『往北』出门」—— 两处一起改的那笔账写在 `_notes.md`。）
+    yield T("SYS_TOWN_ENTER_GATE")
     for line in event_lines(p, TOWN, "wt_gate_n", entered=True):  # ★ B3-5：进镇那一下
         yield line
 
 
 async def go_back(env, sink, uid, player):
+    _lock = _in_fight(env, uid)
+    if _lock:
+        yield _lock
+        return
     p = _p(player)
     prev = p.get("prev") or []
     if not prev:
@@ -882,8 +1032,23 @@ async def go_to(env, sink, uid, player):
       **永远走不到** —— 而 NPC 在那儿。
     规则：目标必须是**当前节点的邻居**（不是任意节点）—— 跨图要先出门。
     """
+    # ★ fxa（P2 试玩 #2/#3）：这一条原先**漏在外面** —— 上一波补的那三行闸被写进了
+    #   docstring 里（成了死字），于是「场在跑」的时候 `去 <房间>` 照旧走得动：野外那一场
+    #   会跟着玩家跨图跨层（P2 原文：拾荒营地打「拾荒人」→ 进塔 → 去 楼梯前 → `攻击`
+    #   ⇒「第 3 手 …… 拾荒人 229/244」），副本里也成了「说的那只 ≠ 打的那只」的来源。
+    _lock = _in_fight(env, uid)
+    if _lock:
+        yield _lock
+        return
     p = _p(player)
     want = AV.arg_of(env)        # ★ B4-11：跟着自己的声明剥参（连写也算）
+    raw = (getattr(env, "text", "") or "").strip()
+    # ★ fix5-nav：**屏幕上的站名能直接敲** —— 整句就是一个地点名时，当它等于「去 <名>」。
+    #   别名 pattern（`^老风车$` 那一族）由 `scripts/rebuild_place_alias.py` 从 `maps` 现读补上；
+    #   这里**只认「整句真是一个地点名」**（本包五张图的节点名 / id）⇒ 裸指令名
+    #   （`去` / `走到` / `前往`）照旧走「去哪儿？」那一支（判据 probe_nav ③）。
+    if not want and raw and _place_at(raw)[0]:
+        want = raw
     loc, node = p["loc"], p["node"]
     nb = _neighbors(loc, node)
     if not want:
@@ -905,8 +1070,23 @@ async def go_to(env, sink, uid, player):
                 yield T("SYS_MOVE_FAR", name=n.get("name"))
                 yield T("SYS_MOVE_CAN", list=" · ".join("『%s』" % _name_of_node(loc, x) for x in nb))
                 return
+        # ★ fix5-nav：名字真存在、只是**不在这张图上** —— 说「从这儿过不去」（别印 id、
+        #   也别谎称「没这个地方」）。判据 probe_nav ④。
+        _there, _disp = _place_at(want)
+        if _there:
+            yield T("SYS_MOVE_FAR", name=_disp)
+            yield T("SYS_MOVE_CAN", list=" · ".join("『%s』" % _name_of_node(loc, x) for x in nb))
+            return
         yield T("SYS_MOVE_NOSUCH", name=want)
         yield T("SYS_MOVE_CAN", list=" · ".join("『%s』" % _name_of_node(loc, x) for x in nb))
+        return
+    # ★ fxa（P2 试玩 #3）：副本里**本层尽头那一间往外走**走的是同一道守卫闸（『下一层』
+    #   那一句的同一个门）—— 原先只有楼梯那一句拦，`去 <上一层第一间>` 照通（那一步就是
+    #   上楼，等于把整层守卫绕过去）。拦下时位置与历史一个字不动。别的图这一步恒为空串。
+    from .cmds_tower import step_guard_line
+    _step = step_guard_line(p, uid, hit)
+    if _step:
+        yield _step
         return
     p["prev"] = (p.get("prev") or [])[-8:] + [(loc, node)]
     p["node"] = hit
@@ -916,6 +1096,10 @@ async def go_to(env, sink, uid, player):
         player.update(p)
     _save(env)
     yield T("SYS_MOVE_TO", name=_name_of_node(loc, hit))
+    # ★ fix5-nav：走到塔门口那一格 —— 顺口说一句门能进（与 `观察` 同一支 · `door_hint_lines`）
+    from .cmds_tower import door_hint_lines
+    for _door in door_hint_lines(p):
+        yield _door
     # ★ P-31：与「观察」同一个口（`_pois_here` 现看门槛）—— 原先这一条自己扫域、不判条件
     poi_here = _pois_here(loc, hit, p)
     seen_poi = poi_names_seen(poi_here)
@@ -1095,14 +1279,16 @@ async def alloc_points(env, sink, uid, player):
     arg = _alloc_arg(env)
 
     if not arg:
-        # 不带参数：把「还剩几点 / 能加哪几维 / 设计基线长什么样」一次说清
+        # 不带参数：把「还剩几点 / 能加哪几维 / 推荐怎么分」一次说清
         # （甲案把点数交给玩家自己分 ⇒ 得让人一眼看见自己手里有点）
+        # ★ fix3-⑥：原先这一步读 `SYS_ALLOC_SUGGEST`，那一句开头写着「**设计基线**（按建议权重铺满…）」
+        #   —— 策划口径直接上屏（P4 E-5）。换成 `SYS_ALLOC_PLAN`（「推荐分配」），
+        #   投法还是同一个口（`alloc.plan`）；旧槽位退役登记见 `scripts/probe_copy.py::RETIRED_DOC`。
         if left <= 0:
             yield T("SYS_ALLOC_DONE", total=AL.total_points(lv))
             return
         yield T("SYS_ALLOC_ASK", usage=usage, left=left, list=_stat_list())
-        # 只列**真投得出点**的维（0 点的维不占屏）；投法来自同一份权重（`alloc.plan`）
-        yield T("SYS_ALLOC_SUGGEST", total=AL.total_points(lv),
+        yield T("SYS_ALLOC_PLAN", total=AL.total_points(lv),
                 list=" · ".join("%s %d" % (_stat_slot(s), n)
                                 for s, n in AL.plan(lv, cls).items() if n))
         return
@@ -1157,6 +1343,40 @@ _POI_WHY_SLOT = {"time": "SYS_POI_WHY_TIME", "weather": "SYS_POI_WHY_WEATHER",
                  "read": "SYS_POI_WHY_READ"}
 
 
+def _poi_read_slot(rec, p):
+    """这一条可读物**此刻**该念哪一条正文槽位（★ g4-⑩：按真实经历分支）。
+
+    数据：`pois.<pid>.text_variant = {"read": "<poi id>"}`（可选）—— 一个「读过了才成立」的条件。
+    判据沿用唯一的读账（`p.books.relic` 里那一条 = `CX.note_read` 写的），与 `_poi_cond` 的
+    `read` 那一支**同一个来源**（不在两处各判一套）。条件成立 ⇒ 走变体槽位
+    `variant_key(base, <poi id>)`（表里有才用）；否则回基础槽位。
+    """
+    base = str(rec.get("read_text") or "")
+    tv = rec.get("text_variant")
+    if not (isinstance(tv, dict) and tv and base):
+        return base
+    pid = str(tv.get("read") or "")
+    if not pid:
+        return base
+    if pid not in ((p.get("books") or {}).get("relic") or {}):
+        return base
+    from .scene import variant_slot
+    return variant_slot(_texts(), base, pid) or base
+
+
+def _poi_label(rec) -> str:
+    """POI 在**文字里**被点名时的写法 —— 与「看得见」那一栏同一形：『名字』图标。
+
+    ★ 本波（P1 体验-10）：门槛那两句（`SYS_POI_NOT_YET` / `SYS_POI_COND_TODO`）原先只传名字 ——
+      屏幕上「看得见」那一栏写的是『重复七次的记号』✂️，点名行却是光秃秃的
+      「白桦林深处的记号 —— …」，两条名字里都带「记号」时，读起来像在说上面那一条。
+      图标从**域里取**（不是代码里写死），写法收在这一处（谁要改口径只改这里）。
+    """
+    name = str(rec.get("name") or "")
+    icon = str(rec.get("icon") or "")
+    return "『%s』%s" % (name, icon) if icon else name
+
+
 def _poi_cond(rec, p, st=None):
     """这条 POI 的门槛此刻过不过 → `(状态, 要说给玩家的那一行)`（P-31）。
 
@@ -1166,9 +1386,13 @@ def _poi_cond(rec, p, st=None):
       · `no`      —— 门槛**判得出、且不成立** ⇒ 这一条这一刻不算在场（列表里不列、上手不上手）
                      + 那一行说清差什么（`SYS_POI_NOT_YET`）—— 不许静默不出现
       · `unknown` —— 门槛**判不了**（键不在词表里 / 值查不到对应的账：如「退潮」今天不是
-                     calendar 域的合法 token，「main06_done」这样的 flag 全仓没有写端）
+                     calendar 域的合法 token，或者 `quest` 那一格写的是一面**旗标的名字**
+                     （「main06_done」那种 slug）而不是一条委托的 id）
                      ⇒ **照旧在场可用**（把它藏起来 = 悄悄删内容）+ 那一行点名差什么
                      （`SYS_POI_COND_TODO`）—— 待真源定下刻度（台账 P-31 甲）
+                     ★ g3-quests2 备注：对话那一族的 slug（`main*_done` 那一族）本波起**有写端**了
+                       （`content/prog.py`），但那是**对话 need** 的口径；`quest` 这一格要的仍是
+                       **委托 id**（`q_main_06` 那种），别把旗标名写进来 —— 两者不是一个东西。
 
     `st` 省 = 现取（与 `npcs` 同一口径）；没写 `condition` 的条目**不碰钟**。
     """
@@ -1177,7 +1401,8 @@ def _poi_cond(rec, p, st=None):
         return ("ok", "")
     if st is None:
         st = CAL.state()
-    name = str(rec.get("name") or "")
+    # ★ 本波（P1 体验-10）：点名行里的名字走 `_poi_label`（『名字』图标 —— 与「看得见」同一形），
+    #   这里不再单独取一次 `name`（两处取法就有两处口径了）。
     unknown, blocked = [], []
     for key in list(POI_COND_KEYS) + [k for k in cond if k not in POI_COND_KEYS]:
         if key not in cond:
@@ -1186,10 +1411,21 @@ def _poi_cond(rec, p, st=None):
         if key in ("time", "weather"):
             toks = list(want) if isinstance(want, (list, tuple)) else [want]
             known = [str(t) for t in toks if CAL.resolve(t)[0]]
-            if not known:                       # 认不出的 token（「退潮」今天就是这一档）
+            if not known:                       # 词表外的 token（真源没有这一档 —— 「涨潮」那类）
                 unknown.append(" · ".join(str(t) for t in toks))
             elif not CAL.allows(known, st):
-                blocked.append(T(_POI_WHY_SLOT[key], token=" · ".join(known)))
+                # ★ fix5-nav（P2 体验）：域里那个词常常是**散文**（「退潮」）—— 别名表把它接到真时辰上
+                #   （`rules/calendar.json` 的 `token_alias`）。这里把**刻度**一并点明：
+                #   token 不是它自己的正式名（= 它是别名）就补一句「就是「夜」」——
+                #   原先只写「得等到退潮」，玩家在浅滩拿六个动词挨个试（报告原话）。
+                #   ★ 判据：probe_pois ③-c（别名那一档走新槽位 · 真名字那一档照旧走旧的）。
+                _real = []
+                for _t in known:
+                    _k2, _e2 = CAL.resolve(_t)
+                    if _k2 and _t != CAL.name(_e2):
+                        _real.append(CAL.name(_e2))
+                _slot = "SYS_POI_WHY_TIME_ALIAS" if (key == "time" and _real) else _POI_WHY_SLOT[key]
+                blocked.append(T(_slot, token=" · ".join(known), real=" · ".join(_real)))
         elif key == "event":
             nm = str(want)
             if not CAL.event(nm):
@@ -1213,9 +1449,9 @@ def _poi_cond(rec, p, st=None):
         else:
             unknown.append("%s %s" % (key, want))     # 词表外的键
     if unknown:
-        return ("unknown", T("SYS_POI_COND_TODO", name=name, keys=" · ".join(unknown)))
+        return ("unknown", T("SYS_POI_COND_TODO", name=_poi_label(rec), keys=" · ".join(unknown)))
     if blocked:
-        return ("no", T("SYS_POI_NOT_YET", name=name, why=" · ".join(blocked)))
+        return ("no", T("SYS_POI_NOT_YET", name=_poi_label(rec), why=" · ".join(blocked)))
     return ("ok", "")
 
 
@@ -1232,6 +1468,22 @@ def _pois_here(loc, node, p, st=None):
             continue
         state, line = _poi_cond(rec, p, st)
         out.append((pid, rec, state, line))
+    return out
+
+
+def rest_places() -> list:
+    """有火的那几站（节点名 · 按 pois 域的顺序去重）—— `歇脚` 没有火时**指路**用（★ F6）。
+
+    ★ 与 `_pois_here` 同一处：`pois` 域的读口只在本模块（P-31 / K65）——
+      `cmds_gather.py` 里一个 `_data("pois")` 都不许有（`probe_cmds` ㉑④ 钉着）。
+    """
+    out = []
+    for v in (_data("pois") or {}).values():
+        if not isinstance(v, dict) or not (v.get("effect") or {}).get("rest"):
+            continue
+        nm = _name_of_node(str(v.get("map") or ""), str(v.get("subarea") or ""))
+        if nm and nm not in out:
+            out.append(nm)
     return out
 
 
@@ -1429,7 +1681,35 @@ async def poi_effect_lines(env, sink, uid, p, pid, rec, verb, player=None):
 # ══════════════════════════════════════════════════════════════
 # 四、可读物（触摸）
 # ══════════════════════════════════════════════════════════════
+def _poi_touch_gives(rec) -> bool:
+    """这一样东西**上手真给得出内容** → True（★ 本波 · P2 BUG②）。
+
+    给得出 = 两样里占一样：
+      · 有正文（`read_text` —— 可读物，以及本波给三处隐藏点补上的那三句）
+      · 有一个**归「触摸」这个动词**的 `effect`（`rest` / 带数值的 `buff` / `talk`；门槛 `need` 写的是
+        别的动词 = 那样东西的产出归那条线，本口不越权代它消费）
+
+    ★ 为什么要有这一条：原先「看得见」里的每一样都**无条件**先吐一行「📦你摸到…」——
+      三处隐藏点（`effect.need = search`、没有正文）在屏幕上就是**一行标题、零内容**；
+      玩家以为自己摸到了那件东西（P2 BUG②，`📍` `🐚` 正是最想摸的两件）。
+      ⇒ 上手给不出内容的，这一支**不出声**（别假装摸到了）；整站一样都上不了手时，
+      末尾那一句 `SYS_TOUCH_NONE` 兜底（P1 BUG-6）。
+    """
+    eff = rec.get("effect")
+    if isinstance(eff, dict) and eff and _poi_verb_ok(rec, "touch"):
+        return True
+    return bool(str(rec.get("read_text") or "").strip())
+
+
 async def touch(env, sink, uid, player):
+    """`触摸 [<东西>]` —— 上手摸。
+
+    ★ F6（QA P2 BUG⑧）：原先**不吃参数**（`触摸 半埋的碑` 回「这句我没接住」），
+      同一个 POI 上「读」吃得下名字、「触摸」吃不下 —— 玩家想只摸某一件事做不到，
+      还得连带把整站的增益/消耗一并领了。现在与 `读` 同一待遇：
+      点了名就只摸那一件；名字对不上照实说（不静默换成「这儿没有可以上手的」——
+      这儿明明有，只是他敲错了名字）。
+    """
     p = _p(player)
     # ★ P-31：这一站的 poi 走唯一一口（门槛现看）—— 原先这一条自己扫域、`condition` 谁都没读，
     #   带条件的四件（水下的石阶 / 退潮后的石缝 / 商会旧账簿 / 白桦林深处的记号）永远能上手。
@@ -1437,15 +1717,29 @@ async def touch(env, sink, uid, player):
     if not here:
         yield T("SYS_TOUCH_NONE")
         return
+    want = AV.arg_of(env)                     # ★ F6：跟着自己的声明剥参（连写也算）
+    if want:
+        hit = [x for x in here
+               if want == (x[1].get("name") or "") or want in (x[1].get("name") or "")]
+        if not hit:
+            yield T("SYS_TOUCH_MISS", name=want,
+                    list=" · ".join("『%s』" % v.get("name") for _pid, v, _st, _ln in here))
+            return
+        here = hit
     got = []
+    got, touched = [], 0
     for pid, v, cond_state, cond_line in here:
         if cond_state == "no":                # 门槛判得出不成立 ⇒ 这一下不做，但点名说清差什么
             yield cond_line
             continue
         if cond_line:                         # 判不了的门槛：照旧可用（藏起来 = 静默删内容），只点名
             yield cond_line
+        # ★ 本波（P2 BUG②）：上手给不出内容的**不出声** —— 别吐一行标题就当摸到了。
+        if not _poi_touch_gives(v):
+            continue
         yield T("SYS_TOUCH_GET", icon=v.get("icon", ""), name=v.get("name"))
-        rt = v.get("read_text")
+        touched += 1
+        rt = _poi_read_slot(v, p)              # ★ g4-⑩：按真实经历取正文（读过白桦树 ⇒ 变体那一条）
         if rt:
             yield "「%s」" % T(rt)
         if v.get("into_codex") and CX.note_read(p, pid):     # ★ 读到就进旧物谱（先一行问号）
@@ -1455,6 +1749,10 @@ async def touch(env, sink, uid, player):
         # ★ P-28：上手那一下的 effect 走唯一消费端（原先 `effect` 谁都读 —— 摸了等于没摸）
         async for line in poi_effect_lines(env, sink, uid, p, pid, v, "touch", player=player):
             yield line
+    # ★ 本波（P1 BUG-6）：这一站一样都上不了手（有东西但门槛全挡着 / 全归别的动词）⇒
+    #   照别处一样明说，**别把「看得见」栏的锁定说明当成触摸结果**（玩家会以为摸到了那本账簿）。
+    if not touched:
+        yield T("SYS_TOUCH_NONE")
     if got:
         if player is not None:
             player.update(p)
@@ -1477,8 +1775,9 @@ async def read_thing(env, sink, uid, player):
     p = _p(player)
     want = AV.arg_of(env)        # ★ B4-11：跟着自己的声明剥参（连写也算）
     # ★ P-31：与「触摸」同一个口（门槛现看）—— 门槛判得出不成立的：正文一个字都不给，只点名
-    here = [(pid, v, st_, ln_) for pid, v, st_, ln_ in _pois_here(p["loc"], p["node"], p)
-            if v.get("read_text")]
+    at = [(pid, v, st_, ln_) for pid, v, st_, ln_ in _pois_here(p["loc"], p["node"], p)
+          if v.get("read_text")]
+    here = at
     if want:
         here = [(pid, v, st_, ln_) for pid, v, st_, ln_ in here
                 if want == (v.get("name") or "") or want in (v.get("name") or "")]
@@ -1488,13 +1787,23 @@ async def read_thing(env, sink, uid, player):
         for _ln in blocked:                   # 拦下来的那条：说清差什么（不静默回「没有能读的」）
             yield _ln
         if not blocked:
-            yield T("SYS_READ_NONE")
+            # ★ QB-6（试玩报告 P2 BUG⑨）：点了名却对不上时，原话只回「这里没有能读的东西」——
+            #   而这一站明明有两件可读物，玩家会以为这站本来就没东西、转身走掉。
+            #   ⇒ 名字对不上就**点名说对不上**，再把这站**现在真能读的**列出来（fail-closed：
+            #     不因为名字没对上就随便塞一件给他读）。没点名（空参）时行为一个字不变。
+            if want and at:
+                yield T("SYS_READ_NOSUCH", name=want)
+                names = [v.get("name") for _pid, v, st_, _ln in at if st_ != "no" and v.get("name")]
+                if names:
+                    yield T("SYS_READ_HERE", list=" · ".join(names))
+            else:
+                yield T("SYS_READ_NONE")
         return
     k, v, _st, _ln = usable[0]
     if _ln:                                   # 判不了的门槛：正文照给，门槛那一句一起点名
         yield _ln
     yield T("SYS_READ_HEAD", name=v.get("name"))
-    yield T(v["read_text"])
+    yield T(_poi_read_slot(v, p))            # ★ g4-⑩：按真实经历取正文（读过白桦树 ⇒ 变体那一条）
     # ★ P-28：可读物身上的 effect 也走同一个消费端（「读」与「触摸」不分家）
     async for line in poi_effect_lines(env, sink, uid, p, k, v, "read", player=player):
         yield line
@@ -1506,7 +1815,22 @@ async def read_thing(env, sink, uid, player):
 
 
 async def hint(env, sink, uid, player):
+    """`提示 [去哪]` —— ★ QB-5：**先给当前委托的下一步**，手上没活才退回地点那一句。
+
+    真源 `06_第一阶段垂直切片/04_指令总表 §一`：「`提示` `去哪` ｜ 随时 ｜ **给一条当前该做什么
+    的提示**」。改前只看地点（镇上 / 野外各一句固定文案）⇒ 接了活以后那句永远不变，而每条接活
+    回话都写着「『提示』会告诉你往哪走」（`quest_accept` → `SYS_JOB_GO`）。
+    ★ 野外那一句（往北 / 往东 / 往西）说的是**地形**、与进度无关 ⇒ 有活时也照样补在后面。
+    """
     p = _p(player)
+    from .cmds_quest import _hint_lines          # 本地 import：免得装载期成环（同 quest_accept 那处）
+    lines = _hint_lines(p)
+    if lines:
+        for line in lines:
+            yield line
+        if p["loc"] != TOWN:
+            yield T("SYS_HINT_WILD")
+        return
     if p["loc"] == TOWN:
         yield T("SYS_HINT_TOWN")
     else:
@@ -1531,6 +1855,15 @@ async def help_cmd(env, sink, uid, player):
     yield T("SYS_HELP_HEAD")
     for c, ws in cats.items():
         yield T("SYS_HELP_ROW", cat=c, list=" · ".join("『%s』" % w for w in ws))
+    # ★ P1 BUG-9 ① / P4 E-11（本波 f4）：**界面上的承诺改诚实** —— 战斗那一栏与别的栏一样是
+    #   一串平铺的『防御』『打断』『技能 <参数>』…，读起来像「逐手出招」。
+    #   ★ G2（本波）撤掉的就是那句「一条指令打完整场」：**战斗真分了一手一手**，
+    #     帮助尾巴改成本波的口径（`SYS_HELP_BATTLE_TURN`）。旧槽位 `SYS_HELP_BATTLE_NOTE`
+    #     的包内读端到这一行就没了 —— 它的退役登记在 `scripts/probe_copy.py::RETIRED_DOC`
+    #     （真源那一行的**值**要由主线改：真源仓对本分支只读 ⇒ 账在 `_notes.md`）。
+    _bat = str((cmds.get("attack") or {}).get("category") or "")
+    if _bat and any(str(c) == _bat for c in cats):
+        yield T("SYS_HELP_BATTLE_TURN")
 
 
 def declared_soon(env):

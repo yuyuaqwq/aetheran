@@ -33,14 +33,42 @@ from __future__ import annotations
 
 from .argv import arg_of
 
-__all__ = ["PER_PAGE", "per_page", "page_no", "render", "cursor", "forget",
-           "page_next", "page_back"]
+__all__ = ["PER_PAGE", "PER_PAGE_DEFAULT", "LIST_DECL", "lists_hint", "per_page", "page_no",
+           "render", "cursor", "forget", "page_next", "page_back"]
 
 #: 每个列表一页多少行（★ 唯一登记处：新加一个分页列表就在这儿加一行）
-PER_PAGE = {"bag": 20, "ranking": 10}
+#: ★ F6（QA P4 E-4）：四本谱与图鉴一览也进来了 —— 改前只有背包/本群榜两列能翻，
+#:   `帮助` 里宣传的『下一页』/『回 <页码>』在**别的**长列表上全是死指令
+#:   （玩家在 `怪物谱` / `旧物谱` 上敲『下一页』，拿到的是「先打开一个列表」那句）。
+PER_PAGE = {"bag": 20, "ranking": 10,
+            "codex": 10, "codex_material": 10, "codex_flavor": 10,
+            "codex_monster": 10, "codex_relic": 10,
+            # ★ G2：**在打的这一场**的战斗过程（『战斗日志』那一屏）——
+            #   一场真打完可能几十行（每一手两段日志），一屏压不下 ⇒ 分页。
+            #   战后那一份（`flags.last_battle`）**不分页**：那是复盘，全文照出。
+            "battle_log": 20}
 
 #: 一页几行的默认值（`PER_PAGE` 里没登记的 kind 用这个 —— 今天没有这样的 kind）
 PER_PAGE_DEFAULT = 20
+
+#: ★ g4-④：**会分页的那几列**（kind → 声明里那一条指令的 key）—— **唯一登记处**。
+#:   为什么要有这一格：`SYS_PAGE_NONE`（"还没翻过任何列表" 那一声引导）原先把那几个列表名
+#:   **手打**在槽位里（只点了『背包』『排行』），而 F6 起四本谱与图鉴也接进了同一口
+#:   ⇒ 那句引导对着一半的列表说的是错的。现在列表名**从这一处现算**（`AV.usage(key)`
+#:   读声明里的 `usage` —— 玩家看见的那个词，代码里不抄第二份中文）。
+#:   ★ 新加一个分页列表 = `PER_PAGE` + `_again` + 这里，三处一起加（探针逐处对账）。
+LIST_DECL = {
+    "bag": "bag",
+    "ranking": "ranking",
+    "codex": "codex",
+    "codex_material": "codex_material",
+    "codex_flavor": "codex_flavor",
+    "codex_monster": "codex_monster",
+    "codex_relic": "codex_relic",
+    # ★ 合入落账（Wave-2）：G2 把「在打的这一场」接进了同一口分页 —— 三处登记一起加
+    #   （`PER_PAGE` / `LIST_DECL` / `_again`；`probe_pager` 逐处对账，漏一处当场红）。
+    "battle_log": "battle_log",
+}
 
 #: 光标最多记多少个人（进程内小表；超了从最早那条开始丢 —— 与 `instance` 的护栏同一个意思）
 CURSOR_MAX = 512
@@ -119,6 +147,18 @@ def _again(env, sink, uid, player, kind):
         from .cmds_self import ranking_page
         gid = str(getattr(env, "group_id", "") or "")
         return lambda page: ranking_page(env, sink, gid, uid, player, page)
+    # ★ F6：四本谱与图鉴一览（每本自己一列 —— 光标记的是「上一次看的是哪一本」）
+    if kind in ("codex", "codex_material", "codex_flavor", "codex_monster", "codex_relic"):
+        from . import cmds_codex
+        fn = getattr(cmds_codex, {"codex": "codex", "codex_material": "codex_material",
+                                  "codex_flavor": "codex_flavor",
+                                  "codex_monster": "codex_monster",
+                                  "codex_relic": "codex_relic"}[kind])
+        return lambda page: fn(env, sink, uid, player, page)
+    # ★ G2：在打的这一场（『战斗日志』那一屏）—— 第 N 页重渲染走同一条口
+    if kind == "battle_log":
+        from . import cmds_battle
+        return lambda page: cmds_battle.battle_log(env, sink, uid, player, page)
     return None
 
 
@@ -127,10 +167,25 @@ async def _turn(env, sink, uid, player, kind, page):
     from .cmds_ast import T
     more = _again(env, sink, uid, player, kind)
     if not more:
-        yield T("SYS_PAGE_NONE")
+        yield T("SYS_PAGE_NONE", lists=lists_hint())
         return
     async for line in more(page):
         yield line
+
+
+def lists_hint() -> str:
+    """`SYS_PAGE_NONE` 里那一串「能翻的列表」—— 玩家词**从声明现取**（★ g4-④）。
+
+    顺序 = `LIST_DECL` 的登记序（背包 → 排行 → 图鉴 → 四本谱），与「最常翻的那两列在前」一致。
+    注册处少登记一列 ⇒ `probe_pager ⑭` 当场红（引导里少说一列 = 玩家以为那一列翻不动）。
+    """
+    from . import argv as AV
+    words = []
+    for _k, _decl in LIST_DECL.items():
+        w = str(AV.usage(_decl) or "").strip()
+        if w and w not in words:
+            words.append(w)
+    return " · ".join("『%s』" % w for w in words)
 
 
 async def page_next(env, sink, uid, player):

@@ -50,6 +50,11 @@ _QUOTED = re.compile("[\u300c\u300e]([^\u300d\u300f]+)[\u300d\u300f]")
 #: 取不到文案时 `T` 回的那串标记（fail-closed：宁可当场抛，也不把这串东西给玩家）
 _MARK = "[MISSING TEXT"
 
+#: 回显那个词最多留几个字（★ F6 · QA P4 E-13）
+#: 玩家敲 32 字长句时，原先是**整句原样回显**一遍 —— 在群里等于刷一长条。
+#: 截断只动**那半句回显**（省略号是排版符号，不是文案）：文案本体仍在 texts 域那一条槽位里。
+ECHO_MAX = 15
+
 _CACHE: dict = {}
 
 
@@ -95,11 +100,18 @@ def line(text, prefix=None) -> str:              # noqa: ARG002 —— prefix �
 
     ★ 取不到文案 ⇒ 当场抛（**不把那串标记漏给玩家**）：这一格是引擎的必需注入，
       它自己已经「装了却给不出文本 ⇒ 抛」，本包这一头照同一条规矩办。
+    ★ F6：回显的那个词超长就截断（`ECHO_MAX`）—— 别把玩家那句 32 字原样贴回群里。
     """
-    out = str(T(SLOT, word=str(text or "")))
+    out = str(T(SLOT, word=echoed(text)))
     if _MARK in out:
         raise KeyError("路由未命中的回话取不到文案（槽位 %r 不在 texts 域里）" % (SLOT,))
     return out
+
+
+def echoed(text) -> str:
+    """回话里那个词（★ F6）：超 `ECHO_MAX` 字就截断成「<前 N 字>…」。"""
+    w = str(text or "").strip()
+    return w if len(w) <= ECHO_MAX else w[:ECHO_MAX] + "…"
 
 
 def check_domain() -> dict:

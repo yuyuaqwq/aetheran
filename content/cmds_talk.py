@@ -24,12 +24,17 @@
 """
 from __future__ import annotations
 
-from .cmds_ast import _data, _p, _save, _map_of, _name_of_node, T, _texts, _npcs_here
+import random
+
+from .cmds_ast import (_data, _p, _save, _map_of, _name_of_node, T, _texts, _npcs_here,
+                       hp_cap_or_line, npc_gone_lines)
 from . import argv as AV
 from .cmds_ast import egg_lines, title_lines
 from . import calendar as CAL
 from . import codex as CX
 from . import heard as HD
+from . import loot as LT
+from . import prog as PROG     # ★ 本波：对话旗标族（`main*_done` 那一族）的唯一判定口
 
 
 def _arg(env, default=""):
@@ -57,7 +62,12 @@ def _pick_indexed(lines, p, st=None):
         ok = True
         for k, v in need.items():
             if k == "flag":
-                if not flags.get(v):
+                # ★ 本波（g3-quests2）：走**真实进度**那一口（`content/prog.flag_ok`）——
+                #   改前这里只是 `bool(flags.get(v))`，而 `main04_done` 那一族**全仓没有写端**
+                #   ⇒ 域里 12 条台词永久出不来。现在：表里的 slug 以真实进度为准（老档里
+                #   进度在、旗标那格当年没写 ⇒ 照样成立；旗标写着而进度不成立 ⇒ 不算满足，
+                #   不刷出不该出的台词）；表外的 token（`card` / `lore_scripts` …）走老口径。
+                if not PROG.flag_ok(p, v):
                     ok = False
             elif k == "holding":
                 if not (p.get("bag") or {}).get(v):
@@ -74,6 +84,19 @@ def _pick_indexed(lines, p, st=None):
                 ok = bool(flags.get("last_" + str(v)))
             elif k == "quest_done":
                 ok = bool(flags.get(v))
+            elif k == "hurt":
+                # ★ 本波（P1 BUG-7）：**有伤才说那一句** —— 上限只有一个来源（职业面板）。
+                #   档上还没择业（建号第二步没走完）⇒ 判不了 = 不算满足（fail-closed：
+                #   宁可落到兜底那一句，也不在一个还不知道自己有多少血的档上假定「有伤」）。
+                _cap, _line = hp_cap_or_line(p)
+                if _cap is None or int(p.get("hp") or _cap) >= int(_cap):
+                    ok = False
+            elif k == "equipped":
+                # ★ 本波（P1 BUG-7）：**那一格上真有东西**才说那一句（`equipped` 的形状 =
+                #   `{槽: 件 id}`，槽名是 ASCII 机器键 —— `weapon` / `armor_top` …）。
+                #   写这一条是因为柯尔那句「（他看了一眼你的剑）」在空手玩家身上也照说。
+                if not (p.get("equipped") or {}).get(str(v)):
+                    ok = False
             elif k == "codex":
                 # `codex: "<谱>:<条目>"` —— 谱里有了才出这句（B2-7：图鉴与对话接上）
                 bk, _, rid = str(v).partition(":")
@@ -169,17 +192,121 @@ def _pick_layer(nodes, p, st, dlg_id):
     return cands[0]                                # 层序上第一层（初次那一档也走这儿）
 
 
+# ══════════════════════════════════════════════════════════════
+# ★ 未鉴定容器：拿给「识货的人」看 ⇒ 当场开出来（B2-3 留的最后一格）
+# ══════════════════════════════════════════════════════════════
+# 为什么路口就落在**现成的『搭话』**上（不另造动词）—— 真源写得最直：
+#   · `27_掉落的惊喜感与未鉴定_v1.md §3.3`「拿给谁看（★ 这一步本身就是玩法）」：
+#     杜林认锻造物 · 柯尔只认铁 · 艾德认教会的器物与文字 · 莉安认铭文；认不出来也有味道；
+#   · `27 §3.5`「你把那块东西放在柜台上。杜林拿起来……」⇒ 一块看不出用途的旧东西 → 刻字的石片；
+#   · `06_装备获取与支线玩法_v1.md §1.1`：「捡到不认得的东西 → 拿给修士/铁匠/莉安看 → 认出来」。
+# ★ 接线之前：`loot.open_unid` / `loot.help_text_of` 全仓**没有调用端** ⇒ 那几件东西
+#   （骨田挖的 / 浅滩捞的 / 塔里搜的）永远开不出来。**这里就是那两个口的唯一调用端。**
+def _unid_held(p) -> list:
+    """手上的**未鉴定容器**（域里 `kind_key` = `unidentified` 的那几条）—— id 升序（稳定序）。"""
+    out = []
+    for iid, n in sorted((p.get("bag") or {}).items()):
+        try:
+            if int(n or 0) <= 0:
+                continue
+        except (TypeError, ValueError):
+            continue
+        if (LT.pools().get(str(iid)) or {}).get("kind_key") == "unidentified":
+            out.append(str(iid))
+    return out
+
+
+def _unid_seed(uid, day, unid_id, left) -> str:
+    """鉴定抽签的种子 —— ★ 与采集（P-26）/ 逃跑（B3-11）同一条纪律：**一律稳定标识拼**，
+    不许 `random.random()` 那种不可复现的口。
+
+    种子 = 人 · 游戏日 · 容器 · **手上还剩几件**（`left` 就是「这是这一类的第几件」——
+    手里两件连着开，第 1 件与第 2 件各抽各的；开掉一件就少一件，所以**同一件开两遍不是一个结果**
+    的漏洞不存在）。游戏日走 `codex.today()`（日期戳那一口），不自己拼时间。
+    """
+    return "aetheran:unid:v1:%s:%s:%s:%d" % (str(uid), CAL.day_key(int(day)),
+                                             str(unid_id), int(left))
+
+
+async def _identify_lines(p, npc_id, who, uid, player, env, just=()):
+    """他在场 ⇒ 手上那几件未鉴定的，他认得出的**当场开出来**（开出真东西 · 容器消失）。
+
+    逐件（id 升序）：
+      ① 他认不认得这一门 ⇒ `loot.help_text_of()` 给那一句（认得 / 看不出 / 她没说话）。
+         ★ F6 同族（同一件事别贴两遍）：他要是**这一趟刚在旧物谱那一支里**说过这句
+           （这一位在这一件的「认得出」名单里 · 且这一件**就是这一趟**在谱里认出来的 —— `just`），
+           这里就不再重复；下一趟谱里已经认出来了、旧物谱那一支不再说话，这一句就重新由这里出。
+      ② 他在**鉴定名单**里（`loot.appraisers_of` ← 域里的 `identify_by`）⇒ 抽一件出来：
+         池子 = 域里现成那一份（`loot.open_unid`，本支不另写池）；抽签种子见 `_unid_seed`。
+         开得出来 ⇒ 容器少一件、开出来的**真进背包**（+ 该进谱的进谱）、旧物谱那一条**问号换真名**；
+         开不出来 ⇒ **什么都不动**（fail-closed：不吞容器、也不编一件出来）。
+      ③ 他不在名单里 ⇒ 只说①那一句，东西照旧留在手上（「认不出来也有味道」）。
+
+    一次搭话**每件容器只开一件**（手上两件 = 说两句、开两件要搭两次话）—— 他一次只看一件。
+    """
+    from .cmds_codex import new_lines            # 本地 import：免得包装载期成环（cmds_codex 引本模块）
+    just = {str(x) for x in (just or ())}
+    for uid_id in _unid_held(p):
+        asks = tuple(str(x) for x in ((CX.entry("relic", uid_id) or {}).get("ask") or []))
+        line = LT.help_text_of(uid_id, npc_id)
+        if line and not (npc_id in asks and uid_id in just):
+            yield line
+        if npc_id not in LT.appraisers_of(uid_id):
+            continue                             # 认不出 ⇒ 只说了那一句，东西照旧留着
+        bag = dict(p.get("bag") or {})
+        try:
+            left = int(bag.get(uid_id) or 0)
+        except (TypeError, ValueError):
+            left = 0
+        if left <= 0:
+            continue
+        got = LT.open_unid(uid_id, rnd=random.Random(_unid_seed(uid, CX.today(p), uid_id, left)))
+        if not got:
+            continue                             # ★ fail-closed
+        if left > 1:
+            bag[uid_id] = left - 1
+        else:
+            bag.pop(uid_id, None)
+        p["bag"] = bag
+        LT.add_to_bag(p, [got])                  # 开出来的真进背包（顺带记 loot 那个「第一次见到」平表）
+        new = CX.note_items(p, [got["id"]])      # 该进谱的进谱（材料谱 / 风味谱 / 旧物谱）
+        CX.reveal(p, uid_id)                     # ★ 旧物谱那一条：问号换真名（不可逆 · 幂等）
+        if player is not None:
+            player.update(p)
+        _save(env)
+        yield T("SYS_UNID_OPENED", who=who)
+        item = LT.rec_of(got["id"])
+        yield T("SYS_GATHER_GET", icon=item.get("icon", "·"),
+                name=item.get("name", got["id"]), n=got.get("n", 1))
+        if got.get("story"):
+            yield T("SYS_UNID_STORY", story=got["story"])
+        for row in new_lines(new):
+            yield row
+
+
 async def talk(env, sink, uid, player):
     p = _p(player)
     st = CAL.state()                       # 现在几时、什么天气（一次，全用它）
     here = _npcs_here(p["loc"], p["node"], st, p)          # ★ B3-5：世界级事件看主线进度（同一个口）
     if not here:
-        yield T("SYS_TALK_NOBODY")
+        # ★ g4-⑨（31_NPC作息 §四）：这一站的人按作息还没来 ⇒ 不只是一句「这儿没有别人」，
+        #   逐位说清「这个点他不在 + 他什么时候在」（与观察那一支同一处 · `npc_gone_lines`）。
+        _gone = npc_gone_lines(p["loc"], p["node"], p, st)
+        for _g in _gone:
+            yield _g
+        if not _gone:
+            yield T("SYS_TALK_NOBODY")
         return
     want = _arg(env)
     if not want:
         yield T("SYS_TALK_HERE", list=" · ".join("『%s』" % v.get("name") for _, v in here))
-        yield T("SYS_TALK_HOW", name=here[0][1].get("name"))
+        # ★ 本波（P1 体验-6）：这一站不止一个人时，原先只举**第一个**名字当例子 ——
+        #   玩家以为只有他。两个人以上就把名字**都**写进教法那一句。
+        if len(here) > 1:
+            yield T("SYS_TALK_HOW_MANY",
+                    list=" · ".join("『%s』" % v.get("name") for _, v in here))
+        else:
+            yield T("SYS_TALK_HOW", name=here[0][1].get("name"))
         return
     hit = None
     for k, v in here:
@@ -216,10 +343,12 @@ async def talk(env, sink, uid, player):
         player.update(p)
         _save(env)
     # ★ B2-7：他要是认得你谱里那些还留着问号的旧东西 —— 名字当场说出来
+    just = set()                               # 这一趟**真**在谱里认出来的那几条（F6：同一句别贴两遍）
     if spoke:
         first = True
         for rid in CX.revealable(p, k):
             if CX.reveal(p, rid):
+                just.add(str(rid))
                 if player is not None:
                     player.update(p)
                 _save(env)
@@ -229,6 +358,10 @@ async def talk(env, sink, uid, player):
                 yield T("SYS_CODEX_REVEAL", name=CX.name_of("relic", rid))
                 yield T("SYS_CODEX_RELIC_KNOWN", name=CX.name_of("relic", rid),
                         known=CX.line_of("relic", rid, "known"))
+    # ★ 未鉴定容器（本件接的那一格）：他在场 ⇒ 手上那几件他认得出的**当场开出来**
+    #   （27 §3.3「拿给谁看」· 唯一调用端见 `_identify_lines`）
+    async for line in _identify_lines(p, k, npc.get("name"), uid, player, env, just=just):
+        yield line
     for line in egg_lines(p, player, env):      # ★ B3-1：人 + 东西，可能就在这一下连起来
         yield line
     for line in title_lines(p, player, env):    # ★ B3-2：话说完，名字可能就挂上来了

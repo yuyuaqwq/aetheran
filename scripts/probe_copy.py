@@ -13,9 +13,9 @@
   ⑨ 面板分层名（B3-6b-2d）真造一个 actor 逐层核 `src` —— 必须正好是 texts 里那 6 条的字
   ⑩ 去(脚下这一站) 回「到了」不回「过不去」（B3-10 ① —— HERE 那一支真取到）
   ⑪ 呈现口不漏机器键的覆盖面：战斗 / 配方 / 图鉴 / 称号 / 彩蛋 / 时间 也逐行扫（B3-10 ②）
-  ⑫ 四条出口（北口/往东/往西/进镇）站在**目的地**上敲 = 回 HERE、不演出门、不塞历史（B3-11 · K60）
+  ⑫ 四条出口（往北/往东/往西/进镇）站在**目的地**上敲 = 回 HERE、不演出门、不塞历史（B3-11 · K60）
      ★ P-52（⑫-b，2026-09-26 · 本波 w5）：那三条出镇口令的「在镇上」守卫 —— 不在镇上 ⇒ 拦下
-     （只那一句 · 位置与历史一个字不动）；在镇上（不核北口那一站）⇒ 照旧出门；『进镇』野外回镇不受影响
+     （只那一句 · 位置与历史一个字不动）；在镇上（不核西边那一站）⇒ 照旧出门；『进镇』野外回镇不受影响
   ⑬ 默认档不许被就地改（B3-12 · K57）：真跑完一遍后 bag/equipped/flags/codex 必须原样；
      半截老档（缺这几个键）采集一趟，不许把东西写进默认档、也不许串给下一个人
   ⑭ ★ P-27：还没择业的档（无职业）= 没有面板 ⇒ `状态` 的生命上限照实说「未定」，
@@ -94,6 +94,32 @@ ENUM_DONE = ("武器", "上甲", "下甲", "头盔", "靴子", "饰品", "主动
              "材料", "食物", "道具", "垃圾", "信物", "线索", "未鉴定", "池", "装备",
              "普通", "精英", "头目", "层主",
              "烹饪", "强化")
+
+#: ★ fix3-⑥⑦：**退役登记** —— 口径表里那几条「呈现口已经不用了」的槽位（键 → 为什么）。
+#
+#   为什么要有这一格：上面 ⑤ 有一条「口径表每条都被引用」（防「写了等于没写」）。
+#   这几条退役之后，那一格会红 —— 而它们退役的**原因**恰恰是「玩家不该看到这句」
+#   （内部完成度 / 策划口径 / 重报族别），所以修法不是把旧句子挂回去，而是：
+#     ① 呈现口换新槽位（`SYS_NOTICE_WHAT` / `SYS_ALLOC_PLAN` / `SYS_CLS_LEAD`）；
+#     ② 在这里登记**真源那一行待主线改/删**（真源仓对本分支只读 ⇒ 改值就两处口径打架）。
+#   ★ 这一格**自带一条更严的判据**（见下面 ⑤）：登记了就必须**真的没被引用**
+#     （哪天有人把旧槽位读回去，登记变陈旧 ⇒ 当场红）+ 每条都必须写明理由。
+RETIRED_DOC = {
+    # ★ 2026-09-26（试玩修复轮真源行落地）：`SYS_NOTICE_CMDS` / `SYS_ALLOC_SUGGEST` 两条登记**已删** ——
+    #   真源 `00_总纲/17_文案收口口径_v1.md` 里那两行已由主线删掉（fix3 §三·B ①/②）⇒ 那两格从
+    #   「退役登记」转成「口径表里不再有这一行」（⑤ 只扫口径表里的行，登记留着反而变陈旧 ⇒ 红）。
+    #   ★ 包内 texts 那两格**照旧留着**：⑲ 的反证还拿它们当靶子（「旧那句会被判红」）。
+    "SYS_CLS_HEAD":
+        "fix3-⑦（P1 体验-2）选职业那一步不再重报一遍族别（「你是精灵了 —— …」）；"
+        "替身 = SYS_CLS_LEAD（族定了 —— …）；"
+        "真源那一行的**值**已随修复轮落地（改值 + 去掉 race 参数），呈现口仍走 SYS_CLS_LEAD "
+        "⇒ 本键在包内没有读端（登记留着是为了这一条「确实没被引用」）",
+    # ★ 2026-09-26（Wave-2 合入落账）：`SYS_HELP_BATTLE_NOTE` 那条登记**已删** —— 真源
+    #   `00_总纲/17_文案收口口径_v1.md` 那一行已由主线删掉（与 G2 的 `_notes.md §三乙 #1` 对齐）、
+    #   包内 `texts` 那格也一起删了（G2 分段推进：战斗不再「一条指令打完整场」）。
+    #   ⇒ 退役登记留下的理由（「没被引用」）现在由「口径表里不再有这一行」承担，
+    #     登记留着反而变陈旧（⑤ 的 `_stale` 会红）—— 与上面 `SYS_NOTICE_CMDS` 那两条同理。
+}
 
 ok = True
 
@@ -187,6 +213,19 @@ def _drive(fn, p, text=""):
 
     asyncio.run(go())
     return out
+
+
+def _clear_field():
+    """把这一格里还留着的那一场清掉（`instance` 作用域 · 键 = `<群>#<uid>`）。
+
+    ★ fxa：本探针的用例表共用同一个 uid（`_E.group_id = g_copy` / `uid = u_copy`），
+      其中 `攻击(野外)` 那一条**真开一场**（一条 `攻击` 只推一手 ⇒ 结果没落下、场留在库里）；
+      而「场在跑 ⇒ 世界级移动一律拦下」（`SYS_MOVE_IN_FIGHT`）是本波新落的闸 ——
+      ⇒ 后面那些验「走路」的用例（⑫ / ⑫-b）得先有一个「手上没有仗」的前提，
+      不然判的是另一件事（拦下那一支另有 ⑫-c 一条正例 + 反证）。与 `probe_tower` 同名小件同款。
+    """
+    from content import instance as _INST
+    return _INST.clear(_INST.key_of("g_copy", "u_copy", ["u_copy"]))
 
 
 def _node_names(st, loc):
@@ -390,9 +429,71 @@ def main():
             elif isinstance(_v, str) and _v in tx:
                 data_ref.add(_v)
 
+    # ⑤ ★ 2026-09-26（试玩修复轮真源行落地）：两处**真引用**原先看不见 ⇒ 补上
+    #    （都走生产端那一口/那一份真源，不在这边另写一份判定）：
+    #    ① `content/rules/*.json` 里的声明也算「数据里取件」—— 例 `battle_text.json::slots`
+    #       把引擎 key 映到 texts 槽位名（那正是「声明式顶掉引擎兜底」的唯一口，值是槽位名）；
+    #    ② 风味文案的**条件变体**槽位 `<基础槽位>__<条件条目 id 大写>` —— 拼法唯一在
+    #       `content/calendar.py::variant_key`（K65），这里**调那一个函数现算比对**（不重写拼法），
+    #       且要求条目 id 真在 calendar 域里（域里没有 = 拼不出那个键 ⇒ 不算引用）。
+    _rdir = os.path.join(str(REPO), "content", "rules")
+    if os.path.isdir(_rdir):
+        for _fn in sorted(os.listdir(_rdir)):
+            if not _fn.endswith(".json"):
+                continue
+            try:
+                with open(os.path.join(_rdir, _fn), encoding="utf-8") as _f:
+                    _obj = json.load(_f)
+            except Exception:                                         # noqa: BLE001 —— 坏文件由别处报
+                continue
+            _stack = [_obj]
+            while _stack:
+                _v = _stack.pop()
+                if isinstance(_v, dict):
+                    _stack.extend(_v.values())
+                elif isinstance(_v, list):
+                    _stack.extend(_v)
+                elif isinstance(_v, str) and _v in tx:
+                    data_ref.add(_v)
+
+    from content import calendar as _CAL                                  # noqa: E402
+    # ★ g4-⑩：变体槽位那一族又多了一处来源 —— `pois.<pid>.text_variant`
+    #   （例：号角室石碑那句读过白桦树之后那一版）。拼法**仍是同一个** `variant_key`
+    #   （K65：别处不许自己拼），这里照样**调那个函数现算**，不重写拼法。
+    #   条件的那一头：calendar 的条目 id（B4-3 那一族）**或** pois 里一个声明了
+    #   `text_variant` 指向它的 poi id（塔外多一条没进谱的可读物那种事仍归 probe_pois 管）。
+    _cal_ids = {k for k in (st.domain("calendar") or {}) if not str(k).startswith("_")}
+    _poi_var = {str((v or {}).get("text_variant", {}).get("read"))
+                for v in (st.domain("pois") or {}).values()
+                if isinstance(v, dict) and (v.get("text_variant") or {}).get("read")}
+    _known_tails = _cal_ids | _poi_var
+    for _k in tx:
+        if "__" not in _k:
+            continue
+        _base, _, _tail = _k.rpartition("__")
+        if _base and _tail and _tail.lower() in _known_tails \
+                and _CAL.variant_key(_base, _tail.lower()) == _k:
+            data_ref.add(_k)
+
     rows = RS.parse_doc()
     notx = [r["key"] for r in rows if r["key"] not in tx]
-    diff = [r["key"] for r in rows if r["key"] in tx and tx[r["key"]]["value"] != r["value"]]
+    _pend = getattr(RS, "DOC_PENDING", {})
+
+    def _doc_ok(r):
+        """这一行「表里与域里」算不算对得上（★ g4：待跟账那一族是**两态**）。"""
+        if r["key"] not in tx:
+            return True
+        got = tx[r["key"]]["value"]
+        if got == r["value"]:
+            return True
+        fx = _pend.get(r["key"])
+        return bool(fx) and r["value"] in (fx["old"], fx["new"]) and got == fx["new"]
+
+    diff = [r["key"] for r in rows if not _doc_ok(r)]
+    _pend_bad = [k for k, fx in _pend.items()
+                 if not (fx.get("old") and fx.get("new")) or fx["old"] == fx["new"]
+                 or not str(fx.get("why") or "").strip()
+                 or k not in tx or tx[k]["value"] != fx["new"]]
     def _by_tpl(k):
         return any(rx.match(k) for rx in _tpl_rx)
     unused = [r["key"] for r in rows
@@ -400,9 +501,21 @@ def main():
               and not _by_tpl(r["key"])]
     chk("★ 口径表 %d 条都落在 texts 里" % len(rows), not notx, "%s" % notx[:6])
     chk("★ 口径表与 texts 逐字一致（防两处口径）", not diff, "%s" % diff[:6])
+    #  ★ g4：待跟账那一族（值改过、真源那一行等主线跟账）—— 两态之外第三态必红，
+    #    且每条都得写明理由 + 域里必须是新值（旧值留在域里 = 改了却没落地）。
+    chk("★ 口径表待跟账 %d 条：每条都写明理由 · 域里是新值 · 表里处于「旧值 / 跟账后」两态之一"
+        % len(_pend), not _pend_bad, "%s" % _pend_bad[:4])
+    #  ★ fix3-⑥⑦：退役登记的那几条「没被引用」是**对的**（见 RETIRED_DOC）；其余一条都不许闲着。
+    #    两态都要守：登记了却没退役（还被人引用）⇒ 登记陈旧 ⇒ 红。
+    _undecided = [k for k in unused if k not in RETIRED_DOC]
+    _stale = [k for k in RETIRED_DOC if k not in unused and k not in (notx + diff)]
+    _noreason = [k for k, v in RETIRED_DOC.items() if not str(v or "").strip()]
     chk("★ 口径表每条都被引用（代码 `T(\"…\")` / 代码字面量 / **模板拼出来** / **数据里取件**）"
-        "（T() %d · 字面量 %d · 模板 %d · 数据 %d）"
-        % (len(ref), len(ref_lit), len(_tpl_rx), len(data_ref)), not unused, "%s" % unused[:6])
+        "（T() %d · 字面量 %d · 模板 %d · 数据 %d）· 退役登记 %d 条（各自写明理由）"
+        % (len(ref), len(ref_lit), len(_tpl_rx), len(data_ref), len(RETIRED_DOC)),
+        not _undecided and not _stale and not _noreason,
+        "没被引用且没登记：%s ｜ 登记陈旧（其实还在用）：%s ｜ 理由是空的：%s"
+        % (_undecided[:6], _stale[:4], _noreason[:4]))
 
     # ⑥ 真跑实现体：产出的行里不许有取不到文案的标记
     from content import cmds_ast as CA                                    # noqa: E402
@@ -429,7 +542,10 @@ def main():
     read_at = next(((v.get("map"), v.get("subarea"), v.get("name")) for v in pois.values()
                     if v.get("read_text")), ("windmill_town", town[0] and "wt_gate_n", "?"))
     rmap, rnode, rname = read_at
-    touch_at = next(((v.get("map"), v.get("subarea")) for v in pois.values()), (rmap, rnode))
+    # ★ F6：那一站第一件 poi 的**名字**也要留着 —— `触摸 <东西>` 点名那一支要用它（不手写）
+    _touch_at3 = next(((v.get("map"), v.get("subarea"), v.get("name")) for v in pois.values()),
+                      (rmap, rnode, ""))
+    touch_at = (_touch_at3[0], _touch_at3[1])
     # ★ P-31：带门槛的两条（从域里现挑，不写死 id）—— 一条 `quest` 门槛（账没交 ⇒ 真挡）、
     #   一条 `time` 门槛（token 判不了 ⇒ 点名但照旧可用）
     _gt_q = next((v for _k, v in sorted(pois.items())
@@ -481,6 +597,14 @@ def main():
                 "flags": {"quests_done": []}}
         over.update(kw)
         return _player(**over)
+    # ★ F6：旧物谱那三行 / 端详那几支的 fixture —— 从 codex 域**现挑**（不手写 id）
+    _rel_book = dict((st.domain("codex") or {}).get("relic") or {})
+    _rel_pick = next((k for k, v in sorted(_rel_book.items()) if v.get("from") == "pick"), "")
+    _rel_read = next((k for k, v in sorted(_rel_book.items()) if v.get("from") == "read"), "")
+    _rel_pick_name = str((_rel_book.get(_rel_pick) or {}).get("name") or "")
+    _rel_read_name = str((_rel_book.get(_rel_read) or {}).get("name") or "")
+    _rel_known = {"relic": {_rel_read: {"day": 1, "known": True}}}
+    _rel_unknown = {"relic": {_rel_pick: {"day": 1, "known": False}}}
     cases = [
         ("观察", CA.look, "", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
         ("地图", CA.map_view, "", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
@@ -511,6 +635,12 @@ def main():
         ("提示(野外)", CA.hint, "", {"loc": "belt_north"}),
         ("帮助", CA.help_cmd, "", {}),
         ("触摸", CA.touch, "", {"loc": touch_at[0], "node": touch_at[1]}),
+        # ★ F6（QA P2 BUG⑧）：`触摸` 吃参数了 —— 点名那一支（只摸一件）与「名字对不上」那一支
+        #   一起进用例表 ⇒ ⑥ 的「不缺文案 / 不漏机器键」**自动**罩到它们身上（K61）
+        ("触摸(点名·一件)", CA.touch, "触摸 %s" % _touch_at3[2],
+         {"loc": touch_at[0], "node": touch_at[1]}),
+        ("触摸(点名·对不上)", CA.touch, "触摸 压根没有这一件",
+         {"loc": touch_at[0], "node": touch_at[1]}),
         ("读", CA.read_thing, "", {"loc": rmap, "node": rnode}),
         # ★ P-31：门槛那两条（真挡 / 判不了就点名）—— 一起进用例表，于是⑥「不漏机器键」与
         #   「取不到文案」两条守卫**自动**罩到它们身上（K61：覆盖面跟判据一起加）
@@ -525,7 +655,14 @@ def main():
         ("去(走到)", CA.go_to, "去 %s" % town[3], {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
         ("去(不是邻居)", CA.go_to, "去 %s" % belt[-1], {"loc": "belt_north", "node": "bn_bone"}),
         ("去(没这地方)", CA.go_to, "去 高塔", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
-        ("北口", CA.go_north, "", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
+        ("往北", CA.go_north, "", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
+        # ★ fix5-nav：屏幕上的站名能直接敲（= 去 <名>）· 跨图那个名字说「从这儿过不去」·
+        #   走到塔门口那一站多说一句「门能进」· 本层挡路的没过手时『下一层』拦住
+        ("去(裸站名·走到)", CA.go_to, "老风车", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
+        ("去(裸站名·别张图)", CA.go_to, "白桦林", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
+        ("去(走到塔门口那一站)", CA.go_to, "去 旧哨塔下", {"loc": "belt_north", "node": "bn_camp", "race": "human"}),
+        ("观察(塔门口那一站)", CA.look, "", {"loc": "belt_north", "node": "bn_tower", "race": "human"}),
+        ("下一层(挡路的没过手)", CTW.tower_next, "", {"loc": "old_watchtower", "node": "tower_stair1", "books": {}}),
         ("往东", CA.go_east, "", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
         ("往西", CA.go_west, "", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
         ("进镇", CA.enter_town, "", {"loc": "belt_north", "node": "bn_bone"}),
@@ -535,6 +672,17 @@ def main():
         ("搭话(这儿有谁)", CT.talk, "搭话", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
         ("搭话(没有这个人)", CT.talk, "搭话 不存在的人", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
         ("搭话(这儿没人)", CT.talk, "搭话", {"loc": "belt_north", "node": "bn_bone"}),
+        # ★ 未鉴定容器（本件接的那一格）：搭话这一支新加的两条路 —— 认得出的当场开出来 /
+        #   认得名字却拆不开的那一位（认不出）。一条落进用例表 ⇒ ⑥ 的「不缺文案 / 不漏机器键」
+        #   两条守卫**自动**罩到这条新路身上（K61：覆盖面跟判据一起加）。
+        ("搭话(带着未鉴定·认得)", CT.talk, "搭话 杜林",
+         {"loc": "windmill_town", "node": "wt_gate_n", "race": "human",
+          "bag": {"unid_rare": 1},
+          "books": {"relic": {"unid_rare": {"day": 1, "known": False}}}}),
+        ("搭话(带着未鉴定·认不出)", CT.talk, "搭话 莉安",
+         {"loc": "windmill_town", "node": "wt_chapel", "race": "human",
+          "bag": {"unid_common": 1},
+          "books": {"relic": {"unid_common": {"day": 1, "known": False}}}}),
         ("问路(镇上)", CT.ask_way, "", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
         ("问路(野外)", CT.ask_way, "", {"loc": "belt_north", "node": "bn_bone"}),
         # 公会与委托（B3-6b-2b：34 个槽位逐个真跑一遍 —— 不许出现取不到文案）
@@ -683,7 +831,7 @@ def main():
         ("彩蛋(一个都没有)", CE.eggs_book, "", {}),
         ("彩蛋(有)", CE.eggs_book, "", {"eggs": {_eid: {"day": 2}}} if _eid else {}),
         # ★ B3-11：站在目的地上再敲那四条出口（原先会再演一遍出门 · 往历史里塞自己）
-        ("北口(就在骨田)", CA.go_north, "", {"loc": "belt_north", "node": "bn_bone"}),
+        ("往北(就在骨田)", CA.go_north, "", {"loc": "belt_north", "node": "bn_bone"}),
         ("往东(就在白桦林)", CA.go_east, "", {"loc": "belt_east", "node": "be_birch"}),
         ("往西(就在旧渡口)", CA.go_west, "", {"loc": "belt_west", "node": "bw_old_ferry"}),
         ("进镇(就在镇口)", CA.enter_town, "", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
@@ -753,6 +901,20 @@ def main():
         ("查看(带价的成品)", CMO.item_show, "查看 %s" % _its.get(_pric, {}).get("name", ""),
          {"bag": {_pric: 2}} if _pric else {}),
         ("查看(没有这件)", CMO.item_show, "查看 不存在的东西", {}),
+        # ★ F6（QA P4 E-7 / P3）：`看` 收敛到「查看」那一支（裸名 = 没带东西 ⇒ 问一句）·
+        #   `端详` 四支（没点名 / 手上那件 / 谱里认出的 / 谱里也没有）
+        ("看(裸名·收敛到查看)", CMO.item_show, "看", {}),
+        ("看(汉字参=查看)", CMO.item_show, "看 %s" % _its.get(_wpn, {}).get("name", ""),
+         {"bag": {_wpn: 1}}),
+        ("端详(没点名·列谱)", CC.relic_study, "端详", {"bag": {}, "books": _rel_unknown}),
+        ("端详(手上那件)", CC.relic_study, "端详 %s" % _rel_pick_name,
+         {"bag": {_rel_pick: 1}, "books": _rel_unknown}),
+        ("端详(谱里认出的那一条)", CC.relic_study, "端详 %s" % _rel_read_name,
+         {"bag": {}, "books": _rel_known}),
+        ("端详(谱里也没有)", CC.relic_study, "端详 从来没见过的东西",
+         {"bag": {}, "books": _rel_unknown}),
+        ("旧物谱(未认出的捡的·带名字)", CC.codex_relic, "", {"bag": {_rel_pick: 1},
+                                                              "books": _rel_unknown}),
         ("丢弃(丢一件)", CMO.item_drop, "丢弃 %s" % _its.get(_wpn, {}).get("name", ""),
          {"bag": {_wpn: 2}}),
         ("丢弃(超过手里的)", CMO.item_drop, "丢弃 %s 9" % _its.get(_wpn, {}).get("name", ""),
@@ -867,7 +1029,7 @@ def main():
     _oP17 = _drive(PG.page_next, _player(**{"bag": {}, "flags": {}}), "下一页")
     chk("★ 『下一页』还没翻过任何列表 ⇒ 回 `SYS_PAGE_NONE`"
         "（不拿空串当第一页、不漏机器键）",
-        _oP17 == [CA.T("SYS_PAGE_NONE")], "%s" % (_oP17[:2],))
+        _oP17 == [CA.T("SYS_PAGE_NONE", lists=PG.lists_hint())], "%s" % (_oP17[:2],))
 
     # ★ B3-16b：`排行` 是**五参帧**（声明 args = group_id / uid / player）—— 单独真跑一遍，
     #   同样过「不缺文案 / 不漏机器键」两条（连档上还没名字那一档一起）
@@ -949,6 +1111,12 @@ def main():
             and _GBP.food_buff(_p_cls) == _want_mult and _GBP.food_buff(_p_no) == _want_mult,
             "%s / %s ｜ 乘数 %s" % (_shCls[-1:], _shNo[-1:], _GBP.food_buff(_p_cls)))
 
+    # ★ fxa：上面那张用例表里 `攻击(野外)` 那一条**真开了一场**（一条 `攻击` 只推一手 ⇒
+    #   这一场留在库里），而本波起「场在跑」会拦住世界级移动（`SYS_MOVE_IN_FIGHT`）——
+    #   ⇒ 下面这几节验的是「走路 / 脚下这一站 / 出镇守卫」的行为，**前提**是手上没有没打完
+    #   的一场：先把这一场清掉（拦下那一支另有 ⑫-c 一条正例 + 反证，不是把判据放宽）。
+    _clear_field()
+
     # ⑩ B3-10 ①：`去 <脚下这一站>` —— 回的是「到了」，不是「过不去」
     here_out = _drive(CA.go_to, _player(loc="windmill_town", node="wt_gate_n"), "去 %s" % cur)
     here_want = tx["SYS_MOVE_HERE"]["value"].replace("{name}", cur)
@@ -958,7 +1126,7 @@ def main():
         "%s" % (here_out[:2] if here_out else ["(空)"]))
 
     # ⑫ B3-11 ★ 四条出口的「脚下这一站」（K60 家族）：站在目的地再敲一次 —— 不许演「又走了一趟」
-    _EXITS = [("北口", "belt_north", "bn_bone", "SYS_MOVE_OUT_NORTH", CA.go_north),
+    _EXITS = [("往北", "belt_north", "bn_bone", "SYS_MOVE_OUT_NORTH", CA.go_north),
               ("往东", "belt_east", "be_birch", "SYS_MOVE_OUT_EAST", CA.go_east),
               ("往西", "belt_west", "bw_old_ferry", "SYS_MOVE_OUT_WEST", CA.go_west),
               ("进镇", "windmill_town", "wt_gate_n", None, CA.enter_town)]
@@ -981,18 +1149,18 @@ def main():
             why.append("紧接着的『返回』不是「没什么可回」：%s" % (back[:1] or ["(空)"]))
         if why:
             exit_bad.append((label, why))
-    chk("★ 站在目的地敲『北口 / 往东 / 往西 / 进镇』：回 HERE · 不演出门 · 不塞历史（4 条）",
+    chk("★ 站在目的地敲『往北 / 往东 / 往西 / 进镇』：回 HERE · 不演出门 · 不塞历史（4 条）",
         not exit_bad, "%s" % exit_bad[:2])
 
     # ⑫-b ★ P-52（B4-12 顺势核到 · 台账「我的倾向：加」）：出镇那三条的「在镇上」守卫
     #   —— 声明（`guard_desc`）+ 真源 `03_风车镇_指令与回复 §一` / `04_指令总表 §一` 同一栏都写着
-    #      「在镇上」，可实现原先**无条件传送**：在白桦林敲『北口』一步落到骨田、敲『往西』落到浅滩
+    #      「在镇上」，可实现原先**无条件传送**：在白桦林敲『往北』一步落到骨田、敲『往西』落到浅滩
     #      （违反地图铁律「城镇星形 / 野外线性相邻 / 出城走 _gate」· 跨图一步到对面那一片）。
-    #   守在哪一支：HERE（脚下这一站）之后、`_move` 之前 —— 站在骨田敲『北口』仍旧回「你已经到了」，
+    #   守在哪一支：HERE（脚下这一站）之后、`_move` 之前 —— 站在骨田敲『往北』仍旧回「你已经到了」，
     #      只有**不在镇上**才拦；拦下来 = 那一句 + 位置与历史一个字不动（不 `_save`）。
     #   『进镇』不受影响：它的守卫写的是「在北口或野外」（真源两处一致）⇒ 野外回镇照旧放行。
     _NOTOWN = tx["SYS_PLACE_NOTOWN"]["value"]
-    _OUTS = (("北口", "belt_north", "bn_bone", "SYS_MOVE_OUT_NORTH", CA.go_north),
+    _OUTS = (("往北", "belt_north", "bn_bone", "SYS_MOVE_OUT_NORTH", CA.go_north),
              ("往东", "belt_east", "be_birch", "SYS_MOVE_OUT_EAST", CA.go_east),
              ("往西", "belt_west", "bw_old_ferry", "SYS_MOVE_OUT_WEST", CA.go_west))
     #: 野外起手那几处（含三条各自的目的地 —— 那三对交给 ⑫ 的 HERE 那一支，这里跳过）
@@ -1014,7 +1182,7 @@ def main():
                 guard_bad.append(("%s→%s" % (_from_lab, _lab), "往历史里塞了自己", _pp.get("prev")))
             if tx[_out_slot]["value"] in chr(10).join(_got):
                 guard_bad.append(("%s→%s" % (_from_lab, _lab), "照样演了出门那一屏", _got[:1]))
-    chk("★ P-52：不在镇上敲『北口 / 往东 / 往西』= 拦下（只那一句 · 位置与历史一个字不动）"
+    chk("★ P-52：不在镇上敲『往北 / 往东 / 往西』= 拦下（只那一句 · 位置与历史一个字不动）"
         "（%d 处起手 × 3 条）" % len(_WILDS), not guard_bad, "%s" % guard_bad[:3])
 
     pass_bad = []
@@ -1037,6 +1205,90 @@ def main():
     chk("★ P-52：『进镇』从野外回镇**不受影响**（%d 处起手都真落到北口）" % len(_WILDS),
         not back_bad, "%s" % back_bad[:3])
 
+    # ⑫-c ★ fxa（P2/P4 试玩 #1 —— 「一场没结就走不了」那一道闸的判据）：移动族那四条
+    #   （往北 / 往东 / 往西 / 进镇）在**手上还有一场没打完**时一律拦下：只那一句、
+    #   位置与历史一个字不动；那一场收掉之后（= 『逃跑』跑成 / 打完那一条路的终态）
+    #   同一步真放行（反证：这一句不是「一律不许出门」）。
+    #   ★ 为什么这一条补在这儿：这道闸原先**一支探针都没罩**（`SYS_MOVE_IN_FIGHT` 只出现在
+    #     content 里）—— 本波顺手把它钉上（覆盖面与判据一起加，K61）。
+    _lock = tx["SYS_MOVE_IN_FIGHT"]["value"]
+    _drive(CBL.attack, _player(loc="belt_north", node="bn_bone", cls="cls_knight", level=3,
+                               hp=80, bag={}, codex={}, flags={}), "")
+    _fight_bad = []
+    for _lab, _loc, _node, _out_slot, _fn in _EXITS:
+        _pp = _player(loc=_loc, node=_node, prev=[])
+        _got = _drive(_fn, _pp, "")
+        if (not _got) or _got[0] != _lock \
+                or (_pp.get("loc"), _pp.get("node")) != (_loc, _node) or _pp.get("prev"):
+            _fight_bad.append((_lab, _got[:1] or ["(空)"], (_pp.get("loc"), _pp.get("node"))))
+    chk("★ fxa：手上还有一场没打完 ⇒ 『往北 / 往东 / 往西 / 进镇』一律拦下"
+        "（只那一句 · 位置与历史一个字不动）", not _fight_bad, "%s" % (_fight_bad[:2],))
+    _clear_field()                     # 反证：这一场收掉（脱身 / 打完之后的终态）
+    _free_bad = []
+    for _lab, _loc, _node, _out_slot, _fn in _OUTS:
+        _pp = _player(loc="windmill_town", node="wt_gate_n", prev=[])
+        _got = _drive(_fn, _pp, "")
+        if _lock in _got or (_pp.get("loc"), _pp.get("node")) != (_loc, _node):
+            _free_bad.append((_lab, _got[:1], (_pp.get("loc"), _pp.get("node"))))
+    chk("★ 反证：这一场收掉之后（脱身 / 打完）⇒ 同一步真放行（那三条各自真出门）",
+        not _free_bad, "%s" % (_free_bad[:2],))
+
+
+    # ── ⑲ ★ fix3-⑥⑦：机器味 / 开发词上屏（三处点名）+「扫面」的语境 ─────────────
+    #   ⑥-a 公告：构建期完成度不上屏（P1 BUG-15）
+    #   ⑥-b 加点：不说「设计基线」这种策划口径（P4 E-5）
+    #   ⑥-c 战斗日志尾巴：引擎那句兜底（无 emoji / 缩进不同）已被自己的槽位顶掉（P2 BUG⑪）
+    #   ⑦-a 老风车观察：「扫面」是磨坊主的话（真源 23_NPC设定 §7），正文要给出能读懂它的语境
+    #        （P1 体验-13 玩家当错字报上来的）
+    import re as _re19                                                     # noqa: E402
+
+    from content import battle_text as BT19                                # noqa: E402
+    from content import cmds_self as CS19                                  # noqa: E402
+
+    _CNT19 = _re19.compile(r"\d+\s*/\s*\d+\s*条")
+    _notice19 = _drive(CS19.notice, _player(), "")
+    _nt19 = [ln for ln in _notice19 if _CNT19.search(ln) or "接上" in ln]
+    chk("★ ⑥ 公告不再报内部完成度（「已经接上的指令：N / M 条」不上屏）",
+        not _nt19 and bool(_notice19), "%s" % (_nt19[:2] or " ｜ ".join(_notice19)))
+
+    # 反证：判据抓得住旧那句（把旧槽位按 P1 BUG-15 那两个数铺出来 —— 逐字重现当时那句）
+    _OLD_NOTICE19 = (tx["SYS_NOTICE_CMDS"]["value"].replace("{n}", "98").replace("{total}", "103"))
+    chk("★ 反证：旧公告那句（98 / 103 条）会被判红",
+        bool(_CNT19.search(_OLD_NOTICE19)) and "98 / 103 条" in _OLD_NOTICE19,
+        "%s" % (_OLD_NOTICE19,))
+
+    _al19 = _drive(CA.alloc_points, _player(cls="cls_knight", level=3), "")
+    _dev19 = [ln for ln in _al19 if ("设计基线" in ln) or ("权重" in ln) or ("基线" in ln)]
+    chk("★ ⑥ 加点（不带参数）不说策划口径：没有「设计基线 / 权重」这类词，"
+        "给的是打得出来的「推荐分配」（%d 行）" % len(_al19),
+        not _dev19 and any(tx["SYS_ALLOC_PLAN"]["value"].split("（")[0] in ln for ln in _al19),
+        "%s" % (_dev19[:2] or _al19[:2]))
+
+    # 反证：旧槽位的值（真源那一行）确实带着那个词 —— 判据不是空转
+    chk("★ 反证：旧加点那句（真源口径表里的 SYS_ALLOC_SUGGEST）会被判红",
+        "设计基线" in tx["SYS_ALLOC_SUGGEST"]["value"], "%s" % tx["SYS_ALLOC_SUGGEST"]["value"][:24])
+
+    _eng19 = "battle.actions.no_target"
+    _decl19 = BT19.slots().get(_eng19, "")
+    _tbl19 = BT19.battle_text()
+    _eng_default = "但没有可攻击的目标！"
+    _rend19 = _tbl19.render_or(_eng19, _eng_default)
+    chk("★ ⑥ 战斗日志尾巴那句引擎腔被顶掉（引擎槽位声明在表里 + 槽位在 texts + 真渲染三条都在）",
+        _decl19 and _decl19 in tx and _rend19 == tx[_decl19]["value"]
+        and _eng_default not in _rend19 and "没有可攻击" not in _rend19,
+        "%s → %r" % (_decl19 or "没声明", _rend19))
+    chk("★ 反证：未声明时上屏的就是引擎那句 —— 与我们的槽位逐字不同（差异是真的，不是同义词）",
+        _eng_default != tx[_decl19]["value"] and _eng_default not in _rend19,
+        "引擎兜底 = %r（未声明时原样上屏；我们的是 %r）"
+        % (_eng_default, tx[_decl19]["value"][:20]))
+
+    _mill19 = tx["SCENE_WT_MILL"]["value"]
+    _OLD_MILL19 = "德里克在下面扫面 —— 他不说话的时候也扫。"
+    chk("★ ⑦ 老风车『观察』里「扫面」带着语境（磨盘 / 落的那层白），不会读成错字",
+        "扫面" in _mill19 and "磨盘" in _mill19,
+        "「扫面」在：%s · 「磨盘」在：%s" % ("扫面" in _mill19, "磨盘" in _mill19))
+    chk("★ 反证：旧那一行（裸「扫面」、上下文里没有磨盘）会被判红",
+        "扫面" in _OLD_MILL19 and "磨盘" not in _OLD_MILL19, "%s" % _OLD_MILL19)
 
     print("  · 打样：%s" % " ｜ ".join(sample))
 

@@ -12,6 +12,8 @@
   · `06_第一阶段垂直切片/00_第一阶段内容总纲_v1.md §三`  怪物五档表（档名 ↔ 怪名）
   · `content/data/monsters.json`                      `role`（中文档名）/ `role_key`（ASCII 机器键）
   · `00_总纲/15_彩蛋域口径_v1.md §二`                  彩蛋条件（「依据」栏点名了某个任务 ⇒ 那就是它的交付条件）
+                                                      ★ g3-quests2：那一行的 `hold=` 那件东西**同时**是
+                                                        「接活时发到手」的那件（`quests.<id>.give`）
 
 落点：`content/data/quests.json`（**只动点名的那几行**，其余逐字节不变 · 全 LF）
 
@@ -27,6 +29,11 @@
   ★ 同一日同档必是同结果、跨日必换（档内只数 > 1）；轮换是**算出来的**，不是写死哪一只。
   （b41 落的是「那一档任意一只打掉过」那个宽口径，本批收窄；依据仍是 24 §二 那两句话 ——
    两句少一句就当场抛，口径变要有人重新裁决。）
+  ★ g3-quests2（2026-09-26）：「档内只数」改指**可遇集合**（`cmds_quest._pool_of`）——
+    池 = 该档的怪 ∩ 「按该档 `min_level` 在它自己写明的每一站上真挑得出来」的那批
+    （尺子 = `combat.encounter_cand`，玩家敲『攻击』时挑怪用的同一个口）。**本生成器不改条件**：
+    `require` 仍是 `{kind: kill, role, n, daily}`（池子的收窄在 `_daily_pick` 那一头），
+    轮换算法一个字没动 —— 只把「档内」收窄成「碰得上的」。
 """
 from __future__ import annotations
 
@@ -564,6 +571,39 @@ def to_require(clauses):
     return reqs
 
 
+#: ★ g3-quests2：**接活那一下就要发到手**的东西（域里 `quests.<id>.give`）。
+#:   ★ 只有点名的条目、每一格都写明它凭什么（**物品 id 一个都不手打** —— 从 15 §二 现取）：
+#:     支 13「还石头」：`15 §二` 彩蛋 2 那一行的依据栏写着「q_side_13「还石头」的交待就是彩蛋 2，
+#:     **小满的石头 = 骨田捡的刻字石片**」，而 `17 §QUEST_SIDE25_STORY` 写的是
+#:     「**小满把那块石头塞给你** —— 它该回到缺着它的那块碑上去。」⇒ 那件 `hold=` 的东西
+#:     是**从小满手上接过来**的 —— 接活那一下就得真给到手上（改前一个东西都不发，那句话是空话）。
+#:   ★ 依据对不上（15 §二 里没有这条 / 那一行没有 `hold=`）⇒ 当场抛（不许静默少发一件）。
+_GIVE_RULES = {
+    "q_side_13": {
+        "from": "egg_hold",
+        "why": "15 §二 彩蛋 2 那件 `hold=` 的东西（依据栏：小满的石头 = 骨田捡的刻字石片）"
+               "＋ 17 §QUEST_SIDE25_STORY「小满把那块石头塞给你」⇒ 接活时真发到手上",
+    },
+}
+
+
+def parse_egg_gives():
+    """`{任务 id: [{"item": <id>, "n": 1}, …]}` —— 按 `_GIVE_RULES` 从 15 §二 那一行现取。"""
+    eggs = parse_egg_gates()
+    out = {}
+    for qid, rule in sorted(_GIVE_RULES.items()):
+        if rule.get("from") != "egg_hold":
+            raise SystemExit("%s 的发东西规则 from=「%s」没有对应的取法" % (qid, rule.get("from")))
+        if qid not in eggs:
+            raise SystemExit("%s 在发东西规则表里，但 15 §二 里没有它那一行「交待就是彩蛋」—— 先裁决"
+                             % qid)
+        items = [v for k, v in eggs[qid][1] if k == "hold"]
+        if not items:
+            raise SystemExit("%s 要接活发东西，但 15 §二 那一行没有 `hold=` 子句（没东西可发）" % qid)
+        out[qid] = [{"item": i, "n": 1} for i in items]
+    return out
+
+
 # ── 三、写（只动点名的行）────────────────────────────────────────
 def _block_span(lines, key):
     """顶层条目 `"key": {` … `  },` 的行号区间（含首尾）。"""
@@ -589,6 +629,13 @@ def _dump_require(reqs, indent="    "):
                                                     "," if j < len(keys) - 1 else ""))
         out.append(indent + "  }" + ("," if i < len(reqs) - 1 else ""))
     out.append(indent + "],")
+    return out
+
+
+def _dump_give(gv, indent="    "):
+    """★ g3-quests2：`give` 那一块（写法与 `require` 逐字同形 —— 同一个铺法）。"""
+    out = _dump_require(gv, indent)
+    out[0] = out[0].replace('"require": [', '"give": [')
     return out
 
 
@@ -621,6 +668,18 @@ def apply_to_text(text, planned):
                 if i is None:
                     raise SystemExit("%s 里没有 objective 那一行，插不进 require" % qid)
                 blk[i + 1:i + 1] = want
+        # ③ ★ g3-quests2：give（接活时发东西）—— 有就整块换掉，没有就紧跟在 require / objective 之后
+        if plan.get("give"):
+            want = _dump_give(plan["give"])
+            i = next((j for j, ln in enumerate(blk) if ln.strip().startswith('"give"')), None)
+            if i is not None:
+                j = next(j for j in range(i + 1, len(blk)) if blk[j].startswith("    ]"))
+                blk[i:j + 1] = want
+            else:
+                i = next((j for j, ln in enumerate(blk) if ln.startswith("    ]")), None)
+                if i is None:
+                    raise SystemExit("%s 里找不到 require 那一块的收尾行，插不进 give" % qid)
+                blk[i + 1:i + 1] = want
         lines[a:b + 1] = blk
     return "\n".join(lines)
 
@@ -651,6 +710,7 @@ def main(dry=False):
     print("五档表（00 §三 → role_key）：%s" % tiers)
     print("悬赏「指定的」= 每天轮换挑一只：%s（24 §二 那两句都在）" % daily)
     print("24 §二 支线表：%d 行" % len(side_rows))
+    print("接活发东西（give）：%s" % {k: v for k, v in sorted(parse_egg_gives().items())})
 
     # ① 悬赏三档：经验 = exp_need(该档 min_level) × N/D（整数；除不尽当场抛，不许四舍五入糊过去）
     for k, v in sorted(dom.items(), key=lambda kv: kv[1].get("order") or 0):
@@ -689,6 +749,15 @@ def main(dry=False):
             planned.setdefault(qid, {})["require"] = req
             planned[qid]["why"] = "15 §二「%s「%s」的交待」那一条 ⇒ %s" % (
                 qid, qname, json.dumps(req, ensure_ascii=False))
+
+    # ②-b ★ g3-quests2：`give` —— **接活那一下真发到手**的东西（同一份 15 §二 那一行现取）
+    for qid, gv in sorted(parse_egg_gives().items()):
+        if qid not in dom:
+            raise SystemExit("15 §二 点名发东西的 %s，但域里没有这条任务" % qid)
+        if dom[qid].get("give") != gv:
+            planned.setdefault(qid, {})["give"] = gv
+            _w = "%s ⇒ give=%s" % (_GIVE_RULES[qid]["why"], json.dumps(gv, ensure_ascii=False))
+            planned[qid]["why"] = (planned[qid]["why"] + " ｜ " + _w) if planned[qid].get("why") else _w
 
     # ③ ★ B3-13：支线那 6 条 —— 按「形状语法」从 24 §二 的「步骤」列现取（数从文档来）
     for qid, rule in sorted(_SIDE_RULES.items()):

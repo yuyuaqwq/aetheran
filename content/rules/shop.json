@@ -3,7 +3,8 @@
   "_src": {
     "真源": "aetheran-plan/06_第一阶段垂直切片/00_第一阶段内容总纲_v1.md §六（品阶四档） · 03_风车镇_指令与回复 §一（`药铺` 在镇上 · 买药） · 04_指令总表 §物品（`购买 <物品>` 别名 买 · 守卫 在铺子且钱够） · 05_玩法数值口径 §六（铺子｜价 = 基础价 × 品阶系数）",
     "口径": "aetheran-plan/00_总纲/18_铺子买卖口径_v1.md（B4-15 那四条 + P-55 落的加价那一格）",
-    "生成": "scripts/rebuild_shop.py（四个系数从 00 总纲 §六 现解析；`buy_markup` 那一格真源没给数，取值理由写在脚本头注里 —— 本文件不手打）"
+    "生成": "scripts/rebuild_shop.py（四个系数从 00 总纲 §六 现解析；`buy_markup` 那一格真源没给数，取值理由写在脚本头注里 —— 本文件不手打）",
+    "加几家（fix7-gear · 手写那几格）": "`shelves` = 除药铺之外的几家（柯尔那家 · 商队那家）—— **不是本脚本生成**（重跑时照原样带过去，见 `merge_hand_shelves`）。依据：真源 `06_第一阶段垂直切片/06_装备获取与支线玩法_v1.md §一 1.1 + §5.4 + §5.3`（普通档 = 镇上铺子直接买 · 兜底 · 制作是「同档不同形状」）· `07_装备体系_v2 §四`（低阶铺子能买）· `00_总纲/06_阶段交接指南_v3.md §3.1③`（凑整 · 费用按等级）· `06_第一阶段垂直切片/29_世界事件_设计_v1.md §五`（商队到货才有货）。逐条裁决与逐件数值写在包 `_notes.md`「fix7-gear」那一节。"
   },
   "quality_mult": {
     "普通": 1.0,
@@ -13,6 +14,48 @@
   },
   "quality_default": "普通",
   "buy_markup": 2,
+  "sell_gear": {
+    "_src": "aetheran-plan/06_第一阶段垂直切片/05_玩法数值口径_v1.md §七「钱从哪来：悬赏 + 卖材料 + 卖旧物（**不靠卖装备**）」—— 真源给了取向、**没给数**；品阶四档的词表来自 items 域的 `quality`（`loot.quality_words()`），等级那一格来自 `items.req.level`（`loot._req_level`）⇒ 本表不抄第二份词表、也不新造字段",
+    "slot_field": "slot",
+    "base_by_quality": {
+      "普通": 6,
+      "精制": 15,
+      "稀有": 36,
+      "遗物": 80
+    },
+    "level_mult_by_band": [
+      {
+        "min_lv": 0,
+        "max_lv": 5,
+        "mul": 1.0
+      },
+      {
+        "min_lv": 6,
+        "max_lv": 10,
+        "mul": 1.5
+      },
+      {
+        "min_lv": 11,
+        "max_lv": 15,
+        "mul": 2.5
+      },
+      {
+        "min_lv": 16,
+        "max_lv": 20,
+        "mul": 4.0
+      }
+    ]
+  },
   "stock_kind": "tool",
-  "station_func": "herb"
+  "station_func": "herb",
+  "shelves": {
+    "smith": {
+      "station_func": "smith",
+      "shop_key": "smith"
+    },
+    "caravan": {
+      "shop_key": "caravan",
+      "event": "ev_caravan_arrived"
+    }
+  }
 }

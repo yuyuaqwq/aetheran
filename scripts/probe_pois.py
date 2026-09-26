@@ -153,8 +153,26 @@ chk("★ 就地线索里 5 条各有自己的正文槽位（%s）· 第 6 条与
              if po[k].get("read_text") == po[tw_share[0]].get("read_text")]) == 1,
     "%s（共用那一句的进谱条目：%s）"
     % ([po[k].get("name") for k in tw_share],
-       [(k, po[k].get("name")) for k in codexed
-        if po[k].get("read_text") == po[tw_share[0]].get("read_text")]))
+      [(k, po[k].get("name")) for k in codexed
+       if po[k].get("read_text") == po[tw_share[0]].get("read_text")]))
+
+# ★ fix3-⑦（P2 BUG⑫ 的处置）：上面那条「两处共用同一句正文」**是有据的，不是漏抄** ——
+#   真源 `22_旧哨塔_逐间设计_v1.md §二·12 可做` 那一行明写：
+#     「捞那页纸（→ **就是** 14 §五 那半页：同一句正文，与伐木棚那本共用 READ_SOAKED_JOURNAL；
+#       P1 不拆成半页 A/B）」
+#   玩家把它当「复制粘贴」报了上来（两处一字不差）；照 `legacy-debt-triage` 的口径先核实，
+#   结论 = **有意为之**（同一样东西的两个位置）⇒ **不改文案**；改成把「这条共享有真源依据」
+#   钉成判据：真源哪天翻成「要拆」，这里当场红（那时才该拆槽位 + 改上面那条判据）。
+_D22 = RK.rd(RK.DOC22)
+_SHARE_LINE = [ln for ln in _D22.splitlines()
+               if "READ_SOAKED_JOURNAL" in ln and "共用" in ln and "不拆" in ln]
+chk("★ 共用正文那一档**有真源依据**（22 §二·12「同一句正文 · 与伐木棚那本共用 · P1 不拆成半页 A/B」）"
+    "—— 真源翻转 ⇒ 这里当场红", bool(_SHARE_LINE),
+    "%s" % ((_SHARE_LINE[0].strip()[:70] + "…") if _SHARE_LINE else "22 文档里找不到那一行"))
+chk("★ 反证：域里确实还是共用（那几处的 `read_text` 逐字相同）—— 判据对象没跑空",
+    len({str(po[k].get("read_text")) for k in tw_share}) == 1
+    and str(po[tw_share[0]].get("read_text")) == "READ_SOAKED_JOURNAL",
+    "%s" % [(k, po[k].get("read_text")) for k in tw_share])
 chk("★ 门厅那件不认得的：挂在池表（未鉴定）· 在旧物谱里（捡的）· 是门厅那个可搜物的产物",
     "unid_tower" in dp9
     and (cx9.get("relic", {}).get("unid_tower") or {}).get("from") == "pick"
@@ -458,10 +476,15 @@ for _pid in _cond_pids:
         continue
     # 点名行必须是**那个槽位**渲染出来的（不手抄整句：拿槽位模板的前半截当判据）
     _slot12 = "SYS_POI_NOT_YET" if _st12 == "no" else "SYS_POI_COND_TODO"
-    _head12 = str((tx.get(_slot12) or {}).get("value") or "").replace("{name}", str(_rec12["name"]))
+    # ★ 本波（P1 体验-10）：点名行现在**带主语** —— 与「看得见」那一栏同一形（『名字』图标）。
+    #   期望值按**域里的名字与图标**现算（不抄代码里那一行怎么写）。
+    _head12 = str((tx.get(_slot12) or {}).get("value") or "").replace(
+        "{name}", "『%s』%s" % (_rec12["name"], _rec12.get("icon") or ""))
     _head12 = _head12.split("{")[0]
     if not _ln12 or not _ln12.startswith(_head12):
         _bad12.append((_pid, "点名行不是 %s 渲染的" % _slot12, _ln12[:40]))
+    elif str(_rec12.get("icon") or "") and str(_rec12["icon"]) not in _ln12:
+        _bad12.append((_pid, "点名行没带上那件东西的图标（主语不明）", _ln12[:40]))
 chk("★ 域里带门槛的 %d 条：每一条都判出了状态（%s），且**不满足 / 判不了都要点名**（一条都不许静默）"
     % (len(_cond_pids), " · ".join("%s=%d" % kv for kv in sorted(_tally12.items()))),
     not _bad12, "%s" % _bad12[:2])
@@ -476,7 +499,7 @@ else:
     _loc12, _node12 = po[_q_pid]["map"], po[_q_pid]["subarea"]
     _p_no = _player12(loc=_loc12, node=_node12)
     _p_yes = _player12(loc=_loc12, node=_node12, flags={"quests_done": [_qid]})
-    _no_txt = CA10.T("SYS_POI_NOT_YET", name=po[_q_pid]["name"],
+    _no_txt = CA10.T("SYS_POI_NOT_YET", name=CA10._poi_label(po[_q_pid]),
                      why=CA10.T("SYS_POI_WHY_QUEST", token=_qname))
     _no_look = _run12(CA10.look, _p_no)
     _no_read = _run12(CA10.read_thing, _p_no, "读 %s" % po[_q_pid]["name"])
@@ -503,7 +526,7 @@ else:
     _p_no2 = _player12(loc=po[_r_pid]["map"], node=po[_r_pid]["subarea"])
     _p_yes2 = _player12(loc=po[_r_pid]["map"], node=po[_r_pid]["subarea"],
                         books={"relic": {_need: {"known": False}}})
-    _no2 = CA10.T("SYS_POI_NOT_YET", name=po[_r_pid]["name"],
+    _no2 = CA10.T("SYS_POI_NOT_YET", name=CA10._poi_label(po[_r_pid]),
                   why=CA10.T("SYS_POI_WHY_READ", token=_need_name))
     _l_no2 = _run12(CA10.look, _p_no2)
     _l_yes2 = _run12(CA10.look, _p_yes2)
@@ -544,12 +567,21 @@ for _hod in (12.0, 22.0):
     _cases12.append((_hod, CAL11.state()["hour"], CA10._poi_cond(po[_t_pid], _player12(), None)))
 CAL11.facade.bind_host(clock=lambda: FIX11)
 #: 点名那一句里的 token **用域里那个词**（`_poi_cond` 就是这么渲染的：写「退潮」不写「夜」）
+#: ★ fix5-nav：域里那个词是**散文**（「退潮」）时，门槛那一句要把**刻度**一并点明
+#:   （P2 体验：「退潮后的石缝」只报条件不给刻度 ⇒ 玩家在浅滩把六个动词挨个试）——
+#:   走的槽位因此是 `SYS_POI_WHY_TIME_ALIAS`（token 照旧 + 补一句「就是「夜」」）。
+_alias_line = CA10.T("SYS_POI_WHY_TIME_ALIAS", token=_t_tok, real=CAL11.name(_eid_t))
 chk("★ P-31 「%s → %s」是**真门槛**（域里那条 POI · 假钟两档）：昼 = %s ⟶ %s ｜ 夜 = %s ⟶ %s"
     % (_t_tok, CAL11.name(_eid_t), _cases12[0][1], _cases12[0][2][0],
        _cases12[1][1], _cases12[1][2][0]),
     _cases12[0][2][0] == "no" and _cases12[1][2][0] == "ok"
-    and CA10.T("SYS_POI_WHY_TIME", token=_t_tok) in _cases12[0][2][1],
+    and CA10.T("SYS_POI_WHY_TIME", token=_t_tok) in _cases12[0][2][1]
+    and _alias_line in _cases12[0][2][1],
     "%s" % _cases12)
+chk("★ fix5-nav（P2 体验）：门槛那一句把**刻度**点明了 —— 散文词「%s」的那一档走 "
+    "`SYS_POI_WHY_TIME_ALIAS`、逐字 = 「%s」（昼那一档）" % (_t_tok, _alias_line),
+    _alias_line in (_cases12[0][2][1] or "") and CAL11.token_alias().get(_t_tok) == CAL11.name(_eid_t),
+    "%s" % (_cases12[0][2][1],))
 
 # ④ ★ P-31（2026-09-26）**换锚**：原先这一条要求「判不了的那两条」在场（= 把「真源写着、刻度没有」
 #   这个**欠账状态**钉成了判据）。现在那两条判得了（别名表），判据换成更强的一条：
@@ -559,18 +591,36 @@ _unk = [_pid for _pid in _cond_pids if CA10._poi_cond(po[_pid], _player12(), Non
 chk("★ P-31 换锚④：域里带门槛的 %d 条 POI **一条都不许判不了**（`unknown` = %s —— 真源写着的词都得有刻度）"
     % (len(_cond_pids), _unk or "0 条"),
     not _unk, "%s" % [po[k]["name"] for k in _unk])
-_syn_unk = dict(po[_cond_pids[0]] or {})
-_syn_unk["condition"] = {"time": ["涨潮"]}                 # 词表外的 token（真源没有这一档）
-_st_u, _ln_u = CA10._poi_cond(_syn_unk, _player12(), None)
-_p_u = _player12(loc=_syn_unk["map"], node=_syn_unk["subarea"])
-_o_u = _run12(CA10.read_thing, _p_u, "读 %s" % _syn_unk["name"]) if _syn_unk.get("read_text") else []
-chk("★ P-31 「判不了就点名 + 照旧可用」那条**路**仍在（合成一条脏 token「涨潮」）：状态 = %s · 点名行 = 「%s」· "
-    "正文照样拿得到（不许静默删内容）"
-    % (_st_u, str(_ln_u)[:42]),
-    _st_u == "unknown" and _ln_u.startswith(CA10.T("SYS_POI_COND_TODO", name=_syn_unk["name"]).split("{")[0])
-    and (not _syn_unk.get("read_text")
-         or str((tx.get(_syn_unk["read_text"]) or {}).get("value") or "") in _o_u),
+# ★ 本波加强：这一支原先拿「域里第一条带门槛的」当底座，而那条**没有正文** ⇒ 「正文照样拿得到」
+#   半句被 `not read_text` 短路掉了（等于没测）。现在换成**有正文的那条**（带时辰门槛的那件），
+#   并把域里那条记录**临时**换成脏 token 真跑 `读`：正文必须照样拿得到；换回去 ⇒ 回到被门槛挡住。
+#   （注入面 = 代码真正在用的那一份 `_CACHE`，跑完原样还原 —— 不动盘上的数据。）
+_LIVE = CA10._data("pois")
+_REC_U = _LIVE[str(_t_pid)]
+_SAVED_U = _json12.loads(_json12.dumps(_REC_U, ensure_ascii=False))
+_st_u, _ln_u, _o_u, _o_u2 = "", "", [], []
+try:
+    _REC_U["condition"] = {"time": ["涨潮"]}               # 词表外的 token（真源没有这一档）
+    _st_u, _ln_u = CA10._poi_cond(_REC_U, _player12(), None)
+    _p_u = _player12(loc=_REC_U["map"], node=_REC_U["subarea"])
+    _o_u = _run12(CA10.read_thing, _p_u, "读 %s" % _REC_U["name"])
+finally:
+    _REC_U.clear()
+    _REC_U.update(_SAVED_U)
+_body_u = str((tx.get(_REC_U.get("read_text")) or {}).get("value") or "")
+_p_u2 = _player12(loc=_REC_U["map"], node=_REC_U["subarea"])
+_o_u2 = _run12(CA10.read_thing, _p_u2, "读 %s" % _REC_U["name"])
+chk("★ P-31 「判不了就点名 + 照旧可用」那条**路**仍在（把域里 `%s` 临时换成脏 token「涨潮」）："
+    "状态 = %s · 点名行 = 「%s」· 正文照样拿得到（不许静默删内容）"
+    % (str(_REC_U.get("name")), _st_u, str(_ln_u)[:42]),
+    _st_u == "unknown"
+    and _ln_u.startswith(CA10.T("SYS_POI_COND_TODO", name=CA10._poi_label(_REC_U)).split("{")[0])
+    and bool(_body_u) and _body_u in _o_u,
     "%s" % (_o_u[:2] if _o_u else "（不可读物 · 只看点名行）"))
+chk("★ 同一件的**另一态**（脏 token 还原回真源那个词）：门槛判得出来 ⇒ 昼被挡、正文一个字不给 "
+    "（`%s`）" % _t_tok,
+    _body_u not in _o_u2 and CA10.T("SYS_POI_WHY_TIME", token=_t_tok) in "\n".join(_o_u2),
+    "%s" % _o_u2[:2])
 
 print()
 print("⑬ 隐藏点的产出引用 —— `effect.loot` 不许悬空（B3-28 ②）")
@@ -601,6 +651,120 @@ chk("★ 三个隐藏点都**显式写了 `effect.need`**（产出口归哪条�
 #     本节改成「引用数 = 真源点名的那几个池，且逐个在 drop_pools 里」（判据只加强，不削弱）。
 chk("★ 隐藏点今天**一条 `effect.loot` 都不挂**（B3-28 ② · 摘干净的登记值 = 0）",
     not _loot_refs13, "%s" % _loot_refs13)
+
+# ══════════════════════════════════════════════════════════════
+# ★ g4-⑩：可读物的正文**按真实经历分支**（`pois.<pid>.text_variant`）
+#   原状（P2 报告 BUG⑦）：号角室那块碑那句「有三个，你在白桦林那棵树皮上见过 —— 重了。」
+#   对**没去过白桦林**的玩家也照说（抢跑一个当时还不成立的发现）。
+#   判据三态：① schema 声明了那一格（键只有 `read`）· 每条的条件 id 真在 pois 域里；
+#             ② 真跑两态：没读到 ⇒ 基础正文 / 读到过 ⇒ 变体正文（两个都不等于对方）；
+#             ③ 反证（有牙）：没读到过时**旧那一句**一个字都不上屏。
+# ══════════════════════════════════════════════════════════════
+print("")
+print("★ g4-⑩：可读物正文按真实经历分支（号角室碑名单那句）")
+_sch10b = _json12.load(_io12.open(os.path.join(REPO, "schemas", "pois.schema.json"), encoding="utf-8"))
+_tv_prop = (((_sch10b.get("patternProperties") or {}).get("^poi_[a-z_]+$") or {})
+            .get("properties") or {}).get("text_variant")
+_tv_pids = sorted(k for k, v in po.items() if (v.get("text_variant") or {}).get("read"))
+_tv_bad = [k for k in _tv_pids if str(po[k]["text_variant"]["read"]) not in po]
+chk("★ `text_variant` 那一格：schema 里声明了（键只有 `read`）· 域里 %d 条（%s）· "
+    "条件指向的 poi 真在域里"
+    % (len(_tv_pids), " · ".join(po[k]["name"] for k in _tv_pids)),
+    bool(_tv_prop) and _tv_pids and not _tv_bad
+    and list(((_tv_prop.get("propertyNames") or {}).get("enum")) or []) == ["read"],
+    "schema=%s · 域里=%s · 悬空=%s" % (bool(_tv_prop), _tv_pids, _tv_bad))
+if not _tv_pids:
+    chk("pois 域里有一条 `text_variant`（找不到 ⇒ 这条测不了）", False, "")
+else:
+    _tp = _tv_pids[0]
+    _tneed = str(po[_tp]["text_variant"]["read"])
+    _tbase = str(po[_tp].get("read_text") or "")
+    from content.scene import variant_key as _vk10                      # noqa: E402
+    _tvk = _vk10(_tbase, _tneed)
+    _p_before = _player12(loc=po[_tp]["map"], node=po[_tp]["subarea"], books={"relic": {}})
+    _p_after = _player12(loc=po[_tp]["map"], node=po[_tp]["subarea"],
+                         books={"relic": {_tneed: {"known": True}}})
+    _body_b = str((tx.get(_tbase) or {}).get("value") or "")
+    _body_a = str((tx.get(_tvk) or {}).get("value") or "")
+    _r_before = _run12(CA10.read_thing, _p_before, "读 %s" % po[_tp]["name"])
+    _r_after = _run12(CA10.read_thing, _p_after, "读 %s" % po[_tp]["name"])
+    chk("★ 真跑两态（%s ← 先读到过『%s』）：没读到 ⇒ 基础正文（%s…）· 读到过 ⇒ 变体正文（%s…）"
+        % (po[_tp]["name"], _tneed, _body_b[:14], _body_a[:14]),
+        bool(_body_a) and _body_a != _body_b and _tbase != _tvk
+        and _body_b in _r_before and _body_a not in _r_before
+        and _body_a in _r_after and _body_b not in _r_after,
+        "before=%s / after=%s" % (_r_before[1:2], _r_after[1:2]))
+    # ③ 反证：真源口径表里旧那一句（不分支的那一句）在「没读到过」那一态一个字都不上屏
+    _old10 = str((tx.get(_tvk) or {}).get("value") or "")
+    chk("★ 反证（有牙）：没读到过白桦树时**旧那一句不出现** —— 旧句 = 变体那句（%s），"
+        "它只在读到过那一态上屏" % _old10[:20], bool(_old10) and _old10 not in _r_before)
+
+# ══════════════════════════════════════════════════════════════
+# ★ g4-⑧：三处隐藏点**都摸得着也搜得到**（每条带一个隐藏点 ⇒ 那一站要有 `verb=search` 的采集点）
+#   原状（P-28 脚注 + 本批核实）：`be_dogs` 那一站**没有**可搜点** ⇒「白桦林深处的记号」
+#   摸得着、读得到，敲『搜查』却回「这儿没什么可搜的」（bn_camp / bw_shoal 两处有）。
+#   口径 = 真源 `06 §一 1.1`（稀有 1.16 ← **隐藏点** · 头目掉 · 野外之王）+ `10 §一C`（隐藏点）+
+#          `05 §三`（稀有按池权重 20%–60% · n 1–2 · 每天 3 次）。
+# ══════════════════════════════════════════════════════════════
+print("")
+print("★ g4-⑧：三处隐藏点所在的那一站都有可搜刮面（与真源资源表对得上）")
+_ga10 = st.domain("gathering") or {}
+_it10 = st.domain("items") or {}
+
+
+def _search_at(node):
+    return [g for g, v in _ga10.items() if v.get("subarea") == node and v.get("verb") == "search"]
+
+
+_hid10 = sorted(k for k, v in po.items() if v.get("kind") == "隐藏点")
+_miss10, _thin10, _rare10 = [], [], {}
+for _k10 in _hid10:
+    _node10 = str(po[_k10].get("subarea"))
+    _pts10 = _search_at(_node10)
+    if not _pts10:
+        _miss10.append((_k10, _node10))
+        continue
+    for _g10 in _pts10:
+        _pool10 = _g10 and (_ga10[_g10].get("pool") or [])
+        if not _pool10:
+            _thin10.append(_g10)
+        _rare10[_g10] = [str(e.get("out")) for e in _pool10
+                         if str(e.get("out")) == "unid_rare"
+                         or str((_it10.get(str(e.get("out"))) or {}).get("quality")) in ("稀有", "遗物")
+                         or str(e.get("out")).startswith("i_set_")]
+chk("★ 三处隐藏点（%s）所在的那一站各有一个 `verb=search` 的采集点 ——「摸得着」与「拿得走」是两回事"
+    % " · ".join(po[k]["name"] for k in _hid10), bool(_hid10) and not _miss10, "%s" % (_miss10,))
+chk("★ 那几个可搜点的池非空 · 且都够得着**稀有那一档**（真源 `06 §一 1.1`：稀有 ← 头目掉 · "
+    "**隐藏点** · 野外之王）—— %s" % " · ".join("%s:%s" % (g, "/".join(v) or "无")
+                                                for g, v in sorted(_rare10.items())),
+    not _thin10 and all(_rare10.values()) and bool(_rare10), "空池 %s · 各点稀有档 %s"
+    % (_thin10, _rare10))
+# 与 05 §三 的三条数对得上（稀有 20%–60% · n 上限 ≤ 3 · 每天 3 次）
+_off10 = []
+for _g10, _rares10 in sorted(_rare10.items()):
+    _rec10 = _ga10[_g10]
+    if int(_rec10.get("times_per_day") or 0) != 3:
+        _off10.append((_g10, "times_per_day", _rec10.get("times_per_day")))
+    for _e10 in _rec10.get("pool") or []:
+        _w10 = int(_e10.get("w") or 0)
+        _tot10 = sum(int(x.get("w") or 1) for x in _rec10["pool"])
+        _pct10 = 100.0 * _w10 / _tot10
+        if _pct10 > 60.5 and _e10.get("out") not in ("i_junk_bone",):
+            _off10.append((_g10, "权重超 60%", round(_pct10, 1)))
+        if max([int(n) for n in (_e10.get("n") or [1])] or [1]) > 3:
+            _off10.append((_g10, "n 上限 >3", _e10.get("n")))
+chk("★ 与 `05 §三` 对得上：每点每天 3 次 · 池权重落在 0–60% 带内 · `n` 上限 ≤ 3",
+    not _off10, "%s" % (_off10[:3],))
+# 反证（有牙）：把 `be_dogs` 那个点临时摘掉 ⇒ 上面那一格当场翻面
+_be10 = [g for g in _search_at("be_dogs")]
+_rev10 = {g: _ga10.pop(g) for g in _be10}
+try:
+    _after10 = [k for k in _hid10 if not _search_at(str(po[k].get("subarea")))]
+finally:
+    _ga10.update(_rev10)
+chk("★ 反证（撤改验证）：把野狗窝那个可搜点临时摘掉 ⇒ 那一格当场点名出 %s（判据真的守着它）"
+    % " · ".join(po[k]["name"] for k in _after10),
+    bool(_be10) and len(_after10) == 1, "摘掉的是 %s" % _be10)
 
 print()
 print("按类别计数：")

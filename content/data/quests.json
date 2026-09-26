@@ -720,6 +720,12 @@
         "node": "bn_bone"
       }
     ],
+    "give": [
+      {
+        "item": "i_token_stone_shard",
+        "n": 1
+      }
+    ],
     "reward_exp": 100,
     "reward_gold": 30,
     "teach": "",
