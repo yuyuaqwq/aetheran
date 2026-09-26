@@ -328,6 +328,22 @@ def pick(ids, want: str, *, need_slot: bool = False):
     return (None, {}, [])
 
 
+def worn_ids(p) -> list:
+    """**身上穿着的那几件**的 id（档上 `equipped` 六格的值，稳定序）—— 「身上」的第二处。
+
+    ★ 为什么要有它（试玩报告 P1 BUG-3）：全包的「按名字找一件东西」都只看背包那一格
+      （`sorted(p["bag"])`）⇒ 穿在身上的东西对『强化 / 查看 / 卖出 / 存放 / 丢弃 / 使用』
+      一律回「背包里没有」、对『卸下』却认得出（只有『对比』单独去看了身上那格）。
+      玩家穿上一件装备之后，同一条指令两种回答，且猜不到是「穿着的看不见」。
+      ⇒ 六格的值收成一个口（与 `bag` 并列），调用方照自己的守卫决定「认出来了怎么答」。
+    ★ 认不出的（`equipped` 不是 dict / 空串那一格）一律跳过 —— 这一层不猜。
+    """
+    eq = p.get("equipped")
+    if not isinstance(eq, dict):
+        return []
+    return sorted(str(v) for v in eq.values() if v)
+
+
 def ambiguous_names() -> set:
     """**一个名字在域里对得着好几件**的那些名字 —— 从域里现算（谁都不许手抄一份）。"""
     n: dict = {}

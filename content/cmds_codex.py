@@ -103,10 +103,25 @@ async def codex_flavor(env, sink, uid, player, page=None):
 
 
 async def codex_monster(env, sink, uid, player, page=None):
+    """怪物谱一页 —— 交过手的都在这（★ 试玩 P1 BUG-1：**见过 ≠ 打掉过**）。
+
+    真源 `00_总纲/14_图鉴四谱口径_v1.md §一`：进谱 = 打过一次（输了也算「见过」）；
+    而 `kills` 那一格记的是**真打掉几只**（委托 / 彩蛋的 `kill` 条件读的就是它）。
+    ⇒ 还没打掉过的那一只**不印「（打过 0 回）」**（那是句自相矛盾的话），
+      走谱里那条不带次数的行（与材料谱 / 风味谱同形）。
+    """
     p = _p(player)
-    rows = [T("SYS_CODEX_ENTRY_KILL", name=CX.name_of("monster", k),
-              kills=CX.kills_of(p, k), line=CX.line_of("monster", k))
-            for k in CX.book("monster") if CX.has(p, "monster", k)]
+    rows = []
+    for k in CX.book("monster"):
+        if not CX.has(p, "monster", k):
+            continue
+        n = CX.kills_of(p, k)
+        if n > 0:
+            rows.append(T("SYS_CODEX_ENTRY_KILL", name=CX.name_of("monster", k),
+                          kills=n, line=CX.line_of("monster", k)))
+        else:
+            rows.append(T("SYS_CODEX_ENTRY", name=CX.name_of("monster", k),
+                          line=CX.line_of("monster", k)))
     async for line in _one_book(env, p, "monster", "codex_monster", rows, page=page):
         yield line
 

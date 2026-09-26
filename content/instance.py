@@ -764,7 +764,7 @@ async def _finish(env, grp, key, st, p, uid, player, res):
             d = dict(raw)
             d["uid"] = m
             p_m, handle = _p(d), _StoreHandle(grp, m)
-        seen = CX.note_kill(p_m, pick[0])
+        seen = CX.note_seen(p_m, pick[0])
         # ★ 现血：倒地的按 **1** 落（与 `cmds_ast._p` / `player_actor` 同一条钳法）——
         #   「队伍里有人倒下了、但这一场赢了」的下场真源没写（见 `_notes.md` 待补行）。
         async for line in CBAT._settle(env, p_m, m, pick, ms, res, logs,

@@ -779,6 +779,29 @@ def _unmet(p, x):
     return out
 
 
+# ── ★ fxb②（试玩 P1 BUG-2）：完成条件**还没落地**的那几条老支线 ───────────────────
+def _no_wire(x) -> bool:
+    """这条委托的完成条件**在数据面上不存在** ⇒ 今天走不通（老条目那条死路径）。
+
+    ★ 为什么由数据判、不手写名单（试玩 P1 BUG-2 支线 22「带路」接了永远交不掉）：
+      支线没写 `require` 时，交活看的是 `flags.side_<名字>` —— 那个键**全仓没有写端**
+      （P-25 §② 的根因；`probe_quests` 的静态守卫钉着「『side_』只有读端 1 处」）。
+      真源 `24_任务线_v1 §二` 给这一条的条件是「陪一个 NPC 走一段（送信）」，而
+      **目的地与「信」这件东西真源都没写**、也没有对应形状（§三 逐条 why 见工作树 `_notes.md`）
+      ⇒ 这不是代码漏判，是**内容还没接线**：不许自己编一个条件顶上（那是改真源口径），
+      就照实标出来（报告 BUG-2 的第二条期望）。
+    ★ 范围：**非主线且没写 `require`** —— 主线的老条目走「等级」那一支（`_obj_ok`），
+      生活 / 悬赏两类按口径**一律写 require**（文件抬头 B3-3），所以这一条挑出来的
+      正是那几条还没接线的支线。
+    """
+    return str(x.get("chain") or "") != "main" and not _require_of(x)
+
+
+def _no_wire_line(x) -> str:
+    """「这条还没接线」那一行（没接线 ⇒ 空串，一行都不多）。"""
+    return T("SYS_JOB_NO_WIRE") if _no_wire(x) else ""
+
+
 def _mark_done(p, k, step):
     """交活那一下把 done 写进 `flags.quests`（形状见文件抬头 ②；step = 已满足的条件条数）。"""
     book = dict((p.get("flags") or {}).get("quests") or {})
@@ -809,6 +832,34 @@ def _hand_over(p, x) -> list:
         LT.add_to_bag(p, [{"id": iid, "n": n}])
         rec = LT.rec_of(iid)
         out.append(T("SYS_JOB_GIVE", icon=rec.get("icon", "·"), name=rec.get("name", iid), n=n))
+    return out
+
+
+def _kept(x) -> list:
+    """★ fxb④（试玩 P1 BUG-4「交了还石头，刻字的石片还在背包里」）：交付物**去向说清**那一行。
+
+    为什么**不是**「交活把东西收走」（不是漏做，是真源不许）：
+      · `item` 条件在真源里的定义就是**持有条件** —— `00_总纲/08_第1批_字段级设计_v1.md`：
+        `{"kind": "item", "item": <物品 id>, "n": <份数>}  背包里有 n 份`；
+        `04_指令总表 §二` 的 `交 <编号>` 只写着「条件达成 → 交活结算」，
+        全仓没有一处真源说过「交活要把东西交出去」。
+      · 更要紧的是：这几件交付物**自己挂着「在身上」的钩子**，收走就变成长不出来的 ——
+        `i_token_stone_shard` ｜ 彩蛋 2（`15 §二`：hold=… & read=… & where=…）· 瑟兰的隐藏台词
+        （`dialogues.dlg_seran.hidden` 的 `need.holding`）；
+        `i_horn_half` ｜ 彩蛋 4 ＋ 柯尔 / 皮特的隐藏台词（都要手里拿着号角）；
+        `i_material_old_iron` ｜ 彩蛋 6（`hold=… & where=…`）。
+        而石片与号角都是**信物**（`21 §四`：信物写「带着」= 不是装备 —— 本来就是攥在手里的东西）。
+      ⇒ 依据报告 BUG-4 的第二条期望（「**若为后续彩蛋有意保留，回话里该说明**」），
+        交付那一下**照实说清**东西还在你手上 —— 一行，不静默留白。
+    """
+    out = []
+    for r in _require_of(x):
+        if r.get("kind") != "item":
+            continue
+        iid = str(r.get("item") or "")
+        if not iid:
+            continue
+        out.append(T("SYS_JOB_KEEP", name=_item_name(iid)))
     return out
 
 
@@ -980,6 +1031,11 @@ async def quest_deliver(env, sink, uid, player):
         return
     x = qs[k]
     if not _obj_ok(x, p):
+        if _no_wire(x):
+            # ★ fxb②：这条的完成条件在数据面上还不存在（老条目那条死路径）—— 照实说
+            #   「还没接线」，不糊一句「还没做完 + 一段与条件无关的进行中行文」。
+            yield T("SYS_JOB_NO_WIRE")
+            return
         yield T("SYS_JOB_NOT_DONE") + (_beat(x, "PROGRESS") or x["objective"])
         for line in _unmet(p, x):          # ★ P-25：把「还差什么」说清楚（老条目这里一行都不多）
             yield "  " + line
@@ -997,6 +1053,8 @@ async def quest_deliver(env, sink, uid, player):
     _save(env)
     yield T("SYS_JOB_DELIVERED", name=x["name"])
     yield _beat(x, "DELIVER")         # ★ B3-6c / B3-8：交时那一段（四条链都走槽位）
+    for _ln in _kept(x):              # ★ fxb④：条件的物件还在你手上 —— 照实说清（见 `_kept`）
+        yield _ln
     yield T("SYS_JOB_REWARD", exp=x["reward_exp"], gold=x["reward_gold"])
     if leveled:
         yield T("SYS_JOB_LEVELUP", level=lv)
@@ -1094,12 +1152,19 @@ def _hint_lines(p):
       真源：`06_第一阶段垂直切片/04_指令总表 §一`「`提示` `去哪` ｜ 随时 ｜ **给一条当前该做什么
       的提示**」—— 「当前」= 手上这条活 ⇒ 先报它的名字与 objective，再逐条说还差什么
       （那几行就是『交』失败时给的同一批行，同一个口 `_unmet`）。
+
+    ★ fxb②（试玩 P1 BUG-2 / UX-4）：**说得出下一步的才给** —— 手上那条要是「没接线」
+      （`_no_wire`：非主线且没写 `require`），报出来只有一行标题、既没有「还差」也没有去处，
+      等于拿一条死单把『提示』这条主线级辅助**永久占住**（QA 原话：「把真正能做的委托
+      全部挡住」，`放弃 22` 才恢复）⇒ 跳过它，接着看手上下一条；全都没得说才退回地点那一句。
     """
     qs = _quests()
     for k in _mine(p):
         x = qs.get(k) or {}
         if not x:
             continue
+        if _no_wire(x):
+            continue                       # ★ 说不出一句可做的 ⇒ 不占这一屏（UX-4）
         out = [T("SYS_HINT_JOB", name=x.get("name", k), objective=x.get("objective", ""))]
         if _obj_ok(x, p):
             out.append("  " + T("SYS_HINT_JOB_READY", order=x.get("order", 0)))
@@ -1119,7 +1184,9 @@ async def quest_mine(env, sink, uid, player):
         yield T("SYS_MINE_HEAD", n=len(act))
         for k in act:
             x = qs.get(k, {})
-            yield "· %s —— %s%s" % (x.get("name", k), x.get("objective", ""), _progress(x, p))
+            # ★ fxb②：没接线的那几条在列表里也**带一句标记**（不然玩家只看得出它「没有进度」）
+            yield "· %s —— %s%s%s" % (x.get("name", k), x.get("objective", ""),
+                                       _progress(x, p), _no_wire_line(x))
     if done:
         yield T("SYS_MINE_DONE", n=len(done))
     # ★ B4-14：那半句评级与『评级』**走同一个门**（`cmds_self.has_card`）—— 没办证的人
