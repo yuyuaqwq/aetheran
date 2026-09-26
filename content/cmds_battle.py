@@ -527,9 +527,12 @@ async def _settle(env, p, uid, pick, ms, res, logs, hp_after, seen, player, affi
         if seen:
             yield T("SYS_CODEX_NEW", book=CX.label("monster"), name=CX.name_of("monster", pick[0]))
         if res == "defeat":
-            _wake_in_chapel(p)                      # ★ 真的回白烛堂（原先只说了这句话）
+            _lost = _wake_in_chapel(p)              # ★ 真的回白烛堂（原先只说了这句话）
             yield T("SYS_DEATH_WILD")
-            yield T("SYS_DEATH_QUEST_LOSS")
+            # ★ 夜班试玩 w3（mage/p3 两条都撞到）：经验 0 时原先照报「掉了一些经验（10%）」
+            #   —— 空头罚（玩家被告知挨罚、数字却一点没动）。掉没掉由**同一口**说了算：
+            #   `_wake_in_chapel` 的返回值（不在这里另判一套）。
+            yield T("SYS_DEATH_QUEST_LOSS") if _lost > 0 else T("SYS_DEATH_NO_LOSS")
         elif res == "fled":
             p["hp"] = max(1, hp_after)              # 跑掉了：血是打完当下的血，不掉经验
         else:

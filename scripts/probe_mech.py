@@ -1023,9 +1023,14 @@ _turns = float(SKD["SKILL_MAG_fallenstar"]["mech2_val"])
     "  · 砸晕落在**目标**身上：`star_daze`（mode=%s · 剩余 %.1f 刻 ≤ mech2_val %s）"
     % (_e4.get("mode"), float(_e4.get("expire") or 0) - _bb4._now, _turns))
 _sub4, _end4 = _bb4.actor_auto(_t4)
-_ctl = "".join(str(x) for x in (_sub4 or []))
-(ok if "无法行动" in _ctl else bad)(
-    "  · 这 100 刻里轮到它 ⇒ 引擎的行动前检查把这一手整手跳过（真源 02_战斗机制 §〇·五）")
+_ctl = [str(x) for x in (_sub4 or [])]
+#: ★ 2026-09-27（夜班试玩 w3）：这一行的**措辞本波起走槽位**（`battle.core.controlled`）——
+#:   原先写死的那个中文词是**引擎兜底模板**里的字，而那句兜底会把状态机器键 `star_daze`
+#:   原样打到玩家屏（两个号实测逐字：「💫 游荡的骸骨 被【star_daze】控制，无法行动！」）。
+#:   判据改成「按槽位逐字对」（与 DoT 那条同款）**并加一条**：机器键不上屏 ⇒ 只紧不松。
+(ok if has(_ctl, "COMBAT_CONTROLLED") and not any("star_daze" in x for x in _ctl) else bad)(
+    "  · 这 100 刻里轮到它 ⇒ 引擎的行动前检查把这一手整手跳过 · 那行走槽位渲染、"
+    "且机器键不上屏（真源 02_战斗机制 §〇·五）")
 (ok if not ((_t2.get("effects") or {}).get("star_daze")) else bad)(
     "  · 引燃（同一条 `mark_burst`、没有 mech2）**不挂**砸晕 —— 两半各自钉住")
 

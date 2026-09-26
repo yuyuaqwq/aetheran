@@ -219,6 +219,28 @@ def main():
         chk("★ 开场那一敲：遇敌那一行 + 四段式那一屏（现状 / 谁先动 / 对方在干什么 / 你的选项）",
             _has(o1, "COMBAT_MEET") and _has(o1, "COMBAT_TURN_STATE")
             and _has(o1, "COMBAT_TURN_FOE_IDLE") and slot("COMBAT_TURN_MENU") in o1, o1[:3])
+        #: ★ 2026-09-27（夜班试玩 w3 · mage 的 c1 与 p3 两条都报）：战斗屏原先只有血 ——
+        #:   法师的两条命根子（法力 / 印记）在打的时候一条都看不见。本波在血那一行后面补了
+        #:   两条读数（`COMBAT_TURN_MP` + `COMBAT_TURN_RES`），这里把「在不在」与「数对不对」
+        #:   都钉住：**逐字**比 actor 上那两格（法力 = `mp`/`max_mp`；资源 = `resources.json`
+        #:   声明的那个码在 `effects[码].stacks` 的层数）。
+        _a1 = INST.actor_of(s1, "u_a") if s1 is not None else None
+        from content import resources as _RES                            # noqa: E402
+
+        _code = next((k for k in sorted(_RES.resources())
+                      if k in ((_a1 or {}).get("effects") or {})), "")
+        _stk = int((((_a1 or {}).get("effects") or {}).get(_code) or {}).get("stacks") or 0)
+        chk("★ 战斗屏带资源读数（法力那一格 + 职业资源那一格 —— 只读 actor 现成的两格）：%s"
+            % [str(x) for x in o1 if "法力" in str(x) or "🔹" in str(x)][:2],
+            _has(o1, "COMBAT_TURN_MP") and _has(o1, "COMBAT_TURN_RES"), o1[:5])
+        chk("★ 那两行报的数**逐字** = actor 上那两格（法力 %s/%s · %s %s 层）"
+            % ((_a1 or {}).get("mp"), (_a1 or {}).get("max_mp"), _code, _stk),
+            _a1 is not None and _code
+            and slot("COMBAT_TURN_MP", mp=int(_a1.get("mp") or 0),
+                     mp_max=int(_a1.get("max_mp") or 0)) in o1
+            and slot("COMBAT_TURN_RES", name=_RES.of(_code).get("name"), n=_stk,
+                     mx=int(_RES.max_of(_code))) in o1,
+            None if _a1 is None else (_a1.get("mp"), _a1.get("max_mp")))
         chk("★ 这一敲**没打完**（场还在 · 引擎那边 result 还是 None · 手数 1）",
             s1 is not None and (s1.get("battle") or {}).get("result") is None
             and int(s1.get("hands") or 0) == 1,

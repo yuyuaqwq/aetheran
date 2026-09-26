@@ -365,6 +365,25 @@ chk("⑨-c 场上没有可攻击目标那一手 ⇒ 走槽位渲染（%s）—�
     "「但没有可攻击的目标！」不上屏" % (_nt_line[:1] or "（没出）"),
     bool(_nt_line) and not any("没有可攻击的目标" in x for x in _lg_nt))
 
+#: ★ 2026-09-27（夜班试玩 w3 · 修）：本波新声明的一条 —— 控制消费那句
+#:   （`battle.core.controlled`）。引擎那行兜底会把**状态机器键**打到玩家屏
+#:   （两个号实测逐字：「💫 游荡的骸骨 被【star_daze】控制，无法行动！」）⇒ 走槽位顶掉。
+#:   这里真驱动一次（挂 `mode=skip` 的效果 → 轮到它 ⇒ 引擎的行动前检查把这一手整手跳过），
+#:   把这一格钉成「真被请求过」，并写死「渲染出来那句不含状态机器键」—— 与 ⑨-a 同款。
+_bk = CB.build({"cls": "cls_mage", "level": 2, "name": "探", "uid": "u_ctl"}, [MID], MON, uid="u_ctl")
+SCH.advance(_bk, [])
+_ek = (_bk.sides[CB.ENEMY_SIDE] or [None])[0]
+_ek.setdefault("effects", {})["star_daze"] = {"stacks": 1, "expire": float(_bk._now) + 100.0,
+                                              "mode": "skip"}
+_sub_k, _end_k = _bk.actor_auto(_ek)
+_lg_k = [str(x) for x in (_sub_k or [])]
+_ctl_slot = BT.slots()["battle.core.controlled"]
+_ctl_pre = str(_tx[_ctl_slot]["value"]).split("{")[0]                 # 前缀现算，别手写那句
+_ctl_line = [x for x in _lg_k if _ctl_pre in x]
+chk("⑨-d 控制型状态轮到手 ⇒ 走槽位渲染（%s）—— 引擎兜底那句会把状态机器键漏给玩家"
+    % (_ctl_line[:1] or "（没出）"),
+    bool(_ctl_line) and not any("star_daze" in x for x in _lg_k))
+
 _unused = BT.battle_text().unused()
 chk("⑨ 声明的槽位（%d 条）都被引擎真请求过（unused = %r）" % (len(BT.slots()), _unused), _unused == ())
 

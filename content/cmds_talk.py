@@ -382,3 +382,7 @@ async def ask_way(env, sink, uid, player):
     yield T("SYS_ASK_HEAD")
     yield T("SYS_ASK_ANSWER", who=here[0][1].get("name"),
             list=" · ".join("『%s』" % x for x in nb[:3]) if nb else T("SYS_ASK_ONLY_WAY"))
+    # ★ 夜班试玩 w3 p1：原先只报 3 处、也不说按什么挑的（镇上一共 10 处）—— 读起来像「路全在这儿」。
+    #   三处的取舍（近的三处）与屏宽都不动，只把**这件事说清**并指到看全部的那条指令（不新增遍历口）。
+    if len(nb) > 3:
+        yield T("SYS_ASK_MORE", n=len(nb))

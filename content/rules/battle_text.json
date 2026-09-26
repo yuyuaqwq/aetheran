@@ -1,5 +1,5 @@
 {
-  "_note": "引擎战斗日志槽位 → texts 域槽位名（P-1）。只声明**要覆盖**的那几条：没声明的 key ⇒ 引擎兜底模板原样输出（引擎 `render_or` 的语义：未注入与表里缺该 key 两条路径逐字节相同）⇒ 只声明 2 条 = 其余几百条战斗日志与接线前一字不差。  ★ 2026-09-25：又补两条 —— 引擎那两句兜底模板的格式符是坏的（`{left::.1f}` / `{rv::g}` 不是合法 Python 格式，`render_or` 渲染失败就**原样把带花括号的模板漏给玩家**；`resource_lack` 那句还会漏出资源机器键 `RES_OATH`）⇒ 声明成自己的文案顶掉。  ★ 2026-09-26（fix3-⑥ · P2 BUG⑪）：再补一条 引擎那句兜底「但没有可攻击的目标！」（没有 emoji、缩进与玩家行也不同）是**内部循环的收尾话**，玩家在『战斗日志』尾巴上看到的就是它 ⇒ 声明成 （玩家侧一行）。  ★ 2026-09-26（fix3-⑥ · P2 BUG⑪）：再补一条 `battle.actions.no_target` —— 引擎那句兜底「但没有可攻击的目标！」（没有 emoji、缩进与玩家行也不同）是**内部循环的收尾话**，玩家在『战斗日志』尾巴上看到的就是它 ⇒ 声明成 `COMBAT_NO_TARGET`（玩家侧一行）。",
+  "_note": "引擎战斗日志槽位 → texts 域槽位名（P-1）。只声明**要覆盖**的那几条：没声明的 key ⇒ 引擎兜底模板原样输出（引擎 `render_or` 的语义：未注入与表里缺该 key 两条路径逐字节相同）⇒ 只声明 2 条 = 其余几百条战斗日志与接线前一字不差。  ★ 2026-09-25：又补两条 —— 引擎那两句兜底模板的格式符是坏的（`{left::.1f}` / `{rv::g}` 不是合法 Python 格式，`render_or` 渲染失败就**原样把带花括号的模板漏给玩家**；`resource_lack` 那句还会漏出资源机器键 `RES_OATH`）⇒ 声明成自己的文案顶掉。  ★ 2026-09-26（fix3-⑥ · P2 BUG⑪）：再补一条 引擎那句兜底「但没有可攻击的目标！」（没有 emoji、缩进与玩家行也不同）是**内部循环的收尾话**，玩家在『战斗日志』尾巴上看到的就是它 ⇒ 声明成 （玩家侧一行）。  ★ 2026-09-26（fix3-⑥ · P2 BUG⑪）：再补一条 `battle.actions.no_target` —— 引擎那句兜底「但没有可攻击的目标！」（没有 emoji、缩进与玩家行也不同）是**内部循环的收尾话**，玩家在『战斗日志』尾巴上看到的就是它 ⇒ 声明成 `COMBAT_NO_TARGET`（玩家侧一行）。  ★ 2026-09-27（夜班试玩 w3 · mage/p3 两条都撞到）：再补一条 引擎那句兜底 `💫 {name} 被【{tag}】控制，无法行动！` 把**内部状态机器键**（本包 = `star_daze`，垂星那 100 刻）摊在玩家脸上 ⇒ 声明成 `COMBAT_CONTROLLED`（不用 `{tag}` 槽位，措辞归内容侧）。",
   "_src": "槽位名 = `ext_combat/battle/landing.py` 里 `render_via(battle, \"…\")` 的第一参（逐字抄，别改）",
   "slots": {
     "battle.landing.element_immune": "COMBAT_ELEM_IMMUNE",
@@ -7,6 +7,7 @@
     "battle.schedule.dot_tick": "COMBAT_DOT_TICK",
     "battle.actions.skill_cd": "COMBAT_SKILL_CD",
     "battle.actions.resource_lack": "COMBAT_RES_LACK",
-    "battle.actions.no_target": "COMBAT_NO_TARGET"
+    "battle.actions.no_target": "COMBAT_NO_TARGET",
+    "battle.core.controlled": "COMBAT_CONTROLLED"
   }
 }

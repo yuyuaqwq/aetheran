@@ -389,6 +389,12 @@
     "category": "系统",
     "desc": "死亡惩罚说明"
   },
+  "SYS_DEATH_NO_LOSS": {
+    "value": "💀 经验一点没掉（你这一级还没攒下什么）—— 装备没丢",
+    "params": [],
+    "category": "系统",
+    "desc": "死亡惩罚说明 · 经验 0 那一档（2026-09-27 夜班试玩 w3：mage/p3 两条都撞到「经验 0 也报掉了一些经验」= 空头罚）"
+  },
   "SYS_ROUND_HOLD": {
     "value": "⏳ 还没轮到你 —— 你在等 {who}",
     "params": [
@@ -2611,6 +2617,14 @@
     "params": [],
     "category": "系统",
     "desc": "问路 · 没有别的去处"
+  },
+  "SYS_ASK_MORE": {
+    "value": "（他先报了近的三处 —— 这一带走得通的一共 {n} 处，打『地图』看全。）",
+    "params": [
+      "n"
+    ],
+    "category": "系统",
+    "desc": "问路 · 去处多过三处时补的一行（2026-09-27 夜班试玩 w3 p1：原先只报 3 处、也不说按什么挑的，读起来像「路全在这儿」）"
   },
   "SYS_GUILD_HEAD": {
     "value": "【公会】门面比镇上任何一家都像样：一块木牌，牌上画着一把断了的剑和一只手。",
@@ -5175,6 +5189,14 @@
     "category": "战斗",
     "desc": "P-1 元素样例：承伤方对该元素有弱点（引擎 battle.landing.element_weak 那条日志走这个槽位）"
   },
+  "COMBAT_CONTROLLED": {
+    "value": "💫 {name} 晕着 —— 这一手什么都做不了！",
+    "params": [
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "引擎 `battle.core.controlled`（控制型状态把这一手跳过那一行；★ 收掉引擎兜底里的 `{tag}` 机器键 —— 2026-09-27 夜班试玩 w3 · mage/p3 两条都撞到 `被【star_daze】控制`）"
+  },
   "COMBAT_DOT_TICK": {
     "value": "🔥 【{name}】持续受损（{n} 层）—— 损失 {dmg} 生命",
     "params": [
@@ -5362,10 +5384,10 @@
     "desc": "B4-10 学习 · 没带技能名"
   },
   "SYS_ITEM_SHOW_ASK": {
-    "value": "看哪一件？打『查看 <东西>』。",
+    "value": "看哪一件？打『查看 <东西>』；委托全文是『看 <编号>』——先在公会敲『悬赏』。",
     "params": [],
     "category": "系统",
-    "desc": "B4-13 查看 · 没带东西"
+    "desc": "B4-13 查看 · 没带东西（2026-09-27 夜班试玩 w3 p1：裸『看』原先只把人推给背包那一族，而它在帮助里同时挂公会『看 <编号>』⇒ 两族入口都说清）"
   },
   "SYS_USE_ASK": {
     "value": "用哪一件？打『使用 <东西>』。",
@@ -6067,6 +6089,25 @@
     "params": [],
     "category": "NPC",
     "desc": "31_NPC作息 §四 · 这一位「他什么时候在」的一句"
+  },
+  "COMBAT_TURN_MP": {
+    "value": "⚡ 法力 {mp}/{mp_max}",
+    "params": [
+      "mp",
+      "mp_max"
+    ],
+    "category": "战斗",
+    "desc": "战斗屏 · 法力那一条读数（2026-09-27 夜班试玩 w3：mage 路「两条命根子一条都看不见」——原先进战斗就只剩血，法力要退出去敲『状态』）"
+  },
+  "COMBAT_TURN_RES": {
+    "value": "🔹【{name}】{n}/{mx}",
+    "params": [
+      "mx",
+      "n",
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "战斗屏 · 职业资源（守誓值 / 准星 / 印记 / 祷言）那一条读数 —— 名字与上限现取自 `content/rules/resources.json`（2026-09-27 夜班试玩 w3：法师的「印记」原先任何一页都没有读数）"
   },
   "COMBAT_TURN_STATE": {
     "value": "⚔ 第 {n} 手 —— 你 {hp}/{hp_max}　｜　{name} {foe_hp}/{foe_hp_max}",
