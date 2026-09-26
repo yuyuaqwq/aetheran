@@ -324,6 +324,18 @@ chk("⑨-b 两句都**不含花括号 / 机器键**（引擎兜底实测会漏 `
     bool(_lack) and bool(_cdl)
     and all(("{" not in x and "}" not in x and "RES_" not in x) for x in (_lack + _cdl)))
 
+#: ★ B4-23：还要**不含小数尾巴** —— 引擎这两句传的都是 float
+#:   （`cur = float(entry.get("stacks") ...)` · `left = _cd_left_of(battle, ...)`），模板不给格式符
+#:   就原样印出来（实测「现在只有 6.0 点」「再等 99999.0 刻」）。
+#:   口径 = 宪法 §一「数值 = 整数显示」（与 B4-22 那一批同一把尺）。
+chk("⑨-b 两句里**一个小数尾巴都不许有**（整数显示 —— 原先印「6.0 点 / 99999.0 刻」）",
+    bool(_lack) and bool(_cdl)
+    and all(re.search(r"\d\.\d", x) is None for x in (_lack + _cdl)))
+#: 覆盖面（K61）：判据跟着一起加 —— 这一场里渲染出来的**每一条**都不许有小数尾巴，
+#:   不只盯那两句（新加的槽位漏了也会红）。
+chk("⑨-b 这一场渲染出来的**每一条**日志都没有小数尾巴（共 %d 条）" % len(_lg_s),
+    all(re.search(r"\d\.\d", str(y)) is None for y in _lg_s))
+
 _unused = BT.battle_text().unused()
 chk("⑨ 声明的槽位（%d 条）都被引擎真请求过（unused = %r）" % (len(BT.slots()), _unused), _unused == ())
 

@@ -22,7 +22,7 @@ ok = True
 #: ★ B4-16 起 `RANK_*` 也在这一族里（公会评级那几张档名 —— 与 `scripts/rebuild_syscopy.py`
 #:   的 KEY_RE 逐字同形：两处必须一起改，否则一个认一个不认）
 KEY_RE = re.compile(r"^(SCENE|READ|NPC|COMBAT|QUEST|ITEM|SYS|TITLE|WORLD|HOUR|WEATHER|UNID|TALK|RANK)_[A-Z0-9_]+$")
-PH = re.compile(r"\{(\w+)\}")
+PH = re.compile(r"\{(\w+)(?::[^{}]*)?\}")   #: ★ B4-23：占位可带格式符（`{cur:.0f}`）—— 与 `scripts/rebuild_syscopy.py` 的 PH 逐字同形（两处一起改）
 
 
 def chk(label, cond, extra=""):
@@ -51,8 +51,9 @@ chk("键名都符合 「类_对象_状态」规则", not bad2, " · ".join(bad2[
 # ③ ★ params 声明的参数，value 里必须有对应占位
 bad3 = []
 for k, v in tx.items():
+    used3 = set(PH.findall(v["value"]))          #: ★ B4-23：按占位**名**认（带不带格式符都算）
     for prm in v.get("params", []):
-        if ("{%s}" % prm) not in v["value"]:
+        if prm not in used3:
             bad3.append("%s 缺 {%s}" % (k, prm))
 chk("★ 声明的 params 都在 value 里有占位", not bad3, " · ".join(bad3[:5]))
 
