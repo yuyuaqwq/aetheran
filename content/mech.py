@@ -1053,13 +1053,23 @@ def player_triggers() -> dict:
       多挂一个（空跑）少挂一个（接了永不触发）都在 `_validate` 里当场抛。
     ★ 职业资源那几条（`resources.json`）由 `content/resources.py::triggers()` 合并进来 ——
       同一个事件允许多个动作（例：`taken_calc` 上「减伤乘区」与「格挡」各一个），引擎按序跑。
-    ★ 另外两个口**不是机制**（它们没有机制名，也不进机制表）：它们是**数值宪法那两条算式**的消费端 ——
+    ★ 另外三个口**不是机制**（它们没有机制名，也不进机制表）：它们是**引擎事件 → 内容槽位**
+      那类读端，只有该事件真发生时才有话：
       · `heal_calc` → `aeth_heal_calc`：治疗量的**基数**（F8 · 治疗强度是那一格的基数）；
-      · `act_cast` 追加 `aeth_burst_trace`：「清空型资源」的层数快照（兑现端在伤害那一步才出手）。
+      · `act_cast` 追加 `aeth_burst_trace`：「清空型资源」的层数快照（兑现端在伤害那一步才出手）；
+      · ★ fix-k-critline `crit` → `aeth_crit_line`：**暴击/幸运一击那一行**
+        （`COMBAT_CRIT` 槽位原先全仓零读端 —— 引擎在 `actions.py` 真掷
+        `random.random() < crit`，玩家屏上却一个字都不播）。动词就在本文件（下同 ——
+        `aeth_*` 全族一处；★ 实测：动词若放到指令模块（`content/cmds_battle.py`）里，
+        走 `load_stack()+install()` 那条路（不 import 命令模块）的进程里
+        `EF.missing_actions` 会非空 ⇒ 引擎**静默跳过**，那一行一个字都不出）。
     """
     out = {
         "act_cast": [{"action": "aeth_on_cast"}],
         "taken_calc": [{"action": "aeth_mitigate"}],
+        # ★ fix-k-critline：`crit` 是**引擎事件**（不是机制 —— 没有机制名、不进机制表），
+        #   所以在这一处手挂（与 `act_cast` / `taken_calc` 那两条同族）。
+        "crit": [{"action": "aeth_crit_line"}],
     }
     for ev, verb in _TRIGGER_VERBS.items():
         out.setdefault(ev, []).append({"action": verb})      # ★ 追加，不覆盖（taken_calc 上有两个）
@@ -1337,3 +1347,55 @@ def aeth_on_taken(battle, caster, target, params, logs):
             continue
         real = LD.deal_damage(battle, None, src, dmg, logs)
         logs.append(T("COMBAT_MECH_TRANCE", name=src.get("name", ""), n=real))
+
+
+# ── ★ fix-k-critline：暴击那一行（引擎 `crit` 事件 · 内容侧唯一读端）──────────
+@EF.register_action("aeth_crit_line")
+def aeth_crit_line(battle, caster, target, params, logs):
+    """暴击命中那一刻那一行（引擎 `crit` 事件 → `texts` 槽位 `COMBAT_CRIT`）。
+
+    ★ 病根（接之前）：引擎 `actions.py::_single_target_pipeline` **真在掷** ——
+      `is_crit = random.random() < st["crit"]`，命中后再掷 30% 追加一次「幸运一击 ×1.3」
+      （1.5 × 1.3 = 1.95 倍，与试玩实测那 1.5~1.9 倍跳变对得上）。可 `crit` 是**事件**：
+      引擎只渲染裸伤害行（`battle.landing.damage`），内容侧没人消费它 ⇒ 玩家打了整轮
+      也看不到「暴击」两个字（`COMBAT_CRIT` 槽位当时**全仓零读端**）。而
+      `effect_triggers.fire` 只跑**主体 actor 自己**声明的触发器 ⇒ 读端必须挂在玩家 actor
+      的挂载面上（`combat.player_actor` → `player_triggers()` 的 `crit` 那一格）。
+
+    ★ 为什么动词落在**本文件**而不是指令模块（分支 `_notes.md` 里那三步改法当时写的是
+      `content/cmds_battle.py` —— 那批的文件面碰不到 mech.py 才那么写）：`@register_action`
+      是 import 期跑的装饰器 ⇒ 注册**取决于那条 import 路径**。实测把动词放进指令模块后，
+      走 `load_stack()+install()`（不 import 命令模块）的进程里 `EF.missing_actions` 非空、
+      引擎**静默跳过**那一行（`probe_mech` 那条形状判据当场红）。本文件由 `combat.py` 在
+      模块级 import ⇒ 两条路都注册得上。判据 `probe_mech` 里「挂载面 + 动词两半都在」钉着。
+
+    ★ 五个值全从**事件上下文**与 actor 现取（代码里一个中文字都不写 —— 文案在 texts 域，
+      `params` 照它声明的 [act, dmg, t, tgt, who]）：
+      · `who` = 出手那个 actor 的名字；
+      · `act` = 引擎给过来的那条技能**自己的名字**（`_fire` 的 ctx.info.name：普攻也是域里
+        那一条的名字，如「短刃」）—— 分隔符照真源那份战斗日志样张的写法（`你 · 攻击 · 伐木工`）；
+      · `tgt` = 挨这一下的那个 actor 名字；
+      · `t`   = 现在这一刻的游戏刻（引擎的绝对时刻）；
+      · `dmg` = 引擎这一手算出来的伤害（ctx.dmg = 伤害管线那一个总数，**落地前**的数）。
+    ★ ★ 已知口径（引擎只给这一个数 · 内容侧不编第二个）：落地那一侧还会叠**等级压制 / 元素**
+      这类加成（`landing._lv_pressure` 等）⇒ 这一行的数与紧上面那行裸伤害行**不一定逐值相同**
+      （实测：这一行 76 点、落地行 82 点；被闪避／被护盾吃掉的场合，这一行照样按管线数报，
+      而裸伤害行是「闪避了攻击！」）。`crit` 事件上没有「落地后那一个数」，内容侧拿不到 ——
+      要收紧它得引擎在 ctx 里多给一格（登记在分支 `_notes.md`，属引擎立项）。
+    ★ 取不到的**不编**：`info` 缺名字 ⇒ `act` 空着；挨打那个 actor 不在 ⇒ `tgt` 空着 ——
+      这一行照样出（谁打谁挨打、多少伤都在）。这条读端**不读机制表**（它不是机制），
+      所以也不吃 `_rules_mounted()` 那道门。
+    """
+    ctx = getattr(battle, "_fire_ctx", None)
+    ctx = ctx if isinstance(ctx, dict) else {}
+    actor = caster if isinstance(caster, dict) else ctx.get("actor")
+    tgt = target if isinstance(target, dict) else ctx.get("target")
+    info = ctx.get("info") if isinstance(ctx.get("info"), dict) else {}
+    name = str((actor or {}).get("name") or "")
+    tname = str((tgt or {}).get("name") or "")
+    logs.append(T("COMBAT_CRIT",
+                  t=int(round(float(getattr(battle, "_now", 0) or 0))),
+                  who=name,
+                  act=(" · %s" % info["name"]) if info.get("name") else "",
+                  tgt=(" · %s" % tname) if tname else "",
+                  dmg=int(ctx.get("dmg") or 0)))
