@@ -21,13 +21,14 @@
 ⑥ 进战人数 ★ `cmds_battle` 那三处 `party=…` 真传人数：没队 = 1 · 同节点的队友算进来 ·
            队友在别的节点 / 血空都不算 · 存档读不出来 = None（= 不知道 ⇒ 不缩放，接上 B3-17 那条）
 ⑦ ★ B4-18  「集火」按**此刻真在不在队里**分档（单人两句 / 有队一句 / 队读不出来同有队）·
-           「逃跑」那句内联桩句收进 `COMBAT_FLEE_TODO`（照实说 + 指向真能用的『后撤』）·
-           两条都真敲、都不动档；再一条源码守卫：那句桩句不许回来
+           两条都真敲、都不动档
          ★ **P-57 改判据（2026-09-26 · w9）**：`逃跑` 在**野外 / 单人**那条老路上已经是
-           **真动作**（掷一次定成败 · 失败率 30%）—— 老判据那两半都留着（有队时照旧回
-           `COMBAT_FLEE_TODO` + 源码守卫不许有内联文案），并**加严**：同种子两态都碰得到
+           **真动作**（掷一次定成败 · 失败率 30%）—— 并**加严**：同种子两态都碰得到
            （探针按同一式子现算手气，不靠「跑很多次看比例」）· 跑成 = 这一场没打（无结算）
            · 被拦下 = 那一手白花、这一场照打 · 失败率只有一个口（改声明表 ⇒ 翻面）
+         ★ **本波（多人那条接上）**：有队时**不再**回那句桩句 —— 两人同格真组一队、
+           先手那位真掷（与单人同一条规则），两态（改率 1.0 / 0.0）都在**多人那一格**里跑到；
+           那句退役的桩句由 `probe_copy.RETIRED_DOC` 登记（真源那一行请主线删）
 
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_party.py
 Python 用 3.12（3.11 假红）。
@@ -386,6 +387,55 @@ if rec("u_b") != _mb0 or rec("u_a") is None:
 chk("★ `队伍` 真敲（队长 / 队员两条路）：看到**同一份现算的名册**（2/4 · 逐人一行）· 看队不动档",
     not _B, "%s" % _B[:2])
 
+# ── 四之二、★ 本波：**有邀请在身时敲『队伍』不该把自己立成队长**
+#    起因（试玩报告 §5⑧）：被邀的人只想看一眼，原先那一刻会顺手 `create`
+#    （「你起了个队（队长：你）」）⇒ 邀他的人再邀他就撞「他在别人的队里」，被卡一轮。
+#    判据两态：① 被邀的人敲『队伍』⇒ 只回「没在队里」+ 那一封邀请，档上**不出现队长那一格**；
+#              ② 对照：**没邀请在身**的人敲『队伍』⇒ 照旧建队（老口径一个字没变）。
+_B = []
+
+
+def _unparty(uid):
+    """把这几位的队格清掉（`_set_party` 定义在后面那一节 ⇒ 这儿自己来一下，一行不差）。"""
+    d = dict(_ad.players[uid])
+    f = dict(d.get("flags") or {})
+    f.pop("party", None)
+    d["flags"] = f
+    d = CA._p(d)
+    _ad.players[uid] = d
+    PS.update_player(G, uid, **d)
+
+
+for _u in ("u_c", "u_f", "u_g"):
+    _unparty(_u)
+_o_c = say("u_c", "队伍")                                   # 丙 起个队（队长）
+say("u_c", "邀请 己")                                       # 丙 邀 己
+if rec("u_f") is not None:
+    _B.append(("被邀那一步就不该写档", rec("u_f")))
+_o_f = say("u_f", "队伍")
+_EXP_F = [_r("SYS_PARTY_LV_NONE"),
+          _r("SYS_PARTY_PEND", cap="丙", left=PT.invite_ttl_ticks())]
+if _o_f != _EXP_F:
+    _B.append(("被邀的人敲『队伍』", _o_f, _EXP_F))
+if rec("u_f") is not None:
+    _B.append(("被邀的人被顺手立成了队长", rec("u_f")))
+_o_f2 = say("u_f", "队伍")                                   # 幂等：再来一遍还是那两行、档还空着
+if _o_f2 != _EXP_F or rec("u_f") is not None:
+    _B.append(("第二遍变了", _o_f2, rec("u_f")))
+_o_g = say("u_g", "队伍")                                   # 对照：没邀请 ⇒ 照旧建队
+_pv_g = CA._p(dict(_SEED["u_g"]))
+_EXP_G = [_r("SYS_PARTY_MAKE", max=PT.max_members()),
+          _r("SYS_PARTY_HEAD", n=1, max=PT.max_members(), cap="庚"),
+          _r("SYS_PARTY_ROW", name="庚", level=_pv_g["level"], hp=_pv_g["hp"],
+             hpmax=_pv_g["hp_max"], where=WHERE_HERE),
+          _r("SYS_PARTY_TAIL")]
+if _o_g != _EXP_G:
+    _B.append(("对照：没邀请的人敲『队伍』", _o_g, _EXP_G))
+chk("★ 本波：**有邀请在身**时敲『队伍』= 只回「没在队里」+ 那一封邀请（档上**不立队长**）· "
+    "没邀请的人照旧建队（对照）", not _B, "%s" % _B[:2])
+for _u in ("u_c", "u_f", "u_g"):
+    _unparty(_u)
+
 # ── 五、fail-closed 八档（逐条明确回话；被拒的那几支一个格子都不动）
 _B = []
 _pend0 = dict((rec("u_a") or {}).get("invites") or {})
@@ -703,24 +753,97 @@ chk("★ 有队档：『集火 <名>』『集火』都回**有队那一句**（%
                                                     _o5[0] if _o5 else ""),
     not _B7, "%s" % _B7[:2])
 
-# ── 四、逃跑：两个别名都真敲 ⇒ 槽位那句 · 不含内部词 · 指向『后撤』· 档一个字不动
-_B7 = []
-_BEFORE = json.dumps(PS.get_player(G, "u_a") or {}, sort_keys=True, ensure_ascii=False)
-_o6 = say("u_a", "逃跑")
-_o7 = say("u_a", "脱离")
-_AFTER = json.dumps(PS.get_player(G, "u_a") or {}, sort_keys=True, ensure_ascii=False)
-if _o6 != [_r("COMBAT_FLEE_TODO")] or _o7 != [_r("COMBAT_FLEE_TODO")]:
-    _B7.append(("逃跑 / 脱离", _o6, _o7, _r("COMBAT_FLEE_TODO")))
-if _BEFORE != _AFTER:
-    _B7.append(("逃跑动了档", _BEFORE[:80], _AFTER[:80]))
-for _txt in _o6 + _o7:
-    if ("第一版" in _txt) or ("轮流制" in _txt) or ("MISSING" in _txt) or ("【" in _txt):
-        _B7.append(("还有内部词 / 内部 key", _txt))
-if "后撤" not in (_o6[0] if _o6 else ""):
-    _B7.append(("指不到真能用的那条路", _o6))
-chk("★ `逃跑`（别名 `脱离`）真敲 = `COMBAT_FLEE_TODO`（%s）· 不含「第一版 / 轮流制 / 内部 key」· "
-    "指向『后撤』· **档一个字不动**" % ((_o6[0] if _o6 else "").replace(chr(10), " / ")),
-    not _B7, "%s" % _B7[:2])
+# ── 四、★ 本波：**多人场里 `逃跑` 真掷**（原先有队时回的是那句已退役的桩句）
+#     ★ 这一条要用的镜子（`_roll7` / `_RATE7` / `_FLY7` / `_STOP7`）在 §六 里（P-57 那一节）
+#       ⇒ 本块**包成一个函数、在 §六 之后调用**（`_multi_flee_criterion()`）。
+#     口径：与单人**同一条规则**（真源 `05_玩法数值口径_v1 §四` 只有一条「逃跑」规则，
+#       没把单人 / 多人分家）—— 谁敲谁掷（种子 = 他自己 + 那一只 + 这一处 + 游戏日）。
+#       ★ 多人那一层的**语义**（跑成之后全队算不算「这一场没打」）真源没写 ⇒ 本波照
+#       「跑成 = 这一场没打」落地并登记（见 `_notes.md §真源行`）。
+#     判据三头（都真敲 · 遇敌钉死 ⇒ 可复现）：
+#       ① 队里那一掷：回的是 OK / BLOCK 里**与探针现算那颗种子相符**的那句（不是桩句）
+#       ② 两态都在多人场里跑到：临时把率改成 1.0 / 0.0 ⇒ 被拦下（这一场还在、真花一手）/
+#          跑成（这一场清干净 + 记 fled）—— 顺带再证一次「率只有一个口」
+#       ③ 那一场真是**多人那一格**（按群存、members 两个人）—— 不是退回单人那一格
+
+
+def _drive_party7(fleer, other):
+    """（多人场）两人真组一队、同在骨田 ⇒ 让 `fleer` 敲一次 `逃跑`。
+
+    返回 `(屏上那几行, 这一场, last_battle)`。先把两个档都摆干净：队格 / 场 / 上一场的账。
+    """
+    for _u in (fleer, other):
+        _set_party(_u, None)
+    _set_party(fleer, {"id": _PID, "role": "captain", "tick": 1, "invites": {}})
+    _set_party(other, {"id": _PID, "role": "member", "captain": fleer})
+    for _u in (fleer, other):
+        _at(_u, LOC, NODE, hp=80)
+        _d = dict(CA._p(_ad.players[_u]))
+        _f = dict(_d.get("flags") or {})
+        _f.pop("last_battle", None)
+        _d["flags"] = _f
+        _ad.players[_u] = _d
+        PS.update_player(G, _u, **_d)
+    _clear_field()
+    _o = say(fleer, "逃跑")
+    _lb = ((PS.get_player(G, fleer) or {}).get("flags") or {}).get("last_battle") or {}
+    return _o, _field(fleer), _lb
+
+
+def _multi_flee_criterion():
+    """★ 本波：多人场那一掷（真敲 · 两态都跑到）—— 见上面那段抬头。"""
+    _bad = []
+    _todo_old = str((TX.get("COMBAT_FLEE_TODO") or {}).get("value") or "")
+    _pair = (_FLY7[0] if _FLY7 else "", _STOP7[0] if _STOP7 else "")
+    _fast = ""
+    if not (_pair[0] and _pair[1] and _pair[0] != _pair[1]):
+        chk("★ 多人场 `逃跑` 真接了（前提：同一颗种子下「跑成 / 被拦下」两个人都凑得齐）",
+            False, "两态凑不齐：%s" % (_pair,))
+        return
+    try:
+        CBT.build, CBT.pick_encounter = _spy, (lambda *a, **k: [_MID7])
+        # 谁先手：拿引擎自己排的 ct 序当期望（不手写 —— 与 `content/instance` 同一把尺）
+        _bb = _REAL_BUILD({}, [_MID7], MON, party=2,
+                          players=[dict(PS.get_player(G, u), uid=u) for u in _pair])
+        _cts = {a["uid"]: float(a.get("ct") or 0) for a in _bb.sides["player"]}
+        _fast = min(_cts, key=_cts.get)
+        _slow = [u for u in _pair if u != _fast][0]
+        # ① 先手那位真掷（哪一边由探针现算的种子说）
+        _exp = _r("COMBAT_FLEE_OK", name=_NAME7) if _roll7(_fast) >= _RATE7 \
+            else _r("COMBAT_FLEE_BLOCK", name=_NAME7)
+        random.seed(20260926)
+        _o1, _st1, _lb1 = _drive_party7(_fast, _slow)
+        if _exp not in _o1:
+            _bad.append(("多人场那一掷与现算的种子不符", _fast, _o1[:4], _exp))
+        if _st1 is not None and sorted(_st1.get("members") or []) != sorted(_pair):
+            _bad.append(("那一场不是多人那一格", _st1.get("members")))
+        if _todo_old and any(_todo_old.split("\n")[0] in _x for _x in _o1):
+            _bad.append(("多人场还在回那句已退役的桩句", _o1[:2]))
+        # ② 两态都真跑到（改率那一格 —— 与 §六 的反证同一个手法）
+        _keep = _BA7.flee_fail_pct
+        try:
+            _BA7.flee_fail_pct = (lambda: 1.0)
+            random.seed(20260926)
+            _ob, _stb, _lbb = _drive_party7(_fast, _slow)
+            _BA7.flee_fail_pct = (lambda: 0.0)
+            random.seed(20260926)
+            _oc, _stc, _lbc = _drive_party7(_fast, _slow)
+        finally:
+            _BA7.flee_fail_pct = _keep
+        if not (_r("COMBAT_FLEE_BLOCK", name=_NAME7) in _ob and _stb is not None
+                and int(_stb.get("hands") or 0) == 1):
+            _bad.append(("多人场被拦下那一档不对（这一场应当还在、且真花了一手）",
+                         _ob[:3], None if _stb is None else _stb.get("hands")))
+        if not (_r("COMBAT_FLEE_OK", name=_NAME7) in _oc and _stc is None
+                and _lbc.get("result") == "fled"):
+            _bad.append(("多人场跑成那一档不对（这一场应当清干净、记 fled）",
+                         _oc[:3], _lbc.get("result")))
+    finally:
+        CBT.build, CBT.pick_encounter = _REAL_BUILD, _REAL_PICK
+    chk("★ 多人场 `逃跑` 真接了（两人同格 · 先手那位 %s 真掷 ⇒「%s」；改率 1.0 ⇒ 被拦下且这一场"
+        "照打 · 改率 0.0 ⇒ 跑成且这一场清干净记 `fled`）· 不再回那句退役桩句"
+        % (_fast or "（没跑）", _exp if _fast else ""),
+        not _bad, "%s" % _bad[:2])
 
 # ── 五、覆盖面（源码守卫）：`flee` 里一句内联文案都没有（K61：覆盖面跟判据一起加）
 _CBSRC = io.open(os.path.join(str(REPO), "content", "cmds_battle.py"), encoding="utf-8").read()
@@ -742,8 +865,8 @@ _CJK = re.compile(r"[\u4e00-\u9fff]")
 _FN_LITS = [n.value for n in _ast.walk(_FN[0])
             if isinstance(n, _ast.Constant) and isinstance(n.value, str)
             and n is not _DOC and _CJK.search(n.value)] if _FN else []
-_SLOTS7 = ("COMBAT_FLEE_TODO", "COMBAT_FLEE_OK", "COMBAT_FLEE_BLOCK")
-#   ★ 三个槽位**在 `flee` 的实现体里真被取**（ast 认 `T("<键>")` 这种调用 ——
+_SLOTS7 = ("COMBAT_FLEE_OK", "COMBAT_FLEE_BLOCK")
+#   ★ 那两条槽位**在 `flee` 的实现体里真被取**（ast 认 `T("<键>")` 这种调用 ——
 #     `COMBAT_FLEE_BLOCK` 是挂在 `hand.lines` 上由引擎取走的，不是 `yield` 出来的，
 #     所以认「调用」而不是认「yield 那一行」）。
 _T_CALLS7 = sorted({n.args[0].value for n in _ast.walk(_FN[0])
@@ -757,11 +880,11 @@ _NUMS7 = sorted({n.value for n in _ast.walk(_FN[0])
                  if isinstance(n, _ast.Constant) and not isinstance(n.value, bool)
                  and isinstance(n.value, (int, float))}) if _FN else []
 chk("★ 覆盖（ast）：`flee` 里**没有一个含汉字的字面量**（%d 处 —— 注释 / docstring / 槽位键不算）· "
-    "三个槽位都是它自己 `T(\"…\")` 取的（%s）· 那一手里出现的数只有 %s（率不在代码里）"
+    "那两条槽位都是它自己 `T(\"…\")` 取的（%s）· 那一手里出现的数只有 %s（率不在代码里）"
     % (len(_FN_LITS), " · ".join(_HAS7) or "一个都没取", _NUMS7),
     len(_FN) == 1 and not _FN_LITS and _HAS7 == sorted(_SLOTS7)
     and set(_NUMS7) <= {0, 1})
-chk("★ 覆盖：这一族的四条槽位都在 texts 里、且占位与 params **双向对账**（%s）"
+chk("★ 覆盖：这一族的三条槽位都在 texts 里、且占位与 params **双向对账**（%s）"
     % " · ".join("%s=%s" % (k, sorted((TX.get(k) or {}).get("params") or []))
                  for k in ("COMBAT_FOCUS_PARTY",) + _SLOTS7),
     all((TX.get(k) or {}).get("value") for k in ("COMBAT_FOCUS_PARTY",) + _SLOTS7)
@@ -912,6 +1035,9 @@ try:
             and _EXP_OK in _o_r2 and _st_r2 is None and _lb_r2.get("result") == "fled")
 finally:
     CBT.build, CBT.pick_encounter = _REAL_BUILD, _REAL_PICK
+
+# ★ 本波（多人场那一掷）—— §⑦ 段四 那一条要用的镜子在上一节里 ⇒ 到这里才调用。
+_multi_flee_criterion()
 
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
