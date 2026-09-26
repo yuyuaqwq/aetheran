@@ -156,6 +156,73 @@ def _fmt(logs, limit=12):
 
 
 # ══════════════════════════════════════════════════════════════
+# ★ 本批两件（法力那条线）：现蓝从哪儿读 / 这一手的资源够不够
+# ══════════════════════════════════════════════════════════════
+def _mp_after(env, uid):
+    """这一场收尾时**我**的现蓝 —— 从「场」里现读（**唯一的口**）。没有场 ⇒ `None`。
+
+    ★ 为什么不在 `_settle` 的入参里多传一格：`_settle` 是单人那条与「场」那条**共用**的
+      结算口（`content/instance._finish` 也在调它），加形参会把签名改到另一个面上去。
+      「场」里那一格 actor 就是这一场的真状态（`take_turn` 每一手 `to_state()` 落盘）
+      ⇒ 从它现读 = 同一个数，不动调用方。
+    """
+    from . import instance as INST
+    st = INST.live(env, uid)
+    if st is None:
+        return None
+    a = INST.actor_of(st, uid)
+    if not isinstance(a, dict):
+        return None
+    return a.get("mp")
+
+
+def res_short_line(env, uid, rec):
+    """这一手自己声明的 `res_cost` 够不够 —— 不够 ⇒ 一句**点名了资源**的话（够 ⇒ 空串）。
+
+    ★ 为什么在指令这一层再判一次（引擎那道预检照旧在）：引擎的判据是「效果表里**有**该资源
+      条目 ⇒ 才须足额；没条目 ⇒ 不拦（保持历史行为）」—— 而「场」这条路上**开战事件从不触发**
+      （引擎 `serialize.from_state` 置 `_started=True`；`_open` 又是先 `to_state()` 再 `restore`）
+      ⇒ 每一场的**第一手**都没有条目 ⇒ 门是空的。实测（试玩报）：游侠 0 层准星敲『技能 狙击』
+      照打 66（3/3 复现）。这里按**开战那一刻的口径**（还没打 = 0 层，`resources.json` 的
+      `aeth_res_start` 就是把本职业那条摆成 0）判一次，并把**资源名**点出来
+      （引擎那句 `battle.actions.resource_lack` 手上只有机器码 `rk`，点名不了 —— 见 `_notes.md`）。
+
+    现层数从哪儿来（只有这两档，不猜）：
+      · 已经在打 ⇒ 「场」里我那一格 actor 的 `effects[<资源>].stacks`（现读）；
+      · 还没打   ⇒ **0**（与开战那一刻同口径）。
+
+    ⚠️ 判据用的是**技能域里声明的那个数**（不含引擎 `bonus.cost` 的折扣折算）—— 本包今天
+      没有任何「耗法/耗资源折扣」的词条，所以两侧同值；将来那一层真出现时，这里要跟着走
+      `_skill_pay_of`（登记在 `_notes.md`）。
+    """
+    cost = rec.get("res_cost") or {}
+    if not isinstance(cost, dict) or not cost:
+        return ""
+    from . import instance as INST
+    from . import resources as RES
+    st = INST.live(env, uid)
+    a = INST.actor_of(st, uid) if st is not None else None
+    for key, need in cost.items():
+        have = 0.0
+        if isinstance(a, dict):
+            entry = (a.get("effects") or {}).get(key)
+            if isinstance(entry, dict):
+                try:
+                    have = float(entry.get("stacks") or 0)
+                except (TypeError, ValueError):
+                    have = 0.0
+        if have >= float(need or 0):
+            continue
+        name = str(RES.of(key).get("name") or "")
+        if not name:
+            raise KeyError("resources.json 里那条资源没写 `name`（门槛要点名是哪样不够）：%r" % (key,))
+        #: 两个数按整数印（宪法 `01_属性字典 §一`「整数显示」）—— 这一句走 `T()` 的朴素替换，
+        #: 占位不带格式符 ⇒ 取整这一步归调用方（与 `COMBAT_RES_LACK` 那句 `:.0f` 同一个读法）。
+        return T("COMBAT_RES_SHORT", res=name, rv=int(need or 0), cur=int(have))
+    return ""
+
+
+# ══════════════════════════════════════════════════════════════
 # ★ G2：分段推进的三件小件（条件那一手 / 对手名 / 只读的口）
 # ══════════════════════════════════════════════════════════════
 def _foe_name(env, p, uid):
@@ -328,6 +395,12 @@ async def _settle(env, p, uid, pick, ms, res, logs, hp_after, seen, player, affi
     """
     # ★ B3-24：这一场记进日志时用的怪名（精英带 `† … †`；没词条 = 原样名）
     _ename = AFFIX.display_name(str(ms[pick[0]].get("name", pick[0])), list(affixes))
+    # ★ 本批（试玩 A2/A3 · 法力那条线）：这一场**收尾那一刻**把现蓝落回档 —— 唯一口
+    #   `mana.settle`（写回现蓝 + 按游戏钟补上「战斗外那一段回蓝」+ 记书签）。
+    #   改前这一格**只有读端、没有写端** ⇒ 放 8 次技能 `状态` 仍报 85/85、跨场一个点都不扣。
+    #   `_mp_after` 拿不到（没在打的那条老路）⇒ 传 None ⇒ `settle` 一个字段都不写（不猜数）。
+    from . import mana as MANA
+    MANA.settle(p, _mp_after(env, uid))
     yield "━" * 12
     if res == "victory":
         yield T("COMBAT_DONE")
@@ -619,6 +692,11 @@ async def skill_cast(env, sink, uid, player):
       ③ 解锁等级没到 ⇒ `SYS_SKILL_TOO_LOW`
     过了就交给引擎那条技能路（mp / 冷却 / 伤害 / 治疗 / 增益都是它自己的事）。
 
+    ★ 本批补的那道门（第四道半）：**这一手自己声明的 `res_cost` 够不够** ⇒ 不够回一句
+      **点了资源名**的话（`COMBAT_RES_SHORT`）并**不开这一场**。为什么非要在这儿补：引擎那道
+      预检认「效果表里有没有该资源条目」，而「场」这条路上开战事件从不触发 ⇒ 每一场的
+      第一手都绕过了它（实测 0 层准星照样满伤 66 · 见 `res_short_line`）。
+
     ★ B4-1 第五道门：**被动不是能"放"的**（`kind_key == "passive"` ⇒ `COMBAT_SKILL_BAD`）。
       被动开战时由事件总线挂上（`content/mech.py` 的 `route=trigger`），放进球场只会白费一次
       行动。判据看 ASCII 机器键，不看中文类别名（K48/K51 同族）。
@@ -654,10 +732,20 @@ async def skill_cast(env, sink, uid, player):
         yield T("SYS_SKILL_TOO_LOW", name=rec.get("name", sid), lv=lv,
                 gap=lv - int(p.get("level") or 1))
         return
-    _head = T("COMBAT_SKILL_HEAD", name=rec.get("name", sid))
+    # ★ 本批（试玩三家 · 指令词那一族）：**第五道半 —— 这一手自己声明的资源够不够**。
+    #   引擎那道预检在「场」的第一手上是空的（见 `res_short_line` 的抬头）⇒ 在这儿按开战
+    #   那一刻的口径判一次，并把资源名点出来（改前「准星 0 层敲狙击照打 66」）。
+    _short = res_short_line(env, uid, rec)
+    if _short:
+        yield _short
+        return
+    from . import instance as INST
+    # ★ 本批（试玩 C-1）：这一句**只在开场那一手**出 —— 它的字面就是「这一场你的第一手就放它」，
+    #   改前不分手次、不分内外：第 2/4 手与战斗外都照播，玩家读成「系统说这手会放」却看不到结果
+    #   （三家报告都点了这条噪音）。已经在打 ⇒ 不出它，这一手的名字由引擎那句「你施展【X】！」说。
+    _head = T("COMBAT_SKILL_HEAD", name=rec.get("name", sid)) if INST.live(env, uid) is None else ""
     # ★ B3-26：在场里 ⇒ 走「场」那道（放技能要「花掉你这一手」，得先轮到你）
     #   ★ G2：没得打的地方先说**同族那一句**
-    from . import instance as INST
     if INST.route_needed(env, uid):
         if not _need_foe(env, p, uid):
             yield T("COMBAT_NEED_FOE")

@@ -293,8 +293,12 @@ def _p(player):
         p.pop("mo_max", None)                              # 无职业 ⇒ 这一格也不留（照实说未定）
     else:
         from . import mana as _MANA
+        # ★ 本批（试玩 A3）：**上限涨了现值跟着涨**（差量补）—— 基线 = 档上那一格「上次派生出来的
+        #   上限」。加点 / 升级 / 换装把面板上限推上去时，现值按同一个差量补（唯一口 `mana.on_cap`）
+        #   ⇒ 智力 / 意志里那半「+法力」真看得见（改前上限 110→159 而现值恒 110）。
+        _prev_cap = p.get("mo_max")
         p["mo_max"] = mcap
-        p["mo"] = _MANA.initial_mp(p.get("mo"), mcap)
+        p["mo"] = _MANA.initial_mp(_MANA.on_cap(p.get("mo"), _prev_cap, mcap), mcap)
     return p
 
 
@@ -784,6 +788,19 @@ async def look(env, sink, uid, player):
         #   现在先出一行表头（`SYS_LOOK_FOE`），怪那一行照旧走 `COMBAT_ELITE_SPAWN`。
         yield T("SYS_LOOK_FOE")
         yield AFFIX.elite_line(str((_data("monsters")[_el[0]] or {}).get("name", _el[0])), _el[1])
+    else:
+        # ★ 本批（试玩 · 塔顶那条）：**没有精英时这一栏也要说话** —— 改前只有精英才有那一栏，
+        #   于是塔顶那只 Boss（`elite_pool` 是空的 ⇒ 永远抽不出词条）在『观察』里一个字都不提，
+        #   玩家到那一间才知道站着一只什么。现在列的是**这一格按等级真会遇上的那几只**
+        #   （`combat.encounter_cand` 的前三名 —— 与 `pick_encounter` 同一个口，不是另抄一份）。
+        #   一条候选都没有（镇上 / 没挂怪的图 / 塔内空房）⇒ 一个字段都不出（与改前逐字相同）。
+        from . import combat as _CB                        # 本地 import：免得包装载期成环
+        _mon = _data("monsters")
+        _top = _CB.encounter_cand(_mon, loc, node, int(p.get("level", 1) or 1))[1]
+        _names = [str((_mon.get(k) or {}).get("name") or k) for k in _top]
+        if _names:
+            yield T("SYS_LOOK_FOE")
+            yield T("SYS_LOOK_FOE_ROW", list=" · ".join("『%s』" % x for x in _names))
     yield T("SYS_LOOK_HINT")
     for line in egg_lines(p, player, env):      # ★ B3-1：看四周那一下可能把两件事连起来
         yield line
@@ -1101,6 +1118,26 @@ async def go_to(env, sink, uid, player):
 # ══════════════════════════════════════════════════════════════
 # 二、角色
 # ══════════════════════════════════════════════════════════════
+def live_mp(env, uid, p):
+    """打斗中途「我这一手」的现蓝 —— **唯一口**：有「场」就按场里那一格 actor 现读。
+
+    ★ 本批（试玩 A2）：扣蓝的落账落在**这一场收尾那一刻**（`cmds_battle._settle`），
+      所以在打的这一场里档上那一格还是开场时的数 —— 中途敲『状态』该报的是**眼下这一场**
+      的余蓝，不是开打前那个（改前实测：放完两招敲 `状态`，报的还是 `85/85`）。
+      拿不到（没在打 / 场里没这一格）⇒ 照**档上那一格**（= 与接线前逐字相同，不编数）。
+
+    血不在这儿读：血在**每一手**都落回档（`instance._write_back`），档上那一格本来就是活的。
+    """
+    from . import instance as INST                 # 本地 import：与 `live_foe` 那一族同款
+    st = INST.live(env, uid)
+    if st is None:
+        return p.get("mo")
+    a = INST.actor_of(st, uid)
+    if not isinstance(a, dict) or a.get("mp") is None:
+        return p.get("mo")
+    return a.get("mp")
+
+
 async def status(env, sink, uid, player):
     p = _p(player)
     nm = name_with_title(p)                     # ★ B3-2：称号跟着名字走进面板
@@ -1117,7 +1154,7 @@ async def status(env, sink, uid, player):
                 mo=T("SYS_UNSET"), mo_max=T("SYS_UNSET"), gold=p.get("gold"))
     else:
         yield T("SYS_STATUS_VITALS", hp=p.get("hp"), hp_max=cap,
-                mo=p.get("mo"), mo_max=mcap, gold=p.get("gold"))
+                mo=live_mp(env, uid, p), mo_max=mcap, gold=p.get("gold"))
     yield T("SYS_STATUS_EXP", exp=p.get("exp"),
             place=_map_of(p["loc"]).get("name", p["loc"]) if _map_of(p["loc"]) else p["loc"])
 
