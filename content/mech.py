@@ -540,8 +540,15 @@ def aeth_advance_ct(battle, caster, target, params, logs):
     now = _now(battle)
     ct = float(caster.get("ct") or 0)
     caster["ct"] = max(now, ct - adv)
-    logs.append(T("COMBAT_MECH_QUICKSTEP", ticks=int(adv),
-                  left=int(round(caster["ct"] - now))))
+    # ★ 那半句「（{left} 刻后就到你）」撤了（试玩 b20/b23 实测 · 2026-09-27）：
+    #   `left` = 夹制后 ct 与当刻之差，而抢拍的 `recover.base`(30) == `mech_val`(30)，
+    #   两个数走**同一个**时间模型 ⇒ spd ≥ 100 时后摇 < 声明量 ⇒ 那道「不早于当刻」的闸
+    #   把差吃掉 ⇒ `left` **结构性恒 0**（实跑 spd=118：后摇 27.62 < 30 ⇒ left=0）。
+    #   于是「提前 30 刻（0 刻后就到你）」被玩家读成自相矛盾（b20/b23 原话）。
+    #   ★ 夹制与声明**一个字没动**（`max(now, …)` 照旧，不许负 ct）——见 `probe_mech` ⑩
+    #     与 `skill_mech.json` 那条 judge「少 mech_val 刻，**且不小于当刻**」。
+    #   现在这句报的是**声明量**（域里 mech_val），文案那边写「最多提前」把闸说清楚。
+    logs.append(T("COMBAT_MECH_QUICKSTEP", ticks=int(adv)))
 
 
 @EF.register_action("aeth_mitigate")
