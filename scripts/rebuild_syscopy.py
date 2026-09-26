@@ -32,6 +32,58 @@ KEY_RE = re.compile(r"^(SCENE|READ|NPC|COMBAT|QUEST|ITEM|SYS|TITLE|WORLD|HOUR|WE
 PH = re.compile(r"\{(\w+)\}")
 ROW_RE = re.compile(r"^\|\s*([A-Z][A-Z0-9_]*)\s*\|")
 
+#: ★ g4-leftovers：**口径表待跟账**（真源那一行的值待主线改 · 两态互锁）。
+#:
+#:   为什么要有这一格：本脚本对已存在的槽位要求**逐字相同**（防两处口径打架），
+#:   可这一轮要改的几条（建号那一步的玩家词 · `SYS_PAGE_NONE` 的列表候选）改的是**值**，
+#:   而真源仓对本分支只读 ⇒ 不给这一格，就只有「换新槽位 + 退役登记」一条路
+#:   （fix3 那次的走法），而那会给 texts 留一条永远没人读的旧句子。
+#:
+#:   口径（第三态当场抛 —— 「门禁只加强不削弱」）：
+#:     · 表里那一格**要么**是旧值（主线还没跟账）· **要么**是新值（跟账后）；别的值 ⇒ 抛；
+#:     · 落下时必须已经在域里（`add` 那一支不许借这一格混进来 —— 那会变成「表里没有、域里先有」）；
+#:     · 域里那一条必须**逐字等于** `new`（旧值留在域里 ⇒ 抛）。
+DOC_PENDING = {
+    "SYS_CLS_NAME": {
+        "old": "名字还没定 —— 打『改名 <名字>』，只改这一回。",
+        "new": "名字还没定 —— 打『名字 <名字>』，只改这一回。",
+        "why": "g4-③（P1 体验-1）：建号那一步的玩家词是『名字』（`04_指令总表` 的别名那一个，"
+               "玩家照着敲得通），引导却把他指去『改名』—— 三处对齐（见分支 `_notes.md`）",
+    },
+    "SYS_REG_ASKNAME": {
+        "old": "「叫什么名字？」—— 先打『改名 <名字>』，回头再来办证。",
+        "new": "「叫什么名字？」—— 先打『名字 <名字>』，回头再来办证。",
+        "why": "g4-③：同上（登记那一支也把『名字』递过去）",
+    },
+    "SYS_RENAME_ASK": {
+        "old": "想叫什么？打『改名 <名字>』—— 一到八个字，只改这一回。",
+        "new": "想叫什么？打『名字 <名字>』—— 一到八个字，只改这一回。",
+        "why": "g4-③：同上（这条指令的 `usage` 也改成『名字』，『改名』留作别名）",
+    },
+    "SYS_PAGE_NONE": {
+        "old": "先打开一个列表（『背包』看东西 ·『排行』看本群榜）—— 再敲『下一页』或『回 <页码>』。",
+        "new": "先打开一个列表（{lists}）—— 再敲『下一页』或『回 <页码>』。",
+        "why": "g4-④（P4 E-4 的另一半）：那句只点了『背包』『排行』两个列表，"
+               "而分页今天有七列（`content/pager.py::LIST_KEYS`）—— 列表名从登记处现算，"
+               "不再手打（见分支 `_notes.md`）",
+    },
+    "READ_TOWER_STELE_NAMES": {
+        "old": "名字一排排往下刻。有三个，你在白桦林那棵树皮上见过 —— 重了。",
+        "new": "名字一排排往下刻。刻痕很深，边角还利 —— 有几个名字眼熟，你想不起在哪儿见过。",
+        "why": "g4-⑩（P2 BUG⑦ 时序）：旧那句对**没去过白桦林**的玩家也断言「你见过」——"
+               "改成按真实经历分支：这一格是**没读过**白桦上那棵树名时的那一版，"
+               "读过之后走变体槽位 `READ_TOWER_STELE_NAMES__POI_NAMED_BIRCH`（见分支 `_notes.md`）",
+    },
+}
+
+
+def pending_ok(key: str, doc_val: str) -> bool:
+    """这一条待跟账、且**表里那一格处于允许的两态之一** → True（第三态 ⇒ False ⇒ 当场抛）。"""
+    fx = DOC_PENDING.get(str(key))
+    return bool(fx) and doc_val in (fx["old"], fx["new"])
+
+
+
 def parse_doc(path=DOC):
     """读口径文档里**所有**槽位表 -> 每行一条（顺序 = 文档里的顺序）。
 
@@ -107,18 +159,28 @@ def main(argv):
     for r in rows:
         old = tx.get(r["key"])
         if old is None:
+            if r["key"] in DOC_PENDING:
+                raise SystemExit("%s：登记了待跟账却**域里没有**（域里先有才谈得上跟账）" % r["key"])
             add.append(r)
         elif old.get("value") == r["value"]:
             same += 1
+        elif pending_ok(r["key"], r["value"]) and old.get("value") == DOC_PENDING[r["key"]]["new"]:
+            same += 1                     # ★ g4：待跟账的两态之一（表里旧值 / 跟账后新值；域里是新值）
         else:
-            clash.append((r["key"], old.get("value"), r["value"]))
+            fx = DOC_PENDING.get(r["key"])
+            if fx and r["value"] not in (fx["old"], fx["new"]):
+                clash.append((r["key"] + "（跟账第三态：表里既不是旧值也不是新值）",
+                              old.get("value"), r["value"]))
+            else:
+                clash.append((r["key"], old.get("value"), r["value"]))
     if clash:
         for k, a, b in clash:
             print("  x %s 两处不一样：" % k)
             print("      表里：%s" % b)
             print("      域里：%s" % a)
         raise SystemExit("槽位与域里的字不一样 —— 先裁决再落（没写任何东西）")
-    print("解析：%d 条（已存在且一致 %d · 要新增 %d）" % (len(rows), same, len(add)))
+    print("解析：%d 条（已存在且一致 %d · 要新增 %d · 待跟账 %d）"
+          % (len(rows), same, len(add), len(DOC_PENDING)))
     if not add:
         print("  · 无新增 —— 数据不变（幂等）")
         return 0

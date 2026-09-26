@@ -64,6 +64,16 @@
               "read"
             ]
           }
+        },
+        "text_variant": {
+          "type": "object",
+          "description": "★ g4-⑩：这一条可读物的正文**按真实经历分支** —— 键只有 `read` 一个：`{\"read\": \"<poi id>\"}` = 读到过那一条之后换另一句正文（变体槽位 = `<read_text>__<那个 poi id 大写>`，拼法唯一在 `content/scene.py::variant_key`；判定唯一口 = `content/cmds_ast._poi_read_slot`）。不写 = 只有一句正文。★ 与 `condition` 不是一回事：那个管**在不在场**，这一格管**在场之后说什么**（写错地方 = 把可读物藏起来、删内容）。",
+          "propertyNames": {
+            "enum": [
+              "read"
+            ]
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false

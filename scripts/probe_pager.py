@@ -225,7 +225,7 @@ def main():
 
     # ── ⑥ 还没翻过任何列表 · 空背包不分页
     print("⑥ 没翻过列表 ⇒ 点名那一句；空背包 ⇒ 不分页")
-    _none = T("SYS_PAGE_NONE")
+    _none = T("SYS_PAGE_NONE", lists=PG.lists_hint())   # ★ g4-④：列表名从登记处现算
     _o_none = say("下一页", uid="u_fresh")
     _fresh_txt = json.dumps(ad.saved.get("u_fresh") or {}, ensure_ascii=False)
     if _o_none == [_none] and "pager" not in _fresh_txt:
@@ -421,8 +421,9 @@ def main():
         host.handle({"uid": _BUID2, "group_id": GID, "text": text})
         return list(ad.out)
 
-    if len(_rows(say3("材料谱"))) == 3 and say3("下一页") == [T("SYS_PAGE_NONE")] \
-            and say3("回 9") == [T("SYS_PAGE_NONE")]:
+    _none3 = [T("SYS_PAGE_NONE", lists=PG.lists_hint())]        # ★ g4-④：列表名从登记处现算
+    if len(_rows(say3("材料谱"))) == 3 and say3("下一页") == _none3 \
+            and say3("回 9") == _none3:
         ok("一页装下的列表**不记光标**：随后敲『下一页』/『回 9』⇒ 仍是引导那句"
            "（`SYS_PAGE_NONE`），不是凭空翻出一页")
     else:
@@ -438,6 +439,44 @@ def main():
         ok("空的风味谱 ⇒ 只回 `SYS_CODEX_EMPTY_FLAVOR`（不分页）")
     else:
         bad("空风味谱那条不对：%r" % (say2("风味谱"),))
+
+    # ══════════════════════════════════════════════════════════
+    # ★ g4-④：那句引导（`SYS_PAGE_NONE`）里「能翻的列表」== 登记处
+    #   原状：列表名**手打**在槽位里（只点了『背包』『排行』），而 F6 起四本谱与图鉴也进来了
+    #   ⇒ 对着别的长列表敲『下一页』，玩家读到的那句引导里**没有他刚才看的那一列**。
+    # ══════════════════════════════════════════════════════════
+    print("⑭ ★ g4：引导里那一串列表 == 三处登记（PER_PAGE / _again / LIST_DECL）· 逐列点名")
+    from content import argv as AV14                                      # noqa: E402
+    _kinds14 = sorted(PG.PER_PAGE)
+    _decl14 = sorted(PG.LIST_DECL)
+    _again14 = sorted(k for k in _kinds14 if PG._again(ad, None, UID, None, k))
+    if _kinds14 == _decl14 == _again14:
+        ok("三处登记逐列一致（一页几行 / 翻页入口 / 引导里的名字）—— %s" % " · ".join(_kinds14))
+    else:
+        bad("三处登记对不上：PER_PAGE %s ｜ LIST_DECL %s ｜ _again %s" % (_kinds14, _decl14, _again14))
+    _hint14 = PG.lists_hint()
+    _miss14 = [k for k in _decl14 if ("『%s』" % AV14.usage(PG.LIST_DECL[k])) not in _hint14]
+    if not _miss14:
+        ok("引导里**逐列点名**（玩家词从声明现取，代码不抄第二份中文）：%s" % _hint14)
+    else:
+        bad("这几列没被点名：%s ｜ 引导 = %s" % (_miss14, _hint14))
+    # 反证（有牙）：真源口径表里旧那一句（只点『背包』『排行』）在**另外五列**上都点名不到
+    _old14 = str((texts.get("SYS_PAGE_NONE") or {}).get("value") or "")
+    _old_said = "先打开一个列表（『背包』看东西 ·『排行』看本群榜）—— 再敲『下一页』或『回 <页码>』。"
+    _lost14 = [k for k in _decl14 if ("『%s』" % AV14.usage(PG.LIST_DECL[k])) not in _old_said]
+    if _lost14 and len(_lost14) >= 5:
+        ok("反证：旧那一句（手打的『背包』『排行』）点名不到这 %d 列 —— %s"
+           % (len(_lost14), " · ".join(AV14.usage(PG.LIST_DECL[k]) for k in _lost14)))
+    else:
+        bad("反证不成立（旧句居然点名到了）：%s" % _lost14)
+    # 两态：真源那一行跟账前后都对得上（跟账后 `_old_said` 那半句就退场）
+    import rebuild_syscopy as RS14                                        # noqa: E402
+    _fx14 = getattr(RS14, "DOC_PENDING", {}).get("SYS_PAGE_NONE") or {}
+    ok("两态：`SYS_PAGE_NONE` 已登记待跟账（真源那句跟账前后都绿）—— 登记理由 %d 字"
+       % len(str(_fx14.get("why") or ""))) if _fx14 else \
+        bad("`SYS_PAGE_NONE` 没登记进 `rebuild_syscopy.DOC_PENDING`（真源那句还没跟账 ⇒ 两处口径）")
+    if _old14 == T("SYS_PAGE_NONE", lists=PG.lists_hint()):
+        ok("域里那条就是新值（{lists} 占位已生效 · 旧那句只留在反证里）")
 
     print()
     print("----")

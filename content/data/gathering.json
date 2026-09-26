@@ -368,7 +368,7 @@
       }
     ],
     "time": null,
-    "desc": "棚子后面那片土被刨过。崩掉的斧刃、弯了的铁钉，还有谁扔下的骨头 —— 都堆在这儿，没人捡。",
+    "desc": "棚子后面那片土被刨过。崩掉的斧刃、弯了的铁钉，还有谁扔下的残骸 —— 都堆在这儿，没人捡。",
     "times_per_day": 1
   },
   "gt_bw_fish_1": {
@@ -497,7 +497,7 @@
         ]
       },
       {
-        "out": "unid_common",
+        "out": "unid_rare",
         "w": 35
       },
       {
@@ -715,6 +715,42 @@
     ],
     "time": null,
     "desc": "两具东西散在地上 —— 捡得起来的不多，有一件不认得是什么，灰被人抹掉过一道。",
+    "times_per_day": 3
+  },
+  "gt_be_search_dogs": {
+    "name": "野狗窝的土坑",
+    "map": "belt_east",
+    "subarea": "be_dogs",
+    "kind": "搜查",
+    "verb": "search",
+    "pool": [
+      {
+        "out": "i_junk_bone",
+        "w": 45,
+        "n": [
+          1,
+          2
+        ]
+      },
+      {
+        "out": "unid_rare",
+        "w": 30
+      },
+      {
+        "out": "i_material_old_iron",
+        "w": 15,
+        "n": [
+          1,
+          1
+        ]
+      },
+      {
+        "out": "i_clue_page",
+        "w": 10
+      }
+    ],
+    "time": null,
+    "desc": "坑边刨出来一圈土，往外堆 —— 有东西埋过，又被人扒出来过。剩下的压在兽骨底下，还有一件硬东西没露头。",
     "times_per_day": 3
   }
 }

@@ -765,6 +765,141 @@ def main():
     else:
         bad("⑭ 撤改没复原干净：货架 %s / 打造 %s" % (_back, _backf))
 
+    # ══════════════════════════════════════════════════════════════
+    # ★ g4-②：随机装甲不再抢打造位（`no_drop`）
+    #   真源核实（06 §一 1.1）：普通档「镇上三家铺子直接买 · 普通怪掉」**两路都有**
+    #     ⇒ 铺子那三件入门装**照旧可被动态格抽到**（那是真源授权的，见下一条正面判据）；
+    #   而打造件那条真源行（`06 §1.1-b`）给的路只有「打造」，不在 §一 1.1 那 16 件里
+    #     ⇒ 真源没授权它掉落 ⇒ 本批按 fail-closed 排掉（`items.no_drop`）。
+    # ══════════════════════════════════════════════════════════════
+    from content import loot as LT22                                      # noqa: E402
+    _sch22 = json.load(io.open(os.path.join(REPO, "schemas", "items.schema.json"), encoding="utf-8"))
+    _nd_prop = (((_sch22.get("patternProperties") or {}).get("^i_[a-z0-9_]+$") or {})
+                .get("properties") or {}).get("no_drop")
+    _nd_ids = sorted(i for i, r in items.items() if isinstance(r, dict) and r.get("no_drop"))
+    if _nd_prop and _nd_ids == [fid]:
+        ok("⑰ ★ `no_drop` 那一格：schema 里声明了（`items.schema.json`）· 域里只有打造件那一件（%s）"
+           % " · ".join(_nd_ids))
+    else:
+        bad("⑰ `no_drop` 那一格不对：schema=%s · 域里=%s" % (bool(_nd_prop), _nd_ids))
+    _no_route = [i for i in _nd_ids if not (items[i].get("shop") or items[i].get("forge"))]
+    if not _no_route:
+        ok("⑰ ★ fail-closed：带 `no_drop` 的每一件都**另有获取路**（`shop` / `forge`）—— "
+           "排掉落不等于把一件东西锁死（今天 %d 件）" % len(_nd_ids))
+    else:
+        bad("⑰ 这几件既不能掉、又没别的路（玩家永远拿不到）：%s" % _no_route)
+    # 真跑：动态格抽 400 次，打造件一次都不许出现；铺子那三件**必须**抽得到（真源授权两路）
+    _seen22 = set()
+    import random as _R22                                                 # noqa: E402
+    _rnd22 = _R22.Random(20260926)
+    for _i22 in range(400):
+        for _pool22 in ("unid_common", "unid_tower"):
+            for _e22 in (LT22.pools().get(_pool22) or {}).get("pool") or []:
+                if str(_e22.get("out") or "").startswith("*"):
+                    _got22 = LT22._resolve(str(_e22["out"]), _e22, 9, _rnd22, items)
+                    if _got22:
+                        _seen22.add(_got22)
+    _leak = sorted(x for x in _nd_ids if x in _seen22)
+    _shop_hit = sorted(x for x in (want_ids or []) if x in _seen22)
+    if not _leak:
+        ok("⑰ ★ 真跑 400 轮动态格（`unid_common` / `unid_tower` 的 `*armor_random`）：打造件 "
+           "一次都没被抽出来（%d 件候选里抽到 %d 种）" % (len(items), len(_seen22)))
+    else:
+        bad("⑰ 打造件还是能被随机装甲抽到：%s" % _leak)
+    if len(_shop_hit) == len(set(want_ids)):
+        ok("⑰ ★ 另一面（真源授权的那一半）：铺子那 %d 件入门装**照旧抽得到** —— "
+           "真源 `06 §一 1.1` 明写普通档「铺子买 · 普通怪掉」两路都有（不排它们）"
+           % len(_shop_hit))
+    else:
+        bad("⑰ 铺子那几件被排掉了（真源授权两路都有，排掉 = 越权）：抽到 %s / 应有 %s"
+            % (_shop_hit, sorted(want_ids)))
+    # 反证（有牙）：临时把那一格摘掉 ⇒ 打造件当场出现在动态格里
+    _keep22 = dict(items[fid])
+    try:
+        items[fid].pop("no_drop", None)
+        _again22 = set()
+        _rnd22 = _R22.Random(20260926)
+        for _i22 in range(400):
+            for _pool22 in ("unid_common", "unid_tower"):
+                for _e22 in (LT22.pools().get(_pool22) or {}).get("pool") or []:
+                    if str(_e22.get("out") or "").startswith("*"):
+                        _g22 = LT22._resolve(str(_e22["out"]), _e22, 9, _rnd22, items)
+                        if _g22:
+                            _again22.add(_g22)
+        if fid in _again22:
+            ok("⑰ 反证（撤改验证）：把 `%s.no_drop` 摘掉 ⇒ 它当场从动态格里冒出来"
+               "（这一格真的在管事，不是注释）" % fid)
+        else:
+            bad("⑰ 反证不成立：摘掉 `no_drop` 之后打造件仍抽不到（那一格没被读）")
+    finally:
+        items[fid] = _keep22
+
+    # ══════════════════════════════════════════════════════════════
+    # ★ g4-①：两条线的料名**彻底分开**（p3 报告 体验-6 · 改名跟账）
+    #   `铁屑/铁渣/旧铁` 与 `硬骨/骨头` 那两组「名字极像但用不了的东西」——
+    #   本批把**打造那一路**的两样改名（`矿渣` / `兽骨`），与强化那两样（`铁屑` / `硬骨`）
+    #   从「同字 / 子串 / 只差一个字」里彻底出来。判据**现算**（谁与谁像由数据算，不写名单）。
+    # ══════════════════════════════════════════════════════════════
+    _enh22 = [str(items[i]["name"]) for i in enh_mats]
+    _cr22 = [str(items[i]["name"]) for i in sorted(set(cr_mats))]
+
+    def _near22(a, b):
+        """两个名字像不像（空串 = 不像，否则回那一句像在哪 —— 判据的**唯一**一处）。"""
+        if a == b:
+            return "同名"
+        if a in b or b in a:
+            return "一个套着另一个"
+        if a and b and a[-1] == b[-1]:
+            return "同一个字收尾"
+        if set(a) & set(b):
+            return "共用了字（%s）" % "".join(sorted(set(a) & set(b)))
+        if len(a) == len(b) and sum(1 for x, y in zip(a, b) if x != y) == 1:
+            return "只差一个字"
+        return ""
+
+    _pair22 = ["%s ↔ %s（%s）" % (a, b, _near22(a, b))
+               for a in _enh22 for b in _cr22 if _near22(a, b)]
+    if _enh22 and _cr22 and not _pair22:
+        ok("① ★ 两条线的料名彻底分得开（强化 %s ｜ 打造 %s）：不共用字 · 不互为子串 · 不同字收尾 · "
+           "不「只差一个字」—— 判据现算（不看名单）" % (" · ".join(_enh22), " · ".join(_cr22)))
+    else:
+        bad("① 两条线里还有像的名字：%s" % _pair22)
+    # 材料 / 垃圾 / 线索 这几类里不许重名（玩家按名字在铁匠铺 / 打造屏上点它们）——
+    # ★ 装备那边有四品阶同名一族（`重上甲` ×4 —— B4-20：显示时缀品阶），那是**有意的**，不在此列。
+    _dup22 = {}
+    for _i22, _r22v in items.items():
+        if isinstance(_r22v, dict) and _r22v.get("name") \
+                and str(_r22v.get("kind_key") or "") in ("material", "junk", "clue", "food", "tool"):
+            _dup22.setdefault(str(_r22v["name"]), []).append(_i22)
+    _dup22 = {k: v for k, v in _dup22.items() if len(v) > 1}
+    if not _dup22:
+        ok("① ★ 材料 / 垃圾 / 线索 / 食物这几类里没有重名两件（玩家按名字点得准 —— "
+           "装备四品阶同名那一族不在此列，显示时缀品阶）")
+    else:
+        bad("① 这几类里有重名：%s" % _dup22)
+    # 反证（有牙）：改名**之前**那一组（铁屑/铁渣 · 硬骨/骨头）在同一判词下当场被点出四处
+    _old_pair = ["%s ↔ %s（%s）" % (a, b, _near22(a, b))
+                 for a, b in (("铁屑", "铁渣"), ("硬骨", "骨头")) if _near22(a, b)]
+    if len(_old_pair) == 2:
+        ok("① 反证（有牙）：改名前的两组（铁屑 ↔ 铁渣 · 硬骨 ↔ 骨头）在同一判词下当场红 —— %s"
+           % " ｜ ".join(_old_pair))
+    else:
+        bad("① 反证不成立（旧名字居然不算像）：%s" % _old_pair)
+    # 两态互锁的那一半：生成器登记了改名 + 谱里那句「攒着能修东西」不再上屏
+    import rebuild_codex as RBX22                                         # noqa: E402
+    _fx22 = getattr(RBX22, "NAME_FIXUP", {})
+    _cx22 = json.load(io.open(os.path.join(REPO, "content", "data", "codex.json"), encoding="utf-8"))
+    _bad22b = [i for i in _fx22
+               if str((_cx22.get("material") or {}).get(i, {}).get("name")) != _fx22[i]["new"]]
+    _oldp = sorted({str((_cx22.get("material") or {}).get(i, {}).get("name"))
+                    for i in _fx22} & {_fx22[i]["old"] for i in _fx22})
+    if _fx22 and not _bad22b and not _oldp:
+        ok("① ★ 改名跟账三处对齐：生成器登记 %d 条（两态互锁）· 材料谱里是新名 · "
+           "旧名在材料谱里一个字都不剩" % len(_fx22))
+    else:
+        bad("① 改名没对齐：登记 %s · 材料谱没跟上 %s · 材料谱里还留着旧名 %s"
+            % (sorted(_fx22), _bad22b, _oldp))
+
     print(NL + "----")
     print("通过 %d / 失败 %d" % (len(OK), len(BAD)))
     if BAD:

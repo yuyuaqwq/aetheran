@@ -652,6 +652,120 @@ chk("★ 三个隐藏点都**显式写了 `effect.need`**（产出口归哪条�
 chk("★ 隐藏点今天**一条 `effect.loot` 都不挂**（B3-28 ② · 摘干净的登记值 = 0）",
     not _loot_refs13, "%s" % _loot_refs13)
 
+# ══════════════════════════════════════════════════════════════
+# ★ g4-⑩：可读物的正文**按真实经历分支**（`pois.<pid>.text_variant`）
+#   原状（P2 报告 BUG⑦）：号角室那块碑那句「有三个，你在白桦林那棵树皮上见过 —— 重了。」
+#   对**没去过白桦林**的玩家也照说（抢跑一个当时还不成立的发现）。
+#   判据三态：① schema 声明了那一格（键只有 `read`）· 每条的条件 id 真在 pois 域里；
+#             ② 真跑两态：没读到 ⇒ 基础正文 / 读到过 ⇒ 变体正文（两个都不等于对方）；
+#             ③ 反证（有牙）：没读到过时**旧那一句**一个字都不上屏。
+# ══════════════════════════════════════════════════════════════
+print("")
+print("★ g4-⑩：可读物正文按真实经历分支（号角室碑名单那句）")
+_sch10b = _json12.load(_io12.open(os.path.join(REPO, "schemas", "pois.schema.json"), encoding="utf-8"))
+_tv_prop = (((_sch10b.get("patternProperties") or {}).get("^poi_[a-z_]+$") or {})
+            .get("properties") or {}).get("text_variant")
+_tv_pids = sorted(k for k, v in po.items() if (v.get("text_variant") or {}).get("read"))
+_tv_bad = [k for k in _tv_pids if str(po[k]["text_variant"]["read"]) not in po]
+chk("★ `text_variant` 那一格：schema 里声明了（键只有 `read`）· 域里 %d 条（%s）· "
+    "条件指向的 poi 真在域里"
+    % (len(_tv_pids), " · ".join(po[k]["name"] for k in _tv_pids)),
+    bool(_tv_prop) and _tv_pids and not _tv_bad
+    and list(((_tv_prop.get("propertyNames") or {}).get("enum")) or []) == ["read"],
+    "schema=%s · 域里=%s · 悬空=%s" % (bool(_tv_prop), _tv_pids, _tv_bad))
+if not _tv_pids:
+    chk("pois 域里有一条 `text_variant`（找不到 ⇒ 这条测不了）", False, "")
+else:
+    _tp = _tv_pids[0]
+    _tneed = str(po[_tp]["text_variant"]["read"])
+    _tbase = str(po[_tp].get("read_text") or "")
+    from content.scene import variant_key as _vk10                      # noqa: E402
+    _tvk = _vk10(_tbase, _tneed)
+    _p_before = _player12(loc=po[_tp]["map"], node=po[_tp]["subarea"], books={"relic": {}})
+    _p_after = _player12(loc=po[_tp]["map"], node=po[_tp]["subarea"],
+                         books={"relic": {_tneed: {"known": True}}})
+    _body_b = str((tx.get(_tbase) or {}).get("value") or "")
+    _body_a = str((tx.get(_tvk) or {}).get("value") or "")
+    _r_before = _run12(CA10.read_thing, _p_before, "读 %s" % po[_tp]["name"])
+    _r_after = _run12(CA10.read_thing, _p_after, "读 %s" % po[_tp]["name"])
+    chk("★ 真跑两态（%s ← 先读到过『%s』）：没读到 ⇒ 基础正文（%s…）· 读到过 ⇒ 变体正文（%s…）"
+        % (po[_tp]["name"], _tneed, _body_b[:14], _body_a[:14]),
+        bool(_body_a) and _body_a != _body_b and _tbase != _tvk
+        and _body_b in _r_before and _body_a not in _r_before
+        and _body_a in _r_after and _body_b not in _r_after,
+        "before=%s / after=%s" % (_r_before[1:2], _r_after[1:2]))
+    # ③ 反证：真源口径表里旧那一句（不分支的那一句）在「没读到过」那一态一个字都不上屏
+    _old10 = str((tx.get(_tvk) or {}).get("value") or "")
+    chk("★ 反证（有牙）：没读到过白桦树时**旧那一句不出现** —— 旧句 = 变体那句（%s），"
+        "它只在读到过那一态上屏" % _old10[:20], bool(_old10) and _old10 not in _r_before)
+
+# ══════════════════════════════════════════════════════════════
+# ★ g4-⑧：三处隐藏点**都摸得着也搜得到**（每条带一个隐藏点 ⇒ 那一站要有 `verb=search` 的采集点）
+#   原状（P-28 脚注 + 本批核实）：`be_dogs` 那一站**没有**可搜点** ⇒「白桦林深处的记号」
+#   摸得着、读得到，敲『搜查』却回「这儿没什么可搜的」（bn_camp / bw_shoal 两处有）。
+#   口径 = 真源 `06 §一 1.1`（稀有 1.16 ← **隐藏点** · 头目掉 · 野外之王）+ `10 §一C`（隐藏点）+
+#          `05 §三`（稀有按池权重 20%–60% · n 1–2 · 每天 3 次）。
+# ══════════════════════════════════════════════════════════════
+print("")
+print("★ g4-⑧：三处隐藏点所在的那一站都有可搜刮面（与真源资源表对得上）")
+_ga10 = st.domain("gathering") or {}
+_it10 = st.domain("items") or {}
+
+
+def _search_at(node):
+    return [g for g, v in _ga10.items() if v.get("subarea") == node and v.get("verb") == "search"]
+
+
+_hid10 = sorted(k for k, v in po.items() if v.get("kind") == "隐藏点")
+_miss10, _thin10, _rare10 = [], [], {}
+for _k10 in _hid10:
+    _node10 = str(po[_k10].get("subarea"))
+    _pts10 = _search_at(_node10)
+    if not _pts10:
+        _miss10.append((_k10, _node10))
+        continue
+    for _g10 in _pts10:
+        _pool10 = _g10 and (_ga10[_g10].get("pool") or [])
+        if not _pool10:
+            _thin10.append(_g10)
+        _rare10[_g10] = [str(e.get("out")) for e in _pool10
+                         if str(e.get("out")) == "unid_rare"
+                         or str((_it10.get(str(e.get("out"))) or {}).get("quality")) in ("稀有", "遗物")
+                         or str(e.get("out")).startswith("i_set_")]
+chk("★ 三处隐藏点（%s）所在的那一站各有一个 `verb=search` 的采集点 ——「摸得着」与「拿得走」是两回事"
+    % " · ".join(po[k]["name"] for k in _hid10), bool(_hid10) and not _miss10, "%s" % (_miss10,))
+chk("★ 那几个可搜点的池非空 · 且都够得着**稀有那一档**（真源 `06 §一 1.1`：稀有 ← 头目掉 · "
+    "**隐藏点** · 野外之王）—— %s" % " · ".join("%s:%s" % (g, "/".join(v) or "无")
+                                                for g, v in sorted(_rare10.items())),
+    not _thin10 and all(_rare10.values()) and bool(_rare10), "空池 %s · 各点稀有档 %s"
+    % (_thin10, _rare10))
+# 与 05 §三 的三条数对得上（稀有 20%–60% · n 上限 ≤ 3 · 每天 3 次）
+_off10 = []
+for _g10, _rares10 in sorted(_rare10.items()):
+    _rec10 = _ga10[_g10]
+    if int(_rec10.get("times_per_day") or 0) != 3:
+        _off10.append((_g10, "times_per_day", _rec10.get("times_per_day")))
+    for _e10 in _rec10.get("pool") or []:
+        _w10 = int(_e10.get("w") or 0)
+        _tot10 = sum(int(x.get("w") or 1) for x in _rec10["pool"])
+        _pct10 = 100.0 * _w10 / _tot10
+        if _pct10 > 60.5 and _e10.get("out") not in ("i_junk_bone",):
+            _off10.append((_g10, "权重超 60%", round(_pct10, 1)))
+        if max([int(n) for n in (_e10.get("n") or [1])] or [1]) > 3:
+            _off10.append((_g10, "n 上限 >3", _e10.get("n")))
+chk("★ 与 `05 §三` 对得上：每点每天 3 次 · 池权重落在 0–60% 带内 · `n` 上限 ≤ 3",
+    not _off10, "%s" % (_off10[:3],))
+# 反证（有牙）：把 `be_dogs` 那个点临时摘掉 ⇒ 上面那一格当场翻面
+_be10 = [g for g in _search_at("be_dogs")]
+_rev10 = {g: _ga10.pop(g) for g in _be10}
+try:
+    _after10 = [k for k in _hid10 if not _search_at(str(po[k].get("subarea")))]
+finally:
+    _ga10.update(_rev10)
+chk("★ 反证（撤改验证）：把野狗窝那个可搜点临时摘掉 ⇒ 那一格当场点名出 %s（判据真的守着它）"
+    % " · ".join(po[k]["name"] for k in _after10),
+    bool(_be10) and len(_after10) == 1, "摘掉的是 %s" % _be10)
+
 print()
 print("按类别计数：")
 for kd in KINDS:

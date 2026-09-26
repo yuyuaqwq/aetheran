@@ -3377,7 +3377,7 @@
     "desc": "22 §二·3 武器架室（架子每一格上都刻着名字 —— 名字是给谁的？）"
   },
   "READ_TOWER_STELE_NAMES": {
-    "value": "名字一排排往下刻。有三个，你在白桦林那棵树皮上见过 —— 重了。",
+    "value": "名字一排排往下刻。刻痕很深，边角还利 —— 有几个名字眼熟，你想不起在哪儿见过。",
     "params": [],
     "category": "可读物",
     "desc": "22 §二·10 号角室（读碑上的名单 → 与白桦树上的名字有 3 个重名）"
@@ -4424,7 +4424,7 @@
     "desc": "B3-16b 旧货 · 怎么卖"
   },
   "SYS_REG_ASKNAME": {
-    "value": "「叫什么名字？」—— 先打『改名 <名字>』，回头再来办证。",
+    "value": "「叫什么名字？」—— 先打『名字 <名字>』，回头再来办证。",
     "params": [],
     "category": "系统",
     "desc": "B3-16b 登记 · 档上还没名字"
@@ -4456,7 +4456,7 @@
     "desc": "B3-16b 评级 · 头目那一行"
   },
   "SYS_RENAME_ASK": {
-    "value": "想叫什么？打『改名 <名字>』—— 一到八个字，只改这一回。",
+    "value": "想叫什么？打『名字 <名字>』—— 一到八个字，只改这一回。",
     "params": [],
     "category": "系统",
     "desc": "B3-16b 改名 · 没带名字"
@@ -5284,7 +5284,7 @@
     "desc": "B4-7 建号第二步 · 收尾指路（点数走 alloc.left_of_record · 触发词从声明取）"
   },
   "SYS_CLS_NAME": {
-    "value": "名字还没定 —— 打『改名 <名字>』，只改这一回。",
+    "value": "名字还没定 —— 打『名字 <名字>』，只改这一回。",
     "params": [],
     "category": "系统",
     "desc": "B4-7 建号第二步 · 建号第三步没走完时点一行（真源 18 §一 第 3 步）"
@@ -5514,8 +5514,10 @@
     "desc": "B4-17 分页 · 页脚（一列分了两页以上才出）"
   },
   "SYS_PAGE_NONE": {
-    "value": "先打开一个列表（『背包』看东西 ·『排行』看本群榜）—— 再敲『下一页』或『回 <页码>』。",
-    "params": [],
+    "value": "先打开一个列表（{lists}）—— 再敲『下一页』或『回 <页码>』。",
+    "params": [
+      "lists"
+    ],
     "category": "系统",
     "desc": "B4-17 分页 · 还没翻过任何列表"
   },
@@ -5875,5 +5877,110 @@
     "params": [],
     "category": "系统",
     "desc": "fix5-nav · 进镇尾注第二句 —— 站名归站点之后的出门口径（真源 17_文案收口口径 里 SYS_TOWN_ENTER_HINT 那条的**待改行**见本分支 _notes.md）"
+  },
+  "SCENE_WT_CHAPEL__FULL": {
+    "value": "白烛堂是镇上唯一用石头砌得齐整的房子。\n堂里暗，只有一盏灯点着，搁在窗台上。窗台上没有灰 —— 这里每天都擦。\n艾德在修椅子，一把很旧的椅子。他修得很慢，但不返工。\n你身上没伤 —— 他看了一眼，就低头接着修那把椅子。",
+    "params": [],
+    "category": "场景",
+    "desc": "风车镇 · 白烛堂 · 满血那一版（P1 BUG-7 同族：场景按状态分支）"
+  },
+  "READ_TOWER_STELE_NAMES__POI_NAMED_BIRCH": {
+    "value": "名字一排排往下刻。有三个，你在白桦林那棵树皮上见过 —— 重了。",
+    "params": [],
+    "category": "可读物",
+    "desc": "号角室 · 石碑上的名单 · 读过白桦上那棵树名之后那一版（P2 BUG⑦ 时序）"
+  },
+  "SYS_WHO_GONE": {
+    "value": "{name} —— 这个点不在。{when}",
+    "params": [
+      "name",
+      "when"
+    ],
+    "category": "系统",
+    "desc": "观察/搭话 · 这一位按作息还没来（31_NPC作息 §四）"
+  },
+  "NPC_WHEN_HAGEN": {
+    "value": "天黑了他才来坐。",
+    "params": [],
+    "category": "NPC",
+    "desc": "31_NPC作息 §四 · 这一位「他什么时候在」的一句"
+  },
+  "NPC_WHEN_XIAOMAN": {
+    "value": "天黑了小孩就回家。白天他在这儿看人。",
+    "params": [],
+    "category": "NPC",
+    "desc": "31_NPC作息 §四 · 这一位「他什么时候在」的一句"
+  },
+  "NPC_WHEN_BELLA": {
+    "value": "天不亮她去买菜，白天到夜里都在客栈。",
+    "params": [],
+    "category": "NPC",
+    "desc": "31_NPC作息 §四 · 这一位「他什么时候在」的一句"
+  },
+  "NPC_WHEN_COLE": {
+    "value": "他住在作坊里 —— 什么时候来都找得到。",
+    "params": [],
+    "category": "NPC",
+    "desc": "31_NPC作息 §四 · 这一位「他什么时候在」的一句"
+  },
+  "NPC_WHEN_NANA": {
+    "value": "她总在摊上 —— 天亮前上山，回来就摆摊。",
+    "params": [],
+    "category": "NPC",
+    "desc": "31_NPC作息 §四 · 这一位「他什么时候在」的一句"
+  },
+  "NPC_WHEN_LAOTAO": {
+    "value": "他白天在棚里。天黑了就睡下了。",
+    "params": [],
+    "category": "NPC",
+    "desc": "31_NPC作息 §四 · 这一位「他什么时候在」的一句"
+  },
+  "NPC_WHEN_ED": {
+    "value": "他总在堂里 —— 灯是他守的。",
+    "params": [],
+    "category": "NPC",
+    "desc": "31_NPC作息 §四 · 这一位「他什么时候在」的一句"
+  },
+  "NPC_WHEN_DERRICK": {
+    "value": "他守着风车 —— 什么时候来都找得到。",
+    "params": [],
+    "category": "NPC",
+    "desc": "31_NPC作息 §四 · 这一位「他什么时候在」的一句"
+  },
+  "NPC_WHEN_MASHA": {
+    "value": "白天她在板子后面。天黑了她就回去了。",
+    "params": [],
+    "category": "NPC",
+    "desc": "31_NPC作息 §四 · 这一位「他什么时候在」的一句"
+  },
+  "NPC_WHEN_PETE": {
+    "value": "他白天在板子那边，入夜才坐回这个角。",
+    "params": [],
+    "category": "NPC",
+    "desc": "31_NPC作息 §四 · 这一位「他什么时候在」的一句"
+  },
+  "NPC_WHEN_SERAN": {
+    "value": "她跟着商队走 —— 商队到了，她才在这儿。",
+    "params": [],
+    "category": "NPC",
+    "desc": "31_NPC作息 §四 · 这一位「他什么时候在」的一句"
+  },
+  "NPC_WHEN_DURIN": {
+    "value": "他跟着商队，一年来两趟 —— 车到了才在。",
+    "params": [],
+    "category": "NPC",
+    "desc": "31_NPC作息 §四 · 这一位「他什么时候在」的一句"
+  },
+  "NPC_WHEN_LIAN": {
+    "value": "她守着门槛那块地方 —— 什么时候都在。",
+    "params": [],
+    "category": "NPC",
+    "desc": "31_NPC作息 §四 · 这一位「他什么时候在」的一句"
+  },
+  "NPC_WHEN_GREY": {
+    "value": "商队到了他才来，就坐客栈那个墙角。",
+    "params": [],
+    "category": "NPC",
+    "desc": "31_NPC作息 §四 · 这一位「他什么时候在」的一句"
   }
 }

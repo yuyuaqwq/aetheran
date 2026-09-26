@@ -148,7 +148,10 @@ def _run_at(hod):
 
 
 def _hagen(lines):
-    return any("『哈根』" in x for x in (lines or []))
+    """★ g4-⑨：只认**「人在」那一栏**里有没有他 —— 「人不在」那句点名不算在场
+    （本批起：不在场时名册那一侧会**点名说清他不在**，那正是「不在」的证据，不是「在」）。"""
+    _head = str((st.domain("texts") or {}).get("SYS_LOOK_WHO", {}).get("value") or "").split("{")[0]
+    return any(x.startswith(_head) and "『哈根』" in x for x in (lines or []))
 
 
 try:
@@ -169,6 +172,134 @@ except Exception as exc:                                              # noqa: BL
 _src = (REPO / "content" / "cmds_ast.py").read_text(encoding="utf-8")
 chk("★ npcs 域只经 `_npcs_here` 这一口（源码里没有第二处自己扫域 —— 两处口径的根）",
     _src.count('_data("npcs")') == 1, '出现 %d 次' % _src.count('_data("npcs")'))
+
+# ══════════════════════════════════════════════════════════════
+# ★ g4-⑨：作息表整体落地（31_NPC作息 §三/§七①⑤）
+#   口径 = **已有的 `condition`**（`time` / `weather` / `event` 三档「与」起来），不新增形状。
+#   判据：① token 全是 calendar 域里认得的名字；② 「故意全天」的那几位与 §三 的设计原则① 对上；
+#         ③ 每个带 `time` 的窗口**两态都成立**（既不是全天开、也不是全天关）；
+#         ④ 真宿主两个时辰走一遍：同一个人在场/不在场**翻面**（换时辰翻面，不是常量）；
+#         ⑤ `07 §七⑤`：交活那位（带 `board` 职能 = 玛莎）**昼间必须在场**；
+#         ⑥ 反证：把那一格临时摘掉 ⇒ 夜里她也「在」（那一格真的在管）。
+# ══════════════════════════════════════════════════════════════
+print("")
+print("⑪ 作息表（31 §七①：补 `condition.time` · 4 位故意全天）")
+sys.path.insert(0, str(REPO))
+from content import calendar as CAL9                                  # noqa: E402
+from content import cmds_ast as CA9                                   # noqa: E402
+
+_with_time = {k: v for k, v in np_.items() if (v.get("condition") or {}).get("time")}
+_tok_bad = []
+for _k, _v in _with_time.items():
+    for _t in _v["condition"]["time"]:
+        if CAL9.resolve(_t)[0] is None:
+            _tok_bad.append((_k, _t))
+chk("★ %d 位挂了作息（`condition.time`）· token 全是 calendar 域认得的名字（%s）"
+    % (len(_with_time), " · ".join("%s=%s" % (k[4:], "/".join(v["condition"]["time"]))
+                                   for k, v in sorted(_with_time.items()))),
+    len(_with_time) >= 6 and not _tok_bad, "脏 token：%s" % _tok_bad)
+# 「故意全天」= 没有 `time` 那一格的那几位（§三 设计原则①：柯尔/娜娜/莉安/德里克 故意不动；
+#   瑟兰/杜林/格雷 那三位的作息是 `event`（商队到了才在），也不带 time）
+_ALWAYS = {"npc_cole", "npc_nana", "npc_lian", "npc_derrick",       # §三 原则①：故意不动手做人
+           "npc_seran", "npc_durin", "npc_grey",                     # 作息是 `event`（商队到了才在）
+           "npc_ed"}                                                 # ★ 功能位（治疗/复活）：§三 原则③
+                                                                     #   「别在玩家最需要他的时候把他挪走」——
+                                                                     #   夜里的「教堂」还得有人应；§五① 那一问拍板前不动
+_no_time = {k for k in np_ if not (np_[k].get("condition") or {}).get("time")}
+chk("★ 「全天」那几位与设计原则① 对得上（不动手做人：%s）"
+    % " · ".join(np_[k]["name"] for k in sorted(_ALWAYS & _no_time)),
+    _no_time == _ALWAYS, "没有 time 的：%s" % sorted(_no_time))
+# ③ 两态都成立：每个窗口在这 24 小时里既有满足的时刻、也有不满足的时刻
+_flat = []
+for _k, _v in _with_time.items():
+    _ok_h, _no_h = [], []
+    for _h in range(24):
+        _stx = CAL9.state(_epoch_at(100, _h + 0.5))
+        (_ok_h if CAL9.allows(_v["condition"]["time"], _stx) else _no_h).append(_h)
+    if not (_ok_h and _no_h):
+        _flat.append((_k, _v["condition"]["time"], len(_ok_h)))
+chk("★ 每个作息窗口**两态都成立**（24 小时里既有在场的时刻、也有不在的时刻 —— "
+    "不是「全天开」也不是「全天关」）", len(_flat) == 0, "%s" % (_flat,))
+# ④ 真宿主两个时辰：同一个人翻面 + ⑤ 交活那位昼间必须在
+def _node_name(node):
+    """节点 id → 玩家敲的那个名字（`去 <名字>` 才走得到 —— 名字从 maps 域现读）。"""
+    for _n in (mp.get("windmill_town") or {}).get("nodes") or []:
+        if str(_n.get("id")) == str(node):
+            return str(_n.get("name"))
+    return str(node)
+
+
+def _roster_at(hod, node):
+    """真宿主 + 假钟：走到那一站再「观察」，把两次回话拼起来（看「人在」那一栏）。"""
+    db = os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp", "ast_probe_npcs_roster.db")
+    try:
+        os.remove(db)
+    except OSError:
+        pass
+    steps = ["去 %s" % _node_name(node), "观察"]
+    ad = _Ad(list(steps))
+    host = Host(ad, str(REPO), inject={"db_path": db, "clock": (lambda: _epoch_at(100, hod))})
+    host.boot()
+    out = []
+    for t in steps:
+        ad.out.clear()
+        host.handle({"uid": "u_n", "group_id": "g_n", "text": t})
+        out += list(ad.out)
+    return "\n".join(out)
+
+
+_HEAD_WHO9 = str((st.domain("texts") or {}).get("SYS_LOOK_WHO", {}).get("value") or "").split("{")[0]
+
+
+def _who_in(text):
+    """那一趟回话里**「人在」栏**上的人名表（★ g4：只认那一栏 —— 不在场时的点名句不算）。"""
+    out = []
+    for _ln in str(text).split("\n"):
+        if _ln.startswith(_HEAD_WHO9):
+            out += [x for x in _ln.replace("『", "|").replace("』", "|").split("|")[1::2]]
+    return out
+
+
+_BOARD_NODE = str(np_["npc_masha"]["subarea"])
+_INN_NODE = str(np_["npc_bella"]["subarea"])
+_board_day, _board_night = _roster_at(_DAY, _BOARD_NODE), _roster_at(_NIGHT, _BOARD_NODE)
+_inn_day, _inn_night = _roster_at(_DAY, _INN_NODE), _roster_at(_NIGHT, _INN_NODE)
+chk("★ 真宿主两态（同一个人翻面）：挂板墙 昼有『玛莎』/ 夜没有；客栈 昼没有『皮特』/ 夜有",
+    np_["npc_masha"]["name"] in _who_in(_board_day)
+    and np_["npc_masha"]["name"] not in _who_in(_board_night)
+    and np_["npc_pete"]["name"] not in _who_in(_inn_day)
+    and np_["npc_pete"]["name"] in _who_in(_inn_night),
+    "板昼=%s 板夜=%s / 栈昼=%s 栈夜=%s"
+    % (_who_in(_board_day), _who_in(_board_night), _who_in(_inn_day), _who_in(_inn_night)))
+chk("★ `07 §七⑤`：交活那位（带 `board` 职能 = %s）**昼间必须在场**（防「找不到人交活」）"
+    % np_["npc_masha"]["name"],
+    any("board" in (v.get("funcs") or []) for v in np_.values())
+    and np_["npc_masha"]["name"] in _who_in(_board_day))
+# ⑥ 反证：把那一格临时摘掉 ⇒ 夜里她也在（这一格真的在管）
+_dom9 = CA9._data("npcs")                         # ★ 要动**代码读的那一份**（见 probe_onsite ⑧ 同款注释）
+_keep9 = dict(_dom9["npc_masha"].get("condition") or {})
+_st9 = CAL9.state(_epoch_at(100, _NIGHT))          # 夜那一刻（判据不看真钟）
+
+
+def _inflight9():
+    return [k for k, _v in CA9._npcs_here("windmill_town", _BOARD_NODE, _st9, {})]
+
+
+_before9 = _inflight9()
+_dom9["npc_masha"]["condition"] = None
+try:
+    _after9 = _inflight9()
+finally:
+    _dom9["npc_masha"]["condition"] = _keep9
+chk("★ 反证（撤改验证）：同一时刻（夜）把玛莎那一格摘掉 ⇒ 她当场在场了"
+    "（`condition.time` 真的在管这一条 —— 夜：%s → 摘掉后：%s）"
+    % ("有" if "npc_masha" in _before9 else "无", "有" if "npc_masha" in _after9 else "无"),
+    bool(_keep9) and "npc_masha" not in _before9 and "npc_masha" in _after9)
+# ⑦ 每位「会动的」都有一句「他什么时候在」（§七④ · 与 `probe_onsite ⑨` 同一条账）
+_tx9 = st.domain("texts") or {}
+_miss9 = [k for k in np_ if ("NPC_WHEN_%s" % str(k)[4:].upper()) not in _tx9]
+chk("★ 14 位每位都有一句「他什么时候在」（`NPC_WHEN_<id>` 槽位）——「人不在」那句用它", not _miss9,
+    "缺：%s" % _miss9)
 
 print()
 print("14 位速览（位置 · 功能 · 口头禅 · 矛盾）:")

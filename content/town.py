@@ -66,6 +66,24 @@ def station_empty(loc: str, node: str, p=None, st: dict | None = None) -> bool:
     return not (base & here)
 
 
+def absent_here(loc: str, node: str, p=None, st: dict | None = None) -> list:
+    """这一站**基位有人、此刻按作息还没来**的那几位 → `[(npc id, 记录)]`（★ g4-⑨）。
+
+    口径 = `station_empty` 的同一份判定（基位 ∪ 到场），只是这里要**哪几位**：
+      · 基位 = 域里写着的 `subarea`（不看条件）
+      · 到场 = 唯一一口 `_npcs_here`（时辰 / 天气 / 事件三档一起看）
+    消费端 = `cmds_ast.npc_gone_lines`（观察 / 搭话在「一个人都没有」时逐位点名 +
+    他什么时候在 —— 31_NPC作息 §四）。位次 = 域里的插入序（稳定、可复现）。
+    """
+    base = [(k, v) for k, v in (_data("npcs") or {}).items()
+            if isinstance(v, dict) and v.get("map") == loc and v.get("subarea") == node]
+    if not base:
+        return []
+    from .cmds_ast import _npcs_here                      # 本地 import：与 `town_gate` 同一个理由
+    here = {k for k, _v in _npcs_here(loc, node, st, p)}
+    return [(k, v) for k, v in base if k not in here]
+
+
 def town_gate(p, node=None, notown: str = "SYS_PLACE_NOTOWN", away: str = "SYS_PLACE_AWAY") -> str:
     """「回镇上 / 走到那一站」这一族守卫的**唯一执行面**（`guard_desc`：在镇上 · 在公会 · 在铺子 · 在客栈）。
 

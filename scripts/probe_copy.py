@@ -439,18 +439,43 @@ def main():
                     data_ref.add(_v)
 
     from content import calendar as _CAL                                  # noqa: E402
+    # ★ g4-⑩：变体槽位那一族又多了一处来源 —— `pois.<pid>.text_variant`
+    #   （例：号角室石碑那句读过白桦树之后那一版）。拼法**仍是同一个** `variant_key`
+    #   （K65：别处不许自己拼），这里照样**调那个函数现算**，不重写拼法。
+    #   条件的那一头：calendar 的条目 id（B4-3 那一族）**或** pois 里一个声明了
+    #   `text_variant` 指向它的 poi id（塔外多一条没进谱的可读物那种事仍归 probe_pois 管）。
     _cal_ids = {k for k in (st.domain("calendar") or {}) if not str(k).startswith("_")}
+    _poi_var = {str((v or {}).get("text_variant", {}).get("read"))
+                for v in (st.domain("pois") or {}).values()
+                if isinstance(v, dict) and (v.get("text_variant") or {}).get("read")}
+    _known_tails = _cal_ids | _poi_var
     for _k in tx:
         if "__" not in _k:
             continue
         _base, _, _tail = _k.rpartition("__")
-        if _base and _tail and _tail.lower() in _cal_ids \
+        if _base and _tail and _tail.lower() in _known_tails \
                 and _CAL.variant_key(_base, _tail.lower()) == _k:
             data_ref.add(_k)
 
     rows = RS.parse_doc()
     notx = [r["key"] for r in rows if r["key"] not in tx]
-    diff = [r["key"] for r in rows if r["key"] in tx and tx[r["key"]]["value"] != r["value"]]
+    _pend = getattr(RS, "DOC_PENDING", {})
+
+    def _doc_ok(r):
+        """这一行「表里与域里」算不算对得上（★ g4：待跟账那一族是**两态**）。"""
+        if r["key"] not in tx:
+            return True
+        got = tx[r["key"]]["value"]
+        if got == r["value"]:
+            return True
+        fx = _pend.get(r["key"])
+        return bool(fx) and r["value"] in (fx["old"], fx["new"]) and got == fx["new"]
+
+    diff = [r["key"] for r in rows if not _doc_ok(r)]
+    _pend_bad = [k for k, fx in _pend.items()
+                 if not (fx.get("old") and fx.get("new")) or fx["old"] == fx["new"]
+                 or not str(fx.get("why") or "").strip()
+                 or k not in tx or tx[k]["value"] != fx["new"]]
     def _by_tpl(k):
         return any(rx.match(k) for rx in _tpl_rx)
     unused = [r["key"] for r in rows
@@ -458,6 +483,10 @@ def main():
               and not _by_tpl(r["key"])]
     chk("★ 口径表 %d 条都落在 texts 里" % len(rows), not notx, "%s" % notx[:6])
     chk("★ 口径表与 texts 逐字一致（防两处口径）", not diff, "%s" % diff[:6])
+    #  ★ g4：待跟账那一族（值改过、真源那一行等主线跟账）—— 两态之外第三态必红，
+    #    且每条都得写明理由 + 域里必须是新值（旧值留在域里 = 改了却没落地）。
+    chk("★ 口径表待跟账 %d 条：每条都写明理由 · 域里是新值 · 表里处于「旧值 / 跟账后」两态之一"
+        % len(_pend), not _pend_bad, "%s" % _pend_bad[:4])
     #  ★ fix3-⑥⑦：退役登记的那几条「没被引用」是**对的**（见 RETIRED_DOC）；其余一条都不许闲着。
     #    两态都要守：登记了却没退役（还被人引用）⇒ 登记陈旧 ⇒ 红。
     _undecided = [k for k in unused if k not in RETIRED_DOC]
@@ -971,7 +1000,7 @@ def main():
     _oP17 = _drive(PG.page_next, _player(**{"bag": {}, "flags": {}}), "下一页")
     chk("★ 『下一页』还没翻过任何列表 ⇒ 回 `SYS_PAGE_NONE`"
         "（不拿空串当第一页、不漏机器键）",
-        _oP17 == [CA.T("SYS_PAGE_NONE")], "%s" % (_oP17[:2],))
+        _oP17 == [CA.T("SYS_PAGE_NONE", lists=PG.lists_hint())], "%s" % (_oP17[:2],))
 
     # ★ B3-16b：`排行` 是**五参帧**（声明 args = group_id / uid / player）—— 单独真跑一遍，
     #   同样过「不缺文案 / 不漏机器键」两条（连档上还没名字那一档一起）

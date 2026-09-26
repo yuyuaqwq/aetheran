@@ -8080,3 +8080,335 @@ scripts/probe_cmds.py / probe_copy.py / probe_pois.py / probe_tower.py / probe_g
 **没做 / 没碰**：真源仓（一字未动）· 引擎（零改动）· master 工作树（只在它上面 `git worktree add` 了本分支）
 · 别的车道（战斗轮流制 / 提示随委托走 / 东口西口无自有文案 等 —— 那些是 P1 BUG-3/4/9 那批的活）·
 GM 指令（没加）。
+
+---
+
+# g4-leftovers · 前一轮各车道留下的 11 条小账（2026-09-26 · 分支 `g4-leftovers` · 工作树 `C:/Users/yuyu/ast-wt/g4`）
+
+> 派活：把前一轮各车道留在 `qa-round1` 的 11 条**小账（都是「没做」而不是「判为设计」）**一次清掉。
+> 基线 = `qa-round1`（`bea4df9`）· 起点全量探针 **49 支 49 绿**（`…/Temp/w10/baseline`）·
+> 出口全量探针 **50 支 50 绿**（`…/Temp/w10/g4final2`）。
+> 红线遵守：**没动** `aetheran-plan`（真源，只读）· **没动** `framework-engine`（引擎，零改动）·
+> **没动** master 工作树 · 全程无 GM 指令。改完只在自己分支提交。
+
+---
+
+## 一、逐条处置（11 条 · 做没做都写明）
+
+| # | 小账 | 处置 | 一句话 |
+|---|---|---|---|
+| 1 | 材料名撞车（`铁屑/铁渣` · `硬骨/骨头`） | **做了**（两条改名 + 一个明写不动） | 打造那两路改名：`铁渣 → 矿渣` · `骨头 → 残骸`；`旧铁` **一个字没动**（理由见 §三·1） |
+| 2 | 随机装甲抢打造位 | **做了**（一条数据格 + 消费端一行） | 核实真源：普通档「铺子买 · 普通怪掉」**两路都有** ⇒ 铺子那三件**不排**；打造件**排**（真源没授权它掉落） |
+| 3 | 建号引导『改名 / 名字』 | **做了**（三处对齐） | 引导 / 帮助 / 真源都改说 `名字`；`改名` 留作别名（敲得通） |
+| 4 | `SYS_PAGE_NONE` 只点两个列表 | **做了** | 列表名**从登记处现算**（`pager.LIST_DECL`）—— 七列一列不漏 |
+| 5 | 「你把伤口给他看」对满血玩家 | **做了** | 场景**按状态分支**：满血走 `SCENE_WT_CHAPEL__FULL`（前几行逐字相同、只换最后一行） |
+| 6 | 精英 `{hint}` 多一枚标点 | **做了** | 每条先摘句末那一枚，末尾补**一枚** `line_end`（表里的值） |
+| 7 | 两镇口无可交互物 | **做了** | 东口「路口那两根木桩」· 西口「靠在墙上的门板」（`触摸` 类 · 不进谱 · 不当 NPC） |
+| 8 | 三处隐藏点产出 / `be_dogs` 缺搜查点 | **做了** | 补 `gt_be_search_dogs`；三个可搜点的池都够得着**稀有那一档**（真源 `06 §一 1.1`） |
+| 9 | 14 位 NPC 作息 + 名册回话 | **做了**（§七① 落了 6 位 + §七② 早已落 + §七④ 逐位一句）；**§三 的「换站」没做**（见 §三·9） | `condition.time` 六位 · 14 位每人都有一句「他什么时候在」· 「人不在」逐位点名 |
+| 10 | 号角室石碑名单时序 | **做了** | 正文**按真实经历分支**（读过白桦上那棵树名才说「你见过」） |
+| 11 | 东西口没有「看得见」栏 | **做了**（与第 7 条同一件事的两面） | 两站各有一件 poi ⇒ 那一栏**列得出**东西了 |
+
+---
+
+## 二、改动文件清单（显式）
+
+```
+content/data/items.json        铁渣→矿渣 · 骨头→残骸 · i_forge_chest 加 no_drop
+content/data/codex.json        生成物重跑（材料谱那两行）
+content/data/gathering.json    gt_be_dig_1.desc（兽骨→残骸）· 新增 gt_be_search_dogs ·
+                               gt_bw_search_1 的 unid_common → unid_rare（稀有那一档）
+content/data/npcs.json         六位补 condition.time（小满/贝拉/皮特/老陶/玛莎 —— 见 §三·9 的说明）
+content/data/pois.json         新增 poi_gate_east_stake / poi_gate_west_plank ·
+                               poi_stele_names 加 text_variant
+content/data/dialogues.json     新增两棵树（talk_gate_east / talk_gate_west）
+content/data/texts.json        改 5 条（SYS_CLS_NAME / SYS_REG_ASKNAME / SYS_RENAME_ASK /
+                               SYS_PAGE_NONE / READ_TOWER_STELE_NAMES）· 新增 17 条
+                               （SCENE_WT_CHAPEL__FULL · READ_TOWER_STELE_NAMES__POI_NAMED_BIRCH ·
+                                SYS_WHO_GONE · NPC_WHEN_* ×14）
+content/data/commands.json     rename.usage「改名」→「名字」（patterns 一个字没动 = 别名照旧敲得通）
+content/rules/elite.json       label 补 line_end（「。」）
+content/loot.py                _resolve：带 no_drop 的不进动态格
+content/affix.py               hint 拼接收成 _join_lines（摘句末一枚 + 补一枚 line_end）
+content/pager.py               LIST_DECL（唯一的「会分页那几列」登记处）+ lists_hint()
+content/scene.py               variant_key / variant_slot + resolve(variant=…)
+content/cmds_ast.py            _scene_line(variant=) · scene_variant_of · npc_when_slot ·
+                               npc_gone_lines · _poi_read_slot · look（满血变体 + 人不在逐位）
+content/cmds_talk.py           搭话没人时逐位点名（不再只有「这儿没有别人」）
+content/town.py                absent_here（这一站按作息还没来的那几位）
+schemas/items.schema.json      新格 no_drop
+schemas/pois.schema.json       新格 text_variant
+scripts/rebuild_codex.py       NAME_FIXUP（改名跟账 · 两态互锁）
+scripts/rebuild_syscopy.py     DOC_PENDING（口径表待跟账 · 两态互锁）
+scripts/probe_*.py             见 §四（9 支探针加/改判据）
+scripts/_baseline_instance_solo.json   第四次重锚（材料改名流过掉落那一行 · 逐行 diff 过）
+```
+
+**探针（9 支动了，逐支都是加/改判据，没有一支是「改判据迁就改动」）**：
+`probe_gear_starter`（⑰⑱ 新增）· `probe_pager`（⑭ 新增 · ⑥⑬ 跟账）· `probe_pois`（⑭⑮ 新增）·
+`probe_onsite`（⑦⑧⑨ 新增 · ②④ 跟账）· `probe_npcs`（⑪ 新增 · ⑩ 跟账）·
+`probe_monsters`（g4-⑥ 三态新增）· `probe_copy`（⑤ 扩写：待跟账两态 + 变体那一族的真引用）·
+`probe_cmds`（卖出那一处不再手打玩家词）· `probe_gather`（登记表的锚词跟着改名）·
+`probe_instance`（基线重锚 + 跟账注）。
+**新增 1 支**：`scripts/probe_leftovers_g4.py`（第 50 支）—— 把这 11 条 → （探针文件 · 判据锚句）
+登记成一张表逐行核对（删掉哪条的判据、或把判据挪到别处，它当场红；自带一条「现编锚句必被报出来」的反证）。
+
+---
+
+## 三、★ 真源行（请主线搬；真源仓本分支**只读**，一个字没改）
+
+> 格式照 `00_总纲/17_文案收口口径_v1.md` 的槽位表（`| 键 | 文案 | 参数 | 类 | 出处 |`）。
+
+### 3.1 改名（材料名撞车 · p3 报告 体验-6）—— 两处真源表要跟账
+
+```
+# ① `00_总纲/14_图鉴四谱口径_v1.md §二 材料谱`（★ 名字与那一句一起换）
+旧：| `i_material_iron_chip` | 铁渣 | 打铁剩的，柯尔扫到墙角。攒着能修东西。 |
+新：| `i_material_iron_chip` | 矿渣 | 打铁剩的，柯尔扫到墙角。柯尔拼小件的时候会收 —— 打造的料。 |
+旧：| `i_junk_bone` | 骨头 | 骨田里到处都是。分不清是谁的。 |
+新：| `i_junk_bone` | 残骸 | 骨田里到处都是。分不清是谁的。 |
+★ 那条「攒着能修东西」是**空头承诺**（`00_总纲/17` P-70 已裁「修理本轮不做」）—— 一并收口。
+★ `items.json` 里那两件的 `name` / `desc` 已经落了（见 §二）；生成器 `rebuild_codex.py` 的
+  `NAME_FIXUP` 是**两态互锁**登记（真源那一格写旧名 / 新名都对，写第三个名字当场抛）。
+
+# ② `06_第一阶段垂直切片/06_装备获取与支线玩法_v1.md §1.1-b` 那张表的「四样料 desc」那一行
+旧：铁渣「打铁落下的碎渣，堆在墙角。柯尔拼小件的时候会收 —— 打造的料。」
+新：矿渣「打铁落下的碎渣，堆在墙角。柯尔拼小件的时候会收 —— 打造的料。」
+旧：骨头「到处都是，捡回来不占手。柯尔打造的时候会收。」
+新：残骸「到处都是，捡回来不占手。柯尔打造的时候会收。」
+```
+
+### 3.2 两条线吃的料名（新口径 · 一行）
+
+```
+| 材料两条线的名字 | 强化要 铁屑 · 硬骨。打造要 矿渣 · 残骸 · 苦叶。两组**不共用字、不互为子串、
+  不同字收尾、不「只差一个字」** | - | 口径 | 06_…/06_装备获取与支线玩法_v1.md §5.2（强化材料
+  铁屑/硬骨 · 制作材料 皮/骨/矿/草）+ p3 报告 体验-6；判据现算 = scripts/probe_gear_starter.py ① |
+★ 为什么打造那两样改名（其余三样不动）：真源 §5.2 那两类（强化 / 制作）本该是**两种东西**，
+  而 `铁渣/铁屑`、`骨头/硬骨` 两组名字字面撞在一起（玩家报的就是这一对）——
+  把制作那一路改成**矿**与**遗骸**两条词根之后，两条线各自成家。
+★ `旧铁` **不动**：它是**精制**那一档、既不做强化也不做打造，名字与语义都清楚
+  （`14 §二`「骨田的土里挖出来的，比这地方的东西都老」），且它嵌在四份委托 / 彩蛋 6 /
+  商会旧账簿正文里（`QUEST_SIDE14_*` · `QUEST_MAIN04_PROGRESS` · `egg_cole_iron` …
+  共 8 处玩家可见文案）—— 动它是一次**内容改名**，不是「材料名撞车」这一条的范围。
+```
+
+### 3.3 建号那一步的玩家词（引导 / 帮助 / 真源三处对齐 · P1 体验-1）
+
+```
+# ① `06_第一阶段垂直切片/04_指令总表.md` 那一行：
+旧：| **改名**（别名 名字） | 未用过 | 改一次 |
+新：| **名字**（别名 改名） | 未用过 | 改一次 |
+★ 只有「哪个是主词」这一处变了：两个触发词照旧都敲得通（`commands.json` 的 patterns 一个字没动）。
+
+# ② `06_第一阶段垂直切片/18_建号与新手引导_v1.md §六 实现状态` 第 3 步那一行：
+旧：第 3 步 取名   ✅ 已有（『改名 <名字>』· 一次制）；第二步收尾时档上还没名字会点一行
+新：第 3 步 取名   ✅ 已有（『名字 <名字>』· 一次制）；第二步收尾时档上还没名字会点一行
+
+# ③ `00_总纲/17_文案收口口径_v1.md` 三行（改值 · 键不动）：
+旧：| SYS_CLS_NAME | 名字还没定 —— 打『改名 <名字>』，只改这一回。 | - | 系统 | … |
+新：| SYS_CLS_NAME | 名字还没定 —— 打『名字 <名字>』，只改这一回。 | - | 系统 | … |
+旧：| SYS_REG_ASKNAME | 「叫什么名字？」—— 先打『改名 <名字>』，回头再来办证。 | - | 系统 | … |
+新：| SYS_REG_ASKNAME | 「叫什么名字？」—— 先打『名字 <名字>』，回头再来办证。 | - | 系统 | … |
+旧：| SYS_RENAME_ASK | 想叫什么？打『改名 <名字>』—— 一到八个字，只改这一回。 | - | 系统 | … |
+新：| SYS_RENAME_ASK | 想叫什么？打『名字 <名字>』—— 一到八个字，只改这一回。 | - | 系统 | … |
+```
+
+### 3.4 分页引导那一句（P4 E-4 的另一半）
+
+```
+旧：| SYS_PAGE_NONE | 先打开一个列表（『背包』看东西 ·『排行』看本群榜）—— 再敲『下一页』或『回 <页码>』。 | - | 系统 | … |
+新：| SYS_PAGE_NONE | 先打开一个列表（{lists}）—— 再敲『下一页』或『回 <页码>』。 | lists | 系统 | … |
+★ `lists` = 从 `content/pager.py::LIST_DECL` 那七列现算（`AV.usage` 读声明里的玩家词）：
+  『背包』 · 『排行』 · 『图鉴』 · 『材料谱』 · 『风味谱』 · 『怪物谱』 · 『旧物谱』
+  —— 表里那一格写**占位**，具体哪几列不再手打（新加一列只改登记处）。
+```
+
+### 3.5 白烛堂那一屏（按状态分支 · P1 BUG-7 同族）
+
+```
+新增槽位：
+| SCENE_WT_CHAPEL__FULL | 白烛堂是镇上唯一用石头砌得齐整的房子。\n堂里暗，只有一盏灯点着，搁在窗台上。窗台上没有灰 —— 这里每天都擦。\n艾德在修椅子，一把很旧的椅子。他修得很慢，但不返工。\n你身上没伤 —— 他看了一眼，就低头接着修那把椅子。 | - | 场景 | 白烛堂 · **满血那一版**（P1 BUG-7 同族：场景按状态分支；前几行与 SCENE_WT_CHAPEL 逐字相同，只换最后一行） |
+★ `SCENE_WT_CHAPEL` 那一格**一个字没动**（非满血照旧）。变体键的拼法唯一在
+  `content/scene.py::variant_key`（`<基础槽位>__<状态大写>`）。
+```
+
+### 3.6 号角室石碑名单（时序 · P2 报告 BUG⑦）
+
+```
+旧：| READ_TOWER_STELE_NAMES | 名字一排排往下刻。有三个，你在白桦林那棵树皮上见过 —— 重了。 | - | 可读物 | … |
+新：| READ_TOWER_STELE_NAMES | 名字一排排往下刻。刻痕很深，边角还利 —— 有几个名字眼熟，你想不起在哪儿见过。 | - | 可读物 | … |
+新增槽位（读过白桦上那棵树名之后那一版）：
+| READ_TOWER_STELE_NAMES__POI_NAMED_BIRCH | 名字一排排往下刻。有三个，你在白桦林那棵树皮上见过 —— 重了。 | - | 可读物 | 号角室 · 石碑上的名单 · 读账里有 `poi_named_birch` 时那一版 |
+新格（`pois.<pid>.text_variant = {"read": "<poi id>"}`）：正文**按真实经历分支**，
+  变体槽位 = `<read_text>__<那个 poi id 大写>`；不写 = 只有一句正文。
+```
+
+### 3.7 精英怪词条拼一行（多一枚标点 · fix2 §七5 顺手核到）
+
+```
+`06_第一阶段垂直切片/12_怪物面板与精英词条池_v1.md`（词条表）那一段加一句口径：
+★ 一只怪带**多条**词条时，效果那一行把各条的句子用「；」连起来，**末尾只留一枚句号**
+  （每条自带的句末标点先摘掉）—— 实机原状「血掉过半以后，它下手更重。；它身后还有两只…」多了一枚。
+落实在 `content/rules/elite.json` 的 `label.line_end`（「。」）与 `content/affix.py::_join_lines`。
+```
+
+### 3.8 两镇口那两件（`10 §一B` 互动那一类的补充 · P1 体验-4）
+
+```
+`06_第一阶段垂直切片/10_地图探索元素库_v1.md §一B`（触摸 · 互动）补两件（编号沿用 §一 B 的 16 / 21）：
+| 16′ 路口的木桩（东口 wt_gate_e） | 触摸 | 逐字正文：桩子上的绳断口朝外。\n缠过绳，后来被人解开了。\n往东这条路，有人走过 —— 也有人不想让人走。 |
+| 21′ 靠在墙上的门板（西口 wt_gate_w） | 触摸 | 逐字正文：门板下沿磨薄了一片，贴着地面磨出来的。\n开它的人进进出出，磨了很多年。\n现在就剩这一边了。 |
+★ 为什么是这两件：两站的场景正文里**已经写了**它们（东口「两根木桩立在路两边，桩上缠过绳」·
+  西口「门板只剩一边，另一半靠在墙上」）—— 真源 §四①「显示必可触发」。
+★ 它们**不进旧物谱**（`触摸` 类 · 不留痕）：12 类可读物那个量账不动 · NPC 仍是 14 位。
+```
+
+### 3.9 三处隐藏点的可搜刮面（`be_dogs` 缺的那一处）
+
+```
+| 新增采集点 `gt_be_search_dogs` | 野狗窝 · 搜查 · 每天 3 次 | 池：残骸 w45（1–2）· 未鉴定·稀有 w30 ·
+  旧铁 w15（1）· 半页纸 w10 | 口径 = 06 §一 1.1「稀有 ← 头目掉 · **隐藏点** · 野外之王」·
+  05 §三「稀有按池权重 20%–60% · n 1–2 · 每天 3 次」· 10 §一E 生息 |
+| `gt_bw_search_1`（退潮后的滩）的池 | `unid_common` w35 → `unid_rare` w35 | 同一条口径：这一站是
+  隐藏点「退潮后的石缝」所在处 ⇒ 那一档该是**稀有**（其余条目与权重一个字没动）|
+★ 这三个权重是本批按同带邻居（`gt_be_search_1`）与上面三条口径**推**出来的 —— 真源今天没有
+  「哪一带出什么、权重几」那张表（B2-4 记的 gathering 来源 = `10 §一E` 只有条目、没有数）。
+  与 fix7 那批「真源没给口径的那几条」同一个走法：先落，理由写在这儿，等真源收编。
+```
+
+### 3.10 NPC 作息与「人不在」的回话（31 §七①④ · §四）
+
+```
+# ① `06_第一阶段垂直切片/31_NPC作息_设计_v1.md §七①` 那一条的落地状态（照实写）：
+   · 本批补 `condition.time` 的有 **5 位**：小满〔昼〕· 贝拉〔昼,昏,夜〕· 皮特〔昏,夜〕·
+     老陶〔晨,昼〕· 玛莎〔昼〕；哈根〔昏,夜〕是原有的样本。
+   · 瑟兰 / 杜林 / 格雷 三位的作息仍是 `event`（商队到了才在 —— §七② 早已落）。
+   · 柯尔 / 娜娜 / 莉安 / 德里克 + 艾德 = **故意全天**（前四位 = §三 设计原则①；
+     艾德 = 原则③「别在玩家最需要他的时候把他挪走」：他是 `heal`/`revive` 的功能位，
+     夜里「教堂」还得有人应 —— §五① 那一问拍板前不动他）。
+   ★ §三 那张表里「同一人不同时辰**换到哪一站**」（小满晨/昏去老风车 · 老陶昏去渡口 ·
+     艾德夜回北墙根 …）**本批没做**：那要一个新形状（`condition` 只管「在不在」，
+     不管「换到哪」），而 §七 的落地清单里没有这一条 —— 见 §四·9 的诚实清单。
+
+# ② 槽位（17 号口径表新增 15 条 · 逐字）
+| SYS_WHO_GONE | {name} —— 这个点不在。{when} | name,when | 系统 | 观察/搭话 · 这一位按作息还没来（31 §四） |
+| NPC_WHEN_HAGEN | 天黑了他才来坐。 | - | NPC | 31 §四 · 他什么时候在 |
+| NPC_WHEN_XIAOMAN | 天黑了小孩就回家。白天他在这儿看人。 | - | NPC | 同上 |
+| NPC_WHEN_BELLA | 天不亮她去买菜，白天到夜里都在客栈。 | - | NPC | 同上 |
+| NPC_WHEN_COLE | 他住在作坊里 —— 什么时候来都找得到。 | - | NPC | 同上 |
+| NPC_WHEN_NANA | 她总在摊上 —— 天亮前上山，回来就摆摊。 | - | NPC | 同上 |
+| NPC_WHEN_LAOTAO | 他白天在棚里。天黑了就睡下了。 | - | NPC | 同上 |
+| NPC_WHEN_ED | 他总在堂里 —— 灯是他守的。 | - | NPC | 同上 |
+| NPC_WHEN_DERRICK | 他守着风车 —— 什么时候来都找得到。 | - | NPC | 同上 |
+| NPC_WHEN_MASHA | 白天她在板子后面。天黑了她就回去了。 | - | NPC | 同上 |
+| NPC_WHEN_PETE | 他白天在板子那边，入夜才坐回这个角。 | - | NPC | 同上 |
+| NPC_WHEN_SERAN | 她跟着商队走 —— 商队到了，她才在这儿。 | - | NPC | 同上 |
+| NPC_WHEN_DURIN | 他跟着商队，一年来两趟 —— 车到了才在。 | - | NPC | 同上 |
+| NPC_WHEN_LIAN | 她守着门槛那块地方 —— 什么时候都在。 | - | NPC | 同上 |
+| NPC_WHEN_GREY | 商队到了他才来，就坐客栈那个墙角。 | - | NPC | 同上 |
+★ 键名拼法唯一在 `content/cmds_ast.py::npc_when_slot`（`NPC_WHEN_<npc id 去掉 npc_ 前缀·大写>`）。
+```
+
+### 3.11 `items.no_drop` 那一格（随机装甲不再抢打造位）
+
+```
+`schemas/items.schema.json` 新格（可选 · boolean）：
+  no_drop —— 这一件**不进任何随机装备格**（`*armor_random` / `*weapon_random`）。
+  唯一读口 = `content/loot.py::_resolve`（cand 现算时排掉）。今天只有打造件 `i_forge_chest` 带这一格。
+  口径：真源 `06 §一 1.1` 给普通档的是「镇上三家铺子直接买 · **普通怪掉**」两路
+  ⇒ 铺子那三件入门装**照旧可掉**（那是真源授权的）；打造件的真源行（`06 §1.1-b`）给的路
+  只有「打造」，也不在 §一 1.1 那 16 件里 ⇒ **真源没授权它掉落**，按 fail-closed 排掉。
+```
+
+---
+
+## 四、判据与反证（逐条 · 都是真跑出来的）
+
+> 反证 = 「拆掉修复 / 换一份数据 / 换一个时辰 ⇒ 这一条当场翻面」—— 不是注释。
+
+1. **材料名**：`probe_gear_starter ①` ——
+   正面：两条线的料名**不共用字 · 不互为子串 · 不同字收尾 · 不「只差一个字」**（判据现算，不看名单）·
+   `items` 域里没有重名两件；`codex` 与生成器登记三处对齐。
+   反证：改名**之前**那两组（`铁屑 ↔ 铁渣` · `硬骨 ↔ 骨头`）在同一判词下**当场红**
+   （「共用了字（铁）」「共用了字（骨）」）。
+   ★ 选中 `残骸` 而不是 `兽骨`：`兽骨` 与 `硬骨` 同字收尾/只差一个字，过不了这条判词 ——
+   名字要挑到**判据真的绿**，不是挑到顺口。
+2. **随机装甲**：`probe_gear_starter ⑰` —— 正面：真跑 400 轮动态格，打造件一次都没被抽出来；
+   铺子那三件**照旧抽得到**（真源授权的那一半）。反证：把 `i_forge_chest.no_drop` 摘掉 ⇒ 它当场冒出来。
+3. **改名跟账（两态互锁）**：`rebuild_codex.NAME_FIXUP` —— 真源那一格写旧名 / 新名都过，写第三个名字当场抛；
+   `rebuild_syscopy.DOC_PENDING` 同理（`probe_copy ⑤` 那条「逐字一致」按两态放宽，但**第三态必红**、
+   且要求「域里必须已经是新值 + 每条写明理由」）。
+4. **建号引导**：`probe_cmds ⑯` 的建号链真跑（`SYS_CLS_NAME` / `SYS_RENAME_ASK` 逐字对账）·
+   `commands.json` 的 `usage` 改成 `名字` ⇒ `帮助` 那一栏跟着换词（同一处声明）；
+   `probe_copy ⑤` 那两条（口径表 ↔ texts）照旧逐字一致。
+5. **分页引导**：`probe_pager ⑭` —— 三处登记（`PER_PAGE` / `_again` / `LIST_DECL`）逐列一致 ·
+   引导里**逐列点名**（玩家词从声明现取）；反证：旧那一句（手打『背包』『排行』）在**另外五列**上点名不到。
+6. **白烛堂按状态分支**：`probe_onsite ⑦` —— 满血 ⇒ 变体那一段 / 有伤 ⇒ 基础那一段；
+   两版**只差最后一行**（前几行逐字相同）；反证：`variant=None` ⇒ 满血也回写着「伤口」那一段。
+7. **精英拼接**：`probe_monsters`（g4-⑥ 三态）—— 真数据里 `af_*` 拼出来**没有 `。；`**、末尾正好一枚
+   `line_end`（表里的值）；反证：照旧拼法（原始 `line` 直接 join）当场拼出 `。；`。
+8. **两镇口**：`probe_onsite ⑧` —— 东口/西口各有自己的「看得见」栏（列的就是这一站那件东西）·
+   两件是 `触摸` 类（不进谱 · 12 类那个量账不动）· NPC 仍 14 位；反证：把东口那一件临时摘掉 ⇒ 那一栏消失。
+   `probe_onsite ④`（原有那条）现在自动覆盖到 5 处夜谈（三处篝火 + 两个镇口）——
+   逐处真敲『触摸』吐的是**它自己的那句**。
+9. **隐藏点可搜刮面**：`probe_pois ⑮` —— 三处隐藏点所在节点各有一个 `verb=search` 采集点 ·
+   三个池都够得着稀有那一档 · 与 `05 §三` 的三条数对得上；反证：把 `be_dogs` 那个点临时摘掉 ⇒
+   当场点名出「白桦林深处的记号」。
+10. **石碑名单时序**：`probe_pois ⑭` —— 真跑两态（没读到 ⇒ 基础正文 / 读到过 ⇒ 变体正文）·
+    schema 那一格只认 `read` · 条件 id 真在域里；反证：没读到过时**旧那一句一个字都不上屏**。
+11. **作息与「人不在」**：`probe_npcs ⑪` —— token 合法 · 「全天」那几位与设计原则对得上 ·
+    每个窗口**两态都成立** · 真宿主昼/夜两态里同一个人**翻面**（玛莎/皮特）· 交活那位昼间必须在场 ·
+    14 位每位都有一句「他什么时候在」；反证：把玛莎那一格临时摘掉 ⇒ 夜里她当场在场。
+    `probe_onsite ⑨` —— 昼 · 北墙根：观察与搭话**都**逐位说清「这个点不在 + 他什么时候在」；
+    反证：换到夜 ⇒ 他来了、那一行不再出。
+    ★ `probe_onsite ②` 那条（原有）跟着**加强**：昼的『搭话』不再只回「这儿没有别人」，
+    而是**点名说清他不在** —— 判据写的是「不许出现这句空话 + 必须逐位点名」。
+
+### ★ 没做 / 明确不动（诚实清单）
+
+```text
+1. `旧铁` 没改名（理由见 §三 3.1 末）—— 它是精制档、两条线都不吃它，且嵌在 8 处正文里。
+2. `31 §三` 那张表里「同一人不同时辰**换到哪一站**」没落（要一个新形状，`condition` 只管在不在）。
+   本批落的是 §七 那三条（①②④）：6 位补 `condition.time` · 14 位各一句「他什么时候在」·
+   「人不在」逐位点名。小满夜里「不在」= §三 写的（§五② 那一问的倾向「留一句第二天再来」已由
+   `NPC_WHEN_XIAOMAN` 满足）。
+3. 艾德**没排作息**（功能位 · 夜里「教堂」还得有人应；§五① 那一问没拍板）。
+4. 两镇口那两件**不是可读物**（不进旧物谱）—— 12 类那个量账与 40 种元素库都不动。
+5. 三处隐藏点的池**仍然是 `gathering` 那条线**（B3-28 ② 的裁决），`pois.effect.loot` 照旧一条不挂。
+```
+
+---
+
+## 五、门禁实跑（全量 · Python 3.12 · `GWEN_ENGINE=C:/Users/yuyu/framework-engine`）
+
+```text
+$ bash C:/Users/yuyu/AppData/Local/Temp/w10/gorun.sh C:/Users/yuyu/ast-wt/g4 baseline
+TOTAL pass=49 fail=0                      ← 起点（`qa-round1` 那棵树上）
+
+$ bash C:/Users/yuyu/AppData/Local/Temp/w10/gorun.sh C:/Users/yuyu/ast-wt/g4 g4final
+TOTAL pass=49 fail=0                      ← 本批（第 50 支还没进来那一次）
+$ bash C:/Users/yuyu/AppData/Local/Temp/w10/gorun.sh C:/Users/yuyu/ast-wt/g4 g4final2
+TOTAL pass=50 fail=0                      ← 本批终态（逐支 rc=0 · 见 …/Temp/w10/g4final2/summary.txt）
+```
+
+★ 中途红过、**都不是功能问题**，逐处都收口了：`probe_gather ⑩`（登记表的锚词跟着改名）·
+`probe_pager ⑥⑬` / `probe_copy ⑤`（引导那句多了 `{lists}` 占位 —— 期望值跟着现算）·
+`probe_cmds`（`卖出 骨头` 那个手打的玩家词 ⇒ 改成从域里现取）·
+`probe_instance`（材料改名流过掉落那一行 ⇒ 基线重锚 + 跟账注）·
+`probe_onsite ②`（昼的『搭话』不再只有那句空话 ⇒ 判据加强）· `probe_npcs ⑩`（同款）。
+
+## 六、可复现命令
+
+```bash
+cd C:/Users/yuyu/ast-wt/g4
+GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_gear_starter.py   # 51/51
+GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_pois.py           # 全绿
+GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_onsite.py         # 全绿
+GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_npcs.py           # 全绿
+GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_pager.py          # 37/37
+GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_monsters.py       # 全绿
+GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_generators.py     # 21 支生成器幂等
+GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_leftovers_g4.py     # 4/4（第 50 支）
+bash C:/Users/yuyu/AppData/Local/Temp/w10/gorun.sh C:/Users/yuyu/ast-wt/g4 g4final2 # 全量 50/50
+```

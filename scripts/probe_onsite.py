@@ -208,9 +208,12 @@ chk("★ 北墙根：昼（人不在）⇒ 第一行是 `%s`；夜（人在）�
     % (SC_ek("wt_wall"), SC_nk("wt_wall")),
     _look_day[:1] == [empty_of("wt_wall")] and _look_night[:1] == [scene_of("wt_wall")],
     "昼=%r 夜=%r" % (_look_day[:1], _look_night[:1]))
-chk("★ 画面与名册**同源**：昼那句里不许出现「有人在旁边坐着」、『搭话』回「这儿没有别人」；"
+chk("★ 画面与名册**同源**：昼那句里不许出现「有人在旁边坐着」、『搭话』**点名说清他不在**；"
     "夜里画面照旧写他坐着、『搭话』认得他",
-    "有人在旁边坐着" not in _look_day[0] and V("SYS_TALK_NOBODY") in _talk_day
+    "有人在旁边坐着" not in _look_day[0]
+    and V("SYS_TALK_NOBODY") not in _talk_day
+    and all(x in _talk_day for x in CA.npc_gone_lines(TOWN, "wt_wall", player()))
+    and V("SYS_WHO_GONE").split("{")[0] in "".join(_talk_day)
     and "有人在旁边坐着" in _look_night[0] and "『哈根』" in "\n".join(_talk_night),
     "昼搭话=%s ／ 夜搭话=%s" % (_talk_day[:1], _talk_night[:2]))
 chk("★ 空版那一句自己把话说清（他不在 + 他什么时候来）：%s" % empty_of("wt_wall")[-18:],
@@ -334,9 +337,12 @@ for _k in _fires:
     _line = str((dl[_did]["nodes"]["meet"]["texts"][0] or {}).get("text") or "")
     set_clock(100, 21.0)
     _out = run(CA.touch, player(loc=po[_k]["map"], node=po[_k]["subarea"]))
-    if _head_missing in "\n".join(_out) or _line not in _out:
+    # ★ g4：多行的那几处（两个镇口）本来就是一行一句吐出来的 ⇒ 逐行核
+    #   （改前比的是**整段**在不在输出里 —— 那只有单行的篝火过得去）。
+    _want_lines = [x for x in _line.split("\n") if x.strip()]
+    if _head_missing in "\n".join(_out) or any(x not in _out for x in _want_lines):
         _fbad.append("%s 上手没吐自己的话（%s）" % (po[_k]["name"], _out[-1:]))
-chk("★ 三处篝火逐处真敲『触摸』：吐的是**它自己的夜谈**，不再漏「…边的话还没写下来。」"
+chk("★ 有夜谈的那几处逐处真敲『触摸』：吐的是**它自己的那句**，不再漏「…边的话还没写下来。」"
     "（%d 处 · talk 键 %s）" % (len(_fires), " · ".join(po[k]["effect"]["talk"] for k in _fires)),
     bool(_fires) and not _fbad, "；".join(_fbad))
 _rev_hid = {k: v for k, v in po[_hid[0]].items() if k != "read_text"}
@@ -445,6 +451,119 @@ _nana_node = str(np_["npc_nana"]["subarea"])
 _shop = run(CP.herbalist, player(loc=TOWN, node=_nana_node))
 chk("★ 药铺面板里说明「摊上只卖药」（%s）" % V("SYS_SHOP_HERB_NOTE"),
     V("SYS_SHOP_HERB_NOTE") in _shop, "%s" % _shop)
+
+# ══════════════════════════════════════════════════════════════
+# ★ g4-⑤：那一站按**状态**分支（白烛堂那句「你把伤口给他看」对满血玩家同样别扭 —— P1 BUG-7 同族）
+#   口径：`SCENE_<节点>__<状态>`（拼法唯一在 `content/scene.py::variant_key`）·
+#   状态由 `cmds_ast.scene_variant_of` 现判（满血 ⇒ FULL）· 表里没有那一条就回落基础版。
+# ══════════════════════════════════════════════════════════════
+print("")
+print("⑦ 场景按状态分支（满血那一版）")
+_CHAPEL_NODE = str(np_["npc_ed"]["subarea"])
+_SC_BASE = SC_nk(_CHAPEL_NODE)
+_SC_VAR = SC_resolve(tx, TOWN, _CHAPEL_NODE, variant="FULL")
+_VMAX = V("SYS_CHAPEL_FULL")
+set_clock(D_PLAIN, 12.0)
+_p_full = player(loc=TOWN, node=_CHAPEL_NODE, hp=9999)
+_cap_full, _capline_full = CA.hp_cap_or_line(dict(_p_full))
+_p_full["hp"] = _cap_full
+_look_full = run(CA.look, _p_full)
+_p_hurt = dict(_p_full)
+_p_hurt["hp"] = max(1, _cap_full - 30)
+_look_hurt = run(CA.look, _p_hurt)
+chk("★ 满血 ⇒ 第一行是变体那一段（%s）· 有伤 ⇒ 回到基础那一段（%s）"
+    % (_SC_VAR, _SC_BASE),
+    _SC_VAR == ("%s__FULL" % _SC_BASE) and bool(_SC_VAR)
+    and _look_full[0] == V(_SC_VAR) and _look_hurt[0] == V(_SC_BASE)
+    and _look_full[0] != _look_hurt[0],
+    "full=%r / hurt=%r" % (_look_full[:1], _look_hurt[:1]))
+_pre_full, _pre_hurt = V(_SC_VAR).split("\n"), V(_SC_BASE).split("\n")
+chk("★ 两版只差**最后一行**（前几行逐字相同 —— 两处抄一份正文就会漂，这一条钉着它）",
+    _pre_full[:-1] == _pre_hurt[:-1] and len(_pre_full) == len(_pre_hurt)
+    and _pre_full[-1] != _pre_hurt[-1],
+    "%d 行 vs %d 行" % (len(_pre_full), len(_pre_hurt)))
+chk("★ 反证（拆掉修复）：不走这一支（`variant=None`）⇒ 满血也回基础那一版（写着「伤口」那一段）",
+    CA._scene_line(TOWN, _CHAPEL_NODE, None, variant=None) == V(_SC_BASE)
+    and "伤口" in V(_SC_BASE) and "伤口" not in V(_SC_VAR),
+    "%s" % V(_SC_BASE)[-16:])
+
+# ══════════════════════════════════════════════════════════════
+# ★ g4-⑦⑪：两个镇口各有一件**上手摸得着**的东西（P1 体验-4 的另一半）
+#   「看得见」那一栏不是单独造的：它列的就是这一站的 poi（`_pois_here` 一口）——
+#   一站没有 poi，那一栏就不存在。补上之后：观察出得来「看得见」+ 触摸真出它自己的话。
+#   ★ 量账不撞：可读物仍是文档那 12 类（这两件是 `触摸` 类，不进谱）· NPC 仍是 14 位。
+# ══════════════════════════════════════════════════════════════
+print("")
+print("⑧ 两个镇口各有自己的「看得见」栏 + 上手摸得着（P1 体验-4）")
+import read_kinds as _RKO                                              # noqa: E402
+_rk10 = _RKO.audit(pois=po,
+                   relic_read=[k for k, v in ((st.domain("codex") or {}).get("relic") or {}).items()
+                               if v.get("from") == "read"],
+                   titles=st.domain("titles") or {})
+_gate_ok, _gate_bad = [], []
+for _gid in ("wt_gate_e", "wt_gate_w"):
+    _here = [v for _pid, v, _st, _ln in CA._pois_here(TOWN, _gid, player())]
+    _o = run(CA.look, player(loc=TOWN, node=_gid))
+    _sees = V("SYS_LOOK_SEES").split("{")[0]
+    if _here and any(x.startswith(_sees) and _here[0]["name"] in x for x in _o):
+        _gate_ok.append("%s:%s" % (_gid, _here[0]["name"]))
+    else:
+        _gate_bad.append((_gid, [v.get("name") for v in _here], _o[3:5]))
+chk("★ 东口 / 西口各有自己的「看得见」栏，且列的就是这一站那件东西（%s）"
+    % " · ".join(_gate_ok), not _gate_bad, "%s" % (_gate_bad,))
+_nohit = [str(v.get("name")) for _pid, v, _st, _ln in CA._pois_here(TOWN, "wt_gate_n", player())]
+chk("★ 两站那两件是**触摸**类（不进旧物谱 · 12 类那个量账不动）· 也不是新 NPC（14 位不动）",
+    all(str(po[k].get("kind")) == "触摸" and not po[k].get("into_codex")
+        for k in po if str(po[k].get("subarea")) in ("wt_gate_e", "wt_gate_w"))
+    and len([k for k in po if po[k].get("into_codex")]) == _rk10["n"]
+    and len([k for k in np_ if not str(k).startswith("_")]) == 14,
+    "进谱 %d（文档那个数 %d）· NPC %d"
+    % (len([k for k in po if po[k].get("into_codex")]),
+       _rk10["n"], len([k for k in np_ if not str(k).startswith("_")])))
+# 反证：把东口那一件临时摘掉 ⇒ 那一站没有「看得见」栏（判据真的守着它）
+#   ★ 要动**代码读的那一份**（`_data("pois")`）—— 我这份 `po` 只是它的同一个域对象，
+#     但摘记录这件事必须落在读口看得到的那一份上（否则反证测的是空气）。
+_dom_gate = CA._data("pois")
+_cut = {k: _dom_gate.pop(k) for k in list(_dom_gate) if str(_dom_gate[k].get("subarea")) == "wt_gate_e"}
+try:
+    _o_cut = run(CA.look, player(loc=TOWN, node="wt_gate_e"))
+finally:
+    _dom_gate.update(_cut)
+chk("★ 反证（撤改验证）：把东口那一件临时摘掉 ⇒ 观察里**没有**「看得见」栏（摘掉的是 %s）"
+    % " · ".join(_cut), bool(_cut) and not any(x.startswith(V("SYS_LOOK_SEES").split("{")[0])
+                                              for x in _o_cut),
+    "%s" % (_o_cut[3:5],))
+
+# ══════════════════════════════════════════════════════════════
+# ★ g4-⑨：按作息「人不在」时，名册那一侧也要有戏（31_NPC作息 §四）
+#   原状：到地方没人 ⇒ 只有一句「这儿没有别人」；玩家不知道他去哪了、什么时候来。
+#   现在：逐位「『名字』图标 —— 这个点不在。他什么时候在」—— 画面 / 名册 / 这一行同源。
+# ══════════════════════════════════════════════════════════════
+print("")
+print("⑨ 「人不在」名册回话（每位一句「他什么时候在」）")
+_when_slots = {str(k): V("NPC_WHEN_%s" % str(k)[4:].upper()) for k in np_ if not str(k).startswith("_")}
+chk("★ 14 位**每位**都有一句「他什么时候在」（槽位 `NPC_WHEN_<id>` · 逐位非空 · 互不相同）",
+    len(_when_slots) == 14 and all(_when_slots.values())
+    and len(set(_when_slots.values())) == 14,
+    "缺槽位的：%s" % [k for k, v in _when_slots.items() if not v])
+set_clock(D_PLAIN, 12.0)                      # 昼：北墙根那位（昏/夜才来）不在
+_gone_look = run(CA.look, player(loc=TOWN, node="wt_wall"))
+_gone_talk = run(CT.talk, player(loc=TOWN, node="wt_wall"))
+_absent = TW.absent_here(TOWN, "wt_wall", player())
+_want_gone = [CA.T("SYS_WHO_GONE", name=CA._poi_label(v), when=_when_slots[k])
+              for k, v in _absent]
+chk("★ 昼 · 北墙根：观察与搭话**都**逐位说清「这个点不在 + 他什么时候在」（%s）"
+    % (_want_gone[0][:22] if _want_gone else "—"),
+    bool(_absent) and _want_gone and all(x in _gone_look for x in _want_gone)
+    and all(x in _gone_talk for x in _want_gone) and V("SYS_TALK_NOBODY") not in _gone_talk,
+    "%s / %s" % (_gone_look[3:4], _gone_talk[:2]))
+set_clock(D_PLAIN, 21.0)                      # 夜：他来了
+_here_night = run(CA.look, player(loc=TOWN, node="wt_wall"))
+chk("★ 反证（换时辰翻面）：夜 · 北墙根 ⇒ 他来了 —— 名册里有他、**不出**「人不在」那一行",
+    all(x not in _here_night for x in _want_gone)
+    and any(x.startswith(V("SYS_LOOK_WHO").split("{")[0]) for x in _here_night),
+    "%s" % (_here_night[:4],))
+
 
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))

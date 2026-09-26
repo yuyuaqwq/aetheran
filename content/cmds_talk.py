@@ -25,7 +25,7 @@
 from __future__ import annotations
 
 from .cmds_ast import (_data, _p, _save, _map_of, _name_of_node, T, _texts, _npcs_here,
-                       hp_cap_or_line)
+                       hp_cap_or_line, npc_gone_lines)
 from . import argv as AV
 from .cmds_ast import egg_lines, title_lines
 from . import calendar as CAL
@@ -188,7 +188,13 @@ async def talk(env, sink, uid, player):
     st = CAL.state()                       # 现在几时、什么天气（一次，全用它）
     here = _npcs_here(p["loc"], p["node"], st, p)          # ★ B3-5：世界级事件看主线进度（同一个口）
     if not here:
-        yield T("SYS_TALK_NOBODY")
+        # ★ g4-⑨（31_NPC作息 §四）：这一站的人按作息还没来 ⇒ 不只是一句「这儿没有别人」，
+        #   逐位说清「这个点他不在 + 他什么时候在」（与观察那一支同一处 · `npc_gone_lines`）。
+        _gone = npc_gone_lines(p["loc"], p["node"], p, st)
+        for _g in _gone:
+            yield _g
+        if not _gone:
+            yield T("SYS_TALK_NOBODY")
         return
     want = _arg(env)
     if not want:
