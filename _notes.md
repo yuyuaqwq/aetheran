@@ -5092,3 +5092,94 @@ P-68 会在同一条上补「家乡 · 寿数」，见 §四。）
 称号册里那一行的形态 = 「✦ <名> —— <怎么拿到>」（`SYS_TITLE_ROW`）—— 名字是绰号、**不自解释**；
 说清「指谁 / 怎么拿到」的活全在破折号后面那半句（P-67）。
 ```
+
+---
+
+## 七、P-62 · `dialogues.<树>.start` 14 处白写字段（裁决：**删字段** —— 域 + schema 一起清）
+
+### 7.1 裁决与依据
+
+老账给的是两条路：① 字段表里标一句「保留 · 不参与取句」；② 撤字段（14 处 + 探针那一条）。
+本路裁 —— **②：删**。四条依据（前两条是实测，后两条是纪律）：
+
+1. **包内 0 读端**（实测）：`content/*.py` 里**一处**都不读它（`probe_dialogues ⑧` 那条静态扫
+   一直在钉着）；本包也**不构造**引擎的对话对象（`content/` 里 `ext_dialogue` / `Dialogue` 零命中）
+   —— 取句走的是自己的 `cmds_talk._pick_layer`，层序在 `cmds_talk.LAYERS`。
+2. **那一格是恒真的常量**：14 处**全是 `"meet"`**，而 `meet` 就是 `LAYERS[0]` ——
+   一个不可能说别的的字段。留着它，下一个人读到 `"start": "meet"` 会以为「取句真的从它开始」
+   （P-12 已经证明不是）—— **留着才是坑**。
+   ★ 引擎那一侧的 `Dialogue.start` 只在「未知节点 id 的兜底」上用一次，而那条路本包走不到；
+   引擎文档自己写着「start 缺失 → None（不补默认值）」⇒ 撤字段**不破引擎契约**。
+3. **与「不留白写字段」一致**（`P-60` 那一族的同一条裁定）：白写字段要么接上消费端、
+   要么撤掉；「保留 + 写一句注释」等于把欠账留在数据里，下一轮还得再判一次。
+4. **将来真要「每棵树自定义起始节点」**，那是**那时**的新形状：会有真的读端 + 一条判据 +
+   一条「它怎么跟 `LAYERS` 相处」的口径——**不是靠今天这个恒真值撑着**。
+
+⇒ 删除范围（连 schema 一起清）：域 14 处 · `schemas/dialogues.schema.json` 的 `required` 与
+`properties` 两处（+ `$comment` 里那句写法）· `scripts/probe_dialogues.py` 的 ① 与 ⑧⑤ 两条判据。
+
+### 7.2 落了什么（改前 → 改后）
+
+| 项 | 改前 | 改后 |
+|---|---|---|
+| `content/data/dialogues.json` | 14 棵树各一格 `"start": "meet"` | **删光**（diff = 恰好 14 行删除，其余逐字节不变） |
+| `schemas/dialogues.schema.json` | `required: [start, nodes]` + `properties.start` | `required: [nodes]` · `properties.start` 删 · `$comment` 改成「`start` 已撤 + 为什么 + 谁加回来就红」 |
+| `scripts/probe_dialogues.py ①` | 「每棵树的 `start` 节点都存在」 | 「每棵树都有节点 · 且有**层序排头那一层**」（`cmds_talk.LAYERS[0]` = `meet`）—— **恒真常量换成真约束**，覆盖面不减 |
+| `scripts/probe_dialogues.py ⑧⑤` | 「`start` 白写（已登记）」 | 「**域里一棵树都不许再有它** + schema 也不许有」+ 原静态守卫（`content/*.py` 不许读）换成「那一格已经撤掉」的理由 |
+| `content/cmds_talk.py` | 模块抬头写着「每棵树的 `start` 字段都写着 `"meet"` —— 排头就是它」 | 改成「**原先**每棵树的 …；★ P-62 已把那一格从域与 schema 一起撤掉」（**说明性文字**，不含读端 —— 留着旧说法就是让下一个人照着不存在的字段干活） |
+| 玩家手感 | —— | **零变化**（那一格本来没人读） |
+
+### 7.3 判据（`probe_dialogues ①⑧`）
+
+```text
+① 每棵树都有节点 · 且有层序排头那一层（层序从 `cmds_talk.LAYERS[0]` 现取 —— 探针不手写 "meet"）
+⑧⑤ 域里**没有** `start`（有 ⇒ 红：`域里又出现了 start：[...]`）
+   + `schemas/dialogues.schema.json` 里**没有** `"start"`（有 ⇒ 红）
+   + `content/*.py` 里**没人读** `start`（有 ⇒ 红）
+```
+
+实跑（原始尾行）：
+
+```text
+  ✓ 每棵树都有节点 · 且有层序排头那一层（meet —— 取句顺序的唯一口 `cmds_talk.LAYERS`）
+  ✓ ★ P-12 取句顺序（层序 meet → daily → main → hidden → idle · 熟门槛 3）：不熟只有 meet · 熟了轮到 daily（不是剧透的 main）· 说过的让位给没说的 · `start` **已撤**（域 + schema 都不许再有 · 谁加回来就红）
+      假树五层真调 `_pick_layer`：搭 0/2 次 ⇒ meet ｜ 搭 3 次 ⇒ daily ｜ daily 听过 ⇒ main ⇒ hidden ⇒ idle ⇒ 全说过回 daily ｜ 14 棵树都有层序排头那一层、`start` 已撤（域里 0 处）
+
+结果：全绿 ✓
+```
+
+**撤改验证（两条 · 都真跑过 · 退回旧写法当场红）**：
+
+```text
+① 把 dlg_hagen 那格塞回去（`d[start]=meet` 复原成旧写法）⇒
+   ✗ … `start` **已撤**（域 + schema 都不许再有 · 谁加回来就红）  —— 域里又出现了 `start`：['meet']（P-62 已裁删字段 —— 取句顺序只认 `cmds_talk.LAYERS`）
+   结果：有红 ✗
+② 把 schema 的 `required` 改回 `[start, nodes]` ⇒
+   ✗ …  —— `schemas/dialogues.schema.json` 里还留着 `start`（要删就连 schema 一起清）
+   结果：有红 ✗
+（两条跑完都已还原；`git diff --stat` 回到 3 文件 · 14 行删除 / schema 6 行 / 探针 45 行）
+```
+
+### 7.4 真源行（待主线落）
+
+**`00_总纲/08_第1批_字段级设计_v1.md` §四 dialogues** —— 三处（逐字）：
+
+```text
+① 第 197 行（消费端那一句）——
+   改前：**消费端**：`ext_dialogue.dialogue`（start + nodes + texts[need] + 会话游标）
+   改后：**消费端**：`ext_dialogue.dialogue`（nodes + texts[need] + 会话游标）·
+          ★ P-62（2026-09-26 裁）：`start` 已撤 —— 取句顺序的唯一口是内容侧 `cmds_talk.LAYERS`
+          （`meet → daily → …`），引擎 `Dialogue.start` 只做未知节点 id 的兜底、本包走不到。
+
+② 第 201 行那一整行（字段表里 `start` 那一行）—— **删掉**：
+   | `start` | str | 起始节点 |
+
+③ 第 211 行（样例 JSON 里那一行）—— **删掉**：
+       "start": "meet",
+```
+
+**另**：`content/cmds_talk.py` 模块抬头那句历史说明**已跟账**（本波顺手改的）——
+原话「每棵树的 `start` 字段都写着 `"meet"` —— 排头就是它，那条「start 没人读」也对上了」
+改成「**原先**每棵树的 …；★ P-62 已把那一格从 dialogues 域与 schema 一起撤掉」。
+理由：那句话解释的是 P-12 那条口径的由来（留着有用），但它陈述的是一个**已经不存在的字段**
+—— 不跟账就是让下一个人照着不存在的东西干活。它**不含读端**（没碰 `cmds_talk` 的行为一个字）。

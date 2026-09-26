@@ -1,19 +1,15 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$comment": "真源在包。照 ext_dialogue.dialogue 的消费端：start + nodes{节点:{texts[{need,text}]}} + 会话游标。★ need 从具体到宽松排列，引擎挑第一条满足的。",
+  "$comment": "真源在包。照 ext_dialogue.dialogue 的消费端：nodes{节点:{texts[{need,text}]}} + 会话游标。★ need 从具体到宽松排列，引擎挑第一条满足的。★ P-62（2026-09-26）：`start` 已撤 —— 那一格 14 处全是白写（包内 0 读端，取句顺序的唯一口是 content/cmds_talk.LAYERS；引擎 Dialogue.start 只做「未知节点 id 的兜底」，而本包不构造引擎对话对象）—— 谁再加回来，probe_dialogues ⑧ 当场红。",
   "type": "object",
   "minProperties": 1,
   "patternProperties": {
     "^dlg_[a-z_]+$": {
       "type": "object",
       "required": [
-        "start",
         "nodes"
       ],
       "properties": {
-        "start": {
-          "type": "string"
-        },
         "nodes": {
           "type": "object",
           "patternProperties": {
