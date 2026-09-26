@@ -552,37 +552,49 @@ def _set_party(uid, val):
 _PID = PT.pid_of("u_a", 777)
 _SEC = []
 # ★ 合入提示（B3-26 × B3-25）：有队(≥2 站一起)之后 `攻击` 会走「场」（`instance.take_turn`）——
-#   场是**跨指令留着**的 ⇒ 每一档之前先 `INST.clear(G)`，否则上一档开着的场会把这一档吃掉
+#   场是**跨指令留着**的 ⇒ 每一档之前先清干净，否则上一档开着的场会把这一档吃掉
 #   （实测：不 clear ⇒ 后面三档根本不再 build，观测值停在上一档）。
+# ★ G2（2026-09-26）：**单人也有自己那一场了**，而且键分两档（有队 ⇒ 按群 `G`；单人 ⇒
+#   按人 `G#<uid>`）—— 所以「清干净」得**两档都清**（只清 `G` 会把单人的那一格漏在库里，
+#   下一档的 `攻击` 就接着上一场打、根本不 build ⇒ 观测值停住）。
 from content import instance as INST
+
+
+def _clear_field():
+    """清掉这一群里的**所有**场（按群的 + 按人的 —— G2 起键分两档）。"""
+    INST.clear(G)                                  # 按群那一格（有队时用）
+    for _u in sorted(NAMES):
+        INST.clear(INST.key_of(G, _u, [_u]))       # 按人那一格（单人时用）
+
+
 try:
     CBT.build, CBT.pick_encounter = _spy, (lambda *a, **k: [PIN])
     _set_party("u_a", None)                     # 一、单人（没队）⇒ 1（老路：一个数都没变）
     _at("u_a", LOC, NODE, hp=80)
-    INST.clear(G)
+    _clear_field()
     say("u_a", "攻击")
     _SEC.append(("没队", _SEEN[-1], 1))
     _set_party("u_a", {"id": _PID, "role": "captain", "tick": 1, "invites": {}})
     _set_party("u_b", {"id": _PID, "role": "member", "captain": "u_a"})
     _at("u_a", LOC, NODE, hp=80)                # 二、两人同在骨田 ⇒ 2
     _at("u_b", LOC, NODE, hp=70)
-    INST.clear(G)
+    _clear_field()
     say("u_a", "攻击")
     _SEC.append(("同节点两人", _SEEN[-1], 2))
     _at("u_b", LOC, "bn_camp")                  # 三、队友在同一张图的另一个节点 ⇒ 1
-    INST.clear(G)
+    _clear_field()
     say("u_a", "攻击")
     _SEC.append(("队友在别站", _SEEN[-1], 1))
     _at("u_b", LOC, NODE, hp=70)
     _set_party("u_c", {"id": _PID, "role": "member", "captain": "u_a"})
     _at("u_b", LOC, NODE, hp=70)                # 五、三人同节点 ⇒ 3
     _at("u_c", LOC, NODE, hp=50)
-    INST.clear(G)
+    _clear_field()
     say("u_a", "攻击")
     _SEC.append(("同节点三人", _SEEN[-1], 3))
     try:                                        # 六、在队里但读不到存档 ⇒ None（不缩放）
         PS.all_players = _boom
-        INST.clear(G)
+        _clear_field()
         say("u_a", "攻击")
     finally:
         PS.all_players = _keep_all
@@ -622,19 +634,46 @@ chk("★ 单人那档与 B3-17 之前**逐字相同**（party=1 ⇒ 那只 Boss 
     == int(round(float(_BH["hp"]) * float(RB.PARTY_SCALE["1"]["hp"]))))
 
 # ══════════════════════════════════════════════════════════════
+def _field(uid):
+    """这个人在这一群里的「场」（★ G2 键分两档：单人按人 / 有队按群）—— 没有 ⇒ None。"""
+    return INST.load(INST.key_of(G, uid, [uid])) or INST.load(G)
+
+
+# ══════════════════════════════════════════════════════════════
 print("⑦ ★ B4-18：集火按此刻真在不在队里分档 · 逃跑那句桩句收进槽位")
 _B7 = []
-# ── 一、单人（没队）：两句照旧（认得出 / 认不出），且**过时那半句**一个字都没有
+# ── 一、单人（没队）：**没在打** ⇒ 两句照旧（认得出 / 认不出），且**过时那半句**一个字都没有
 _set_party("u_a", None)
 _set_party("u_b", None)
 _at("u_a", LOC, NODE, hp=80)
+_clear_field()                                    # ★ G2：单人也有场 ⇒ 先清干净（这一档要的是「没在打」）
 _o1 = say("u_a", "集火")
 _o2 = say("u_a", "集火 田鼠")
 if _o1 != [_r("COMBAT_FOCUS_SOLO")]:
     _B7.append(("单人 集火", _o1, _r("COMBAT_FOCUS_SOLO")))
 if _o2 != [_r("COMBAT_FOCUS_NAMED", name="田鼠")]:
     _B7.append(("单人 集火 田鼠", _o2, _r("COMBAT_FOCUS_NAMED", name="田鼠")))
-chk("★ 单人档：『集火』= `COMBAT_FOCUS_SOLO`（%s）· 『集火 田鼠』= `COMBAT_FOCUS_NAMED`（%s）"
+# ── 一之二（★ G2 新增的那一档）：**真打起来的时候**『集火 <目标>』真锁上（不吃行动）
+_real_pick7 = CBT.pick_encounter
+CBT.pick_encounter = lambda *a, **k: [PIN]
+try:
+    random.seed(20260926)
+    say("u_a", "攻击")                             # 这一敲就开一场
+    _f0 = _field("u_a")
+    _h0 = int((_f0 or {}).get("hands") or 0)
+    _o2b = say("u_a", "集火 田鼠")
+    _f1 = _field("u_a")
+    if _o2b[:1] != [_r("COMBAT_FOCUS_LOCK", name="田鼠")]:
+        _B7.append(("战斗中 集火 <名>", _o2b[:2], _r("COMBAT_FOCUS_LOCK", name="田鼠")))
+    if str((_f1 or {}).get("focus") or "") != PIN:
+        _B7.append(("战斗中 集火 没写进这一场", (_f1 or {}).get("focus")))
+    if int((_f1 or {}).get("hands") or 0) != _h0:
+        _B7.append(("集火 竟然吃了行动", (int((_f1 or {}).get("hands") or 0), _h0)))
+finally:
+    CBT.pick_encounter = _real_pick7
+    _clear_field()
+chk("★ 单人档：没在打 ⇒ 『集火』= `COMBAT_FOCUS_SOLO`（%s）· 『集火 田鼠』= `COMBAT_FOCUS_NAMED`（%s）；"
+    "★ G2：**真打起来的时候**同一条 = `COMBAT_FOCUS_LOCK`（锁写进这一场 · **不吃行动**）"
     % (_o1[0] if _o1 else "", _o2[0] if _o2 else ""), not _B7, "%s" % _B7[:2])
 
 # ── 二、有队（两人站一起）⇒ 单人那两句都不许再说，走「有队」那一句
@@ -644,7 +683,7 @@ _set_party("u_a", {"id": _PID, "role": "captain", "tick": 1, "invites": {}})
 _set_party("u_b", {"id": _PID, "role": "member", "captain": "u_a"})
 _at("u_a", LOC, NODE, hp=80)
 _at("u_b", LOC, NODE, hp=70)
-INST.clear(G)
+_clear_field()
 _o3 = say("u_a", "集火 田鼠")
 _o4 = say("u_a", "集火")
 if _o3 != [_r("COMBAT_FOCUS_PARTY")]:
@@ -776,22 +815,37 @@ chk("★ P-57 **同种子两态都碰得到**（第 %d 游戏日 · 率 %s · �
 
 
 def _drive7(uid):
-    """单人（没队）+ 遇敌钉死，真敲一次 `逃跑` ⇒ (屏上那几行, last_battle 那一格)。"""
+    """单人（没队）+ 遇敌钉死，真敲一次 `逃跑` ⇒ (屏上那几行, 这一场的状态, `last_battle`)。
+
+    ★ G2 起这一手走「场」：清干净（群/人两格都清）· 顺手把上一场的 `flags.last_battle` 也抹掉
+      （那是**结算期**才写的账，不清就会把「上一场的结局」当成「这一拍的结果」）。
+    """
     _set_party(uid, None)
     _at(uid, LOC, NODE, hp=80)
-    INST.clear(G)
+    _d = dict(CA._p(_ad.players[uid]))
+    _f = dict(_d.get("flags") or {})
+    _f.pop("last_battle", None)
+    _d["flags"] = _f
+    _ad.players[uid] = _d
+    PS.update_player(G, uid, **_d)
+    _clear_field()
+    _b0 = (int(_d.get("gold") or 0), int(_d.get("exp") or 0), sorted(_d.get("bag") or {}))
     _o = say(uid, "逃跑")
+    _st = _field(uid)
     _lb = ((PS.get_player(G, uid) or {}).get("flags") or {}).get("last_battle") or {}
-    return _o, _lb
+    return _o, _st, _lb, _b0
 
 
-def _sig7(out, lb, exp):
-    """这一拍的「结果签名」= 走的是哪一边 + `last_battle` 记成什么。
+def _sig7(out, st, lb, exp):
+    """这一拍的「结果签名」= 走的是哪一边 + 这一场还在不在 + `last_battle` 记成什么。
 
     ★ 不拿整屏比：同一拍里**背包 / 图鉴的账会变**（第二回来那一件已经不是新东西了，
       「拾取」那一行就不一样）—— 那条与「掷出来是哪一边」无关，别让判据被它带红。
+    ★ G2 换锚不换强度：老那版拿「有没有 `━` 结算抬头」当「这一场打没打」的代理；
+      分段之后**跑成也走结算那一段**（要写 `last_battle` 那一格）⇒ 代理换成**这一场还在不在**
+      （`fled` ⇒ 场清干净）；「没打」的**实质**（没有掉落 / 没有经验）另有一条逐数判据。
     """
-    return (exp in out, lb.get("result"))
+    return (exp in out, st is not None, lb.get("result"))
 
 
 try:
@@ -804,51 +858,58 @@ try:
         _u_ok, _u_no = _FLY7[0], _STOP7[0]
         _EXP_OK = _r("COMBAT_FLEE_OK", name=_NAME7)
         _EXP_NO = _r("COMBAT_FLEE_BLOCK", name=_NAME7)
-        _SEP = chr(0x2501)                       # `_settle` 那一段的抬头（「这一场打完了」）
         _B7 = []
         random.seed(20260926)                    # 两遍走**同一颗引擎种子** ⇒ 逐字可比
-        _o_ok, _lb_ok = _drive7(_u_ok)
+        _o_ok, _st_ok, _lb_ok, _b_ok = _drive7(_u_ok)
         random.seed(20260926)
-        _o_ok2, _lb_ok2 = _drive7(_u_ok)
+        _o_ok2, _st_ok2, _lb_ok2, _b_ok2 = _drive7(_u_ok)
         random.seed(20260926)
-        _o_no, _lb_no = _drive7(_u_no)
+        _o_no, _st_no, _lb_no, _b_no = _drive7(_u_no)
         random.seed(20260926)
-        _o_no2, _lb_no2 = _drive7(_u_no)
+        _o_no2, _st_no2, _lb_no2, _b_no2 = _drive7(_u_no)
         if _EXP_OK not in _o_ok:
             _B7.append(("跑成那一档没有那一句", _o_ok[:3]))
         if _lb_ok.get("result") != "fled":
             _B7.append(("跑成却没记 fled", _lb_ok.get("result")))
-        if any(str(x).startswith(_SEP) for x in _o_ok):
-            _B7.append(("跑成竟然还打了（有结算那一段）", _o_ok[-3:]))
+        if _st_ok is not None:
+            _B7.append(("跑成竟然还留着这一场", list((_st_ok or {}).keys())))
         if _EXP_NO not in _o_no:
             _B7.append(("被拦下那一档没有那一句", _o_no[:4]))
-        if _lb_no.get("result") in (None, "fled"):
-            _B7.append(("被拦下却没照打", _lb_no.get("result")))
-        if not any(str(x).startswith(_SEP) for x in _o_no):
-            _B7.append(("被拦下没照打（缺结算那一段）", _o_no[-3:]))
-        if not (_sig7(_o_ok2, _lb_ok2, _EXP_OK) == _sig7(_o_ok, _lb_ok, _EXP_OK)
-                and _sig7(_o_no2, _lb_no2, _EXP_NO) == _sig7(_o_no, _lb_no, _EXP_NO)):
+        if _lb_no.get("result") == "fled":
+            _B7.append(("被拦下却记成 fled", _lb_no.get("result")))
+        if _st_no is None or int(_st_no.get("hands") or 0) != 1:
+            _B7.append(("被拦下没照打（这一场应当还在、且真花了这一手）",
+                        None if _st_no is None else _st_no.get("hands")))
+        if not (_sig7(_o_ok2, _st_ok2, _lb_ok2, _EXP_OK) == _sig7(_o_ok, _st_ok, _lb_ok, _EXP_OK)
+                and _sig7(_o_no2, _st_no2, _lb_no2, _EXP_NO) == _sig7(_o_no, _st_no, _lb_no, _EXP_NO)):
             _B7.append(("同种子再来一遍不是同一边",
-                        (_sig7(_o_ok2, _lb_ok2, _EXP_OK), _sig7(_o_no2, _lb_no2, _EXP_NO))))
-        chk("★ P-57 同种子真敲两态：%s ⇒「%s」（last_battle=%s · 无结算）· "
-            "%s ⇒「%s」（last_battle=%s · 照打）· 各自再来一遍**还是那一边**（同种子同结果）"
+                        (_sig7(_o_ok2, _st_ok2, _lb_ok2, _EXP_OK),
+                         _sig7(_o_no2, _st_no2, _lb_no2, _EXP_NO))))
+        chk("★ P-57 同种子真敲两态：%s ⇒「%s」（last_battle=%s · 这一场清干净）· "
+            "%s ⇒「%s」（last_battle=%s · 这一场照打、花了一手）· 各自再来一遍**还是那一边**"
             % (_u_ok, _EXP_OK, _lb_ok.get("result"), _u_no, _EXP_NO, _lb_no.get("result")),
             not _B7, "%s" % _B7[:2])
+        # ★ G2 另加一条**实质**判据：「跑成 = 这一场没打」= 没有掉落 / 没有经验 / 没有铜板
+        _d_ok = PS.get_player(G, _u_ok) or {}
+        _a_ok = (int(_d_ok.get("gold") or 0), int(_d_ok.get("exp") or 0),
+                 sorted(_d_ok.get("bag") or {}))
+        chk("★ P-57 跑成的**实质**：这一场没打 ⇒ 铜板 / 经验 / 背包与这一拍之前**逐格相同**"
+            "（%s → %s）" % (_b_ok, _a_ok), _a_ok == _b_ok)
         # ⑤ 反证：那个数真被读（同一个种子、同一个人，只改声明表那个数）
         _keep_rate7 = _BA7.flee_fail_pct
         try:
             _BA7.flee_fail_pct = (lambda: 1.0)
-            _o_r1, _lb_r1 = _drive7(_u_ok)
+            _o_r1, _st_r1, _lb_r1, _b_r1 = _drive7(_u_ok)
             _BA7.flee_fail_pct = (lambda: 0.0)
-            _o_r2, _lb_r2 = _drive7(_u_no)
+            _o_r2, _st_r2, _lb_r2, _b_r2 = _drive7(_u_no)
         finally:
             _BA7.flee_fail_pct = _keep_rate7
         chk("★ P-57 反证（率只有一个口、真被读）：临时改成 1.0 ⇒ 原来跑成的 %s 当场被拦下（%s）· "
             "改成 0.0 ⇒ 原来被拦下的 %s 当场跑成（%s）"
-            % (_u_ok, (_EXP_NO in _o_r1 and _lb_r1.get("result") != "fled"),
-               _u_no, (_EXP_OK in _o_r2 and _lb_r2.get("result") == "fled")),
-            _EXP_NO in _o_r1 and _lb_r1.get("result") != "fled"
-            and _EXP_OK in _o_r2 and _lb_r2.get("result") == "fled")
+            % (_u_ok, (_EXP_NO in _o_r1 and _st_r1 is not None),
+               _u_no, (_EXP_OK in _o_r2 and _st_r2 is None and _lb_r2.get("result") == "fled")),
+            _EXP_NO in _o_r1 and _st_r1 is not None
+            and _EXP_OK in _o_r2 and _st_r2 is None and _lb_r2.get("result") == "fled")
 finally:
     CBT.build, CBT.pick_encounter = _REAL_BUILD, _REAL_PICK
 

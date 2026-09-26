@@ -42,7 +42,11 @@ __all__ = ["PER_PAGE", "per_page", "page_no", "render", "cursor", "forget",
 #:   （玩家在 `怪物谱` / `旧物谱` 上敲『下一页』，拿到的是「先打开一个列表」那句）。
 PER_PAGE = {"bag": 20, "ranking": 10,
             "codex": 10, "codex_material": 10, "codex_flavor": 10,
-            "codex_monster": 10, "codex_relic": 10}
+            "codex_monster": 10, "codex_relic": 10,
+            # ★ G2：**在打的这一场**的战斗过程（『战斗日志』那一屏）——
+            #   一场真打完可能几十行（每一手两段日志），一屏压不下 ⇒ 分页。
+            #   战后那一份（`flags.last_battle`）**不分页**：那是复盘，全文照出。
+            "battle_log": 20}
 
 #: 一页几行的默认值（`PER_PAGE` 里没登记的 kind 用这个 —— 今天没有这样的 kind）
 PER_PAGE_DEFAULT = 20
@@ -132,6 +136,10 @@ def _again(env, sink, uid, player, kind):
                                   "codex_monster": "codex_monster",
                                   "codex_relic": "codex_relic"}[kind])
         return lambda page: fn(env, sink, uid, player, page)
+    # ★ G2：在打的这一场（『战斗日志』那一屏）—— 第 N 页重渲染走同一条口
+    if kind == "battle_log":
+        from . import cmds_battle
+        return lambda page: cmds_battle.battle_log(env, sink, uid, player, page)
     return None
 
 

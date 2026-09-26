@@ -30,21 +30,39 @@
 单人路径一个字都不变（硬判据）
 ------------------------------
 队伍名单口（B3-25 落地之后）：`members_of()` 走 `content.party.members_of` —— 在队 ⇒ 真名单；
-不在队 ⇒ 回 `[uid]` 一个 ⇒ 单人档 `route_needed()` 仍回 `False`、直接往下走**单人那条路**
-（`scripts/probe_instance.py` ⑤ 拿改前基线的真跑回话逐字对）。
+不在队 ⇒ 回 `[uid]` 一个。
 ★ B4-18：这一段原先写「（B3-25 那一批）今天还不存在」—— 那句话在 B3-25 落地那天就过时了。
+★ G2（本波）：单人**不再**等于「回 False 走一次结算那条老路」—— 单人也有自己那一场，
+  键按人分（`key_of`）；这一整段「单人路径一个字都不变」的判据因此**有意换向**，
+  逐条账在 `scripts/probe_instance.py ⑤` 的抬头与本分支 `_notes.md`（旧回话 / 新回话 / 为何）。
 
 本批**不做**的（写在这儿免得下一轮当成已完，详见本工作树 `_notes.md`）
 --------------------------------------------------------------------
 * 队伍本身（谁在队里 / 邀请 / 离队）—— B3-25 那一批；本模块只点名要的口（见 `members_of`）。
-* 后撤 / 换武器 / 集火 / 逃跑 在多人场里的口径**真源没写** ⇒ 本批不接（单人那条老路原样）；
-  只有「花掉一手」的那几条战斗指令走「场」（攻击 / 防御 / 技能 / 用物 / 打断）。
 * 「轮到你了」的**全队广播**：QQ 那边只有回话能到群里 ⇒ 谁拿着窗口要看回话。本模块的取法
   （谁都能敲一下知道自己该不该动 + 没轮到就报「在等谁」）是骨架；主动推送要宿主的投递口。
 * 多人结算的**分配口径**（击杀奖励一人一份还是平分）真源没写 ⇒ 今天按「每人各走一遍单人那条
   结算路」（`_finish`），登记为待补行。
 * `battle` 那个内置守卫（「必须在战斗中」）没接：宿主的 `battle_check` 今天不给
   （引擎侧 `Env` 有位置，见 `_notes.md` 遗留清单）。
+
+★★★ B3-26b / G2（2026-09-26 · 本波）：「场」**从「多人专有」放开成「谁都有」**
+-------------------------------------------------------------------------------
+真源：`06_第一阶段垂直切片/03_风车镇_指令与回复 §二`（四段式战斗回复：现状 / 对方在干什么 /
+你的选项 / 上一手的结果）· `02_数值宪法/02_战斗机制 §〇·五`（伪即时 CTB：**一条指令 = 你的
+一手**，不是一整场）· `04_指令总表 §五`（11 条战斗指令分开列 = 承诺逐手出招）。
+
+改之前：`route_needed()` 只在「有群 + 在队（≥2 人）」时回 True，其余一律走**单人那条一次结算**
+的老路（`cmds_battle.attack` 的 `CB.run_auto`）—— 玩家中途吃不了药、跑不掉、看不到对方在蓄什么。
+改之后：**单人也有自己那一场**，每条战斗指令 = 推进到你下一次行动机会。落地只有两条：
+
+  ① **键分两档**（`key_of`）：有队（≥2 人）⇒ 按**群**存（全队同一场，与 B3-26 逐字相同）；
+     单人 ⇒ 按**人**存（`<群>#<uid>`）—— 同一个群里两个人都单打时各是各的一场，不互相串。
+     存储仍然是**同一条** `persistence.group_get/set/del`（没另造第二套存储）。
+  ② **`route_needed` 没有场 ⇒ True**（那一敲就是开场那一敲）。原先这一档回 False。
+
+★ 单人那一场里 `sides["player"]` 只有一个人 —— 引擎每边本来就是列表 ⇒ **引擎零改动**，
+  「轮转」退化成「只有你」，`17_ §四` 那五条在那条路上天然成立（等待提示永远不出现）。
 """
 from __future__ import annotations
 
@@ -150,19 +168,48 @@ def members_of(group_id, uid) -> list:
 
 
 # ══════════════════════════════════════════════════════════════
-# 三、「场」的存取（按群存的共同档）
+# 三、「场」的存取（按群 / 按人存的共同档 —— 同一条存储，键分两档）
 # ══════════════════════════════════════════════════════════════
 def group_of(env) -> str:
     """这一条消息是哪个群 —— 引擎 `Env.group_id`（宿主给的）。
 
-    没群（私聊 / 没接上）⇒ 空串 ⇒ 没有「按群存的场」⇒ 一律单人老路（fail-closed）。
+    没群（私聊 / 没接上）⇒ 空串。★ G2 起**不再等于「不进这一场」**：单人的键是
+    `<群>#<uid>`，没群时就是 `#<uid>` —— 仍然按人分开（两个人永远不共用一格）。
     """
     return str(getattr(env, "group_id", "") or "")
 
 
-def load(group_id):
-    """这一群现在有没有在跑的一场（None = 没有）。"""
-    st = PS.group_get(SCOPE, group_id)
+def key_of(group_id, uid, members=None) -> str:
+    """这一场的存储键（★ G2 的唯一一口）—— **队按群 · 单人按人**。
+
+      · 有队（名单 ≥2 人）⇒ **群 id**：全队看的是同一场（B3-26 的键，逐字未变）；
+      · 单人（名单只有自己）⇒ `<群>#<uid>`：各打各的，互不串场。
+        ★ 为什么单人不能也用群 id：一个群里两个人可能同时在两条野外带上单打 ——
+          用群做键的话，第二个人会被当成「不在这一场名单里」而拿不到分段战斗
+          （或者更糟：两个人的手写进同一场）。
+
+    fail-closed：有队却没群 ⇒ 当场抛（队本身也是按群存的，没有群就取不出名单的形状）。
+    """
+    g = str(group_id or "")
+    mem = [str(x) for x in (members if members is not None else [])]
+    if len(set(mem)) > 1:
+        if not g:
+            raise RuntimeError("有队就得按群存这一场（队伍名单 %r 但没有群）" % (mem,))
+        return g
+    return "%s#%s" % (g, str(uid or ""))
+
+
+def battle_key(env, uid) -> str:
+    """这一条消息里，**我**这一场的键（现算：群 → 名单 → 键）。"""
+    g = group_of(env)
+    u = str(uid or "")
+    mem = members_of(g, u) if u else []
+    return key_of(g, u, mem)
+
+
+def load(key):
+    """这一格现在有没有在跑的一场（None = 没有）。`key` 走 `key_of` / `battle_key`。"""
+    st = PS.group_get(SCOPE, key)
     if st is None:
         return None
     miss = [k for k in ST_KEYS if k not in st]
@@ -174,14 +221,14 @@ def load(group_id):
     return st
 
 
-def save(group_id, st) -> None:
+def save(key, st) -> None:
     """把这一场写回去（整条覆盖）。"""
-    PS.group_set(SCOPE, group_id, st)
+    PS.group_set(SCOPE, key, st)
 
 
-def clear(group_id) -> None:
+def clear(key) -> None:
     """这一场散了（结算完 / 没人站着）—— 把记录删掉。"""
-    PS.group_del(SCOPE, group_id)
+    PS.group_del(SCOPE, key)
 
 
 # ══════════════════════════════════════════════════════════════
@@ -241,26 +288,69 @@ def name_of(group_id, uid) -> str:
 # 五、入口（只有两个：要不要走「场」 / 真走）
 # ══════════════════════════════════════════════════════════════
 def route_needed(env, uid) -> bool:
-    """这一条战斗指令要不要走「场」那道（`False` = 今天那条单人老路，一个字不变）。
+    """这一条战斗指令要不要走「场」那道（`False` = 一次结算那条老路）。
 
-    三条判：
-      · 没群 / 没 uid            ⇒ False（「按群存的场」不存在的前提）
-      · 这一群有场、我在名单里    ⇒ True
-      · 这一群没场、名单不止我一人 ⇒ True（这一敲就是**开场**那一敲）
-      · 其余（单人、且没有场）    ⇒ False
+    四条判（★ G2 起第 2/3 条换了语义 —— 单人也有自己那一场）：
+      · 没 uid                    ⇒ False（键拼不出来；生产里永远有 uid）
+      · 这一格有场、我在名单里     ⇒ True（接着打）
+      · 这一格有场、我不在名单里   ⇒ False（fail-closed：别人的场不碰，走老路）
+      · 没有场                    ⇒ True（**这一敲就是开场那一敲** —— 单人也是）
     """
-    g = group_of(env)
     u = str(uid or "")
-    if not g or not u:
+    if not u:
         return False
-    st = load(g)
+    st = load(battle_key(env, u))
     if st is not None:
         return u in [str(x) for x in (st.get("members") or [])]
-    return len(members_of(g, u)) > 1
+    return True
 
 
-async def take_turn(env, p, uid, player, *, head="", hand=None, action=None, skill=None):
-    """「场」那一道的**唯一出口** —— 轮转 → 轮到我出手 → 落回场（打完就结算全队）。
+def live(env, uid):
+    """**我**现在那一场（没有 ⇒ None）—— 『战斗日志』/『集火』这类只读的口用它。"""
+    u = str(uid or "")
+    if not u:
+        return None
+    st = load(battle_key(env, u))
+    if st is not None and u not in [str(x) for x in (st.get("members") or [])]:
+        return None
+    return st
+
+
+def foe_of(st):
+    """这一场里**还站着的第一个敌人**那一格 actor（没有 ⇒ None）。
+
+    ★ 只读那格 dict —— 它就是在场的那个 actor 的序列化快照（键名与活着的对象同形）。
+    """
+    for a in ((st.get("battle") or {}).get("sides") or {}).get("enemy") or []:
+        if isinstance(a, dict) and int(a.get("hp", 0) or 0) > 0:
+            return a
+    return None
+
+
+def live_logs(env, uid) -> list:
+    """这一场**到现在为止**的日志（没有在跑的一场 ⇒ 空表）。『战斗日志』看的就是它。"""
+    st = live(env, uid)
+    return [str(x) for x in ((st or {}).get("logs") or [])]
+
+
+def set_focus(env, uid, target_uid) -> bool:
+    """把「集火」的目标写进这一场（★ G2）—— 写成了回 True。
+
+    目标按 **uid** 记（怪那一格 actor 的 uid = 怪 id）；后面每一手都按它取对手
+    （`take_turn` 里现读现传 ⇒ 目标倒了就自动回落到引擎自己的目标解析）。
+    """
+    u = str(uid or "")
+    st = live(env, u)
+    if st is None:
+        return False
+    st["focus"] = str(target_uid or "")
+    save(battle_key(env, u), st)
+    return True
+
+
+async def take_turn(env, p, uid, player, *, head="", hand=None, action=None, skill=None,
+                    decide=None):
+    """「场」那一道的**唯一出口** —— 轮转 → 轮到我出手 → 落回场（打完就结算）。
 
     分支正好是 `17_ §四` 那五条（判断顺序也照 `cmds_instance_router.py:378-418`）：
 
@@ -273,15 +363,26 @@ async def take_turn(env, p, uid, player, *, head="", hand=None, action=None, ski
 
     「我这一手」由调用方给（与单人那条 `_run_hand` 同一套形状）：`action`/`skill` 是引擎内置
     动作，`hand` 是 B3-23 那几手（打断 / 用物）的内容侧回调；`head` 是这一手要说的那句话。
+    `decide(b, caster, logs, st) -> 结果名 | None`：★ G2 给「后撤 / 逃跑」这两个
+    **要先看条件的**那一手用 —— 回一个结果名（例 `"fled"`）= 这一场到此为止、**不花这一手**；
+    回 None = 照常花掉这一手（`hand` 那几句由调用方自己塞进 `hand.lines`）。
+
+    ★ G2 的四处收口（单人也有这一场之后才成立的）：
+      · 单人那条路在这儿**退化成「只有你」**（等待提示 / 超时 / guard 都走不到）；
+      · 回话按 `03_ §二` 的**四段式**：现状 + 对方在干什么 + 你的选项（`turn_lines`）
+        → 这一手说的话（`head`）→ 上一手的结果（日志）—— 打完/散场那一档不出这一屏；
+      · 每一手都把 `st["hands"]` 加一（「第几手」那一格只有一个写端）；
+      · `st["focus"]`（集火）现读现传给引擎的目标解析。
     """
-    g = group_of(env)
+    grp = group_of(env)
     u = str(uid or "")
-    st = load(g)
+    key = battle_key(env, u)
+    st = load(key)
     if st is None:
         # ── 开场：遇敌一次，把名单里每个人真拉进同一场（sides 每边是列表）
-        async for line in _open(env, g, p, u):
+        async for line in _open(env, grp, key, p, u):
             yield line
-        st = load(g)
+        st = load(key)
         if st is None:
             return                                    # 没遇敌 / 有人的档还没定职业（已出过话）
     if u not in [str(x) for x in (st.get("members") or [])]:
@@ -295,28 +396,28 @@ async def take_turn(env, p, uid, player, *, head="", hand=None, action=None, ski
             break
         cur = next_actor_key(st)
         if cur is None:                              # 没站着的了 ⇒ 这一场按输收（照参考实现）
-            async for line in _finish(env, g, st, p, u, player, "defeat"):
+            async for line in _finish(env, grp, key, st, p, u, player, "defeat"):
                 yield line
             return
         if cur == u:
             break                                    # ③ 轮到我了
         if now() - float(st.get("turn_time") or 0) > window_seconds():
             # ④ 超时 ⇒ 自动防御（日志全队可见）—— 既不惩罚也不遮掩
-            _to = T("SYS_TIMEOUT_DEFEND", who=name_of(g, cur))
+            _to = T("SYS_TIMEOUT_DEFEND", who=name_of(grp, cur))
             ended, sub = _defend(st, cur)
             st["logs"] = list(st.get("logs") or []) + [_to] + list(sub)
-            save(g, st)
+            save(key, st)
             yield _to
             for line in sub:
                 yield line
             if ended:
-                async for line in _finish(env, g, st, p, u, player,
+                async for line in _finish(env, grp, key, st, p, u, player,
                                           _result_of(st) or "defeat"):
                     yield line
                 return
             continue                                 # 消化掉一个，再来一轮看轮到谁
         # ② 未超时 ⇒ 等待提示，收工（★ 不动档、不动场、不开新战斗）
-        yield T("SYS_ROUND_HOLD", who=name_of(g, cur))
+        yield T("SYS_ROUND_HOLD", who=name_of(grp, cur))
         return
     # ── ③ 轮到我（或 ⑤ 消化到上限后按参考实现落到「轮到请求者」）
     me = actor_of(st, u)
@@ -326,21 +427,19 @@ async def take_turn(env, p, uid, player, *, head="", hand=None, action=None, ski
         # 队友还在打 ⇒ **不替他出手**（窗口交给下一位），更不许把别人的仗判成输。
         left = next_actor_key(st)
         if left is None:
-            async for line in _finish(env, g, st, p, u, player, "defeat"):
+            async for line in _finish(env, grp, key, st, p, u, player, "defeat"):
                 yield line
         elif _result_of(st) is not None:
-            async for line in _finish(env, g, st, p, u, player, str(_result_of(st))):
+            async for line in _finish(env, grp, key, st, p, u, player, str(_result_of(st))):
                 yield line
         else:
             st["turn_time"] = int(now())
-            save(g, st)
-            yield T("SYS_ROUND_HOLD", who=name_of(g, left))
+            save(key, st)
+            yield T("SYS_ROUND_HOLD", who=name_of(grp, left))
         return
     st["turn"] = [str(x) for x in (st.get("members") or [])].index(u)
     st["turn_time"] = int(now())                     # 窗口开在我名下（我随时可以接着敲）
-    save(g, st)
-    if head:
-        yield head
+    save(key, st)
     logs: list = []
     b = _restore(st)
     if hand is not None and getattr(hand, "override", None) is not None:
@@ -351,25 +450,142 @@ async def take_turn(env, p, uid, player, *, head="", hand=None, action=None, ski
     if caster is None:
         raise RuntimeError("引擎那边找不到这一场里的 %r（场的名单与 sides 对不上）" % (u,))
     if hand is not None and str(getattr(hand, "kind", "")) == "item":
+        # ★ G2：**每件的每场上限**要跨手有效 ⇒ 记账放在这一场里（原先一个
+        #   `Hand` 只活一条指令，一次结算那版天然有效；分段之后必须在场里）
+        hand.used = dict(st.get("items_used") or {})
         caster["auto_act"] = {"act": {"type": "item", "skill": hand.item}}
     SCH.advance(b, logs)                             # 推到我的决策点（快的对方该动的先动）
     caster = b.find_actor(u) or caster
+    tgt = _focus_actor(b, st)                        # ★ 集火：这一场里记着的那个目标
+    took, decided = False, None
     if b.result is None and int(caster.get("hp", 0) or 0) > 0:
-        if hand is not None:
-            _sub, _ended, _who = b.human_act(str(hand.kind), hand.item, caster)
-        else:
-            _sub, _ended, _who = b.human_act(str(action), skill, caster)
-        logs.extend(str(x) for x in (_sub or []))
+        if decide is not None:
+            decided = decide(b, caster, logs, st)    # ★ 条件那一手（后撤 / 逃跑）先问它
+        if decided is None and b.result is None:
+            took = True
+            if hand is not None:
+                _sub, _ended, _who = b.human_act(str(hand.kind), hand.item, caster, target=tgt)
+            else:
+                _sub, _ended, _who = b.human_act(str(action), skill, caster, target=tgt)
+            logs.extend(str(x) for x in (_sub or []))
+    if decided is not None:
+        b.result = str(decided)                      # decide 说这一场到此为止（不花这一手）
     st["battle"] = b.to_state()
     st["logs"] = list(st.get("logs") or []) + [str(x) for x in logs]
     st["turn_time"] = int(now())                     # 窗口交到下一位手里（他从现在开始算）
-    save(g, st)
+    if took:
+        st["hands"] = int(st.get("hands") or 0) + 1   # 「第几手」唯一的写端（★ G2）
+        if hand is not None and str(getattr(hand, "kind", "")) == "item":
+            st["items_used"] = {k: int(v) for k, v in (hand.used or {}).items()}
+    if b.result is None:
+        # ★ 四段式 ①②③ —— 这一手打完之后的样子（下一手该敲什么，看这一屏）
+        for line in turn_lines(st):
+            yield line
+    save(key, st)
+    if head:
+        yield head                                   # ④ 上一手的结果（这一手说的话 + 过程）
     for line in _fmt(logs):
         yield line
     _write_back(env, p, player, b, u)                # 我这一手的血真落到档上（下一敲按它接着走）
     if b.result is not None:
-        async for line in _finish(env, g, st, p, u, player, str(b.result)):
+        async for line in _finish(env, grp, key, st, p, u, player, str(b.result)):
             yield line
+
+
+async def take_auto(env, p, uid, player):
+    """`自动` —— **一直推到分出胜负**（★ G2：分段制里唯一允许一次打完的那条）。
+
+    与 `take_turn` 同一套骨架，只把「我这一手」换成「引擎自己替我和它都出完手」：
+    没场就先开一场（与『攻击』同一条开场路），然后把这一场跑到底、照旧结算。
+
+    `b.auto_run` 在**人控 actor 在场上**时也会替它出普攻（引擎既有的那一支）——
+    这正是「自动打完」的语义；本函数不另写第二套轮转。
+    """
+    grp = group_of(env)
+    u = str(uid or "")
+    key = battle_key(env, u)
+    st = live(env, u)
+    if st is None:
+        async for line in _open(env, grp, key, p, u):
+            yield line
+        st = load(key)
+        if st is None:
+            return
+    logs: list = []
+    b = _restore(st)
+    b.auto_run(logs)
+    st["battle"] = b.to_state()
+    st["logs"] = list(st.get("logs") or []) + [str(x) for x in logs]
+    if b.result is None:
+        save(key, st)                                # 没分出胜负 ⇒ 这一场还留着（下一敲接着来）
+        for line in turn_lines(st):
+            yield line
+        for line in _fmt(logs):
+            yield line
+        _write_back(env, p, player, b, u)
+        return
+    save(key, st)
+    for line in _fmt(logs):
+        yield line
+    _write_back(env, p, player, b, u)
+    async for line in _finish(env, grp, key, st, p, u, player, str(b.result)):
+        yield line
+
+
+def _focus_actor(b, st):
+    """这一场「集火」锁着的那一格 actor（没锁 / 锁的那只已经倒了 ⇒ None = 引擎自己挑）。"""
+    fu = str(st.get("focus") or "")
+    if not fu:
+        return None
+    a = b.find_actor(fu)
+    if a is None or int(a.get("hp", 0) or 0) <= 0:
+        return None
+    return a
+
+
+def turn_lines(st) -> list:
+    """★ G2 四段式的 ①②③ —— **只读那一份场**（不重开引擎），给每一次出手之后看。
+
+    ① 现状 + 谁先动（`COMBAT_TURN_STATE` + `COMBAT_TURN_I_FIRST` / `COMBAT_TURN_FOE_FIRST`）
+    ② 对方在干什么（`COMBAT_TURN_FOE_DOING` / `COMBAT_TURN_FOE_IDLE`）
+    ③ 你的选项（`COMBAT_TURN_MENU`）
+
+    两边有一边不在了（打完了 / 场是坏的）⇒ 出**空表**：那种时候该说话的是结算那一段，
+    这里不抢话（空表 = 不出一屏，不是「出了几行空行」）。
+    """
+    bd = st.get("battle") or {}
+    me = None
+    for a in ((bd.get("sides") or {}).get("player") or []):
+        if isinstance(a, dict) and int(a.get("hp", 0) or 0) > 0:
+            me = a
+            break
+    foe = foe_of(st)
+    if me is None or foe is None:
+        return []
+    nm = str(foe.get("name") or "")
+    my_ct = float(me.get("ct", 0) or 0)
+    foe_ct = float(foe.get("ct", 0) or 0)
+    # ★ 两边的血先取成局部量再拼 —— `probe_panel ④` 那条静态守卫扫的是
+    #   「`"max_hp"` 后面紧跟 `or <数字>`」那种**写死上限**的写法，这里只是读快照。
+    _my_hp, _my_mx = me.get("hp"), me.get("max_hp")
+    _fo_hp, _fo_mx = foe.get("hp"), foe.get("max_hp")
+    out = [T("COMBAT_TURN_STATE", n=int(st.get("hands") or 0),
+             hp=int(_my_hp or 0), hp_max=int(_my_mx or 0),
+             name=nm, foe_hp=int(_fo_hp or 0), foe_hp_max=int(_fo_mx or 0))]
+    if my_ct <= foe_ct:
+        out.append(T("COMBAT_TURN_I_FIRST", my_ct=int(round(my_ct)), foe_ct=int(round(foe_ct))))
+    else:
+        out.append(T("COMBAT_TURN_FOE_FIRST", my_ct=int(round(my_ct)), foe_ct=int(round(foe_ct))))
+    slot = foe.get("charging")
+    left = 0.0
+    if isinstance(slot, dict):
+        left = max(0.0, float(slot.get("cast_done_at", 0) or 0) - float(bd.get("now", 0) or 0))
+    if left > 0:
+        out.append(T("COMBAT_TURN_FOE_DOING", name=nm, left=int(round(left))))
+    else:
+        out.append(T("COMBAT_TURN_FOE_IDLE", name=nm))
+    out.append(T("COMBAT_TURN_MENU"))
+    return out
 
 
 # ══════════════════════════════════════════════════════════════
@@ -393,23 +609,26 @@ def _member_seed(g, m, uid, p) -> dict:
     return d
 
 
-async def _open(env, g, p, uid):
+async def _open(env, grp, key, p, uid):
     """开场那一敲：遇敌**一次** → 名单里每个人真进同一场 → 存成「场」。
 
     没遇敌 / 有人的档还没定职业 ⇒ 什么都不开（fail-closed：不动档、不建场）。
+
+    ★ G2：`grp` = **群**（别人的档按它读）· `key` = 这一场的键（单人时是 `<群>#<uid>`）。
+      两件事分开之后，同一个群里两个人各自单打互不影响。
     """
     from . import cmds_battle as CBAT
     from . import combat as CB
     from . import affix as AFFIX
 
-    members = members_of(g, uid)
+    members = members_of(grp, uid)
     pick, ms, affixes, mline = CBAT._meet(p, uid)
     if not pick:
         yield T("COMBAT_NONE")
         return
     seeds = []
     for m in members:
-        d = _member_seed(g, m, uid, p)
+        d = _member_seed(grp, m, uid, p)
         _mx, _line = hp_cap_or_line(d)
         if _line:
             yield _line                  # 点名「谁的档还没定职业」—— 这一场不开
@@ -419,20 +638,39 @@ async def _open(env, g, p, uid):
     for line in CBAT.encounter_lines(ms[pick[0]], p):
         yield line
     _ids, _hm = AFFIX.spawn_plan(pick[0], list(affixes))
-    b = CB.build(p, _ids, ms, party=len(members), affixes=list(affixes), hp_mults=_hm,
-                 players=seeds)
-    save(g, {"members": list(members), "pick": list(pick), "affixes": list(affixes),
-             "hp_mults": list(_hm), "party": len(members), "battle": b.to_state(),
-             "logs": [], "turn": 0, "turn_time": int(now())})
+    # ★ 人数那一格与单人那条老路**同一个口径**（`cmds_battle._party_now`：在队 + 同处 + 活人；
+    #   存档读不出来 ⇒ **None ⇒ `party_scale_of` 不缩放**，绝不因为「不知道」而悄悄削弱 Boss）。
+    _pn = CBAT._party_now(env, p, uid)
+    b = CB.build(p, _ids, ms, party=_pn, affixes=list(affixes), hp_mults=_hm, players=seeds)
+    save(key, {"members": list(members), "pick": list(pick), "affixes": list(affixes),
+               "hp_mults": list(_hm), "party": len(members), "battle": b.to_state(),
+               "logs": [], "turn": 0, "turn_time": int(now()), "hands": 0, "focus": "",
+               "items_used": {}})
+    # ★ G2 fail-closed：写完**当场读回来核一遍** —— 这一场是唯一跨指令的状态，
+    #   存不住的话下一条指令会「只回一行、什么都没发生」（静默）。存不住就点名（常见因：
+    #   宿主注进来的 db_path 是 `:memory:` 那种**每条连接各一份**的库 ⇒ 下一次读不到）。
+    if load(key) is None:
+        raise RuntimeError("开场那一敲没把这一场留下（共同档 %r 存不住）—— 存档半边的共同档口没接上？"
+                           % (key,))
 
 
 def _restore(st):
-    """「场」里那份战斗态 → 引擎 Battle（引擎自带的往返，面板 / ct / 待发槽 / 效果都随档走）。"""
+    """「场」里那份战斗态 → 引擎 Battle（引擎自带的往返，面板 / ct / 待发槽 / 效果都随档走）。
+
+    ★ G2：恢复之后**把面板栈补登记回来**（`panel_build.ensure_stack`）—— 栈声明只活在造它的
+      那个进程里，而这一场是**落盘**的（机器人重启 / 换一个进程接着打 ⇒ 旧栈 id 查不到，
+      引擎当场抛 `panel_layers 无此栈`）。补登记用的是 actor 自己那份快照 ⇒ 数一个都不动。
+    """
     from ext_combat.battle import serialize as SER
     from . import battle_text as BT
+    from . import panel_build as PB
     # ★ P-1：文案表**不落盘**（引擎 `from_state` 的注释明写「续战方重新传入」）——
     #   不传 ⇒ 续战那几刻的日志退回引擎兜底模板（元素那两行走不到槽位 = 静默降级）。
-    return SER.from_state(dict(st.get("battle") or {}), text=BT.battle_text())
+    b = SER.from_state(dict(st.get("battle") or {}), text=BT.battle_text())
+    for acts in (b.sides or {}).values():
+        for a in acts:
+            PB.ensure_stack(a)
+    return b
 
 
 def _result_of(st):
@@ -483,9 +721,9 @@ def _save(env) -> None:
         pass
 
 
-async def _finish(env, g, st, p, uid, player, res):
+async def _finish(env, grp, key, st, p, uid, player, res):
     """这一场收尾：**在场的每个人**各按单人那条结算路走一遍（钱 / 经验 / 掉落 / 死亡 / 日志），
-    然后删掉这一场的记录。
+    然后删掉这一场的记录（★ G2：`clear(key)` —— 单人那一格也要清干净，下一场不带残留）。
 
     ★ 分配口径真源没写（`_notes.md` 待补行）⇒ 今天就是「每人各走一遍单人那条路」；
       `_settle` 是单人那条**唯一**的结算实现，本模块不另写一份（单一出口）。
@@ -506,19 +744,19 @@ async def _finish(env, g, st, p, uid, player, res):
         if m == str(uid):
             p_m, handle = p, player
         else:
-            raw = PS.get_player(g, m)
+            raw = PS.get_player(grp, m)
             if not isinstance(raw, dict):
                 continue                             # 他这一份档不在（没他的份，不凭空造一份）
             d = dict(raw)
             d["uid"] = m
-            p_m, handle = _p(d), _StoreHandle(g, m)
+            p_m, handle = _p(d), _StoreHandle(grp, m)
         seen = CX.note_kill(p_m, pick[0])
         # ★ 现血：倒地的按 **1** 落（与 `cmds_ast._p` / `player_actor` 同一条钳法）——
         #   「队伍里有人倒下了、但这一场赢了」的下场真源没写（见 `_notes.md` 待补行）。
         async for line in CBAT._settle(env, p_m, m, pick, ms, res, logs,
                                        max(1, hp_of(st, m)), seen, handle, affixes=affixes):
             yield line
-    clear(g)
+    clear(key)
 
 
 #: 「谁是玩家」那几列**不进档** —— 与宿主壳 `host/store_factory.py::_IDENTITY_KEYS` 同一张表

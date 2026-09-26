@@ -338,6 +338,33 @@ def send_as(uid, text):
     return got
 
 
+# ★ G2（2026-09-26）：战斗改成**一手一推进** ⇒ 「这一场」跨指令落盘（单人的键 = `<群>#<uid>`）
+_GID, _TUID = "g_t", "u_t"
+
+
+def _field():
+    """这一群里的那场（单人按人的那一格；没有 ⇒ None）。"""
+    from content import instance as _INST
+    return _INST.load(_INST.key_of(_GID, _TUID, [_TUID]))
+
+
+def _clear_field():
+    from content import instance as _INST
+    _INST.clear(_INST.key_of(_GID, _TUID, [_TUID]))
+
+
+def fight_over(cap=60):
+    """把当前这一场**真收掉**（一条 `攻击` 只推一手）—— 返回收尾那几行。
+
+    ★ 不收掉的话，下一间敲 `攻击` 会**接着上一场打**（遇不到这一间那只怪）。
+    """
+    got, n = [], 0
+    while _field() is not None and n < cap:
+        n += 1
+        got += send("自动")
+    return got
+
+
 def txt(slot, **kw):
     s = (TX.get(slot) or {}).get("value") or ""
     for k, v in kw.items():
@@ -610,11 +637,14 @@ print("  · 逐间候选：" + " · ".join("%s=%s" % (r, "+".join(MS[k]["name"] 
 print("⑩ 真敲『攻击』（12 间逐间 · 村镇仍是安全区）")
 FIGHT = dict(ad.saved, cls="cls_knight", level=14, hp=999, gold=0, exp=0, flags={})
 fight_bad, fight_seen = [], []
+_clear_field()                     # ★ G2：上一次运行 / 上一节留下的场先清掉
 for _f, _no, rname, _teach, enemy, _reads in overview:
     nd = ID_OF.get(rname)
     toks = enemy_tokens(enemy)
     ad.saved = dict(FIGHT, loc=TOWER, node=nd, prev=[])
     got = send("攻击")
+    # ★ G2：一条 `攻击` = 推一手 ⇒ 逐间这一场要**真收掉**（下一间才是新的一间）
+    got += fight_over()
     head = [x for x in got if "遭遇" in x]
     if not toks:
         if head or len(got) != 1:
@@ -633,6 +663,7 @@ for _f, _no, rname, _teach, enemy, _reads in overview:
         else:
             fight_seen[-1] = (rname, MS[mid]["name"], "%s · %s" % (ROLE_OF[mid], end[0].strip()))
 ad.saved = dict(FIGHT, loc="windmill_town", node="wt_gate_n", prev=[])
+_clear_field()                     # ★ G2：镇上那一敲要的是「安全区」这一档 ⇒ 先清干净
 _safe = send("攻击")
 chk("★ 12 间逐间真敲『攻击』：遇上的就是文档说的那只（层主 / Boss 也真打完一场）",
     not fight_bad, "%s" % fight_bad[:3])
