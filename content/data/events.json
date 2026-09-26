@@ -96,7 +96,7 @@
       "crowd": "哪一站聚人（node）+ 临时在场的 npc 名单 + 那一下的文案槽位 ⇒ 消费端 content/cmds_ast.py::_npcs_here（移出基位 / 在那儿算在场）+ event_lines",
       "weather_mul": "天气加权（按游戏日）⇒ 消费端 content/calendar.py::weather_weights",
       "encounter_mul": "遇敌候选加权 ⇒ 消费端 content/combat.py::pick_encounter（没给 = 零变化）",
-      "price_mul": "★ 未接（没有铺子 / 价目表 —— 21 §二「杜林给一张价目单」未落）：本域今天不用这个键；谁写进来，probe_events 会点名「这份数据今天没人读」"
+      "price_mul": "★ 已接（P-16 收口）：**物价倍数**（一个数，如 1.2 = 「价格 +20%」，真源 21 §二「北边的路封了 —— 铺子缺货、价格 +20%」）⇒ 判定口 content/calendar.py::price_mul · 消费端 content/shop.py（铺子买价 —— 面板与『购买』扣的是同一个数；没给 = ×1.0 零变化）。本域今天一条都没用这个键（29 §五 那四条里没有物价类）—— 谁写进来就是真生效，不是「没人读」"
     },
     "notes": [
       "① 集日那两位（临时在场）设计案没点名 ⇒ 选 小满 + 老陶（小孩往人堆里去 / 商队老人集日到板子那边讲路上的事）；与 31_NPC作息 的时段表按「事件优先」合成，31 落地时照这条（_notes.md 记了）。",

@@ -7,7 +7,8 @@ B3-2 轮次核过：19 §D 世界动静的效果栏**一个消费端都没有**�
 一个诚实标出来，本探针就是那件事的判据（★ 规格来自 29 §七⑧）：
 
   ① 每条事件都能算出当下成不成立（**可复现**：注入假钟）
-  ② ★ 效果栏的**每个键都有消费端**（`price_mul` 例外，但必须显式登记在「待接清单」里）
+  ② ★ 效果栏的**每个键都有消费端** —— ★ 本批之后**四个键全接**（`price_mul` 那一格
+     由 P-16 收口：B4-15 落了铺子 ⇒ 判定口 `calendar.price_mul` + 消费端 `shop` 买价）
   ③ 注入假钟跨「集日边界」⇒ 判定翻转（边界可测）
 
 判据（逐条）
@@ -22,7 +23,9 @@ B3-2 轮次核过：19 §D 世界动静的效果栏**一个消费端都没有**�
   ⑧ ★ 消费端 ④ NPC 出场：真宿主两趟（主线 3 前 / 后）+ 两个口（观察 / 去）同源
   ⑨ ★ 消费端 ③ 场地：集日那天挂板墙多两位「临时在场」，那两位**不在**原处
   ⑩ ★ 消费端 ② 遇敌：没给 mul = 与改前逐字相同；给了 mul = 分布真偏
-  ⑪ ★ 消费端 ①：`price_mul` 仍**没人读** ⇒ 待接清单里点名（数据里也不许出现）
+  ⑪ ★ 消费端 ① 物价：四个效果键**全接了**（待接清单空）· 注入一条 `price_mul` = 1.25 的
+     假事件 ⇒ 每件买价 ×1.25、收价不动；拿掉 ⇒ 回 1.0（没给 = 零变化）· 静态守卫：
+     `price_mul` 只许在 `calendar.py`（判定口）与 `shop.py`（消费端）出现
   ⑫ 初雪那 3 天：天气权重真变（消费端 `weather_weights`），别天原样
   ⑬ 文案：事件与「异动」的字**逐字**取自 texts 槽位
   ⑭ ★ 宿主插口：`timed_events` 半边取得到 + `refresh_timed` 真调一次不抛 · **幂等** ·
@@ -329,17 +332,50 @@ if BEST:
 else:
     chk("★ 找得到一张图有三个候选（遇敌用例的前提）", False, "没有候选 ≥3 的地点")
 
-print("⑪ ★ 消费端 ①：`price_mul` 仍没人读（诚实标 · 待接清单）")
+print("⑪ ★ 消费端 ①：物价倍数 `price_mul` **已接**（P-16 收口）—— 真生效，不是「没人读」")
+#: 四个效果键的**消费者登记表** —— 这是 29 §七⑧ 要的那一份（每个键都要有消费端）
 CONSUMED = {"crowd": "cmds_ast._npcs_here / event_lines", "weather_mul": "calendar.weather_weights",
-            "encounter_mul": "combat.pick_encounter"}
-PENDING = {"price_mul": "没有铺子 / 价目表（21 §二「杜林给一张价目单」未落）"}
+            "encounter_mul": "combat.pick_encounter",
+            "price_mul": "calendar.price_mul → shop 买价（content/shop.py）"}
+#: ★ P-16 收口：待接清单**空了**（B4-15 落了铺子之后，物价这一格终于有地方生效）
+PENDING = {}
 used = sorted({k for v in EV.values() for k in (v.get("effects") or {})})
-chk("★ 效果栏用到的键都在「消费者登记表」里（已接 %d 个）" % len(CONSUMED),
+chk("★ 效果栏用到的键都在「消费者登记表」里（已接 %d 个 · 待接 %d 个）"
+    % (len(CONSUMED), len(PENDING)),
     set(used) <= set(CONSUMED) | set(PENDING), sorted(set(used) - set(CONSUMED) - set(PENDING)))
-pretend = sorted(set(used) & set(PENDING))
-chk("★ 没人假装「物价」生效（待接的键一个都不许出现在数据里）", not pretend, pretend)
-chk("★ 待接清单打印出来（这两个键今天没人读：%s）" % " / ".join(sorted(PENDING)), bool(PENDING),
-    "；".join("%s → %s" % kv for kv in sorted(PENDING.items())))
+chk("★ 待接清单**空了**：四个效果键（crowd / weather_mul / encounter_mul / price_mul）"
+    "每一个都有消费端 —— P-16 当初诚实留的那一个今天收口", not PENDING, sorted(PENDING))
+chk("★ 数据里今天一条都没写 `price_mul`（29 §五 那四条不含物价类）—— 「现在没生效」是数据的"
+    "样子，不是「没人读」：下面那条注入就证明谁写进来谁真生效",
+    not [k for k, v in EV.items() if "price_mul" in (v.get("effects") or {})])
+
+#: ★ 真生效那一半（P-16 的判据）：注入一条**带 price_mul 的假事件** ⇒ 买价按倍数涨、收价不动；
+#:   拿掉 ⇒ 回 1.0 / 原价（「没给 = 零变化」那一档）。
+from content import shop as SHP                                          # noqa: E402
+_PM18 = 1.25                       # 「价格 +25%」（例值；真源 21 §二 那一行写的是 +20%）
+_base_pm18 = CAL.price_mul(st7, {})
+_base_shelf18 = [(g["id"], g["gold"], int(g["rec"]["price"])) for g in SHP.goods({})]
+EVRAW["ev_probe_price18"] = {"no": 98, "name": "probe", "scale": "每日", "scale_key": "daily",
+                             "period": {"daily": True}, "text": "SYS_EV_NONE", "where": [],
+                             "effects": {"price_mul": _PM18}}
+try:
+    _on_pm18 = CAL.price_mul(st7, {})
+    _on_shelf18 = [(g["id"], g["gold"], int(g["rec"]["price"])) for g in SHP.goods({})]
+finally:
+    EVRAW.pop("ev_probe_price18", None)
+_off_pm18 = CAL.price_mul(st7, {})
+_off_shelf18 = [(g["id"], g["gold"], int(g["rec"]["price"])) for g in SHP.goods({})]
+chk("★ 真生效：注入 `price_mul` = %s ⇒ 判定口给 %s、**每一件买价都 ×%s**（收价一个字不动）"
+    " 拿掉 ⇒ 回 %s / 原价（没给 = 零变化）" % (_PM18, _on_pm18, _PM18, _off_pm18),
+    _base_pm18 == 1.0 and abs(_on_pm18 - _PM18) < 1e-9
+    and [g for _i, g, _p in _on_shelf18] == [int(round(g * _PM18)) for _i, g, _p in _base_shelf18]
+    and [p for _i, _g, p in _on_shelf18] == [p for _i, _g, p in _base_shelf18]
+    and abs(_off_pm18 - 1.0) < 1e-9 and _off_shelf18 == _base_shelf18,
+    "%s → %s → %s" % (_base_pm18, _on_pm18, _off_pm18))
+_src18 = {p.name: p.read_text(encoding="utf-8") for p in (REPO / "content").glob("*.py")}
+_who18 = sorted(n for n, s in _src18.items() if "price_mul" in s)
+chk("★ 静态：`price_mul` 只有「判定口 + 消费端」两处 —— %s（谁再自己扫一遍 events 域算物价，这里红）"
+    % " · ".join(_who18), _who18 == ["calendar.py", "shop.py"], _who18)
 
 print("⑫ 初雪的天气加权（消费端真吃到了）")
 base_w = {wid: int(v["weight"]) for wid, v in WX.items()}

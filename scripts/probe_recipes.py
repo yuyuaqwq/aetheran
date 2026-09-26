@@ -383,6 +383,48 @@ chk("★ 菜品增益 = 最贵那样食材的品阶（普通 %d / 精制 %d / �
 chk("★ 菜品卖价 = 食材市价合计 × %s 四舍五入（按 items 市价复算 · 8 道菜）" % _sell_mult,
     not _bad_sell, "%s" % (_bad_sell or "无"))
 
+# ⑮ ★ P-6「漏口径」收口（2026-09-26 · w6/wave-f-econ 第二轮复核挑出来的两口；只加强 · 没放宽任何一条）
+#   ① 率表那三格常数（起点 90 / 每级 −10% / 下限 50）：生成器只从真源解析**那串**「90/80/70/60/50」，
+#      三格是原样搬进 `_meta` 的 —— **一个读端都没有**（生成器不读、运行期不读）⇒ 谁改了其中一格
+#      （例：下限 50 → 40）率表不会跟着动、也没人喊。这里用三格**复算整张率表**（含末档 == 下限）。
+#   ② 卖价那条「取整」= **半档向上**（Python 内置 round 是银行家舍入 —— 生成器 `round_half_up` 的注释
+#      就写着这件事）。⑭ 复算走的是生成器那一支（同一个函数）⇒ 那条口径自己漂了 ⑭ 看不出来。
+#      8 道菜里有 5 道的「材料市价合计 × 0.5」正好落在 .5 上 ⇒ 两种取整 **差 1**。
+#      ⇒ 这里**独立**写一遍半档向上（不复用生成器那份），把边界那几道点名。
+_e_sure, _e_from = int(eme.get("sure_until") or 0), int(eme.get("rate_from") or 0)
+_e_drop, _e_floor, _e_cap = (int(eme.get("drop_pct_per_level") or 0),
+                             int(eme.get("rate_floor_pct") or 0), int(eme.get("cap") or 0))
+_e_first = round(float((enh.get("rc_enh_%02d" % _e_from) or {}).get("rate") or 0) * 100)
+_e_want = [max(_e_floor, _e_first - _e_drop * i) for i in range(_e_cap - _e_sure)]
+_e_have = [round(float((enh.get("rc_enh_%02d" % lv) or {}).get("rate") or 0) * 100)
+           for lv in range(_e_sure + 1, _e_cap + 1)]
+chk("★ 率表能由三格常数复算出来（起点 %d · 每级 −%d%% · 下限 %d ⇒ %s）"
+    "—— 原先这三格一个读端都没有（改了没人喊）"
+    % (_e_first, _e_drop, _e_floor, _e_want),
+    bool(_e_have) and _e_want == _e_have and _e_have[-1] == _e_floor
+    and all(_e_have[i] - _e_have[i + 1] == _e_drop for i in range(len(_e_have) - 1)),
+    "域里 = %s" % _e_have)
+
+
+def _probe_half_up(x):                 # ← 独立一份：**不复用**生成器的 `round_half_up`
+    return int(x + 0.5) if x >= 0 else -int(-x + 0.5)
+
+
+_mid, _bad_mid = [], []
+for _rid, _v in sorted(cooks.items()):
+    _mats2 = sum(float((IT.get(e["id"]) or {}).get("price") or 0) * int(e.get("n") or 0)
+                 for e in (_v.get("inputs") or []))
+    _x2 = _mats2 * _sell_mult
+    if abs(_x2 - int(_x2) - 0.5) < 1e-9:          # 正好落在半档上
+        _gp2 = (IT.get(_v.get("out")) or {}).get("price")
+        _mid.append((_v.get("name"), _x2, _gp2, _probe_half_up(_x2), round(_x2)))
+        if _gp2 != _probe_half_up(_x2):
+            _bad_mid.append((_v.get("name"), _gp2, _x2))
+_ex = next((m for m in _mid if m[3] != m[4]), _mid[0] if _mid else ("无", 0, 0, 0, 0))
+chk("★ 卖价的「取整」= 半档向上（不是 Python `round` 的银行家舍入）：正好 .5 的那 %d 道菜逐道核过"
+    "（例：%s %s ⇒ 域里 %s、银行家舍入会给 %s）" % (len(_mid), _ex[0], _ex[1], _ex[3], _ex[4]),
+    not _bad_mid, "%s" % ((_mid or "无边界菜") if not _bad_mid else _bad_mid))
+
 # ⑪ ★ B4-8：`使用` 的两句话不许混用 —— 「手上没有这件」 vs 「有、但认不出效果」
 def _txt(key, **kw):
     return str((TX.get(key) or {}).get("value") or "").format(**kw)

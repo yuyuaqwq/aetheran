@@ -19,6 +19,7 @@ import json
 import os
 
 from .cmds_ast import TOWN, _data, _name_of_node
+from . import calendar as CAL
 from . import loot as LT
 from . import town as TW
 
@@ -48,8 +49,8 @@ def station(loc: str = TOWN) -> str:
     return TW._func_node(str(rules().get("station_func") or ""), loc)
 
 
-def price_of(rec: dict) -> int:
-    """买价 = 域里的基础价 × 品阶系数 × 固定加价（真源 05 §六 + 口径表那一格），取整到 1。
+def price_of(rec: dict, p=None, mul=None) -> int:
+    """买价 = 基础价 × 品阶系数 × 固定加价 × **物价倍数**（真源 05 §六 + 口径表 + 事件层），取整到 1。
 
     品阶取条目的 `quality`；没写的一律按「普通」（`quality_default`，口径 §二②）。
     认不出的品阶 ⇒ **当场喊**（fail-closed，不静默当 0 —— K68）。
@@ -57,6 +58,10 @@ def price_of(rec: dict) -> int:
       台账的倾向是「例：买价 = 收价 × 2」；普通档系数 1.00 ⇒ 正好是「买价 = 收价 × 2」
       （收价 = `items.price`，B3-12 落的那一路，一个字不动）。缺格 / 烂值 = 抛（fail-closed：
       没有它买价就退回等于收价，「低买高卖」那条路又开了）。
+    ★ P-16：**物价倍数**接在这一格里 —— 世界事件效果栏 `price_mul`（如 1.2 = 「价格 +20%」，
+      真源 21 §二）走事件层的唯一口 `calendar.price_mul`；今天数据里一条都没给 ⇒ 1.0
+      （买价与改前逐字相同）。★ `p` 要传（世界级事件看主线进度）；`mul` 传了就用它
+      （同一眼货架上的价得用**同一刻**的倍数 —— 由 `goods` / `find` 算一次传下来）。
     ★ 买价**永远 ≥ 收价**：算完再核一遍（口径 / 数据错了当场喊，不静默放一条刷钱的路过去）。
     """
     r = rules()
@@ -68,38 +73,43 @@ def price_of(rec: dict) -> int:
     if q not in mult:
         raise RuntimeError("品阶 %r 不在铺子口径表里（%s）" % (q, sorted(mult)))
     base = float((rec or {}).get("price") or 0)
-    gold = int(round(base * float(mult[q]) * float(mark)))
+    pm = CAL.price_mul(p=p) if mul is None else float(mul)
+    gold = int(round(base * float(mult[q]) * float(mark) * pm))
     if gold < int(base):
-        raise RuntimeError("买价 %d 比收价 %d 还低 —— 铺子被刷了（口径 / 数据错了）"
+        raise RuntimeError("买价 %d 比收价 %d 还低 —— 铺子被刷了（口径 / 数据 / 物价倍数错了）"
                            % (gold, int(base)))
     return gold
 
 
-def goods() -> list:
+def goods(p=None) -> list:
     """柜上有什么 —— `[{"id", "rec", "gold"}, …]`（按 items 域自己的顺序，不重排）。
 
     货架 = 域里 `kind_key == stock_kind` 且**有价**的那些（口径 §二①）。
-    `gold` = 买价（基础价 × 品阶系数 × 固定加价 —— 与『购买』扣的是同一个数）。
+    `gold` = 买价（基础价 × 品阶系数 × 固定加价 × 物价倍数 —— 与『购买』扣的是同一个数）。
+    ★ P-16：物价倍数**算一次**传下去（同一眼货架上的价必须是同一刻的；`p` 要传 ——
+      世界级事件看主线；不传 = 按「没有世界级事件」算，调用方别这么干）。
     """
     kind = str(rules().get("stock_kind") or "")
+    pm = CAL.price_mul(p=p)
     out = []
     for iid, rec in (_data("items") or {}).items():
         if str(iid).startswith("_") or not isinstance(rec, dict):
             continue
         if rec.get("kind_key") != kind or not rec.get("price"):
             continue
-        out.append({"id": iid, "rec": rec, "gold": price_of(rec)})
+        out.append({"id": iid, "rec": rec, "gold": price_of(rec, mul=pm)})
     return out
 
 
-def find(name) -> tuple:
+def find(name, p=None) -> tuple:
     """柜上按名字 / id 找一件 —— `(id, rec, gold, cands)`；找不到 `(None, {}, 0, [])`。
 
     ★ B4-20：比法走**全包唯一的一口** `loot.match_ids`（原先这里自己写了一份「遍历序里
       第一个命中的就算」）。`cands` 非空 = 柜上有**好几件同一个名字** ⇒ 调用方照实说，
       不替玩家挑（今天柜上那两件名字不重，但这一格归了口就不会再各自跑偏）。
+    ★ P-16：`p` 一路传给 `goods`（物价倍数按这一档的事件算 —— 与面板同一眼同一个价）。
     """
-    shelf = goods()
+    shelf = goods(p)
     hits = LT.match_ids([g["id"] for g in shelf], name)
     if len(hits) > 1:
         return (None, {}, 0, sorted(hits))

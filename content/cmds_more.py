@@ -350,7 +350,7 @@ async def item_buy(env, sink, uid, player):
     if not name:                                   # ★ B4-10：没带东西就照实说
         yield T("SYS_SHOP_ASK")
         return
-    iid, rec, gold, cands = SH.find(name)
+    iid, rec, gold, cands = SH.find(name, p)
     if not iid:
         if cands:                      # ★ B4-20：柜上同名好几件 ⇒ 照实说，不替玩家挑
             yield ambig_line("item_buy", name, cands)
