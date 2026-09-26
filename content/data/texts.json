@@ -5303,5 +5303,13 @@
     "params": [],
     "category": "系统",
     "desc": "歇脚 · 这一站没有篝火（B4-25 收「有篝火」这条守卫）"
+  },
+  "SYS_CMD_MISS": {
+    "value": "「{word}」这句我没接住。手边还能做什么，敲「帮助」看一眼。",
+    "params": [
+      "word"
+    ],
+    "category": "系统",
+    "desc": "P-54 · 路由未命中的回话（引擎 `route_miss_text_fn` 的供体 · 指向的「帮助」取自本包 commands.json 的可见声明）"
   }
 }

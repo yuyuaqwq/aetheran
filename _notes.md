@@ -6212,3 +6212,107 @@ P-50 的待槽位块（+47 行）+ P-69 的 `BUILD_STEPS`（+10 行）⇒ 那个
   scripts/probe_quests.py      ⑧-c 判据换锚（行号 → 所在函数）+ 显式「只有一处」
   _notes.md                    本文（逐件的裁决 + 依据 + 判据原始尾行 + 撤改验证 + 真源行）
 ```
+
+---
+
+# w10 · 待主线落的真源行
+
+> **本件**（分支 `w10-miss-text` · 工作树 `C:/Users/yuyu/ast-wt/w10` · 基线 `a42ecdc`）：
+> **P-54「路由未命中的回话」的内容半边**。引擎已把那一句改成**必需注入**
+> （`saintess_engine/host/runtime.py::_miss_reply`：`route_miss_text_fn` 拿不到 ⇒ 抛
+> `EngineNotConfigured`，引擎不自己编中文、也不提宿主命令名），而本包**一直没装这个口**
+> ⇒ 新引擎一上线，玩家敲一个没命中的词**一句话都拿不到**（不是「回得不好」）。
+> 真源仓 `C:/Users/yuyu/aetheran-plan` **全程只读**（本件一个字没动）；引擎仓 `framework-engine`
+> **零改动**（`git status` 空）。原有 43 支探针**一字未改**，本件只**新增**一支。
+
+## 一、要落的真源行（一条 · 逐字）
+
+**目标文件**：`C:/Users/yuyu/aetheran-plan/00_总纲/17_文案收口口径_v1.md`
+**锚点**：文件**末尾** —— 现最后一行为第 884 行
+`| SYS_ORIGIN_HOME | 家乡 · {home} ｜ 寿数 · {life} | home,life | 系统 | … |`（属 §二十八 那张表）
+⇒ 在它下面**新起一节**（建议标题 `## §二十九 槽位表 · P-54 路由未命中的回话（一条）`）并放这张表：
+
+```markdown
+## §二十九 槽位表 · P-54 路由未命中的回话（一条）
+
+| 槽位 | 文案 | 参数 | 类 | 用途 |
+|---|---|---|---|---|
+| SYS_CMD_MISS | 「{word}」这句我没接住。手边还能做什么，敲「帮助」看一眼。 | word | 系统 | P-54 · 路由未命中的回话（引擎 `route_miss_text_fn` 的供体 · 指向的「帮助」取自本包 commands.json 的可见声明） |
+```
+
+★ **逐字**（`scripts/rebuild_syscopy.py` 的 `check()` 认它：`value` 与 `desc` 与包内一字不差，
+否则抛「两处不一样」）。包内那一格**已经按这一行**落在本分支 `content/data/texts.json`
+（**727 → 728**）⇒ 搬进真源之后重跑 `scripts/rebuild_syscopy.py` 应报「已存在且一致 · 要新增 0」
+（幂等、零 diff）。
+
+**怎么写成的**（口径，供主线核对；不必进文档）：
+
+- **第二人称 · 平实 · 一两句**：与既有系统句同一条声（照 `SYS_REST_NOFIRE`「这儿没有篝火 ——
+  歇脚得在火边。」那种写法）—— 不堆假名、不带中式行政语域。
+- **给一个真存在的下一步**：指向 `帮助`（`content/data/commands.json::help.usage`，
+  `visible: true`）—— 本包**自己**的指令，**不是**宿主命令（P-54 要治的正是原先引擎内置那句
+  `<prefix>help`）。判据现读命令表核它，代码里不写死「它指的是帮助」。
+- **把玩家敲的那个词带回来**（`{word}`）：回话照着**这个词**说，不是一句万能套话。
+
+**其余真源面本件零改动**：宪法 / 命令表 / 台账 —— 没有新数值、没有新指令、没有新系统。
+
+## 二、本件落地了什么（与判据）
+
+| 文件 | 改动 |
+|---|---|
+| `content/data/texts.json` | +1 条槽位 `SYS_CMD_MISS`（727 → 728；追加在表尾 —— 与生成器的落点同形，diff 只有 +8 行） |
+| `content/miss_text.py` | **新**：`line(text, prefix)` = `route_miss_text_fn` 供体（槽位渲染 + 把玩家敲的词嵌进去，**代码零中文**）；`declared_usages()` 现读 `commands.json` 的可 `usage`；`referenced_commands()` 从**文案里**现读「它指的是哪条指令」；`check_domain()` 装配期对账（槽位在不在 + 指向的指令是不是本包**可见**声明里的那一个），答不上来当场抛 |
+| `content/apply.py` | `install_engine()` 里挂 `config.mount(route_miss_text_fn=_MISS.line)`（第 95 行那个 `mount` 块之外，与 mana 那两个钩子同一段写法）+ 装配期 `_MISS.check_domain()` + 挂完**回读一次**（`config.set_hook` 对不认识的名字**静默忽略** ⇒ 反「灯亮着线没接」）；文件抬头那张 hook 表加一行 |
+| `scripts/probe_miss.py` | **新**（第 44 支）：① 钩子已装（引擎 `_HOOKS` 认识那个名字 + 挂的就是本包那一条）② 真宿主真敲一个**现算不命中**的词 ⇒ 回话逐字 = 槽位渲染 · 非空 · 不含宿主前缀（`/help` 那类）· 把那个词带回来 · 引号指向的指令 `Host.declared_hit()` 现算真能路由且可见 ③ **反证**：`set_hook(..., None)` ⇒ `Host.route()` 必抛 `EngineNotConfigured`；装回 ⇒ 那句照旧出得来 ④ 撤改验证：槽位拿掉 / 改指一条不存在的指令 ⇒ 装配期对账当场红 ⑤ 静态守卫：那句里没有 ASCII / 整句不在 `content/*.py` 里 |
+| `_notes.md` | 本文 |
+
+**门禁原始尾行**（Python 3.12 · `GWEN_ENGINE=C:/Users/yuyu/framework-engine`）：
+
+```text
+scripts/probe_miss.py   结果：全绿 ✓
+scripts/probe_cmds.py   结果：全绿 ✓
+scripts/e2e_drive.py "唱歌"
+    » 唱歌
+        「唱歌」这句我没接住。手边还能做什么，敲「帮助」看一眼。
+    （末行）{'level': 1, 'loc': 'windmill_town', 'node': 'wt_gate_n', 'gold': 30}
+全量：ls scripts/probe_*.py 逐支跑 —— **44 支**（43 + 新增 1）：
+   真源 `aetheran-plan` @ **提交态**（`git archive HEAD` 导出）：**44/44 全绿**
+   真源**工作树**（14:54:52 落盘、未提交那一版，见 §三）：42/44 —— 2 支红（见 §三）
+```
+
+## 三、顺手发现（只报不改）：本件基线那两支红**不是本件弄的**
+
+1. **本件动手前先量的基线**（工作树刚切出来、`content/` 一个字节没动 · `a42ecdc`）：
+   全量 43 支里 **3 支红** —— `probe_copy` / `probe_monsters` / `probe_races`。
+   本件改完之后**红的还是同一批、红的那几行逐字相同**（`probe_copy:16` 与 `probe_races:18` 两行
+   前后 diff 完全一致）；其中 `probe_monsters` 那次是它解析真源时读到 `None`（`TypeError`），
+   **复跑即绿**（下一遍就是绿的）。⇒ 与本件无关。
+
+2. **还在红的那两支是同一个根因，且是「真源先行、包没跟上」**：
+   真源工作树（`00_总纲/17_文案收口口径_v1.md` 与 `06_第一阶段垂直切片/04_指令总表.md`，
+   mtime **2026-09-26 14:54:52**，**未提交**）里已经落了 **P-50 / P-68** 的真源行
+   （§二十七 `SYS_CLS_EDGE` · §二十八 `SYS_ORIGIN_HOME` · `04 §三` 那行加「家乡与寿数」），
+   而包内 `content/data/texts.json` **还没有这两条槽位** ⇒
+   - `probe_copy` ⑤「口径表 508 条都落在 texts 里」红：`['SYS_CLS_EDGE', 'SYS_ORIGIN_HOME']`；
+   - `probe_races` ⑫「P-68 槽位未铺 ⇒ 真源 `04 §三` 那一行还是旧写法」红（两态互锁）。
+
+   **证据（两态对照，同一份包）**：把真源按**提交态**导出（`git archive HEAD` ⇒
+   `%LOCALAPPDATA%/Temp/w10/plan_head`），用 `AST_PLAN=<那份>` 跑同一批探针：
+   `probe_copy` / `probe_monsters` / `probe_races` **三支全绿**；全量 **44/44 全绿**。
+   ⇒ 红的是「真源工作树上那两处先落的账还没落到包里」，**不是包这一侧的行为**
+
+3. **给主线的两条（合入时别忘）**：
+   - 这两处正是 w-h-ux（`_notes.md` §10.6「P-50 的 12 句 / P-68 那一行 —— 代码接通了、槽位没落，
+     由主线落」）留的尾巴 ⇒ **合入时连同本件一起跑一遍 `scripts/rebuild_syscopy.py`**，
+     把三条槽位（`SYS_CLS_EDGE` / `SYS_ORIGIN_HOME` / 本件的 `SYS_CMD_MISS`）一次落齐 ——
+     那样 `probe_copy` / `probe_races` 与 `probe_miss` 在**真源工作树**下也全绿。
+   - ★ 本件**故意没替它们跑生成器**：那两条属另一件的账（域里还有 P-50 的 12 句 / `04 §三` 那行
+     的「两头互锁」），混进本件的提交里会让「哪一件动了什么」对不上账；本件只**报**不改。
+
+## 四、本件没做的（明写，免得下一轮以为落了）
+
+```text
+· P-50 / P-68 那两条槽位 —— 不落（§三·3：属另一件的账；本件只报不改）。
+· 引擎那半边（`_miss_reply` / `config._HOOKS` 的注释）—— 一个字节没动（红线：引擎零改动）。
+· 宿主命令名那一族（`/help` · `/quit`）—— 本件不引用、也不替宿主写说明；那一句只许指本包指令。
+```

@@ -11,6 +11,7 @@
 | `panel_layers_fn` | `content/panel_build.py` 的栈登记表 | 面板栈声明（E2）—— 形状在 `ext_combat.panel` |
 | `action_base_fn` | `content/rules/action_base.json` 的 `cast` 表 | 行动类别 → 第一段基准耗时（刻）|
 | `recover_base_fn` | `content/rules/action_base.json` 的 `recover` 表 | 行动类别 → 第二段基准耗时（刻）|
+| `route_miss_text_fn` | `content/miss_text.py`（槽位 `SYS_CMD_MISS`） | 路由未命中的回话（P-54 · 引擎**必需注入**，不装 ⇒ 玩家敲错一个词一句话都拿不到）|
 | `recover_model_fn` | 委托声明 `F6_act_time` | 第二段的时间模型（与第一段同一形状）|
 
 ★ 零双源纪律：本文件不手写任何公式或常数；钳位归声明的 `guard`/`clamp`，
@@ -155,6 +156,25 @@ def install_engine():
     _MANA.check_domain()
     if _MANA.installed():
         config.mount(mp_regen_fn=_MANA.regen_amount, mp_gate_fn=_MANA.gate_line)
+    # ★ P-54（2026-09-26）「路由未命中」的回话：引擎把这一句改成**必需注入**了 ——
+    #   `Host.route()` 没接住玩家敲的那个词时去问 `route_miss_text_fn`；
+    #   **没装配（或装了给不出文本）⇒ 抛 `EngineNotConfigured`**
+    #   （引擎不自己编一句中文、也不提任何宿主命令名 —— 原先那半就是这么收掉的）。
+    #   ⇒ 本包不挂这个口，玩家敲一个没命中的词就是**一句话都拿不到**（不是「回得不好」）。
+    #   那一句在 texts 域（槽位 `SYS_CMD_MISS`），代码里零中文：本件只传槽位名 + 把玩家敲的
+    #   那个词嵌进去；「指向哪条指令」也归槽位（`content/miss_text.py::referenced_commands`）
+    #   —— 代码里不写死「它指的是帮助」。
+    #   ★ 装配期对账（fail-closed）：槽位在不在 + 那句引号里指向的指令是不是本包**可见**
+    #     声明里的那一个（指向一条不存在的指令 = 把玩家支去再撞一次空）⇒ 答不上来当场抛。
+    from . import miss_text as _MISS
+    _MISS.check_domain()
+    config.mount(route_miss_text_fn=_MISS.line)
+    # ★ 反「静默不装」：引擎 `config.set_hook` 对**不认识的名字静默忽略** ⇒ 装完回读一次：
+    #   读不回来 = 引擎不认识这个口（版本旧）—— 症状是「玩家敲错一个词直接抛」，要等上线
+    #   才照得出来（真机才照得出的那一类），所以在这里当场现形。
+    if config.optional_hook("route_miss_text_fn") is None:
+        raise config.EngineNotConfigured(
+            "route_miss_text_fn 没装配上：引擎 config 不认识这个口（引擎版本旧？）")
     _MOUNTED = True
 
 
