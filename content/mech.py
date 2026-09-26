@@ -118,7 +118,7 @@ def _validate(t) -> dict:
             if str(m.get("verb") or "") != _TRIGGER_VERBS[ev]:
                 raise ValueError("机制 %r 的 trigger=%s 该配动词 %r，表里写的是 %r"
                                  % (name, ev, _TRIGGER_VERBS[ev], m.get("verb")))
-            trigger_declared[ev] = name
+            trigger_declared.setdefault(ev, []).append(name)
         if route == "cast":
             cast_declared.add(name)
         for a in (m.get("actions") or []):
@@ -145,9 +145,10 @@ def _validate(t) -> dict:
                 raise ValueError("机制 %r 的 consume_event=%r 不在 _TRIGGER_VERBS 里（%s）"
                                  % (name, ce, " · ".join(sorted(_TRIGGER_VERBS))))
             used.add(ce)
-    if used != set(_TRIGGER_VERBS):
+    _mounted = set(_TRIGGER_VERBS)
+    if set(used) != _mounted or any(not v for v in trigger_declared.values()):
         raise ValueError("route=trigger 的挂载面与表对不上：表里用到 %s · 代码里挂 %s"
-                         % (sorted(used), sorted(_TRIGGER_VERBS)))
+                         % (sorted(used), sorted(_mounted)))
     return t
 
 
@@ -236,12 +237,30 @@ def _info(params: dict) -> dict:
     return (params or {}).get("info") or {}
 
 
-def _mval(params: dict) -> float:
-    """技能自己那个强度数（`skills` 域的 `mech_val`）—— 唯一来源，本层不重写。"""
+def _ctx_info(battle) -> dict:
+    """出手那一刻的**事件 ctx** 里那份技能 dict（`info`）—— 触发器那一路的 `params` 没有它。
+
+    与 `content/resources.py::_info(battle)` 读的是同一处（`battle._fire_ctx`）——「谁在出手、
+    出的哪条技能」只有一个口，不许各读各的。
+    """
+    v = getattr(battle, "_fire_ctx", None)
+    return ((v or {}).get("info") or {}) if isinstance(v, dict) else {}
+
+
+def _mval(params: dict, field: str = "mech_val") -> float:
+    """技能自己那个强度数（`skills` 域的 `mech_val` / `mech2_val`）—— 唯一来源，本层不重写。"""
     try:
-        return float(_info(params).get("mech_val") or 0)
+        return float(_info(params).get(field) or 0)
     except (TypeError, ValueError):
         return 0.0
+
+
+def _mech_of(params: dict) -> dict:
+    """这次落地的**机制声明** —— 先认 `params["mech"]`（引擎 `_mech_to_effect` 写的那个名字，
+    `mech2` 走的也是它），退化到技能自己的 `info["mech"]`（`route=cast` 那条内容动词路上没有
+    `params["mech"]`）。两者都取不到 ⇒ 空 dict（调用方一律「一个字段都不写」）。"""
+    p = params or {}
+    return of(str(p.get("mech") or _info(p).get("mech") or ""))
 
 
 def _num(m: dict, key: str) -> float:
@@ -256,10 +275,10 @@ def _num(m: dict, key: str) -> float:
 
 
 def _turns(m: dict, params: dict) -> float:
-    """这次落地持续多久（刻）：`"mech_val"` = 取技能域那个数；dict = 表里那个常数。"""
+    """这次落地持续多久（刻）：`"mech_val"` / `"mech2_val"` = 取技能域那个数；dict = 表里那个常数。"""
     t = m.get("turns")
-    if t == "mech_val":
-        return _mval(params)
+    if t in ("mech_val", "mech2_val"):
+        return _mval(params, str(t))
     if isinstance(t, dict):
         try:
             return float(t.get("value") or 0)
@@ -302,18 +321,34 @@ def _live(holder: dict, key: str, now: float) -> bool:
 
 
 def _self_cut(battle, caster, m: dict, logs) -> int:
-    """**付血**（代价那一半的公共实现）—— 按机制表里 `self_dmg_pct` 扣自己的 max_hp。
+    """**付血**（代价那一半的公共实现）—— 按机制表里 `self_dmg_pct` 扣自己。
 
-    真源口径（02_狂战士_v2.md §一）：自伤按 **max_hp 的比例**算；**保底留 1 血**
-    （引擎没有「按条件判某条技能此刻能不能放」的注入面 ⇒ 先兜住下限，别让玩家被自己打死，
-    那条 why 见 `_notes.md` 破势那条）。破势（旧）/ 血债 / 狂态 / 横扫 四条共用这一处。
+    三格全在声明里（本函数一个数都不写）：
+      · `self_dmg_base` —— 比例的**基数**：`max_hp`（缺省）＝ 生命上限的比例
+        （破势 8% / 狂斩 12% / 血债 / 狂态 / 横扫）；`hp` ＝ **当前生命**的比例
+        （焚身 35% —— 血越少付得越少，真源 §六③ 那条「满血放太浪费」就是这么来的）。
+      · `self_dmg_cap` —— 这一笔的**上限**（缺省 0 = 不设；焚身那句「最多 40 点」）。
+      · `self_dmg_pct` —— 比例本身。
+
+    真源口径（02_狂战士_v2.md §二「不能把自己打死」）：**保底留 1 血** —— 引擎没有
+    「按血线判某条技能此刻能不能放」的注入面 ⇒ 先兜住下限（那道**可用性门**的账见
+    `skill_mech.json` 里 rampage / immolate 的 `halves`）。破势（旧）/ 血债 / 狂态 / 横扫 /
+    狂斩 / 焚身 六条共用这一处。
     """
     pct = _num(m, "self_dmg_pct")
     if pct <= 0 or not isinstance(caster, dict) or caster.get("hp") is None:
         return 0
-    mx = int(ST.actor_max_hp(battle, caster) or 0)
     hp = int(caster.get("hp") or 0)
-    cut = min(int(round(mx * pct)), max(0, hp - 1))
+    base = m.get("self_dmg_base")
+    if isinstance(base, dict):
+        base = base.get("value")
+    base = str(base or "max_hp")
+    ref = hp if base == "hp" else int(ST.actor_max_hp(battle, caster) or 0)
+    cut = int(round(ref * pct))
+    cap = _num(m, "self_dmg_cap")
+    if cap > 0:
+        cut = min(cut, int(cap))
+    cut = min(cut, max(0, hp - 1))
     if cut > 0:
         LD.deal_damage(battle, None, caster, cut, logs)
         logs.append(T("COMBAT_MECH_SELF_CUT", n=cut))
@@ -533,7 +568,7 @@ def taunt_picker(battle, actor):
 
 
 # ══════════════════════════════════════════════════════════════
-# route=cast 那三条（引擎那两条路都够不着 —— 见文件抬头第 2 条）
+# route=cast 那五条（引擎那两条路都够不着 —— 见文件抬头第 2 条）
 # ══════════════════════════════════════════════════════════════
 def _cast_protect(battle, caster, info, m, logs):
     """盾墙：免伤到**自己下一次行动之前**（时长现算：`ct − 现在` —— 引擎自己推的那个数）。"""
@@ -559,14 +594,12 @@ def _cast_cleanse(battle, caster, info, m, logs):
 
 
 def _cast_hot(battle, caster, info, m, logs):
-    """安神曲：挂 300 刻再生，每刻回「这一发治疗量的 1/4」（比例来自声明，量现算）。
+    """安神曲：挂 300 刻再生，每跳回「这一发治疗量的 1/4」（比例来自声明，量现算）。
 
-    治疗量走**与 `do_heal` 同一个口**（`actions.heal_amount`）—— 不另写一套公式。
+    治疗量走**本包那个唯一的基数口**（`_heal_base_of` = F8）—— 不另写一套公式；
+    引擎的 `do_heal` 那一发吃的是同一个口（`aeth_heal_calc` 折的是同一个数）。
     条目自带 `period`（引擎优先读它，EFFECT_RULES 不必再声明一份）⇒ 时间轴上真跳。
     """
-    from ext_combat.battle import actions as ACT
-    from ext_combat.battle import game_config as GC
-
     key = str(m.get("state") or "")
     turns = _turns(m, {"info": info})
     ratio = _num(m, "hot_ratio")
@@ -576,8 +609,10 @@ def _cast_hot(battle, caster, info, m, logs):
     mx = int(_mx_raw) if _mx_raw else 0
     if mx <= 0:
         mx = int(ST.actor_max_hp(battle, caster) or 1)
-    lv = GC.formulas().skill_level_of(caster, info.get("name", "")) if caster.get("class_name") else 0
-    heal = ACT.heal_amount(ST.actor_stats(battle, caster), caster, info, lv)
+    try:
+        heal = _heal_base_of(battle, caster, info)
+    except Exception:                                   # noqa: BLE001
+        heal = _engine_heal_of(battle, caster, info)    # F8 没装配 ⇒ 引擎那一口（与接线前一字不差）
     per = int(round(float(heal) * ratio))
     if not key or turns <= 0 or per <= 0:
         return
@@ -589,10 +624,101 @@ def _cast_hot(battle, caster, info, m, logs):
     logs.append(T("COMBAT_MECH_LULLABY", turns=int(turns), per=per))
 
 
+def _f8_heal(battle, caster, info) -> float:
+    """本包 F8（`content/rules/formula_table.json::F8_heal`）**求值** —— 治疗量基数那一格。
+
+    真源 `02_数值宪法/01_属性字典与基础公式.md` F8：`heal = heal_pow × mult × (1 + heal_bonus/100)`
+      · `heal_pow`   治疗强度（真源那一栏的原话就是「治疗量基数」）
+      · `mult`       这一发技能自己的倍率（域里的 `power`：安神曲 1.5）
+      · `heal_bonus` 治疗加成（点数）—— 本包今天没有任何一档声明它 ⇒ 恒 0
+
+    ★ 本函数**只求值**、不写任何字段；取不到（公式表没挂 / 变量名对不上）⇒ 抛给调用方
+      （`_heal_base_of` 接住并回落到引擎那一口；探针 ㉓ 有撤改那条判据钉着）。
+    """
+    from . import apply as _AP                      # 公式表的唯一出口（本包那一份）
+    st = ST.actor_stats(battle, caster)
+    return float(_AP._table().eval("F8_heal", {
+        "heal_pow": float(st.get("heal_pow", 0) or 0),
+        "mult": float((info or {}).get("power") or 0),
+        "heal_bonus": float(st.get("heal_bonus", 0) or 0),
+    }))
+
+
+def _heal_base_of(battle, caster, info) -> float:
+    """这一发治疗的**基数**：本包 F8（声明）优先，取不到才回落引擎那一口。
+
+    ★ fail-closed 的落点：「公式表没装配 ⇒ 与接线前一字不差」（F8 求值抛 / 回 ≤ 0 ⇒ 用引擎那一口，
+      即声明的 `heal_formula` 或兜底 `matk × power`）—— 探针 ㉓ 有撤改那条判据钉着。
+    ★ 本函数只取基数、不写任何字段 —— 落地的两处是 `aeth_heal_calc`（引擎那一发）与
+      `_cast_hot`（再生每一跳）。
+    """
+    try:
+        got = _f8_heal(battle, caster, info)
+        if got > 0:
+            return got
+    except Exception:                                   # noqa: BLE001
+        pass
+    return _engine_heal_of(battle, caster, info)
+
+
+def _engine_heal_of(battle, caster, info) -> float:
+    """引擎那一口治疗量（`actions.heal_amount`：声明式 `heal_formula` / 兜底 `matk × power`）。"""
+    from ext_combat.battle import actions as ACT
+    from ext_combat.battle import game_config as GC
+
+    lv = GC.formulas().skill_level_of(caster, info.get("name", "")) if caster.get("class_name") else 0
+    return float(ACT.heal_amount(ST.actor_stats(battle, caster), caster, info, lv))
+
+
+@EF.register_action("aeth_heal_calc")
+def aeth_heal_calc(battle, caster, target, params, logs):
+    """治疗量的基数（F8）—— 挂在引擎的 `heal_calc`（**治疗算出后、落地前**的乘区口，主体 = 施法者）。
+
+    引擎那一发在 `ctx["heal"]` 里，而那个口只给「乘一个系数」（没有「换基数」的形参）
+    ⇒ 本层按**比值**把引擎那一发折成本包 F8 那一发（比例与 F8 都是现算，本层一个数都不写）。
+
+    ★ 为什么走 `heal_calc` 而不是 `heal_formula`：那条要 `heal_pow` 当表达式变量，而变量表由
+      内容侧另一处声明（引擎那份默认表里没有 `heal_pow`）—— 本批不许动那一处（见 `_notes.md` 的
+      「需要那一半」）。`heal_calc` 是本包已经挂着的口，且它拿到的是**同一个**技能 dict。
+    ★ fail-closed 两道：F8 求不出来（公式表没挂 / 变量对不上）/ 引擎那一发 ≤ 0 ⇒ 一个字段都不写
+      （与接线前一字不差：引擎照旧用自己那一口）。
+    """
+    ctx = getattr(battle, "_fire_ctx", None)
+    if not isinstance(ctx, dict) or not isinstance(caster, dict):
+        return
+    info = ctx.get("info") or {}
+    try:
+        want = _heal_base_of(battle, caster, info)
+    except Exception:                                   # noqa: BLE001
+        return
+    cur = float(ctx.get("heal") or 0)
+    if want <= 0 or cur <= 0:
+        return
+    ratio = want / cur
+    if abs(ratio - 1.0) < 1e-9:
+        return
+    cur_m = ctx.get("mult")
+    ctx["mult"] = (1.0 if cur_m is None else float(cur_m)) * ratio
+
+
+def _cast_self_cut(battle, caster, info, m, logs):
+    """**付血**（狂斩 / 焚身）：出手那一刻先付（真源 §二 那本账是「付：… / 收：…」两步）。
+
+    ★ 为什么这两条走 `route=cast` 而不是与 破势 同一条（命中后的 `engine` 路）：
+      ① 真源的账是先付后打，付血与「这一下打没打中」无关（自伤不是命中效果）；
+      ② 引擎那条 `if mech and mval` 的门要一个非 0 的**整数** `mech_val`，而这两条的比例
+         是 0.12 / 0.35（`int()` 会把它截成 0 ⇒ 门直接关，见文件抬头第 2 条）。
+      两格比例都取自 `skill_mech.json` 的 `self_dmg_pct`（含基数与上限），本函数不写数。
+    """
+    _self_cut(battle, caster, m, logs)
+
+
 _CAST_VERBS.update({
     "protect": _cast_protect,
     "cleanse": _cast_cleanse,
     "hot": _cast_hot,
+    "rampage": _cast_self_cut,
+    "immolate": _cast_self_cut,
 })
 
 
@@ -658,6 +784,127 @@ def aeth_block_roll(battle, caster, target, params, logs):
     logs.append(T("COMBAT_MECH_BLOCK", n=int(_dmg * mit), oath=oath, cur=got))
 
 
+# ══════════════════════════════════════════════════════════════
+# 「清空型资源」的层数快照 + 兑现端（`mark_burst`：印记 → 引爆）
+# ══════════════════════════════════════════════════════════════
+#: 层数快照那一格（挂在 actor 身上：`{资源码: 层数}`）—— 只服务「扣费/清空发生在出手之前」
+#: 那一类资源（今天的实例 = 法师的印记）。与 `_res_at` / `_mp_at` 同族：都是不落档的临时书签。
+_TRACE_KEY = "_res_trace"
+
+
+def _stacks_of(actor, key: str) -> int:
+    """actor 某条资源当前的层数（读 `effects[key].stacks`；没有条目 ⇒ 0）。"""
+    try:
+        return int(float((((actor.get("effects") or {}).get(key)) or {}).get("stacks") or 0))
+    except (TypeError, ValueError, AttributeError):
+        return 0
+
+
+def _burst_mech(info: dict) -> dict:
+    """这一次出手的机制声明里那份 `burst`（今天只有 `mark_burst`）—— 名字取 `info["mech"]` /
+    `info["mech2"]`（引擎的 `_mech_to_effect` 两格都支持）。
+
+    两格都取不到、或那条机制没声明 `burst` ⇒ 空 dict（调用方一律「一个字段都不写」）。
+    """
+    for fld in ("mech", "mech2"):
+        m = of(str((info or {}).get(fld) or ""))
+        if m.get("burst"):
+            return m
+    return {}
+
+
+def _trace_keys() -> frozenset:
+    """表里**声明了 `burst.trace` 的资源码**（现读机制表 ⇒ 加一条带 burst 的机制不用改这里）。
+
+    这一格决定「哪些资源要留清空之前的层数」—— 名字住在机制表里，代码只读不写。
+    """
+    return frozenset(str((m.get("burst") or {}).get("trace") or "")
+                     for m in mechs().values()) - {""}
+
+
+@EF.register_action("aeth_burst_trace")
+def aeth_burst_trace(battle, caster, target, params, logs):
+    """出手那一刻：给「清空型资源」记一行**层数快照**（`actor["_res_trace"][<资源码>]`）。
+
+    ★ 为什么要有这一格：引擎的扣费（`res_cost`）与清空（`consume_all`）都发生在 `act_cast`
+      **之前**（`do_skill` 的次序：预检 → 扣费 → 冷却 → `act_cast` → 命中 / 伤害）⇒ 兑现端
+      （`dmg_calc`，伤害算出之后）**读不到印记层数**。所以层数一变（= 出手那一刻）就顺手记一行；
+      兑现端读它、用完即销（一次性 —— 没重新铺印记的第二发不再加成）。
+    ★ **判据是「这一手真涨了那条资源」**（技能自己声明的 `res_gain`），不是「这一手带不带 burst」：
+      涨层的那几条（星屑 / 焰痕 / 冰棱）自己不带 burst 机制；而带 burst 的那两条（引燃 / 垂星）
+      出手时印记已经被扣费/清空 —— 两边都不许拿自己那一格去覆盖快照（否则兑现端读到 0）。
+      盯哪条资源由**机制表里 `burst.trace`** 现读（`_trace_keys()`），代码里零资源名。
+    ★ 挂载顺序：本动作排在 `content/resources.py::aeth_res_on_cast` **之后**
+      （`player_triggers()` 里最后追加）⇒ 记下的是「这一手加完之后」的层数。
+    ★ fail-closed：表里没有 burst 声明 / 这个 actor 没有那条资源 / 这一手不涨它 ⇒ 一个字段都不写。
+    """
+    actor = caster
+    if not isinstance(actor, dict):
+        return
+    key = RES.res_of_class(str(actor.get("class_name") or ""))
+    if not key or key not in _trace_keys():
+        return
+    info = _ctx_info(battle) or _info(params)
+    if int((info.get("res_gain") or {}).get(key) or 0) <= 0:
+        return                          # 这一手不涨这条资源（含引燃/垂星自己那一手）⇒ 快照保持
+    actor.setdefault(_TRACE_KEY, {})[key] = _stacks_of(actor, key)
+
+
+def _burst_mult(battle, actor, info: dict) -> float:
+    """这一发的层数乘区（`mark_burst`）：`(power + N × 每层系数) / power`。
+
+    N = 出手**之前**那一刻的层数（快照）；系数与 base 的名字都取自表里的 `burst`
+    （`rate` / `power`）⇒ 本层不认任何机制名、也不写任何数。
+    ★ 快照**一次性**：只有「真要用它」时才销（声明坏了 / N=0 ⇒ 不销，留给下一次机会）。
+    ★ 没有快照 ⇒ 1.0（一个字段都不写 —— 与接线前一字不差）。
+    """
+    m = _burst_mech(info)
+    if not m or not isinstance(actor, dict):
+        return 1.0
+    b = m.get("burst") or {}
+    key = str(b.get("trace") or "")
+    tr = actor.get(_TRACE_KEY)
+    if not key or not isinstance(tr, dict) or key not in tr:
+        return 1.0
+    try:
+        rate = float((info or {}).get(str(b.get("rate") or "mech_val")) or 0)
+        power = float((info or {}).get(str(b.get("power") or "power")) or 0)
+        n = int(tr.get(key))
+    except (TypeError, ValueError):
+        return 1.0
+    if n <= 0 or rate <= 0 or power <= 0:
+        return 1.0
+    tr.pop(key, None)                                  # ★ 用完即销（一次性）
+    # ★ 清空之后把条目**摆回 0 层**：引擎的 res_cost 判据是「**有**该条目才须足额」
+    #   （`_skill_usable` 里 `if not isinstance(entry, dict): continue`）—— 条目被
+    #   `consume_all` 连容器一起清掉之后，那道门就跟着消失了 ⇒ 摆回 0 层才是真闸门
+    #   （与 `content/resources.py::aeth_res_start` 开战那一下同一条口径；真源
+    #   04_法师_v2.md §三「引燃 先得有一层才放得出来」）。
+    RES.set_to(actor, key, 0)
+    return (power + n * rate) / power
+
+
+@EF.register_action("aeth_daze")
+def aeth_daze(battle, caster, target, params, logs):
+    """砸晕（垂星的第二格机制 `star_stun`）：给目标挂一条**控制**（`mode=skip`）。
+
+    与 `silence_lock`（`mode=no_skill`：禁技、还能普攻）**不同轴**：这一条是**整手作废** ——
+    引擎的行动前检查读 `mode`，`skip` = 这一手跳过 + 条目消费掉（真源 02_战斗机制 §〇·五
+    「控制 = 剥夺一次行动机会」）。时长只认技能自己声明的 `mech2_val`（表里 `turns: "mech2_val"`），
+    表里不抄第二份数。
+    """
+    m = _mech_of(params)
+    key = str(m.get("state") or "")
+    turns = _turns(m, params)
+    mode = str(m.get("mode") or "")
+    if target is None or not actor_alive(target) or not key or turns <= 0 or not mode:
+        return
+    if not state_rule(key):
+        return
+    _put(target, key, _now(battle) + turns, mode=mode)
+    logs.append(T("COMBAT_MECH_DAZE", name=target.get("name", ""), turns=int(turns)))
+
+
 def player_triggers() -> dict:
     """玩家 actor 要挂的注入点（引擎的事件总线 + 承伤乘区 + B4-1 的常驻被动那条路）。
 
@@ -665,6 +912,9 @@ def player_triggers() -> dict:
       多挂一个（空跑）少挂一个（接了永不触发）都在 `_validate` 里当场抛。
     ★ 职业资源那几条（`resources.json`）由 `content/resources.py::triggers()` 合并进来 ——
       同一个事件允许多个动作（例：`taken_calc` 上「减伤乘区」与「格挡」各一个），引擎按序跑。
+    ★ 另外两个口**不是机制**（它们没有机制名，也不进机制表）：它们是**数值宪法那两条算式**的消费端 ——
+      · `heal_calc` → `aeth_heal_calc`：治疗量的**基数**（F8 · 治疗强度是那一格的基数）；
+      · `act_cast` 追加 `aeth_burst_trace`：「清空型资源」的层数快照（兑现端在伤害那一步才出手）。
     """
     out = {
         "act_cast": [{"action": "aeth_on_cast"}],
@@ -674,6 +924,9 @@ def player_triggers() -> dict:
         out.setdefault(ev, []).append({"action": verb})      # ★ 追加，不覆盖（taken_calc 上有两个）
     for ev, acts in (RES.triggers() or {}).items():          # 职业资源渠道（B4-1 那批的声明）
         out.setdefault(ev, []).extend(acts)                  # ★ 同一个事件允许多个动作（引擎按序跑）
+    # ★ 顺序要紧：快照那条**必须**排在 `aeth_res_on_cast` 之后（它记的是这一手加完之后的层数）
+    out.setdefault("act_cast", []).append({"action": "aeth_burst_trace"})
+    out.setdefault("heal_calc", []).append({"action": "aeth_heal_calc"})
     return out
 
 
@@ -883,9 +1136,14 @@ def aeth_on_start(battle, caster, target, params, logs):
 
 @EF.register_action("aeth_on_dmg_calc")
 def aeth_on_dmg_calc(battle, caster, target, params, logs):
-    """攻击方乘区（`dmg_calc`）：按**出手那一刻**的血线现算（血勇：血少就打得狠）。
+    """攻击方乘区（`dmg_calc`）—— 引擎这**一个**事件在这里只有一个动词，所以两件事共用它：
 
-    现算而不是挂态 ⇒ 「治疗回到线上」自动不再生效，不留过期态（见机制表那条 judge）。
+    ① **血的乘区**（血勇那类常驻被动）：按出手那一刻的血线现算（血少就打得狠）——
+       现算而不是挂态 ⇒ 「治疗回到线上」自动不再生效，不留过期态（见机制表那条 judge）；
+    ② **层数乘区**（印记 → 引爆的兑现端）：技能声明了 `burst` 的那一发，按出手**之前**那一刻的
+       层数快照加成（`_burst_mult`；数值全在表里那三格，本函数不认任何机制名）。
+
+    两半各写各的乘区、最后一次性折进 `ctx["mult"]`（都不命中 ⇒ 一个字段都不写）。
     """
     if not _rules_mounted():
         return
@@ -893,14 +1151,18 @@ def aeth_on_dmg_calc(battle, caster, target, params, logs):
     if not isinstance(ctx, dict):
         return
     actor = caster if isinstance(caster, dict) else ctx.get("actor")
-    m = of(_passive_mech(actor))
-    if not m or m.get("trigger") != "dmg_calc" or not isinstance(actor, dict):
+    if not isinstance(actor, dict):
         return
-    below = _num(m, "hp_below")
-    mult = _num(m, "dmg_mult")
-    mx = float(ST.actor_max_hp(battle, actor) or 0)
-    hp = float(actor.get("hp") or 0)
-    if mult <= 0 or below <= 0 or mx <= 0 or hp / mx >= below:
+    mult = _burst_mult(battle, actor, ctx.get("info") or {})        # ② 层数乘区（印记引爆）
+    m = of(_passive_mech(actor))                                    # ① 血的乘区（常驻被动）
+    if m and m.get("trigger") == "dmg_calc":
+        below = _num(m, "hp_below")
+        _dm = _num(m, "dmg_mult")
+        mx = float(ST.actor_max_hp(battle, actor) or 0)
+        hp = float(actor.get("hp") or 0)
+        if _dm > 0 and below > 0 and mx > 0 and hp / mx < below:
+            mult *= _dm
+    if mult == 1.0:
         return
     cur = ctx.get("mult")
     ctx["mult"] = (1.0 if cur is None else float(cur)) * mult

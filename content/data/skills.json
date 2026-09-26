@@ -272,6 +272,7 @@
     "owner_class": "cls_berserker",
     "lv_band": "P1",
     "element": "ELE_PHYS",
+    "mech": "rampage",
     "note": "自伤 12% 生命上限，换一记 2.4 倍重击（血就是你的资源）",
     "tier": 1,
     "kind_override": "物理",
@@ -297,6 +298,7 @@
     "owner_class": "cls_berserker",
     "lv_band": "P1",
     "element": "ELE_FIRE",
+    "mech": "immolate",
     "note": "割开自己当前生命的 35%（最多 40 点）换一记 3.2 倍重击 —— 一场只放得出一次",
     "tier": 1,
     "kind_override": "物理",
@@ -447,6 +449,9 @@
     "owner_class": "cls_ranger",
     "lv_band": "P1",
     "element": "ELE_PHYS",
+    "res_gain": {
+      "RES_AIM": 1
+    },
     "note": "距离 2 也能用",
     "tier": 1,
     "kind_override": "物理",
@@ -472,6 +477,9 @@
     "owner_class": "cls_ranger",
     "lv_band": "P1",
     "element": "ELE_PHYS",
+    "res_gain": {
+      "RES_AIM": 1
+    },
     "res_cost": {
       "RES_AIM": 4
     },
@@ -500,6 +508,9 @@
     "owner_class": "cls_ranger",
     "lv_band": "P1",
     "element": "ELE_PHYS",
+    "res_gain": {
+      "RES_AIM": 1
+    },
     "res_cost": {
       "RES_AIM": 6
     },
@@ -527,6 +538,9 @@
     "power": 0.0,
     "owner_class": "cls_ranger",
     "lv_band": "P1",
+    "res_gain": {
+      "RES_AIM": 1
+    },
     "mech": "advance_ct",
     "mech_val": 30.0,
     "note": "把自己的下一次行动提前 30 刻",
@@ -550,6 +564,9 @@
     "power": 0.0,
     "owner_class": "cls_ranger",
     "lv_band": "P1",
+    "res_gain": {
+      "RES_AIM": 1
+    },
     "mech": "retreat",
     "note": "贴脸时唯一的出手：拉开距离",
     "tier": 1,
@@ -573,6 +590,9 @@
     "owner_class": "cls_ranger",
     "lv_band": "P1",
     "element": "ELE_PHYS",
+    "res_gain": {
+      "RES_AIM": 1
+    },
     "res_cost": {
       "RES_AIM": 2
     },
@@ -748,6 +768,8 @@
     },
     "mech": "mark_burst",
     "mech_val": 0.8,
+    "mech2": "star_stun",
+    "mech2_val": 100,
     "note": "印记攒到三层以上才放得出来：这一下砸下去，每层再添 0.8 倍，并把它砸晕 100 刻",
     "tier": 1,
     "kind_override": "魔法",

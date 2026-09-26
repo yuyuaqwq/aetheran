@@ -320,6 +320,25 @@ dir_event(_b5, "act_cast", actor=_c5, ctx_extra={"target": _mob5, "info": SK.ski
 dir_event(_b5, "act_cast", actor=_c5, ctx_extra={"target": _mob5, "info": SK.skill_info("cls_ranger", "短弓")})
 chk("⑤ 准星封顶 %d（夹在 0..max）" % RES.max_of("RES_AIM"), stacks(_c5, "RES_AIM") == RES.max_of("RES_AIM"),
     "⇒ %d 层" % stacks(_c5, "RES_AIM"))
+# ★ fxmech：真源 03_游侠_v2 §二 的「攒法」写的是**每次行动 +1**（不是「只有短弓 +1」）。
+#   域里六条主动原先只有短弓写了 `res_gain` ⇒ 点射 / 抢拍 / 后撤 / 狙击 / 连射 / 箭止 出手都不涨层，
+#   于是「狙击花 4 层 · 连射花 6 层」在实战里够不着（六职业试玩报告：45 批里准星最高只到 2 层）。
+#   判据两头：① 真出手那一路（定向 act_cast，逐条技能）② **域现算**（不写镜像表）。
+_b5b = build("cls_ranger", 16, uid="u_res5b")
+_c5b = focus(_b5b)
+_mob5b = (_b5b.sides.get("enemy") or [None])[0]
+put(_c5b, "RES_AIM", 0)
+for _sid5 in ("SKILL_RNG_aimshot", "SKILL_RNG_backstep", "SKILL_RNG_quickstep"):
+    dir_event(_b5b, "act_cast", actor=_c5b,
+              ctx_extra={"target": _mob5b, "info": SK.skills()[_sid5]})
+chk("⑤ ★ 每一条游侠主动出手都 +1（点射 / 后撤 / 抢拍 三手 ⇒ 3 层；改前只有短弓涨层）",
+    stacks(_c5b, "RES_AIM") == 3, "⇒ %d 层" % stacks(_c5b, "RES_AIM"))
+_miss5 = sorted(sid for sid, r in SK.skills().items()
+                if isinstance(r, dict) and r.get("owner_class") == "cls_ranger"
+                and r.get("kind_key") == "active"
+                and int((r.get("res_gain") or {}).get("RES_AIM") or 0) != 1)
+chk("⑤ ★ 域里**每一条**游侠主动都声明了 `res_gain.RES_AIM == 1`（现读域，不写镜像表）",
+    not _miss5, "没声明的：%s" % (_miss5 or "无"))
 _b6 = build("cls_priest", 16, uid="u_res6")
 #: 这一档也要「**真挨到**」才算数 ⇒ 骑在 ③ 挂的那个 `no_dodge()` fixture 上
 #: （闪避不关掉的话，「+1 祷言」这半也是掷硬币 —— 修女 16 级 dodge=0.0375）。

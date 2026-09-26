@@ -5102,6 +5102,15 @@
     "category": "战斗",
     "desc": "机制 · 静默（控制：mode=no_skill）"
   },
+  "COMBAT_MECH_DAZE": {
+    "value": "星砸在【{name}】头上 —— 它晕了 {turns} 刻，下一手什么都做不了。",
+    "params": [
+      "name",
+      "turns"
+    ],
+    "category": "战斗",
+    "desc": "机制 · 砸晕（垂星的第二格：控制 mode=skip —— 整手作废）"
+  },
   "COMBAT_MECH_FROSTVEIL": {
     "value": "霜从你脚底结上来 —— {turns} 刻里落上来的东西轻 {pct}%，你自己的法术也轻 {cost}%。",
     "params": [
