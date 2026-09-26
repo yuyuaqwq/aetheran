@@ -312,7 +312,7 @@ def main():
             "（先补真源行 → 跑 rebuild_syscopy → 再补域里那两句；反序也红）"
             % (len(_dom14), "在" if _slot14 else "不在"))
     else:
-        ok("★ P-50 两头一致：域里 adv/weak %d 门 · texts 那条槽位%s —— 今天**都没铺**（真源行还没写）"
+        ok("★ P-50 两头一致：域里 adv/weak %d 门 · texts 那条槽位%s"
            % (len(_dom14), "在" if _slot14 else "不在"))
     ad4 = Ad()
     host4 = Host(ad4, REPO, inject={"db_path": ":memory:", "clock": time.time})
@@ -331,13 +331,21 @@ def main():
            "（真源没给句 ⇒ 菜单也就不许先印那两栏 —— 更不许自己编一句顶上）")
     else:
         bad("★ P-50 菜单里出现了「优势 / 弱点」而真源还没有那两句：%s" % jm[:200])
-    # ③ 两态（探针自己造记录 + 临时注入槽位，用完即撤）
+    # ③ 两态（探针自己造记录 + 临时**撤/注**槽位，用完即还原 —— 不靠「今天本来有没有」）
+    #    ★ 2026-09-26 主线落槽位后改口径：真源行已落（SYS_CLS_EDGE 在表里）⇒「缺槽位」那一态
+    #      要**自己撤走**才算数（原来写的是「今天这一态」，落完就假红）。撤/注都真调，强度只增不减。
     _TXT14 = _CA14._texts()
     _REC14 = {"adv": "（探针造的）优势那一句", "weak": "（探针造的）弱点那一句"}
     _TPL14 = "[A]{adv}[B]{weak}"              # 探针自己给的模板（不镜像真源那一行）
-    _cases14 = []
-    _cases14.append(("缺槽位 ⇒ 不出那一行（今天这一态）", _CA14._cls_edge_line(_REC14) is None))
     _had14 = _TXT14.get(_tmp14)
+    _cases14 = []
+    if _had14 is not None:                    # 真源那条在 ⇒ 先真撤走 = 「缺槽位」那一态
+        _TXT14.pop(_tmp14, None)
+    try:
+        _cases14.append(("撤走槽位 ⇒ 不出那一行", _CA14._cls_edge_line(_REC14) is None))
+    finally:
+        if _had14 is not None:
+            _TXT14[_tmp14] = _had14
     _TXT14[_tmp14] = {"value": _TPL14, "params": ["adv", "weak"], "category": "系统",
                       "desc": "（probe_class 临时注入 —— 用完即撤）"}
     try:
@@ -351,7 +359,12 @@ def main():
             _TXT14.pop(_tmp14, None)
         else:
             _TXT14[_tmp14] = _had14
-    _cases14.append(("临时注入撤干净 ⇒ 又回到「不出那一行」", _CA14._cls_edge_line(_REC14) is None))
+    if _had14 is None:                        # 真源行还没落：照旧「没有那一行」
+        _cases14.append(("真源那条槽位仍不在 ⇒ 不出那一行", _CA14._cls_edge_line(_REC14) is None))
+    else:                                     # 真源行已落：用**真源那条模板**渲染，逐字对账
+        _cases14.append(("真源那条槽位在 ⇒ 真模板逐字渲染那一行",
+                         _CA14._cls_edge_line(_REC14)
+                         == _had14["value"].format(adv=_REC14["adv"], weak=_REC14["weak"])))
     _bad14 = [n for n, o in _cases14 if not o]
     if not _bad14:
         ok("★ P-50 接线两态真调（造记录 · 临时注入即撤）：%s" % " ｜ ".join(n for n, _ in _cases14))

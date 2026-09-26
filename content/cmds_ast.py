@@ -419,7 +419,7 @@ def class_menu(p) -> list:
                      star=_cls_star(p, v), icon=v.get("icon", ""), name=v.get("name", k),
                      role=v.get("role", ""), desc=v.get("desc", "")))
         out.append(T("SYS_CLS_MECH", mech=v.get("mech", "")))
-        edge = _cls_edge_line(v)        # ★ P-50：优势 / 弱点那一栏（真源行没落 ⇒ 今天不印）
+        edge = _cls_edge_line(v)        # ★ P-50：优势 / 弱点那一栏（★ 2026-09-26 真源行已落 ⇒ 现在真印）
         if edge:
             out.append(edge)
     out.append(T("SYS_CLS_HOW"))

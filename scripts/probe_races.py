@@ -198,8 +198,17 @@ else:
 _TXT12 = _CA12._texts()
 _REC12 = {"home": "（探针造的）家乡", "lifespan": "（探针造的）寿数"}
 _TPL12 = "<H>{home}</L>{life}"        # 探针自己给的模板（不镜像真源那一行）
-_cases12 = [("缺槽位 ⇒ 不出那一行（今天这一态）", _CA12._origin_home_line(_REC12) is None)]
 _had12 = _TXT12.get(_SK12)
+_cases12 = []
+# ★ 2026-09-26 主线落槽位后改口径：「缺槽位」那一态要**自己撤走**才算数
+#   （原来写的是「今天这一态」，真源行一落就假红）。撤 / 注都真调，强度只增不减。
+if _had12 is not None:                # 真源那条在 ⇒ 先真撤走 = 「缺槽位」那一态
+    _TXT12.pop(_SK12, None)
+try:
+    _cases12.append(("撤走槽位 ⇒ 不出那一行", _CA12._origin_home_line(_REC12) is None))
+finally:
+    if _had12 is not None:
+        _TXT12[_SK12] = _had12
 _TXT12[_SK12] = {"value": _TPL12, "params": ["home", "life"], "category": "系统",
                  "desc": "（probe_races 临时注入 —— 用完即撤）"}
 try:
@@ -213,7 +222,12 @@ finally:
         _TXT12.pop(_SK12, None)
     else:
         _TXT12[_SK12] = _had12
-_cases12.append(("临时注入撤干净 ⇒ 又回到「不出那一行」", _CA12._origin_home_line(_REC12) is None))
+if _had12 is None:                    # 真源行还没落：照旧「没有那一行」
+    _cases12.append(("真源那条槽位仍不在 ⇒ 不出那一行", _CA12._origin_home_line(_REC12) is None))
+else:                                 # 真源行已落：用**真源那条模板**渲染，逐字对账
+    _cases12.append(("真源那条槽位在 ⇒ 真模板逐字渲染那一行",
+                     _CA12._origin_home_line(_REC12)
+                     == _had12["value"].format(home=_REC12["home"], life=_REC12["lifespan"])))
 _bad12 = [n for n, o in _cases12 if not o]
 chk("★ P-68 接线两态真调（造记录 · 临时注入即撤）：%s" % " ｜ ".join(n for n, _ in _cases12),
     not _bad12, "%s" % _bad12)
