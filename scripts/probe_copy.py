@@ -625,6 +625,17 @@ def main():
         ("搭话(这儿有谁)", CT.talk, "搭话", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
         ("搭话(没有这个人)", CT.talk, "搭话 不存在的人", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
         ("搭话(这儿没人)", CT.talk, "搭话", {"loc": "belt_north", "node": "bn_bone"}),
+        # ★ 未鉴定容器（本件接的那一格）：搭话这一支新加的两条路 —— 认得出的当场开出来 /
+        #   认得名字却拆不开的那一位（认不出）。一条落进用例表 ⇒ ⑥ 的「不缺文案 / 不漏机器键」
+        #   两条守卫**自动**罩到这条新路身上（K61：覆盖面跟判据一起加）。
+        ("搭话(带着未鉴定·认得)", CT.talk, "搭话 杜林",
+         {"loc": "windmill_town", "node": "wt_gate_n", "race": "human",
+          "bag": {"unid_rare": 1},
+          "books": {"relic": {"unid_rare": {"day": 1, "known": False}}}}),
+        ("搭话(带着未鉴定·认不出)", CT.talk, "搭话 莉安",
+         {"loc": "windmill_town", "node": "wt_chapel", "race": "human",
+          "bag": {"unid_common": 1},
+          "books": {"relic": {"unid_common": {"day": 1, "known": False}}}}),
         ("问路(镇上)", CT.ask_way, "", {"loc": "windmill_town", "node": "wt_gate_n", "race": "human"}),
         ("问路(野外)", CT.ask_way, "", {"loc": "belt_north", "node": "bn_bone"}),
         # 公会与委托（B3-6b-2b：34 个槽位逐个真跑一遍 —— 不许出现取不到文案）
