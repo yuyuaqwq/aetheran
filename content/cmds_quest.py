@@ -150,6 +150,19 @@ P-25 §② 剩下的 11 条支线里，**能按真源文档补上正当条件的
     —— 手上真有这条委托的档不许被回一句「你没有证」的假话
   · 没办证的档 ⇒ `SYS_JOB_NEED_CARD` 一行、**档一个字不动**（fail-closed 不静默放行）
   · 判据：`scripts/probe_quests.py` ㉝（三档真敲 + 档上副作用 + 撤改验证）
+
+★ B4-27 ③ P-56：`放弃` 的冷却（1 个游戏日）
+--------------------------------------------
+真源 `06_第一阶段垂直切片/05_玩法数值口径_v1.md §一`：「放弃 ｜ **冷却 1 天**；**掉一点声望**，
+不影响主线」。改前 `quest_abandon` 把那一条从 `flags.quests_active` 摘掉就完事 —— 没有冷却。
+
+  · **本批只落冷却那半**：同一个**游戏日**只许放弃一条（第二条 ⇒ `SYS_JOB_ABANDON_CD` 一行、档不动）
+  · 那一格 = `flags.abandon_day`（既有容器 · 不新建）；写口/读口各一处（`_abandon_day`）
+  · 「今天」= `codex.today` → `calendar.day_now()`（**那根钟**，与悬赏轮换同一个口）——
+    不是档上那格 `p["day"]`（B4-9：那只是 `tick()` 的跨日标记）
+  · ★ **「掉一点声望」这半没落**：全仓**没有声望这个容器**（`05 §一` 也没给数）⇒ 登记待裁
+    （工作树 `_notes.md`「待鱼鱼拍板」），不自己造第二本账（K74 那一族：别跟 `评级` 开成两处口径）
+  · 判据：`scripts/probe_quests.py` ㉞（三拍真敲 + 跨日 + 档上那格假的也不许影响判定）
 """
 from __future__ import annotations
 
@@ -732,6 +745,18 @@ def _obj_ok(x, p):
     return bool((p.get("flags") or {}).get("side_" + x["name"]))
 
 
+def _abandon_day(p) -> int:
+    """上一次「放弃」是**第几个游戏日**（`flags.abandon_day`；没记过 / 坏了 = 0）。
+
+    ★ B4-27 ③（P-56）：「放弃」的冷却那一格 —— 只读、不建容器（K57：问一句冷却不该往档里塞东西）。
+      认不出（写成别的类型）一律当 0 ⇒ 退回「没冷却过」（这一格坏了不该把玩家永久锁住）。
+    """
+    try:
+        return int((p.get("flags") or {}).get("abandon_day") or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
 async def quest_abandon(env, sink, uid, player):
     p = _p(player)
     act = _mine(p)
@@ -749,7 +774,17 @@ async def quest_abandon(env, sink, uid, player):
     if not k:
         yield T("SYS_JOB_NO_ACTIVE_ONE")
         return
+    # ★ B4-27 ③（P-56）：「放弃」的冷却 = **同一个游戏日只许放弃一条**（真源 `05 §一`「冷却 1 天」）。
+    #   · 读的是**那根钟**（`_abandon_day` → `CX.today` = `calendar.day_now`，与悬赏轮换同一口）——
+    #     不是档上那格 `p["day"]`（B4-9：那只是 `tick()` 的跨日标记，别处读它会拿到旧值 / 0）。
+    #   · 冷却那一格是 `flags.abandon_day`（既有容器，不新建）；写在**真放下那一下**。
+    #   · fail-closed：冷却期内 ⇒ 只回一行、**档一个字不动**（不静默放行、不替玩家挑一条）。
+    #   · 位置在「认可这一条」之后：「没有这一条」那种问法不该被冷却挡住（那是另一件事）。
+    if _abandon_day(p) == CX.today(p):
+        yield T("SYS_JOB_ABANDON_CD")
+        return
     _set(p, "quests_active", [a for a in act if a != k])
+    _set(p, "abandon_day", CX.today(p))
     if player is not None:
         player.update(p)
     _save(env)

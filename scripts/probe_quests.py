@@ -72,6 +72,12 @@ B4-2 加的那一组（P-25 §① 主线收口 · P-37 曲线唯一口）：
       行里点了名（探针现解析；不是从别条串台凑的）· **缺一步矩阵**（逐条少做那一件 ⇒ 拦住）·
       万事俱备 ⇒ 交得掉 + 奖励入档 + `flags.quests[<id>]` 的 `step == 条件条数`
 
+B4-27 加的那一组（P-25 §① 主线交活判据 · 按条目身份复核后钉住）：㉟（见 ㉜ 之后那一节）。
+★ 台账 P-25 那句「① 主线交活只判等级」**已经过期** —— B4-2 已把 12 条主线全落上 `require`、
+`_obj_ok` 主线那一支已是「等级 **且** 逐步记账」；本批 grep 消费者复核后**没有改行为**，
+只把结论钉成机器可验：等级那一半单独载重（万事俱备 + 等级压在门槛下 ⇒ 拦住）·
+每条条件的途径都存在（与支线 ⑮/㉚ 同一把尺子）· `_obj_ok` 主线那一支两半都在（静态守卫）。
+
 B4-27 加的那一组（P-25 §② 再收一条：支 7 白烛堂的灯）：
   ㉚（扩）★ 支 7「送灯油 → 陪他配一次」的后半截落成 `talk npc_ed ×1`（「陪」= 搭话，与
       「听他讲完（三次）」同一族；次数从那一句现取）⇒ `_EXP_KIND` 6 → **7**，于是 ㉘ 的
@@ -81,6 +87,9 @@ B4-27 加的那一组（P-25 §② 再收一条：支 7 白烛堂的灯）：
 B4-27 加的那一组（P-53 见习证门）：㉝（四拍，见文件尾部那一节）。**判据没有一条放宽** ——
 既有夹具里「手拼最小档直接接活」的十几处只是照**新守卫**补上 `flags.card`（探针 / probe_copy /
 probe_cmds 各自补），原来钉的那些分支一条都没少。
+
+B4-27 加的那一组（P-56 放弃的冷却）：㉞（三拍真敲 + 跨日 + 失败档，见文件尾部那一节）。
+★ 「掉一点声望」那半**没落**（没有容器）—— 登记在工作树 `_notes.md`「待鱼鱼拍板」。
 
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_quests.py
 """
@@ -1283,6 +1292,84 @@ for _n in sorted(mainq):
 for _ln in _main_lines:
     print("      %s" % _ln)
 
+# ══════════════════════════════════════════════════════════════
+# ㉟ ★ B4-27 ①（P-25 §① 那一条的收口）：主线交活 = **等级 + 逐步记账**（B4-2 已落）
+#   本批按**条目身份** grep 消费者复核之后，把结论钉成机器可验（台账那半句「主线交活只判等级」
+#   **已经过期** —— B4-2 落了 require、`_obj_ok` 主线那一支已是 `level >= min_level` **且**
+#   逐条 `_req_ok`；台账会过期，所以判据不能只写在注释里）：
+#     ① 等级那一半**单独**是载重的：万事俱备（条件全做上）但等级压在门槛之下 ⇒ 照样拦住、
+#        档一个字不动；同一个档把等级抬回门槛 ⇒ 立刻交得掉（差别**只**在等级）——
+#        把那半摘掉就当场红
+#     ② 逐步记账那一半：与支线走的是**同一条判定**（`all(_req_ok(...))`）—— 按条钉在 ㉜
+#        （每条都写了 require + 缺一步矩阵）
+#     ③ 每条条件的**途径都存在**（与支线 ⑮ / ㉚ 同一把尺子）：`visit` 的图与节点在 maps 域里 ·
+#        `kill` 的怪在 monsters 域里 · `item` 在 items 域里且**有出产渠道**（采集 / 掉落 / 配方
+#        三处汇总，探针自己重算）· `talk` 的人挂着对话树 —— 一条做不到的条件 = 这条主线永远交不掉
+#     ④ 静态守卫：`_obj_ok` 主线那一支**必须两半都在**（`min_level` 与 `_req_ok`）——
+#        「接了就交」与「等级变唯一判据」两个方向都堵死
+# ══════════════════════════════════════════════════════════════
+_lv_bad, _lv_lines = [], []
+for _n in sorted(mainq):
+    _k, _x = mainq[_n]
+    # ① 等级那一半：条件全做上、等级压到门槛之下 ⇒ 拦住且档不动；抬回门槛 ⇒ 交得掉
+    _low = _sat_player(_x, _k)
+    _low["level"] = int(_x["min_level"]) - 1
+    _lv_out = _drive(CQ.quest_deliver, _low, "交 %d" % _n)
+    if any(ln.startswith("交了") for ln in _lv_out) \
+            or _k in ((_low.get("flags") or {}).get("quests_done") or []):
+        _lv_bad.append("主%d：等级压到 %d（门槛 %d）竟然交得掉 —— 等级那一半不在载重"
+                       % (_n, _low["level"], _x["min_level"]))
+    elif not any(ln.startswith("还没做完") for ln in _lv_out):
+        _lv_bad.append("主%d：等级不够时没说「还没做完」：%s" % (_n, _lv_out[:2]))
+    _full1 = _sat_player(_x, _k)
+    _full1["level"] = int(_x["min_level"])
+    _pay1 = _drive(CQ.quest_deliver, _full1, "交 %d" % _n)
+    if not any(ln.startswith("交了") for ln in _pay1):
+        _lv_bad.append("主%d：等级刚够（%d）也交不掉：%s" % (_n, _x["min_level"], _pay1[:2]))
+    _lv_lines.append("主%-2d 门槛 %-2d：等级 %-2d（门槛下）拦住 · 等级 %-2d 交得掉 → 「%s…」"
+                     % (_n, _x["min_level"], int(_x["min_level"]) - 1, _x["min_level"],
+                        next((ln for ln in _pay1 if ln.startswith("交了")), "?")[:14]))
+    # ③ 条件途径存在（一把一个 kind）
+    for _r in CQ._require_of(_x):
+        _kind = _r.get("kind")
+        if _kind == "visit":
+            _mv = MAPS.get(str(_r.get("map")))
+            if not _mv:
+                _lv_bad.append("主%d：要去的图 %s 不在 maps 域里" % (_n, _r.get("map")))
+            elif _r.get("node") \
+                    and str(_r["node"]) not in [x["id"] for x in (_mv.get("nodes") or [])]:
+                _lv_bad.append("主%d：要去的节点 %s 不在图 %s 里"
+                               % (_n, _r.get("node"), _r.get("map")))
+        elif _kind == "kill":
+            if str(_r.get("monster")) not in MON:
+                _lv_bad.append("主%d：要打的怪 %s 不在 monsters 域里" % (_n, _r.get("monster")))
+        elif _kind == "item":
+            _iid = str(_r.get("item"))
+            if _iid not in ITEMS and not (_iid.startswith("unid_") and _iid in DP):
+                _lv_bad.append("主%d：要拿的 %s 不在 items 域里" % (_n, _iid))
+            elif _iid not in produced:
+                _lv_bad.append("主%d：要拿的 %s **没有任何出产渠道**（采集 / 掉落 / 配方都没有）"
+                               "⇒ 这条主线永远交不掉" % (_n, _iid))
+        elif _kind == "talk":
+            if not (NPCS.get(str(_r.get("npc"))) or {}).get("dialogue"):
+                _lv_bad.append("主%d：要搭话的 %s 没挂对话树" % (_n, _r.get("npc")))
+        else:
+            _lv_bad.append("主%d：条件 kind「%s」不在主线用的那一族里（visit/kill/item/talk）"
+                           % (_n, _kind))
+# ④ 静态守卫：`_obj_ok` 主线那一支必须两半都在（`min_level` 与 `_req_ok`）
+_m_line = next((_s for _s in io.open(os.path.join(REPO, "content", "cmds_quest.py"),
+                                     encoding="utf-8").read().split("\n")
+                if _s.strip().startswith("return") and "min_level" in _s), "")
+if not _m_line or "_req_ok" not in _m_line:
+    _lv_bad.append("_obj_ok 主线那一支不再两半都在（读到的是「%s」）" % _m_line.strip())
+(ok if not _lv_bad else bad)(
+    "★ P-25 §① 主线交活那一半（B4-2 已收口 · 台账那半句已过期）：**等级 + 逐步记账两条都在载重**"
+    "（万事俱备但等级压在门槛下 ⇒ 拦住且档原样 · 抬回门槛 ⇒ 交掉）· 每条条件的**途径都存在**"
+    "（图/节点 · 怪 · 物有出产渠道 · 对话树 —— 与支线 ⑮/㉚ 同一把尺子）· `_obj_ok` 主线那一支"
+    "两半都在（静态守卫；坏 %s）" % (_lv_bad or "无"))
+for _ln in _lv_lines:
+    print("      %s" % _ln)
+
 _m_bad, _m_lines, _can, _cant = [], [], [], []
 for _k, _x in sorted(side_q.items(), key=lambda kv: kv[1]["order"]):
     _n, _lv = int(_x["order"]), int(_x["min_level"])
@@ -1815,6 +1902,97 @@ _card_lines.append("无证 ⇒ 交活「%s」· 我的委托 %s 行照旧"
     % (_card_bad or "无"))
 for _ln in _card_lines:
     print("      %s" % _ln)
+
+# ══════════════════════════════════════════════════════════════
+# ㉞ ★ B4-27 ③（P-56）：`放弃` 的冷却 = **同一个游戏日只许放弃一条**
+#      真源 = `06_第一阶段垂直切片/05_玩法数值口径_v1.md §一`「放弃 ｜ 冷却 1 天；掉一点声望」。
+#      ★ 本批**只落冷却那半**（「掉一点声望」没有容器 ⇒ 登记待裁，见 `_notes.md`）。
+#      判据（都真敲 · 拨钟造日）：
+#        ① 第 5 日 放弃 1 ⇒ 掉了 + `flags.abandon_day = 5`
+#        ② 同一日再 放弃 2 ⇒ **拦住**（冷却那一行）+ **档一个字不动**
+#        ③ 跨到第 6 日 ⇒ 放行（冷却真的只有 1 个游戏日）
+#        ④ 冷却期内「另一件事」不许被连累：`放弃 99`（不在手上）照旧回「没有这一条」·
+#           裸「放弃」照旧回「放弃哪一条」（两拍档都不动）
+#        ⑤ ★ 判定读的是**那根钟**：档上那格 `p["day"]` 故意写成错的旧值也不许影响
+#           （B4-9 同族 —— 日期戳一律现算）· 那一格写坏了（认不出）不许把玩家永久锁住
+# ══════════════════════════════════════════════════════════════
+_CD_Q = (TX.get("SYS_JOB_ABANDON_CD") or {}).get("value") or ""
+_NONE_Q = (TX.get("SYS_JOB_NO_ACTIVE_ONE") or {}).get("value") or ""
+_ASK_Q = (TX.get("SYS_JOB_ABANDON_ASK") or {}).get("value") or ""
+_cd_bad, _cd_lines = [], []
+if not _CD_Q:
+    _cd_bad.append(("槽位 SYS_JOB_ABANDON_CD 取不到文案", ""))
+_CD_D = 5
+_at_day(_CD_D)                                  # ★ 拨钟造「第 5 个游戏日」
+# ① 第一条：放得下 + 冷却那一格写下**今天**
+_p_cd1 = _player(level=3, day=99, flags={"card": 1,
+                                         "quests_active": ["q_main_01", "q_main_02"]})
+_o_cd1 = _drive(CQ.quest_abandon, _p_cd1, "放弃 1")
+_f_cd1 = _p_cd1.get("flags") or {}
+if not any("放弃了" in ln for ln in _o_cd1):
+    _cd_bad.append(("第 %d 日 · 放弃 1" % _CD_D, _o_cd1[:2]))
+if _f_cd1.get("quests_active") != ["q_main_02"] or int(_f_cd1.get("abandon_day") or 0) != _CD_D:
+    _cd_bad.append(("第 %d 日 · 掉完之后档上不对" % _CD_D, _f_cd1))
+_cd_lines.append("第 %d 日 · 放弃 1 ⇒ 「%s」（档上 abandon_day=%s · 手上 %s）"
+                 % (_CD_D, next((ln for ln in _o_cd1 if "放弃了" in ln), "?"),
+                    _f_cd1.get("abandon_day"), _f_cd1.get("quests_active")))
+# ② 同一天第二条：拦住 + 档一个字不动（`day=99` 那格假的旧戳照样不许影响判定）
+_p_cd2 = _player(level=3, day=99, flags={"card": 1, "quests_active": ["q_main_02"],
+                                         "abandon_day": _CD_D})
+_o_cd2 = _drive(CQ.quest_abandon, _p_cd2, "放弃 2")
+if _o_cd2 != [_CD_Q]:
+    _cd_bad.append(("同一日 · 放弃 2（应当只回冷却那一行）", _o_cd2[:2]))
+if (_p_cd2.get("flags") or {}) != {"card": 1, "quests_active": ["q_main_02"],
+                                   "abandon_day": _CD_D}:
+    _cd_bad.append(("同一日 · 拦下时动了档", _p_cd2.get("flags")))
+_cd_lines.append("同日 · 放弃 2 ⇒ 「%s」· 档原样" % (_o_cd2[0][:20] if _o_cd2 else "?"))
+# ④ 冷却期内「另一件事」不受连累（不在手上 / 没带编号 —— 都是别的问法）
+_o_cd4 = _drive(CQ.quest_abandon, _player(level=3, flags={"card": 1, "quests_active": ["q_main_02"],
+                                                          "abandon_day": _CD_D}), "放弃 99")
+_p_cd5 = _player(level=3, flags={"card": 1, "quests_active": ["q_main_02"], "abandon_day": _CD_D})
+_o_cd5 = _drive(CQ.quest_abandon, _p_cd5, "放弃")
+if _o_cd4 != [_NONE_Q] or _o_cd5 != [_ASK_Q]:
+    _cd_bad.append(("冷却期内的另一件事被连累", (_o_cd4[:2], _o_cd5[:2])))
+if (_p_cd5.get("flags") or {}).get("quests_active") != ["q_main_02"]:
+    _cd_bad.append(("裸「放弃」动了档", _p_cd5.get("flags")))
+# ③ 跨日 ⇒ 放行（冷却只有 1 个游戏日）
+_at_day(_CD_D + 1)
+_p_cd3 = _player(level=3, day=99, flags={"card": 1, "quests_active": ["q_main_02"],
+                                         "abandon_day": _CD_D})
+_o_cd3 = _drive(CQ.quest_abandon, _p_cd3, "放弃 2")
+_f_cd3 = _p_cd3.get("flags") or {}
+if not any("放弃了" in ln for ln in _o_cd3) \
+        or int(_f_cd3.get("abandon_day") or 0) != _CD_D + 1:
+    _cd_bad.append(("跨到第 %d 日竟然还拦着" % (_CD_D + 1), (_o_cd3[:2], _f_cd3)))
+_cd_lines.append("第 %d 日 · 放弃 2 ⇒ 「%s」（abandon_day 跟到 %s）"
+                 % (_CD_D + 1, next((ln for ln in _o_cd3 if "放弃了" in ln), "?"),
+                    _f_cd3.get("abandon_day")))
+# ⑤ 那一格写坏了（认不出）不许把玩家永久锁住 —— 退回「没冷却过」
+_p_cd6 = _player(level=3, flags={"card": 1, "quests_active": ["q_main_02"],
+                                 "abandon_day": "坏了"})
+_o_cd6 = _drive(CQ.quest_abandon, _p_cd6, "放弃 2")
+if not any("放弃了" in ln for ln in _o_cd6):
+    _cd_bad.append(("abandon_day 写坏了却被永久锁住", _o_cd6[:2]))
+# 静态守卫：那一格只有 `cmds_quest.py` 两处（读口 `_abandon_day` + 写口那一行）
+_ab_hits = []
+for _p_ab in sorted(_glob.glob(os.path.join(REPO, "content", "*.py"))):
+    for _i_ab, _ln_ab in enumerate(io.open(_p_ab, encoding="utf-8").read().split("\n")):
+        if '"abandon_day"' in _ln_ab or "'abandon_day'" in _ln_ab:
+            _fn_ab = next((_s.split("(")[0].replace("def ", "").strip()
+                           for _s in reversed(io.open(_p_ab, encoding="utf-8").read()
+                                              .split("\n")[:_i_ab]) if _s.startswith("def ")), "?")
+            _ab_hits.append((os.path.basename(_p_ab), _i_ab + 1, _fn_ab))
+if [h for h in _ab_hits if h[0] != "cmds_quest.py"] or len(_ab_hits) != 2 \
+        or not any(h[2] == "_abandon_day" for h in _ab_hits):
+    _cd_bad.append(("冷却那一格出现了第二个口", _ab_hits))
+(ok if not _cd_bad else bad)(
+    "★ B4-27（P-56）`放弃` 的冷却（1 个游戏日 · 源 05 §一）：同日第二条拦住且档原样 · 跨日放行 · "
+    "冷却期内别的问法不受连累 · 判定走那根钟（档上那格假的也不影响）· 那一格坏掉不把人锁死 · "
+    "读写各一处（坏 %s）" % (_cd_bad or "无"))
+for _ln in _cd_lines:
+    print("      %s" % _ln)
+FC_Q.bind_host(**_FC_SAVED)                     # ★ 拨回真钟
+
 for n in notes:
     print("  · " + n)
 

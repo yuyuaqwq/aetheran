@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 """探针：dialogues 域（14 位 · need 条件择优 · 与 npcs 双向对账 · 一屏 400 字）。
 
+★ P-12 那条（对话层的**取句顺序**）也钉在这里（⑧）：层序 `meet → daily → main → hidden → idle`
+  +「熟了才轮到 daily」+「说过的句子让位」+ `start` 白写字段登记（与 P-60 同族）。
+  ★ 台账 P-12 已经 ✅（2026-09-25 包 `4815bdb` 落的那三件）—— 本探针只**钉住**它，不改行为。
+
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_dialogues.py
 """
 from __future__ import annotations
@@ -88,6 +92,76 @@ has_main = [k for k, v in dl.items() if "main" in v["nodes"]]
 has_hidden = [k for k, v in dl.items() if "hidden" in v["nodes"]]
 print("  · 四层分布：daily %d 位 · main %d 位 · hidden %d 位" % (
     len(has_daily), len(has_main), len(has_hidden)))
+
+# ⑧ ★ P-12（对话层的**取句顺序** —— 2026-09-25 包 `4815bdb` 已落）：层序 = 人先熟、事才说
+#    台账那一条的原状是「`cmds_talk` 按 `main → hidden → meet → daily → idle` 挑」（刚认识就剧透
+#    主线、底牌一见面就漏；哈根的 hidden 兜底句还把 meet / daily 永久遮住）。已落的口径 =
+#    `meet → daily → main → hidden → idle` +「同一个对话树搭过 ≥ 3 次才算熟」+「说过的句子让位给
+#    还没说过的层」。本判据把它钉成机器可验，且与实现**各写各的**（这里用一棵**假树**直接调
+#    `_pick_layer`，不去读实现里的常量表是怎么写的）：
+#      ① 层序常量 == 真源那串（`meet daily main hidden idle`）·「熟了」的门槛 == 3
+#      ② 还不熟（搭 0 / 2 次）⇒ **只有 `meet` 那一档会说话**（daily 的门没过 · main / hidden 排后头）
+#      ③ 熟了（搭 3 次）⇒ 轮到 `daily` —— ★ **不是 `main`**：层序里 daily 排在 main 前面
+#         （原先那条顺序会把主线剧透给刚认识的人）
+#      ④ 说过的句子让位给还没说过的层：daily 听过 ⇒ main ⇒ hidden ⇒ idle；
+#         全会说过才回到层序上第一档（daily）—— 兜底句不许把 main / hidden 永久遮住
+#      ⑤ `start` 字段：每棵树的 `start` == 层序排头（`"meet"`）· 且 `content/*.py` 里
+#         **一处读取都没有** —— **白写字段**（与 P-60 同族）在这里**登记**；哪天有人读它当场红
+#         （读了 = 多出第二个取句口径，要重新裁决）
+import glob as _glob8                                                       # noqa: E402
+import io as _io8                                                           # noqa: E402
+
+from content import cmds_talk as CT                                         # noqa: E402
+
+_FIVE = {_ly: {"texts": [{"need": None, "text": _ly.upper()}]}
+         for _ly in ("meet", "daily", "main", "hidden", "idle")}
+_DLG12 = "dlg_probe_p12"
+
+
+def _p12(n, heard=()):
+    """一棵假树的档：搭过 n 次话 + 听过哪几句（形状照 `heard` 那本账）。"""
+    return {"flags": {"talked": {_DLG12: n}}, "heard": {_DLG12: {h: 1 for h in heard}}}
+
+
+def _pick12(n, heard=()):
+    return CT._pick_layer(_FIVE, _p12(n, heard), None, _DLG12)
+
+
+bad8 = []
+if tuple(CT.LAYERS) != ("meet", "daily", "main", "hidden", "idle"):
+    bad8.append("层序常量 = %s（真源那串 = meet → daily → main → hidden → idle）"
+                % (tuple(CT.LAYERS),))
+if int(CT.FAMILIAR_TALKS) != 3:
+    bad8.append("「熟了」的门槛 = %s（真源 = 同一个对话树搭过 ≥ 3 次）" % CT.FAMILIAR_TALKS)
+for _n in (0, 2):                                     # 还不熟 ⇒ 只有 meet
+    _ly, _, _tx = _pick12(_n)
+    if _ly != "meet":
+        bad8.append("搭 %d 次（还不熟）出的却是「%s」层 —— 应当是 meet" % (_n, _ly))
+for _n, _h, _want in ((3, (), "daily"),                     # 熟了 ⇒ daily（不是剧透的 main）
+                      (9, ("daily#0",), "main"),
+                      (9, ("daily#0", "main#0"), "hidden"),
+                      (9, ("daily#0", "main#0", "hidden#0"), "idle"),
+                      (9, ("daily#0", "main#0", "hidden#0", "idle#0"), "daily")):
+    _ly, _, _tx = _pick12(_n, _h)
+    if _ly != _want:
+        bad8.append("搭 %d 次 · 听过 %s ⇒ 出的却是「%s」层（应当是 %s）"
+                    % (_n, list(_h), _ly, _want))
+_starts = sorted({str(v.get("start")) for v in dl.values()})
+if _starts != ["meet"]:
+    bad8.append("每棵树的 start 不全是「meet」：%s" % _starts)
+_start_read = []
+for _pp in sorted(_glob8.glob(os.path.join(str(REPO), "content", "*.py"))):
+    for _i8, _l8 in enumerate(_io8.open(_pp, encoding="utf-8").read().split("\n")):
+        if '.get("start")' in _l8 or '["start"]' in _l8:
+            _start_read.append((os.path.basename(_pp), _i8 + 1))
+if _start_read:
+    bad8.append("content/*.py 里有人读 `start` 了（白写字段被读了 = 多出第二个取句口径）：%s"
+                % _start_read)
+chk("★ P-12 取句顺序（层序 %s · 熟门槛 %s）：不熟只有 meet · 熟了轮到 daily（不是剧透的 main）· "
+    "说过的让位给没说的 · `start` 白写（已登记）"
+    % (" → ".join(CT.LAYERS), CT.FAMILIAR_TALKS), not bad8, "；".join(bad8))
+print("      假树五层真调 `_pick_layer`：搭 0/2 次 ⇒ meet ｜ 搭 3 次 ⇒ daily ｜ daily 听过 ⇒ main "
+      "⇒ hidden ⇒ idle ⇒ 全说过回 daily ｜ 14 棵树的 start = %s（无人读 · 白写登记）" % _starts)
 
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
