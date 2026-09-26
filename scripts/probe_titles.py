@@ -16,6 +16,8 @@
   ⑩ 用到的文案槽位都在 texts 域（6 个）
   ⑪ ★ 端到端：真宿主 + 假适配器敲「去 北墙根」×2 +「搭话 哈根」+「观察」→ 落档里真的记下了
   ⑫ 可达性（信息行 + 一条底线）：今天能拿到 ≥5 个（不让前置换掉整层玩法）
+  ⑬ ★ P-13（本波 w5）：称号 7「拾荒人的朋友」指谁 —— 条件那两条任务同一个 NPC 给的 ·
+     「拾荒人」在 npcs 域 0 名（在 monsters 是精英、在 quests 是主线名）⇒ 只登记、不改数据
 
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_titles.py
 """
@@ -370,6 +372,52 @@ try:
         (_lines.get("称号") or [""])[0][:40])
 except Exception as exc:                                               # noqa: BLE001 —— 起不来就是红
     chk("★ 端到端跑得起来（真宿主契约）", False, "%s: %s" % (type(exc).__name__, exc))
+
+# ⑬ ★ P-13（2026-09-26 · 本波 w5）：「拾荒人的朋友」到底指谁 —— 由**数据**说清，不靠注释
+#   那条老账的由来：称号 7 的「怎么拿到」写着「完成拾荒人的两条支线」，而 npcs 域里**没有**
+#   「拾荒人」这个人 —— 那它指的是谁？本档把这条链**每一环都现查一遍**（K80 的自检问法：
+#   「这句指的是哪一条数据？」）：
+#     · 称号 7 的条件那两条任务 = 同一个 NPC 给的（小满）
+#     · 「拾荒人」在 npcs 域里 **0 命中**（不是人）；在 monsters 域里是精英（`ms_pick_scavenger`）；
+#       在 quests 域里名字等于「拾荒人」的是**一条主线**（q_main_05 · 玛莎给的）
+#   ⇒ 那句「完成拾荒人的两条支线」能且只能读成「（与）拾荒人（有关的那两条）支线」
+#     = 小满给的那两条（24 §二 支 13 / 14：还石头 · 带他看塔）。B4-3 的只读复核就是这个结论。
+#   ★ 这一档只**登记**（不改数据）：要让玩家读到的那句不含糊 ⇒ 改真源 `21_长期目标层_v1.md §一`
+#     那一格（+ 口径 `16_称号域口径_v1.md` 同句），归主线（见本波 `_notes.md §三`）。
+_NPC13 = st.domain("npcs") or {}
+_TID13 = next((k for k, v in BOOK.items() if v.get("no") == 7), None)
+_R13 = BOOK.get(_TID13) or {}
+_DONE13 = [(a, b) for a, b, _c in RB.walk(dict(_R13.get("cond") or {}), [])
+           if RB._key_of(a) == "done"]
+_GIV13 = [(QU.get(b) or {}).get("giver") for _a, b in _DONE13]
+chk("★ P-13：称号 7「%s」的条件 = 两条任务 %s —— 同一个 NPC 给的（%s ⇒ %s）"
+    % (_R13.get("name"), [b for _a, b in _DONE13], sorted(set(_GIV13)),
+       ((_NPC13.get(_GIV13[0]) or {}).get("name") if _GIV13 and _GIV13[0] else "")),
+    len(_DONE13) == 2 and len(set(_GIV13)) == 1 and all(g in _NPC13 for g in _GIV13 if g))
+_PICKN13 = [v.get("name") for v in _NPC13.values() if v.get("name") == "拾荒人"]
+_PICKM13 = [k for k, v in MO.items() if v.get("name") == "拾荒人"]
+_PICKQ13 = [k for k, v in QU.items() if v.get("name") == "拾荒人"]
+chk("★ P-13：「拾荒人」在 npcs 域 **0 名**（它不是人）· 在 monsters 域 %s（精英）· "
+    "在 quests 域 %s（主线，玛莎给的）—— 两条支线都是小满给的 ⇒ 那句不该读成「它自己的支线」"
+    % (_PICKM13, _PICKQ13),
+    not _PICKN13 and bool(_PICKM13) and bool(_PICKQ13))
+# ★ 二选一的**依据**（为什么是「改正文案」而不是「补一个 NPC」）—— 两句话都由数据当场说清：
+#   ① 「拾荒人」在数据里是**玩家的对手**：主线 `q_main_05`（名字就叫「拾荒人」· 玛莎给的）的要求
+#      是 `kill ms_pick_scavenger` ⇒ 在同一张图里再补一个**同名 NPC** = 一个名字挂两个实体，
+#      还会与主 5「打拾荒人」正面撞车（K97 那族：同名的两件东西）。
+#   ② 能挂上称号 7 的那两条支线**已经是**小满给的（24 §二 支 13 / 14 · 口径 §二 第 7 行）——
+#      NPC 本来就在，缺的只是玩家可见那句里点他的名 ⇒ 改那**一句文案**，不动数据。
+_KILL13 = [(r or {}).get("monster") for r in ((QU.get("q_main_05") or {}).get("require") or [])
+           if isinstance(r, dict) and r.get("kind") == "kill"]
+chk("★ P-13 依据①：「拾荒人」这条主线 `q_main_05`（%s 给的）的要求 = 打死 %s ⇒ 「拾荒人」是**打的**，"
+    "不是给支线的人 ⇒ ★ 不补同名 NPC（一个名字挂两个实体 + 与主 5 对撞）"
+    % ((QU.get("q_main_05") or {}).get("giver"), _KILL13),
+    "ms_pick_scavenger" in _KILL13)
+chk("★ P-13 依据②：能挂上称号 7 的那两条支线的 giver 就是 %s（`npc_xiaoman`）—— 人本来就在数据里，"
+    "缺的只是玩家可见那句点名 ⇒ **改文案**（要改的真源行逐字写在 `_notes.md`）"
+    % ((_NPC13.get("npc_xiaoman") or {}).get("name") or "?"),
+    sorted(set(_GIV13)) == ["npc_xiaoman"]
+    and (_NPC13.get("npc_xiaoman") or {}).get("name") == "小满")
 
 # ⑫ 可达性（信息行 + 一条底线）：今天的数据里几个拿得到
 gaps, live = {}, []
