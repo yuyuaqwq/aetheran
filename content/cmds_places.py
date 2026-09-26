@@ -153,13 +153,17 @@ async def inn(env, sink, uid, player):
 
 
 async def caravan(env, sink, uid, player):
-    """`商队` —— 歇脚处打听消息。
+    """`商队` —— 歇脚处打听消息 · ★ fix7-gear 起**真到货**。
 
-    两条都**现算**、都不手写：
+    三条都**现算**、都不手写：
       · 今天的动静 = 事件层里**世界级**（`scale_key == "world"`）且落在镇上的那几条 ——
         数据里就是「商队在路上 / 商队到了」那一对（口径 `29_世界事件 §五`）
       · 跟车来的人现在在哪一站 = `npcs` 里带 `condition.event` 的那几位，逐个核**此刻真的在场**
         （走 `_npcs_here` 一口：时辰 / 天气 / 事件三档一起看）—— 没到场就不列
+      · ★ fix7-gear：**货** = 柜上挂着事件的那一家（口径表 `shelves.*.event`，今天 = 商队那家）。
+        车没到 ⇒ 照实说**在等什么**（那件事等的是哪条委托，从 `events.period` 现取 —— 原先这一句
+        只说「今天没有车来」，玩家看不到后续，p1 报告「体验-9」）；车到了 ⇒ 柜上那几件真列出来，
+        `购买` 也真买得着（走 `content/shop.py` 那一个口，价与药铺同一个算法）。
     """
     p = _p(player)
     line = town_gate(p)
@@ -176,6 +180,27 @@ async def caravan(env, sink, uid, player):
             yield T(t)
     if not news:
         yield T("SYS_CARAVAN_QUIET")
+    for key in SH.stationless():                   # ★ fix7-gear：挂在事件上的那一家
+        ev = str(SH.shelf_rec(key).get("event") or "")
+        if not ev:
+            continue
+        if not CAL.event_on(ev, p=p):
+            who = SH.event_wait(key)
+            if who:
+                yield T("SYS_CARAVAN_WHY", name=who)
+            continue
+        rows = SH.goods(p, shelf=key)
+        if rows:
+            yield T("SYS_CARAVAN_GOODS")
+            for g in rows:
+                yield T("SYS_SHELF_ROW", icon=g["rec"].get("icon") or "",
+                        name=g["rec"].get("name") or g["id"], gold=g["gold"],
+                        level=SH.level_need(g["rec"]))
+            continue
+        for g in SH.goods_at(key):                 # 车到了、可你还不到级：照实说（不静默）
+            yield T("SYS_SHELF_LOCK", name=g["rec"].get("name") or g["id"],
+                    level=SH.level_need(g["rec"]), now=int(p.get("level") or 0))
+            break
     outsiders = []
     for node in ((_data("maps") or {}).get(TOWN) or {}).get("nodes") or []:
         nid = str(node.get("id") or "")

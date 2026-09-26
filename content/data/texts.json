@@ -5362,5 +5362,106 @@
     ],
     "category": "系统",
     "desc": "P-68 出身那一屏 · 六族的家乡与寿数（数据在 races 域：home / lifespan 两格）"
+  },
+  "SYS_SMITH_GOODS": {
+    "value": "柜上摆着柯尔自己打的粗货。比不上外头捡来的，胜在现成。",
+    "params": [],
+    "category": "系统",
+    "desc": "B4-15 同族 · 铁匠铺货架（柯尔打的粗货）抬头"
+  },
+  "SYS_SHELF_ROW": {
+    "value": "· {icon} {name} —— {gold} 铜板（{level} 级起卖）",
+    "params": [
+      "icon",
+      "name",
+      "gold",
+      "level"
+    ],
+    "category": "系统",
+    "desc": "B4-15 同族 · 货架（铁匠铺 / 商队）· 一件一行（等级 = 条目自带那一格）"
+  },
+  "SYS_SHELF_LOCK": {
+    "value": "「{name}」要 {level} 级 —— 你现在 {now} 级。",
+    "params": [
+      "name",
+      "level",
+      "now"
+    ],
+    "category": "系统",
+    "desc": "B4-15 同族 · 货架 · 点名不到等级的那一件（铁匠铺 / 商队共用）"
+  },
+  "SYS_SMITH_MATS": {
+    "value": "强化要：{enh}。打造要：{craft}。",
+    "params": [
+      "enh",
+      "craft"
+    ],
+    "category": "系统",
+    "desc": "同族 · 铁匠铺 · 两条线各吃哪几样料（两组名字摆在一起，免得看错）"
+  },
+  "SYS_SMITH_CRAFT_HEAD": {
+    "value": "炉边那堆料是留给学徒的 —— 凑够了，柯尔让你自己上手。",
+    "params": [],
+    "category": "系统",
+    "desc": "同族 · 铁匠铺 · 打造抬头"
+  },
+  "SYS_SMITH_CRAFT_ROW": {
+    "value": "· {name}：{need} + {gold} 铜板（{level} 级起）",
+    "params": [
+      "name",
+      "need",
+      "gold",
+      "level"
+    ],
+    "category": "系统",
+    "desc": "同族 · 铁匠铺 · 打造一行（条目自带 forge 那一格）"
+  },
+  "SYS_SMITH_CRAFT_ASK": {
+    "value": "打哪一件？打『打造 <名字>』。",
+    "params": [],
+    "category": "系统",
+    "desc": "同族 · 打造 · 没给名字"
+  },
+  "SYS_SMITH_CRAFT_MISSING": {
+    "value": "打『{name}』要：{need} + {gold} 铜板。你还差：{lack}。",
+    "params": [
+      "name",
+      "need",
+      "gold",
+      "lack"
+    ],
+    "category": "系统",
+    "desc": "同族 · 打造 · 料或钱不够"
+  },
+  "SYS_SMITH_CRAFT_OK": {
+    "value": "🔨 {icon}{name} 打出来了 —— 柯尔看了一眼，没说话。",
+    "params": [
+      "icon",
+      "name"
+    ],
+    "category": "系统",
+    "desc": "同族 · 打造 · 打出来了"
+  },
+  "SYS_CARAVAN_WHY": {
+    "value": "路上还没放车 —— 得先走完『{name}』那条（『我的委托』看进度）。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "同族 · 商队 · 车没来是为什么（条件从 events 域的 period 现取）"
+  },
+  "SYS_CARAVAN_GOODS": {
+    "value": "跟着车来的货摊在棚子底下：",
+    "params": [],
+    "category": "系统",
+    "desc": "同族 · 商队 · 到货那几件抬头"
+  },
+  "SYS_FORGE_NOSUCH": {
+    "value": "炉子上打不出「{name}」这一件 —— 打『打造』看能打什么。",
+    "params": [
+      "name"
+    ],
+    "category": "系统",
+    "desc": "同族 · 打造 · 名字对不上"
   }
 }

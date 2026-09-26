@@ -330,19 +330,24 @@ async def item_sell(env, sink, uid, player):
 
 
 async def item_buy(env, sink, uid, player):
-    """`购买 <物品> [数量]` —— 在药铺柜上买（B4-15）。
+    """`购买 <物品> [数量]` —— 在**脚下这一家**铺子的柜上买（B4-15 · fix7-gear 扩成几家）。
 
     守卫（声明 `guard_desc` =「在铺子且钱够」）分两半：
-      · 地点走唯一执行面 `town_gate` —— 那一站从 `content/shop.py::station()` 现取
-        （npcs 域里带 `herb` 的那个人所在节点；叫不准就拦，不猜）
+      · 地点走唯一执行面 `town_gate` 那一族的语义（不在镇上 ⇒ 那一句），
+        那一站从 `content/shop.py::station(key)` 现取（npcs 域里带那个职能的人所在节点；叫不准就拦，不猜）
       · 钱在下面按**现算价**判 —— 不够只回一句，**档一个字不动**（不扣钱、不给货）
     ★ 价与货架全从 `content/shop.py` 来（基础价 × 品阶系数 —— 真源 05 §六 / 00 §六）：
       本文件不写价、不写 id、不写节点名。
-    ★ 「柜上没有」与「背包里没有」是两句不同的话（K69 同族）—— 买走的是**柜上**那件，
-      与包里有没有同名东西无关。
+    ★ fix7-gear：货架不止一家（药铺 · 柯尔那家 · 商队那家）——
+      先在**脚下这一家**的柜上找；找不到再看别家，四档照实说：
+        · 别家有、这一家没有 ⇒ 指路（站名从 maps 现取）
+        · 找到了、**等级不够** ⇒ 那一句（还差几级），档不动
+        · 找到了、可它挂的事还没发生（商队那家：车没到）⇒ 照实说在等什么，档不动
+        · 哪儿都没有 ⇒ 柜上没有（**不是**「背包里没有」—— K69 同族）
+      ★ `购买` 与药铺那一家改前**逐字同行为**：站在药铺站买药 = 老那一路（`probe_shop ④⑨` 的锚点不动）。
     """
     p = _p(player)
-    line = town_gate(p, SH.station(), away="SYS_SHOP_AWAY")
+    line = town_gate(p, None)                      # 铺子都在镇上（不核那一站 —— 与旧货 / 商队同族）
     if line:
         yield line
         return
@@ -350,12 +355,30 @@ async def item_buy(env, sink, uid, player):
     if not name:                                   # ★ B4-10：没带东西就照实说
         yield T("SYS_SHOP_ASK")
         return
-    iid, rec, gold, cands = SH.find(name, p)
+    iid, rec, gold, cands = (None, {}, 0, [])
+    for key in SH.shops_here(p) + SH.stationless():   # 脚下的这家先找（顺序是口径表定的）
+        iid, rec, gold, cands = SH.find(name, p, shelf=key)
+        if iid or cands:
+            break
     if not iid:
         if cands:                      # ★ B4-20：柜上同名好几件 ⇒ 照实说，不替玩家挑
             yield ambig_line("item_buy", name, cands)
-        else:
-            yield T("SYS_SHOP_NOGOOD", name=name)
+            return
+        w = SH.where(name, p)
+        why = str((w or {}).get("why") or "")
+        if why == "level":
+            yield T("SYS_SHELF_LOCK", name=(w["rec"].get("name") or name),
+                    level=int(w.get("level") or 0), now=int(p.get("level") or 0))
+            return
+        if why == "event":
+            yes, no = "SYS_CARAVAN_WHY", "SYS_SHOP_NOGOOD"
+            who = SH.event_wait(w.get("key"))
+            yield T(yes, name=who) if who else T(no, name=name)
+            return
+        if why == "away":
+            yield T("SYS_SHOP_AWAY", name=SH.station_name(w.get("key")))
+            return
+        yield T("SYS_SHOP_NOGOOD", name=name)
         return
     total = int(gold) * int(n)
     have = int(p.get("gold") or 0)

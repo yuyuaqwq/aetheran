@@ -168,9 +168,22 @@ chk("③ 开战把资源摆成 0 层（引擎的资源闸门才真的存在：re
     stacks(_c, "RES_OATH") == 0, "⇒ %d 层" % stacks(_c, "RES_OATH"))
 _mob = (_b.sides.get("enemy") or [None])[0]
 put(_c, "RES_OATH", 0)
-LD.deal_damage(_b, _mob, _c, 10, [])
-chk("③ 受击 +%d（真源「受击（无论格挡与否）+6」）" % RES.gain_of("RES_OATH", "on_taken"),
-    stacks(_c, "RES_OATH") == RES.gain_of("RES_OATH", "on_taken"), "⇒ %d 层" % stacks(_c, "RES_OATH"))
+# ★ fix7-gear 顺手收口（**判据一个字没松，收的是 fixture**）：引擎 `_apply_damage` **先 roll 闪避**，
+#   被闪掉的那一下**不触发 `on_taken`**（`_apply_damage` 里闪掉就 return 0 —— 引擎语义如此）。
+#   原先这里只打一下 ⇒ 命中率那一枚硬币有时翻到「闪掉了」，这一条就红一次（实测：满载那一跑红过一回，
+#   单独连跑 3 回又全绿 —— 是掷硬币，不是判据错）。⇒ 改成「打到真挨住那一发为止」，
+#   期望值仍然是 `gain_of`（**不许放宽**：挨住的第一下必须正好等于声明的 +6）。
+_took = 0
+for _try in range(20):
+    LD.deal_damage(_b, _mob, _c, 10, [])
+    if stacks(_c, "RES_OATH"):
+        _took = stacks(_c, "RES_OATH")
+        break
+chk("③ 受击 +%d（真源「受击（无论格挡与否）+6」· 挨住那一发：第 %d 次落上）"
+    % (RES.gain_of("RES_OATH", "on_taken"), _try + 1),
+    _took == RES.gain_of("RES_OATH", "on_taken")
+    and stacks(_c, "RES_OATH") == RES.gain_of("RES_OATH", "on_taken"),
+    "⇒ %d 层" % stacks(_c, "RES_OATH"))
 put(_c, "RES_OATH", 0)
 dir_event(_b, "attack_hit", actor=_c, ctx_extra={"target": _mob, "info": {"_basic": True}, "dmg": 9})
 chk("③ 普攻命中 +%d（引擎 `attack_hit`）" % RES.gain_of("RES_OATH", "hit_basic"),

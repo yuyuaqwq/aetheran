@@ -74,8 +74,13 @@ QUALITY_MULT = {"普通": None, "精制": 0.70, "稀有": 0.90, "遗物": 1.05}
 QUALITY_ROLE = {"精制": ("elite",), "稀有": ("chief",), "遗物": ("warden", "boss")}
 
 #: ★ 本批**明确无门槛**的家族（主线只点了四个家族组；这五个不猜 —— 理由与待补建议见 _notes.md）
+#: ★ fix7-gear（2026-09-26）再加五个：铺子卖的粗货（`smith_*`）· 打造的那一件（`forge_*`）·
+#:   商队到货那一件（`caravan_*`）—— 它们全是**普通**品阶（口径 `QUALITY_MULT[普通] = None`
+#:   ⇒ 本来就走不到门槛那一支），登记在这里是为了让「每个家族都登记过」那条判据照得见它们
+#:   （`scripts/probe_items.py` ⑩：不许有「谁都没管」的家族）。
 FAMILY_FREE = ("helmet_thick", "helmet_bright", "boots_steady",
-               "accessory_stat", "accessory_effect")
+               "accessory_stat", "accessory_effect",
+               "smith_vest", "smith_cap", "smith_boots", "forge_chest", "caravan_bracer")
 
 QUALITIES = ("普通", "精制", "稀有", "遗物")
 
