@@ -480,8 +480,10 @@ _dup16 = sorted({"%s 也挂在 %s" % (u, k) for k, v in DP.items() if k not in _
     "`unique` 池（%s）条目全是静态 id（动态/嵌套 %s）· 唯一信物只挂**一条** `dp_*` 池（重 %s）"
     % (_bad_calls16 or "无", " · ".join(sorted(_uniq16)) or "无", _dyn16 or "无", _dup16 or "无"))
 print("  · 登记（不当判据）：同一件信物**另有采集点**一条渠道 —— `gathering.json::gt_tw_search_4`"
-      "（号角室石台 · `搜查` · 一天 3 遍）的池里也有 `i_horn_half`。本批只按真源"
-      "「Boss 池按档去重」这一条修，采集点那条渠道按域里没声明 `unique` 就**不动**（见分支 `_notes.md`）。")
+      "（号角室石台 · `搜查` · 一天 3 遍）的池里也有 `i_horn_half`。fxm2 那一批按「域里没声明"
+      "`unique` 就**不动**」放它过去；**fxm5-gather-unique 已跟账**：那一条目现在写了"
+      " `\"unique\": true`（与这里的池级 `unique` 同一个词、同一个语义），采集那条路也**按档"
+      "去重**了 —— 判据 `probe_gather ⑫`（两态 + 反证 + 零误伤 + 跨渠道守卫）。")
 
 print()
 print("结果：%s" % ("全绿 ✓" if not fails else "有红 ✗"))

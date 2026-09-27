@@ -13,6 +13,13 @@
     ② 当日的**最后一遍**（第 `times_per_day` 遍，且这个点一天不止一遍）= 空手 —— 那儿翻空了
        （槽位 SYS_GATHER_BARE）
     ③ 一天只给一遍的点（挖掘那类）不走 ②：唯一一遍照常全池抽
+★ 按档去重（fxm5-gather-unique）：池里**某一条目**写了 `unique: true` ⇒ **手上已有那一件
+    就不再进池**（真源 `22_旧哨塔_逐间设计_v1` §二·10「拿半截号角（信物 `i_horn_half`）」·
+    §二·12 塔顶「掉落 半截号角（**如果 10 房没拿**）」—— 同一件剧情信物**每档最多一件**，
+    号角室那张石台（`gt_tw_search_4`）就是「10 房拿」那一侧）。**声明粒度 = 条目**：
+    只排写了这一格的那些条目，同一点里的材料 / 药品即便手上已有照出不误；别的点一条都
+    没写 ⇒ 一个字节不动。「手上有哪些件」走 `loot.held_ids` 那**唯一一口**（与掉落池那条
+    路同一份账）。判据 `probe_gather ⑫`。
 ★ 抽取仍是 `loot.roll_pool` 那套权重（Σw + uniform(0,tot) + 累加命中）—— 这里只是把 `rnd`
   换成上面那个确定性 Random；机器键（`kind_key`）/ 名字 / 进包一律走 loot 那几口。
 """
@@ -159,9 +166,23 @@ async def _do_gather(env, sink, uid, player, verb: str, word: str):
         yield T("SYS_TIME_GATED", what=pt["name"],
                 when=" · ".join(sorted({str(e.get("when")) for e in pool if e.get("when")})))
         return
+    # ★ fxm5-gather-unique：条目写了 `unique: true` ⇒ **按档去重**（手上已有那一件就不再进池）。
+    #   真源 `22_旧哨塔_逐间设计_v1` §二·10「拿半截号角（信物）」+ §二·12「掉落 半截号角
+    #   （**如果 10 房没拿**）」—— 同一件剧情信物**每档最多一件**；这一支就是「10 房拿」
+    #   那一侧，而它原先是**每档一天最多再出 1~2 件**（池里 `w=100`）——与 Boss 那条路
+    #   （`loot.roll_pool` 的 `unique` · fxm2-horn）本来是同一条口径，这里跟账。
+    #   · ★ 声明在**条目**上（不是整点）：只排**写了这一格的那些条目** —— 同一点里的材料 /
+    #     药品即便手上已有照出不误（`27_掉落的惊喜感与未鉴定 §四`：重复掉落本身不消灭）；
+    #   · 别的点（今天 21 个）一条条目都没写 ⇒ 一个字节不动；
+    #   · 「手上有哪几件」走 `loot.held_ids`（**唯一一口**，与掉落池那条路同一份账）；
+    #   · 排的是**条目**（静态 id）⇒ 池里剩下那些条目的权重与**相对**几率一字不动；
+    #   · `left`（越翻越少）**先算再排** —— 「稀罕的先让人捡走了」是这一站当天的事，与背包无关。
+    keep = LT.held_ids(p) if any(e.get("unique") for e in entries) else set()
     # ★ 反复采：越翻越少（去掉最稀罕的几条）；当日的**最后一遍**那儿已经翻空了 = 空手。
     #   一天只给一遍的点（挖掘那类）不适用 —— 唯一一遍照常全池抽。
     left = [] if (times > 1 and nth >= times) else _left_after(entries, nth)
+    if keep:
+        left = [e for e in left if not (e.get("unique") and str(e.get("out")) in keep)]
     if left:
         tot = sum(int(e.get("w", 1) or 1) for e in left)
         r = rnd.uniform(0, tot or 1)

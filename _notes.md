@@ -12379,3 +12379,96 @@ AbilityTask），闸 = 阿斯特兰内容停点（`aetheran-plan/00_总纲/AETHE
   在 哨所（内）连打 `旧哨塔的守兵` 3 场：拾取 = 半截号角 + 旧铁 ｜ 哨兵的护手 ｜ 旧铁，
   `整理背包` ⇒ `· 信物（1 种）：半截号角 ×1`。逐字见提交信息。
 ```
+
+
+---
+
+# fxm5-gather-unique · 采集点那条渠道也按档去重（同一条口径的另一半 · 2026-09-27）
+
+> 起因：fxm2-horn 在 `_notes.md §五①` 把这条**挂给主线裁**（「口径由主线定：要不要也按档去重」）。
+> 本批 = 先核真源、再按判定动手。**结论：真源支持 ⇒ 落实现**（不是只登记）。
+
+## 一、现状（带行号 · 逐条核过）
+
+```text
+`content/data/gathering.json::gt_tw_search_4`（`old_watchtower` / `tower_horn_room` · kind 搜查 ·
+  verb `search` · `times_per_day: 3`）池 4 条：
+    `i_horn_half` w=100 · `i_set_sentry_horn` w=20 · `i_junk_bone` w=16 ×1~2 · `i_potion_minor` w=12
+实现体 = `content/cmds_gather.py::_do_gather`（**自己那一份抽签**，不走 `loot.roll_pool`）：
+  种子 = uid + `calendar.day_key(游戏日)` + 点 id + 当日第几次；`_left_after` 越翻越少；当日最后一遍空手
+  ⇒ 同一天最多出 **2** 件号角（第 1、2 遍），跨天重置 —— fxm2 实测「一天最多再拿 1~2 件」。
+另一条渠道**已经**按档去重：`drop_pools.json::dp_boss_minor`（`{rolls: 2, unique: true,
+  entries:[{out: i_horn_half, w: 100}]}`）+ `loot.roll_pool(..., held=…)`（fxm2 `ac23fc5` · 已并入 master）
+  ⇒ 同一件剧情信物两条渠道两种口径。
+```
+
+## 二、真源取证（`aetheran-plan/06_第一阶段垂直切片/22_旧哨塔_逐间设计_v1.md`）
+
+| 行 | 原文 | 它说的是什么 |
+|---|---|---|
+| L139 | 「一间小厅，正中有个石台，上面放着半截号角」 | 石台上是**那半截**号角（一件） |
+| L144 | 「可做　**拿** 半截号角（信物 `i_horn_half`）· 读碑上的名单」 | 一次「拿」——**没有「一天 3 遍」那一格**（那是 B3-7 把它实现成「搜查」采集点时带进来的形状） |
+| L167 | 「掉落　半截号角（**如果 10 房没拿**）· 刻字的石片 · …」 | 同一件信物的两条渠道被写成**互斥** ⇒ **每档最多一件**；这正是 fxm2 用的那一句 |
+
+旁证（同一件东西在别处都当**一件**用）：`24_任务线_v1.md` 主 8「号角不响」步骤 ②「拿「半截号角」」、
+交付「半截号角」· `19_世界热闹度与可发现物_v1.md` §二 隐藏线②「号角线　半截号角 → 谁能修」·
+`00_总纲/16_称号域口径_v1.md` 称号「把号角修好的人」。
+
+**反证面（也核过，不然会顺手扩大）**：`27_掉落的惊喜感与未鉴定_v1.md` §一 / §四 那一族
+「重复掉落是必然的 / 不消灭重复，而是让重复有用（拆解·卖出·图鉴）」讲的是**材料 / 未鉴定**；
+信物那一栏 7% 的样例是「刻字的石片」（走**挖掘**、本来就重复）—— 与「剧情信物每档一件」不冲突。
+⇒ 结论：**只排写了声明的那一条目**，同池的材料 / 药品照旧重复。
+
+## 三、修法（声明粒度 = 条目，两处数据 + 一处实现）
+
+```text
+`content/data/gathering.json`   `gt_tw_search_4.pool[0]`（号角那一条）补 `"unique": true`
+`schemas/gathering.schema.json` `pool.items.properties.unique`（boolean + `$comment` 写明粒度与依据）
+`content/cmds_gather.py`        `_do_gather`：
+    keep = LT.held_ids(p) if any(e.get("unique") for e in entries) else set()
+    left = … `_left_after(entries, nth)`（**先算**：越翻越少是这一站当天的事，与背包无关）
+    if keep: left = [e for e in left if not (e.get("unique") and str(e.get("out")) in keep)]
+```
+
+★ 粒度为什么是**条目**不是整点：第一版按「整点 `unique`」实现，判据当场抓到副作用 ——
+袋里放 3 个残骸 ⇒ 残骸那一条目被排掉 ⇒ **第二遍反而多出一件号角**（同一条 uniform 落到别处）。
+那正是「顺手扩大」（把材料也按档去重，与 `27 §四` 冲突）⇒ 改成条目级声明。
+
+## 四、判据（`scripts/probe_gather.py ⑫` · 五条 · 只加强，一个都没松）
+
+```text
+① 声明与范围：写了 `unique` 的条目 = [('gt_tw_search_4', 'i_horn_half')]（全仓唯一）· schema 登记 = True
+② 真宿主真敲两态（固定钟 1790308800 · 6 个档 · 号角室石台 · 连敲 3 遍）：
+   空袋那一臂   号角出现在 u_h1/u_h2/u_h3/u_h5/u_h6 的第 1 遍（u_h4 那档第 1 遍给的是生锈的号角
+                —— 池权重使然）；袋里先有号角那一臂 **6 个档一遍都不出**
+   那一臂照出 ['i_junk_bone', 'i_potion_minor', 'i_set_sentry_horn']（池没被排空）
+②b 反证：袋里放齐**另外三样**（残骸×3 · 生锈的号角×1 · 伤药×4）⇒ 号角照出，且与空袋那一臂
+   **逐条（连回话）相同** —— 证明排的是「已有那件」、且**只排写了声明的那一条目**
+③ 零误伤：塔内另外三处 `搜查` 点（gt_tw_search_1 / _2 / hall）带上各自关键件 ⇒ 与空袋臂逐条相同
+④ 反证（有牙）：把 `unique` 从**实现体真读的那一份域表**上撤掉 ⇒ 袋里先有号角**又出**（u_h1/u_h2/u_h3
+   第 1、2 遍都出）；还原后复跑回到「一遍都不出」
+⑤ 跨渠道 + 静态：出 `i_horn_half` 的**每一条**渠道都带按档去重（`dp_boss_minor` 池级 ·
+   `gt_tw_search_4.i_horn_half` 条目级）· `cmds_gather.py` 里 `"unique"` 只读 2 处 · `held_ids` 只调 1 次
+```
+
+## 五、门禁（真数字）
+
+```text
+车道跑器 `bash C:/Users/yuyu/AppData/Local/Temp/w10/gorun2.sh <工作树> <tag>`（私有 LOCALAPPDATA · Python 3.12 · GWEN_ENGINE=C:/Users/yuyu/framework-engine）
+  基线（干净 master worktree `<工作树>` = C:/Users/yuyu/ast-wt/fxm5-gather @9e6b898 · tag fxm5base）：TOTAL pass=53 fail=0
+  改动后（本提交 · tag fxm5）：TOTAL pass=53 fail=0（与基线**同一条不差** —— 没多一条红）
+  ★ 单跑 `probe_gather` 复跑两遍都是「结果：全绿 ✓」（⑫ 那七条逐条 ✓；判据里没有任何
+    时间相关的输入：那个 HOST 走**固定钟** 1790308800）
+```
+
+## 六、没做的 / 留给主线
+
+```text
+· 别的「可拿物」**不动**：`gt_tw_search_1`（储藏室 → 哨兵的护手 · 套装件）· `gt_tw_search_hall`
+  （门厅 → unid_tower · 未鉴定）· `gt_tw_search_2`（空营房 → 线索页）—— 真源里**没有**任何一句给它们
+  写过「每档最多一件」（`22 §二·8`「开箱」· `22 §二·2`「搜查门厅」），而 `27 §四` 明写「重复掉落
+  是必然的，不消灭重复」；套装件 / 未鉴定都属可重复那一档 ⇒ **不许顺手扩大**。
+· 真源要不要补一行：同 fxm2 的建议（`27_掉落的惊喜感与未鉴定_v1.md` 补一句「唯一信物每档最多一件」）
+  —— **本分支对真源只读**，请主线在合入时搬。
+· 本批**未 push · 未 merge master**（合入由主线做）；引擎仓未动（本批零引擎改动）。
+```
