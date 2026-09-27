@@ -23,7 +23,7 @@
   ⑥ 真敲 `购买 <东西>`：钱按**现算价**减、背包 +1（回话与档上副作用都核）
   ⑦ 数量形态：`购买 <东西> 3` ⇒ 一次三件（钱按 3 倍）
   ⑧ 钱不够 ⇒ 只回一句 `SYS_SHOP_POOR`（差额现算）且**档一个字不动**
-  ⑨ 柜上没有的（材料 / 装备）⇒ `SYS_SHOP_NOGOOD` 且档一字不动
+  ⑨ 柜上没有的（**哪一家柜上都没有**的材料 / 装备）⇒ `SYS_SHOP_NOGOOD` 且档一字不动
   ⑩ 没带参（裸 `购买` / `买`）⇒ `SYS_SHOP_ASK` 且档一字不动（K71 第 2 条）
   ⑪ 连写取参（K71）：`购买药水` == `购买 药水`（回话与档上副作用逐字相同）
   ⑫ 静态守卫：全 `content/*.py` 里读铺子口径表的只有 `content/shop.py` 一处 ·
@@ -293,10 +293,21 @@ def main():
     else:
         bad("钱不够那一下：%s · 档 %r" % (lines[:2], snap()))
 
-    # ── ⑨ 柜上没有（拿域里有价、但不在货架上的那件来试）
+    # ── ⑨ 柜上没有（拿域里有价、但**哪一家柜上都没有**的那件来试）
+    #   ★ fix7-gear 之后台上不止一家（药铺 = `stock_kind` 那一路 · 柯尔那家 / 商队 = `shop` 那一格）：
+    #     原先「`kind_key != stock_kind`」当「不在柜上」的等价式**只在一家铺子时成立** ——
+    #     普通档那 6 件武器补上 `shop` 之后，第一件有价的东西正好落在柯尔那家柜上（回的是
+    #     `SYS_SHOP_AWAY` 指路，不是「柜上没有」）⇒ 取件改成逐家问同一口
+    #     `shop._on_any_shelf_rule`（**不另抄一份收法**：判定口只有一个，探针也不该多一份）。
+    #   ★ 判据本身一个字没动（还是「`SYS_SHOP_NOGOOD` + 档一字不动」）—— 严格说这条**更贴**了：
+    #     原先挑到的那件只是「不在药铺」，现在挑到的是「**哪一家都没有**」。
+    _shelved = set()
+    for _k in [None] + SH.shelf_keys():
+        _shelved |= {i for i, r in items.items()
+                     if isinstance(r, dict) and SH._on_any_shelf_rule(r, _k)}
     off = [i for i, r in items.items()
            if isinstance(r, dict) and r.get("price") and not str(i).startswith("_")
-           and r.get("kind_key") != rules.get("stock_kind")]
+           and i not in _shelved]
     ad.saved[UID]["gold"] = 999
     b4 = snap()
     if off:
