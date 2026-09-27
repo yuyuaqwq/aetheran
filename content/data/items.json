@@ -6,6 +6,9 @@
     "kind_key": "weapon",
     "quality": "普通",
     "slot": "weapon",
+    "shop": "smith",
+    "level": 1,
+    "price": 6,
     "affixes": [
       {
         "stat": "atk",
@@ -202,6 +205,9 @@
     "kind_key": "weapon",
     "quality": "普通",
     "slot": "weapon",
+    "shop": "smith",
+    "level": 1,
+    "price": 6,
     "affixes": [
       {
         "stat": "atk",
@@ -398,6 +404,9 @@
     "kind_key": "weapon",
     "quality": "普通",
     "slot": "weapon",
+    "shop": "smith",
+    "level": 1,
+    "price": 6,
     "affixes": [
       {
         "stat": "atk",
@@ -594,6 +603,9 @@
     "kind_key": "weapon",
     "quality": "普通",
     "slot": "weapon",
+    "shop": "smith",
+    "level": 1,
+    "price": 6,
     "affixes": [
       {
         "stat": "matk",
@@ -790,6 +802,9 @@
     "kind_key": "weapon",
     "quality": "普通",
     "slot": "weapon",
+    "shop": "smith",
+    "level": 1,
+    "price": 6,
     "affixes": [
       {
         "stat": "matk",
@@ -986,6 +1001,9 @@
     "kind_key": "weapon",
     "quality": "普通",
     "slot": "weapon",
+    "shop": "smith",
+    "level": 1,
+    "price": 6,
     "affixes": [
       {
         "stat": "atk",
