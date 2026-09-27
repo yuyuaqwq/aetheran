@@ -419,7 +419,15 @@ _left = sorted(_c.get("effects") or {})
 (ok if "aa_ctl" not in _left and "zz_buff" in _left else bad)(
     "  · 控制态被解掉、非控制条目留着（剩 %s）" % (_left,))
 _mlogs = apply_cast(_b, _c, "SKILL_PRS_absolve")
-(ok if any("没有能解" in x for x in _mlogs) else bad)("  · 没控可解 ⇒ 出「没有能解的东西」那一句（不静默）")
+_none = CA.T("COMBAT_MECH_ABSOLVE_NONE")
+(ok if _none in _mlogs else bad)(
+    "  · 没控可解 ⇒ 出「没有能解的东西」那一句（不静默）—— 逐字取自槽位 %r" % _none)
+#: ★ fix-h-small（真人试玩 b13 · 修女路）：净罪的**收件人就是施法者自己**
+#:   （`_cast_cleanse` 只动 caster 自己的 `effects`；单人对面只有怪）⇒ 那一句的主人公必须是
+#:   「你」。改前写的是「它身上…」，屏上被读成**对面**（玩家以为打空 / 解错了对象）。
+#:   判据：那一句里有「你」、没有「它」（槽位值改回去 ⇒ 这一条当场红）。
+(ok if ("你" in _none and "它" not in _none) else bad)(
+    "  · 那一句的主人公是「你」（单人 = 自己，不是对面）：%r" % _none)
 
 print()
 print("── ⑫ 安神曲（hot）：300 刻再生，每刻 = 这一发治疗量的 1/4（真推进时间轴）")
@@ -932,6 +940,29 @@ _w5 = int(round(float(ST.actor_max_hp(_b5, _c5) or 0)
                 * float(MECH.of("def_break")["self_dmg_pct"]["value"])))
 (ok if _self_cut_of(_l5) == [_w5] else bad)(
     "  · 回归：破势（走命中后的 engine 路）自伤口径一点没变（%s，期望 [%d]）" % (_self_cut_of(_l5), _w5))
+
+#: ★ fix-a-screen（2026-09-27 · ①）：一笔自付**只出一行**。落地照旧走引擎那条
+#:   （`LD.deal_damage` —— 结算 / 事件 / 保底 1 血一个字不动），但引擎那条**通用**伤害行
+#:   （`battle.landing.damage` = `💥 {name} 受到 {dmg} 点伤害！`，与「被怪打」同形）在**自付那一调**
+#:   里被顶掉（`content/battle_text.quiet_engine_damage`）⇒ 屏上只剩本包的专用行；
+#:   专用行报的数是**真扣下去的那一笔**（= 血账差分）。
+_b6, _c6 = _bare("cls_berserker", mid=DOG, hp=500)
+_hp6 = int(_c6["hp"])
+_l6 = apply_cast(_b6, _c6, "SKILL_BSK_rampage")
+_d6 = _hp6 - int(_c6["hp"])
+_hurt6 = [x for x in _l6 if "受到" in x]
+(ok if _self_cut_of(_l6) == [_d6] and _d6 > 0 and not _hurt6 else bad)(
+    "  · 一笔自付**只出一行**：专用行 %s（真扣 %d）· 引擎那条通用伤害行不再重复（%s）"
+    % (_self_cut_of(_l6), _d6, _hurt6[:1] or "没有"))
+
+#: 反证（这一条判据不是空转）：同一调里「怪打你」那条**照旧**上屏 —— 遮挡只认自付那一笔，
+#:   没把引擎那条 key 全局改掉（`content/rules/battle_text.json` 里它**照样没声明**）。
+_b7, _c7 = _bare("cls_berserker", mid=DOG, hp=500)
+_l7 = []
+LD.deal_damage(_b7, _b7.sides["enemy"][0], _c7, 20, _l7)
+(ok if [x for x in _l7 if "受到" in x] else bad)(
+    "  · 反证：「挨打」那条通用伤害行照旧（%s）—— 遮挡只作用于自付那一笔"
+    % ([x for x in _l7 if "受到" in x][:1] or "不见了"))
 _restore_dodge(_sd)
 
 print()
@@ -1023,9 +1054,14 @@ _turns = float(SKD["SKILL_MAG_fallenstar"]["mech2_val"])
     "  · 砸晕落在**目标**身上：`star_daze`（mode=%s · 剩余 %.1f 刻 ≤ mech2_val %s）"
     % (_e4.get("mode"), float(_e4.get("expire") or 0) - _bb4._now, _turns))
 _sub4, _end4 = _bb4.actor_auto(_t4)
-_ctl = "".join(str(x) for x in (_sub4 or []))
-(ok if "无法行动" in _ctl else bad)(
-    "  · 这 100 刻里轮到它 ⇒ 引擎的行动前检查把这一手整手跳过（真源 02_战斗机制 §〇·五）")
+_ctl = [str(x) for x in (_sub4 or [])]
+#: ★ 2026-09-27（夜班试玩 w3）：这一行的**措辞本波起走槽位**（`battle.core.controlled`）——
+#:   原先写死的那个中文词是**引擎兜底模板**里的字，而那句兜底会把状态机器键 `star_daze`
+#:   原样打到玩家屏（两个号实测逐字：「💫 游荡的骸骨 被【star_daze】控制，无法行动！」）。
+#:   判据改成「按槽位逐字对」（与 DoT 那条同款）**并加一条**：机器键不上屏 ⇒ 只紧不松。
+(ok if has(_ctl, "COMBAT_CONTROLLED") and not any("star_daze" in x for x in _ctl) else bad)(
+    "  · 这 100 刻里轮到它 ⇒ 引擎的行动前检查把这一手整手跳过 · 那行走槽位渲染、"
+    "且机器键不上屏（真源 02_战斗机制 §〇·五）")
 (ok if not ((_t2.get("effects") or {}).get("star_daze")) else bad)(
     "  · 引燃（同一条 `mark_burst`、没有 mech2）**不挂**砸晕 —— 两半各自钉住")
 
@@ -1257,6 +1293,99 @@ try:
         "  ⑤ 撤改（不挂 E6）⇒ 两条门都不存在（6 血照放 · 焚身同场照放第二次）—— 与接线前逐字相同")
 finally:
     CFG.set_hook("skill_gate_fn", _saved26)
+
+print()
+print("── ★ fix-k-critline：暴击那一行（引擎 `crit` 事件 → texts 槽位 `COMBAT_CRIT`）")
+#  改前：`COMBAT_CRIT` 槽位**全仓零读端**。引擎 `extends/ext_combat/battle/actions.py` 真在掷 ——
+#    `is_crit = random.random() < st["crit"]`（命中后再掷 30% 追加一次「幸运一击 ×1.3」⇒
+#    1.5 × 1.3 = 1.95 倍，与试玩实测那 1.5~1.9 倍跳变对得上），可玩家屏上只有裸伤害行：
+#    刺客整轮看不到「暴击」两个字。而 `effect_triggers.fire` 只跑**主体 actor 自己**声明的触发器
+#    ⇒ 读端只能挂在 `combat.player_actor` → `MECH.player_triggers()` 的 `crit` 那一格上。
+import re as _re                                                            # noqa: E402
+from unittest import mock as _mock                                          # noqa: E402
+
+_SLOT_CRIT = "COMBAT_CRIT"
+_ACT_CRIT = "aeth_crit_line"
+#: 槽位里**最长的那一段固定字** —— 判「这一行是不是暴击行」用现算出来的它（文案一改，判据跟着动），
+#: 探针里不另写一份中文镜像。
+_MARK_CRIT = max((p for p in _re.split(r"\{\w+\}", CA.T(_SLOT_CRIT)) if p.strip()), key=len)
+#: 引擎那一侧这一刻的两个数（刻 / 伤害）—— 只有引擎知道；读端读的是 `battle._fire_ctx`，
+#: 这里换成读**同一个口**旁听一手（不改任何行为），拿它当逐字锚点的另一半。
+_LIVE_CRIT: dict = {}
+_orig_crit = EF.ACTION_HANDLERS.get(_ACT_CRIT)
+
+
+def _crit_watch(battle, caster, target, params, logs):
+    """旁听那一手：记下引擎 ctx 里的刻与伤害，其余照旧交给真读端。"""
+    ctx = getattr(battle, "_fire_ctx", None) or {}
+    _LIVE_CRIT.clear()
+    _LIVE_CRIT.update({"t": int(round(float(getattr(battle, "_now", 0) or 0))),
+                       "dmg": int(ctx.get("dmg") or 0)})
+    return _orig_crit(battle, caster, target, params, logs)
+
+
+def _crit_hand(roll, mounted=True, seed=20260927, cls="cls_assassin", lv=10,
+               sid="SKILL_SHD_blade", name="试"):
+    """钉死随机源跑**你这一手**（`advance` 那一段照旧自由跑 —— 只钉你出手这一下）。
+
+    ★ 两处各钉一枚：`roll` 钉**决策**（暴击 / 幸运一击 / 闪避都走 `random.random()`）；
+      `seed` 钉**波动**（引擎公式那支 `variance=0.15` 走 `random.uniform()`，用的是同一个
+      Random 实例 —— 只 patch `random.random` 钉不住它，同一个 fixture 的数会一次一个样）。
+    """
+    random.seed(seed)
+    _bb = CMB.build({"cls": cls, "level": lv, "uid": "u_crit", "name": name, "hp": 300},
+                    [DOG], MON, party=1)
+    _ll = []
+    SCH.advance(_bb, _ll)
+    _cc = _bb.focus()
+    if not mounted:
+        _cc["triggers"] = {}                 # 撤改臂：拿掉挂载面 ⇒ 那一行该一个字都不出
+    with _mock.patch.object(ACT.random, "random", return_value=roll):
+        _sub, _e, _w = _bb.human_act("skill", sid, _cc)
+    return _bb, _cc, [str(x) for x in (_sub or [])]
+
+
+def _crit_lines(_logs):
+    """日志里那几行暴击行（按槽位现算出来的那段固定字认）。"""
+    return [x for x in _logs if _MARK_CRIT in x]
+
+
+#  ── 形状：挂载面与动词**两半都得在**（挂了没人注册 = 引擎静默跳过；注册了没人挂 = 死码）
+_mnt = [a.get("action") for a in (MECH.player_triggers().get("crit") or []) if isinstance(a, dict)]
+(ok if _mnt == [_ACT_CRIT] and not EF.missing_actions(_mnt) else bad)(
+    "  · ★ 挂载面与动词两半都在：`player_triggers()[crit]` = %s ｜ `EF.missing_actions` = %s"
+    % (_mnt, EF.missing_actions(_mnt) or "空"))
+
+#  ── ① 正向：钉死随机源（必暴击）⇒ 那一行真出，且**逐字** = 槽位 + 这一手真值
+_sd_c = _no_dodge()                          # 收口的是 fixture：闪避那枚硬币不参与这一档
+EF.ACTION_HANDLERS[_ACT_CRIT] = _crit_watch
+try:
+    _b1, _c1, _l1 = _crit_hand(0.0)
+finally:
+    EF.ACTION_HANDLERS[_ACT_CRIT] = _orig_crit
+    _restore_dodge(_sd_c)
+_bh1 = [int(x.split("受到 ")[1].split(" 点伤害")[0]) for x in _l1 if "受到 " in x and "点伤害" in x]
+_want1 = CA.T(_SLOT_CRIT, t=_LIVE_CRIT.get("t"), who="试",
+              act=" · %s" % SKD["SKILL_SHD_blade"]["name"],
+              tgt=" · %s" % MON[DOG]["name"], dmg=_LIVE_CRIT.get("dmg"))
+(ok if _crit_lines(_l1) == [_want1] and _bh1 else bad)(
+    "  · ① 必暴击那一手（随机源钉成 0.0）⇒ 回话里**恰好一行**暴击行、逐字 = 槽位 + 引擎给的真值：\n"
+    "        %s\n        （同一句现算：%s ｜ 这一手真落地 %s 点）"
+    % (_crit_lines(_l1) or "没出", _want1, _bh1 or "没打上"))
+
+#  ── ② 反证：**不暴击**那一手（同一 fixture · 随机源钉成 0.99）⇒ 这一行一个字都不许出
+_b2, _c2, _l2 = _crit_hand(0.99)
+_bh2 = [int(x.split("受到 ")[1].split(" 点伤害")[0]) for x in _l2 if "受到 " in x and "点伤害" in x]
+(ok if not _crit_lines(_l2) and _bh2 else bad)(
+    "  · ② 反证（不暴击）：随机源钉成 0.99 ⇒ 这一手照打（真落地 %s 点）**但没有**那一行"
+    % (_bh2 or "没打上"))
+
+#  ── ③ 反证：拿掉挂载面（触发器清空）⇒ 即使钉了必暴击，这一行也一个字都不出
+#       （证明那一行来自**内容侧的挂载面**，不是引擎自己渲染的）
+_b3, _c3, _l3 = _crit_hand(0.0, mounted=False)
+(ok if not _crit_lines(_l3) else bad)(
+    "  · ③ 反证（撤改）：触发器清空 + 同一手钉必暴击 ⇒ 一个字都不出（%s）"
+    % (_crit_lines(_l3) or "空"))
 
 print()
 print()

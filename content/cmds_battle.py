@@ -412,9 +412,14 @@ def _run_hand(p, pick, ms, affixes=(), hand=None, action=None, skill=None, party
         if hand is not None:
             # ★ 「用物」是**每一手**的立场（上限那一层由 battle_acts 的记账挡着）；
             #   其余几手都是「抢一手」⇒ 只在你这一手走非内置动作，后面自动普攻。
+            #   ★ fxe（修 e·道具使用 ①）：这里**不许**写内容侧的 `item`（与
+            #   `instance.take_turn` 同款、同一个坑）—— 引擎自动那条路认得的内置动作只有
+            #   attack / skill / defend / flee；内容侧动作要靠 `action_override`，而它在
+            #   「从场里恢复出来的」Battle 上挂不回来（不可序列化）⇒ 玩家一手都不出。
+            #   `item_uses_per_battle` = 1 ⇒ 用满之后那一手本来也是回落普攻 ⇒ 写 `attack`。
             caster = b.focus()
             if caster is not None and hand.kind == "item":
-                caster["auto_act"] = {"act": {"type": "item", "skill": hand.item}}
+                caster["auto_act"] = {"act": {"type": "attack"}}
         SCH.advance(b, logs)                       # 推到你的决策点（对方该动的先动）
         caster = b.focus()
         if b.result is None and caster is not None:
@@ -527,9 +532,12 @@ async def _settle(env, p, uid, pick, ms, res, logs, hp_after, seen, player, affi
         if seen:
             yield T("SYS_CODEX_NEW", book=CX.label("monster"), name=CX.name_of("monster", pick[0]))
         if res == "defeat":
-            _wake_in_chapel(p)                      # ★ 真的回白烛堂（原先只说了这句话）
+            _lost = _wake_in_chapel(p)              # ★ 真的回白烛堂（原先只说了这句话）
             yield T("SYS_DEATH_WILD")
-            yield T("SYS_DEATH_QUEST_LOSS")
+            # ★ 夜班试玩 w3（mage/p3 两条都撞到）：经验 0 时原先照报「掉了一些经验（10%）」
+            #   —— 空头罚（玩家被告知挨罚、数字却一点没动）。掉没掉由**同一口**说了算：
+            #   `_wake_in_chapel` 的返回值（不在这里另判一套）。
+            yield T("SYS_DEATH_QUEST_LOSS") if _lost > 0 else T("SYS_DEATH_NO_LOSS")
         elif res == "fled":
             p["hp"] = max(1, hp_after)              # 跑掉了：血是打完当下的血，不掉经验
         else:
@@ -776,7 +784,7 @@ async def skill_cast(env, sink, uid, player):
         # ★ B4-13：裸「技」/「放」走到这儿（裸「技能」= 技能表那条）—— 照实说「放哪一手」
         yield T("SYS_SKILL_CAST_ASK")
         return
-    sid, rec = _by_name(_skills(), want)
+    sid, rec = _by_name(_skills(), want, cls)
     if not sid:
         yield T("COMBAT_SKILL_BAD", name=want)
         return
@@ -784,13 +792,22 @@ async def skill_cast(env, sink, uid, player):
         yield T("COMBAT_SKILL_BAD", name=rec.get("name", sid))
         return
     owner = str(rec.get("owner_class") or "")
-    if (owner and owner != cls) or sid not in known_ids(p):
+    if owner and owner != cls:
         yield T("COMBAT_SKILL_BAD", name=rec.get("name", sid))
         return
+    # ★ fix-l（试玩 berserker b58：「技能 血债」在 11 级前读起来像「这门没这条技能」）：
+    #   抬头那张门表写的第三道是「解锁等级没到 ⇒ `SYS_SKILL_TOO_LOW`」，可实现把
+    #   `sid not in known_ids(p)` 与 owner 挤在**同一条 if** 里 —— `known_ids` 只列
+    #   此刻解锁的那一班 ⇒ 等级没到的一律先落 `COMBAT_SKILL_BAD`，第三道门**走不到**。
+    #   改法：owner 与「等级」拆开判，等级那一道**在 known_ids 之前** —— 判据一个字没松
+    #   （两个都不满足照旧被拦），只是拦下时说的话分得开：等级没到 ⇒ 点名到几级。
     lv = int(rec.get("lv") or 1)
-    if lv > int(p.get("level") or 1):
-        yield T("SYS_SKILL_TOO_LOW", name=rec.get("name", sid), lv=lv,
-                gap=lv - int(p.get("level") or 1))
+    _mine = int(p.get("level") or 1)
+    if lv > _mine:
+        yield T("SYS_SKILL_TOO_LOW", name=rec.get("name", sid), lv=lv, gap=lv - _mine)
+        return
+    if sid not in known_ids(p):
+        yield T("COMBAT_SKILL_BAD", name=rec.get("name", sid))
         return
     # ★ 本批（试玩三家 · 指令词那一族）：**第五道半 —— 这一手自己声明的资源够不够**。
     #   引擎那道预检在「场」的第一手上是空的（见 `res_short_line` 的抬头）⇒ 在这儿按开战
@@ -851,6 +868,18 @@ async def battle_item(env, sink, uid, player):
     if INST.route_needed(env, uid):
         if not _need_foe(env, p, uid):
             yield T("COMBAT_NEED_FOE")
+            return
+        # ★ fix-s：这一件**这一场已经用满**了 ⇒ 这一手**开口就说那一句**（走 `head`，与别的手
+        #   同一个位置）。原先这一手照旧先说「备在手边」，而「用过了」那句要等这一手真轮到你才
+        #   由 `Hand._item` 用满那一支说 —— 中间隔着「🌀」与上一手的日志 ⇒ 玩家第一眼读到的是
+        #   「药备好了」（骑士第 3 轮报的就是这个次序）。
+        #   结算口径一个字不动：这一手照花、按**普攻**落（与 `Hand._item` 用满那一支同形）。
+        #   这一格只在**真有一场在跑**且这件已用满时才走。
+        if BA.item_capped(INST.live(env, uid), iid):
+            async for line in INST.take_turn(
+                    env, p, uid, player, action="attack",
+                    head=T("COMBAT_ITEM_CAP", name=rec.get("name", iid))):
+                yield line
             return
         async for line in INST.take_turn(env, p, uid, player, head=_head, hand=hand):
             yield line

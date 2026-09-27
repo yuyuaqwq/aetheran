@@ -249,6 +249,27 @@ async def party_accept(env, sink, group_id, uid, player):
 # ══════════════════════════════════════════════════════════════
 # 四、离队（队员退 / 队长退 = 解散）
 # ══════════════════════════════════════════════════════════════
+def _reconcile_battle(group_id, uid, r, before) -> None:
+    """★ fix-r：离队/解散 那一刻，把**在跑的那一场**按现名单收口（唯一一口 `instance.leave_reconcile`）。
+
+    ★ 病根（试玩实测 · knight 第 3 轮）：`离队` 原先只动队伍名单，那一格 `instance:<群>`
+      一个字不碰 ⇒ 走掉的人还留在那一场的 `members` / `sides` 里，剩下的人敲『攻击』回
+      「⏳ 还没轮到你 —— 你在等 <走掉的那位>」（只能等 45 秒窗口过期）；队散了再开一场
+      又会被塞回那场没打完的旧仗。
+    ★ `before` = 离队**之前**那一队的人（`PT.membership` 现算 —— 只有 `content/party.py`
+      知道谁在队里）；`after` 按这一步之后还留在队里的那些人算：队员退 ⇒ 去掉我；
+      队长退 = **解散** ⇒ 队没了（空表）。**名单只从 party 那一侧取**，本文件不另算一份。
+    ★ 局部 import：`content/instance.py` 在装配期被 `cmds_battle` 反过来 import，
+      不在模块头顶引它（与 `instance.members_of` 里那条局部 import 同一个理由）。
+    """
+    if r.get("code") == PT.LV_NONE:
+        return
+    from . import instance as IS
+    after = [] if r.get("code") == PT.LV_CAPTAIN \
+        else [m for m in (before or []) if str(m) != str(uid)]
+    IS.leave_reconcile(group_id, uid, after)
+
+
 async def party_leave(env, sink, group_id, uid, player):
     """`离队` —— 队员退：清自己那一格；队长退 = **解散**（队员的格由他们自己现算时清掉）。"""
     p = _p(player)
@@ -256,7 +277,9 @@ async def party_leave(env, sink, group_id, uid, player):
     if rows is None:
         yield T("SYS_PARTY_OFF")
         return
+    before = list((PT.membership(rows, p, uid) or {}).get("members") or [])   # ★ fix-r：离队前那一队的人
     r = PT.leave(p, uid, rows)
     if r.get("code") != PT.LV_NONE:
         _commit(env, player, p)
+        _reconcile_battle(group_id, uid, r, before)                           # ★ fix-r：那一场按现名单收口
     yield _lv_line(rows, p, uid, r)

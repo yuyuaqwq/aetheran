@@ -134,8 +134,10 @@ async def codex_relic(env, sink, uid, player, page=None):
       · 没认出·读的    `？ <问号行>`（**名字不写** —— 名字本身就是认出后的答案）
       · 没认出·捡的    `？ <手上的名字> —— <问号行>`（F6：名字在背包里就写着，
                        谱里不写玩家根本认不出是哪一件 —— QA P4 BUG-4）
-    `端详` 自己看出的那一层（`SYS_CODEX_RELIC_SEEN`）**只在它真多说了一层**时才另起一行：
-    未鉴定那类（物证句挂在池表上、与问号行说的是同一件事）不再把同一句贴两遍。
+    `端详` 自己看出的那一层（`SYS_CODEX_RELIC_SEEN`）**只在还没认出来、且它真多说了一层**时
+    才另起一行：未鉴定那类（物证句挂在池表上、与问号行说的是同一件事）不再把同一句贴两遍；
+    ★ fix-n-small ②：**已经认出名字的**（`known`）那一条底下**一律不再贴这一层** —— 认名
+    已经把整行换成 `known`，端详那一句就是认名前那行问号说的同一件事，再贴一遍 = 问号句回来了。
     """
     p = _p(player)
     _sync_bag(p, player, env)
@@ -153,7 +155,14 @@ async def codex_relic(env, sink, uid, player, page=None):
         else:
             shown = hint
             rows.append(T("SYS_CODEX_RELIC_UNKNOWN", hint=hint))
-        if CX.studied(p, k):                       # ★ P-8：自己看出的那一层，跟在后面（另起一行）
+        if CX.studied(p, k) and not CX.known(p, k):   # ★ P-8：自己看出的那一层，跟在后面（另起一行）
+            #   ★ fix-n-small ②：**认出来之后不再单独贴这一层** —— 这一件的身份已经有人给了
+            #     （`known` 高于 `studied`），而端详那一句正是**认名前那行问号**说的同一件事
+            #     （`hint` == 物证句）⇒ 认名把整行换成 `known` 之后再贴一遍，看着就是
+            #     「问号句又回来了」。QA 两轮报到（骑士第 1/2 轮：`一块刻着字的石片` /
+            #     `一块看不出用途的旧东西`）。不丢信息：端详那一刻玩家已经看到过（`studied`
+            #     那一格就是那一下落档的），`端详 <名>` 也随时能重看（见 `relic_study`）。
+            #   ★ F6 那道去重闸保留（未认名那半边照旧管「同一件事别贴两遍」）。
             ev = CX.evidence(k)
             if ev and not CX.said_in(shown, ev):   # ★ F6：同一件事别贴两遍
                 rows.append(T("SYS_CODEX_RELIC_SEEN", line=ev))

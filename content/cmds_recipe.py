@@ -436,8 +436,14 @@ async def enhance(env, sink, uid, player):
         enh = dict(p.get("enhance") or {})
         enh[iid] = {"lv": nxt, "bonus": bonus}
         p["enhance"] = enh
+        # ★ fix-g-enhance（现象 A · 游侠路 b63/b73/b82）：成功那一下**原来一个字没提料** ——
+        #   背包前后少了 铁屑 ×1 · 硬骨 ×1，回话只有「→ +2（加成 +0.8%…）」，而**缺料**那一支
+        #   却逐项报价（`SYS_ENHANCE_MISSING` 用 `_need_str(ins)`）⇒ 同一件事两处口径不一。
+        #   这里把**同一份料表**（这一档的 `ins`，与上面扣料那一段同一个变量）交给槽位 ——
+        #   不新造一份「强化料是哪些」的名单（那正是两处对不上的根因），也不只印总数。
         line = T("SYS_ENHANCE_OK", item=rec.get("name", iid), lv=nxt,
-                 bonus="+%.1f%%" % (bonus * 100), cap=cap_label)
+                 bonus="+%.1f%%" % (bonus * 100), cap=cap_label,
+                 cost=_need_str(ins))
     else:
         line = T("SYS_ENHANCE_FAIL", item=rec.get("name", iid), lv=lv_now)
     if player is not None:

@@ -70,6 +70,7 @@ import json
 import os
 
 from . import persistence as PS
+from . import skills_lookup as SK
 from .cmds_ast import T, _p, hp_cap_or_line
 
 #: 共同档里的作用域名（这一套数据是谁在用）—— 键形状 `<scope>:<group_id>`
@@ -232,6 +233,51 @@ def clear(key) -> None:
 
 
 # ══════════════════════════════════════════════════════════════
+# 三·二、名单变了（离队 / 解散）—— 把在跑的那一场按**现名单**收口
+# ══════════════════════════════════════════════════════════════
+def leave_reconcile(group_id, uid, after) -> dict:
+    """`离队` / `解散` 那一刻：（若在打）那一场按**现名单**收口 —— **唯一一口**。
+
+    ★ 试玩实测（knight 第 3 轮 · 第 41/42 批 + 第 46~50 批）：`离队` 原先**只动队伍名单**，
+      那一格 `instance:<群>` 一个字都不碰 ⇒ 两种病：
+        ① 走掉的人还留在这一场的 `members` 与 `sides` 里 ⇒ 剩下的人敲『攻击』回
+           「⏳ 还没轮到你 —— 你在等 <已经走掉的那位>」（只能等 45 秒窗口过期，由超时那一手
+           推过去；「队伍」那一屏 meanwhile 已经写着 1/4 人 = **两套名单**）；
+        ② 队散了之后在同一个群再开一场 ⇒ 键又回到群上 ⇒ **被塞回那场没打完的旧仗**
+           （带着冻结在旧等级的面板与幽灵成员）。
+    ★ 口径（本轮定的这一条 —— 判据就是它）：**这一场的名单 = 开场那一刻站在场上的人**。
+      · 走的人**不在**这一场里（后入队的那些）⇒ 什么都不动；
+      · 走的人**在**这一场里、而这一场还剩 ≥2 人 ⇒ 只把他从这一场**摘掉**
+        （`members` 与 `sides["player"]` **一起**摘 —— `hp_of` 按 `members` 去 `sides` 找，
+        少摘一边就会在结算那一步当场抛），其余的人接着打；
+      · 摘完只剩 ≤1 人（或队长退了 = 队本身没了）⇒ 这一场**收掉**：键按名单分
+        （一个人那一场的键是 `<群>#<uid>`，不再是群）⇒ 留着就是下一批人踩的同一个坑。
+    ★ `after` = **这一步之后**还留在队里的名单（由调用方现算给过来）：队伍名单的真源是
+      `content/party.py`，本模块只照它给的名单收口，**不自己读档**（谁在队里只有一个口）。
+    ★ 返回 `{"action": "none"|"drop"|"reap", …}` —— 探针拿它当判据，生产里没人读这个返回值。
+    """
+    g = str(group_id or "")
+    u = str(uid or "")
+    st = load(g) if g else None
+    if st is None:
+        return {"action": "none", "why": "no-party-battle"}
+    mem = [str(x) for x in (st.get("members") or [])]
+    if u not in mem:
+        return {"action": "none", "why": "not-in-this-battle"}
+    rest = [m for m in (str(x) for x in (after or [])) if m != u]
+    if len(set(rest)) >= 2:
+        st["members"] = [m for m in mem if m != u]
+        sides = (st.get("battle") or {}).get("sides")
+        if isinstance(sides, dict):
+            sides["player"] = [a for a in (sides.get("player") or [])
+                               if str((a or {}).get("uid") or "") != u]
+        save(g, st)
+        return {"action": "drop", "key": g, "members": list(st["members"])}
+    clear(g)
+    return {"action": "reap", "key": g, "members": []}
+
+
+# ══════════════════════════════════════════════════════════════
 # 四、轮转（纯函数：谁该动 —— CTB 的自然顺序）
 # ══════════════════════════════════════════════════════════════
 def players_of(st) -> list:
@@ -386,7 +432,8 @@ async def take_turn(env, p, uid, player, *, head="", hand=None, action=None, ski
       · 回话按 `03_ §二` 的**四段式**：现状 + 对方在干什么 + 你的选项（`turn_lines`）
         → 这一手说的话（`head`）→ 上一手的结果（日志）—— 打完/散场那一档不出这一屏；
       · 每一手都把 `st["hands"]` 加一（「第几手」那一格只有一个写端）；
-      · `st["focus"]`（集火）现读现传给引擎的目标解析。
+      · `st["focus"]`（集火）现读现传给引擎的目标解析 —— ★ fix-j：**只给吃目标的那几手**
+        （攻击 / 伤害技能 / 打断），治疗·增益那两档不吃（见 `_hand_takes_focus` 的抬头）。
     """
     grp = group_of(env)
     u = str(uid or "")
@@ -475,10 +522,23 @@ async def take_turn(env, p, uid, player, *, head="", hand=None, action=None, ski
         # ★ G2：**每件的每场上限**要跨手有效 ⇒ 记账放在这一场里（原先一个
         #   `Hand` 只活一条指令，一次结算那版天然有效；分段之后必须在场里）
         hand.used = dict(st.get("items_used") or {})
-        caster["auto_act"] = {"act": {"type": "item", "skill": hand.item}}
+        # ★ fxe（修 e·道具使用 ①）：这一格**只许放引擎内置动作**。原先写的是
+        #   `{"type": "item", "skill": hand.item}`（把「用物」当成后面每一手的立场）——
+        #   而引擎的自动那条路（`auto_run` → `actor_auto` → `act`）在这一场**从场里恢复**
+        #   出来的 Battle 上**没有** `action_override`（那是不可序列化的回调：`take_turn`
+        #   这一支自己重挂、`take_auto` 那一支没有手可挂）⇒ 引擎当场走
+        #   「未知行动类型：item」那一支：**玩家一手都不出**、被活活打完（实跑见本分支
+        #   `_notes.md §一` 与 `scripts/probe_battle_turns.py` ③b）。`item_uses_per_battle` = 1
+        #   （声明表 `content/rules/battle_cmds.json`）⇒ 用满之后那一手本来就是「回落普攻」，
+        #   立场与普攻在这一档**等价** ⇒ 直接声明引擎内置的 `attack`（自动那条路认得它）。
+        #   显式点名再吃一瓶那一条照旧：`Hand._item` 的上限那一支（`COMBAT_ITEM_CAP`）。
+        caster["auto_act"] = {"act": {"type": "attack"}}
     SCH.advance(b, logs)                             # 推到我的决策点（快的对方该动的先动）
     caster = b.find_actor(u) or caster
-    tgt = _focus_actor(b, st)                        # ★ 集火：这一场里记着的那个目标
+    # ★ 集火：这一场里记着的那个目标 —— **只有吃目标的那几手**才拿得到它（★ fix-j：
+    #   治疗 / 增益那一档不吃 —— 那两手上的 `target` 是「受疗对象 / 挂机制的落点」，
+    #   不是「打击对象」；锁着的这一格永远是敌人 ⇒ 原样传下去 = 好处落到敌人身上）。
+    tgt = _focus_actor(b, st) if _hand_takes_focus(action, skill, hand) else None
     took, decided = False, None
     if b.result is None and int(caster.get("hp", 0) or 0) > 0:
         if decide is not None:
@@ -555,6 +615,60 @@ async def take_auto(env, p, uid, player):
         yield line
 
 
+#: 内置动作里**吃「集火」**的那一档 —— 引擎 `do_attack` 走伤害管线，拿 `target` 当**打击对象**。
+#: 另外两档内置动作（`defend` / `flee`）引擎那边**一个都不读** `target` ⇒ 不吃。
+_FOCUS_ACTIONS = ("attack",)
+
+#: 内容侧那几手（`battle_acts.Hand` 的 `kind`）里**吃「集火」**的那一档：
+#: 打断 —— 它本来就是**对对面**的动作（拆掉它押着的那一手 / 推后它的到点时刻，
+#: 见 `battle_acts.Hand._interrupt` 的 `pick_target`），与「后面的手都往它身上招呼」同义。
+#: 用物 —— **用物本身**不指向敌人（回的是**自己**的血 —— `Hand._item` 只看 `actor`），
+#: 但它上限用满之后**回落成普攻**（`battle_acts` 的 `_plain_attack`）⇒ 那一手是**攻击**、
+#: 吃集火目标（★ fix-j：`Hand._item` 现在把调用方给的 target 交给回落那一手）。
+#: 换手 / 后撤都不指向敌人（一个重挂面板、一个说一句），不吃。
+_FOCUS_HANDS = ("interrupt", "item")
+
+
+def _hand_takes_focus(action, skill, hand) -> bool:
+    """这一手**吃不吃「集火」锁着的那一格**（★ fix-j：按 `target` 在这一手上的**合法面**分档）。
+
+    ★ 为什么要分档：`target` 在引擎里**不是一个意思** —— `do_skill` 的分派就是那条线
+      （同一个形参、三种语义）：
+
+        伤害支（域里 `kind_override` = 物理 / 魔法 / 真伤）  拿它当**打击对象**
+        治疗支（`actions._do_heal`）                          拿它当**受疗对象**（缺省 = 施法者**自己**）
+        增益支（`actions._do_buff`）                          拿它当挂机制的落点
+                                                              （内容侧 `route=cast` 那几条一律挂自己）
+
+      而「集火」锁着的那一格**永远是敌方 actor**（`cmds_battle.focus_fire` 只锁对手 ⇒ `set_focus`）
+      —— 把它原样传给后两档 = **好处整份落到敌人身上**，而屏上还印「治愈了你 N 点生命」。
+      2026-09-27 修女路真人试玩实测（同一场、一回合内 A/B）：`集火 田鼠` 之后敲 `技能 安神曲`
+      ⇒ 田鼠 12→51 = **+39 = 那一发的治疗量**，自己 231/231 一格没涨。
+
+    分档口径（**每档只有一个来源**，不另抄一份「哪些算攻击」的名单）：
+      · 技能 ⇒ `skills_lookup.takes_target()`（域里 `kind_override` 经 `kinds.json` 换语义 ——
+        与引擎 `do_skill` 的分派**同一格**；缺 / 非法 ⇒ 当场抛，不静默按某一档算）；
+      · 内置动作 ⇒ `_FOCUS_ACTIONS`（只有 `attack`）；
+      · 内容侧那几手 ⇒ `_FOCUS_HANDS`（`interrupt`；`item` 只为它**回落成普攻**的那一手）。
+
+    ★ 为什么不把这条判据塞进 `_focus_actor`（另一种改法）：那个口回答的是「**这一场锁着谁**」
+      （一个纯读 —— 探针 ⑤ 拿它核「锁真传进引擎」）；让它按动作改主意 ⇒ 锁的含义变成**条件的**，
+      读它的地方都得先知道自己要干嘛。而「哪个动作吃目标」只有**出手那一处**知道（`hand` /
+      `action` / `skill` 三个实参都在那儿）⇒ 分档放在调用点 = 一个写端（`take_turn` 那条赋值）。
+    """
+    if hand is not None:
+        return str(getattr(hand, "kind", "")) in _FOCUS_HANDS
+    if str(action or "") in _FOCUS_ACTIONS:
+        return True
+    if str(action or "") == "skill":
+        rec = SK.skills().get(str(skill or ""))
+        if not isinstance(rec, dict):
+            raise RuntimeError("认不出这一手要放的技能：%r（域里没这条 ⇒ 别按「吃 / 不吃」猜）"
+                               % (skill,))
+        return SK.takes_target(rec)
+    return False
+
+
 def _focus_actor(b, st):
     """这一场「集火」锁着的那一格 actor（没锁 / 锁的那只已经倒了 ⇒ None = 引擎自己挑）。"""
     fu = str(st.get("focus") or "")
@@ -566,10 +680,48 @@ def _focus_actor(b, st):
     return a
 
 
+def _res_rows(a) -> list:
+    """★ 夜班试玩 w3（mage/p3 两条都撞到）：战斗屏上「法力 + 职业资源」那两条读数。
+
+    原先那一屏只有血（`COMBAT_TURN_STATE`）—— 法师的两个命根子（法力 / 印记）在打的时候
+    一条都看不见：法力要退出去敲『状态』，印记**任何一页都没有**（唯一读法是敲一个付不起的
+    技能看它拒绝）。这里只**读 actor 身上现成的两格**，不新开账：
+
+      · 法力 = 引擎 actor 的 `mp` / `max_mp`（与 `状态`、档上那一格同源，`combat.player_actor` 写的）
+      · 资源 = `content/rules/resources.json` 里声明的资源码 → 层数取自 `actor["effects"][码].stacks`
+        （`resources.set_to / add` 写的就是这个容器 —— 开战摆 0 层那条）
+
+    没这两格（没有职业 / 表读不到 / 这一档还没接线）⇒ **一行都不出**（不装配 = 与接线前逐字相同）。
+    """
+    out = []
+    try:
+        _mx = int(a.get("max_mp") or 0)
+    except (TypeError, ValueError):                                     # noqa: BLE001
+        _mx = 0
+    if _mx > 0:
+        out.append(T("COMBAT_TURN_MP", mp=int(a.get("mp") or 0), mp_max=_mx))
+    try:
+        from . import resources as _RES
+        _tbl = _RES.resources()
+    except Exception:                                                   # noqa: BLE001
+        _tbl = {}
+    _ef = a.get("effects") or {}
+    for _code in sorted(_tbl):
+        _entry = _ef.get(_code)
+        if not isinstance(_entry, dict):
+            continue
+        _rec = _tbl.get(_code) or {}
+        out.append(T("COMBAT_TURN_RES", name=_rec.get("name") or _code,
+                     n=int(_entry.get("stacks") or 0),
+                     mx=int(_RES.max_of(_code) or _rec.get("max") or 0)))
+    return out
+
+
 def turn_lines(st, uid) -> list:
     """★ G2 四段式的 ①②③ —— **只读那一份场**（不重开引擎），给每一次出手之后看。
 
-    ① 现状 + 谁先动（`COMBAT_TURN_STATE` + `COMBAT_TURN_I_FIRST` / `COMBAT_TURN_FOE_FIRST`）
+    ① 现状 + 谁先动（`COMBAT_TURN_STATE` + `COMBAT_TURN_MP` / `COMBAT_TURN_RES`（本波起）+
+       `COMBAT_TURN_I_FIRST` / `COMBAT_TURN_FOE_FIRST`）
     ② 对方在干什么（`COMBAT_TURN_FOE_DOING` / `COMBAT_TURN_FOE_IDLE`）
     ③ 你的选项（`COMBAT_TURN_MENU`）
 
@@ -600,6 +752,9 @@ def turn_lines(st, uid) -> list:
     out = [T("COMBAT_TURN_STATE", n=int(st.get("hands") or 0),
              hp=int(_my_hp or 0), hp_max=int(_my_mx or 0),
              name=nm, foe_hp=int(_fo_hp or 0), foe_hp_max=int(_fo_mx or 0))]
+    # ★ 夜班试玩 w3：血那一行后面补「法力 + 职业资源」两行（只读 actor 现成的格子；
+    #   没有那两格 ⇒ 一行都不出 —— 与接线前逐字相同，见 `_res_rows` 的抬头）。
+    out.extend(_res_rows(me))
     if my_ct <= foe_ct:
         out.append(T("COMBAT_TURN_I_FIRST", my_ct=int(round(my_ct)), foe_ct=int(round(foe_ct))))
     else:

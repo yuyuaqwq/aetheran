@@ -65,23 +65,40 @@ def _ordered(p, ids) -> list:
     return sorted(set(str(x) for x in ids), key=lambda x: order.get(x, (99, x)))
 
 
-def _by_name(sk: dict, want: str) -> tuple:
-    """技能按名字（或 id）认一条；认不出回 `(None, None)`。
+def _by_name(sk: dict, want: str, cls: str) -> tuple:
+    """技能按名字（或 id）认一条 —— 撞名时**先认你自己门里的那条**；认不出回 `(None, None)`。
 
     ★ 「≥2 字才算部分匹配」与 `loot.match_ids` 同一口径（B4-20 起那一个是唯一的一口）。
-      （重名的那一对「后撤」落在两个职业上 —— 认到的那条**不是你职业的**会被
-      `SYS_SKILL_NOTMINE` 挡住，不乱学。）
+
+    ★ fix-f-dupname：域里**撞名**的那一对「后撤」落在两个职业上
+      （`SKILL_RNG_backstep` / `SKILL_SHD_backstep`）。改前这里写的是 `for k in sorted(sk)`
+      取**第一条** —— id 序恒为 `RNG_ < SHD_` ⇒ **刺客敲『技能 后撤』永远认到游侠那条**
+      ⇒ 调用点判 owner 不符 ⇒ `COMBAT_SKILL_BAD`；可同一张 `技能` 页又把它列在「已会」里
+      （列的是**本职业那一条**）⇒ 玩家读成「自己会、却永远放不出来」。
+
+      改法：候选按 `(是不是你这一门, id)` 排 —— 排名 0 = `owner_class == cls`（**你的门优先**）。
+      别人门的技能**照旧被拦**：这一口只决定「认到域里哪一条」，四道门仍在调用点
+      （`SYS_SKILL_NOTMINE` / `COMBAT_SKILL_BAD` 的语义一个字没松）。
+      排名 1 那一档**不是兜底**：不是本职业的名字得照样认出来、好让调用点**点名是谁的**
+      （改这一档为"认不出"会把门放**松** —— `SYS_SKILL_NOTMINE` 退化成「域里没有这条」）。
+
+    `cls` 是**必传**的（不给默认值）：认到哪一条本来就取决于「你是谁」，
+    没有 cls 的调用点本身就是错的，不该有个静默的默认值替它猜。
     """
     want = str(want or "").strip()
     if not want:
         return (None, None)
     if want in sk:
         return (want, sk[want])
+    hits = []
     for k in sorted(sk):
         nm = str(sk[k].get("name") or "")
         if nm and (want == nm or (len(want) >= 2 and want in nm)):
-            return (k, sk[k])
-    return (None, None)
+            hits.append((0 if str(sk[k].get("owner_class") or "") == cls else 1, k))
+    if not hits:
+        return (None, None)
+    hits.sort()
+    return (hits[0][1], sk[hits[0][1]])
 
 
 # ══════════════════════════════════════════════════════════════
@@ -138,7 +155,7 @@ async def skill_learn(env, sink, uid, player):
         return
 
     sk = _skills()
-    sid, rec = _by_name(sk, want)
+    sid, rec = _by_name(sk, want, cls)
     if not sid:
         yield T("SYS_SKILL_NONE", name=want)
         return

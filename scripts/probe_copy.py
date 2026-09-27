@@ -573,6 +573,13 @@ def main():
     _w2 = next((k for k in sorted(k for k, v in _its.items() if v.get("slot") == "weapon")
                 if _its[k].get("name") != _its.get(_wpn, {}).get("name")), _wpn)
     _plain = next((k for k in sorted(_its) if not _its[k].get("slot")), "")
+    # ★ fix-g-enhance（现象 A）：「强化 **成功**」那一支要进用例表 —— 它得站在柯尔那一站
+    #   （那一站从 `npcs.funcs` 的 `smith` 现取，与 `cmds_recipe` 那条守卫**同一个口**，不手写节点 id），
+    #   料则从**那一档的配方**现取（同一个域 —— 不另抄一份「强化料是哪些」）。
+    from content.town import _func_node as _TOWN_FN                       # noqa: E402
+    _SMITH_NODE = _TOWN_FN("smith")
+    _ENH1 = ((st.domain("recipes") or {}).get("rc_enh_01") or {}).get("inputs") or []
+    _ENH1_BAG = {str(e["id"]): int(e["n"]) for e in _ENH1}
     # ★ B3-12 的 fixture（都从域里挑，不手写 id）：域里带价的（卖得掉）· 域里没写价的（拿在手上的）
     _pric = next((k for k in sorted(_its) if isinstance(_its[k].get("price"), (int, float))
                   and not isinstance(_its[k].get("price"), bool) and _its[k]["price"] > 0), "")
@@ -786,6 +793,10 @@ def main():
          {"cls": "cls_assassin", "level": 5}),
         ("放技能(不是本职业)", CBL.skill_cast, "技能 冰棱",
          {"cls": "cls_assassin", "level": 5}),
+        # ★ fix-l：**等级没到**这一支也进用例表 —— 于是 ⑥「不缺文案」与 ⑪「不漏机器键」
+        #   两条守卫自动罩到它身上（K61）；「要几级」那句逐字对账在 ⑫-d 一条正例 + 三条反证。
+        ("放技能(等级没到)", CBL.skill_cast, "技能 血债",
+         {"cls": "cls_berserker", "level": 2}),
         ("放技能(本门的断势)", CBL.skill_cast, "技能 断势",
          {"cls": "cls_assassin", "level": 5, "loc": "belt_north", "node": "bn_bone"}),
         ("战斗中用物(没带)", CBL.battle_item, "使用 伤药",
@@ -822,6 +833,12 @@ def main():
         ("强化(没有这件)", CR.enhance, "强化 不存在的剑", {}),
         ("强化(料不够)", CR.enhance, "强化 %s" % _its.get(_wpn, {}).get("name", "剑"),
          {"bag": {_wpn: 1}} if _wpn else {}),
+        # ★ fix-g-enhance（现象 A / B）：**成功**那一支也进用例表 —— 成功那行要逐项报出吃掉的料
+        #   （料表 = 那一档的 `inputs`，与「缺料」那一支同一份）· 加成那句说明在域里；
+        #   ⑥「不缺文案」与 ⑪「不漏机器键」于是**自动**罩到这条新写的呈现口上（K61）。
+        ("强化(成功·报料)", CR.enhance, "强化 %s" % _its.get(_wpn, {}).get("name", "剑"),
+         {"loc": "windmill_town", "node": _SMITH_NODE, "gold": 999,
+          "bag": dict(_ENH1_BAG), "equipped": {_its.get(_wpn, {}).get("slot"): _wpn}}),
         ("使用(没给东西)", CR.item_use, "使用", {}),
         ("使用(药水)", CR.item_use, "使用 药水", {"cls": "cls_knight", "bag": {"i_potion_heal": 1}}),
         ("使用(伤药)", CR.item_use, "使用 伤药",
@@ -1275,6 +1292,42 @@ def main():
             _free_bad.append((_lab, _got[:1], (_pp.get("loc"), _pp.get("node"))))
     chk("★ 反证：这一场收掉之后（脱身 / 打完）⇒ 同一步真放行（那三条各自真出门）",
         not _free_bad, "%s" % (_free_bad[:2],))
+
+    # ⑫-d ★ fix-l（夜班试玩 · ranger b38~b40 / b56·b57）：两条**呈现缺口**，各配一条反证
+    #   （两态互锁 —— 不是「恒印一句」）。
+    #   ① 手上还有一场没打完 ⇒ 『状态』末行就把它说出来。改前：面板一个字不提，玩家要等
+    #      敲『去 X』被 `SYS_MOVE_IN_FIGHT` 拦下才知道自己走不动（跨进程回来尤其看不懂）。
+    #      只读 `instance.fighting`，不动状态；那一场收掉之后**不印**（反证）。
+    #   ② 野外那屏『地图』末行点明回镇的口（『进镇』原先只在『帮助』那一栏，玩家自己想不到）；
+    #      镇上那屏**不印**（反证）—— 判据的轴 = maps 域的 `topology`（star = 镇）。
+    _in_fight = tx["SYS_STATUS_IN_FIGHT"]["value"]
+    _back_town = tx["SYS_MAP_BACK_TOWN"]["value"]
+    _l_d = []
+    _mk = dict(loc="belt_north", node="bn_bone", cls="cls_knight", level=3, hp=80,
+               bag={}, codex={}, flags={})
+    _drive(CBL.attack, _player(**_mk), "")
+    _st_on = _drive(CA.status, _player(**_mk), "")
+    if _in_fight not in _st_on:
+        _l_d.append(("场在跑·状态没提", _st_on[-2:]))
+    _clear_field()
+    _st_off = _drive(CA.status, _player(**_mk), "")
+    if _in_fight in _st_off:
+        _l_d.append(("场收掉了·状态还印", _st_off[-2:]))
+    chk("★ fix-l ①：手上还有一场没打完 ⇒ 『状态』末行说出来；收掉之后不再印（两态互锁）",
+        not _l_d, "%s" % (_l_d[:2],))
+
+    _l_m = []
+    _mw = _drive(CA.map_view, _player(loc="belt_north", node="bn_camp"), "")
+    _mt = _drive(CA.map_view, _player(loc="windmill_town", node="wt_gate_n", race="human"), "")
+    if not _mw or _mw[-1] != _back_town:
+        _l_m.append(("野外没这一行", _mw[-1:]))
+    if any(_back_town in ln for ln in _mt):
+        _l_m.append(("镇上不该印", _mt[-2:]))
+    if str((st.domain("maps").get("windmill_town") or {}).get("topology")) != "star" \
+            or str((st.domain("maps").get("belt_north") or {}).get("topology")) == "star":
+        _l_m.append(("拓扑轴选错了", "镇上 / 野外那张图的 topology"))
+    chk("★ fix-l ②：野外那屏『地图』末行点明回镇的口；镇上那屏**不印**（两态互锁）",
+        not _l_m, "%s" % (_l_m[:2],))
 
 
     # ── ⑲ ★ fix3-⑥⑦：机器味 / 开发词上屏（三处点名）+「扫面」的语境 ─────────────

@@ -20,6 +20,9 @@ r"""探针：多人战斗的轮转与输入窗口（B3-26）—— 场 · 轮转
   ⑥ fail-closed：队伍口坏了当场抛 · 队却没群当场抛 · **没群时单人照样有自己那一场、两个人各一格** · 场记录坏了不当成「没开过」
   ⑥b 名单外的人敲战斗指令 ⇒ 走单人老路，别人的场一字不动
   ⑦ 一场真打完（两个档轮流出手）⇒ 结算落两个人的档 · 场散掉
+  ⑪ ★ 名单变了（离队 / 解散）⇒ 那一场按**现名单**收口（`instance.leave_reconcile` 唯一一口）：
+     走的人从 `members` 与 `sides` **一起**摘（剩下的人接着打）· 摘完 ≤1 人 / 队长退 = 解散
+     ⇒ 这一场收掉 · 人不在这一场里 / 手上没场 ⇒ 一个字都不动（真敲队伍/邀请/同意/攻击/离队）
 
 跑法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_instance.py
      python scripts/probe_instance.py --dump      # 打基线（改前那份树的真跑回话）
@@ -261,6 +264,35 @@ def solo_transcript():
 #     ⇒ 逐字对账里唯一变的一行是「…在 北带 · 骨田」→「…在 北带」（新旧两份 `--dump` 逐行 diff 过：
 #       5 条指令 · 5 条 row 只差这 1 行 · `save` 那几格逐字相同）。
 #     新口径的常驻判据在 `scripts/probe_maps.py` ⑨（图名是区域名 · 不含自己的节点名）+ 本分支 `_notes.md` §八。
+#
+#   ★ ★ 夜班试玩 w3（2026-09-27 · 分支 `fix-qa1`）第六次刷新 —— 同样是**有意的口径变更**（这一支没动一行）：
+#     战斗屏（四段式①）在「血」那一行后面补了两条读数：`⚡ 法力 {mp}/{mp_max}` 与
+#     `🔹【{资源}】{n}/{mx}`（法师的印记 · 骑士的守誓值…名字与上限现取自 `content/rules/resources.json`，
+#     层数取自 actor 现成的 `effects[码].stacks` —— 开战摆 0 层那条，不新开账）。
+#     起因：六路试玩里有两条（mage 的 c1 与 p3）都报「法师的两个命根子在战斗里一条都看不见」：
+#     法力要退出去敲『状态』、印记任何一页都没有（唯一读法是敲一个付不起的技能看它拒绝）。
+#     ⇒ 逐字对账里**只多出 6 行**（3 条指令各 2 行：⚡ 法力 50/50 · 🔹【守誓值】12/100 → 24/100），
+#       删/改 **0 行** · 命令序列与 `save` 那几格逐字相同（新旧两份 `--dump` 逐行 diff 过）。
+#     新口径的常驻判据见 `scripts/probe_battle_turns.py`（战斗屏四段式那一族）与本分支 `_notes.md` §w3。
+#   ★ fix-a-screen（2026-09-27 · 显示层那一批）第七次刷新 —— 同样是**有意**的呈现变更
+#     （这一支一个字没动；改的是内容侧那一格文案）：`content/rules/battle_text.json` 新声明了
+#     引擎槽位 `battle.landing.blocked_amount` ⇒ 那句兜底模板的**半角括号**（全屏唯一一处，
+#     骑士路试玩报的「`(格挡后 N 点伤害)` 是全屏唯一的半角括号」）换成 texts 域里那一行。
+#     ⇒ 逐字对账里唯一变的一行是「(格挡后 2 点伤害)」→「（格挡后 2 点伤害）」
+#     （新旧两份 `--dump` 逐行 diff 过：5 条指令 · 共 37 行只差这 1 行 · `save` 那几格逐字相同；
+#       括号以外**逐字节**相同 —— 半角 1 字节 → 全角 3 字节，整份基线只差这 4 字节）。
+#     新口径的常驻判据：`scripts/probe_elements.py` ⑨-d（那一屏一个半角括号都不许有）
+#     + `scripts/probe_mech.py` ㉑（一笔自付只出一行）。
+#     口径依据：措辞归内容侧（引擎只给 key + 兜底模板 + 槽位，`landing.py:170`）。
+#   ★ fix-l（2026-09-27 · 夜班修复那一批）第八次刷新 —— 同样是**有意**的呈现变更
+#     （这一支一个字没动；改的是内容侧那一屏文案）：`状态` 面板在「手上还留着一场没打完」时
+#     多一行（`SYS_STATUS_IN_FIGHT`）。起因：试玩 ranger b38~b40 报「跨进程回来先敲『状态』
+#     一个字都不提，直到敲『去 X』被 `SYS_MOVE_IN_FIGHT` 拦下才知道自己走不动」。
+#     ⇒ 逐字对账里**只多出 1 行**（第 5 条指令『状态』末行：⚔ 手上这一场还没打完 —— …），
+#       删/改 **0 行** · 命令序列与 `save` 那几格逐字相同（新旧两份 `--dump` 逐行 diff 过：
+#       5 条指令 · 共 38 行只多这 1 行 · `save` 逐字相同）。
+#     新口径的常驻判据：`scripts/probe_copy.py` ⑫-d ①（场在跑 ⇒ 印 · 收掉了 ⇒ 不印，两态互锁）
+#     + 同节 ②（野外 `地图` 末行点明回镇的口 · 镇上不印）。
 # ══════════════════════════════════════════════════════════════
 BASELINE_PATH = os.path.join(str(REPO), "scripts", "_baseline_instance_solo.json")
 
@@ -717,6 +749,153 @@ def main():
         _unpin(saved)
     chk("★ 区域 Boss 只能打一次（真源 `05_玩法数值口径_v1 §四` · 真敲）：打掉过 ⇒ 遇敌里不再出现；"
         "**只输过**（进谱但 kills=0）⇒ 照样遇得上", not _B9, "%s" % _B9[:2])
+
+    # ── ⑩ ★ fix-q：持态中敲『状态』报的是**这一场那一格血**（不是档上那一份）──────────
+    #   `instance._write_back` 只把**轮到我那一手**的血落回档 ⇒「别人出手那一手我挨的打」
+    #   不在档上（实测 2 人同场：乙出手那一手甲挨 27，档上仍是 284 ⇒ 甲敲『状态』报旧数，
+    #   下一手头行才见真数）。这里不靠「怪正好打谁」那种抽签：把这一场那一格**改成与档上
+    #   不同的一个数**（档一个字不动），再看『状态』报哪一个 —— 判据咬的是「读的是哪一份」。
+    print()
+    print("⑩ ★ fix-q：持态中敲『状态』报的是**这一场那一格血**（与 `live_mp` 同一个口）")
+    import ast as _ast10
+    from content import panel_build as _PB10
+    db = _fresh("q")
+    host, ad = _boot(db, "g_q")
+    _seed("g_q", "u_a", level=PARTY_LV, cls="cls_knight", name="甲")
+    _seed("g_q", "u_b", level=PARTY_LV, cls="cls_assassin", name="乙")
+    INST.party_members = lambda g, u: ["u_a", "u_b"] if g == "g_q" else [u]
+    saved = _pin_encounter(PARTY_MON)
+    _B10 = []
+    try:
+        _o_q = _drive(host, ad, "u_a", "攻击")               # 开场 + 甲先出一手
+        _st_q = INST.load("g_q")
+        if _st_q is None or not any(("遭遇" in x or "⚔" in x) for x in _o_q):
+            _B10.append(("攻击 没开成一场", _o_q[:2]))
+        else:
+            _pk_q = dict(PS.get_player("g_q", "u_a"))
+            _cap_q = int(_PB10.hp_cap(_pk_q))
+            _me_q = INST.actor_of(_st_q, "u_a")
+            _me_q["hp"] = _cap_q - 37                        # 场里那一格 ≠ 档上那一格
+            INST.save("g_q", _st_q)
+            _snap_q = dict(PS.get_player("g_q", "u_a"))
+            _o_q2 = _drive(host, ad, "u_a", "状态")
+            _txt_q = "\n".join(_o_q2)
+            if ("生命 %d/%d" % (_cap_q - 37, _cap_q)) not in _txt_q:
+                _B10.append(("状态 没报场里那一格血（该 %d/%d）" % (_cap_q - 37, _cap_q), _o_q2[:2]))
+            if ("生命 %d/%d" % (int(_pk_q.get("hp") or 0), _cap_q)) in _txt_q:
+                _B10.append(("状态 报的还是档上那一份（旧数 %s）" % (_pk_q.get("hp"),), _o_q2[:2]))
+            if dict(PS.get_player("g_q", "u_a")) != _snap_q:
+                _B10.append(("只读的口把档动了",))
+        # 两态互锁：**没有场**的那一位照旧报档上那一格（与接线前逐字相同）
+        db2 = _fresh("q2")
+        host2, ad2 = _boot(db2, "g_q2")
+        _seed("g_q2", "u_c", level=PARTY_LV, cls="cls_priest", name="丙")
+        _pk2 = dict(PS.get_player("g_q2", "u_c"))
+        _txt_q2 = "\n".join(_drive(host2, ad2, "u_c", "状态"))
+        if ("生命 %s/" % (_pk2.get("hp"),)) not in _txt_q2:
+            _B10.append(("没有场时没照档上那一格报", _txt_q2.splitlines()[:2]))
+        # 覆盖面（静态）：这一格的读数只走 `live_hp` 那一口（谁再直接拿 `p["hp"]` 顶上，这里红）
+        _src_q = (REPO / "content" / "cmds_ast.py").read_text(encoding="utf-8")
+        _st_fn_q = next((n for n in _ast10.walk(_ast10.parse(_src_q))
+                         if isinstance(n, _ast10.AsyncFunctionDef) and n.name == "status"), None)
+        _uses_q = [n for n in _ast10.walk(_st_fn_q) if isinstance(n, _ast10.Call)
+                   and getattr(n.func, "id", "") == "live_hp"] if _st_fn_q else []
+        if len(_uses_q) != 1:
+            _B10.append(("status 没走 live_hp 那一口（%d 处）" % len(_uses_q),))
+    finally:
+        _unpin(saved)
+        INST.party_members = None
+    chk("★ fix-q 持态中『状态』报**这一场那一格血**（档上那一格只对刚出手的那位是活的）· "
+        "只读的口**不动档** · 没有场时照旧报档上那一格 · 读数只走 `live_hp` 那一口"
+        "（坏 %s）" % (_B10[:2] or "无",), not _B10, "%s" % (_B10[:2],))
+    # ── ⑪ 名单变了（离队 / 解散）：那一场按**现名单**收口（fix-r）────────────
+    #   ★ 试玩实测（knight 第 3 轮 · 第 41/42 批 + 第 46~50 批）：`离队` 原先只动队伍名单，
+    #     那一格 `instance:<群>` 一个字不碰 ⇒ ① 剩下的人敲『攻击』回「⏳ 还没轮到你 ——
+    #     你在等 <已经走掉的那位>」（只能等 45 秒窗口过期）② 队散了再开一场 ⇒ 被塞回那场
+    #     没打完的旧仗（幽灵成员）。本节的判据 = `instance.leave_reconcile` 那三条口径，
+    #     全部**真敲指令**（队伍 / 邀请 / 同意 / 攻击 / 离队 都是真命令，不注入队伍口）。
+    print()
+    print("⑪ 名单变了：离队 ⇒ 走的人从**这一场**摘掉（剩下的人接着打）· 剩 ≤1 人 / 解散 ⇒ 这一场收掉")
+    db = _fresh("lv")
+    host, ad = _boot(db, "g_lv")
+    _seed("g_lv", "u_a", name="甲", level=PARTY_LV, cls="cls_knight")
+    _seed("g_lv", "u_b", name="乙", level=PARTY_LV, cls="cls_assassin")
+    _seed("g_lv", "u_c", name="丙", level=PARTY_LV, cls="cls_ranger")
+    saved = _pin_encounter(PARTY_MON)
+    _B11 = []
+
+    def _names11(mem):
+        return sorted(str(x) for x in (mem or []))
+
+    def _sides_uids11(st):
+        return [str(a.get("uid") or "") for a in (INST.players_of(st) if st else [])]
+
+    try:
+        _drive(host, ad, "u_a", "队伍")
+        _drive(host, ad, "u_a", "邀请 乙")
+        _drive(host, ad, "u_b", "同意")
+        _drive(host, ad, "u_a", "邀请 丙")
+        _drive(host, ad, "u_c", "同意")
+        _drive(host, ad, "u_a", "攻击")                       # 三个人真进同一场
+        _st0 = INST.load("g_lv")
+        if _st0 is None or _names11(_st0.get("members")) != ["u_a", "u_b", "u_c"]:
+            _B11.append(("三个人没进同一场", None if _st0 is None else _st0.get("members")))
+        # ① 队员退（三个人里走一个）⇒ **只**把他从这一场摘掉（members 与 sides 一起）
+        _drive(host, ad, "u_b", "离队")
+        _st1 = INST.load("g_lv")
+        if _st1 is None or _names11(_st1.get("members")) != ["u_a", "u_c"] or "u_b" in _sides_uids11(_st1):
+            _B11.append(("走的人没从这一场摘干净",
+                         (None if _st1 is None else _st1.get("members"), _sides_uids11(_st1))))
+        elif str(INST.key_of("g_lv", "u_a", INST.members_of("g_lv", "u_a"))) != "g_lv":
+            _B11.append(("剩下的人这一场的键跑偏了", INST.members_of("g_lv", "u_a")))
+        #   剩下的人真能接着打：轮转不再落在走掉的那位身上
+        _hands0 = int((_st1 or {}).get("hands") or 0)
+        _o2 = _drive(host, ad, "u_a", "攻击")
+        _st1b = INST.load("g_lv")
+        if _st1b is not None and str(INST.next_actor_key(_st1b) or "") not in ("u_a", "u_c"):
+            _B11.append(("轮转还指着走掉的人", INST.next_actor_key(_st1b)))
+        if _st1b is not None and int(_st1b.get("hands") or 0) <= _hands0 \
+                and not any("还没轮到你" in _x for _x in _o2):
+            _B11.append(("剩下的人敲『攻击』什么都没发生", _o2[:3]))
+        # ② 摘完只剩一个人 ⇒ 这一场**收掉**（键按名单分：留着就是下一批人踩的坑）
+        _drive(host, ad, "u_c", "离队")
+        if INST.load("g_lv") is not None:
+            _B11.append(("只剩一个人还留着那一场", INST.load("g_lv").get("members")))
+        # ③ 走的人**本来就不在这一场**里 ⇒ 一个字都不动（这一场照跑）
+        _drive(host, ad, "u_a", "队伍")
+        _drive(host, ad, "u_a", "邀请 乙")
+        _drive(host, ad, "u_b", "同意")
+        _drive(host, ad, "u_a", "攻击")
+        _st2 = INST.load("g_lv")
+        if _st2 is None or _names11(_st2.get("members")) != ["u_a", "u_b"]:
+            _B11.append(("两人场没开起来", None if _st2 is None else _st2.get("members")))
+        else:
+            _r3 = INST.leave_reconcile("g_lv", "u_c", ["u_a", "u_b"])   # 丙不在这一场里
+            _st2b = INST.load("g_lv")
+            if _r3.get("action") != "none" or _st2b is None \
+                    or _names11(_st2b.get("members")) != ["u_a", "u_b"]:
+                _B11.append(("不在这一场里的人也该什么都不动", (_r3, None if _st2b is None
+                                                              else _st2b.get("members"))))
+        # ④ 队长退 = **解散** ⇒ 这一场收掉（队没了，键也不再是群）
+        _drive(host, ad, "u_a", "离队")
+        if INST.load("g_lv") is not None:
+            _B11.append(("解散之后那一场还留着", INST.load("g_lv").get("members")))
+        # ⑤ 手上没有场 ⇒ 什么都不动（两条「none」分支的另一条）
+        _lr = getattr(INST, "leave_reconcile", None)      # ★ 这一口没了 ⇒ 这一节照实红（不炸整支）
+        if _lr is None:
+            _B11.append(("没有 `instance.leave_reconcile` 这一口", None))
+        else:
+            _r5 = _lr("g_lv", "u_a", ["u_b"])
+            if _r5.get("action") != "none":
+                _B11.append(("没场时不该动", _r5))
+    except Exception as _exc:                             # noqa: BLE001
+        _B11.append(("这一节真跑炸了", repr(_exc)))
+    finally:
+        _unpin(saved)
+    chk("★ 名单变了（离队 / 解散）⇒ 那一场按**现名单**收口（真敲：队伍→邀请→同意→攻击→离队）："
+        "走的人从 members 与 sides **一起**摘（剩下的人接着打、轮转不再落在他身上）· "
+        "摘完 ≤1 人 / 队长退（解散）⇒ 这一场收掉 · 人不在这一场里 / 手上没场 ⇒ 一个字都不动",
+        not _B11, "%s" % _B11[:2])
 
     print()
     print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))

@@ -1126,7 +1126,28 @@ try:
     _w1b = _want_show(1) + [_r("SYS_BOARD_ACTIVE"), _r("SYS_BOARD_DELIVER", order=1)]
     if _g1b != _w1b:
         _BAD12.append(("看 1（已接）", _g1b, _w1b))
-    chk("★ `看 <编号>` 真敲四档：未接 / 支线编号 / 没有这张 / 已接 —— 整段与 quests 域 + texts 现算的期望"
+    #   ★ fix-r②：**手上真在跑的那一条压过「已交」那本历史账** —— 跨游戏日重接的悬赏
+    #     （fix-m-bounty 放行的那一档）会**同时在** `flags.quests_active` 与 `flags.quests_done`
+    #     （完成记录，有意不去掉）里；改前 `_done` 先判 ⇒ 同一屏上面刚印「还差：…（你打过 0 只）」，
+    #     下一行接一句「（已交）」，而『我的委托』把它算【进行中】（berserker b124 / knight b4~b5
+    #     两路实测）。这里**手工造出那个两本账并存的状态**（两路都真敲），判据只钉呈现顺序。
+    _fl12b = dict(_ad12.saved.get("flags") or {})
+    _fl12b["quests_active"] = ["q_main_01"]
+    _fl12b["quests_done"] = ["q_main_01"]
+    _ad12.saved["flags"] = _fl12b
+    _g1c = _say12("看 1")
+    _w1c = _want_show(1) + [_r("SYS_BOARD_ACTIVE"), _r("SYS_BOARD_DELIVER", order=1)]
+    if _g1c != _w1c:
+        _BAD12.append(("看 1（既在手上 · 又有完成记录）", _g1c, _w1c))
+    _fl12b2 = dict(_ad12.saved.get("flags") or {})
+    _fl12b2["quests_active"] = []
+    _ad12.saved["flags"] = _fl12b2
+    _g1d = _say12("看 1")                      # 只交过、手上没有 ⇒ 才是「（已交）」
+    _w1d = _want_show(1) + [_r("SYS_TRADE_MARK_DONE")]
+    if _g1d != _w1d:
+        _BAD12.append(("看 1（只交过）", _g1d, _w1d))
+    chk("★ `看 <编号>` 真敲六档：未接 / 支线编号 / 没有这张 / 已接 / **既在手上又有完成记录（进行中优先）** / "
+        "只交过 —— 整段与 quests 域 + texts 现算的期望"
         "逐字一致（编号就是 `order`，与『接』认的是同一个字段）",
         not [x for x in _BAD12 if x[0].startswith("看")],
         "%s" % [x for x in _BAD12 if x[0].startswith("看")][:2])
@@ -1459,18 +1480,45 @@ try:
     _lv13 = int(_sv12().get("level") or 1)
     _tot13 = _AL13.total_points(_lv13)
 
-    def _ok13(stat, n, now, left):
-        return [_r("SYS_ALLOC_OK", stat=_r("SYS_STAT_%s" % stat), n=n, now=now, left=left)]
+    def _cap13(al):
+        """这一档在 `alloc=al` 时的**生命上限**（唯一来源 `PB.hp_cap` —— 与「属性」页 / `面板` 同一个口）。"""
+        return int(PB.hp_cap(dict(_sv12(), alloc=dict(al))))
+
+    def _capline13(out):
+        """回话里那行「生命上限 old → new」→ `(old, new)`；没有这行回 `None`（按槽位前缀认）。"""
+        _pre = str(TX["SYS_GEAR_HP_CAP"]["value"]).split("{")[0]
+        for _ln in out:
+            if _ln.startswith(_pre):
+                _o, _n = _ln[len(_pre):].split(" → ")
+                return int(_o), int(_n)
+        return None
+
+    def _ok13(stat, n, now, left, al_before, al_after):
+        """`加点` 那一屏的期望 —— ★ fix-n-small ①：**上限真动了就多一行**（与「装备」同一句）。"""
+        _c0, _c1 = _cap13(al_before), _cap13(al_after)
+        out = [_r("SYS_ALLOC_OK", stat=_r("SYS_STAT_%s" % stat), n=n, now=now, left=left)]
+        if _c0 != _c1:
+            out.append(_r("SYS_GEAR_HP_CAP", old=_c0, new=_c1))
+        return out
 
     def _alloc13():
         return (_sv12().get("alloc") or {})
 
     _g13a = _say12("加点 力量 3")
-    if _g13a != _ok13("STR", 3, 3, _tot13 - 3) or _alloc13() != {"STR": 3}:
+    if _g13a != _ok13("STR", 3, 3, _tot13 - 3, {}, {"STR": 3}) or _alloc13() != {"STR": 3}:
         _BAD12.append(("加点 力量 3", _g13a, _alloc13()))
     _g13b = _say12("加点 STR 2")
-    if _g13b != _ok13("STR", 2, 5, _tot13 - 5) or _alloc13() != {"STR": 5}:
+    if _g13b != _ok13("STR", 2, 5, _tot13 - 5, {"STR": 3}, {"STR": 5}) or _alloc13() != {"STR": 5}:
         _BAD12.append(("加点 STR 2（ASCII 也认）", _g13b, _alloc13()))
+    # ★ fix-n-small ①：**加点回话报的那条上限变化 = 「属性」页那一格**（同一份数据源、两个口）
+    _vital_pre13 = str(TX["SYS_ATTR_VITAL"]["value"]).split("{")[0]
+    _g13cap = _say12("属性")
+    _vital13 = [ln for ln in _g13cap if ln.startswith(_vital_pre13)]
+    _attr_cap13 = int(_vital13[0][len(_vital_pre13):].split(" ｜")[0]) if _vital13 else None
+    _cl13 = _capline13(_g13b)
+    if _cl13 != (_cap13({"STR": 3}), _attr_cap13) or _attr_cap13 != _cap13({"STR": 5}) \
+            or _cl13[1] != _cap13({"STR": 5}):
+        _BAD12.append(("加点报的上限 != 属性页", _g13b, _g13cap[:2]))
     _asks = [("加点 运气 1", _r("SYS_ALLOC_BAD_STAT", want="运气", list=_statlist13()),
               "认不出的维"),
              ("加点 力量 0", _r("SYS_ALLOC_BAD_NUM", want="0"), "次数 0"),
@@ -1491,7 +1539,9 @@ try:
     if _g13c != _w13c or _alloc13() != {"STR": 5}:
         _BAD12.append(("加点（不带参数）", _g13c, _w13c, _alloc13()))
     _g13d = _say12("加点 意志 %d" % (_tot13 - 5))
-    if _g13d != _ok13("WIL", _tot13 - 5, _tot13 - 5, 0) or _AL13.left_of_record(_sv12()) != 0 \
+    if _g13d != _ok13("WIL", _tot13 - 5, _tot13 - 5, 0, {"STR": 5},
+                      {"STR": 5, "WIL": _tot13 - 5}) \
+            or _AL13.left_of_record(_sv12()) != 0 \
             or _AL13.spent_of_record(_sv12()) != _tot13:
         _BAD12.append(("加点（投满）", _g13d, _alloc13(), _AL13.left_of_record(_sv12())))
     _g13e = _say12("加点")
@@ -1503,7 +1553,8 @@ try:
         _BAD12.append(("加点（余额 0 还想加）", _g13f))
     chk("★ P-34 `加点` 真敲 11 档：中文名 / ASCII 都认 · 逐字对账 · **余额对得上**"
         "（总点数 %d = 8 + 3×(级−1)）· 超余额 / 认不出的维 / 次数不是正整数 各回一行且**不动档**"
-        " · 投满 ⇒ `DONE`" % _tot13,
+        " · 投满 ⇒ `DONE` · ★ fix-n-small ① 抬了上限的那几维**多一行上限变化**（= 「属性」页那一格）"
+        "且不带上限的那一维**不出**这一行" % _tot13,
         not [x for x in _BAD12 if str(x[0]).startswith("加点")],
         "%s" % [x for x in _BAD12 if str(x[0]).startswith("加点")][:2])
 
@@ -2183,21 +2234,25 @@ try:
     _f_item = _field23(gid="")
     _o_item2 = _direct23(CBAT23.battle_item, _p_item, "使用 伤药")
     _used_left2 = (_p_item.get("bag") or {}).get(_POT23)
+    _f_item2 = _field23(gid="")
     _o_none = _direct23(CBAT23.battle_item, dict(_BASE23, bag={}), "使用 伤药")
     if _o_item[:1] != [_MEET23] \
             or _r("COMBAT_ITEM_HEAD", name="伤药") not in _o_item \
             or _used_left != 2 \
-            or not (_r("COMBAT_ITEM_CAP", name="伤药") in _o_item2) \
+            or _o_item2.count(_r("COMBAT_ITEM_CAP", name="伤药")) != 1 \
+            or _r("COMBAT_ITEM_HEAD", name="伤药") in _o_item2 \
             or _used_left2 != 2 \
             or _f_item is None or int(_f_item.get("items_used", {}).get(_POT23, 0)) != 1 \
+            or _f_item2 is None or int(_f_item2.get("hands") or 0) != 2 \
             or len([ln for ln in _o_item if "伤药" in ln and "喝下" in ln]) != 1:
         _B23.append(("用物 上限那一档", _o_item[:3], _used_left, _used_left2,
-                     [ln for ln in _o_item if "喝下" in ln]))
+                     [ln for ln in _o_item if "喝下" in ln], _o_item2[:3]))
     if _o_none != [_r("COMBAT_ITEM_BAD", name="伤药")]:
         _B23.append(("用物 没带", _o_none))
     _clear23(gid="")
     chk("★ `使用 <药>`（战斗口径 · 直调 · G2 起一手一手）：第 1 手真喝（背包 3 → %s）· "
-        "同一场第 2 手出「%s」并回落成普攻（背包仍是 %s）· 没带就一句实话（不开打）"
+        "同一场第 2 手**开口就说**「%s」（这一手照花、按普攻落；不再先报「备在手边」"
+        "—— fix-s 之前那句要等真轮到你才出，中间隔着别的日志）· 背包仍是 %s · 没带就一句实话（不开打）"
         % (_used_left, (TX.get("COMBAT_ITEM_CAP") or {}).get("value", "")[:10], _used_left2),
         not [x for x in _B23 if str(x[0]).startswith("用物")],
         "%s" % [x for x in _B23 if str(x[0]).startswith("用物")][:2])
@@ -2555,6 +2610,28 @@ try:
         "⇒ 一律**指路**（站名从 `maps` 现取）", not _badB17, "%s" % _badB17[:3])
     chk("★ 站到了 ⇒ 放行（首行是它自己那一句，不再是那两句拦话）", not _badC17, "%s" % _badC17[:3])
 
+    # ── 四 ★ fix-h-small（真人试玩 b24 野外 / b32 镇上对照）：`看 <认不出的编号>`
+    #    **先**答「没有这条」那一族、**再**判地点门 —— 「这几处都在镇上」是地点门给
+    #    『去 <铺子>』那一族的兜底，它答的是「这一屏在哪儿看得到」，答不了「板上有没有这一条」。
+    #    两态都要守（判据只加严，不许顺手把地点那一档松掉）：
+    #      · 认不出的编号（野外 / 镇上错站 / 站到了）⇒ **同一句**「没有这条」；
+    #      · 认得出的编号在野外 ⇒ **照旧**只回地点门那一句（`看 1`）。
+    _badD17 = []
+    _NO17 = _r("SYS_JOB_NOSUCH", name="999")
+    for _lab17, _loc17, _node17 in (("野外（骨田）", _WILD17[0], _WILD17[1]),
+                                    ("镇上但没走到那一站（北口）", _GATE17[0], _GATE17[1]),
+                                    ("站到了（挂板墙）", TW17.TOWN, _BRD17)):
+        _stand17(_loc17, _node17)
+        _got17 = _say17("看 999")
+        if _got17 != [_NO17]:
+            _badD17.append((_lab17, _got17[:2], [_NO17]))
+    _stand17(*_WILD17)
+    _got17 = _say17("看 1")
+    if _got17 != [_r("SYS_PLACE_NOTOWN")]:
+        _badD17.append(("野外 `看 1`（认得出的编号）", _got17[:2], [_r("SYS_PLACE_NOTOWN")]))
+    chk("★ 认不出的编号（`看 999`）三档同回「没有这条」那一族 · 认得出的编号在野外**照旧**"
+        "只回地点门那一句（地点这一档一个字没松）", not _badD17, "%s" % _badD17[:3])
+
     # ── 覆盖面（静态）①：凡 `guard_desc` 点名地点的声明，handler 必须**真调** `town_gate`
     _CALL17 = {}
     for _f in sorted((REPO / "content").glob("*.py")):
@@ -2796,6 +2873,40 @@ try:
     chk("★ 篝火那一站『触摸』照样能歇（`effect.rest` 那一条路与 `歇脚` 是同一支 `cmds_gather.rest`）",
         _s21c.get("hp") == _want21, "%s / hp=%s" % (_o21c[:3], _s21c.get("hp")))
 
+    # ── ③b ★ fix-p-restfight：**战斗中的『歇脚』**（持态闸 · 与出镇 / 带间 / 返回 / 去 / 塔门同一条）
+    #   原先这一支只判「脚下有没有火」⇒ 战斗中照样放行，而回血落在**玩家档那一份**、
+    #   这一场的血在「场」里 = **一人两套血**（实测：屏上被报满、下一手实战仍从旧血接着算，
+    #   试玩里靠它把屏上血量报满之后当场被打死）。两态互锁：这一敲被拦（下面）+ 不打架时
+    #   那一站照旧真回血（上面 ② 那条）。
+    def _two21(seed, texts):
+        _dbc = os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp",
+                            "ast_probe_cmds_b425_fight.db")
+        try:
+            os.remove(_dbc)
+        except OSError:
+            pass
+        _ac = _Ad([], seed=dict(seed))
+        _hc = Host(_ac, str(REPO), inject={"db_path": _dbc, "clock": lambda: _FIXED})
+        _hc.boot()
+        _steps = []
+        for _t in texts:
+            _ac.out.clear()
+            _hc.handle({"uid": "u_c", "group_id": "g_c", "text": _t})
+            _steps.append((list(_ac.out), dict(_ac.saved or {})))
+        return _steps
+
+    _steps21f = _two21(dict(_SEED21, cls="cls_knight", level=14, hp=999, exp=0, gold=0,
+                            bag={}, flags={}, prev=[], loc=_FM21, node=_FN21),
+                       ["攻击", "歇脚"])
+    _bad21f = []
+    if _steps21f[1][0] != [_r("SYS_MOVE_IN_FIGHT")]:
+        _bad21f.append(("拦话", _steps21f[1][0][:3]))
+    if _steps21f[1][1].get("hp") != _steps21f[0][1].get("hp"):
+        _bad21f.append(("档上的血被动了", _steps21f[0][1].get("hp"), _steps21f[1][1].get("hp")))
+    chk("★ fix-p-restfight：**战斗中『歇脚』一律拦下**（`SYS_MOVE_IN_FIGHT` —— 与出镇 / 带间 / "
+        "塔门同一条闸）· 档**一个字不动**（原先放行 ⇒ 回血落在玩家档那一份、而这一场的血在「场」里 "
+        "= 一人两套血）（坏 %s）" % (_bad21f or "无",), not _bad21f)
+
     # ── ④ 覆盖面（静态）：`cmds_gather.py` 不许自己扫 `pois` 域；`rest` 必须真调 `_fire_here`
     _gf21 = (REPO / "content" / "cmds_gather.py").read_text(encoding="utf-8")
     _t21 = _ast21.parse(_gf21)
@@ -2898,6 +3009,127 @@ try:
         and _r("SYS_TOUCH_NONE") not in _miss22, _miss22)
 except Exception as exc:                                                  # noqa: BLE001
     chk("★ F6 `触摸` 取参那一族跑得起来（真宿主契约）", False,
+        "%s: %s" % (type(exc).__name__, exc))
+
+
+# ══════════════════════════════════════════════════════════════
+# ★ fix-q：野外那四条（采集 / 挖掘 / 垂钓 / 搜查）也吃「场在跑」那道闸
+#   （原先只判「脚下有没有这个动词的点」⇒ 战斗中照出东西、档当场被改、而这一手不花）
+# ══════════════════════════════════════════════════════════════
+print("㉓ ★ fix-q：战斗中『采集 / 挖掘 / 垂钓 / 搜查』一律拦下（持态闸 · 与 `歇脚` 同一条）")
+try:
+    import ast as _ast23
+
+    _G23 = st.domain("gathering") or {}
+    _MON23 = st.domain("monsters") or {}
+    _HB23 = {}
+    for _m23 in _MON23.values():
+        for _n23 in ((_m23 or {}).get("habitat") or {}).get("nodes") or []:
+            _HB23.setdefault(str(_n23), []).append(_m23)
+    # 每条动词挑一处「既有这个点、又有怪」的站 —— 两半（拦得下 / 平时照出东西）都跑得起来；
+    # ★ 优先挑**不带时辰/天气门**的那个点（例：`树根边的菌` 只在「雨」出 ⇒ 平时那一半会
+    #   回 `SYS_TIME_GATED`，判据就咬不住「平时照出东西」了）。
+    _NODE23 = {}
+    for _gid23, _v23 in _G23.items():
+        _verb23 = str(_v23.get("verb") or "")
+        _key23 = (str(_v23.get("map") or ""), str(_v23.get("subarea") or ""))
+        if _key23[1] not in _HB23:
+            continue
+        _rank23 = (1 if _v23.get("time") else 0, _key23)
+        if _verb23 not in _NODE23 or _rank23 < _NODE23[_verb23][0]:
+            _NODE23[_verb23] = (_rank23, _key23)
+    _NODE23 = {k: v[1] for k, v in _NODE23.items()}
+    _WORD23 = {"herb": "采集", "dig": "挖掘", "fish": "垂钓", "search": "搜查"}
+    chk("★ 四条动词各有一处「有采集点 + 有怪」的站（从 gathering / monsters 两域现算 —— "
+        "站名一个字都不手写）：%s"
+        % " · ".join("%s=%s/%s" % (_WORD23.get(k, k), v[0], v[1]) for k, v in sorted(_NODE23.items())),
+        set(_NODE23) >= set(_WORD23), sorted(_NODE23))
+
+    _SEED23 = {"cls": "cls_knight", "race": "human", "name": "试炼者", "level": 12, "exp": 0,
+               "gold": 0, "hp": 60, "loc": "belt_north", "node": "bn_bone",
+               "prev": [], "bag": {}, "equipped": {}, "codex": {}, "flags": {}}
+
+    def _two23(seed, texts):
+        """真宿主逐敲（同一份档连着走，每一步都给回话 + 那一刻的档）—— 与别处同形。"""
+        _db23 = os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp",
+                             "ast_probe_cmds_fixq.db")
+        try:
+            os.remove(_db23)
+        except OSError:
+            pass
+        _ad23 = _Ad([], seed=dict(seed))
+        _h23 = Host(_ad23, str(REPO), inject={"db_path": _db23, "clock": lambda: _FIXED})
+        _h23.boot()
+        _steps = []
+        for _t23 in texts:
+            _ad23.out.clear()
+            _h23.handle({"uid": "u_c", "group_id": "g_c", "text": _t23})
+            _steps.append((list(_ad23.out), dict(_ad23.saved or {})))
+        return _steps
+
+    # ── ① 战斗中：四条一律只回闸那一句 · 档**逐值不动**
+    _bad23 = []
+    for _verb23 in sorted(_NODE23):
+        _fm23, _fn23 = _NODE23[_verb23]
+        _w23 = _WORD23[_verb23]
+        _st23 = _two23(dict(_SEED23, loc=_fm23, node=_fn23), ["攻击", _w23])
+        _opened23 = any(("遭遇" in x or "⚔" in x) for x in _st23[0][0])
+        if not _opened23:
+            _bad23.append((_w23, "攻击 没开成一场", _st23[0][0][:2]))
+            continue
+        if _st23[1][0] != [_r("SYS_MOVE_IN_FIGHT")]:
+            _bad23.append((_w23, "回话不是闸那一句", _st23[1][0][:2]))
+        _diff23 = [k for k in set(list(_st23[0][1]) + list(_st23[1][1]))
+                   if _st23[0][1].get(k) != _st23[1][1].get(k)]
+        if _diff23:
+            _bad23.append((_w23, "档被动了", _diff23))
+    chk("★ ① 真宿主：开一场（`攻击`）之后敲这四条 —— 一律**只回** `SYS_MOVE_IN_FIGHT`"
+        "（与出镇 / 带间 / 塔门 / 歇脚同一句）· 档**逐值不动**（坏 %s）" % (_bad23 or "无",),
+        not _bad23, "%s" % (_bad23[:3],))
+
+    # ── ② 两态互锁：不打架时那四条**照旧真出东西**（判据只紧，不拿"一律拦下"顶过去）
+    _bad23b = []
+    for _verb23 in sorted(_NODE23):
+        _fm23, _fn23 = _NODE23[_verb23]
+        _w23 = _WORD23[_verb23]
+        _st23b = _two23(dict(_SEED23, loc=_fm23, node=_fn23), [_w23])[0]
+        if _r("SYS_MOVE_IN_FIGHT") in _st23b[0]:
+            _bad23b.append((_w23, "平时也被拦了", _st23b[0][:2]))
+        _moved23 = [k for k in ("bag", "flags", "codex")
+                    if _st23b[1].get(k) != _SEED23.get(k)]
+        if not _moved23:
+            _bad23b.append((_w23, "档没动（平时该真出东西）", _st23b[0][:2]))
+    chk("★ ② 两态互锁：**不打架时**同一站敲同一条 ⇒ 不是闸那一句、且档真被改"
+        "（`bag` / `flags.gather_used` / `codex` 至少动一格）（坏 %s）" % (_bad23b or "无",),
+        not _bad23b, "%s" % (_bad23b[:3],))
+
+    # ── ③ 覆盖面（静态）：这一族**每个写档的入口**各自带闸、`pick_up` 有意不拦 ────────
+    #   ★ 判据按**函数**数，不数全文件的总数：这一族三个入口是 `_do_gather`（四条动词共用）·
+    #     `rest`（歇脚）· `pick_up`（有意不拦）；别处多出一个 `_in_fight` 调用照样红。
+    #     （写「全文件只有一处」在**并线**之后必然假红：`歇脚` 那一闸是另一条车道落进 `rest`
+    #       的 —— 两条是同一族的两半，不是重复。）
+    _gf23 = (REPO / "content" / "cmds_gather.py").read_text(encoding="utf-8")
+    _t23 = _ast23.parse(_gf23)
+    _calls23 = [n.lineno for n in _ast23.walk(_t23)
+                if isinstance(n, _ast23.Call) and isinstance(n.func, _ast23.Name)
+                and n.func.id == "_in_fight"]
+    _gated23 = {}
+    for _fn23 in _ast23.walk(_t23):
+        if isinstance(_fn23, _ast23.AsyncFunctionDef):
+            _gated23[_fn23.name] = sum(
+                1 for n in _ast23.walk(_fn23)
+                if isinstance(n, _ast23.Call) and isinstance(n.func, _ast23.Name)
+                and n.func.id == "_in_fight")
+    _names23 = sorted(k for k, v in _gated23.items() if v)
+    chk("★ ③ 覆盖面（静态）：这一族**每个写档的入口各自带闸** —— `_do_gather`（四条动词共用）"
+        "必须带（%s）· `pick_up` **有意不拦**（那一支一个字都不写，拦它只换一句话）· "
+        "带闸的只许是这一族那两处（`_do_gather` / `rest`，%d 处调用）"
+        % ("带了" if _gated23.get("_do_gather") else "**没带**", len(_calls23)),
+        _gated23.get("_do_gather") == 1 and not _gated23.get("pick_up")
+        and set(_names23) <= {"_do_gather", "rest"} and len(_calls23) == len(_names23),
+        "带闸的: %s · 调用 %s" % (_gated23, _calls23))
+except Exception as exc:                                                  # noqa: BLE001
+    chk("★ fix-q 野外那四条那一道闸跑得起来（真宿主契约）", False,
         "%s: %s" % (type(exc).__name__, exc))
 
 

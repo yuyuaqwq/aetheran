@@ -100,6 +100,15 @@ w9 加的那一组（P-61 悬赏板列三档悬赏）：㊱（见文件尾部那
 板上那三个编号**真接得下**（接线档）· 已接那档带「进行中」· 段序照旧 · 域里没有悬赏档时
 一行都不列（反证）。★ 判据只加不松：这一节没动上面任何一条。
 
+fix-m-bounty 加的那一组（悬赏日常循环断链 · 看板列了交掉的活）：㊲（见文件尾部那一节）——
+① 悬赏**跨游戏日可重接**（真源 `24 §二`「无限循环的日常内容 · 每天刷 1 次」+ `03 §4.1`
+「打怪类的日常活，**可反复接**」）：第 A 日交掉后**同日**仍拦 · **第 B 日放行**（真接下 ·
+完成记录不摘）· 第 B 日再交一次**落账去重**（`quests_done` 不许同一档进两份）·
+主线 / 支线 / 副业**跨日也照旧拦**（判据只加强）· 完成日**写坏 / 缺记录**一律拦（fail-closed）·
+反证：把链的限定拿掉 ⇒ 主线当场就接得下（拦主线真靠这条判据）。
+② `悬赏` 板那一段**只列还能接的**：已交那条不在板上 · 没交的照旧 · 全交掉 ⇒ **连表头都不印**；
+反证：把 `_done` 换回空表 ⇒ 已交那条又出现。
+
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_quests.py
 """
 from __future__ import annotations
@@ -695,6 +704,49 @@ for _n in sorted(doc24):
     "坏 %s）" % (recon_bad or "无"))
 for _ln in recon_lines:
     print("      %s" % _ln)
+
+# ⑳-b ★ fix-h-small（真人试玩 b59 · 游侠路）：主线 2 的 objective 把玩家指去**图上走不到**的
+#      「白烛堂侧屋」——镇图 11 站里没有「侧屋」那一站（实测 `去 白烛堂侧屋` ⇒
+#      「这儿没有叫「白烛堂侧屋」的地方。」），而莉安就站在 `白烛堂`（`wt_chapel` =
+#      她 `subarea` 那一格，`观察` 的「人在」栏印着她）。
+#   判据（**全现算**：站名从 `maps` 取、人名从 `npcs` 取、真源那一行探针自己解析）：
+#     ① objective 的第一步那段**逐字** = 「去<莉安真站的那一站>找<莉安>」—— 站名与名字都现算，
+#        不手打（改前那句多了「侧屋」两个字 ⇒ 这一条当场红）；
+#     ② 「侧屋」不许再出现在 objective 里（站内的子地点 —— 图上走不到）；
+#     ③ **真源那一行待主线跟账**（两态互锁 · 第三态红）：`24 §一` 主 2 的「步骤」行
+#        **要么**还写着「去白烛堂侧屋找莉安」（未跟账 —— 域里那句是去掉那两个字的版本）·
+#        **要么**已经跟账成同一句（域里这句那时与真源逐字同款）；两态都不是 ⇒ 真源被改跑偏了 ⇒ 红。
+#        ★ 两态之下**域里那句都是** `去<站>找<人>`：这一格是「玩家照着敲得通」的呈现口径，
+#          真源补/删「侧屋」都不改变它（那一行只是叙述莉安住在侧屋 —— 站内的子房间）。
+_Q2 = (mainq.get(2) or (None, {}))[1]
+_OBJ2 = str(_Q2.get("objective") or "")
+#: 域里那一步找的那个人 —— 从**本条自己的 require** 现取（不手打名字）
+_TALK2 = next((r for r in CQ._require_of(_Q2) if r.get("kind") == "talk"), {})
+_NPC2 = NPCS.get(str(_TALK2.get("npc") or "")) or {}
+_LIAN_NM = str(_NPC2.get("name") or "?")
+#: 这个人**真站的那一站名** —— `subarea` → `maps` 里的节点名（不写死「白烛堂」）
+_LIAN_STOP = next((str(_nd.get("name")) for _m in MAPS.values()
+                   for _nd in (_m.get("nodes") or [])
+                   if str(_nd.get("id")) == str(_NPC2.get("subarea") or "")), "")
+_STEP2 = _re.sub(r"\s+", "", str((doc24.get(2) or {}).get("步骤") or ""))
+_WANT2 = "去%s找%s" % (_LIAN_STOP, _LIAN_NM)
+_DOC_OLD2 = "去%s侧屋找%s" % (_LIAN_STOP, _LIAN_NM)        # 真源未跟账那一版（多「侧屋」两字）
+_FORMS2 = [f for f in (_DOC_OLD2, _WANT2) if f and f in _STEP2]
+_obj2_bad = []
+if not (_LIAN_NM != "?" and _LIAN_STOP):
+    _obj2_bad.append("主 2 的交待那个人 / 他真站的那一站，在 npcs+maps 里算不出来")
+if len(_FORMS2) != 1:
+    _obj2_bad.append("真源 24 §一 主2 那一行既不是「%s」也不是「%s」（%s）"
+                     % (_DOC_OLD2, _WANT2, _STEP2 or "解析不出「步骤」"))
+if _OBJ2.split("（")[0] != _WANT2:
+    _obj2_bad.append("objective 第一步那段 ≠「%s」：%s" % (_WANT2, _OBJ2.split("（")[0]))
+if "侧屋" in _OBJ2:
+    _obj2_bad.append("objective 里还写着站内的子地点「侧屋」：%s" % _OBJ2)
+(ok if not _obj2_bad else bad)(
+    "★ 主 2 的 objective 指的就是那个人真站的那一站（现算 %r）· 子地点「侧屋」不在 objective 里 · "
+    "真源 24 §一 那一行 %s（坏 %s）"
+    % (_WANT2, "**待主线跟账**（仍写着「%s」）" % _DOC_OLD2
+       if _FORMS2 and _FORMS2[0] == _DOC_OLD2 else "**已跟账**", _obj2_bad or "无"))
 
 # ㉑ ★ 真跑「接 <编号>」/「交 <编号>」：槽位里的字必须**原样**出现在屏上（槽位 → 玩家眼睛的闭环）
 #   ★ B4-2（P-25 §①）：这一块的**执行**挪到下面（`_sat_player` 定义之后就开跑 —— 见 §㉑ 那一段）。
@@ -2277,6 +2329,277 @@ if _MAIN36 and not any(x.startswith("主线 ") for x in _o36c):
     % ("/".join(str(v["order"]) for _k, v in _BQ36), _bad36 or "无"))
 for _k, _v in _BQ36:
     print("      %s" % _row36(_v).strip())
+
+# ══════════════════════════════════════════════════════════════
+# ㊲ ★ fix-l：缺的是**料**时也要说「从哪儿来」（试玩 ranger b71/b85 · 副业 15「娜娜的药单」）
+#   与 `kill` 那一支的「出没地」（QB-3）**同一口径**：`强化` / `打造` 早就有这一栏
+#   （唯一出处口 = `cmds_recipe._src_of` → `matsrc`：采集点 + 掉它的怪），而 `提示` /
+#   `看 <编号>` 这一路原先只报名字与数目 ⇒ 玩家拿着「夜明砂 ×3」不知道去哪儿找。
+#   判据（现算，不硬编码材料名 · 期望走**同一个出处口**）：逐条带 `item` 条件的任务，
+#   用一个空手档真敲「看 <编号>」—— 凡是那件东西域里真有出产渠道的，那一行必须在屏上；
+#   取不到渠道的不许多塞一行。反证：把出处口换成空 ⇒ 那些行全消失（判据不是恒真）。
+print()
+print("── ★ fix-l ㊲：缺料要说「从哪儿来」（与 `kill` 的「出没地」同一口径）")
+from content import cmds_recipe as _CR37                                  # noqa: E402
+from content import cmds_more as _CMO37                                    # noqa: E402（`看 <编号>` 那一支住在 cmds_more）
+_LW37 = TX["SYS_JOB_REQ_ITEM_WHERE"]["value"]
+
+
+def _want37(iid):
+    _wh = _CR37._src_of(iid)
+    if not _wh:
+        return ""
+    # 品名走**实现那一口**（`CQ._item_name`）—— 未鉴定件（`unid_*`）不在 items 域里，
+    # 探针自己从域里取名会取到机器键（那正是判据要防的那种漏键）。
+    return _LW37.replace("{item}", str(CQ._item_name(iid))).replace("{where}", _wh)
+
+
+_bad37, _n37, _tgt37, _sat_p37 = [], [0], [], {}
+for _k37, _v37 in sorted(QE.items(), key=lambda kv: int(kv[1].get("order") or 0)):
+    for _i37, _r37 in enumerate(CQ._require_of(_v37)):
+        if _r37.get("kind") != "item":
+            continue
+        _iid37 = str(_r37.get("item") or "")
+        _w37 = _want37(_iid37)
+        if not _w37:
+            continue                      # 域里真没渠道的那几样：不在本条判据的范围（另有 ⑮ 管「渠道存在」）
+        #   单子按步走 ⇒ 只有**轮到这一条**（前面几步都做过）时它才上屏：用 `skip=<这一条>`
+        #   造一个「前面都做过、只差这件料」的档（同一个骨架，不另写一份）。
+        _p37 = _sat_player(_v37, _k37, skip=_i37)
+        _p37["loc"], _p37["node"] = "windmill_town", "wt_board"
+        _sat_p37[(_v37["order"], _iid37)] = _p37
+        _n37[0] += 1
+        _tgt37.append((_v37["order"], _iid37, _w37))
+        _o37 = _drive(_CMO37.board_show, _p37, "看 %s" % _v37["order"])
+        if not any(_w37 in _ln for _ln in _o37):      # 单子那一屏每条前面自带两个空格 ⇒ 比子串
+            _bad37.append((_v37["order"], _v37.get("name"), _w37, _o37[-3:]))
+(ok if not _bad37 else bad)(
+    "★ fix-l ㊲：带 `item` 条件的单子，缺那件料时屏上带「从哪儿来」那一行"
+    "（%d 处逐条真敲 · 期望走同一个出处口）· 取不到渠道的不多话（坏 %s）"
+    % (_n37[0], _bad37[:2] or "无"))
+# 反证：把出处口换成空 ⇒ 刚才那几行**全都**消失（判据真的咬在「出处是现算的」上）
+_keep_src37 = _CR37._src_of
+try:
+    _CR37._src_of = (lambda *_a, **_k: "")
+    _rev37 = [(od, w) for od, _iid, w in _tgt37
+              if any(w in _ln for _ln in _drive(_CMO37.board_show, _sat_p37[(od, _iid)],
+                                                "看 %s" % od))]
+finally:
+    _CR37._src_of = _keep_src37
+(ok if (not _rev37 and _tgt37) else bad)(
+    "★ 反证：把出处口换成空 ⇒ 那 %d 行全都消失（判据咬得住「有没有真现算」）"
+    "（坏 %s）" % (len(_tgt37), _rev37[:2] or "无"))
+# ㊳ ★ fix-m-bounty ①：悬赏**跨游戏日可重接**（「日常」那一层本来是死的）
+#                    ②：`悬赏` 板的「这人手上还有」**只列还能接的**
+#      真源（`aetheran-plan`，只读）：
+#        · `06_第一阶段垂直切片/24_任务线_v1.md §二`：悬赏板（玛莎 · **无限循环的日常内容**）·
+#          「同时挂 6 条 · **每天刷 1 次**」「悬赏板**每天轮换挑一只**」「三档每日悬赏**常年挂
+#          在公会上**」；同文件 §二 支线表 = 板上那一段列的活儿（一人一行 · 带编号）
+#        · `00_总纲/03_主要玩法.md §4.1`：「**悬赏（公会板）** 打怪类的日常活，**可反复接**」
+#      改前两条：① `quest_accept` 的 `k in _done(p)` 是**永久**挡（`quests_done` 只加不减）⇒
+#      悬赏交过一次以后**新的游戏日**再接仍回「这条你已经接了（或交过了）。」（游侠路
+#      b125/b130 实测）· ② `board` 那一段把在场 NPC 的支线**全列**（不看 `done`）⇒ 玩家照着
+#      点一条交掉的单子，回的就是那句「你已经接了（或交过了）」（ranger b130/b131 实测）。
+#      判据（**只加强** · 每一条都真敲指令 · 日期一律拨钟造 —— B4-9 那根钟）：
+#        ① 第 A 日 接 → 交：交活那一拍把**完成日**记下（`flags.quests[<id>].at` = A）
+#        ② 同一日再敲 ⇒ 仍拦（`SYS_JOB_ALREADY` 一行 · **档一个字不动**）
+#        ③ 拨到第 B 日 再敲 ⇒ **放行**（真接下 · 档上真写下 · `quests_done` 不被动过）
+#        ④ 第 B 日再交一次 ⇒ 落账**去重**（同一条不进两份 —— 已交条数不许虚高）· 完成日跟到 B
+#        ⑤ 其余链条一个字不松：主线 / 支线 / 副业各一条，完成日远在昨天也照旧拦
+#        ⑥ fail-closed：完成日**写坏 / 缺记录**（老档只有 `quests_done`）/ 写在将来 ⇒ 拦
+#        ⑦ 反证：把「只有悬赏」那半拿掉（`_reaccept_ok` 恒真）⇒ **主线当场就接得下**
+#           （「拦主线」真靠这条判据，而不是靠别的守卫）
+#        ⑧ 板子：**已交那条不列** · 没交的照旧列 · 抬头照旧
+#        ⑨ 板子：在场那位手上的全交掉 ⇒ **连表头都不印**（主线那一段一字不动）
+#        ⑩ 反证：把 `_done` 换回空表 ⇒ 已交那条**又出现在板上**（「不列」真由 done 过滤管着）
+# ══════════════════════════════════════════════════════════════
+_ALREADY_Q = (TX.get("SYS_JOB_ALREADY") or {}).get("value") or ""
+_TAKEN_Q = (TX.get("SYS_JOB_TAKEN") or {}).get("value") or ""
+_DELIV_Q = (TX.get("SYS_JOB_DELIVERED") or {}).get("value") or ""
+_SIDEHEAD_Q = (TX.get("SYS_BOARD_SIDE_HEAD") or {}).get("value") or ""
+_fb_bad, _fb_lines = [], []
+
+
+def _pfx(_s):
+    """槽位那句话的头两个字 —— 判「这一拍走的是哪一支」用现取的槽位，不写死中文。"""
+    return (_s or "")[:2]
+
+
+def _fb_flags(p):
+    return json.loads(json.dumps(p.get("flags") or {}))
+
+
+_BQ1 = next(((k, v) for k, v in QE.items() if v.get("chain") == "bounty"), None)
+_DAY_A, _DAY_B = 20, 21
+if _BQ1 is None or not (_ALREADY_Q and _TAKEN_Q and _DELIV_Q and _SIDEHEAD_Q):
+    _fb_bad.append(("夹具不齐（悬赏档 / 槽位取不到文案）", ""))
+else:
+    _bk, _bx = _BQ1
+    _bn = int(_bx["order"])
+    _blv = max(1, int(_bx["min_level"]))
+    # ── ① 第 A 日：接 → 交（完成日 = A）────────────────────────────
+    _at_day(_DAY_A)
+    _p1 = _player(level=_blv, flags={"card": 1})
+    _o1 = _drive(CQ.quest_accept, _p1, "接 %d" % _bn)
+    if not _o1 or not _o1[0].startswith(_pfx(_TAKEN_Q)) or _bx["name"] not in _o1[0] \
+            or _bk not in ((_p1.get("flags") or {}).get("quests_active") or []):
+        _fb_bad.append(("第 %d 日 · 悬赏 %d 接不下" % (_DAY_A, _bn), _o1[:2]))
+    _p2 = _sat_player(_bx, _bk, day=_DAY_A)
+    _o2 = _drive(CQ.quest_deliver, _p2, "交 %d" % _bn)
+    _F_DONE = _fb_flags(_p2)
+    _atA = ((_F_DONE.get("quests") or {}).get(_bk) or {}).get("at")
+    if not _o2 or not _o2[0].startswith(_pfx(_DELIV_Q)) \
+            or _bk not in (_F_DONE.get("quests_done") or []):
+        _fb_bad.append(("第 %d 日 · 悬赏交不掉" % _DAY_A, _o2[:2]))
+    if int(_atA or -1) != _DAY_A:
+        _fb_bad.append(("交活那一拍没把完成日记下（`flags.quests[%s].at` = %s）" % (_bk, _atA), _F_DONE))
+    _fb_lines.append("第 %-2d 日 · 接 %d ⇒「%s」· 交 ⇒「%s」（完成日 at=%s）"
+                     % (_DAY_A, _bn, (_o1[0][:12] if _o1 else "?"),
+                        (_o2[0][:12] if _o2 else "?"), _atA))
+    # ── ② 同一日再敲 ⇒ 仍拦 · 档一个字不动 ─────────────────────────
+    _p3 = _player(level=_blv, flags=json.loads(json.dumps(_F_DONE)))
+    _o3 = _drive(CQ.quest_accept, _p3, "接 %d" % _bn)
+    if _o3 != [_ALREADY_Q] or _fb_flags(_p3) != _F_DONE:
+        _fb_bad.append(("第 %d 日 · 同日重接没拦住 / 拦下时动了档" % _DAY_A, (_o3[:2], _p3.get("flags"))))
+    _fb_lines.append("第 %-2d 日（同一天）· 再接 %d ⇒「%s」· 档原样" % (_DAY_A, _bn, (_o3[0][:22] if _o3 else "?")))
+    # ── ③ 第 B 日 再敲 ⇒ 放行（真接下 · 完成记录不摘）──────────────
+    #   ★ 起手档带上 `card`：证那道门管的是「能不能**新接**一条」——跨日的悬赏就是新接一条，
+    #     照旧要证（与 ㉝ 同一把尺子；探针不因为这条改动把证那道门绕过去）。
+    _F_CARD = dict(_F_DONE, card=1)
+    _at_day(_DAY_B)
+    _p4 = _player(level=_blv, flags=json.loads(json.dumps(_F_CARD)))
+    _o4 = _drive(CQ.quest_accept, _p4, "接 %d" % _bn)
+    _f4 = _fb_flags(_p4)
+    if not _o4 or not _o4[0].startswith(_pfx(_TAKEN_Q)) \
+            or _bk not in (_f4.get("quests_active") or []):
+        _fb_bad.append(("第 %d 日 · 悬赏跨日竟接不下（日常循环还是死的）" % _DAY_B, _o4[:2]))
+    if (_f4.get("quests_done") or []) != (_F_DONE.get("quests_done") or []):
+        _fb_bad.append(("重接时把 `quests_done` 动了（那是完成记录，不许摘）", _f4.get("quests_done")))
+    _fb_lines.append("第 %-2d 日（跨日）· 再接 %d ⇒「%s」· 手上 %s"
+                     % (_DAY_B, _bn, (_o4[0][:12] if _o4 else "?"), _f4.get("quests_active")))
+    # ── ④ 第 B 日再交一次 ⇒ 落账去重 · 完成日跟过来 ──────────────────
+    _p5 = _sat_player(_bx, _bk, day=_DAY_B)
+    _p5["flags"] = json.loads(json.dumps(_f4))
+    _o5 = _drive(CQ.quest_deliver, _p5, "交 %d" % _bn)
+    _f5 = _fb_flags(_p5)
+    _dn5 = list(_f5.get("quests_done") or [])
+    _at5 = ((_f5.get("quests") or {}).get(_bk) or {}).get("at")
+    if not _o5 or not _o5[0].startswith(_pfx(_DELIV_Q)):
+        _fb_bad.append(("第 %d 日 · 再交一次交不掉" % _DAY_B, _o5[:2]))
+    if _dn5.count(_bk) != 1 or len(_dn5) != len(_F_DONE.get("quests_done") or []):
+        _fb_bad.append(("同一档跨日交两次把 `quests_done` 写重了（已交条数虚高）", _dn5))
+    if int(_at5 or -1) != _DAY_B or _bk in (_f5.get("quests_active") or []):
+        _fb_bad.append(("第二次交活：完成日没跟到第 %d 日 / 手上没摘掉" % _DAY_B, (_at5, _f5.get("quests_active"))))
+    _fb_lines.append("第 %-2d 日 · 再交一次 ⇒「%s」· quests_done=%s（去重后 %d 条）· at=%s"
+                     % (_DAY_B, (_o5[0][:12] if _o5 else "?"), _dn5, len(_dn5), _at5))
+    # ── ⑤ 其余链条跨日**一个字不松** ───────────────────────────────
+    for _kd, _qid2, _n2 in (("主线", "q_main_01", 1), ("支线", "q_side_09", 21),
+                            ("副业", "q_trade_01", 31)):
+        _x2 = QE.get(_qid2)
+        if not _x2:
+            _fb_bad.append(("%s 的夹具不在域里（%s）" % (_kd, _qid2), ""))
+            continue
+        _fl = {"card": 1, "quests_done": [_qid2],
+               "quests": {_qid2: {"step": 1, "done": True, "at": _DAY_A}}}
+        _at_day(_DAY_B)
+        _p6 = _player(level=99, flags=dict(_fl))
+        _o6 = _drive(CQ.quest_accept, _p6, "接 %d" % _n2)
+        if _o6 != [_ALREADY_Q] or _fb_flags(_p6) != _fl:
+            _fb_bad.append(("%s 跨日竟能重接（判据松了）" % _kd, _o6[:2]))
+        _fb_lines.append("%s（%s）· 完成日 %d ⇒ 第 %d 日再敲「%s」"
+                         % (_kd, _qid2, _DAY_A, _DAY_B, (_o6[0][:22] if _o6 else "?")))
+    # ── ⑥ fail-closed：完成日写坏 / 缺记录 / 写在将来 ────────────────
+    _at_day(99)
+    for _lbl6, _raw6 in (
+            ("老档只有 quests_done（没有 flags.quests）", {"quests_done": [_bk]}),
+            ("完成日写坏（认不出）",
+             {"quests_done": [_bk], "quests": {_bk: {"step": 1, "done": True, "at": "坏了"}}}),
+            ("完成日写在将来（第 100 日）",
+             {"quests_done": [_bk], "quests": {_bk: {"step": 1, "done": True, "at": 100}}})):
+        _fl6 = dict(_raw6, card=1)
+        _p7 = _player(level=_blv, flags=dict(_fl6))
+        _o7 = _drive(CQ.quest_accept, _p7, "接 %d" % _bn)
+        if _o7 != [_ALREADY_Q] or _fb_flags(_p7) != _fl6:
+            _fb_bad.append(("fail-closed 破了：%s 竟放行" % _lbl6, _o7[:2]))
+        _fb_lines.append("第 99 日 · %s ⇒「%s」" % (_lbl6, (_o7[0][:22] if _o7 else "?")))
+    # ── ⑦ 反证：把「只有悬赏」那半拿掉 ⇒ 主线当场就接得下 ────────────
+    _keep_ra = CQ._reaccept_ok
+    _fl7 = {"card": 1, "quests_done": ["q_main_01"],
+            "quests": {"q_main_01": {"step": 1, "done": True, "at": _DAY_A}}}
+    _at_day(_DAY_B)
+    try:
+        CQ._reaccept_ok = (lambda *_a: True)
+        _o8 = _drive(CQ.quest_accept, _player(level=99, flags=dict(_fl7)), "接 1")
+    finally:
+        CQ._reaccept_ok = _keep_ra
+    if not _o8 or not _o8[0].startswith(_pfx(_TAKEN_Q)):
+        _fb_bad.append(("反证失败：把「只有悬赏」那半拿掉，主线也没接得下 —— 拦主线的不是这条判据",
+                        _o8[:2]))
+    _fb_lines.append("反证（拿掉链的限定）· 主线跨日 ⇒「%s」· 复原后 ⇒ 上面 ⑤ 那一行仍拦"
+                     % (_o8[0][:22] if _o8 else "?"))
+    # ── ⑧⑨⑩ 看板那一段 ────────────────────────────────────────
+    # 找「板子那边有支线 giver」的那个游戏日（集日：小满 / 老陶被吸到板子那边）——
+    # 前提现算（数据一动，这里当场说清是夹具变了，而不是悄悄跳过判据）
+    _mk = _player(level=3)
+    _best = (0, 0, [])
+    for _d in range(1, 29):
+        _at_day(_d, 10.0)                              # 昼
+        _here_d = [n for n, _v2 in CQ._npcs_here(CA.TOWN, _BRD36, p=_mk)]
+        _cnt = len([1 for _k2, _v2 in QE.items()
+                    if _v2["chain"] == "side" and _v2["giver"] in _here_d])
+        if _cnt > _best[0]:
+            _best = (_cnt, _d, _here_d)
+    _MKT_N, _DAY_MKT, _HERE_MKT = _best
+    if _MKT_N < 2:
+        _fb_bad.append(("板子那边凑不出两条支线（在场就是 %s）—— 夹具前提变了" % (_HERE_MKT,), ""))
+    else:
+        _at_day(_DAY_MKT, 10.0)
+        _side_here = [(k2, v2) for k2, v2 in QE.items()
+                      if v2["chain"] == "side" and v2["giver"] in _HERE_MKT]
+        _rows8 = ["  " + _slot36("SYS_BOARD_SIDE_ROW", order=v2["order"], name=v2["name"],
+                                 objective=v2["objective"]) for _k2, v2 in _side_here[:3]]
+        _k8, _v8 = _side_here[0]
+        _row8 = _rows8[0]
+        _o9a = _board36({"card": 1})                   # 全没交
+        if _SIDEHEAD_Q not in _o9a or any(r not in _o9a for r in _rows8):
+            _fb_bad.append(("没交过时那一段就不对了（抬头 / 行）", _o9a[-5:]))
+        _o9b = _board36({"card": 1, "quests_done": [_k8]})   # 交掉其中一条
+        if _row8 in _o9b:
+            _fb_bad.append(("已交（%s）的那条**还列在板上** ⇒ 玩家点它就是「你已经接过」" % _k8, _o9b[-5:]))
+        for _r2 in _rows8[1:]:
+            if _r2 not in _o9b:
+                _fb_bad.append(("没交的那条被连累滤掉了", (_r2, _o9b[-5:])))
+        if _SIDEHEAD_Q not in _o9b:
+            _fb_bad.append(("还有人能接，那一段的抬头却不印了", _o9b[-5:]))
+        _fb_lines.append("第 %d 日板子那边在场 %s ⇒ 没交过 %d 行；交掉 %s 后 ⇒ 那一行不在板上、"
+                         "另 %d 行照旧 · 抬头在（板上 %s 行）"
+                         % (_DAY_MKT, _HERE_MKT, len(_rows8), _k8, max(0, len(_rows8) - 1), len(_o9b)))
+        # ⑨ 全交掉 ⇒ 连表头都不印
+        _o9c = _board36({"card": 1, "quests_done": [k2 for k2, _v2 in _side_here]})
+        if _SIDEHEAD_Q in _o9c or any(r in _o9c for r in _rows8):
+            _fb_bad.append(("在场那位手上的活全交掉了，那一段（抬头 / 行）还在印", _o9c[-5:]))
+        if not any(x.startswith("主线 ") for x in _o9c):
+            _fb_bad.append(("那一支把主线那一段也弄没了", _o9c[:4]))
+        _fb_lines.append("全交掉（%s）⇒ 抬头与那几行都不印（板上剩 %d 行，主线那一段照旧）"
+                         % ([k2 for k2, _v2 in _side_here], len(_o9c)))
+        # ⑩ 反证：把 done 过滤拿掉 ⇒ 已交那条又出现
+        _keep_done = CQ._done
+        try:
+            CQ._done = (lambda _pp: [])
+            _o9d = _board36({"card": 1, "quests_done": [_k8]})
+        finally:
+            CQ._done = _keep_done
+        if _row8 not in _o9d:
+            _fb_bad.append(("反证失败：把 done 过滤拿掉，已交那条也没回来 —— 管它的不是这条判据",
+                            _o9d[-5:]))
+        _fb_lines.append("反证（把 done 过滤拿掉）· 已交的 %s ⇒ 又列在板上（那一行真由 done 管着）" % _k8)
+FC_Q.bind_host(**_FC_SAVED)                             # ★ 拨回真钟
+(ok if not _fb_bad else bad)(
+    "★ fix-m-bounty：① 悬赏**跨游戏日可重接**（同日仍拦 · 主线/支线/副业一律不松 · 完成日写坏"
+    "一律拦 · 落账去重 · 反证）② `悬赏` 板那一段**只列还能接的**（已交不列 · 全交掉连表头都不印 ·"
+    " 反证）（坏 %s）" % (_fb_bad or "无"))
+for _ln in _fb_lines:
+    print("      %s" % _ln)
 
 for n in notes:
     print("  · " + n)

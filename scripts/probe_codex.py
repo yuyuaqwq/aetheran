@@ -491,6 +491,33 @@ _b15d = _book_of(_p15d, CC.codex_relic)
 chk("★ 反证：物证句真**多说了一层**时照旧另起一行（`半截号角` —— B3-16 那笔没被这刀削掉）",
     any(EV_ITEM in x for x in _b15d), _b15d)
 
+# ④b ★ fix-n-small ②：**已经认出名字**的那一条底下**不再贴**「端详自己看出那一层」——
+#     认名那一行（`known`）本来就高于自己看出那一层，而且端详那一句正是**认名前那行问号**
+#     说的同一件事（`hint` == 物证句）⇒ 认名把整行换掉之后再贴一遍，看着就是「问号句又回来了」。
+#     QA 两轮报到的两个样本原样钉在这：`一块刻着字的石片`（unid_rare）/`一块看不出用途的旧东西`
+#     （unid_common）—— 加上信物那件（它的物证句与问号行不是同一句，最能证「认名之后一律不贴」）。
+#     ★ 反证在上面 ④ 与下面两条：「未认名时照旧要出」+「`端详` 随时还能重看那一件」。
+#     为什么不丢信息：端详那一刻玩家已经看到过（`studied` 那一格就是那一下落的档），
+#     认名之后 `端详 <名>` 仍能重看（`relic_study` 的 known 那一支）。
+_p16 = {"day": 1, "loc": "windmill_town", "node": "wt_gate_n",
+        "bag": {"unid_rare": 1, "unid_common": 1, "i_horn_half": 1}, "books": {}, "foot": {}}
+CM.sync_bag(_p16)
+_run("端详 %s" % CM.held_name("i_horn_half"), _p16, CC.relic_study)   # 先看（此时还没认出来）
+_b16a = _book_of(_p16, CC.codex_relic)
+chk("★ 反证（未认名）：自己看出那一层真多说了一层时照旧另起一行 —— `%s`" % CM.held_name("i_horn_half"),
+    any(EV_ITEM in x for x in _b16a), _b16a)
+for _rid16 in ("unid_rare", "unid_common", "i_horn_half"):
+    _run("端详 %s" % CM.held_name(_rid16), _p16, CC.relic_study)
+    CM.reveal(_p16, _rid16)
+_b16b = _book_of(_p16, CC.codex_relic)
+_ev16 = {_r: CM.evidence(_r) for _r in ("unid_rare", "unid_common", "i_horn_half")}
+_has16 = [x for x in _b16b for _e in _ev16.values() if str(_e) and str(_e) in x]
+chk("★ fix-n-small ② **认名之后不再贴端详那一层**（三个样本都试过：%s / %s / %s）· 认出后那一行照字出"
+    % (_ev16["unid_rare"], _ev16["unid_common"], _ev16["i_horn_half"]),
+    not _has16
+    and all(any(str(BOOK["relic"][_r]["known"]) in x for x in _b16b) for _r in _ev16),
+    "%s ← 残留：%s" % (_b16b, _has16))
+
 # ⑤ 端详能重看**谱里已认出**的那一条（QA P3：旧物谱里正列着它，端详却回「背包里没有」）
 _p15e = {"day": 1, "loc": "windmill_town", "node": "wt_gate_n",
          "books": {"relic": {"poi_stone_scripts": {"day": 1, "known": True}}}, "foot": {}}

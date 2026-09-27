@@ -389,6 +389,12 @@
     "category": "系统",
     "desc": "死亡惩罚说明"
   },
+  "SYS_DEATH_NO_LOSS": {
+    "value": "💀 经验一点没掉（你这一级还没攒下什么）—— 装备没丢",
+    "params": [],
+    "category": "系统",
+    "desc": "死亡惩罚说明 · 经验 0 那一档（2026-09-27 夜班试玩 w3：mage/p3 两条都撞到「经验 0 也报掉了一些经验」= 空头罚）"
+  },
   "SYS_ROUND_HOLD": {
     "value": "⏳ 还没轮到你 —— 你在等 {who}",
     "params": [
@@ -1499,10 +1505,11 @@
     "desc": "菜谱名对不上"
   },
   "SYS_ENHANCE_OK": {
-    "value": "🔨 {item} → +{lv}（加成 {bonus}，走装备本体 —— 上限 +{cap}%）。",
+    "value": "🔨 {item} → +{lv}（吃了{cost}。加成 {bonus}，走装备本体 —— 上限 +{cap}%。面板按整数看：+1..+3 这点不到半格，看不出。）",
     "params": [
       "bonus",
       "cap",
+      "cost",
       "item",
       "lv"
     ],
@@ -1973,6 +1980,12 @@
     "category": "系统",
     "desc": "地图 · 当前节点那一行"
   },
+  "SYS_MAP_BACK_TOWN": {
+    "value": "（回镇：敲『进镇』 —— 野外哪一站都走得通。）",
+    "params": [],
+    "category": "系统",
+    "desc": "地图 · 野外那屏的尾注（fix-l）：回镇的词只在『帮助』那一栏，玩家自己想不到；镇上那屏不印这一行"
+  },
   "SYS_LISTEN_DEFAULT": {
     "value": "风声。远处有水声。没有别的声音。",
     "params": [],
@@ -2280,6 +2293,21 @@
     ],
     "category": "系统",
     "desc": "状态 · 第三行"
+  },
+  "SYS_STATUS_IN_FIGHT": {
+    "value": "⚔ 手上这一场还没打完 —— 敲『战斗日志』看打到哪儿了，或者『逃跑』脱身。",
+    "params": [],
+    "category": "系统",
+    "desc": "状态 · 第四行（fix-l）：手上还留着一场时补一行 —— 走不动的原因原先要等玩家敲『去 X』被拦才知道"
+  },
+  "SYS_JOB_REQ_ITEM_WHERE": {
+    "value": "（{item} 从哪儿来：{where}）",
+    "params": [
+      "item",
+      "where"
+    ],
+    "category": "系统",
+    "desc": "交活 · 前置没做（缺的是料时补一句从哪儿来 —— fix-l：与 `kill` 的「出没地」同一口径；出处口 = cmds_recipe._src_of / matsrc）"
   },
   "SYS_UNSET": {
     "value": "未定",
@@ -2611,6 +2639,14 @@
     "params": [],
     "category": "系统",
     "desc": "问路 · 没有别的去处"
+  },
+  "SYS_ASK_MORE": {
+    "value": "（他先报了近的三处 —— 这一带走得通的一共 {n} 处，打『地图』看全。）",
+    "params": [
+      "n"
+    ],
+    "category": "系统",
+    "desc": "问路 · 去处多过三处时补的一行（2026-09-27 夜班试玩 w3 p1：原先只报 3 处、也不说按什么挑的，读起来像「路全在这儿」）"
   },
   "SYS_GUILD_HEAD": {
     "value": "【公会】门面比镇上任何一家都像样：一块木牌，牌上画着一把断了的剑和一只手。",
@@ -3162,7 +3198,7 @@
     "desc": "建号 · 选好了（含「为什么来」）"
   },
   "SYS_RACE_TALENT": {
-    "value": "天赋 · {name}：{effect}",
+    "value": "天赋 · {name}：{effect}（已生效）",
     "params": [
       "name",
       "effect"
@@ -3171,7 +3207,7 @@
     "desc": "建号 · 天赋一行"
   },
   "SYS_RACE_COST": {
-    "value": "代价 · {name}：{effect}",
+    "value": "代价 · {name}：{effect}（已生效）",
     "params": [
       "name",
       "effect"
@@ -5018,10 +5054,10 @@
     "desc": "机制 · 净罪（解掉一个控制）"
   },
   "COMBAT_MECH_ABSOLVE_NONE": {
-    "value": "它身上没有能解的东西。",
+    "value": "你身上没有能解的东西。",
     "params": [],
     "category": "战斗",
-    "desc": "机制 · 净罪（没控可解 —— 口令式，不静默）"
+    "desc": "机制 · 净罪（没控可解 —— 口令式，不静默；★ 单人收件人 = 自己 ⇒ 主人是「你」）"
   },
   "COMBAT_MECH_LULLABY": {
     "value": "你把这口气吹进去 —— {turns} 刻再生，每刻回 {per} 点。",
@@ -5033,13 +5069,12 @@
     "desc": "机制 · 安神曲（再生：每刻 = 这一发治疗量的 1/4）"
   },
   "COMBAT_MECH_QUICKSTEP": {
-    "value": "你抢了半拍 —— 下一次出手提前 {ticks} 刻（{left} 刻后就到你）。",
+    "value": "你抢了半拍 —— 下一次出手的到点时刻最多提前 {ticks} 刻，再早也早不过此刻。",
     "params": [
-      "ticks",
-      "left"
+      "ticks"
     ],
     "category": "战斗",
-    "desc": "机制 · 抢拍（提前 30 刻）"
+    "desc": "机制 · 抢拍（提前量 = 技能域 mech_val；引擎那道「不早于当刻」的闸会把它夹小 —— 这一手后摇短于声明量时只能压到当前时刻，试玩 b20/b23 实测（撤改臂逐手量过：ct 174.91→147.29，= min(声明 30, 后摇 27.62)））"
   },
   "COMBAT_MECH_MITIGATE": {
     "value": "🛡️ 这一下被卸掉了 {pct}%。",
@@ -5159,6 +5194,14 @@
     "category": "战斗",
     "desc": "机制 · 反击兑现（on_taken 那一刀）"
   },
+  "COMBAT_BLOCKED_AMOUNT": {
+    "value": "（格挡后 {dmg} 点伤害）",
+    "params": [
+      "dmg"
+    ],
+    "category": "战斗",
+    "desc": "fix-a-screen ③：顶掉引擎那句兜底模板 `battle.landing.blocked_amount`（兜底是**半角括号** `(格挡后 {dmg} 点伤害)` —— 全屏唯一一处半角括号，骑士路试玩报的）。措辞照旧，只把括号改成全角。"
+  },
   "COMBAT_ELEM_IMMUNE": {
     "value": "💠 免疫 —— 【{name}】不吃这一手，伤害一点没落上去。",
     "params": [
@@ -5174,6 +5217,14 @@
     ],
     "category": "战斗",
     "desc": "P-1 元素样例：承伤方对该元素有弱点（引擎 battle.landing.element_weak 那条日志走这个槽位）"
+  },
+  "COMBAT_CONTROLLED": {
+    "value": "💫 {name} 晕着 —— 这一手什么都做不了！",
+    "params": [
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "引擎 `battle.core.controlled`（控制型状态把这一手跳过那一行；★ 收掉引擎兜底里的 `{tag}` 机器键 —— 2026-09-27 夜班试玩 w3 · mage/p3 两条都撞到 `被【star_daze】控制`）"
   },
   "COMBAT_DOT_TICK": {
     "value": "🔥 【{name}】持续受损（{n} 层）—— 损失 {dmg} 生命",
@@ -5362,10 +5413,10 @@
     "desc": "B4-10 学习 · 没带技能名"
   },
   "SYS_ITEM_SHOW_ASK": {
-    "value": "看哪一件？打『查看 <东西>』。",
+    "value": "看哪一件？打『查看 <东西>』；委托全文是『看 <编号>』——先在公会敲『悬赏』。",
     "params": [],
     "category": "系统",
-    "desc": "B4-13 查看 · 没带东西"
+    "desc": "B4-13 查看 · 没带东西（2026-09-27 夜班试玩 w3 p1：裸『看』原先只把人推给背包那一族，而它在帮助里同时挂公会『看 <编号>』⇒ 两族入口都说清）"
   },
   "SYS_USE_ASK": {
     "value": "用哪一件？打『使用 <东西>』。",
@@ -6067,6 +6118,25 @@
     "params": [],
     "category": "NPC",
     "desc": "31_NPC作息 §四 · 这一位「他什么时候在」的一句"
+  },
+  "COMBAT_TURN_MP": {
+    "value": "⚡ 法力 {mp}/{mp_max}",
+    "params": [
+      "mp",
+      "mp_max"
+    ],
+    "category": "战斗",
+    "desc": "战斗屏 · 法力那一条读数（2026-09-27 夜班试玩 w3：mage 路「两条命根子一条都看不见」——原先进战斗就只剩血，法力要退出去敲『状态』）"
+  },
+  "COMBAT_TURN_RES": {
+    "value": "🔹【{name}】{n}/{mx}",
+    "params": [
+      "mx",
+      "n",
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "战斗屏 · 职业资源（守誓值 / 准星 / 印记 / 祷言）那一条读数 —— 名字与上限现取自 `content/rules/resources.json`（2026-09-27 夜班试玩 w3：法师的「印记」原先任何一页都没有读数）"
   },
   "COMBAT_TURN_STATE": {
     "value": "⚔ 第 {n} 手 —— 你 {hp}/{hp_max}　｜　{name} {foe_hp}/{foe_hp_max}",

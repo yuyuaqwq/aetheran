@@ -164,6 +164,37 @@ P-25 §② 剩下的 11 条支线里，**能按真源文档补上正当条件的
     （工作树 `_notes.md`「待鱼鱼拍板」），不自己造第二本账（K74 那一族：别跟 `评级` 开成两处口径）
   · 判据：`scripts/probe_quests.py` ㉞（三拍真敲 + 跨日 + 档上那格假的也不许影响判定）
 
+★ fix-m-bounty 两条（2026-09-27 夜班 · 试玩实测报上来的）
+------------------------------------------------------------------
+① 【真 bug】悬赏是**一次性**的 —— 跨了游戏日也接不回来。
+   改前守卫 = `k in _mine(p) or k in _done(p)`，而 `_done` 读的 `flags.quests_done` 是**只加不减
+   的永久列表** ⇒ 悬赏交过一次以后，**新的游戏日**再敲『接 101』仍回「这条你已经接了（或交过
+   了）。」（游侠路 b125/b130 实测）—— 三档悬赏实际成了一次性委托，「日常」这一层是死的。
+   真源三处都写「可反复」（`aetheran-plan`，只读）：
+     · `06_第一阶段垂直切片/24_任务线_v1.md §二`：「**悬赏板**（玛莎 · **无限循环的日常内容**）·
+       同时挂 6 条 · **每天刷 1 次**」「悬赏板**每天轮换挑一只**」「三档每日悬赏**常年挂在公会上**」
+     · `00_总纲/03_主要玩法.md §4.1`：「**悬赏（公会板）** 打怪类的日常活，**可反复接**」
+   修法（判据 = **跨游戏日可重接**，一个字都不多松）：
+     · 完成时的**游戏日**在 `flags.quests[<id>].at` —— 交活那一拍 `_mark_done` **早就写着**
+       （现成的账，不新建容器）；读口 = `_done_at`（缺记录 / 认不出 / 写成别的类型 ⇒ `None`
+       = 当「不是跨日的悬赏」算 ⇒ **拦**，fail-closed 不猜哪一天）。
+     · `quest_accept` 里命中 `_done` 时只问一句 `_reaccept_ok(x, k, p)`：**只有**
+       『`chain == "bounty"` **且** 完成日 `<` 当前游戏日』才放行。主线 / 支线 / 生活（副业）/
+       同日重接 —— **一个字都不许松**（仍回 `SYS_JOB_ALREADY`）。
+     · 「今天」= `CX.today(p)` = `calendar.day_now()`（**那根钟** —— 与悬赏轮换 / 放弃冷却同一口）。
+     · 重接时**不把 k 从 `quests_done` 里摘掉**（那是完成记录：`calendar.main_done` / 『评级』的
+       已交条数 / 图鉴 / 彩蛋都在读它）—— 只让 accept 这一处放行；而 `quest_deliver` 落账那一行
+       改成**去重后再写**（同一条跨日交两次不进两份，否则已交条数虚高）。
+     · 判据：`scripts/probe_quests.py` ㊲ ①（跨日放行 + 同日拦 + 主线/支线/副业一律拦 +
+       完成日写坏一律拦 · 全部真敲指令 · 含反证）。
+
+② 【⚠️误导】`board` 的「这人手上还有」那一段**把在场 NPC 的支线全列**（不看 `done`）——
+   玩家照着板子点一条**已交**的单子 ⇒ 回「这条你已经接了（或交过了）。」（ranger b130/b131 实测）。
+   真源同 ①：「挂板墙上的**单子**」—— 交掉的单子不在板上；这一段的抬头也是「还能接的活」。
+   修法：那一段**只列还能接的**（`qid not in _done(p)`）；过滤后一条不剩 ⇒ **连表头都不印**
+   （既有 `if side:` 已经管着）。判据：`scripts/probe_quests.py` ㊲ ②（已交那条不在板上 ·
+   其余照旧 · 三条全交掉 ⇒ 表头也不印）。
+
 ★ g3-quests2 三件（「差最后一步」那一批 · 2026-09-26）
 ---------------------------------------------------
 ① 悬赏轮换池按**可遇性**收窄（`_pool_of` / `_encounterable`）：
@@ -216,6 +247,38 @@ def _mine(p):
 def _done(p):
     v = (p.get("flags") or {}).get("quests_done")
     return list(v) if isinstance(v, list) else []
+
+
+def _done_at(p, k):
+    """这条委托**交掉时是第几个游戏日**（`flags.quests[<id>].at` —— 交活那一拍写的，现成的账）。
+
+    ★ fix-m-bounty ①：「悬赏跨游戏日可重接」唯一的日期读口。
+    ★ fail-closed：缺记录 / 认不出 / 写成别的类型 ⇒ 回 `None` = **当「不是跨日的悬赏」算**（拦），
+      不猜哪一天、更不默认放行（老档只有 `quests_done` 没有 `flags.quests` 时也一样拦住）。
+    """
+    rec = ((p.get("flags") or {}).get("quests") or {}).get(k)
+    if not isinstance(rec, dict) or rec.get("done") is not True:
+        return None
+    try:
+        return int(rec.get("at"))
+    except (TypeError, ValueError):
+        return None
+
+
+def _reaccept_ok(x, k, p) -> bool:
+    """这条**已交过**的委托，今天还能再接一次吗？—— 四条链只有**悬赏**、且**跨了游戏日**才放行。
+
+    ★ fix-m-bounty ①：真源 = `24_任务线_v1 §二`「悬赏板（玛莎 · **无限循环的日常内容**）·
+      每天轮换挑一只 · 三档每日悬赏常年挂在公会上」+ `03_主要玩法 §4.1`「悬赏（公会板）
+      打怪类的日常活，**可反复接**」。
+    ★ 主线 / 支线 / 生活（副业）**一个字都不松**：它们不是日常内容（`03 §4.1` 三类分列）。
+    ★ 同日重接也拦（「每天刷 1 次」）：完成日**严格小于**当前游戏日才算跨日。
+    ★ 「今天」= `CX.today(p)` = `calendar.day_now()` —— 与悬赏轮换 / 放弃冷却**同一根钟**。
+    """
+    if str(x.get("chain") or "") != "bounty":
+        return False
+    d = _done_at(p, k)
+    return d is not None and d < CX.today(p)
 
 
 def _set(p, key, val):
@@ -752,7 +815,18 @@ def _req_lines(p, r):
         return out
     if kind == "item":
         iid = str(r.get("item") or "")
-        return [T("SYS_JOB_REQ_ITEM", item=_item_name(iid), n=_n_of(r), have=_have_n(p, r)[0])]
+        out = [T("SYS_JOB_REQ_ITEM", item=_item_name(iid), n=_n_of(r), have=_have_n(p, r)[0])]
+        # ★ fix-l（试玩 ranger b71/b85 · 副业 15「娜娜的药单」）：与上面 `kill` 那一支的
+        #   「出没地」**同一口径** —— 缺的是**料**时把「从哪儿来」也说一遍。
+        #   `强化` / `打造` 早就有这一栏（唯一出处口 = `cmds_recipe.src_lines` → `matsrc`：
+        #   采集点 + 掉它的怪），而 `提示` / `看 <编号>` 这一路原先只报名字与数目 ⇒ 玩家
+        #   拿着「夜明砂 ×3」不知道去哪儿找。出处现算 —— 域里加一个出产点这一行跟着变。
+        #   取不到出处（域里真没有渠道）⇒ 不多话（与「只差钱 ⇒ 那几行为空」同一把尺）。
+        from .cmds_recipe import _src_of as _src_of_item     # 本地 import：避免装载期成环
+        _where = _src_of_item(iid)
+        if _where:
+            out.append(T("SYS_JOB_REQ_ITEM_WHERE", item=_item_name(iid), where=_where))
+        return out
     if kind == "enhance":                  # ★ B3-13
         return [T("SYS_JOB_REQ_ENHANCE", n=_n_of(r), have=_have_n(p, r)[0])]
     if kind == "cook":                     # ★ B3-13（带品阶的走品阶那条槽位）
@@ -927,11 +1001,16 @@ async def board(env, sink, uid, player):
             mark = T("SYS_BOARD_ACTIVE") if qid in active else ""
             yield "  " + T("SYS_BOARD_BOUNTY_ROW", order=v["order"], name=v["name"],
                            mark=mark, level=v["min_level"])
-    side = [v for v in qs.values() if v["chain"] == "side" and v["giver"] in
-            [k for k, _ in _npcs_here(p["loc"], p["node"], p=p)]]
+    # ★ fix-m-bounty ②：这一段列的是**还能接的**活儿 —— 已交的不列（改前把在场 NPC 的支线
+    #   **全列**，不看 `done` ⇒ 玩家照着点一条**交掉**的单子，回的是「这条你已经接了（或交过了）。」
+    #   —— ranger b130/b131 实测；板子是「挂板墙上的单子」，交掉的单子不在板上）。
+    #   过滤后一条不剩 ⇒ **连表头都不印**（下面的 `if side:` 已经管着）。
+    _side_here = [n for n, _ in _npcs_here(p["loc"], p["node"], p=p)]
+    side = [(qid, v) for qid, v in qs.items()
+            if v["chain"] == "side" and v["giver"] in _side_here and qid not in done]
     if side:
         yield T("SYS_BOARD_SIDE_HEAD")
-        for v in side[:3]:
+        for _qid, v in side[:3]:
             # ★ 支线也**必须带编号**：不带编号 + `接 <编号>` 只认主线 ⇒ 18 条支线全接不了
             #   （2026-09-25 端到端玩出来的真 bug）。硬编码中文一并收进槽位（B3-6 口径）。
             yield "  " + T("SYS_BOARD_SIDE_ROW", order=v["order"], name=v["name"],
@@ -963,7 +1042,13 @@ async def quest_accept(env, sink, uid, player):
         yield T("SYS_JOB_NOSUCH", name=want)
         return
     k, x = v
-    if k in _mine(p) or k in _done(p):
+    # ★ fix-m-bounty ①：「已经接过」这条守卫里，**只有悬赏跨了游戏日**才放行（见 `_reaccept_ok`）
+    #   —— 改前 `k in _done(p)` 是**永久**挡（`quests_done` 只加不减）⇒ 悬赏交过一次以后
+    #   **新的游戏日**再接仍回「这条你已经接了（或交过了）。」，三档悬赏实际成了一次性委托
+    #   （游侠路 b125/b130 实测）。主线 / 支线 / 副业 / 同日重接**一个字都没松**（探针 ㊲ 钉着）。
+    #   ★ 重接时**不把 k 从 `quests_done` 里摘掉**（那是完成记录，`calendar.main_done` /
+    #     『评级』已交条数 / 图鉴 / 彩蛋都在读它）—— 只这一处放行。
+    if k in _mine(p) or (k in _done(p) and not _reaccept_ok(x, k, p)):
         yield T("SYS_JOB_ALREADY")
         return
     # ★ B4-27（P-53）：「接 <编号>」这一条**真有门了** —— 先办见习证。
@@ -1041,7 +1126,13 @@ async def quest_deliver(env, sink, uid, player):
             yield "  " + line
         return
     _set(p, "quests_active", [a for a in act if a != k])
-    _set(p, "quests_done", _done(p) + [k])
+    # ★ fix-m-bounty ①：**去重后再写** —— 悬赏跨游戏日交第二次时这条早在 `quests_done` 里了，
+    #   照旧写 `+ [k]` 就是同一条进两份（『评级』的「已交条数」/ 图鉴 / `main_done` 都在读这本账
+    #   ⇒ 计数会虚高）。顺序保持「第一次交掉」那一次的位置（只加不重排）。
+    _done_now = _done(p)
+    if k not in _done_now:
+        _done_now.append(k)
+    _set(p, "quests_done", _done_now)
     _mark_done(p, k, len(_require_of(x)))   # ★ P-25：done 记进 flags.quests（形状见文件抬头 ②）
     PROG.resync(p, k)                       # ★ 本波③：旗标族的**写端**（交活那一拍：done 型 True）
     p["gold"] = p.get("gold", 0) + x["reward_gold"]

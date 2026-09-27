@@ -842,6 +842,12 @@ async def map_view(env, sink, uid, player):
         yield line
     for line in title_lines(p, player, env):    # ★ B3-2：走了那么多趟，名字该挂上来了
         yield line
+    # ★ fix-l（试玩 ranger b56/b57：野外敲『地图』只列本图三站，回镇得自己想出「进镇」，
+    #   而『往南』这类方向词根本不被接住）：**野外**那一屏补一行尾注点明回镇的口。
+    #   只认拓扑（`star` = 镇上 ⇒ 不印：镇里回镇那句话已由进镇那一屏的尾注说了）；
+    #   真源 `04_指令总表 §一` 那张表里 `进镇` 的守卫本来就是「在北口或野外」。
+    if str(m.get("topology") or "") != "star":
+        yield T("SYS_MAP_BACK_TOWN")
 
 
 async def listen(env, sink, uid, player):
@@ -1206,7 +1212,10 @@ def live_mp(env, uid, p):
       的余蓝，不是开打前那个（改前实测：放完两招敲 `状态`，报的还是 `85/85`）。
       拿不到（没在打 / 场里没这一格）⇒ 照**档上那一格**（= 与接线前逐字相同，不编数）。
 
-    血不在这儿读：血在**每一手**都落回档（`instance._write_back`），档上那一格本来就是活的。
+    ★ 血也在这儿读（`live_hp`）—— 原先这句写的是「血在每一手都落回档，档上那一格本来就是
+      活的」：**只对出手的那一位成立**。`instance._write_back` 只把**轮到我那一手**的血落回档，
+      而「别人出手那一手我挨的打」不在档上（实测 2 人同场：乙出手那一手甲挨 27，档上仍是 284）
+      ⇒ 甲敲『状态』报的是旧数。见 `live_hp`。
     """
     from . import instance as INST                 # 本地 import：与 `live_foe` 那一族同款
     st = INST.live(env, uid)
@@ -1216,6 +1225,29 @@ def live_mp(env, uid, p):
     if not isinstance(a, dict) or a.get("mp") is None:
         return p.get("mo")
     return a.get("mp")
+
+
+def live_hp(env, uid, p):
+    """打斗中途「我」的现血 —— **唯一口**：有「场」就按场里那一格 actor 现读。
+
+    ★ fix-q（试玩 · 与 `歇脚` 那条同源）：`instance._write_back` 的抬头明写「『不动档』那条
+      只对**没轮到我的那两敲**成立」—— 也就是说，**别人出手那一手我挨的打根本不在档上**。
+      实测（2 人同场 · 真宿主）：乙（后手）出手那一手甲挨了 27 点，甲档上仍是 `284` ⇒
+      甲敲『状态』报 `生命 284/284`，而场上它 `257/284`（下一手头行才见真数）——
+      「一人两套血」的读数那一面，与 `live_mp` 同一个理由。
+      拿不到（没在打 / 场里没这一格）⇒ 照**档上那一格**（= 与接线前逐字相同，不编数）。
+    ★ 倒地的这一档同样照档：0 不是「档上的血」，是这一场的处置（回白烛堂 / 回满）——
+      与 `_write_back` 不写 0 同口径，不许拿 0 顶替（否则面板上出现「生命 0/248」的活人）。
+    """
+    from . import instance as INST                 # 本地 import：与 `live_mp` 同款
+    st = INST.live(env, uid)
+    if st is None:
+        return p.get("hp")
+    a = INST.actor_of(st, uid)
+    if not isinstance(a, dict) or a.get("hp") is None:
+        return p.get("hp")
+    hp = int(a.get("hp") or 0)
+    return hp if hp > 0 else p.get("hp")
 
 
 async def status(env, sink, uid, player):
@@ -1233,10 +1265,19 @@ async def status(env, sink, uid, player):
         yield T("SYS_STATUS_VITALS", hp=T("SYS_UNSET"), hp_max=T("SYS_UNSET"),
                 mo=T("SYS_UNSET"), mo_max=T("SYS_UNSET"), gold=p.get("gold"))
     else:
-        yield T("SYS_STATUS_VITALS", hp=p.get("hp"), hp_max=cap,
+        # ★ fix-q：血与蓝都按**这一场那一格**现读（`live_hp` / `live_mp` 同一个口）——
+        #   档上那一格只对「刚出手的那一位」是活的，别人出手时我挨的打不在档上。
+        yield T("SYS_STATUS_VITALS", hp=live_hp(env, uid, p), hp_max=cap,
                 mo=live_mp(env, uid, p), mo_max=mcap, gold=p.get("gold"))
     yield T("SYS_STATUS_EXP", exp=p.get("exp"),
             place=_map_of(p["loc"]).get("name", p["loc"]) if _map_of(p["loc"]) else p["loc"])
+    # ★ fix-l（试玩 ranger b38~b40：跨进程回来先敲『状态』一个字都不提，直到敲『去 X』
+    #   才被 `SYS_MOVE_IN_FIGHT` 拦下 ⇒ 玩家读不懂为什么走不动）：**手上还留着一场**时
+    #   面板上就把它说出来。只读 `instance` 那两个现成口（`live` / `fighting`），
+    #   不动状态、不重开那一场；面板其余各行一个字不动（`SYS_MOVE_IN_FIGHT` 那道闸也照旧）。
+    from . import instance as _INST                       # 本地 import：避免包装载期成环
+    if _INST.fighting(env, uid):
+        yield T("SYS_STATUS_IN_FIGHT")
 
 
 async def origin(env, sink, uid, player):
@@ -1410,6 +1451,8 @@ async def alloc_points(env, sink, uid, player):
         yield T("SYS_ALLOC_SHORT", stat=_stat_slot(stat), n=cnt, left=left, usage=usage)
         return
 
+    from . import panel_build as _PB   # 本地 import（与 `_p` 同一个理由：避免包装载期成环）
+    _cap0 = _PB.hp_cap(p, strict=False)          # ★ 加点**前**那一格（唯一来源 = 职业面板）
     try:
         p["alloc"] = AL.apply(al, stat, cnt)
     except AL.AllocError as e:                   # 档上那一格是小数（配平基准那种）⇒ 不截断，点名
@@ -1421,6 +1464,19 @@ async def alloc_points(env, sink, uid, player):
     _save(env)
     yield T("SYS_ALLOC_OK", stat=_stat_slot(stat), n=cnt,
             now=int((p.get("alloc") or {}).get(stat) or 0), left=left - cnt)
+    # ★ fix-n-small ①：**加点也报上限变化** —— 与「装备 / 卸下」那一条**同一句话、同一份数据源**：
+    #   槽位 `SYS_GEAR_HP_CAP`（「生命上限 {old} → {new}」）+ 上限走 `panel_build.hp_cap`
+    #   这唯一一口（与 `_p` 出档口、`属性` 页、战斗 actor 同一个数）。原先只报「力量 +3」，
+    #   上限自己悄悄涨了一格 ⇒ 玩家看不见这一笔投在哪儿兑现（P-27 三处一致，独独回话不提）。
+    #   ★ 上限没动（例：只加不带上限的那几维）⇒ **不出这一行**（与装备那条同形：真变了才说）。
+    #   ★ 只报上限：**现值那半边一个字不碰** —— 「加点后上限涨、现血/现蓝跟不跟」是队列里
+    #     一条**待裁**的口径题（归主线），这里不许顺手拍。（现血/现蓝仍由 `_p` 那条既有口径管。）
+    #   ★ 借槽位：真源 `00_总纲/17_文案收口口径_v1.md` 里这一句挂在「装备/卸下」名下，
+    #     还没有「加点」自己的槽位名 ⇒ 本轮借 `SYS_GEAR_HP_CAP` 顶上（待补的槽位名写在
+    #     分支 `_notes.md`），等主线连同真源表一起补 —— 别在代码里新造中文。
+    _cap1 = _PB.hp_cap(p, strict=False)          # 加完点**同一口**再算一遍
+    if _cap0 is not None and _cap1 is not None and int(_cap0) != int(_cap1):
+        yield T("SYS_GEAR_HP_CAP", old=int(_cap0), new=int(_cap1))
 
 
 # ══════════════════════════════════════════════════════════════

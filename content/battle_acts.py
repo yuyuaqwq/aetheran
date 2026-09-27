@@ -83,6 +83,25 @@ def flee_fail_pct() -> float:
     return float(rules()["flee_fail_pct"])
 
 
+def item_cap() -> int:
+    """**这一场**每件用几次的上限（唯一一口 = `rules/battle_cmds.json::item_uses_per_battle`）。
+
+    ★ fix-s：这个数原先只在 `Hand._item` 里现算一份 —— 而指令侧（`cmds_battle.battle_item`）
+      要在**玩家敲下那一刻**就知道「这一件已经用满了没有」（那句「这一场用过了」原先要等
+      这一手真轮到你才出，中间隔着别的日志 ⇒ 玩家第一眼以为药备好了）⇒ 抽成这一口，两处同源。
+    """
+    return int(rules().get("item_uses_per_battle") or 1)
+
+
+def item_capped(st, iid) -> bool:
+    """**这一场**这一件已经用满了吗（只读场那一格 `items_used`）。
+
+    没有场 / 这一格没记过这件 ⇒ `False`（fail-closed：没账 = 没满，指令侧照常走原来的路）。
+    """
+    used = dict(((st or {}).get("items_used") or {}))
+    return int(used.get(str(iid)) or 0) >= item_cap()
+
+
 # ══════════════════════════════════════════════════════════════
 # 取值小件
 # ══════════════════════════════════════════════════════════════
@@ -119,9 +138,14 @@ def _take(p, iid, n=1) -> None:
     (p or {})["bag"] = bag
 
 
-def _plain_attack(battle, actor) -> list:
-    """普攻那一条路（引擎自己那条 `actions.do_attack`）—— 用物超限时那一手照打。"""
-    ctx = ActCtx(caster=actor, action="attack", target=pick_target(battle))
+def _plain_attack(battle, actor, target=None) -> list:
+    """普攻那一条路（引擎自己那条 `actions.do_attack`）—— 用物超限时那一手照打。
+
+    ★ fix-j：`target` 由调用方给（**集火锁着的那一格**）—— 它是**攻击**，与「后面的手都往它
+      身上招呼」同一条规则；不给 / 给的那只已经倒了 ⇒ `pick_target` 落回敌方还有气的第一个
+      （与接线前逐字相同）。
+    """
+    ctx = ActCtx(caster=actor, action="attack", target=pick_target(battle, target))
     return list(ACT.do_attack(battle, ctx))
 
 
@@ -177,7 +201,7 @@ class Hand:
         if self.kind == "interrupt":
             return self._interrupt(battle, actor, target)
         if self.kind == "item":
-            return self._item(battle, actor, skill_name or self.item)
+            return self._item(battle, actor, skill_name or self.item, target)
         if self.kind == "swap":
             repanel(actor, self.p)                  # ★ G2：换手**当场**生效（重挂面板那一族键）
             return (list(self.lines), CAT["swap"], None)
@@ -204,20 +228,33 @@ class Hand:
         return ([line], cat, None)
 
     # ---------------------------------------------------------- 战斗中用物
-    def _item(self, battle, actor, iid):
+    def _item(self, battle, actor, iid, target=None):
         cat = CAT["item"]
-        cap = int(rules().get("item_uses_per_battle") or 1)
+        cap = item_cap()
         rec = _item_rec(iid)
         name = str(rec.get("name") or iid)
         if int(self.used.get(iid, 0)) >= cap:
             # 上限用满：这一手**回落成普攻**（白纸黑字，不静默、也不白花）
-            return ([T("COMBAT_ITEM_CAP", name=name)] + _plain_attack(battle, actor), "attack", None)
+            # ★ fix-j：回落的那一手是**攻击** ⇒ 吃集火目标（`target` 由调用方传进来）
+            return ([T("COMBAT_ITEM_CAP", name=name)] + _plain_attack(battle, actor, target),
+                    "attack", None)
         from .cmds_recipe import _heal_gain                  # 回血口径唯一一口
         mx = ST.actor_max_hp(battle, actor)
         gain = _heal_gain(self.p, rec, mx)
         if gain is None:
             return ([T("SYS_USE_NOT", name=name)], cat, None)
         hp0 = int(actor.get("hp") or mx)
+        # ★ fxe（修 e·道具使用 ②）：**回不了血就别吃** —— 原先满血时敲 `使用 <药>`
+        #   照样把药扣掉、只回一句「生命 +0」（实跑：满血 188/188 一瓶伤药照样从背包里少掉；
+        #   一瓶 24 铜板 ≈ 同档 3~4 只怪的全部收入）。判据只看**真能回多少** ——
+        #   `min(上限, 现血 + 回复量) - 现血 <= 0` ⇒ 这一手**不消耗**（同一句走
+        #   `items` 那条老路的 `SYS_USE_FULL`，文案仍只在 `content/data/texts.json` 里，
+        #   本文件零中文）；真能回一点的（含被上限截掉一半的）照旧结算 —— 上限钳制 /
+        #   减伤那类正当结算**一格不动**。
+        #   这一手也不白花：照「上限用满」那一支的形状**回落成普攻**。
+        eff = min(int(mx), hp0 + int(gain)) - hp0
+        if eff <= 0:
+            return ([T("SYS_USE_FULL", name=name)] + _plain_attack(battle, actor), "attack", None)
         actor["hp"] = min(int(mx), hp0 + int(gain))
         _take(self.p, iid, 1)
         self.used[iid] = int(self.used.get(iid, 0)) + 1
