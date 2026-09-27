@@ -12069,3 +12069,118 @@ bash C:/Users/yuyu/AppData/Local/Temp/w10/gorun.sh C:/Users/yuyu/ast-wt/fix-n-sm
 probe_instance ⑤「单人那条路与冻结基线逐字相同」**通过、无需重采** —— 本批只动
 「加点」与「旧物谱」两条回话，冻结基线那条路（单人不带加点/不带旧物谱）碰不到。
 ```
+
+---
+
+# fxm2-horn · 剧情信物「半截号角」无限刷（⛔ 经济级 · 2026-09-27）
+
+> 分支 `fxm2-horn`（基线 `83db6ad`）· 真源仓 `C:/Users/yuyu/aetheran-plan` **只读**。
+> 证据出处（只读，未改）：`C:/Users/yuyu/AppData/Local/hermes/workspace/AETHERAN_夜班发现.md`
+> 「Wave-7 收尾 · mage 第 3 轮」那条 `[⛔经济级 · 新 · 唯一会毁叙事的一条]`（b250 批）。
+
+## 一、现象 → 根因（逐条核实过）
+
+```text
+现象（法师第 3 轮实测）  同一只头目怪反复打 ⇒ 「整理背包」里 `半截号角 ×225`（本轮打了 967 只怪）
+静态根因                `content/data/drop_pools.json::dp_boss_minor`
+                          = {rolls: 2, unique: true, entries: [{out: i_horn_half, w: 100, story: …}]}
+                        —— **单条目 w=100** 的池；`unique` 的唯一读端是
+                        `content/loot.py::roll_pool`（1 处），语义 = 「**同一次抽取内**不重复」
+                        ⇒ 跨次抽取挡不住 ⇒ 每杀一只必掉一个。
+挂在哪几只怪（5 只，全部 `drops` 里带它）
+  ms_head_dog      头狗         lv10  头目   drops = [dp_boss_minor]            其余掉落：无（钱 200 / 经验 100）
+  ms_tower_guard   旧哨塔的守兵 lv14  头目   drops = [dp_boss_minor, dp_tower_keep]
+                                            其余掉落：dp_tower_keep（哨兵的护手 / unid_rare / 旧铁 / 伤药）
+  ms_sunken_corpse 沉尸         lv15  头目   drops = [dp_boss_minor]            其余掉落：无（钱 300 / 经验 150）
+  ms_bone_warden   守塔的骨架   lv17  层主   drops = [dp_boss_minor]            其余掉落：无（钱 340 / 经验 170）
+  ms_boss_oath_sentry 旧誓哨兵  lv19  boss   drops = [dp_boss_minor]            其余掉落：无（钱 380 / 经验 190）
+全仓 `unique: true` 的池 = **只有 `dp_boss_minor` 这一条**（`grep -rn '"unique"' content/data` 只命中它）。
+```
+
+## 二、修法（真源依据 + 两条落地）
+
+真源 `06_第一阶段垂直切片/22_旧哨塔_逐间设计_v1.md §三 12 · 塔顶` 那一行原文：
+
+```text
+掉落   半截号角（**如果 10 房没拿**）· 刻字的石片 · 它在执行一条没人撤销的命令
+```
+
+⇒ 「同一件剧情信物**每档最多一件**」是**真源本来就写着**的口径（10 房拿了就不再给）。
+
+```text
+① content/loot.py
+   · 新增 `held_ids(player)` —— 「手上已有哪些件」的**唯一一口**（`bag` 的键；`bag` 不是 dict ⇒ 空集）
+   · `roll_pool(..., held=…)`：池写了 `unique: true` 时，**`held` 里已有那一件 ⇒ 那条不进池**；
+     只对 `unique` 池生效（其余 5 条 `dp_*` 池一个字节不动）；排的是**条目**（静态 id）⇒
+     剩下那些条目的权重与相对几率、抽签次数都不动 ⇒「同一条池里别的东西照掉」。
+     `held` 缺省 = 不排（判据 / 工具那些「看池子本身」的调用不受背包影响）。
+② content/cmds_battle.py::_settle
+   · 落账那一刻算一次 `held = LT.held_ids(p)`，透传给每个挂着 `roll_pool` 的池。
+     （副本那条路也走这里 —— `content/instance.py:954` 调的就是同一个 `_settle`，只此一份实现。）
+```
+
+**没做**（有意）：采集点那条渠道 **不动** —— `gathering.json::gt_tw_search_4`（号角室石台 · `搜查` ·
+一天 3 遍）的池里也有 `i_horn_half`。域里采集点**没有** `unique` 这个概念可声明，要改得先给
+`gathering` 加一格（域 + schema + `cmds_gather` 那条自己实现的抽签 + `probe_gather` 的期望），
+属另一件事 ⇒ 按「先核实再动手、别顺手扩大」处置，留下面第五节的登记。
+
+## 三、判据（`scripts/probe_drops.py ⑯` · 只加强，一个都没松）
+
+```text
+① 池级两态：不传 `held` ⇒ ['i_horn_half'] ｜ held={号角} ⇒ [] ｜ held={别的东西} ⇒ ['i_horn_half']
+   （反证：不传就出 ⇒ 这条判据不是永真；且排的是「已有那一件」而不是「有背包」）
+② 真跑 3 场（同一个人 · `ms_tower_guard` · 走真落账那条路 · 词条精英关掉）：
+   空袋那一臂   = [号角×1 + 哨兵的护手×1] · [unid_rare] · [unid_rare]
+   袋里先有那一臂 = [哨兵的护手×1]        · [unid_rare] · [unid_rare]
+   ⇒ 除号角外**逐条相同**、钱 [280,280,280] / 经验 [196,196,196] 也一分不差（= 掉率不动）
+③ 别的池零误伤：没写 `unique` 的 5 条池 × 2 级（1/20）逐池两臂对账 ⇒ 传 `held` 与不传逐条相同
+④ 静态守卫三条：`content/*.py` 的 `roll_pool(` 调用点都带 `held=`（AST 扫）·`unique` 池条目全是
+   静态 id · 「同一件唯一信物只挂一条 `dp_*` 池」
+```
+
+## 四、真源：无需改，但要补一行口径（请主线在合入时搬）
+
+```text
+· `22_旧哨塔_逐间设计_v1 §三 12` 那行「（如果 10 房没拿）」**本来就是这个口径** ⇒ 本批是**跟账**、
+  不是新口径，真源不必动。
+· 可选补一行（**我的倾向：补**）：`27_掉落的惊喜感与未鉴定_v1.md` 目前只有「§四 重复掉落的三个去处
+  （别指望它不重复）」那一节，讲的是**材料 / 未鉴定**那两类；剧情信物（`keepsake`）是另一档。
+  建议在那份文档里补一句：`unique: true` 的池 = **同一件东西每档最多一件**（手上已有一件就不再进池）。
+  ⇒ 不补也能跑（`loot.roll_pool` 的 docstring 已写明依据），补了下一轮就不会有人把它当「新机制」再裁一遍。
+```
+
+## 五、留给主线的两条（本轮**没**动 · 已实测取证）
+
+```text
+① [裁] 采集点那条渠道也出同一件信物（**另一条路，量级小得多**）：
+   `gathering.json::gt_tw_search_4`（`subarea = tower_horn_room` · `verb = search` · `pool` 里
+   `i_horn_half w=100` · `times_per_day: 3`）—— 同一天同一站按 `_left_after` 的规则能翻两遍
+   （第 3 遍「翻空了」），跨天重置 ⇒ **一天最多再拿 1~2 件**（对比 Boss 那条路 = 每杀一只一件）。
+   修它要给它一格声明（域 + schema + `cmds_gather` 里那条**自己实现**的抽签 + `probe_gather` 期望），
+   不是本批「按档去重」这一条能顺手罩住的 ⇒ 建议**另开一批**，口径由主线定（要不要也按档去重）。
+② 本车道的**基线本来就不是 53/0**（详见提交信息与报告）：`probe_instance ⑤`（冻结基线 158 vs
+   真跑 156）与 `probe_mech ⑮` / `probe_resources ⑧`（读的是**引擎仓 HEAD 那一提交的落点** ⇒
+   与判据登记的四份对不上：实测 `['tests/test_battle_text_inject.py']` vs 声明
+   `extends/ext_combat/battle/{actions,battle,schedule}.py` + `saintess_engine/config.py`；
+   引擎仓 HEAD `c5a33c3` · 工作区**干净**）三条红 **改动前就在**，
+   与本批无关（引擎仓只读，本车道不碰）。
+```
+
+## 六、门禁与端到端（真数字）
+
+```text
+全量探针（车道私有库 · Python 3.12 · GWEN_ENGINE=C:/Users/yuyu/framework-engine）
+  改动前：TOTAL pass=50 fail=3（红 = probe_instance ✗⑤ / probe_mech ✗⑮ / probe_resources ✗⑧）
+  改动后：TOTAL pass=50 fail=3（**同样是那 3 条** —— 没多一条红）
+反证（stash 掉实现 ⇒ 判据咬得住 · 收尾轮复测）：
+  · 只回退 `content/cmds_battle.py`（留着 `loot.held_ids` 与新判据）⇒ ⑯ 当场 **3 条红**
+    （②「真跑 3 场」+ ②「反证（袋里先有）」+ ④①「调用点缺 `held=` · cmds_battle.py:495」），
+    ①③ 仍绿 —— 说明它咬的是「落账那一支没把 `held` 交下去」，不是泛红；
+  · 连 `content/loot.py` 一起回退 ⇒ ⑯ 直接炸在第 ① 条：
+    `TypeError: roll_pool() got an unexpected keyword argument 'held'`；
+  `git stash pop` 后复绿（⑯ 7 条全 ✓）。
+真客户端（`Temp/qa/player_client.py` · 真宿主 · 假钟 1790308800 · 存档 `Temp/qa/fxm2horn/save.json`）：
+  走真路进塔（镇口 → 往北 → 去 拾荒营地 → 去 旧哨塔下 → 进塔 → 一层三间 → 下一层 → 哨所（内）），
+  在 哨所（内）连打 `旧哨塔的守兵` 3 场：拾取 = 半截号角 + 旧铁 ｜ 哨兵的护手 ｜ 旧铁，
+  `整理背包` ⇒ `· 信物（1 种）：半截号角 ×1`。逐字见提交信息。
+```

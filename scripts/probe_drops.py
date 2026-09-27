@@ -313,6 +313,176 @@ _b5 = LT.roll_pool("dp_trash_small", level=17, rnd=random.Random("s"))
     "★ ⑤ 没写 `level_gated` 的池**按等级也是同结果**（`dp_trash_small` 3 级 vs 17 级：%s）"
     % [d["id"] for d in _a5])
 
+# ── ⑯ ★ fxm2-horn：`unique` 池**按档去重**（剧情信物「半截号角」不许无限刷）——
+#   病根（夜试玩 mage 第 3 轮 · b250）：`dp_boss_minor` = `{rolls: 2, unique: true,
+#     entries: [{out: i_horn_half, w: 100}]}` —— 一条**单条目 w=100** 的池，挂在**五只可反复打**
+#     的头目怪上（头狗 10 / 守兵 14 / 沉尸 15 / 守塔的骨架 17 / 旧誓哨兵 19）；而 `roll_pool`
+#     那格 `unique` **只防「同一次抽取内重复」** ⇒ 跨次抽取挡不住 = 每杀一只必掉一个
+#     （实测：同一只怪反复打，进包 **225** 个）。
+#   修法（真源 `22_旧哨塔_逐间设计_v1 §12 塔顶`：「掉落 半截号角（**如果 10 房没拿**）· …」）：
+#     手上已经有这一件 ⇒ 那一条**不再进池**；池里别的东西照掉、掉率不动。
+#   判据四条（每条都带**两态 / 反证**，不许永真）：
+#     ① 池级两态：不传 `held` ⇒ 照旧出号角；`held={号角}` ⇒ **一条都不出**；
+#        而 `held` 里放**别的东西** ⇒ 号角照旧进池（排的是「已有那件」，不是「有背包」）
+#     ② 真跑 3 场（同一个人 · 同一只头目 · 走真落账那条路）：第 1 场号角进包、第 2/3 场**不再出**；
+#        与「袋里先有号角」那一臂**逐条相同**（除号角那一条）—— 这就是「别的东西照掉、掉率不动」
+#     ③ 别的池零误伤：全仓**每一条没写 `unique` 的池**，同种子传 / 不传 `held` ⇒ 逐条相同
+#     ④ 静态守卫三条：`content/*.py` 每个 `roll_pool(` 调用点都带 `held=`（AST 扫）·
+#        `unique` 池的条目全是**静态 id**（动态 `*` 项 / 嵌套池那一类排不动）·
+#        「同一件唯一信物只挂在**一条** `dp_*` 池上」（同一场两个池各给一件在结构上不可能）
+print()
+print("⑯ ★ fxm2-horn：`unique` 池按档去重（剧情信物不许无限刷）")
+
+# ① 池级两态（反证：不传 held 就出）
+_a16 = [d["id"] for d in LT.roll_pool("dp_boss_minor", level=1, rnd=random.Random(7))]
+_b16 = [d["id"] for d in LT.roll_pool("dp_boss_minor", level=1, rnd=random.Random(7),
+                                      held={"i_horn_half"})]
+_c16 = [d["id"] for d in LT.roll_pool("dp_boss_minor", level=1, rnd=random.Random(7),
+                                      held={"i_material_old_iron", "unid_rare"})]
+(ok if (_a16 == ["i_horn_half"] and _b16 == [] and _c16 == ["i_horn_half"]) else bad)(
+    "★ ① 池级两态：`dp_boss_minor` 不传 `held` ⇒ %s ｜ `held={号角}` ⇒ %s（**一条都不出**）｜ "
+    "`held` 里放别的东西 ⇒ %s（排的是「手上已有那件」，不是「有背包」）" % (_a16, _b16, _c16))
+
+# ③ 别的池零误伤：逐池两臂对账（同种子 ⇒ 逐条相同）
+_MILE = ("i_set_sentry_gauntlet", "unid_rare", "i_material_old_iron", "i_potion_minor",
+         "unid_common", "i_material_iron_chip", "i_material_hard_bone", "i_junk_bone",
+         "i_material_herb_common", "i_set_scavenger_blade", "i_horn_half")
+_bad16, _n16 = [], 0
+for _pid, _pv in sorted(DP.items()):
+    if not _pid.startswith("dp_") or _pv.get("unique"):
+        continue
+    for _L in (1, 20):
+        _arm1 = [(d["id"], d.get("n")) for d in
+                 LT.roll_pool(_pid, level=_L, rnd=random.Random("k16:" + _pid + str(_L)))]
+        _arm2 = [(d["id"], d.get("n")) for d in
+                 LT.roll_pool(_pid, level=_L, rnd=random.Random("k16:" + _pid + str(_L)),
+                              held=set(_MILE))]
+        _n16 += 1
+        if _arm1 != _arm2:
+            _bad16.append((_pid, _L, _arm1, _arm2))
+(ok if not _bad16 else bad)(
+    "★ ③ 别的池零误伤：抹掉 `unique` 的 %d 条池 × 2 级（1/20 · 共 %d 次对账）⇒ "
+    "传 `held` 与不传**逐条相同**（坏 %s）"
+    % (_n16 // 2, _n16, _bad16[:2] or "无"))
+
+# ② 真跑 3 场（同一只头目 · 同一个人 · 两臂只差「袋里先有没有号角」）
+import asyncio as _a16io                                                         # noqa: E402
+import ast as _ast16                                                             # noqa: E402
+from content import alloc as _AL16                                               # noqa: E402
+from content import cmds_battle as _CB16                                         # noqa: E402
+from content import combat as _CM16                                              # noqa: E402
+from content import instance as _IN16                                            # noqa: E402
+
+_HORN16 = "i_horn_half"
+_CHIEF16 = "ms_tower_guard"          # 头目 · drops = [dp_boss_minor, dp_tower_keep]
+
+
+class _E16(object):
+    """直调 handler 的最小环境（只要 `save()`）—— 照 `probe_fix4_combat` 的夹具。"""
+
+    text = ""
+    group_id = "g_probe_drops"
+
+    def save(self):
+        pass
+
+
+def _chief_runs(bag, kills, uid):
+    """同一个档连打 `kills` 场 `ms_tower_guard` —— 逐场列出「掉落 / 钱 / 经验」（走真落账那条路）。"""
+    p = dict(CA.DEFAULT_PLAYER)
+    p.update({"cls": "cls_knight", "level": 20, "alloc": _AL16.plan(20, "cls_knight"),
+              "hp": 999, "gold": 0, "exp": 0, "bag": dict(bag), "codex": {}, "flags": {},
+              "loc": "old_watchtower", "node": "tower_outpost_in"})
+    p = CA._p(p)
+    rows = []
+    for _ in range(kills):
+        try:                                                 # 从零开一场（先清掉这一格「场」）
+            _IN16.clear(_IN16.key_of("", uid, [uid]))
+        except Exception:                                    # noqa: BLE001
+            pass
+        _b0, _g0, _e0 = dict(p.get("bag") or {}), int(p.get("gold") or 0), int(p.get("exp") or 0)
+        _lines = []
+
+        async def _go():
+            async for _ln in _CB16.auto_battle(_E16(), None, uid, p):
+                _lines.append(str(_ln))
+
+        _a16io.run(_go())
+        _b1 = dict(p.get("bag") or {})
+        rows.append({
+            "got": {k: int(v) - int(_b0.get(k, 0)) for k, v in _b1.items()
+                    if int(v) - int(_b0.get(k, 0)) > 0},
+            "gold": int(p.get("gold") or 0) - _g0,
+            "exp": int(p.get("exp") or 0) - _e0,
+            "rows": [x for x in _lines if x.startswith("拾取")],
+        })
+    return rows
+
+
+_rp16, _re16 = _CM16.pick_encounter, None
+try:
+    from content import affix as _AF16                                          # noqa: E402
+    _re16 = _AF16.elite_of
+    _AF16.elite_of = lambda *a, **k: None        # 词条精英那一层关掉（本判据只看掉落池那一条线）
+    _CM16.pick_encounter = lambda *a, **k: [_CHIEF16]
+    _A16 = _chief_runs({}, 3, "u_probe_drops_horn")                # 空袋那一臂
+    _B16 = _chief_runs({_HORN16: 1}, 3, "u_probe_drops_horn")      # ★ 同一个 uid ⇒ 同一个种子
+finally:
+    _CM16.pick_encounter = _rp16
+    try:
+        _AF16.elite_of = _re16
+    except NameError:
+        pass
+
+_same16 = all(
+    {k: v for k, v in _A16[_i]["got"].items() if k != _HORN16}
+    == {k: v for k, v in _B16[_i]["got"].items() if k != _HORN16}
+    and _A16[_i]["gold"] == _B16[_i]["gold"]
+    and _A16[_i]["exp"] == _B16[_i]["exp"]
+    for _i in range(3))
+(ok if _same16 else bad)(
+    "★ ② 别的东西照掉（两臂逐条对账）：空袋那一臂 %s ｜ 袋里先有号角那一臂 %s "
+    "⇒ 除号角外**逐条相同**、钱 %s / 经验 %s 也一分不差"
+    % ([r["got"] for r in _A16], [r["got"] for r in _B16],
+       [r["gold"] for r in _A16], [r["exp"] for r in _A16]))
+(ok if (_A16[0]["got"].get(_HORN16) == 1 and _HORN16 not in _A16[1]["got"]
+        and _HORN16 not in _A16[2]["got"]) else bad)(
+    "★ ② 真跑 3 场：第 1 场号角进包、第 2/3 场**不再出** —— %s"
+    % ["×".join("%s:%d" % (k, v) for k, v in sorted(r["got"].items())) or "（无掉落）" for r in _A16])
+(ok if all(_HORN16 not in r["got"] for r in _B16) else bad)(
+    "★ ② 反证（袋里先有）：3 场一场都没出号角 —— %s"
+    % ["×".join("%s:%d" % (k, v) for k, v in sorted(r["got"].items())) or "（无掉落）" for r in _B16])
+(ok if all(_A16[i]["rows"] for i in range(3)) else bad)(
+    "★ ② 屏上那几行照旧（逐场要点）：%s"
+    % " ｜ ".join("第%d场 %s" % (i + 1, r["rows"]) for i, r in enumerate(_A16)))
+
+# ④ 静态守卫（三条）
+_bad_calls16 = []
+_cdir16 = os.path.join(REPO, "content")
+for _f in sorted(os.listdir(_cdir16)):
+    if not _f.endswith(".py"):
+        continue
+    _tree16 = _ast16.parse(io.open(os.path.join(_cdir16, _f), encoding="utf-8").read())
+    for _n in _ast16.walk(_tree16):
+        if isinstance(_n, _ast16.Call) and getattr(_n.func, "attr", None) == "roll_pool":
+            if not any(_k.arg == "held" for _k in _n.keywords):
+                _bad_calls16.append("%s:%d" % (_f, _n.lineno))
+_uniq16 = {k: v for k, v in DP.items() if v.get("unique") and k.startswith("dp_")}
+_dyn16 = ["%s.%s" % (k, e.get("out")) for k, v in _uniq16.items()
+          for e in (v.get("entries") or [])
+          if str(e.get("out") or "").startswith("*") or e.get("kind_key") == "pool"]
+_uids16 = {str(e.get("out")) for v in _uniq16.values() for e in (v.get("entries") or [])}
+_dup16 = sorted({"%s 也挂在 %s" % (u, k) for k, v in DP.items() if k not in _uniq16
+                 for e in ((v.get("entries") or []) + (v.get("pool") or []))
+                 if str(e.get("out")) in _uids16})
+(ok if (not _bad_calls16 and not _dyn16 and not _dup16 and _uniq16) else bad)(
+    "★ ④ 静态守卫：`content/*.py` 的 `roll_pool(` 调用点**都带 `held=`**（缺 %s）· "
+    "`unique` 池（%s）条目全是静态 id（动态/嵌套 %s）· 唯一信物只挂**一条** `dp_*` 池（重 %s）"
+    % (_bad_calls16 or "无", " · ".join(sorted(_uniq16)) or "无", _dyn16 or "无", _dup16 or "无"))
+print("  · 登记（不当判据）：同一件信物**另有采集点**一条渠道 —— `gathering.json::gt_tw_search_4`"
+      "（号角室石台 · `搜查` · 一天 3 遍）的池里也有 `i_horn_half`。本批只按真源"
+      "「Boss 池按档去重」这一条修，采集点那条渠道按域里没声明 `unique` 就**不动**（见分支 `_notes.md`）。")
+
 print()
 print("结果：%s" % ("全绿 ✓" if not fails else "有红 ✗"))
 sys.exit(1 if fails else 0)

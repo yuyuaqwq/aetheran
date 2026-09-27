@@ -140,7 +140,22 @@ def _resolve(out: str, entry: dict, level: int, rnd: random.Random, items_tbl: d
     return rnd.choice(sorted(cand))
 
 
-def roll_pool(pool_id: str, *, level: int = 1, rnd: random.Random | None = None) -> list:
+def held_ids(player) -> set:
+    """玩家**手上已有哪些件**（`bag` 的键）—— 唯一一口 · `unique` 池「按档去重」的输入。
+
+    ★ fxm2-horn：为什么要收成一口 —— 「手上有哪几件」别处都问 `bag` 那一格（`sorted(p["bag"])`
+      之类走 `loot.worn_ids` / `match_ids` 那一族），只有**掉落这一支**从来没问过它：
+      `dp_boss_minor`（`unique: true` · 单条目 w=100）挂在五只**可反复打**的头目怪上 ⇒
+      每杀一只必掉一个「半截号角」（夜试玩实测：同一只怪反复打，进包 225 个）。
+      这一口只回答「手上有哪些 id」——**不判任何规则**（规则在 `roll_pool` 的 `unique` 那一条）。
+    · `bag` 不是 dict（半截老档 / 坏档）⇒ 空集（fail-closed：不猜、不编）。
+    """
+    bag = (player or {}).get("bag")
+    return set(str(k) for k in bag) if isinstance(bag, dict) else set()
+
+
+def roll_pool(pool_id: str, *, level: int = 1, rnd: random.Random | None = None,
+              held=None) -> list:
     """按池抽掉落，返回 [{id, n, kind_key, story?}]。同一池不许抽重（unique）。
 
     ★ B3-6b-2d-keys-2：那一格叫 `kind_key`（ASCII 机器键），不再是中文 `kind` —— 它与域里
@@ -149,6 +164,22 @@ def roll_pool(pool_id: str, *, level: int = 1, rnd: random.Random | None = None)
       **本函数这一行**）时，动态格只在「这一级穿得上」的那批里挑（见 `_resolve`）。
       `level` 缺省 1（与调用方一致）；嵌套池把 `level` 原样传下去（`dp_trash_mid` → `dp_elite_gear`
       那条路就是靠它）。
+    ★ fxm2-horn：`unique: true` 的池是**「按档去重」**，不只是「同一次抽取内不重」——
+      `held`（`held_ids(player)`）里**已经有一件**的条目**不再进池**。真源
+      `22_旧哨塔_逐间设计_v1 §12 塔顶`：「掉落 半截号角（**如果 10 房没拿**）· 刻字的石片 · …
+      」—— 信物只该有一件（`09` 那条线的 `q_main_08` / 彩蛋 4 都只要「手里拿着它」）。
+      原先那一格只防「**同一次抽取内**重复」⇒ 一条单条目 w=100 的池挂在五只可反复打的头目怪上
+      = 每杀一只必掉一个（夜试玩实测 225 个）。
+      · **只对 `unique` 池生效** ⇒ 没写这一格的池（今天 6 条 `dp_*` 里的 5 条）一个字节都不动；
+      · 排的是**条目**（按条目自己那份静态 `out` 的 id）⇒ 池里剩下那些条目的权重与**相对**
+        几率一字不动（`_pick` 的 Σw 只对剩下的那几条求和）、抽签次数照旧 ⇒
+        「同一条池里别的东西照掉」。今天唯一的 `unique` 池（`dp_boss_minor`）条目全是静态 id，
+        `probe_drops ⑯` 把这一条钉成常驻判据（哪天有池给 `unique` 池塞了 `*动态`/嵌套项当场红）；
+      · 动态项（`*armor_random` 那种）**不排**：它要现抽才知道是哪一件，而现抽要消耗随机流 ——
+        排它会改动**别的条目**的签（那是另外一件事，见 `_resolve`）；
+      · `held` 缺省 = **不排**（池长什么样就抽什么样）：判据 / 工具那些「看池子本身」的调用
+        不该被玩家的背包影响。★ 谁**必须**传 = 静态守卫 `probe_drops ⑯④`：`content/*.py` 里
+        每一个 `roll_pool(` 调用点都得带 `held=`（免得哪天新加的调用点把这半条规则漏掉）。
     """
     rnd = rnd or random.Random()
     p = pools().get(pool_id)
@@ -158,12 +189,17 @@ def roll_pool(pool_id: str, *, level: int = 1, rnd: random.Random | None = None)
     out, seen = [], set()
     rolls = int(p.get("rolls", 1) or 1)
     gated = bool(p.get("level_gated"))                # ★ P-60：池侧声明 → 动态格那一刀
+    # ★ fxm2-horn：手上已有的那几件（只有 `unique` 池认这一格 —— 别的池零变化）
+    keep = {str(x) for x in (held or ())} if p.get("unique") else set()
     for _ in range(rolls):
-        e = _pick(p.get("entries") or [], rnd)
+        entries = p.get("entries") or []
+        if keep:                                      # 已有 ⇒ 那一条**不进池**（静态 id 才排得动）
+            entries = [x for x in entries if str(x.get("out")) not in keep]
+        e = _pick(entries, rnd)
         if not e:
             continue
         if e.get("kind_key") == "pool":                 # 嵌套池（ASCII 机器键；原先比中文枚举）
-            out.extend(roll_pool(e["out"], level=level, rnd=rnd))
+            out.extend(roll_pool(e["out"], level=level, rnd=rnd, held=held))
             continue
         oid = _resolve(str(e.get("out")), e, level, rnd, it, gated=gated)
         if not oid:
