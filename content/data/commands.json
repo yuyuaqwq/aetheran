@@ -185,6 +185,27 @@
     },
     "guard_desc": "随时"
   },
+  "explore": {
+    "patterns": [
+      "^探索$",
+      "^探$",
+      "^走一圈$"
+    ],
+    "category": "移动与世界",
+    "desc": "在脚下这一站转一圈（可能撞上这一带的怪）",
+    "usage": "探索",
+    "visible": true,
+    "order": 9,
+    "bind": {
+      "handler": "content.cmds_ast:explore",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    },
+    "guard_desc": "随时"
+  },
   "read": {
     "patterns": [
       "^读(?:\\s*(.+))?$",
