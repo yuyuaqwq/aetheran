@@ -346,8 +346,13 @@
         "value": 0.25,
         "src": "B4-1 本批设计（01_骑士_v2.md 的 11–20 段补章待收编）「花 40 守誓，立起一张吸收伤害的墙（生命上限的 25%）」—— 吸收量按**生命上限**的比例算，不走 F9（护盾吃 1.4 倍治疗强度）：骑士 10 级 heal_pow 只有 7.7，按 F9 算出来的盾小到看不出"
       },
-      "rules": {},
-      "judge": "施放后 actor.shields 多一条（key=aeth.oath_shield）· 盾值 = int(生命上限 × 0.25)（现算，逐值复算）· 到期 = 现在 + mech_val(300)（引擎 shields.expire_at）· 这段里落上来的伤害先吃盾（引擎 `_apply_damage` 的护盾吸收），盾破之后照旧扣血。",
+      "rules": {
+        "aeth.oath_shield": {
+          "_src": "★ 状态容器收口第 2 批（2026-09-28 · 设计案 `gas-design/_r2/DESIGN_state_container_r2.md` §2.2）：护盾不再是引擎里一个**特殊容器**（旧 `actor[\"shields\"]`），而是「状态容器里一条**带 value 的条目**」这一族的一员。**吸收型由本声明决定**（`absorb: true`），引擎不认任何游戏专名 —— 它只问两件事：① 我身上哪些条目声明了 `absorb`（引擎词 `absorb_keys`）② 这条还剩多少（`entry[\"value\"]`）。★ 本条是**纯声明**（不带 stacks/expire/value）—— 时长/盾值都是运行期现算的，落在条目上。",
+          "absorb": true
+        }
+      },
+      "judge": "施放后 actor 的**状态容器**（`effects`）里多一条（key=`aeth.oath_shield`，**声明了 `absorb`** ⇒ 这一族条目吸收伤害）· 盾值写在条目自己的 `value` 上 = int(生命上限 × 0.25)（现算，逐值复算）· 到期 = 现在 + mech_val(300)（条目 `expire`）· 这段里落上来的伤害先吃这条（引擎 `_apply_damage` 遍历声明了 `absorb` 的条目逐条扣 `value`），扣光即删，扣剩的照旧进血。",
       "src": "B4-1 本批设计（真源待补：01_骑士_v2.md 11–20 段）"
     },
     "hold_line": {

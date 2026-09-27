@@ -6782,6 +6782,15 @@
     "category": "战斗",
     "desc": "引擎槽位 `battle.landing.shield_absorb`（`extends/ext_combat/battle/landing.py:382` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
   },
+  "COMBAT_LANDING_TAKEN_REDUCE": {
+    "value": "🛡️ {name} 减伤 {pct}%！",
+    "params": [
+      "name",
+      "pct"
+    ],
+    "category": "战斗",
+    "desc": "★ 状态容器收口第 2 批（2026-09-28 · 引擎那条车道落到 main `adad98a`）：引擎新增点位 `battle.landing.taken_reduce`（`extends/ext_combat/battle/landing.py:201` 的承伤减免读点 —— 累加容器里声明了 `taken_pct` 的条目 `value`，按内容侧骨架表 `formulas.reduce_cap()` 封顶）。★ 本包**没有声明任何 `taken_pct`**（`grep taken_pct` 在 `content/` 下零命中）⇒ 那一段对本包恒 0 ⇒ 这句话**永不出口**，先占位把装配期那道点名抛解掉（引擎每加一条点位，本包 `cues.check_domain` 要求同步声明槽位 + texts 一格）。措辞随真源走（`00_总纲/17_文案收口口径_v1.md`）。"
+  },
   "COMBAT_LANDING_WOKEN": {
     "value": "💥 目标被攻击惊醒！",
     "params": [],

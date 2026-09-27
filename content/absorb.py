@@ -1,0 +1,209 @@
+# -*- coding: utf-8 -*-
+"""吸收型（护盾）—— **状态容器收口第 2 批**（2026-09-28）的包侧一半。
+
+设计案：`gas-design/_r2/DESIGN_state_container_r2.md` §2.1/§2.2
+------------------------------------------------------------------
+§0 的目标形状一句话：`effects` 是**唯一**的战斗状态容器；护盾、减伤、承伤资源全部变成
+「容器里一条**带 `value`** 的条目」，到期/叠加/清除全部走既有的一条通路。引擎那边要删掉
+`shields` 这个**特殊容器**、`reduce_left` 影子字段、`halve` 死字段。
+
+本文件负责三件事（**内容侧**）
+------------------------------------------------------------------
+① **声明**：`absorb: true` 进本包那份 `effect_rules` 声明表（真源
+   `content/rules/skill_mech.json` 的 `mechs.<名>.rules.<状态键>`，由
+   `content/mech.py::rules_module()` 算成 `EFFECT_RULES` 挂进引擎）。
+   ★ **吸收型由声明决定，不硬编码键名** —— 引擎问的是「哪些条目声明了 `absorb`」，
+   不是「哪个键叫 shield」。内容侧想加第二种吸收资源（荆棘护罩 / 元素吸收）只要再写
+   一条声明，**引擎不用动**（设计案 §2.2 的全部理由）。
+② **写口**：护盾开出来一律走**引擎的状态容器写入口**（`actors.open_entry`），不是
+   `actor["shields"] = …` 那个要被删掉的独立容器。
+③ **两态**：引擎那半还没落到 main 之前，本包**照跑**（走旧容器，行为逐字不变）；
+   引擎那半一到（`open_entry` 认 `value=` 且承伤层改走容器遍历），本包**自动**改走
+   容器条目。判定只问引擎**形状**（签名 + 承伤层那张表），不认版本号。
+
+★ 为什么写口用**关键字传参**
+------------------------------------------------------------------
+`open_entry` 的形参表由引擎那半同批改动（新增 `value`）。本包一律
+`open_entry(actor, tag, stacks=…, value=…, expire=…)` 全关键字 ⇒ 参数名变了也不炸。
+★ 旧引擎上 `value=` 不被接受 —— 见 `engine_has_value_entry()` 那道**形状门**：
+  不装就**不调**，退回旧容器（fail-closed 的另一面：形状不认识就不假装会）。
+
+★ 「两态」是本仓库既有纪律，不是新发明：`content/cues.py::engine_has_cues()` 判
+  「引擎侧 cue 迁移在不在」；`content/apply.py` 在引擎**认识**新形状却没装上口时**当场抛**。
+"""
+from __future__ import annotations
+
+import inspect
+import os
+
+from ext_combat.battle import actors as ACT
+from ext_combat.battle.state_effects import state_def
+
+_RULES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "rules", "skill_mech.json")
+
+#: 声明表（`{"<状态键>": {"absorb": true, …}}`）—— 唯一真源 `rules/skill_mech.json`。
+#: 与 `mech.rules_module()` 算出来的 `EFFECT_RULES` 是**同一份**（不另抄一份名单）：
+#: 本模块在装配期与 `mech` 对账，对不上当场抛（两处声明各写一份 = 迟早双源）。
+_CACHE: dict = {}
+
+
+class AbsorbError(RuntimeError):
+    """吸收型声明与装配面对不上 —— 装配期当场抛，不静默。"""
+
+
+# ══════════════════════════════════════════════════════════════
+# ① 引擎形状门（两态的唯一判据）
+# ══════════════════════════════════════════════════════════════
+def engine_has_value_entry() -> bool:
+    """引擎的 `open_entry` 认不认 `value` 形参（状态容器收口第 2 批的形状门 · 第一道）。
+
+    ★ 只问**形状**（签名里有没有那个形参），不认版本号、不 try/except 蒙。
+    """
+    try:
+        return "value" in inspect.signature(ACT.open_entry).parameters
+    except (TypeError, ValueError):        # 签名单拿不到 ⇒ 不认得形状 ⇒ 当没这形状
+        return False
+
+
+def engine_absorb_by_container() -> bool:
+    """引擎的承伤层改没改走「遍历容器里声明了 `absorb` 的条目」（形状门 · 第二道）。
+
+    ★ 信号 = `state_effects.absorb_keys` 这个**引擎词**函数在不在（设计案 §2.2 点名的那个读口）。
+      顺带验**旧容器真的没了**（`_MUTABLE_KEYS` 里不再有 `shields`）—— 引擎那半是
+      「不留兼容壳」：容器删了而本包还在写那一格的话，护盾会变成一块**不掉的血**。
+    """
+    try:
+        from ext_combat.battle.state_effects import absorb_keys   # noqa: F401
+    except ImportError:
+        return False
+    return "shields" not in (getattr(ACT, "_MUTABLE_KEYS", {}) or {})
+
+
+#: 两态的单一判据：**两道形状门都真** = 新路（容器条目）；任一假 = 旧路（`shields` 容器）。
+def container_mode() -> bool:
+    return engine_has_value_entry() and engine_absorb_by_container()
+
+
+# ══════════════════════════════════════════════════════════════
+# ② 声明侧：哪些状态键声明了 `absorb`（引擎词，零游戏专名）
+# ══════════════════════════════════════════════════════════════
+def absorb_declared() -> dict:
+    """声明了 `absorb` 的那些状态规则（`{<状态键>: <那条规则>}`）—— 现读，不写死名单。
+
+    真源 = 本包那份 `effect_rules` 声明表（`rules/skill_mech.json` 的 `mechs.*.rules`）。
+    ★ 与 `mech.rules_module()` 挂进引擎的 `EFFECT_RULES` **同一份**：这里走
+      `state_def`（引擎那个取件口，读的就是 `EFFECT_RULES`）⇒ 内容与引擎读同一处，
+      不存在「内容声明了、引擎没挂」的双源缝。
+    """
+    from . import mech as MECH                    # 本地 import：mech → 本模块（不成环）
+    out = {}
+    for key in MECH.absorb_state_keys():
+        rule = state_def(key)
+        if not rule:
+            raise AbsorbError(
+                "状态 %r 在 skill_mech.json 里声明了 absorb，但它没挂进 EFFECT_RULES"
+                "（state_def 回空）—— 声明了没落地 = 静默不吸收，装配期点名" % (key,))
+        out[key] = rule
+    return out
+
+
+def absorb_keys_of(actor: dict) -> list:
+    """这个 actor 身上**当前开着**的吸收型条目（按容器键序，可复现）。
+
+    ★ 判据 = 「这条的 `value` 还是正数」（引擎承伤层同一条口径：归零即删、不再吸收）。
+      返回的是**条目键**列表，不是规则 —— 规则在 `absorb_declared()` 那儿。
+    """
+    out = []
+    for key in sorted(actor.get("effects") or {}):
+        entry = (actor.get("effects") or {}).get(key)
+        if not isinstance(entry, dict):
+            continue
+        try:
+            if float(entry.get("value") or 0) > 0:
+                out.append(key)
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
+# ══════════════════════════════════════════════════════════════
+# ③ 写口：护盾开出来（两态各走各的那一条）
+# ══════════════════════════════════════════════════════════════
+def open_shield(actor: dict, key: str, value: int, expire=None) -> dict:
+    """给 `actor` 开一条吸收型条目（盾值 `value`，到期 `expire`），回那条条目。
+
+    ★ **容器条目那条路**（新）：一律**关键字**传给引擎那个唯一写入口
+      `actors.open_entry`（引擎侧同批新增 `value` 形参，见 `open_entry`）：
+      `stacks` / `value` / `expire` 三个格子全由这一口落 —— 内容侧**不自己拼 dict**
+      （自己拼 = 绕过唯一写入口 = 形状一变就悄悄错位）。
+    ★ **旧 `shields` 容器那条路**（引擎那半还没到）：逐字照旧（`value` / `expire_at`），
+      与接线前一致。★ 这一支**只在形状门没开时**走。
+    """
+    if not isinstance(actor, dict) or not key:
+        raise AbsorbError("开吸收型条目要一个 actor 与一个非空状态键：%r" % (actor,))
+    if not container_mode():
+        return _open_shield_legacy(actor, key, value, expire)
+    #: ★ 同源叠厚（同一状态键反复开 = 叠厚，与旧 `act_shield` 同口径）——
+    #: 引擎那条 `open_entry` 是**覆盖**语义，所以叠厚由这一口自己做（取 max，不丢旧量）。
+    old = (actor.get("effects") or {}).get(key)
+    if not isinstance(old, dict):
+        old = {}
+    keep = max(int(old.get("value") or 0), int(value))
+    keep_exp = expire
+    if keep_exp is None:
+        keep_exp = old.get("expire")
+    elif old.get("expire") is not None:
+        keep_exp = max(float(keep_exp), float(old["expire"]))
+    return ACT.open_entry(actor, str(key), stacks=1, value=keep, expire=keep_exp)
+
+
+def _open_shield_legacy(actor: dict, key: str, value: int, expire) -> dict:
+    """旧路：写引擎那个要被删掉的 `shields` 容器（形状门没开时的唯一出路）。
+
+    ★ 字段名逐字照旧（`value` / `expire_at`）—— 引擎承伤层读的就是这两个
+      （`landing._apply_damage`：逐条扣 `value`、归零即删、`expire_at` 到期由
+      `schedule._settle_time_effects` 那段独立到期逻辑清）。**行为零变化**。
+    """
+    sh = actor.get("shields")
+    if not isinstance(sh, dict):
+        sh = actor["shields"] = {}
+    old = sh.get(str(key))
+    keep = max(int((old or {}).get("value") or 0), int(value))
+    exp = expire
+    if exp is None:
+        exp = (old or {}).get("expire_at")
+    elif (old or {}).get("expire_at") is not None:
+        exp = max(float(exp), float(old["expire_at"]))
+    entry = {"value": keep, "expire_at": exp, "halve": False}
+    sh[str(key)] = entry
+    return entry
+
+
+def shield_of(actor: dict, key: str) -> dict:
+    """读某一格吸收型条目（两态都认）—— 读口，**不写**。
+
+    ★ 探针与文案读它。容器那态读 `effects[key]`，旧路读 `shields[key]`。
+    """
+    if container_mode():
+        e = (actor.get("effects") or {}).get(str(key))
+        return e if isinstance(e, dict) else {}
+    e = (actor.get("shields") or {}).get(str(key))
+    return e if isinstance(e, dict) else {}
+
+
+def shield_value_of(actor: dict, key: str) -> int:
+    """那一格还剩多少（两态同口径：条目自己的 `value`）。"""
+    try:
+        return int(shield_of(actor, key).get("value") or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def shield_expire_of(actor: dict, key: str) -> float:
+    """那一格什么时候到期（两态同口径：容器那态叫 `expire`，旧路叫 `expire_at`）。"""
+    e = shield_of(actor, key)
+    raw = e.get("expire") if container_mode() else e.get("expire_at")
+    try:
+        return float(raw) if raw is not None else 0.0
+    except (TypeError, ValueError):
+        return 0.0

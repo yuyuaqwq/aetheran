@@ -49,6 +49,7 @@ st.install()
 
 from content import cmds_ast as CA                                   # noqa: E402
 from content import mech as MECH                                     # noqa: E402
+from content import absorb as ABS                                    # noqa: E402  容器收口第2批
 from content import combat as CMB                                    # noqa: E402
 from ext_combat.battle import actions as ACT                         # noqa: E402
 from ext_combat.battle import effects as EF                          # noqa: E402
@@ -120,11 +121,17 @@ print("  · 逐条：%s" % " · ".join("%s=%s" % (n, m["status"]) for n, m in so
 # ══════════════════════════════════════════════════════════════
 _ea, _er = GC.get_effect_actions() or {}, GC.get_effect_rules() or {}
 _want_ea = sorted(n for n, m in MECH.mechs().items() if m.get("route") == "engine")
-_want_er = sorted({k for m in MECH.mechs().values() for k in (m.get("rules") or {})})
+# ★ 状态容器收口第 2 批（2026-09-28）：`EFFECT_RULES` 现在有**两个声明来源** ——
+#   ① 技能机制的 `mechs.*.rules`；② 精英词条那条吸收型声明（`rules/elite.json::absorb`）。
+#   判据跟着扩：期望键 = 两个来源的并集（照旧**逐键相等**，多一格少一格都红）。
+#   ★ 强度不变：它照样钉住「挂进引擎的表 == 声明出来的那些格」，只是声明面多了一处。
+_want_er = sorted(set(k for m in MECH.mechs().values() for k in (m.get("rules") or {}))
+                  | set(MECH.absorb_state_keys()))
 (ok if sorted(_ea) == _want_ea else bad)(
     "★ `EFFECT_ACTIONS` 的键 == route=engine 的机制（引擎侧 %s）" % (sorted(_ea),))
 (ok if sorted(_er) == _want_er else bad)(
-    "★ `EFFECT_RULES` 的键 == 表里 states 声明的全部规则（引擎侧 %s）" % (sorted(_er),))
+    "★ `EFFECT_RULES` 的键 == 两个来源声明的全部规则（技能机制 %d + 吸收型声明 %d；引擎侧 %s）"
+    % (len(_want_er) - len(MECH.absorb_state_keys()), len(MECH.absorb_state_keys()), sorted(_er)))
 _missv = EF.missing_actions(MECH.declared_actions())
 (ok if not _missv else bad)(
     "★ 表里引用的动词都真注册了（%s —— 声明了没实现 = 静默跳过）" % (MECH.declared_actions(),))
@@ -563,23 +570,36 @@ _b = fresh("cls_knight")
 _c = _b.focus()
 _mx = int(ST.actor_max_hp(_b, _c) or 0)
 apply_mech(_b, _c, _c, "SKILL_KNT_bulwark")
-_sh = (_c.get("shields") or {}).get(MECH._SHIELD_KEY) or {}
+# ★ 状态容器收口第 2 批（2026-09-28 · 设计案 §2.1/§2.2）：这一处判据换口径 ——
+#   旧口径 = 「`actor["shields"][aeth.oath_shield]` 那一格」；新口径 = 「**容器里那条
+#   声明为吸收型的条目**」（键由 `skill_mech.json` 的 `absorb: true` 声明，引擎不硬编码
+#   游戏专名；值由 `content/absorb.py::shield_value_of` 读，两态同口径）。
+#   ★ 两态门在这里也钉一条：引擎那半没到 ⇒ 走旧容器；到了 ⇒ 自动走容器条目。
+_sh = ABS.shield_of(_c, MECH._SHIELD_KEY) or {}
+_sh_decl = MECH.state_rule(MECH._SHIELD_KEY) or {}
 _want_sh = int(round(_mx * float(MECH.of("oath_shield")["shield_pct"]["value"])))
 _t_sh = float(SKD["SKILL_KNT_bulwark"]["mech_val"])
+(ok if _sh_decl.get("absorb") is True else bad)(
+    "  · ★ 声明：状态 %r 在 `EFFECT_RULES` 里声明了 `absorb: true`（吸收型由声明决定，不硬编码键名）"
+    % (MECH._SHIELD_KEY,))
 (ok if int(_sh.get("value") or 0) == _want_sh else bad)(
     "  · 定向：盾值 = int(生命上限 %d × %s) = %d（实测 %s）"
     % (_mx, MECH.of("oath_shield")["shield_pct"]["value"], _want_sh, _sh.get("value")))
-(ok if abs(float(_sh.get("expire_at") or 0) - (_b._now + _t_sh)) < 1e-6 else bad)(
+(ok if abs(ABS.shield_expire_of(_c, MECH._SHIELD_KEY) - (_b._now + _t_sh)) < 1e-6 else bad)(
     "  · 定向：盾到期 = 现在 + mech_val（%.2f = %.2f + %s）"
-    % (float(_sh.get("expire_at") or 0), _b._now, _t_sh))
+    % (ABS.shield_expire_of(_c, MECH._SHIELD_KEY), _b._now, _t_sh))
+(ok if ABS.container_mode() == (ABS.engine_has_value_entry() and ABS.engine_absorb_by_container())
+   else bad)(
+    "  · ★ 两态门：容器那态 = %s（引擎 `open_entry` 认 value? %s · 承伤层走容器遍历? %s）"
+    % (ABS.container_mode(), ABS.engine_has_value_entry(), ABS.engine_absorb_by_container()))
 #: ★ 端到端那几路一律用 **16 级**的号：新技能是 lv 11/14/16 解锁的，10 级的 actor 索引不到它
 #:   （`_index_one_actor` 只索引 actor 技能表里那几条）—— 放一条没解锁的招，引擎只会回落普攻。
 _b2 = fresh("cls_knight", lv=16)
 _b2._ensure_battle_started([])                        # 先推开门（它会把资源摆 0），再垫
 _b2.focus().setdefault("effects", {})["RES_OATH"] = {"stacks": 40, "expire": None}   # 誓约壁垒要 40 守誓
 _c2, _t2, _l2 = do(_b2, "SKILL_KNT_bulwark")
-(ok if (_c2.get("shields") or {}).get(MECH._SHIELD_KEY) and any("护盾" in x for x in _l2) else bad)(
-    "  · 端到端：真出手 ⇒ 引擎那句「获得护盾 N 点」（护盾走引擎自己的容器与文案，不另写一套）")
+(ok if ABS.shield_value_of(_c2, MECH._SHIELD_KEY) > 0 and any("护盾" in x for x in _l2) else bad)(
+    "  · 端到端：真出手 ⇒ 引擎那句「获得护盾 N 点」（护盾走引擎自己的写入口与文案，不另写一套）")
 _b3 = fresh("cls_knight")
 _c3 = _b3.focus()
 _c3["ct"] = _b3._now + 123.0
@@ -1435,12 +1455,14 @@ _dirty = [ln for ln in (_git.stdout or "").splitlines() if ln.strip()]
 #     （`tools/_cue_freeze.py`）· 标签机制三笔（`tags.py` / `traits.py` / `state_effects.py` /
 #     `actors.py` / `battle.py` 的状态容器与注册表收口）。基准 = 那批开工前引擎的 HEAD。
 #     ⇒ 声明面变成 **34 份代码文件**（多一个就红 —— 强度不变，只是这一批面大）。
-_ENGINE_BASE = "8f85f7d"
+_ENGINE_BASE = "8f85f7d"   # 换批只扩声明面（47 份），基准仍是共同起点
 _want_touched = sorted([
     "README.md",
+    "examples/host-skeleton/main.py",
     "examples/minimal-game/content/apply.py",
     "examples/minimal-game/content/bridge.py",
     "examples/minimal-game/content/cues.py",
+    "examples/minimal-game/content/data/rules.py",
     "examples/minimal-game/content/texts.py",
     "examples/minimal-game/tests/test_smoke.py",
     "extends/ext_combat/battle/actions.py",
@@ -1452,6 +1474,7 @@ _want_touched = sorted([
     "extends/ext_combat/battle/game_config.py",
     "extends/ext_combat/battle/landing.py",
     "extends/ext_combat/battle/schedule.py",
+    "extends/ext_combat/battle/serialize.py",
     "extends/ext_combat/battle/state_effects.py",
     "extends/ext_combat/battle/tags.py",
     "extends/ext_combat/battle/traits.py",
@@ -1459,12 +1482,14 @@ _want_touched = sorted([
     "extends/ext_combat/gauge/actions.py",
     "saintess_engine/config.py",
     "saintess_engine/cues.py",
+    "saintess_engine/domains.py",
     "saintess_engine/host/runtime.py",
     "saintess_engine/text/__init__.py",
     "saintess_engine/text/template.py",
     "tests/_cue_text_fixture.py",
     "tests/test_attrs_write_port.py",
     "tests/test_battle_text_inject.py",
+    "tests/test_builtin_false_warn.py",
     "tests/test_cross_hand_state.py",
     "tests/test_cue_coverage.py",
     "tests/test_cues_shape.py",
@@ -1474,6 +1499,7 @@ _want_touched = sorted([
     "tests/test_gauge_actions_frozen.py",
     "tests/test_segment_declaration.py",
     "tests/test_state_container.py",
+    "tests/test_state_container_r2.py",
     "tests/test_tags.py",
     "tools/_cue_coverage.py",
     "tools/_cue_freeze.py",

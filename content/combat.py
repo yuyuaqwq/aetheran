@@ -21,6 +21,7 @@ from ext_combat.battle.actors import make_actor
 from . import panel_build as PB
 from . import alloc as ALLOC          # ★ P-34：档上那份加点只走它（`of_record`）
 from . import affix as AFFIX          # ★ B3-24：精英词条（面板乘 / 先手 / 开场盾 / 血量阈值）
+from . import absorb as ABS           # ★ 状态容器收口第2批：吸收型（护盾）写口 + 读口（两态门）
 from . import mech as MECH            # ★ B3-27：技能机制层（触发器 + 选目标注入点）
 from . import elements as ELE         # ★ P-1：元素通道（样例怪身上的免疫/弱点表）
 from . import battle_text as BT       # ★ P-1：战斗日志的文案槽位（`Battle(text=…)` 那一口）
@@ -239,15 +240,23 @@ def monster_actor(mid: str, m: dict, *, party: int | None = None, affixes=None,
     _el = ELE.sample_fields(mid)
     if _el:
         a.update(_el)
-    # ★ B3-24：精英词条 —— 名字（`† 硬壳的田鼠 †`，走 texts 槽位）与开场盾（引擎 shields 容器）。
-    #   没有词条 ⇒ 名字原样、盾字典为空（= 与接线前逐字相同）。
+    # ★ B3-24：精英词条 —— 名字（`† 硬壳的田鼠 †`，走 texts 槽位）与开场盾（**吸收型**：状态容器里
+    #   一条声明了 `absorb` 的条目）。没有词条 ⇒ 名字原样、一个字段都不写（= 与接线前逐字相同）。
     if affixes:
         a["name"] = AFFIX.display_name(str(m.get("name", mid)), affixes)
         # 开场盾按**生命上限**算 ⇒ 上限取不到就不给盾（fail-closed：不拿 1 / 100 垫上）
         _mx = a.get("max_hp")
         if not isinstance(_mx, (int, float)) or isinstance(_mx, bool) or float(_mx) <= 0:
             raise ValueError("精英词条要发开场盾，但 actor 没有可用的生命上限：%s" % (mid,))
-        a["shields"] = AFFIX.shields_of(affixes, int(_mx))
+        # ★ 状态容器收口第 2 批（2026-09-28 · 设计案 §2.1/§2.2）：**这一行是包侧真正的写口**。
+        #   旧形状 = 写引擎那个要被删掉的 `shields` 容器（`a["shields"] = …`）；新形状 = 往
+        #   **状态容器**（`effects`）里写一条**带 value 的条目**，且它**声明为吸收型** ——
+        #   声明在 `content/rules/elite.json` 的 `absorb` 里（引擎不硬编码任何游戏专名）。
+        #   ★ 写口走 `content/absorb.py::open_shield`（引擎状态容器唯一写入口 `open_entry`，
+        #     全关键字传参；引擎侧同批新增 `value` 形参）；那一口自带**形状门**：引擎那半没到
+        #     就退回旧容器 ⇒ 与接线前逐字相同。**行为零变化**（引擎那边照旧吸收/扣血/清空）。
+        for _sk, _sv in AFFIX.shield_entries_of(affixes, int(_mx)).items():
+            ABS.open_shield(a, _sk, _sv, expire=None)
         a["_affixes"] = list(affixes)              # 阈值那类词条要在 `build` 里挂导演钩子
     if m.get("skills"):
         a["skills"] = list(m["skills"])

@@ -82,7 +82,10 @@ _TRIGGER_VERBS: dict = {
     "taken_calc": "aeth_block_roll",        # 承伤乘区：格挡（骑士「格挡回誓」）
 }
 
-#: 盾容器里那一格的 key（同一个来源反复开 = 同源叠厚，引擎 `act_shield` 的语义）
+#: 吸收型（护盾）容器里那一格的 key（同一个来源反复开 = 同源叠厚，引擎 `act_shield` 的语义）。
+#: ★ 状态容器收口第 2 批（2026-09-28）：**这个键名不变**（`aeth.oath_shield`）——
+#:   变的只是它落在哪儿（旧 `shields` 容器 / 新状态容器条目），而「这一族吸收伤害」这件事
+#:   由**声明**说了算（`skill_mech.json` 里那条 `absorb: true`，见 `absorb_state_keys()`）。
 _SHIELD_KEY = "aeth.oath_shield"
 
 
@@ -185,11 +188,37 @@ def state_rule(key: str) -> dict:
     return state_def(key) or {}
 
 
+def absorb_state_keys() -> list:
+    """声明了 `absorb` 的那些状态键（**现算**，不写死名单）—— 吸收型只由声明决定。
+
+    ★ 状态容器收口第 2 批（2026-09-28 · 设计案 `gas-design/_r2/DESIGN_state_container_r2.md` §2.2）：
+      护盾不再是一个**特殊容器**，而是「带 `value` 的状态」这一族的一员；**哪一族吸收伤害由
+      声明说了算**（`absorb: true`），引擎不硬编码任何游戏专名。
+      消费端 = `content/absorb.py`（写口 + 读口 + 两态门）。
+    ★ 唯一真源 = `EFFECT_RULES` 那张表（`rules_module()` 算出来的，含技能机制 + 精英词条两个
+      来源）—— **直接读引擎那个取件口**，不另抄一份名单：抄一份 = 迟早双源。
+    """
+    keys = set(k for k, r in
+               ((k, rule) for m in mechs().values()
+                for k, rule in (m.get("rules") or {}).items())
+               if isinstance(r, dict) and r.get("absorb") is True)
+    for key, rule in _elite_absorb_rules().items():
+        if isinstance(rule, dict) and rule.get("absorb") is True:
+            keys.add(key)
+    return sorted(keys)
+
+
 def rules_module() -> types.SimpleNamespace:
     """给 `game_config.load_game_rules(module)` 的模块壳：两张表从**同一张表**算出来。
 
     ★ route=cast 的机制**不并进 EFFECT_ACTIONS** —— 它们由内容侧那一手（act_cast 触发）落，
       并进去就等于同一件事两处落地（引擎那条名词路也会走一遍）。表里声明、探针钉着。
+    ★ **吸收型（护盾）的声明也进这张表**（状态容器收口第 2 批 · 设计案 §2.2）：护盾是
+      「状态容器里一条带 `value` 的条目」，**哪一族吸收伤害由声明说了算**（引擎不硬编码
+      任何游戏专名，只问 `absorb_keys`）。两个来源合成同一张 `EFFECT_RULES`：
+        · `mechs.*.rules`（技能机制那条，如 `aeth.oath_shield`）
+        · 精英词条那条（`rules/elite.json::absorb.state_key`，如 `aeth.elite_shell`）
+      ★ 同一格被两处声明 ⇒ **当场抛**（状态语义只许有一处，与下面那行同纪律）。
     """
     ea: dict = {}
     er: dict = {}
@@ -200,7 +229,28 @@ def rules_module() -> types.SimpleNamespace:
             if key in er:
                 raise KeyError("状态规则 %r 被两条机制同时声明（状态语义只许有一处）：%r" % (key, name))
             er[key] = json.loads(json.dumps(rule, ensure_ascii=False))
+    # ★ 精英词条的吸收型声明（同一张表、同一处对账）
+    for key, rule in _elite_absorb_rules().items():
+        if key in er:
+            raise KeyError("状态规则 %r 被技能机制与精英词条同时声明（状态语义只许有一处）" % (key,))
+        er[key] = rule
     return types.SimpleNamespace(EFFECT_ACTIONS=ea, EFFECT_RULES=er)
+
+
+def _elite_absorb_rules() -> dict:
+    """精英词条那条吸收型声明 → `EFFECT_RULES` 的一格（真源 `rules/elite.json::absorb`）。
+
+    ★ 键 = `absorb.state_key`（内容侧声明的容器条目键），值 = `{"absorb": true}`。
+      **不是**拿词条 id 当键，也不是硬编码 —— 引擎只认「声明了 `absorb`」这件事。
+    ★ 表里没有那一块 ⇒ 回空表（**不兜底**）：那等于「本包没有精英开场盾这条吸收资源」，
+      与接线前一致，而不是悄悄造一格。
+    """
+    from . import affix as _AF
+    spec = (_AF.rules() or {}).get("absorb") or {}
+    key = str(spec.get("state_key") or "")
+    if not key:
+        return {}
+    return {key: {"_src": str(spec.get("_src") or ""), "absorb": True}}
 
 
 def check_domain(raise_on_unknown: bool = True) -> dict:
@@ -1137,7 +1187,16 @@ def aeth_oath_shield(battle, caster, target, params, logs):
     """誓约壁垒（骑士 · 11 级）：花守誓换一张**吸收型**的墙（不是减伤率 —— 另一条通道）。
 
     盾值 = 生命上限 × 表里那个比例（现算）；时长 = 域里 `mech_val`（刻）。落地走引擎现成的
-    `shield` 动词（护盾容器 shields + 它那句「获得护盾 N 点」），不自己另写一套护盾结算。
+    `shield` 动词（**引擎那一口**的护盾落点 + 它那句「获得护盾 N 点」），不自己另写一套护盾结算。
+
+    ★ 状态容器收口第 2 批（2026-09-28）· **本文件这一处是「透传」，不是包侧写口**：
+      它走的是**引擎自己的** `act_shield`（`effects.py:554`）—— 引擎那半会把那一口改写成
+      `open_entry(..., value=…, expire=…)` 并删掉 `shields` 容器（设计案 §1.1 把 `act_shield`
+      列在**引擎文件**里，不在包侧清单里）。所以本包**一个字不用改**就会跟着走新形状。
+      ★ 正因为如此本包**不许**在这里自己拼条目 dict、也不许自己发 `battle.effects.shield_gain`
+      那条 cue —— 那是引擎那个唯一写入口的活（内容侧重发 = 同一句话出两遍）。
+      ★ 内容侧真正要交的是**声明**：`skill_mech.json` 里 `aeth.oath_shield` 那条 `absorb: true`
+        （吸收型由声明决定，引擎不认「盾」这个专名）—— 见 `mech.absorb_state_keys()`。
     """
     m = of("oath_shield")
     if not isinstance(caster, dict):

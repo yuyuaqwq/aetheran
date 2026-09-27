@@ -457,8 +457,10 @@ print()
 print("══ ⑧ 引擎改动面（硬指标）")
 #  ★ fxmech（2026-09-26）起：本批**动了引擎**（B4-4 两段耗时接线 + 一条可选否决口 `skill_gate_fn`）
 #    ⇒ 判据从「引擎零改动」改成**钉住改动面**：只许落在声明的那些文件里（多一个文件就红）。
-#    ★ 2026-09-27 **换批**（引擎侧 cue 解耦 B0–B5 落到 main）：基准 = `8f85f7d`（那批开工前
-#      引擎的 HEAD），声明面 = 那批落点（cue 形状 + 60 点位 + 标签机制三笔，共 34 份代码文件）。
+#    ★ 2026-09-28 **换批**（容器收口第 2 批 + $builtin 契约 + 冻结尺登记三批落到 main）：
+#      基准 = `8f85f7d`（仍是这一串换批的共同起点），声明面扩到 `8f85f7d..78da079` 的
+#      **46 份代码文件**（cue 解耦 + 标签/写口 + 容器收口 + 两支新门禁 + 冻结尺）。
+#      强度不变：多一份文件就红，少一份也红。
 #      换批时改 `_ENGINE_BASE8`（本批开工前引擎的 HEAD）与 `_want_t`。
 #  ★ 2026-09-27（跨手状态三条那一批）**换锚不换强度**：原先只看 `git log -1`（HEAD 那一笔），
 #    而本批在引擎仓可以落好几笔（代码 → docs 落账 → 上一笔判据的 fixture 修）⇒ HEAD 是
@@ -470,9 +472,11 @@ import subprocess as _sp                                                # noqa: 
 _ENGINE_BASE8 = "8f85f7d"
 _want_t = sorted([
     "README.md",
+    "examples/host-skeleton/main.py",
     "examples/minimal-game/content/apply.py",
     "examples/minimal-game/content/bridge.py",
     "examples/minimal-game/content/cues.py",
+    "examples/minimal-game/content/data/rules.py",
     "examples/minimal-game/content/texts.py",
     "examples/minimal-game/tests/test_smoke.py",
     "extends/ext_combat/battle/actions.py",
@@ -484,6 +488,7 @@ _want_t = sorted([
     "extends/ext_combat/battle/game_config.py",
     "extends/ext_combat/battle/landing.py",
     "extends/ext_combat/battle/schedule.py",
+    "extends/ext_combat/battle/serialize.py",
     "extends/ext_combat/battle/state_effects.py",
     "extends/ext_combat/battle/tags.py",
     "extends/ext_combat/battle/traits.py",
@@ -491,12 +496,14 @@ _want_t = sorted([
     "extends/ext_combat/gauge/actions.py",
     "saintess_engine/config.py",
     "saintess_engine/cues.py",
+    "saintess_engine/domains.py",
     "saintess_engine/host/runtime.py",
     "saintess_engine/text/__init__.py",
     "saintess_engine/text/template.py",
     "tests/_cue_text_fixture.py",
     "tests/test_attrs_write_port.py",
     "tests/test_battle_text_inject.py",
+    "tests/test_builtin_false_warn.py",
     "tests/test_cross_hand_state.py",
     "tests/test_cue_coverage.py",
     "tests/test_cues_shape.py",
@@ -506,6 +513,7 @@ _want_t = sorted([
     "tests/test_gauge_actions_frozen.py",
     "tests/test_segment_declaration.py",
     "tests/test_state_container.py",
+    "tests/test_state_container_r2.py",
     "tests/test_tags.py",
     "tools/_cue_coverage.py",
     "tools/_cue_freeze.py",

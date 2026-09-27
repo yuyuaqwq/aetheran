@@ -659,6 +659,8 @@ DOC09 = os.path.join(DOC_DIR, "09_精英怪机制_v1.md")
 D09 = _io.open(DOC09, encoding="utf-8").read()
 import asyncio                                                          # noqa: E402
 from content import affix as _AF                                        # noqa: E402
+from content import absorb as _ABS                                      # noqa: E402  容器收口第2批
+from content import mech as MECH                                        # noqa: E402  声明表
 from content import combat as _CB                                       # noqa: E402
 from content import cmds_ast as _CA                                      # noqa: E402
 from content import calendar as _CAL                                    # noqa: E402
@@ -829,13 +831,27 @@ _sk = next(k for k, v in mo.items() if "af_shield" in _AF.rollable(v.get("elite_
 _b3 = _CB.build(_PL, [_sk], mo, party=1, affixes=["af_shield"])
 _a3 = _b3.sides["enemy"][0]
 _sh_want = max(1, int(round(_a3["max_hp"] * float(ER["shield_pct_of_hp"]["value"]))))
-_sh_got = _a3["shields"].get("af_shield", {}).get("value")
-sh_want_ok = _a3["shields"] == {"af_shield": {"value": _sh_want}}
+# ★ 状态容器收口第 2 批（2026-09-28 · 设计案 §2.1/§2.2）：这一条判据换口径 ——
+#   旧口径 = 「`actor["shields"]` 那一格的键**等于词条 id**」；新口径 = 「**容器里那条
+#   声明为吸收型的条目**」：键由 `rules/elite.json::absorb.state_key` 声明
+#   （引擎不硬编码游戏专名，它只问「哪条声明了 absorb」+「还剩多少 value」），
+#   值由 `content/absorb.py::shield_value_of` 读（两态同口径）。
+_SH_KEY = str(ER.get("absorb", {}).get("state_key") or "")
+_sh_got = _ABS.shield_value_of(_a3, _SH_KEY)
+# ★ 反证：把声明里的 `absorb` 去掉 ⇒ 判据当场红（这一格不再是「声明为吸收型」）
+_ABS_DECL_OK = bool((MECH.state_rule(_SH_KEY) or {}).get("absorb") is True)
+sh_want_ok = _ABS_DECL_OK and _sh_got == _sh_want
 _lg3: list = []
 _b3.auto_run(_lg3)
-chk("★ 护盾：开场就有一层壳（值 = 生命上限 %s%% = %s）且**真吸收**（日志里出现吸收行；打完盾被吃光 ⇒ 容器里没了）"
-    % (round(float(ER["shield_pct_of_hp"]["value"]) * 100), _sh_got),
-    sh_want_ok and any("护盾吸收" in str(x) for x in _lg3))
+chk("★ 护盾：开场就有一层壳（**容器里那条声明为吸收型的条目** · 键 = rules 声明的 %r · "
+    "值 = 生命上限 %s%% = %s）且**真吸收**（日志里出现吸收行；打完盾被吃光 ⇒ 那一格没了）"
+    % (_SH_KEY, round(float(ER["shield_pct_of_hp"]["value"]) * 100), _sh_got),
+    sh_want_ok and any("护盾吸收" in str(x) for x in _lg3),
+    "声明了 absorb? %s（去掉声明这一条就该红）" % (_ABS_DECL_OK,))
+chk("  · ★ 盾值与**旧写口逐字相同**（旧 shields_of = %s · 新容器读口 = %s）—— 收口只改落点不改数值"
+    % (dict(_AF.shields_of(["af_shield"], int(_a3["max_hp"]))), _sh_got),
+    int((_AF.shields_of(["af_shield"], int(_a3["max_hp"])) or {}).get("af_shield", {}).get("value", 0))
+    == _sh_want)
 _am = next(k for k, v in mo.items() if "af_ambush" in _AF.rollable(v.get("elite_pool") or []))
 _b4 = _CB.build(_PL, [_am], mo, party=1, affixes=["af_ambush"])
 _a4 = _b4.sides["enemy"][0]

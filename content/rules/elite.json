@@ -105,6 +105,10 @@
     "line_sep": "；",
     "line_end": "。"
   },
+  "absorb": {
+    "_src": "★ 状态容器收口第 2 批（2026-09-28 · 设计案 `gas-design/_r2/DESIGN_state_container_r2.md` §2.1/§2.2）：开场盾不再是引擎里一个**特殊容器**（旧 `actor[\"shields\"]`），而是「**状态容器里一条带 value 的条目**」这一族的一员。这一块就是**吸收型的声明** —— 引擎不硬编码任何游戏专名，它只问「哪些条目声明了 `absorb`」（引擎词 `absorb_keys`）与「这条还剩多少」（`entry[\"value\"]`）。`state_key` = 容器里那一格的键（内容侧声明，引擎只认声明不认名字）。★ 消费端：`content/affix.py::shield_entries_of`（取值）→ `content/combat.py::monster_actor`（写口）→ `content/absorb.py::open_shield`（引擎状态容器唯一写入口 `open_entry`）。★ 加第二种吸收资源（荆棘护罩 / 元素吸收）只要在这里再写一条声明，**引擎不用动**。",
+    "state_key": "aeth.elite_shell"
+  },
   "fx": {
     "_src": "★ 本批**已接线**的四条消费通道（引擎零改动，全部走引擎现成形状）：panel 面板乘 · spawn 多只 · opening.ct 先手 · threshold 血量阈值（Battle.script_hook —— 引擎给内容的导演注入点）· shields 开场盾。其余落在「未接线」的通道（效果规则表 / 掉落池权重 / 可挖点）上，逐条写在词条的 `why` 里。",
     "channels": [

@@ -34,6 +34,7 @@ import random
 import re
 import sys
 import time
+import types
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ENGINE = os.environ.get("GWEN_ENGINE", "C:/Users/yuyu/framework-engine")
@@ -55,6 +56,8 @@ SK = st.optional_submodule("skills_lookup")
 MON = st.domain("monsters")
 from ext_combat.battle import landing as LD                          # noqa: E402
 from ext_combat.battle.actors import DEFEND_TAG, open_window         # noqa: E402
+from ext_combat.battle import game_config as GC                      # noqa: E402  容器收口第2批
+_ABS = st.optional_submodule("absorb")                               # noqa: E402  吸收型两态门
 
 MID = "ms_shallow_ghoul"          # P-1 样例怪（既有怪）
 OTHER = "ms_field_mouse"          # 对照：不在样例里
@@ -509,7 +512,21 @@ _ge["elem_res"] = 0.3
 _g("landing.resist_reduce", _g_hit(_gb, _ge, 100, element="fire"))
 
 _gb, _gc, _ge = _g_battle("u_g8")
-_ge["shields"] = {"s1": {"value": 5, "expire_at": None, "halve": False}}
+# ★ 状态容器收口第 2 批（2026-09-28 · 设计案 §1.1/§2.2）：这一条是**驱动引擎自己那个吸收读点**
+#   （cue 覆盖面穷举里的一条），所以夹具得跟着引擎的形状走：
+#     · 引擎还认旧 `shields` 容器（今天）⇒ 照旧写那一格（逐字同字段）
+#     · 引擎改成遍历容器里**声明为 absorb 的条目**（那半落地后）⇒ 写进 `effects`，
+#       并把 `absorb: true` 挂进 `EFFECT_RULES`（引擎只认**声明**，不认键名）
+#   ★ 判据强度不变：两种形状下这一条都真的驱动到「吸收」那个 cue。
+_g_skey = "aeth.elite_shell"
+if _ABS.container_mode():
+    from content.mech import _elite_absorb_rules as _EAR
+    GC.load_game_rules(types.SimpleNamespace(
+        EFFECT_ACTIONS=dict(GC.get_effect_actions() or {}),
+        EFFECT_RULES={**(GC.get_effect_rules() or {}), **_EAR()}))
+    _ge.setdefault("effects", {})[_g_skey] = {"stacks": 1, "value": 5, "expire": None}
+else:
+    _ge["shields"] = {_g_skey: {"value": 5, "expire_at": None, "halve": False}}
 _g("landing.shield_absorb", _g_hit(_gb, _ge, 10))
 _gb, _gc, _ge = _g_battle("u_g9")
 _ge["effects"] = {"death_guard": {"stacks": 1}}
@@ -741,6 +758,11 @@ NEED_DRIVE = {
     "battle.gauge.shaken": "同上（只有条真触发、且 `trigger_effect=skip_turn` 才走这一句）",
     "battle.gauge.phase_preserve": "同上（阶段更迭那一手，本包没有分阶段的条）",
     "battle.gauge.reflect": "同上（`passive_reflect_bar` 是挂在条机制上的被动，条没声明就挂不上）",
+    # ★ 状态容器收口第 2 批（2026-09-28 · 引擎落到 main `adad98a`）新增的点位
+    "battle.landing.taken_reduce":
+        "承伤减免读点要容器里有条目声明了 `taken_pct`（引擎 `state_effects.taken_pct_keys`）；"
+        "本包 `grep taken_pct content/` **零命中** —— 那一族今天一条都没声明"
+        "（本包的承伤减伤走 `reduce_taken` 乘区那条老路，与这一族不是同一件事）⇒ 这一句永不出口",
 }
 
 _eng_keys = _engine_text_keys()

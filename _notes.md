@@ -12594,3 +12594,120 @@ extends/ext_combat/battle/landing.py:483   通用治疗行：logs.append(label.f
       模板由**调用方** `heal_actor(..., label=…)` 传入 ⇒ 引擎侧没有 key
 ```
 
+
+# 状态容器收口第 2 批 · 包侧触点（2026-09-28）
+
+> 设计案：`hermes/workspace/gas-design/_r2/DESIGN_state_container_r2.md`（§1.1 末尾「包侧」那段
+> 与 §2 目标形状 = 本批判据）。★ **只改内容包，不改引擎仓**（引擎那条车道在同批改
+> `shields` / `reduce_left` / `halve`）。
+
+## 一、触点判定表（全仓实测 · `shields` / `reduce_left` / `halve` / `defending`）
+
+`reduce_left` / `halve` 在本包 `content/` `scripts/` `editor/` 下**零出现**（引擎侧那两处的
+包侧调用方只有奥兰迪亚，本包没有）⇒ 本包对这两笔**零工程量**，只剩一句账。
+
+| 文件:行号 | 关键字 | 判定 | 处置 |
+|---|---|---|---|
+| `content/combat.py:250`（旧 `:250`，今 `:258`） | `a["shields"] = AFFIX.shields_of(...)` | **真写**（包侧真正的写口） | 改走 `ABS.open_shield`（容器写入口；两态门） |
+| `content/affix.py:182` `shields_of()` | 造 `{词条id: {"value": n}}` | **真写**（返回值是旧容器那一格） | 退役；新增 `shield_entries_of()` 回 `{容器键: 值}`，旧函数**只当旧形状回读口** |
+| `content/affix.py:44` `CH_SHIELDS = "shields"` | 通道名 | **透传**（与域里 `mods.shields` 同值，非容器键） | 不动（它不是容器键，是**词条通道名**） |
+| `content/battle_acts.py:168` keep 名单 | `"shields"` | **死格**（见 §三） | 删掉 + 注释说明为什么死的 |
+| `content/mech.py:1140`（docstring） | 「护盾容器 shields」 | **注释** | 改口径（标注那一处是**透传**引擎 `act_shield`，本包不碰） |
+| `content/mech.py:86` `_SHIELD_KEY` | 容器里那一格的 key | **真用**（传给引擎 `act_shield`） | 不动（键名不变，仍是 `aeth.oath_shield`） |
+| `content/mech.py:1150` `EF.act_shield(...)` | 引擎动词 | **透传**（引擎那半会把它改写成 `open_entry`） | 逻辑不动，只改 docstring 说清为什么不用改 |
+| `content/data/monster_affixes.json:135` `"shields": {}` | 词条 `mods` 通道 | **透传**（声明「这条词条发开场盾」） | 不动 |
+| `content/rules/elite.json:115` `"shields"`（`fx.channels`） | 通道名 | **透传** | 不动 |
+| `content/rules/skill_mech.json:350` `judge` 文字 | 描述旧落点 | **注释** | 改口径 |
+| `scripts/probe_monsters.py:832-833` | 读 `_a3["shields"]["af_shield"]` | **真读**（判据） | 换口径：读「容器里那条声明为吸收型的条目」+ 加反证 |
+| `scripts/probe_mech.py:566/581` | 读 `shields[aeth.oath_shield]` | **真读**（判据） | 换口径（`ABS.shield_of`）+ 加「声明」与「两态门」两条 |
+| `scripts/probe_elements.py:512` | 夹具写 `_ge["shields"]` | **真写**（驱动引擎吸收读点） | 随引擎形状两态（容器那态写 `effects` + 挂 `absorb` 声明） |
+| `editor/`（全目录） | — | **零出现** | 无 |
+| `content/explore.py:129` `spec["reduce"]` | 见 §四 | **有真消费端** | 不动 |
+
+## 二、包侧交付的东西
+
+1. **声明**（`absorb: true` 进本包那份 `effect_rules` 声明表，两个来源合成同一张 `EFFECT_RULES`）：
+   * `content/rules/skill_mech.json` → `mechs.oath_shield.rules["aeth.oath_shield"].absorb = true`
+   * `content/rules/elite.json` → `absorb.state_key = "aeth.elite_shell"`（容器条目键由内容侧声明）
+   * 出口 = `content/mech.py::rules_module()`（与技能机制那 21 格**同一张表**，同一格两处声明 ⇒ 抛）
+   * 名单单一真源 = `content/mech.py::absorb_state_keys()`（现算，不写死）
+2. **写口**：`content/absorb.py::open_shield` —— 走引擎状态容器唯一写入口
+   `actors.open_entry`，**全关键字传参**（`stacks=` / `value=` / `expire=`；引擎侧同批新增 `value` 形参）。
+3. **两态门**：`content/absorb.py::container_mode()` = 「`open_entry` 认 `value=`」**且**
+   「承伤层走容器遍历」**两道都真**才切新路。判定只问引擎**形状**（`inspect.signature` + `hasattr`），
+   **不认版本号**、不 try/except 蒙。今天实测两道都假 ⇒ 走旧容器 ⇒ **行为零变化**。
+
+★ **为什么第二道门不能省**：只让 `open_entry` 认 `value` 而承伤层还没改的话，光写容器不吸收 ——
+护盾会变成一块「不掉的血」（比没有护盾更坏）。两道门都真才切，是那道门存在的全部理由。
+
+## 三、`battle_acts.py` keep 名单那格为什么是死的（两条实测，不是估计）
+
+* ① `player_actor()` 的返回里**没有 `shields` 这一格**（实测 24 个键：`atk block class_name def
+  eva heal_pow hit hp human_controlled kind level matk max_hp max_mp mdef mp name panel_flags
+  panel_refs panel_stack side skills spd triggers uid`）⇒ `repanel` 里那圈
+  `for k, v in fresh.items(): actor[k] = v` **覆盖不到它**。
+* ② 实测「摘掉那格」前后各换一次手，`player["shields"]` 逐字相同
+  （`{'aeth.oath_shield': {'value': 72, 'expire_at': 411.900576, 'halve': False}}`）。
+  ⇒ **行为零变化**（与上一轮清 `defending` 同结论，死法不同：那一格是 `if k in actor` 恒假，
+  这一格是恒真但值会被 `actor.update(keep)` 原样写回同一份引用）。
+
+## 四、`content/explore.py:129` 那条分支 —— **有真消费端，不动**（如实报告）
+
+`if str(spec.get("reduce") or "") == "max":` —— 查清了，四条实测：
+
+* **`spec` 来自哪份数据**：`content/rules/explore_encounter.json` → `m_event` 那一块
+  （实测键 = `['_reduce_note', '_src', 'default', 'reduce']`，`spec["reduce"] == "max"`）。
+* **语义**：`calendar.encounter_mul()` 给的是 `{怪 id: 倍数}`（`combat.pick_encounter` 的加权形状），
+  而探索概率要**一个数** ⇒ 按表里 `reduce` 那一档收（`max` = 取被抬得最多的那一个）。
+* **有没有真消费端：有。** `event_mul()` → `ratio()`（`m_e` 那一个乘子）→
+  `cmds_ast.explore` 第 894-895 行 `EX.ratio(...)` / `EX.roll(...)` ⇒ 真判定「探索撞不撞上怪」。
+* **今天恒不执行？：在真实数据下是** —— `CAL.encounter_mul()` 回 `{}`，
+  `content/data/events.json` 里声明了 `effects.encounter_mul` 的事件 = **0 条**
+  ⇒ `vals` 恒空 ⇒ 第 126 行先回 `default`（1.0），**第 129 行今天走不到**。
+* **但它不是死分支**：把它拧成别的值立刻变（实测 —— 顶掉 `encounter_mul` 给两条 ×2/×5 ⇒
+  `event_mul() == 5.0`（走到了 `max` 分支）；把底表 `reduce` 改成 `"mean"` ⇒ `event_mul() is None`
+  （fail-closed，「表里没写怎么收 ⇒ 不猜」）。探针 `probe_explore.py:345-354` 有一条真判据
+  钉着它（顶掉 `encounter_mul` 给 ×2 ⇒ `m_event` 真吃上）。
+
+⇒ 结论：**不是死分支，是「数据没喂到那条路」**。死分支清理要单独判停 ⇒ **本批只报告，不动**。
+★ 附一条坑：`explore.rules()` 每次返回**新的浅拷贝** ⇒ 探针要改 `reduce` 必须改
+  `explore._CACHE[explore.RULES_FILE]`，改副本等于没改（我第一次就踩了，反证因此假通过）。
+
+## 五、判据（真实数字 · 干净环境跑）
+
+```text
+unset SAINTESS_EXTENDS GWEN_FRAMEWORK_DIR ; export GWEN_ENGINE=C:/Users/yuyu/framework-engine
+scripts/e2e_drive.py「观察 往东 观察 返回」：真宿主跑通，落档 level=16 / belt_north / bn_bone
+全量探针 scripts/probe_*.py：55 绿 / 0 红（改前 55/0，改后 55/0 —— 数量不减、无一支从绿变红）
+```
+
+★ **本批中途引擎那条车道落到了 main（`b0e8e74` 容器收口 A+B + `adad98a` $builtin + `78da079` 冻结尺）**，
+所以本仓有两笔「跟着引擎走」的账（与「包侧触点」本批主线并列，都在同一提交里）：
+1. **新 cue `battle.landing.taken_reduce`** ⇒ 包侧要声明槽位 + texts 一格，否则
+   `cues.check_domain` **装配期点名抛**（实测 6 支探针当场红）。已补
+   `battle_text.json::slots` + `texts.json::COMBAT_LANDING_TAKEN_REDUCE`（措辞占位：★ 本包
+   `grep taken_pct content/` **零命中** ⇒ 这一族一条都没声明 ⇒ 这句话**永不出口**）。
+2. `scripts/probe_elements.py` ⑨-4 的「未驱动清单」要加这一条（登记它为什么够不着）；
+   `probe_mech` ⑮ / `probe_resources` ⑧ 的「引擎改动面」声明面跟着扩到 **47 份代码文件**
+   （基准仍是 `8f85f7d`；这一段的清单是**并发那条车道**帮我补齐的，我只补回了漏掉的 `README.md`）。
+
+* **两条反证都验过**（都当场红，且都已还原）：
+  * 拿掉 `elite.json` 的 `absorb.state_key` ⇒ `probe_monsters` 红
+    （`AffixError: 容器里那一格叫什么都没声明 ⇒ 不猜` —— 写口 fail-closed）
+  * 拿掉 `skill_mech.json` 的 `aeth.oath_shield.absorb` ⇒ `probe_mech` 红
+    （那条「声明了 `absorb: true`」判据）
+* 两态门**两态都实测过**：
+  * 旧引擎（`f4b7dfe`）：`container_mode() == False` ⇒ 走旧 `shields` 容器 ⇒ 数值逐字不变
+    （精英开场盾 102 == 旧口径 `shields_of` 的 102；`probe_monsters` 一条判据专门钉这个相等）。
+  * 新引擎（`78da079`，收口已落）：`container_mode() == True` ⇒ 走**容器条目**，实测
+    `effects == {'aeth.elite_shell': {'stacks': 1, 'value': 102}}`、`shields` 键**已不存在**。
+
+## 六、没做的（交给主线 / 引擎侧）
+
+* **引擎侧那半**（`shields` 容器 / `reduce_left` / `halve` 删掉、`open_entry` 加 `value`、
+  承伤层改走 `absorb_keys` 遍历）—— 本包**一个字都不改**就跟着走：`mech.py` 那一处是**透传**
+  引擎的 `act_shield`，容器写口已备好（`content/absorb.py`），引擎那半一落地形状门自动切。
+* `content/affix.py::shields_of()` 留着当旧形状回读口（`probe_monsters` 的「数值与旧写口逐字
+  相同」那条判据要用它）。等引擎那半落 main、确认没有读点之后可删（属清理，本批不删）。
+* `reduce_left` / `halve`：本包零触点（引擎侧那个 `halve: True` 调用方在**奥兰迪亚**
+  `boss_script.py:509`，不属本包）。

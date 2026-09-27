@@ -9,10 +9,13 @@
 ① 抽：`roll()` —— 按 `elite_pool` 抽词条，**固定种子可复现**；PE ≤ 24 · 同轴不叠 ·
    条数照 09_ §二 的等级档位；**只从 `status=="on"` 的词条里抽**（fail-closed：
    绝不发一条只有名字、没有效果的词条给玩家 —— 未接线的那几条在域里带 `why`）。
-② 落：`apply_panel()` / `opening_ct()` / `shields_of()` / `thresholds_of()` / `spawn_plan()`
+② 落：`apply_panel()` / `opening_ct()` / `shield_entries_of()` / `thresholds_of()` / `spawn_plan()`
    / `scale_drops()` —— 面板乘 · 先手 · 开场盾 · 血量阈值 · 多只 · 材料倍数。
    通道名（panel/spawn/opening/threshold/shields/drops）与各条词条的 `mods` 键同值，
    唯一真源是域 + `content/rules/elite.json`，本文件不写内容取值（只写通道名与形状）。
+   ★ 状态容器收口第 2 批（2026-09-28）：开场盾由 `shields_of()`（旧 `shields` 容器那一格）
+   改成 **`shield_entries_of()`**（**状态容器里那条声明为吸收型的条目** —— 键由
+     `rules/elite.json::absorb.state_key` 声明，见 `content/absorb.py`）。
 ③ 说：`display_name()` / `hint_of()` / `elite_line()` —— 名字与那一行效果**全走 texts 槽位**
    （`COMBAT_ELITE_SPAWN`）；分隔符这类排版骨架也取自 rules（代码里没有汉字文案）。
 ④ 预告：`elite_of()` —— 这一格、这一天、这个玩家的精英（怪 + 词条）**现算、可复现**；
@@ -180,13 +183,42 @@ def opening_ct(aids):
 
 
 def shields_of(aids, max_hp: int) -> dict:
-    """开场盾（改机制 护盾）：盾值 = 生命上限 × rules 的比例（真源未给数那一条）。"""
+    """开场盾（改机制 护盾）—— 盾值 = 生命上限 × rules 的比例（真源未给数那一条）。
+
+    ★ **状态容器收口第 2 批（2026-09-28 · 设计案 §2.2）**：这个**返回 `shields` 容器那一格**
+      的函数已经**退役** —— 引擎要删掉 `shields` 容器，护盾变成「状态容器里一条带 `value` 的
+      条目」。新的消费端是 `shield_entries_of()`（返回 `{状态键: 盾值}`，由
+      `content/combat.py` 走 `content/absorb.py::open_shield` 落进容器）。
+      ★ 留这一个函数**只当旧形状的回读口**（判据与旧存档对账用），**新代码不许调它**
+        —— 新写口一律 `shield_entries_of()`。
+    """
     got = _mods(aids, CH_SHIELDS)
     if not got:
         return {}
     pct = float(rules()["shield_pct_of_hp"]["value"])
     val = max(1, int(round(float(max_hp) * pct)))
     return {aid: {"value": val} for aid, _m in got}
+
+
+def shield_entries_of(aids, max_hp: int) -> dict:
+    """★ 状态容器收口第 2 批：开场盾 → **`{容器条目键: 盾值}`**（旧 `shields_of` 的新形状）。
+
+    ★ **条目键由 rules 声明**（`rules/elite.json` 的 `absorb` 那一块），不是拿词条 id 当键 ——
+      引擎判「吸收型」问的是**声明**（`EFFECT_RULES[键].absorb`），不是「键名里有没有 shield」。
+      词条 id 仍留在 `mods.shields` 里做**声明与对账**（哪条词条发了盾），只是不再兼当容器键。
+    ★ 盾值口径与旧 `shields_of` **逐字相同**（生命上限 × `shield_pct_of_hp`）⇒ 数值零变化。
+    """
+    got = _mods(aids, CH_SHIELDS)
+    if not got:
+        return {}
+    pct = float(rules()["shield_pct_of_hp"]["value"])
+    val = max(1, int(round(float(max_hp) * pct)))
+    key = str(rules().get("absorb", {}).get("state_key") or "")
+    if not key:
+        raise AffixError(
+            "精英词条要发开场盾，但 rules/elite.json 的 `absorb.state_key` 是空的"
+            "（容器里那一格叫什么都没声明 ⇒ 不猜）")
+    return {key: val}
 
 
 def thresholds_of(aids) -> list:

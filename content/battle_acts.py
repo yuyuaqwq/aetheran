@@ -157,15 +157,24 @@ def repanel(actor, p) -> None:
     **一个数都不动**（等于白亏一手，玩家看不出来）。
 
     只重挂**面板那一族键**（`player_actor` 给的全部键 + 栈 id）；战斗态一概不动：
-    `hp` / `mp` / `ct` / `charging` / `effects` / `shields` / `cooldown` 原样留着
+    `hp` / `mp` / `ct` / `charging` / `effects` / `cooldown` 原样留着
     （换手不该把人打回满血，也不该清掉身上的状态）。现血按**新的上限**钳一次。
     ★ 2026-09-27：keep 名单里**删掉 `defending`** —— 引擎那边防御姿态早已收进状态容器
     （`effects["defend"]` 窗口条目，读口 `window_open(target, DEFEND_TAG)`），裸 bool 兄弟字段
     已不存在 ⇒ 这一格在名单里是死的（`if k in actor` 恒假）。真正的姿态态随 `effects` 一起留。
+    ★ 2026-09-28（状态容器收口第 2 批）：keep 名单里**再删掉 `shields`** —— 同一族的死格，
+    但**死法不同**，两条实测（`check_why_shields_keep.py` / 记在 `_notes.md`）：
+      ① `player_actor()` 的返回里**根本没有 `shields` 这一格**（实测 24 个键，不含它）
+         ⇒ 下面那圈 `for k, v in fresh.items(): actor[k] = v` **覆盖不到它**；
+      ② 真正的护盾态已随 `effects` 一起留（容器那态）或由 `content/absorb.py` 那一口自己管
+         （旧 `shields` 容器那态）。
+      ⇒ 这一格在名单里**已经是死的**（`if k in actor` 虽然为真，但 keep 里的值会被随后
+        `actor.update(keep)` 写回同一份引用）。**行为零变化**（实测：摘掉前后换武器
+        那一手的 `shields` 逐字相同）。留它只是让读者以为「护盾要单独保」—— 删掉更诚实。
     """
     from . import combat as CB
     fresh = CB.player_actor(dict(p or {}), uid=str((actor or {}).get("uid") or ""))
-    keep = {k: actor[k] for k in ("hp", "mp", "ct", "charging", "effects", "shields",
+    keep = {k: actor[k] for k in ("hp", "mp", "ct", "charging", "effects",
                                   "cooldown") if k in actor}
     for k, v in fresh.items():
         actor[k] = v
