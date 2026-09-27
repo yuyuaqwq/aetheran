@@ -106,16 +106,47 @@ def foe_lines_here(p, uid, elite_row: bool = False) -> list:
       `elite_row=True`（这一站今天有精英、那两行已经由观察那一支出过了）⇒ 空表（不重复）。
     不在这张图 / 这一间没有怪 / 这一带一只候选都挑不出来 ⇒ 空表（fail-closed：没东西可遇
     就不多说一行 —— 镇上与塔内空房就是这一档）。
+    ★ 本波（任务③ · P-30 后半）：那一栏再补一行**等级差提示** —— 这一站**最弱的一只**都比
+      玩家高 ≥ 5 级（= 整片都在等级带外，见 `content/rules/level_band.json`）⇒ 说一句
+      「这一带的怪比你高 N 级」。**只补呈现**：怪物面板 / 存档 / 别处回话一个数都没动
+      （旧哨塔下 1 级必死场那一条真源仍是「未定口径」⇒ 不硬改站点数值）。
+      这一行与上面的精英那一支**无关**（`elite_row=True` 时照出）——独立算。
     """
+    out = list(_band_gap_lines(p))
     if elite_row:
-        return []
+        return out
     from .cmds_battle import foe_here
     name = foe_here(p, uid)
     if not name:
         return []
     if _inside(p):
-        return [T("SYS_LOOK_FOE"), T("SYS_LOOK_FOE_ROOM", name=name)]
-    return [T("SYS_LOOK_FOE"), T("SYS_LOOK_FOE_ROW", list="『%s』" % name)]
+        return out + [T("SYS_LOOK_FOE"), T("SYS_LOOK_FOE_ROOM", name=name)]
+    return out + [T("SYS_LOOK_FOE"), T("SYS_LOOK_FOE_ROW", list="『%s』" % name)]
+
+
+def _band_gap_lines(p) -> list:
+    """这一站整片都比玩家高 ≥5 级 ⇒ 补一句话（空表 = 不多话）。
+
+    · **站基准**走 `explore.station_level`（唯一一口：这一站说得上话的怪里最低的那一级 ——
+      与「遇怪概率」的 `m_level` 那一档读的是同一个口）；
+    · 带内/带外的判据走 `combat.in_band`（唯一一口 → `rules/level_band.json`）——
+      **不在带内且比我高** ⇒ 报「比你高 N 级」；
+    · 取不到站基准（镇上 / 这一带没挂怪 / 数据坏了）⇒ 空表（fail-closed：不猜、不编数）。
+    """
+    from . import combat as CB
+    from . import explore as EX
+    try:
+        lvl = int(p.get("level", 1) or 1)
+    except (TypeError, ValueError):
+        return []
+    base = EX.station_level(_data("monsters") or {}, str(p.get("loc") or ""),
+                            str(p.get("node") or ""), lvl)
+    if base is None:
+        return []
+    gap = int(base) - lvl
+    if gap <= 0 or CB.in_band(base, lvl):
+        return []
+    return [T("SYS_LOOK_FOE_GAP", gap=gap)]
 
 
 def _room_foes(node) -> list:

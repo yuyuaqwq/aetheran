@@ -1017,9 +1017,37 @@ def _spots_spec(mid):
     return out
 
 
+#: ★ 本波（2026-09-27 · 任务②）：**等级带** —— 探针**自己读**声明表，判据**自己写一遍**
+#:   （唯一真源 = `content/rules/level_band.json`；不与实现共用函数 —— 照 ⑬/⑳ 的老规矩）。
+_BAND = json.load(io.open(os.path.join(REPO, "content", "rules", "level_band.json"),
+                          encoding="utf-8"))
+_BAND_MAX = int(_BAND["max_level_diff"]["value"])
+
+
+def _in_band(lv_mon, lv_ref):
+    """|怪的等级 − 参照等级| ≤ 带宽 ⇒ 带内（悬赏那一档的参照 = 单子自己的 `min_level`）。"""
+    return abs(int(lv_mon) - int(lv_ref)) <= _BAND_MAX
+
+
 def _pool_spec(role):
     """★ 这一档的**可遇集合**（规格 · 探针自己算）：该档的怪里，按该档 `min_level`
-    在它 `habitat` 写明的**每一站**上都进得了「等级最近前 3」的那几只（按 id 排序）。"""
+    —— ① 在它 `habitat` 写明的**每一站**上都进得了「等级最近前 3」（旧尺子）；
+      ② **且落在等级带内**（`_in_band`，本波加的：差 > 带宽 ⇒ 不进池 —— 病灶是「只有 3 只怪的
+         站上前 3 = 全部 ⇒ 等于没筛」，1 级档点到 lv9 石滩螃蟹、5 级档点到 lv13 水里的东西）
+    —— 按 id 排序。两半都**不带玩家当前等级**（池要按日稳定：`_tier_lv` = 该档标称等级）。"""
+    lv = _tier_lv(role)
+    out = []
+    for mid in _role_ids_of(role):
+        spots = _spots_spec(mid)
+        if lv <= 0 or not spots or not _in_band(MON[mid].get("lv"), lv):
+            continue
+        if all(mid in _top3(_l, _n, lv) for _l, _n in spots):
+            out.append(mid)
+    return sorted(out)
+
+
+def _pool_spec_no_band(role):
+    """**只按旧尺子**的可遇集合（本波反证用：拿掉「等级带」这一半 ⇒ 应当点名到带外那一只）。"""
     lv = _tier_lv(role)
     out = []
     for mid in _role_ids_of(role):
@@ -1909,13 +1937,19 @@ for _ln in _nk_lines:
 #       ⇒ 可能点名一只**按这一档标称等级、在它自己写明的站上根本挑不出来**的怪
 #         （玩家报告 P1 BUG-2：`normal` 档点到「野狗」ms_wild_dog，1 级档的玩家在野狗窝
 #          按 `pick_encounter` 只能撞上 田鼠 / 拾荒野狗 / 林鸦 —— 杀了 4 回也不算）。
-#     新规格 = 池 = 该档的怪 ∩ **可遇集合**（`_pool_spec`：该怪 `habitat` 写明的**每一站**上，
+#     g3 规格 = 池 = 该档的怪 ∩ **可遇集合**（`_pool_spec`：该怪 `habitat` 写明的**每一站**上，
 #       按该档 `min_level` 都进得了「等级最近前 3」的那批）；轮换算法一个字没动。
+#   ★ 本波（2026-09-27 · 任务②）**再加一半 —— 等级带**：
+#     病灶：只站着 **3 只怪**的站上「前 3」= **全部** ⇒ 可遇那半等于没筛（knight 第 3 轮 b5
+#     1 级档点到 lv9 石滩螃蟹；ranger 第 4 轮 b156 精英档点到 lv13 水里的东西）⇒ 接得下、交不掉。
+#     新规格 = 池 = 该档的怪 ∩ 可遇 ∩ **带内**（|怪 lv − 该档标称等级| ≤ `level_band.json` 的
+#       `max_level_diff`；边界 5 借的是探索那条已批口径「差 ≥ +5 ⇒ 怪躲」）。数值一个没动。
 #     逐条判据（新增的都在这儿，原来的**一条没松**）：
-#       ① 三档的池子逐只与探针自己算的可遇集合**相等**（不是「按 id 排序的全档」）
-#       ② 被剔掉的那几只**逐只点名** + 剔的理由**现算**（它在自己哪一站进不了前 3）
-#       ③ 反证：把可遇性过滤拿掉（`_pool_of` 放行全档）⇒ 逐个游戏日比，至少有一天对不上
-#          （证明这一条判据真的载重 —— 改回旧规格当场红）
+#       ① 三档的池子逐只与探针自己算的（可遇 ∩ 带内）**相等**
+#       ② 被剔掉的那几只**逐只点名** + 剔的理由**现算**（在哪一站进不了前 3 / 带外差几级）
+#       ③ 反证 A：把可遇性过滤拿掉（放行全档）⇒ 逐个游戏日比，至少有一天对不上
+#       ④ 反证 B（本波加）：**把等级带拿掉**（只按旧尺子）⇒ 至少有一天点名到**带外**那一只
+#          —— 证明「带」这一半真的载重（不是装饰）
 _rot_bad, _rot_lines = [], []
 _CERTAIN = _re.search(r"打掉\s*\**\s*指定的", bounty_blk or "")
 _ROTATE = _re.search(r"每天轮换挑一只", bounty_blk or "")
@@ -1951,12 +1985,24 @@ for _role in sorted(set(_roles)):
     for _m in _cut:
         _spots = _spots_spec(_m)
         _bad = [(l, n) for l, n in _spots if _m not in _top3(l, n, _lv_role)]
+        _mlv = int(MON[_m].get("lv") or 0)
+        if _lv_role > 0 and not _in_band(_mlv, _lv_role):
+            _why_lines.append("%s（带外：lv%d vs 标称 %d 级 · 差 %d > %d%s）"
+                              % (_mon_name(_m), _mlv, _lv_role, abs(_mlv - _lv_role), _BAND_MAX,
+                                 "" if not _bad else "；另在 %s 也进不了前 3"
+                                 % " · ".join("%s:%s" % (l, n) for l, n in _bad)))
+            continue
         if not _spots or not _bad:
-            _rot_bad.append("★ 档 %s 把「%s」剔了，但按规格它该在池里（现算是可遇的）"
+            _rot_bad.append("★ 档 %s 把「%s」剔了，但按规格它该在池里（可遇 · 且带内）"
                             % (_role, _mon_name(_m)))
             continue
         _why_lines.append("%s（在 %s 进不了前 3）"
                           % (_mon_name(_m), " · ".join("%s:%s" % (l, n) for l, n in _bad)))
+    # ★ 正例（本波加）：池里**每一只**都必须在等级带内 —— 拿掉带子这一条当场红
+    for _m in _spec:
+        if not _in_band(MON[_m].get("lv"), _lv_role):
+            _rot_bad.append("★ 档 %s 的池子里「%s」（lv%s）在等级带外（标称 %s 级 · 带宽 %d）"
+                            % (_role, _mon_name(_m), MON[_m].get("lv"), _lv_role, _BAND_MAX))
     for _d in range(1, 3 * len(_spec) + 2):
         _want = _spec[(_d - 1) % len(_spec)]
         _at_day(_d)                                                   # ★ B4-9：造「第 d 日」= 拨钟
@@ -1994,6 +2040,43 @@ finally:
     CQ._pool_of = _keep_pool
 if not _off_diff:
     _rot_bad.append("★ 反证没生效：把可遇性过滤拿掉后逐个游戏日比，竟然一天都不差（判据可能恒真）")
+# ★ 反证 B（本波新增）：「等级带」那一半真的载重 —— 把 `_pool_of` 换成**只按旧尺子**的可遇集合
+#   （不带带）⇒ 逐个游戏日比，至少有一天点名到**带外**那一只（改回旧尺子当场红）
+_keep_pool_b = CQ._pool_of
+_band_off = 0
+try:
+    CQ._pool_of = (lambda role: _pool_spec_no_band(str(role or "")))
+    for _role in sorted(set(_roles)):
+        _lv_r = _tier_lv(_role)
+        _spec2 = _pool_spec_no_band(_role)
+        if _lv_r <= 0 or len(_spec2) < 2:
+            continue
+        for _d in range(1, len(_spec2) + 1):
+            _at_day(_d)
+            _p = CQ._daily_pick(_role, {})
+            if _p == _spec2[(_d - 1) % len(_spec2)] and not _in_band(MON[_p].get("lv"), _lv_r):
+                _band_off += 1
+finally:
+    CQ._pool_of = _keep_pool_b
+if not _band_off:
+    _rot_bad.append("★ 反证 B 没生效：拿掉等级带后逐个游戏日比，一天都没点到带外那一只（判据可能恒真）")
+# ★ 池空那一档（本波新加的**人话**）：现网三档池都 ≥2 只 ⇒ 这一档到不了，**反证式**造空它 ——
+#   池空必须「不点名」+ 说 `SYS_JOB_REQ_NO_MATCH` 那一句，**不许**掉到
+#   `SYS_JOB_REQ_UNKNOWN`（「这条的前置条件取不出来」= 给「数据坏了」用的，读起来像 bug）
+_keep_pool_c = CQ._pool_of
+try:
+    CQ._pool_of = (lambda role: [])
+    _at_day(2)
+    _empty = _drive(CQ.quest_deliver, _player(level=1, day=2,
+                                              flags={"quests_active": ["q_bounty_normal"]}), "交 101")
+finally:
+    CQ._pool_of = _keep_pool_c
+_want_nomatch = str(CQ.T("SYS_JOB_REQ_NO_MATCH"))
+_want_unknown = str(CQ.T("SYS_JOB_REQ_UNKNOWN"))
+if not any(_want_nomatch in ln for ln in _empty):
+    _rot_bad.append("★ 池空（反证造空）时没出「没点到合适的怪」那一句：%s" % (_empty,))
+if any(_want_unknown in ln for ln in _empty):
+    _rot_bad.append("★ 池空时掉到了 `SYS_JOB_REQ_UNKNOWN`（那句是给数据坏了用的）：%s" % (_empty,))
 # fail-closed：认不出的档
 _at_day(2)
 if CQ._daily_pick("no_such_role", {}) != "" \
@@ -2030,8 +2113,11 @@ if not any(ln.startswith("交了") for ln in _pay2):
     _rot_bad.append("打了点名的那只却交不掉：%s" % _pay2[:3])
 (ok if not _rot_bad and len(_roles) == 3 else bad)(
     "★ 悬赏「指定的」= 每天轮换挑一只（可复现 · 跨日必换〔拨钟造日〕· 探针自己算规格一致 · "
-    "★ **池按可遇性收窄**：池 == 探针自算的可遇集合 · 剔掉的逐只现算核过 · 反证关掉过滤 ⇒ "
-    "逐日至少一天对不上 · **打同档另一只不算** · 认不出的档 fail-closed · 真跑拦得住也交得掉；"
+    "★ **池按「可遇 ∩ 等级带」收窄**：池 == 探针自算的（可遇 ∩ 带内）· 剔掉的逐只现算核过"
+    "（带外差几级 / 哪一站进不了前 3）· 池里每一只都在带内 · 反证 A 关掉可遇过滤 ⇒ "
+    "逐日至少一天对不上 · ★ 反证 B 关掉等级带 ⇒ 至少一天点到**带外**那一只 · "
+    "★ 池空（反证造空）⇒ 不点名 + 说 `SYS_JOB_REQ_NO_MATCH`（不掉 UNKNOWN）· "
+    "**打同档另一只不算** · 认不出的档 fail-closed · 真跑拦得住也交得掉；"
     "坏 %s）" % (_rot_bad or "无"))
 for _ln in _rot_lines:
     print("      %s" % _ln)

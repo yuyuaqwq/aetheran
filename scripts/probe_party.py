@@ -767,10 +767,32 @@ chk("★ 有队档：『集火 <名>』『集火』都回**有队那一句**（%
 #       ③ 那一场真是**多人那一格**（按群存、members 两个人）—— 不是退回单人那一格
 
 
-def _drive_party7(fleer, other):
-    """（多人场）两人真组一队、同在骨田 ⇒ 让 `fleer` 敲一次 `逃跑`。
+def _warm_party7(fleer, other):
+    """★ 本波（任务①）：**先把这一场真开起来、并推到「轮到 fleer」**。
 
-    返回 `(屏上那几行, 这一场, last_battle)`。先把两个档都摆干净：队格 / 场 / 上一场的账。
+    为什么：新口径下 `逃跑` **不在场就不开场**（旧口径它自己开那一下）—— 多人那一掷那一档
+    得先把场摆好。做法：拿 `防御` 喂当前拿窗口的那位（**不出伤 ⇒ 对面满血**、也不会把这一场打完），
+    一直到 `next_actor_key(st) == fleer`；最多 8 手（打不到就回 None，调用方当场报红）。
+    返回「喂完之后的那一格场」（None = 没推开）。
+    """
+    if _field(fleer) is None:
+        say(other, "防御")                       # 开那一场（多人在场的开场；轮不轮到他不重要）
+    for _i in range(8):
+        _st = _field(fleer)
+        if _st is None:
+            return None
+        _cur = INST.next_actor_key(_st)
+        if _cur == fleer:
+            return _st
+        say(_cur, "防御")
+    return None
+
+
+def _drive_party7(fleer, other):
+    """（多人场）两人真组一队、同在骨田 ⇒ 让 `fleer` 在**已经在打**的那一场里敲一次 `逃跑`。
+
+    返回 `(屏上那几行, 这一场, last_battle, 逃跑之前这一场花过几手)`。先把两个档都摆干净：
+    队格 / 场 / 上一场的账。
     """
     for _u in (fleer, other):
         _set_party(_u, None)
@@ -785,9 +807,11 @@ def _drive_party7(fleer, other):
         _ad.players[_u] = _d
         PS.update_player(G, _u, **_d)
     _clear_field()
+    _st0 = _warm_party7(fleer, other)
+    _h0 = int((_st0 or {}).get("hands") or 0)
     _o = say(fleer, "逃跑")
     _lb = ((PS.get_player(G, fleer) or {}).get("flags") or {}).get("last_battle") or {}
-    return _o, _field(fleer), _lb
+    return _o, _field(fleer), _lb, _h0
 
 
 def _multi_flee_criterion():
@@ -808,13 +832,13 @@ def _multi_flee_criterion():
         _cts = {a["uid"]: float(a.get("ct") or 0) for a in _bb.sides["player"]}
         _fast = min(_cts, key=_cts.get)
         _slow = [u for u in _pair if u != _fast][0]
-        # ① 先手那位真掷（哪一边由探针现算的种子说）
+        # ① 先手那位真掷（哪一边由探针现算的种子说）—— ★ 本波：那一场先由「防御」摆好（见 `_warm_party7`）
         _exp = _r("COMBAT_FLEE_OK", name=_NAME7) if _roll7(_fast) >= _RATE7 \
             else _r("COMBAT_FLEE_BLOCK", name=_NAME7)
         random.seed(20260926)
-        _o1, _st1, _lb1 = _drive_party7(_fast, _slow)
+        _o1, _st1, _lb1, _h1 = _drive_party7(_fast, _slow)
         if _exp not in _o1:
-            _bad.append(("多人场那一掷与现算的种子不符", _fast, _o1[:4], _exp))
+            _bad.append(("多人场那一掷与现算的种子不符（那一场已先摆好）", _fast, _o1[:4], _exp))
         if _st1 is not None and sorted(_st1.get("members") or []) != sorted(_pair):
             _bad.append(("那一场不是多人那一格", _st1.get("members")))
         if _todo_old and any(_todo_old.split("\n")[0] in _x for _x in _o1):
@@ -824,24 +848,25 @@ def _multi_flee_criterion():
         try:
             _BA7.flee_fail_pct = (lambda: 1.0)
             random.seed(20260926)
-            _ob, _stb, _lbb = _drive_party7(_fast, _slow)
+            _ob, _stb, _lbb, _hb = _drive_party7(_fast, _slow)
             _BA7.flee_fail_pct = (lambda: 0.0)
             random.seed(20260926)
-            _oc, _stc, _lbc = _drive_party7(_fast, _slow)
+            _oc, _stc, _lbc, _hc = _drive_party7(_fast, _slow)
         finally:
             _BA7.flee_fail_pct = _keep
         if not (_r("COMBAT_FLEE_BLOCK", name=_NAME7) in _ob and _stb is not None
-                and int(_stb.get("hands") or 0) == 1):
-            _bad.append(("多人场被拦下那一档不对（这一场应当还在、且真花了一手）",
-                         _ob[:3], None if _stb is None else _stb.get("hands")))
+                and int(_stb.get("hands") or 0) == _hb + 1):
+            _bad.append(("多人场被拦下那一档不对（这一场应当还在、且这一手真花了）",
+                         _ob[:3], None if _stb is None else (_hb, _stb.get("hands"))))
         if not (_r("COMBAT_FLEE_OK", name=_NAME7) in _oc and _stc is None
                 and _lbc.get("result") == "fled"):
             _bad.append(("多人场跑成那一档不对（这一场应当清干净、记 fled）",
                          _oc[:3], _lbc.get("result")))
     finally:
         CBT.build, CBT.pick_encounter = _REAL_BUILD, _REAL_PICK
-    chk("★ 多人场 `逃跑` 真接了（两人同格 · 先手那位 %s 真掷 ⇒「%s」；改率 1.0 ⇒ 被拦下且这一场"
-        "照打 · 改率 0.0 ⇒ 跑成且这一场清干净记 `fled`）· 不再回那句退役桩句"
+    chk("★ 多人场 `逃跑` 真接了（两人同格 · **那场先由防御摆好** · 先手那位 %s 真掷 ⇒「%s」；"
+        "改率 1.0 ⇒ 被拦下且这一场照打（这一手真花）· 改率 0.0 ⇒ 跑成且这一场清干净记 "
+        "`fled`）· 不再回那句退役桩句"
         % (_fast or "（没跑）", _exp if _fast else ""),
         not _bad, "%s" % _bad[:2])
 
@@ -853,36 +878,52 @@ _CBSRC = io.open(os.path.join(str(REPO), "content", "cmds_battle.py"), encoding=
 #   算成文案了（`"retreat"` / `"fled"` 是**接线**不是给玩家看的字）⇒ 收口的那条线改成
 #   「含汉字的字面量一个都没有」+「三个槽位都真由它 yield 出来」（两句都真判）。
 import ast as _ast                                                     # noqa: E402
-_FN = [n for n in _ast.parse(_CBSRC).body
-       if isinstance(n, _ast.AsyncFunctionDef) and n.name == "flee"]
-#   ★ docstring 那一格**按节点排掉**（不拿 get_docstring 的 clean 结果去比 —— 多行 docstring
-#     的原始字面量与 clean 后的字面量不一样，K46 同族的一个小坑）
-_DOC = (_FN[0].body[0].value
-        if _FN and _FN[0].body and isinstance(_FN[0].body[0], _ast.Expr)
-        and isinstance(_FN[0].body[0].value, _ast.Constant)
-        and isinstance(_FN[0].body[0].value.value, str) else None)
+_TREE7 = _ast.parse(_CBSRC)
+#   ★ 本波（2026-09-27 · 任务①）：`flee` 的**冷启动那一档**不再掷骰 ⇒ 掷骰那两位（`跑成` /
+#     `被拦下` 的落点）挪到 `_flee_decide` 那一格里。这条静态守卫因此**换锚不换强度**：
+#     认的是「这一族两个实现体（`flee` + `_flee_decide`）**合起来**把两条槽位都取到了、
+#     且**一个含汉字的字面量都没有**、且**一个数都没写死**」—— 比只扫 `flee` 那一个更严
+#     （多扫了一个函数）。
+_FN_BY_NAME7 = {n.name: n for n in _TREE7.body
+                if isinstance(n, (_ast.AsyncFunctionDef, _ast.FunctionDef))}
+_FN = [_FN_BY_NAME7["flee"]] if "flee" in _FN_BY_NAME7 else []
+_FD = [_FN_BY_NAME7["_flee_decide"]] if "_flee_decide" in _FN_BY_NAME7 else []
+_FAM7 = _FN + _FD
+
+
+def _doc_of7(f):
+    """这个函数的 docstring 字面量节点（没有 ⇒ None）—— 排掉它，不算「字面量」。"""
+    if f.body and isinstance(f.body[0], _ast.Expr) \
+            and isinstance(f.body[0].value, _ast.Constant) \
+            and isinstance(f.body[0].value.value, str):
+        return f.body[0].value
+    return None
+
+
+_DOCNODES7 = {id(_doc_of7(f)) for f in _FAM7 if _doc_of7(f) is not None}
 _CJK = re.compile(r"[\u4e00-\u9fff]")
-_FN_LITS = [n.value for n in _ast.walk(_FN[0])
+_FN_LITS = [n.value for f in _FAM7 for n in _ast.walk(f)
             if isinstance(n, _ast.Constant) and isinstance(n.value, str)
-            and n is not _DOC and _CJK.search(n.value)] if _FN else []
+            and id(n) not in _DOCNODES7 and _CJK.search(n.value)]
 _SLOTS7 = ("COMBAT_FLEE_OK", "COMBAT_FLEE_BLOCK")
-#   ★ 那两条槽位**在 `flee` 的实现体里真被取**（ast 认 `T("<键>")` 这种调用 ——
-#     `COMBAT_FLEE_BLOCK` 是挂在 `hand.lines` 上由引擎取走的，不是 `yield` 出来的，
-#     所以认「调用」而不是认「yield 那一行」）。
-_T_CALLS7 = sorted({n.args[0].value for n in _ast.walk(_FN[0])
+#   ★ 那两条槽位**在这一族的实现体里真被取**（ast 认 `T("<键>")` 这种调用 ——
+#     `COMBAT_FLEE_BLOCK` 是挂在 `hand.lines` 上由引擎取走的 / 由 `_flee_decide` 写进日志的，
+#     不是 `flee` 自己 `yield` 出来的，所以认「调用」而不是认「yield 那一行」）。
+_T_CALLS7 = sorted({n.args[0].value for f in _FAM7 for n in _ast.walk(f)
                     if isinstance(n, _ast.Call) and isinstance(n.func, _ast.Name)
                     and n.func.id == "T" and n.args
                     and isinstance(n.args[0], _ast.Constant)
                     and isinstance(n.args[0].value, str)})
 _HAS7 = sorted(set(_SLOTS7) & set(_T_CALLS7))
-#   ★ 那一手里**除 0 / 1 没有别的数**：失败率 / 阈值一个都不许写进代码（唯一来源 = 声明表）。
-_NUMS7 = sorted({n.value for n in _ast.walk(_FN[0])
+#   ★ 那一族里**除 0 / 1 没有别的数**：失败率 / 阈值一个都不许写进代码（唯一来源 = 声明表）。
+_NUMS7 = sorted({n.value for f in _FAM7 for n in _ast.walk(f)
                  if isinstance(n, _ast.Constant) and not isinstance(n.value, bool)
-                 and isinstance(n.value, (int, float))}) if _FN else []
-chk("★ 覆盖（ast）：`flee` 里**没有一个含汉字的字面量**（%d 处 —— 注释 / docstring / 槽位键不算）· "
-    "那两条槽位都是它自己 `T(\"…\")` 取的（%s）· 那一手里出现的数只有 %s（率不在代码里）"
+                 and isinstance(n.value, (int, float))}) if _FAM7 else []
+chk("★ 覆盖（ast）：`flee` + `_flee_decide` 这一族里**没有一个含汉字的字面量**"
+    "（%d 处 —— 注释 / docstring / 槽位键不算）· 那两条槽位都由这一族 `T(\"…\")` 取到（%s）· "
+    "这一族里出现的数只有 %s（率不在代码里）"
     % (len(_FN_LITS), " · ".join(_HAS7) or "一个都没取", _NUMS7),
-    len(_FN) == 1 and not _FN_LITS and _HAS7 == sorted(_SLOTS7)
+    len(_FN) == 1 and len(_FD) == 1 and not _FN_LITS and _HAS7 == sorted(_SLOTS7)
     and set(_NUMS7) <= {0, 1})
 chk("★ 覆盖：这一族的三条槽位都在 texts 里、且占位与 params **双向对账**（%s）"
     % " · ".join("%s=%s" % (k, sorted((TX.get(k) or {}).get("params") or []))
@@ -937,11 +978,16 @@ chk("★ P-57 **同种子两态都碰得到**（第 %d 游戏日 · 率 %s · �
     bool(_FLY7) and bool(_STOP7))
 
 
-def _drive7(uid):
+def _drive7(uid, warm=False):
     """单人（没队）+ 遇敌钉死，真敲一次 `逃跑` ⇒ (屏上那几行, 这一场的状态, `last_battle`)。
 
     ★ G2 起这一手走「场」：清干净（群/人两格都清）· 顺手把上一场的 `flags.last_battle` 也抹掉
       （那是**结算期**才写的账，不清就会把「上一场的结局」当成「这一拍的结果」）。
+    ★ 本波（2026-09-27 · 任务①）：`warm=True` ⇒ **先用 `防御` 真开一场**（防御不出伤 ⇒ 对面满血），
+      再敲 `逃跑` —— 掷骰那一档（真源「三成被拦下」）只在「**已经在打**」时谈得上。
+      `warm=False`（默认）= **冷启动**那一档：这一敲是「这一带站着怪、但这一场还没开打」——
+      新口径 = **不建场、不掷骰、0 风险走人**（旧口径会先开一场再掷骰 ⇒ 掷败就把人拉进去）。
+      返回的 `_o` 仍然是**逃跑那一敲**的屏（`防御` 那几行不混进来）。
     """
     _set_party(uid, None)
     _at(uid, LOC, NODE, hp=80)
@@ -953,10 +999,15 @@ def _drive7(uid):
     PS.update_player(G, uid, **_d)
     _clear_field()
     _b0 = (int(_d.get("gold") or 0), int(_d.get("exp") or 0), sorted(_d.get("bag") or {}))
+    _hp0 = int(_d.get("hp") or 0)
+    if warm:
+        say(uid, "防御")                         # ★ 真开一场（这一手不出伤 ⇒ 怪还满血）
     _o = say(uid, "逃跑")
     _st = _field(uid)
     _lb = ((PS.get_player(G, uid) or {}).get("flags") or {}).get("last_battle") or {}
-    return _o, _st, _lb, _b0
+    _d2 = PS.get_player(G, uid) or {}
+    _a0 = (int(_d2.get("gold") or 0), int(_d2.get("exp") or 0), sorted(_d2.get("bag") or {}))
+    return _o, _st, _lb, _b0, (_hp0, int(_d2.get("hp") or 0), _a0)
 
 
 def _sig7(out, st, lb, exp):
@@ -981,54 +1032,78 @@ try:
         _u_ok, _u_no = _FLY7[0], _STOP7[0]
         _EXP_OK = _r("COMBAT_FLEE_OK", name=_NAME7)
         _EXP_NO = _r("COMBAT_FLEE_BLOCK", name=_NAME7)
+        # ── ① ★ 本波（任务①）：**不在场（这一场还没开打）⇒ 不建场、不掷骰、0 风险**
+        #    拿**手气最差**那个号（`_u_no`：冷启动若还掷必被拦下）来验「一个骰子都没掷」。
         _B7 = []
+        for _u, _tag in ((_u_no, "手气最差那个"), (_u_ok, "跑成那档那个")):
+            random.seed(20260926)
+            _o_c, _st_c, _lb_c, _b_c, (_hp0_c, _hp1_c, _a_c) = _drive7(_u)
+            if _EXP_OK not in _o_c:
+                _B7.append(("冷启动（%s）没有「这一场没打」那一句" % _tag, _o_c[:3]))
+            if _EXP_NO in _o_c:
+                _B7.append(("冷启动（%s）竟然出了「被拦下」那一句（= 还在掷骰）" % _tag, _o_c[:3]))
+            if _st_c is not None:
+                _B7.append(("冷启动（%s）竟然建了场" % _tag, list((_st_c or {}).keys())))
+            if _lb_c.get("result") != "fled":
+                _B7.append(("冷启动（%s）没记 fled" % _tag, _lb_c.get("result")))
+            if _hp0_c != _hp1_c or _a_c != _b_c:
+                _B7.append(("冷启动（%s）动了档上的血/账" % _tag, (_hp0_c, _hp1_c, _b_c, _a_c)))
+        chk("★ 任务① 不在场敲 `逃跑`（两个号都验，含手气最差那个 %s）：**不建场**（场 = None）· "
+            "出的是「…甩在了后头 —— 这一场没打」· 档上血与账逐格不动 · `last_battle` 记 fled "
+            "—— 冷启动**一个骰子都不掷**（那一档不存在「被拦下」）"
+            % _u_no, not _B7, "%s" % _B7[:2])
+        # ── ② 「已经在打」（先 `防御` 真开一场）⇒ 掷骰两态照旧（真源那条「三成被拦下」）
         random.seed(20260926)                    # 两遍走**同一颗引擎种子** ⇒ 逐字可比
-        _o_ok, _st_ok, _lb_ok, _b_ok = _drive7(_u_ok)
+        _o_ok, _st_ok, _lb_ok, _b_ok, _x_ok = _drive7(_u_ok, warm=True)
         random.seed(20260926)
-        _o_ok2, _st_ok2, _lb_ok2, _b_ok2 = _drive7(_u_ok)
+        _o_ok2, _st_ok2, _lb_ok2, _b_ok2, _x_ok2 = _drive7(_u_ok, warm=True)
         random.seed(20260926)
-        _o_no, _st_no, _lb_no, _b_no = _drive7(_u_no)
+        _o_no, _st_no, _lb_no, _b_no, _x_no = _drive7(_u_no, warm=True)
         random.seed(20260926)
-        _o_no2, _st_no2, _lb_no2, _b_no2 = _drive7(_u_no)
+        _o_no2, _st_no2, _lb_no2, _b_no2, _x_no2 = _drive7(_u_no, warm=True)
+        _B7b = []
         if _EXP_OK not in _o_ok:
-            _B7.append(("跑成那一档没有那一句", _o_ok[:3]))
+            _B7b.append(("跑成那一档没有那一句", _o_ok[:3]))
         if _lb_ok.get("result") != "fled":
-            _B7.append(("跑成却没记 fled", _lb_ok.get("result")))
+            _B7b.append(("跑成却没记 fled", _lb_ok.get("result")))
         if _st_ok is not None:
-            _B7.append(("跑成竟然还留着这一场", list((_st_ok or {}).keys())))
+            _B7b.append(("跑成竟然还留着这一场", list((_st_ok or {}).keys())))
         if _EXP_NO not in _o_no:
-            _B7.append(("被拦下那一档没有那一句", _o_no[:4]))
+            _B7b.append(("被拦下那一档没有那一句", _o_no[:4]))
+        if _EXP_OK in _o_no:
+            _B7b.append(("被拦下却出了「跑成」那一句", _o_no[:4]))
         if _lb_no.get("result") == "fled":
-            _B7.append(("被拦下却记成 fled", _lb_no.get("result")))
-        if _st_no is None or int(_st_no.get("hands") or 0) != 1:
-            _B7.append(("被拦下没照打（这一场应当还在、且真花了这一手）",
-                        None if _st_no is None else _st_no.get("hands")))
+            _B7b.append(("被拦下却记成 fled", _lb_no.get("result")))
+        if _st_no is None or int(_st_no.get("hands") or 0) != 2:
+            _B7b.append(("被拦下没照打（这一场应当还在、且真花了这一手：防御 1 + 逃跑 1 = 2）",
+                         None if _st_no is None else _st_no.get("hands")))
         if not (_sig7(_o_ok2, _st_ok2, _lb_ok2, _EXP_OK) == _sig7(_o_ok, _st_ok, _lb_ok, _EXP_OK)
                 and _sig7(_o_no2, _st_no2, _lb_no2, _EXP_NO) == _sig7(_o_no, _st_no, _lb_no, _EXP_NO)):
-            _B7.append(("同种子再来一遍不是同一边",
-                        (_sig7(_o_ok2, _st_ok2, _lb_ok2, _EXP_OK),
-                         _sig7(_o_no2, _st_no2, _lb_no2, _EXP_NO))))
-        chk("★ P-57 同种子真敲两态：%s ⇒「%s」（last_battle=%s · 这一场清干净）· "
-            "%s ⇒「%s」（last_battle=%s · 这一场照打、花了一手）· 各自再来一遍**还是那一边**"
+            _B7b.append(("同种子再来一遍不是同一边",
+                         (_sig7(_o_ok2, _st_ok2, _lb_ok2, _EXP_OK),
+                          _sig7(_o_no2, _st_no2, _lb_no2, _EXP_NO))))
+        chk("★ P-57 同种子真敲两态（**已经在打**那一档 · 先 `防御` 开一场）：%s ⇒「%s」"
+            "（last_battle=%s · 这一场清干净）· %s ⇒「%s」（last_battle=%s · 这一场照打、花了一手）· "
+            "各自再来一遍**还是那一边**"
             % (_u_ok, _EXP_OK, _lb_ok.get("result"), _u_no, _EXP_NO, _lb_no.get("result")),
-            not _B7, "%s" % _B7[:2])
+            not _B7b, "%s" % _B7b[:2])
         # ★ G2 另加一条**实质**判据：「跑成 = 这一场没打」= 没有掉落 / 没有经验 / 没有铜板
         _d_ok = PS.get_player(G, _u_ok) or {}
         _a_ok = (int(_d_ok.get("gold") or 0), int(_d_ok.get("exp") or 0),
                  sorted(_d_ok.get("bag") or {}))
         chk("★ P-57 跑成的**实质**：这一场没打 ⇒ 铜板 / 经验 / 背包与这一拍之前**逐格相同**"
             "（%s → %s）" % (_b_ok, _a_ok), _a_ok == _b_ok)
-        # ⑤ 反证：那个数真被读（同一个种子、同一个人，只改声明表那个数）
+        # ⑤ 反证：那个数真被读（同一个种子、同一个人，只改声明表那个数）—— 仍然在「已经在打」那一档上验
         _keep_rate7 = _BA7.flee_fail_pct
         try:
             _BA7.flee_fail_pct = (lambda: 1.0)
-            _o_r1, _st_r1, _lb_r1, _b_r1 = _drive7(_u_ok)
+            _o_r1, _st_r1, _lb_r1, _b_r1, _x_r1 = _drive7(_u_ok, warm=True)
             _BA7.flee_fail_pct = (lambda: 0.0)
-            _o_r2, _st_r2, _lb_r2, _b_r2 = _drive7(_u_no)
+            _o_r2, _st_r2, _lb_r2, _b_r2, _x_r2 = _drive7(_u_no, warm=True)
         finally:
             _BA7.flee_fail_pct = _keep_rate7
-        chk("★ P-57 反证（率只有一个口、真被读）：临时改成 1.0 ⇒ 原来跑成的 %s 当场被拦下（%s）· "
-            "改成 0.0 ⇒ 原来被拦下的 %s 当场跑成（%s）"
+        chk("★ P-57 反证（率只有一个口、真被读 · **场里**那一档）：临时改成 1.0 ⇒ 原来跑成的 %s "
+            "当场被拦下（%s）· 改成 0.0 ⇒ 原来被拦下的 %s 当场跑成（%s）"
             % (_u_ok, (_EXP_NO in _o_r1 and _st_r1 is not None),
                _u_no, (_EXP_OK in _o_r2 and _st_r2 is None and _lb_r2.get("result") == "fled")),
             _EXP_NO in _o_r1 and _st_r1 is not None

@@ -224,6 +224,27 @@ P-25 §② 剩下的 11 条支线里，**能按真源文档补上正当条件的
    **真实进度**为准）、写端走 `content/prog.resync`（接 / 交 / 放弃那三处照真实进度重写）。
    判据：`scripts/probe_qloop.py` ⑨（写端三拍 + 读端真搭话 + 两条反证：没做到 ⇒ 旗标没写且
    那句出不来；只塞一个脏旗标 ⇒ 那句**照样**出不来）。
+
+★ 本波（2026-09-27 · 任务②）：「可遇」尺子**再加一道等级带**（`_encounterable`）
+----------------------------------------------------------------------------------
+病灶（同一处根因，两路试玩各报一次）：`_encounterable` 的尺子 = `combat.encounter_cand
+(level = 该档 min_level, keep=3)`（「这一站的怪按等级最近取前 3」），而**只站着 3 只怪的站
+上「前 3」= 全部** ⇒ 等于没筛：
+  · knight 第 3 轮 b5：`悬赏·普通`（单子写「1 级+」）点名 `石滩螃蟹` —— **lv9 · 410 血**，
+    4 级打 12 手、掉 ~110 血才拿下（`bw_ferry` 上就 3 只怪：水鬼 8 / 螃蟹 9 / 摆渡人 12）；
+  · ranger 第 4 轮 b156：`悬赏·精英`（5 级解锁**当天**）点名 `水里的东西` —— **lv13 · 精英**
+    （`bw_old_ferry`：螃蟹 9 / 水里的东西 13 / 沉尸 15）⇒ 接得下、交不掉。
+口径（本波定 · 数值一律不降）：**候选必须落在带内** —— 怪的等级与该档**标称等级**
+（`_tier_level` = 单子上印给玩家的那个 `min_level`；报酬也按它发，见 `05 §一`）的差
+绝对值 > `max_level_diff` ⇒ **不进池**。那个数**不在代码里**：唯一声明处 =
+`content/rules/level_band.json`（边界 5 借的是探索那条已批的口径「差 ≥ +5 ⇒ 那一片的怪
+看见你就躲」⇒ 带内 = |差| ≤ 4）；表缺 / 值坏 ⇒ 当场抛（fail-closed，不猜）。
+带内一只都没有 ⇒ **不点名**（池空 ⇒ 当日那只 = 空串 ⇒ 一律算「没满足」，与认不出档同一档），
+玩家看到的是 `SYS_JOB_REQ_NO_MATCH` 那一句（人话，不是空名字 / 不是机器键）。
+实测（本波现算）：普通 6→3 只（裁 骸骨 6 / 水鬼 8 / 石滩螃蟹 9）· 精英 4→2 只（裁 摆渡人 12 /
+水里的东西 13）· 头目 3→2 只（裁 沉尸 15）—— 三档池都还剩 ≥ 2 只（「轮换」观察得到）。
+判据：`scripts/probe_quests.py` ㉛（探针**另写一份**「可遇 ∩ 带内」逐日对账 + 被裁逐只点名 +
+反证拿掉带子 ⇒ 点名到带外那一只当场红）· `scripts/probe_qloop.py` ②。
 """
 from __future__ import annotations
 
@@ -568,7 +589,9 @@ def _encounterable(mid, level) -> bool:
       （`_habitat_of` → `SYS_JOB_REQ_MON_WHERE`），所以每一站都得真碰得上；否则玩家照着
       单子走到某一站，撞到的却是别人（报告 P1 BUG-2 的原样：在野狗窝杀成 4 回「拾荒野狗」
       而单子要的「野狗」一次没出）。
-    ★ fail-closed：没有 habitat / 站表为空 / 等级取不到 ⇒ **不算可遇**（不猜）。
+    ★ 本波（任务②）：**再加一道「等级带」** —— 这只怪的等级与 `level`（= 该档标称等级）
+      的差绝对值 > `rules/level_band.json::max_level_diff` ⇒ 不算可遇（见下面的那一段）。
+    ★ fail-closed：没有 habitat / 站表为空 / 等级取不到 / 带取不到 ⇒ **不算可遇**（不猜）。
     """
     try:
         lv = int(level)
@@ -580,6 +603,14 @@ def _encounterable(mid, level) -> bool:
     if not spots:
         return False
     mon = _data("monsters")
+    # ★ 本波（任务②）：**等级带**（唯一读口 = `combat.in_band` → `rules/level_band.json`）。
+    #   旧的尺子只看「这一站的怪按等级最近前 3」（`encounter_cand`）—— 而只站着 3 只怪的站上
+    #   「前 3」= 全部 ⇒ 等于没筛：`悬赏·普通`（1 级+）点到 lv9 石滩螃蟹、`悬赏·精英`（5 级+）
+    #   点到 lv13 水里的东西（两路试玩各报一次）⇒ 接得下、交不掉。这里再加一道：
+    #   这只怪的等级与**该档标称等级**的差 > `max_level_diff` ⇒ 不在带内（不进池）。
+    #   数值一个没动（怪的面板 / 档位全是原样）—— 收的是**尺子**。
+    if not CB.in_band((mon.get(mid) or {}).get("lv"), lv):
+        return False
     for loc, nd in spots:
         _cand, top = CB.encounter_cand(mon, loc, nd, lv)
         if mid not in top:
@@ -802,6 +833,12 @@ def _req_lines(p, r):
             name = _mon_name(mid)
         elif r.get("daily"):
             mid = _daily_pick(str(r.get("role") or ""), p)
+            if not mid:
+                # ★ 本波（任务②）：带内一只都没有 ⇒ **不点名**（池空 = fail-closed，
+                #   与「认不出的档」同一档：一律算没满足）。这里给的是**一句人话** ——
+                #   原先池空会一路掉到 `SYS_JOB_REQ_UNKNOWN`（「这条的前置条件取不出来」），
+                #   那句话是给「数据坏了」用的，玩家读起来像 bug。
+                return [T("SYS_JOB_REQ_NO_MATCH")]
             name = _mon_name(mid)
         else:
             mid, name = "", _role_name(str(r.get("role") or ""))

@@ -279,8 +279,34 @@ def _spots_spec(mid):
     return out
 
 
+#: ★ 本波（2026-09-27 · 任务②）：**等级带** —— 探针自己读声明表 `content/rules/level_band.json`，
+#:   判据自己写一遍（不与实现共用函数 —— 照 ⑬/⑳ 的老规矩）。
+_BAND_MAX = int(json.load(io.open(os.path.join(REPO, "content", "rules", "level_band.json"),
+                                 encoding="utf-8"))["max_level_diff"]["value"])
+
+
+def _in_band(lv_mon, lv_ref):
+    """|怪 lv − 参照等级| ≤ 带宽 ⇒ 带内（悬赏的参照 = 该档 `min_level`）。"""
+    return abs(int(lv_mon) - int(lv_ref)) <= _BAND_MAX
+
+
 def _pool_spec(role):
-    """★ 这一档的**可遇集合**（探针自己算）：每一站上都进得了「等级最近前 3」的那几只。"""
+    """★ 这一档的**可遇集合**（探针自己算）：① 每一站上都进得了「等级最近前 3」；
+    ② **且落在等级带内**（本波加的 —— 只站着 3 只怪的站上「前 3」= 全部，1 级档因此点到
+    lv9 石滩螃蟹、5 级档点到 lv13 水里的东西）。"""
+    lv = _tier_lv(role)
+    out = []
+    for mid in sorted(k for k, m in MON.items()
+                      if not str(k).startswith("_") and m.get("role_key") == role):
+        spots = _spots_spec(mid)
+        if lv > 0 and spots and _in_band(MON[mid].get("lv"), lv) \
+                and all(mid in _top3(_l, _n, lv) for _l, _n in spots):
+            out.append(mid)
+    return out
+
+
+def _pool_spec_no_band(role):
+    """只按旧尺子的可遇集合（反证用）。"""
     lv = _tier_lv(role)
     out = []
     for mid in sorted(k for k, m in MON.items()
@@ -296,7 +322,15 @@ if _pool_spec("normal") != list(CQ._pool_of("normal")):
     _b2.append(("规范池 %s ≠ 实现 %s" % (_norm_pool, list(CQ._pool_of("normal"))), ""))
 _cut_norm = [m for m in _norm_ids if m not in _norm_pool]
 if not _cut_norm:
-    _b2.append(("普通档一只都没被剔掉 —— 可遇性过滤没生效", ""))
+    _b2.append(("普通档一只都没被剔掉 —— 可遇性/等级带过滤没生效", ""))
+_lv_norm = _tier_lv("normal")
+for _m in _norm_pool:                                   # ★ 正例：池里每一只都在带内
+    if not _in_band(MON[_m].get("lv"), _lv_norm):
+        _b2.append(("★ 池里「%s」（lv%s）在等级带外（标称 %s 级 · 带宽 %d）"
+                    % (_mon_name(_m), MON[_m].get("lv"), _lv_norm, _BAND_MAX), ""))
+_cut_band = [m for m in _norm_ids if not _in_band(MON[m].get("lv"), _lv_norm)]
+if not _cut_band:
+    _b2.append(("★ 普通档没有一只因「带外」被剔 —— 等级带那一半没生效（判据可能恒真）", ""))
 
 
 def _where_of(mid):
@@ -358,12 +392,35 @@ if not _off:
     _b2.append(("★ 反证没生效：拿掉可遇性过滤后逐日比，竟然一天都不差（判据可能恒真）", ""))
 if "ms_wild_dog" in CQ._pool_of("normal"):
     _b2.append(("★ 报告里那条：「野狗」还在普通档的池里（1 级档真挑不出来）", "ms_wild_dog"))
+# ★ 本波：报告里那两条**原样**钉住 —— 1 级档点到 lv9 石滩螃蟹（knight 第 3 轮 b5）、
+#   5 级档点到 lv13 水里的东西（ranger 第 4 轮 b156）—— 两个名字都不许再出现在各自的池里
+for _bad_mid, _bad_role, _bad_lv in (("ms_stone_crab", "normal", 9),
+                                     ("ms_thing_in_water", "elite", 13)):
+    if _bad_mid in CQ._pool_of(_bad_role):
+        _b2.append(("★ 病灶那只还在池里：「%s」（lv%d）出现在 %s 档的池里"
+                    % (_mon_name(_bad_mid), _bad_lv, _bad_role), _bad_mid))
+# 反证 ②-c（本波新增）：把**等级带**拿掉 ⇒ 池回到「只按旧尺子」⇒ 至少有一天点名到**带外**那一只
+_keep_pool3 = CQ._pool_of
+_off_band = 0
+try:
+    CQ._pool_of = (lambda role: _pool_spec_no_band(str(role or "")))
+    for _d in range(1, len(_norm_ids) + 1):
+        _at_day(_d)
+        _p3 = CQ._daily_pick("normal", {})
+        if _p3 and not _in_band(MON[_p3].get("lv"), _lv_norm):
+            _off_band += 1
+finally:
+    CQ._pool_of = _keep_pool3
+if not _off_band:
+    _b2.append(("★ 反证 ②-c 没生效：拿掉等级带后逐日比，一天都没点到带外那一只", ""))
 (ok if not _b2 else bad)(
-    "② 悬赏 101：池按**可遇性**收窄（普通档 %d/%d 只 · 剔掉 %s）—— 逐日真敲：点名的**那一只**"
-    "写进「还差」，紧接着一行说它出没在哪几站（站名 = monsters.habitat × maps 现算 · 逐字相同）；"
-    "关掉这一支那一行立刻消失（反证 a）· 关掉可遇性过滤逐日对不上 %d 天（反证 b · 坏 %s）"
+    "② 悬赏 101：池按**「可遇 ∩ 等级带」**收窄（普通档 %d/%d 只 · 剔掉 %s）—— 逐日真敲："
+    "点名的**那一只**写进「还差」，紧接着一行说它出没在哪几站（站名 = monsters.habitat × maps "
+    "现算 · 逐字相同）；池里每一只都在带内 · 报告那两只（石滩螃蟹 lv9 / 水里的东西 lv13）"
+    "都不在池里；关掉出没地那一支行立刻消失（反证 a）· 关掉可遇过滤逐日对不上 %d 天（反证 b）· "
+    "关掉**等级带** ⇒ 逐日点到带外那一只 %d 天（反证 c · 坏 %s）"
     % (len(_norm_pool), len(_norm_ids), "·".join(_mon_name(m) for m in _cut_norm) or "无",
-       _off, _b2 or "无"))
+       _off, _off_band, _b2 or "无"))
 for _ln in _l2:
     print("      %s" % _ln)
 
