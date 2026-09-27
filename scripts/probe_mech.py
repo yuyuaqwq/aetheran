@@ -1390,27 +1390,35 @@ _b3, _c3, _l3 = _crit_hand(0.0, mounted=False)
 print()
 print()
 print("── ⑮ 引擎改动面（硬指标）")
-#  ★ fxmech（2026-09-26）：本批**动了引擎**（B4-4 的两段耗时接线 + 一条新的可选否决口
-#    `skill_gate_fn`）—— 判据从「引擎零改动」改成**钉住改动面**：改动只许落在这四份文件里，
+#  ★ fxmech（2026-09-26）起：本批**动了引擎**（B4-4 的两段耗时接线 + 一条新的可选否决口
+#    `skill_gate_fn`）—— 判据从「引擎零改动」改成**钉住改动面**：改动只许落在声明的那些文件里
+#    （声明在下一条 `_want_touched` 那里；本批 = 跨手状态三条），
 #    且**引擎自带的门禁要全过**（那一半在本包门禁之外，由引擎仓自己的 `tests/` 跑）。
-_want_touched = sorted(["extends/ext_combat/battle/schedule.py",
-                        "extends/ext_combat/battle/battle.py",
-                        "extends/ext_combat/battle/actions.py",
-                        "saintess_engine/config.py"])
 # ★ 0 号：引擎仓**工作区干净**（本批的引擎改动已提交 —— 不留半截在盘上）
 _git = subprocess.run(["git", "status", "--porcelain"], cwd=ENGINE, capture_output=True, text=True)
 _dirty = [ln for ln in (_git.stdout or "").splitlines() if ln.strip()]
 (ok if not _dirty else bad)("★ 引擎仓工作区干净（未提交的 %d 条：%s）"
                             % (len(_dirty), [x.strip() for x in _dirty[:3]]))
-# ★ 1 号：**本批那一提交**的落点 == 声明的四份代码文件（其余只许 docs/ 落账）
-_rng = ["git", "log", "--name-only", "--pretty=format:", "-1"]
-_committed = sorted({p for p in subprocess.run(_rng, cwd=ENGINE, capture_output=True, text=True)
-                     .stdout.split() if p})
-_code = [p for p in _committed if not p.startswith("docs/")]
-_docs = [p for p in _committed if p.startswith("docs/")]
+# ★ 1 号：**本批**（自 `_ENGINE_BASE` 起）的落点 == 声明的这几份代码文件（其余只许 docs/ 落账）
+#   ★ 2026-09-27（跨手状态三条那一批）**换锚不换强度**：原先只看 `git log -1`（HEAD 那一笔），
+#     而本批在引擎仓可以落好几笔（代码 → docs 落账 → 上一笔判据的 fixture 修）⇒ HEAD 是
+#     docs-only 提交时那写法会算出「代码 无」而**假红**。改成**自基准提交起 diff**
+#     （`<base>..HEAD` 的并集 —— 与「本批落了几笔」无关，且扫的面更宽）。
+#     ★ 换批时改两处：`_ENGINE_BASE`（本批**开工前**引擎的 HEAD）与 `_want_touched`。
+_ENGINE_BASE = "2c31c54"
+_want_touched = sorted(["extends/ext_combat/battle/battle.py",
+                        "extends/ext_combat/battle/landing.py",
+                        "extends/ext_combat/battle/serialize.py",
+                        "tests/test_battle_text_inject.py",
+                        "tests/test_cross_hand_state.py"])
+_committed = {p for p in subprocess.run(
+    ["git", "diff", "--name-only", "%s..HEAD" % _ENGINE_BASE], cwd=ENGINE,
+    capture_output=True, text=True).stdout.split() if p}
+_code = sorted(p for p in _committed if not p.startswith("docs/"))
+_docs = sorted(p for p in _committed if p.startswith("docs/"))
 (ok if _code == _want_touched else bad)(
-    "★ 本批那一提交的代码落点 == 声明的四份（代码 %s ｜ docs 落账 %d 份）"
-    % ("、".join(_code) or "无", len(_docs)))
+    "★ 本批（自 %s 起）的代码落点 == 声明的那几份（代码 %s ｜ docs 落账 %d 份）"
+    % (_ENGINE_BASE, "、".join(_code) or "无", len(_docs)))
 _hooks_decl = {"segment_plan_fn", "skill_gate_fn"}
 from saintess_engine import config as _CFG15
 _missing_hook = sorted(h for h in _hooks_decl if _CFG15.optional_hook(h) is None and h == "segment_plan_fn")
