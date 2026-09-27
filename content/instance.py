@@ -232,6 +232,51 @@ def clear(key) -> None:
 
 
 # ══════════════════════════════════════════════════════════════
+# 三·二、名单变了（离队 / 解散）—— 把在跑的那一场按**现名单**收口
+# ══════════════════════════════════════════════════════════════
+def leave_reconcile(group_id, uid, after) -> dict:
+    """`离队` / `解散` 那一刻：（若在打）那一场按**现名单**收口 —— **唯一一口**。
+
+    ★ 试玩实测（knight 第 3 轮 · 第 41/42 批 + 第 46~50 批）：`离队` 原先**只动队伍名单**，
+      那一格 `instance:<群>` 一个字都不碰 ⇒ 两种病：
+        ① 走掉的人还留在这一场的 `members` 与 `sides` 里 ⇒ 剩下的人敲『攻击』回
+           「⏳ 还没轮到你 —— 你在等 <已经走掉的那位>」（只能等 45 秒窗口过期，由超时那一手
+           推过去；「队伍」那一屏 meanwhile 已经写着 1/4 人 = **两套名单**）；
+        ② 队散了之后在同一个群再开一场 ⇒ 键又回到群上 ⇒ **被塞回那场没打完的旧仗**
+           （带着冻结在旧等级的面板与幽灵成员）。
+    ★ 口径（本轮定的这一条 —— 判据就是它）：**这一场的名单 = 开场那一刻站在场上的人**。
+      · 走的人**不在**这一场里（后入队的那些）⇒ 什么都不动；
+      · 走的人**在**这一场里、而这一场还剩 ≥2 人 ⇒ 只把他从这一场**摘掉**
+        （`members` 与 `sides["player"]` **一起**摘 —— `hp_of` 按 `members` 去 `sides` 找，
+        少摘一边就会在结算那一步当场抛），其余的人接着打；
+      · 摘完只剩 ≤1 人（或队长退了 = 队本身没了）⇒ 这一场**收掉**：键按名单分
+        （一个人那一场的键是 `<群>#<uid>`，不再是群）⇒ 留着就是下一批人踩的同一个坑。
+    ★ `after` = **这一步之后**还留在队里的名单（由调用方现算给过来）：队伍名单的真源是
+      `content/party.py`，本模块只照它给的名单收口，**不自己读档**（谁在队里只有一个口）。
+    ★ 返回 `{"action": "none"|"drop"|"reap", …}` —— 探针拿它当判据，生产里没人读这个返回值。
+    """
+    g = str(group_id or "")
+    u = str(uid or "")
+    st = load(g) if g else None
+    if st is None:
+        return {"action": "none", "why": "no-party-battle"}
+    mem = [str(x) for x in (st.get("members") or [])]
+    if u not in mem:
+        return {"action": "none", "why": "not-in-this-battle"}
+    rest = [m for m in (str(x) for x in (after or [])) if m != u]
+    if len(set(rest)) >= 2:
+        st["members"] = [m for m in mem if m != u]
+        sides = (st.get("battle") or {}).get("sides")
+        if isinstance(sides, dict):
+            sides["player"] = [a for a in (sides.get("player") or [])
+                               if str((a or {}).get("uid") or "") != u]
+        save(g, st)
+        return {"action": "drop", "key": g, "members": list(st["members"])}
+    clear(g)
+    return {"action": "reap", "key": g, "members": []}
+
+
+# ══════════════════════════════════════════════════════════════
 # 四、轮转（纯函数：谁该动 —— CTB 的自然顺序）
 # ══════════════════════════════════════════════════════════════
 def players_of(st) -> list:
