@@ -255,6 +255,236 @@ if _rule:
         (ok if [d["id"] for d in _r3] == [_out] else bad)("⑪ 次日第一铲又补 ⇒ %r" % ([d["id"] for d in _r3],))
         (ok if _r4 == [] else bad)("⑪ 这一铲自己就出了 ⇒ 不叠加 ⇒ %r" % (_r4,))
 print()
+# ══════════════════════════════════════════════════════════════
+# ⑫ ★ fxm5-gather-unique：`unique` 采集点**按档去重**（号角室石台 → 半截号角）
+#   病根（fxm2 留给主线那条 [裁]）：`gathering.json::gt_tw_search_4`（号角室 · `搜查` ·
+#     一天 3 遍）的池里 `i_horn_half w=100` —— 同一天按 `_left_after` 能翻两遍（第 3 遍
+#     「翻空了」）、跨天重置 ⇒ **一天最多再拿 1~2 件**；而同一件信物的**另一条路**
+#     （`dp_boss_minor`）从 fxm2 起已经**按档去重** ⇒ 同一件剧情信物两条渠道两种口径。
+#   真源（本批跟账的依据）：`22_旧哨塔_逐间设计_v1` §二·10 号角室「可做 **拿** 半截号角
+#     （信物 i_horn_half）」（**一次「拿」**，不是可反复翻的素材点；设计里它也没有
+#     「一天 3 遍」那一格）+ §二·12 塔顶「掉落 半截号角（**如果 10 房没拿**）」
+#     ⇒ 同一件信物每档最多一件 —— 与 fxm2 用的是**同一句话**、同一条口径。
+#   判据五条（每条都带两态 / 反证，不许永真）：
+#     ① 声明与范围：全仓只有 `gt_tw_search_4` 池里 `i_horn_half` **那一条目**写了 `unique`
+#        （★ 粒度是**条目**、不是整个点 —— 采集点的池里还混着材料/药品，整点去重会连
+#        `27_掉落的惊喜感与未鉴定 §四`「不消灭重复」那条一起顶掉）· schema 登记了条目这一格
+#     ② 真宿主真敲两态（固定钟 · 6 个档 · 同一站连敲 3 遍 = 一天的上限）：空袋那一臂出过号角；
+#        袋里先有号角那一臂**一遍都不出**，而别的条目照出（池没被排空）；
+#        袋里放齐**另外三样**那一臂与空袋那一臂**逐条（连回话）相同**（排的是「已有那件」，
+#        而不是「有背包」，也不是「同一点里别的东西」）
+#     ③ 零误伤：同形但**没写** `unique` 的点（塔内另外三处 `搜查`）带上它们的关键件 ⇒
+#        与空袋那一臂**逐条相同**（回话也逐字相同）
+#     ④ 反证：把那一条目上的声明从**实现体真读的那一份域表**上撤掉 ⇒ 袋里先有号角又出号角
+#        （再还原）
+#     ⑤ 跨渠道 + 静态守卫：全仓**每一条**出 `i_horn_half` 的渠道都带按档去重声明 ·
+#        `cmds_gather.py` 里 `unique` 只读两处 · 「手上有哪些件」只走 `loot.held_ids` 那一口
+# ══════════════════════════════════════════════════════════════
+print("⑫ ★ fxm5-gather-unique：`unique` 采集点按档去重（号角室石台 · 半截号角）")
+
+import ast as _ast12                                                              # noqa: E402
+import io as _io12                                                                # noqa: E402
+import json as _json12                                                            # noqa: E402
+from saintess_engine.host.runtime import Host                                     # noqa: E402
+
+_HORN12 = "i_horn_half"
+_PT12 = "gt_tw_search_4"                 # 号角室石台 —— 写了 `unique` 的那一点
+_PT12S = ("gt_tw_search_1", "gt_tw_search_2", "gt_tw_search_hall")   # 同形、没写（零误伤那一臂）
+_FIXED12 = 1790308800                    # 2026-09-25 12:00 +08:00（**固定钟** ⇒ 种子与「今天」无关）
+
+# ① 声明与范围（静态）：全仓只许「半截号角」那一条目写 `unique`，且 schema 里登记了这一格
+_decl12 = sorted({(gid, str(e.get("out"))) for gid, v in G.items()
+                  for e in (v.get("pool") or []) if e.get("unique")})
+_sch12 = os.path.join(str(REPO), "schemas", "gathering.schema.json")
+try:
+    _sprops12 = ((_json12.load(_io12.open(_sch12, encoding="utf-8"))
+                  .get("patternProperties", {}).get("^gt_[a-z0-9_]+$", {})
+                  .get("properties", {}).get("pool", {}).get("items", {}).get("properties", {})) or {})
+except Exception as _e12:                                                         # noqa: BLE001
+    _sprops12 = {}
+    bad("⑫ ① schema 读不到（%s）：%s" % (_sch12, _e12))
+(ok if (_decl12 == [(_PT12, _HORN12)] and "unique" in _sprops12) else bad)(
+    "★ ① 声明与范围：写了 `unique` 的**条目** = %s（只许 `(%s, %s)` 一处）｜ schema 登记了条目"
+    "这一格 = %s" % (_decl12 or "无", _PT12, _HORN12, "unique" in _sprops12))
+
+
+class _Ad12(object):
+    """三函数 + say（照 host-api 契约的最小适配器 —— 与 `probe_cmds` / `e2e_drive` 同形）。"""
+
+    def __init__(self, texts, uid, seed=None):
+        self.uid = uid
+        self._msgs = [{"uid": uid, "group_id": "g_c", "text": t, "is_group": True} for t in texts]
+        self.out = []
+        self.saved = seed
+
+    def recv(self):
+        return self._msgs.pop(0) if self._msgs else None
+
+    def load_player(self, uid):
+        return self.saved if uid == self.uid else None
+
+    def save_player(self, uid, data):
+        self.saved = dict(data) if isinstance(data, dict) else data
+
+    def say(self, to, text):
+        self.out.append(str(text))
+
+
+#: 档的形状照 `probe_cmds` ㉓ 那份（同一族真宿主真敲）；`node` 由每一臂自己给
+_SEED12 = {"cls": "cls_knight", "race": "human", "name": "试炼者", "level": 12, "exp": 0,
+           "gold": 0, "hp": 60, "loc": "old_watchtower", "node": "tower_horn_room",
+           "prev": [], "bag": {}, "equipped": {}, "codex": {}, "flags": {}}
+_UNIDS12 = ("u_h1", "u_h2", "u_h3", "u_h4", "u_h5", "u_h6")
+
+
+def _say12(node, bag, uids=_UNIDS12, times=3):
+    """真宿主真敲：`uids` 里每个档在 `node` 那站连敲 `times` 遍『搜查』。
+
+    返回 [(uid, [逐遍 {lines, got}])] —— `got` 是**那一刻背包的增量**（走真落账那条路）。
+    """
+    _db = os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp", "ast_probe_gather_u.db")
+    out = []
+    for _uid in uids:
+        try:
+            os.remove(_db)
+        except OSError:
+            pass
+        _ad = _Ad12(["搜查"] * times, _uid, seed=dict(_SEED12, node=node, bag=dict(bag)))
+        _h = Host(_ad, str(REPO), inject={"db_path": _db, "clock": lambda: _FIXED12})
+        _h.boot()
+        rows = []
+        for _i in range(times):
+            _b0 = dict((_ad.saved or {}).get("bag") or {})
+            _ad.out.clear()
+            _h.handle({"uid": _uid, "group_id": "g_c", "text": "搜查"})
+            _b1 = dict((_ad.saved or {}).get("bag") or {})
+            rows.append({"lines": list(_ad.out),
+                         "got": sorted((k, int(v) - int(_b0.get(k, 0))) for k, v in _b1.items()
+                                       if int(v) - int(_b0.get(k, 0)) > 0)})
+        out.append((_uid, rows))
+    return out
+
+
+def _horns12(arm):
+    """这一臂里「号角出现在哪几遍」（uid → 遍号列表）。"""
+    return {uid: [i + 1 for i, r in enumerate(rows) if any(k == _HORN12 for k, _n in r["got"])]
+            for uid, rows in arm}
+
+
+def _others12(arm, upto=2):
+    """这一臂头 `upto` 遍里拿到过哪些**别的**东西（除号角）。"""
+    return sorted({k for _uid, rows in arm for r in rows[:upto] for k, _n in r["got"] if k != _HORN12})
+
+
+print()
+# ② 真宿主真敲两态（同一批档 · 同一站 · 连敲 3 遍）
+_A12 = _say12("tower_horn_room", {})                        # 空袋那一臂
+_B12 = _say12("tower_horn_room", {_HORN12: 1})              # 袋里先有号角那一臂
+_C12 = _say12("tower_horn_room", {"i_junk_bone": 3, "i_set_sentry_horn": 1,
+                                  "i_potion_minor": 4})     # 袋里有「另外三样」那一臂
+_hA12, _hB12, _hC12 = _horns12(_A12), _horns12(_B12), _horns12(_C12)
+(ok if (any(_hA12.values()) and not any(_hB12.values())) else bad)(
+    "★ ② 真宿主真敲两态（固定钟 · 6 个档 · 号角室石台 · 连敲 3 遍）：空袋那一臂 号角出现在 %s"
+    " ⇒ 这条渠道照旧拿得到；袋里先有号角那一臂 %s ⇒ **一遍都不出**"
+    % ({k: v for k, v in _hA12.items() if v} or "（一遍都没有 —— 两态没牙）",
+       {k: v for k, v in _hB12.items() if v} or "一遍都没出"))
+(ok if _others12(_B12) else bad)(
+    "★ ② 别的条目照出（池没被排空）：袋里先有号角那一臂 拿到 %s" % (_others12(_B12),))
+def _shape12(arm):
+    """一臂的「逐 uid · 逐遍（拿到什么 + 回话）」—— 两臂对账用。"""
+    return [(uid, [(r["got"], r["lines"]) for r in rows]) for uid, rows in arm]
+
+
+(ok if (_shape12(_A12) == _shape12(_C12) and any(_hC12.values())) else bad)(
+    "★ ② 反证（声明在**条目**上 · 排的是「已有那件」不是「有背包」）：袋里放齐**另外三样**"
+    "（残骸 ×3 · 生锈的号角 ×1 · 伤药 ×4）⇒ 号角照出，且与空袋那一臂**逐条（连回话）相同**"
+    " —— 号角出现在 %s" % ({k: v for k, v in _hC12.items() if v},))
+(ok if all(rows[1]["got"] for _uid, rows in _A12) else bad)(
+    "★ ② 屏上那几行照旧（逐遍要点）：%s"
+    % " ｜ ".join("%s 第1遍 %s / 第2遍 %s / 第3遍 %s"
+                  % (uid, [x[0] for x in rows[0]["got"]] or "（空手）",
+                     [x[0] for x in rows[1]["got"]] or "（空手）",
+                     [x[0] for x in rows[2]["got"]] or "（空手）")
+                  for uid, rows in _A12[:2]))
+
+print()
+# ③ 零误伤：同形但没写 `unique` 的点 —— 带上它们的关键件，结果与空袋那一臂逐条相同
+_bad12 = []
+for _gid in _PT12S:
+    _pt = G.get(_gid) or {}
+    _pool = _pt.get("pool") or []
+    if not _pool:
+        _bad12.append((_gid, "点不在域里 / 池空"))
+        continue
+    _key = str(max(_pool, key=lambda e: int(e.get("w", 1) or 1)).get("out"))
+    _a3 = _say12(_pt["subarea"], {}, uids=("u_z1", "u_z2"))
+    _b3 = _say12(_pt["subarea"], {_key: 1}, uids=("u_z1", "u_z2"))
+    if [(uid, [(r["got"], r["lines"]) for r in rows]) for uid, rows in _a3] \
+            != [(uid, [(r["got"], r["lines"]) for r in rows]) for uid, rows in _b3]:
+        _bad12.append((_gid, _key, "两臂不同"))
+(ok if not _bad12 else bad)(
+    "★ ③ 零误伤：同形但**没写** `unique` 的 %d 处（%s）带上各自的关键件 ⇒ 与空袋那一臂"
+    "（连回话）**逐条相同**（坏 %s）"
+    % (len(_PT12S), " · ".join(_PT12S), _bad12 or "无"))
+
+print()
+# ④ 反证：把声明从**实现体真读的那一份域表**上撤掉 ⇒ 袋里先有号角又出号角（再还原）
+try:
+    from content import cmds_ast as _CA12
+except Exception as _e12b:                                                         # noqa: BLE001
+    _CA12 = None
+    bad("⑫ ④ content.cmds_ast 导不进来：%s" % (_e12b,))
+_hOff12, _hBack12 = {}, {}
+if _CA12 is not None:
+    _tbl12 = _CA12._data("gathering")                    # ★ 真源只读：这里改的是**进程内那一份**
+    _ent12 = next((e for e in (((_tbl12.get(_PT12) or {}).get("pool")) or [])
+                   if str(e.get("out")) == _HORN12), None)
+    if _ent12 is None:
+        bad("⑫ ④ 实现体那一份域表里找不到 `%s.%s` 那一条目" % (_PT12, _HORN12))
+    _had12 = _ent12.pop("unique", None) if _ent12 is not None else None
+    try:
+        _hOff12 = _horns12(_say12("tower_horn_room", {_HORN12: 1}, uids=("u_h1", "u_h2", "u_h3")))
+    finally:
+        if _ent12 is not None:
+            if _had12 is not None:
+                _ent12["unique"] = _had12
+            else:                                         # 撤之前本来就没有（不许留脏）
+                _ent12.pop("unique", None)
+    _hBack12 = _horns12(_say12("tower_horn_room", {_HORN12: 1}, uids=("u_h1", "u_h2", "u_h3")))
+    assert _ent12 is None or _ent12.get("unique") is True, "还原没落回去"
+(ok if (any(_hOff12.values()) and not any(_hBack12.values())) else bad)(
+    "★ ④ 反证（这一条判据有牙）：把 `unique` 从实现体那一份域表上撤掉 ⇒ 袋里先有号角**又出号角**"
+    "（%s）；还原后再跑仍是「一遍都不出」（%s）"
+    % ({k: v for k, v in _hOff12.items() if v} or "（撤掉也没出）",
+       {k: v for k, v in _hBack12.items() if v} or "一遍都没出"))
+
+print()
+# ⑤ 跨渠道 + 静态守卫：全仓每一条出「半截号角」的渠道都带按档去重声明
+_CH12 = []
+for _pid, _pv in sorted(DP.items()):
+    if any(str(e.get("out")) == _HORN12 for e in ((_pv.get("entries") or []) + (_pv.get("pool") or []))):
+        if not _pv.get("unique"):
+            _CH12.append(_pid)
+for _gid, _gv in sorted(G.items()):
+    for _e in (_gv.get("pool") or []):
+        if str(_e.get("out")) == _HORN12 and not _e.get("unique"):
+            _CH12.append("%s.%s" % (_gid, _e.get("out")))
+_src12g = _io12.open(os.path.join(str(REPO), "content", "cmds_gather.py"), encoding="utf-8").read()
+_tree12g = _ast12.parse(_src12g)
+_n12 = sum(1 for _node in _ast12.walk(_tree12g)
+           if isinstance(_node, _ast12.Constant) and _node.value == "unique")
+_h12 = sum(1 for _node in _ast12.walk(_tree12g)
+           if isinstance(_node, _ast12.Call) and getattr(_node.func, "attr", None) == "held_ids")
+(ok if (not _CH12 and _n12 == 2 and _h12 == 1) else bad)(
+    "★ ⑤ 跨渠道 + 静态守卫：出 `%s` 的渠道（掉落池 %s · 采集点条目 %s）**每一条都写了按档去重**"
+    "（漏声明的：%s）· `cmds_gather.py` 里 `unique` 只读 %d 处（判「有没有」+ 排那一条）·"
+    " `held_ids` 只调 %d 次"
+    % (_HORN12,
+       [k for k, v in DP.items() if v.get("unique")],
+       ["%s.%s" % (k, e.get("out")) for k, v in G.items() for e in (v.get("pool") or []) if e.get("unique")],
+       _CH12 or "无", _n12, _h12))
+
+print()
 
 print("按地图：%s" % by_map)
 print("结果：%s" % ("全绿 ✓" if not fails else "有红 ✗（%d）" % len(fails)))

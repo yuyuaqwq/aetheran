@@ -658,7 +658,8 @@
     "pool": [
       {
         "out": "i_horn_half",
-        "w": 100
+        "w": 100,
+        "unique": true
       },
       {
         "out": "i_set_sentry_horn",
