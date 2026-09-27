@@ -17,9 +17,14 @@
    一条声明，**引擎不用动**（设计案 §2.2 的全部理由）。
 ② **写口**：护盾开出来一律走**引擎的状态容器写入口**（`actors.open_entry`），不是
    `actor["shields"] = …` 那个要被删掉的独立容器。
-③ **两态**：引擎那半还没落到 main 之前，本包**照跑**（走旧容器，行为逐字不变）；
-   引擎那半一到（`open_entry` 认 `value=` 且承伤层改走容器遍历），本包**自动**改走
-   容器条目。判定只问引擎**形状**（签名 + 承伤层那张表），不认版本号。
+③ **形状门**（不是「两态兼容」）：判定只问引擎**形状**（`open_entry` 认不认 `value=`
+   + 承伤层那张表在不在），不认版本号、不 try/except 蒙。
+   ★ 2026-09-28：引擎那半**已落到 main**（`df4caf0`，`shields` 容器已删）⇒ 旧路
+     （`_open_shield_legacy` 写 `actor["shields"]`）**已随之删除**。按「不留兼容壳」：
+     形状门不成立时**当场抛**（旧引擎上跑 = 配置错），不悄悄退回一条死路 ——
+     留着它的话，护盾会变成一块**不掉的血**（容器删了没人写、吸收层也不读它）。
+     本仓既有的「两态」纪律（`content/cues.py::engine_has_cues()`）用于**判形状**，
+     不用于**留两条写口**。
 
 ★ 为什么写口用**关键字传参**
 ------------------------------------------------------------------
@@ -127,7 +132,7 @@ def absorb_keys_of(actor: dict) -> list:
 
 
 # ══════════════════════════════════════════════════════════════
-# ③ 写口：护盾开出来（两态各走各的那一条）
+# ③ 写口：护盾开出来（唯一一条路 = 容器条目）
 # ══════════════════════════════════════════════════════════════
 def open_shield(actor: dict, key: str, value: int, expire=None) -> dict:
     """给 `actor` 开一条吸收型条目（盾值 `value`，到期 `expire`），回那条条目。
@@ -136,13 +141,17 @@ def open_shield(actor: dict, key: str, value: int, expire=None) -> dict:
       `actors.open_entry`（引擎侧同批新增 `value` 形参，见 `open_entry`）：
       `stacks` / `value` / `expire` 三个格子全由这一口落 —— 内容侧**不自己拼 dict**
       （自己拼 = 绕过唯一写入口 = 形状一变就悄悄错位）。
-    ★ **旧 `shields` 容器那条路**（引擎那半还没到）：逐字照旧（`value` / `expire_at`），
-      与接线前一致。★ 这一支**只在形状门没开时**走。
+    ★ **旧 `shields` 容器那条路已删**（2026-09-28 · 引擎 `df4caf0` 落到 main 之后）：
+      引擎已删掉那个容器，留着这条写口就是**永不生效的壳** —— 护盾会变成一块不掉的血
+      （写进去没人读、吸收层也不看它）。形状门不成立 ⇒ **当场抛**（那是引擎版本配错）。
     """
     if not isinstance(actor, dict) or not key:
         raise AbsorbError("开吸收型条目要一个 actor 与一个非空状态键：%r" % (actor,))
     if not container_mode():
-        return _open_shield_legacy(actor, key, value, expire)
+        raise AbsorbError(
+            "引擎形状门不成立（open_entry 缺 value= / 承伤层没走 absorb_keys / _MUTABLE_KEYS "
+            "里还有 shields）—— 本包只支持收口后的引擎（main ≥ df4caf0）。"
+            "★ 不退回旧容器：那个容器引擎已删，写进去是一块不掉的血。")
     #: ★ 同源叠厚（同一状态键反复开 = 叠厚，与旧 `act_shield` 同口径）——
     #: 引擎那条 `open_entry` 是**覆盖**语义，所以叠厚由这一口自己做（取 max，不丢旧量）。
     old = (actor.get("effects") or {}).get(key)
@@ -157,37 +166,12 @@ def open_shield(actor: dict, key: str, value: int, expire=None) -> dict:
     return ACT.open_entry(actor, str(key), stacks=1, value=keep, expire=keep_exp)
 
 
-def _open_shield_legacy(actor: dict, key: str, value: int, expire) -> dict:
-    """旧路：写引擎那个要被删掉的 `shields` 容器（形状门没开时的唯一出路）。
-
-    ★ 字段名逐字照旧（`value` / `expire_at`）—— 引擎承伤层读的就是这两个
-      （`landing._apply_damage`：逐条扣 `value`、归零即删、`expire_at` 到期由
-      `schedule._settle_time_effects` 那段独立到期逻辑清）。**行为零变化**。
-    """
-    sh = actor.get("shields")
-    if not isinstance(sh, dict):
-        sh = actor["shields"] = {}
-    old = sh.get(str(key))
-    keep = max(int((old or {}).get("value") or 0), int(value))
-    exp = expire
-    if exp is None:
-        exp = (old or {}).get("expire_at")
-    elif (old or {}).get("expire_at") is not None:
-        exp = max(float(exp), float(old["expire_at"]))
-    entry = {"value": keep, "expire_at": exp, "halve": False}
-    sh[str(key)] = entry
-    return entry
-
-
 def shield_of(actor: dict, key: str) -> dict:
-    """读某一格吸收型条目（两态都认）—— 读口，**不写**。
+    """读某一格吸收型条目 —— 读口，**不写**（只认容器那一条路）。
 
-    ★ 探针与文案读它。容器那态读 `effects[key]`，旧路读 `shields[key]`。
+    ★ 探针与文案读它。读 `effects[key]`；引擎没给这格 ⇒ 空 dict（调用方按「没这盾」算）。
     """
-    if container_mode():
-        e = (actor.get("effects") or {}).get(str(key))
-        return e if isinstance(e, dict) else {}
-    e = (actor.get("shields") or {}).get(str(key))
+    e = (actor.get("effects") or {}).get(str(key))
     return e if isinstance(e, dict) else {}
 
 
@@ -200,9 +184,9 @@ def shield_value_of(actor: dict, key: str) -> int:
 
 
 def shield_expire_of(actor: dict, key: str) -> float:
-    """那一格什么时候到期（两态同口径：容器那态叫 `expire`，旧路叫 `expire_at`）。"""
+    """那一格什么时候到期（只认容器条目的 `expire`）。"""
     e = shield_of(actor, key)
-    raw = e.get("expire") if container_mode() else e.get("expire_at")
+    raw = e.get("expire")
     try:
         return float(raw) if raw is not None else 0.0
     except (TypeError, ValueError):
