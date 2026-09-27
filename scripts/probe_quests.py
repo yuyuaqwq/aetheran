@@ -2747,6 +2747,7 @@ print("── ★ fxm3-questsnap ㊴：`require` 判「接活后新达成」（�
 from content import cmds_more as _CMO39                                  # noqa: E402
 from content.town import _func_node as _FN39                             # noqa: E402
 from content.cmds_ast import T as _T39                                   # noqa: E402（槽位渲染：判据自己拼期望）
+from content.cmds_ast import exp_need as _EXP_NEED39                     # noqa: E402（经验曲线唯一口）
 
 _BOARD39 = _FN39("board")
 _DLG39 = st.domain("dialogues") or {}
@@ -2839,15 +2840,36 @@ def _mk39(x, k):
 
 
 _b39, _l39, _base39 = [], [], [0]
+
+
+def _tot39(p):
+    """档上的**累计经验**（把升级时消耗掉的那些也算回来）—— 曲线不另写一份，走 `exp_need` 一个口。
+
+    ★ 为什么判据要看累计（2026-09-27 修）：`add_exp` 会**跨级结转**（一次加 100、当级只要 40
+      ⇒ 升一级、余 60）⇒ 直接比「`exp` 那一格的差」会把升级消耗误报成「少发了奖励」。
+      改前这一条就是这么错的：21 条支线/副业的 `reward_exp` = 100 而它们的主人是 1 级
+      （40 升 2 级）⇒ 全被报成「经验 +60（应 +100）」，连带「再交一次又动了档」。
+    """
+    lv = int(p.get("level") or 1)
+    return sum(int(_EXP_NEED39(i)) for i in range(1, max(1, lv))) + int(p.get("exp") or 0)
+
+
 for _k39, _x39 in sorted(QE.items(), key=lambda kv: int(kv[1].get("order") or 0)):
     _reqs39 = CQ._require_of(_x39)
     if not _reqs39:
         continue                              # 没写 require 的 4 条老支线不在这条判据的范围（走死路径）
     _n39 = int(_x39["order"])
     _reql = len(_reqs39)
+    # ★ 条件的两种口径（取舍写在 `cmds_quest._req_ok` 的 docstring 里）：
+    #   · **增量型**（visit / kill / item / cook / talk / ask）⇒ 判「接活后新达成」
+    #   · **状态型**（enhance：「有一件装备强化到 ≥ n」）⇒ 判**绝对值**（有意不判增量：
+    #     真源写的就是「把一件装备强化到 +3」这个状态；档上只有等级、没有「强化成功次数」那本账）
+    _state39 = [r for r in _reqs39 if r.get("kind") == "enhance"]
+    _incr39 = [r for r in _reqs39 if r.get("kind") != "enhance"]
     p = _mk39(_x39, _k39)
     _wantb = {CQ._ckey(r): CQ._metric(p, r) for r in _reqs39}       # 接活**那一刻**每条条件的读数
     _e0, _g0 = int(p.get("exp") or 0), int(p.get("gold") or 0)
+    _t0 = _tot39(p)
     _acc39 = _drive(CQ.quest_accept, p, "接 %d" % _n39)
     if _k39 not in ((p.get("flags") or {}).get("quests_active") or []):
         _b39.append("%s 接不下：%s" % (_k39, _acc39[:2]))
@@ -2858,25 +2880,83 @@ for _k39, _x39 in sorted(QE.items(), key=lambda kv: int(kv[1].get("order") or 0)
     elif _base != _wantb:
         _b39.append("%s 基线不是「接活那一刻的读数」：%s ≠ %s" % (_k39, _base, _wantb))
     _base39[0] += 1
-    # ── 态一：接活前把活干完 ⇒ `看` 还差 · `提示` 不说办完了 · `交` 拦住
+
+    # ── 态一：接活前把活干完 ⇒ 增量型逐条拦住 · 状态型有意仍算达标 · 判定／呈现／『交』同一把尺
     _o39 = _drive(_CMO39.board_show, p, "看 %d" % _n39)
-    _lack39 = [ln for ln in _o39 if "还差" in ln]
-    _unm39 = CQ._unmet(p, _x39, _k39)
-    if len(_lack39) != _reql:
-        _b39.append("%s（`看 %d`）「还差」说了 %d 条（条件 %d 条）：%s"
-                    % (_k39, _n39, len(_lack39), _reql, _o39[-4:]))
-    if not _unm39 or any(("  " + ln) not in _o39 for ln in _unm39):
-        _b39.append("%s（`看 %d`）缺的每一条没逐条说清（缺项 %s）：%s"
-                    % (_k39, _n39, _unm39, _o39[-4:]))
+    # ★ 接活那一刻**真发到手上**的那几件（`quests.<id>.give`）—— 有意算「接活后到手」：
+    #   真源 `17 §QUEST_SIDE25_STORY` 写着「小满把那块石头塞给你」⇒ 石头是接活那一下到包的
+    #   （`_set_base` 就在 `_hand_over` **之前**，正是为了让这一份算进「接活后新达成」）。
+    #   除它以外，接活前干完的活**一律不许**算 —— 这一条就是本判据要钉死的那条线。
+    _give39 = {}
+    for _g39 in (_x39.get("give") or []):
+        _iid39 = str((_g39 or {}).get("item") or "")
+        if _iid39:
+            _give39[_iid39] = _give39.get(_iid39, 0) + int((_g39 or {}).get("n") or 1)
+    for _r39 in _incr39:
+        _base_r39 = CQ._base_at(p, _k39, _r39)
+        _growth39 = CQ._metric(p, _r39) - _base_r39          # 「接活后新达成」的量
+        _give_n39 = (_give39.get(str(_r39.get("item") or ""), 0)
+                     if _r39.get("kind") == "item" else 0)
+        _expect39 = _give_n39 >= CQ._n_of(_r39)   # 该不该达标：只有「接活那一下真到手的」算
+        if _growth39 > _give_n39:                 # 接活前干完的活被算进进度 ⇒ 白拿
+            _b39.append("%s 接活前干完的活被算成「接活后新达成」（该拦住）：%s"
+                        "（读数 %d · 基线 %d · 接活给的 %d）"
+                        % (_k39, CQ._ckey(_r39), CQ._metric(p, _r39), _base_r39, _give_n39))
+        if CQ._req_ok(p, _r39, _k39) != _expect39:
+            _b39.append("%s 条件判定与「接活给的 + 目标」对不上：%s（该 %s · 实 %s）"
+                        % (_k39, CQ._ckey(_r39), _expect39, CQ._req_ok(p, _r39, _k39)))
+    _met39 = [r for r in _reqs39 if CQ._req_ok(p, r, _k39)]
+    _unmet39 = [r for r in _reqs39 if not CQ._req_ok(p, r, _k39)]
+    # 版面：**没满足的**每条都得逐行说出来；**已满足的**一行都不许留（呈现跟判定同一把尺子）
+    for _r39 in _unmet39:
+        for _ln39 in CQ._req_lines(p, _r39, _k39):
+            if ("  " + _ln39) not in _o39:
+                _b39.append("%s（`看 %d`）没满足却没逐行说清：%s 缺「%s」：%s"
+                            % (_k39, _n39, CQ._ckey(_r39), _ln39, _o39[-4:]))
+    for _r39 in _met39:
+        for _ln39 in CQ._req_lines(p, _r39, _k39):
+            if ("  " + _ln39) in _o39:
+                _b39.append("%s（`看 %d`）已满足却还报「还差」：%s（%s）"
+                            % (_k39, _n39, CQ._ckey(_r39), _ln39[:28]))
+    # 『提示』跟着判定走：还有没满足的 ⇒ 不许说办完了；全满了 ⇒ 必须说办完了
     _h39 = CQ._hint_lines(p)
-    if not _h39 or any(_T39("SYS_HINT_JOB_READY", order=_n39) in ln for ln in _h39):
-        _b39.append("%s 接活后（活已干完）『提示』却说办完了：%s" % (_k39, _h39[:3]))
+    _ready39 = any(_T39("SYS_HINT_JOB_READY", order=_n39) in ln for ln in _h39)
+    if _unmet39 and _ready39:
+        _b39.append("%s 接活后还有 %d 条没满足，『提示』却说办完了：%s"
+                    % (_k39, len(_unmet39), _h39[:3]))
+    if not _unmet39 and not _ready39:
+        _b39.append("%s 条件全满足了，『提示』却没说办完了：%s" % (_k39, _h39[:3]))
     _pay0 = _drive(CQ.quest_deliver, p, "交 %d" % _n39)
-    if any(ln.startswith("交了") for ln in _pay0) \
-            or _k39 in ((p.get("flags") or {}).get("quests_done") or []) \
-            or int(p.get("exp") or 0) != _e0 or int(p.get("gold") or 0) != _g0:
-        _b39.append("★ %s「%s」：**接活前就把活干完，接活后一句就交掉了（白拿经验/铜板）**：%s"
-                    % (_k39, _x39["name"], _pay0[:3]))
+    if _unmet39:
+        # 判定说还差 ⇒ 『交』必须拦住、档上的经验／铜板／已交名单一个字都不许动
+        if any(ln.startswith("交了") for ln in _pay0) \
+                or _k39 in ((p.get("flags") or {}).get("quests_done") or []) \
+                or int(p.get("exp") or 0) != _e0 or int(p.get("gold") or 0) != _g0:
+            _b39.append("★ %s「%s」：**接活前就把活干完，接活后一句就交掉了（白拿经验/铜板）**：%s"
+                        % (_k39, _x39["name"], _pay0[:3]))
+            continue
+    else:
+        # ── 条件在接活那一刻**就**全达标 ⇒ 两种合法来源：状态型（enhance）· 接活那一下真给的
+        #    （`give`）⇒ **有意**：接活后一句就交得掉（这就是上面那条线钉住的边界）
+        if not any(ln.startswith("交了") for ln in _pay0):
+            _b39.append("%s 条件在接活那一刻就全达标（状态型／接活给的）却交不掉：%s"
+                        % (_k39, _pay0[:3]))
+            continue
+        _d0 = _tot39(p) - _t0
+        _dg0 = int(p.get("gold") or 0) - _g0
+        if _d0 != int(_x39["reward_exp"]) or _dg0 != int(_x39["reward_gold"]):
+            _b39.append("%s 状态型那一跳奖励没照单入档：经验 %+d（应 +%d）· 铜板 %+d（应 +%d）"
+                        % (_k39, _d0, _x39["reward_exp"], _dg0, _x39["reward_gold"]))
+        _pay0b = _drive(CQ.quest_deliver, p, "交 %d" % _n39)
+        if any(ln.startswith("交了") for ln in _pay0b) \
+                or _tot39(p) != _t0 + int(_x39["reward_exp"]) \
+                or int(p.get("gold") or 0) != _g0 + int(_x39["reward_gold"]):
+            _b39.append("%s 状态型那一跳之后再交一次又动了档（奖励只许发一次）：%s"
+                        % (_k39, _pay0b[:3]))
+        _l39.append("★ 有意缺口 · %s「%s」：状态型条件（%s）接活前已达标 ⇒ 接活后一句就能交"
+                    "（**不判增量** —— 取舍写在 `_req_ok` 的 docstring；要改口径得先有"
+                    "「强化成功次数」那本账）" % (_k39, _x39["name"],
+                                             "/".join(CQ._ckey(r) for r in _state39)))
         continue
     # ── 态二：接活后**真干一次** ⇒ 交得掉 · 奖励只发一次
     for _r39 in _reqs39:
@@ -2884,7 +2964,7 @@ for _k39, _x39 in sorted(QE.items(), key=lambda kv: int(kv[1].get("order") or 0)
             _b39.append("%s：条件 %s 推不动（造不出「接活后再干一次」的账）"
                         % (_k39, CQ._ckey(_r39)))
     _pay1 = _drive(CQ.quest_deliver, p, "交 %d" % _n39)
-    _de = int(p.get("exp") or 0) - _e0
+    _de = _tot39(p) - _t0
     _dg = int(p.get("gold") or 0) - _g0
     _rec39 = ((p.get("flags") or {}).get("quests") or {}).get(_k39) or {}
     if not any(ln.startswith("交了") for ln in _pay1):
@@ -2897,14 +2977,14 @@ for _k39, _x39 in sorted(QE.items(), key=lambda kv: int(kv[1].get("order") or 0)
                     % (_k39, _k39, _rec39.get("step"), _reql))
     _pay2 = _drive(CQ.quest_deliver, p, "交 %d" % _n39)
     if any(ln.startswith("交了") for ln in _pay2) \
-            or int(p.get("exp") or 0) != _e0 + int(_x39["reward_exp"]) \
+            or _tot39(p) != _t0 + int(_x39["reward_exp"]) \
             or int(p.get("gold") or 0) != _g0 + int(_x39["reward_gold"]):
         _b39.append("%s 再交一次又动了档（奖励只许发一次）：%s" % (_k39, _pay2[:3]))
     if str(_x39.get("chain")) == "main":
         _l39.append("主%-2d %-7s 条件 %d 条（%s）：接活（活已干完）⇒ 还差 %d 条 + 拦住 · "
                     "接活后真干一次 ⇒ 交了（经验 +%d 铜板 +%d · 再交不动档）"
                     % (_n39, _x39["name"], _reql, "/".join(str(r.get("kind")) for r in _reqs39),
-                       len(_lack39), _de, _dg))
+                       len(_unmet39), _de, _dg))
 # ── ⑤ 老档兼容（**有意差异登记**）：没有基线 ⇒ 判定与改前逐字节相同（= 改前那一版）
 _old39 = []
 for _k9, _n9, _why in (("q_main_03", 3, "到过三条带"), ("q_main_04", 4, "万事俱备"),
