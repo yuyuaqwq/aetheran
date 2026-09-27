@@ -2183,21 +2183,25 @@ try:
     _f_item = _field23(gid="")
     _o_item2 = _direct23(CBAT23.battle_item, _p_item, "使用 伤药")
     _used_left2 = (_p_item.get("bag") or {}).get(_POT23)
+    _f_item2 = _field23(gid="")
     _o_none = _direct23(CBAT23.battle_item, dict(_BASE23, bag={}), "使用 伤药")
     if _o_item[:1] != [_MEET23] \
             or _r("COMBAT_ITEM_HEAD", name="伤药") not in _o_item \
             or _used_left != 2 \
-            or not (_r("COMBAT_ITEM_CAP", name="伤药") in _o_item2) \
+            or _o_item2.count(_r("COMBAT_ITEM_CAP", name="伤药")) != 1 \
+            or _r("COMBAT_ITEM_HEAD", name="伤药") in _o_item2 \
             or _used_left2 != 2 \
             or _f_item is None or int(_f_item.get("items_used", {}).get(_POT23, 0)) != 1 \
+            or _f_item2 is None or int(_f_item2.get("hands") or 0) != 2 \
             or len([ln for ln in _o_item if "伤药" in ln and "喝下" in ln]) != 1:
         _B23.append(("用物 上限那一档", _o_item[:3], _used_left, _used_left2,
-                     [ln for ln in _o_item if "喝下" in ln]))
+                     [ln for ln in _o_item if "喝下" in ln], _o_item2[:3]))
     if _o_none != [_r("COMBAT_ITEM_BAD", name="伤药")]:
         _B23.append(("用物 没带", _o_none))
     _clear23(gid="")
     chk("★ `使用 <药>`（战斗口径 · 直调 · G2 起一手一手）：第 1 手真喝（背包 3 → %s）· "
-        "同一场第 2 手出「%s」并回落成普攻（背包仍是 %s）· 没带就一句实话（不开打）"
+        "同一场第 2 手**开口就说**「%s」（这一手照花、按普攻落；不再先报「备在手边」"
+        "—— fix-s 之前那句要等真轮到你才出，中间隔着别的日志）· 背包仍是 %s · 没带就一句实话（不开打）"
         % (_used_left, (TX.get("COMBAT_ITEM_CAP") or {}).get("value", "")[:10], _used_left2),
         not [x for x in _B23 if str(x[0]).startswith("用物")],
         "%s" % [x for x in _B23 if str(x[0]).startswith("用物")][:2])
