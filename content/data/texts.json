@@ -6362,5 +6362,17 @@
     ],
     "category": "系统",
     "desc": "探索 · **掷空**那一句的另一种（fxexp）：脚下这一站**有拾取点**（采集点声明）时，把现成的点列出来（`list` 由现成槽位 SYS_SRC_GATHER 逐点拼，动作词走 SYS_GATHER_VERB_*）—— 提示不空手。"
+  },
+  "SYS_GUARD_REGISTER": {
+    "value": "未找到你的角色档 —— 请先创建角色。",
+    "params": [],
+    "category": "系统",
+    "desc": "P-11 · 内置 `player` 守卫（没建档）拦下的那一句 —— 引擎 `guard_text_fn` 的供体之一（引擎给的中性键 `guard.register_missing`）。逐字 = 宿主改前 `main.py` 那两句之一（宿主面改成只传键，玩家看到的字一个没动）。"
+  },
+  "SYS_GUARD_BATTLE": {
+    "value": "你现在不在战斗中。",
+    "params": [],
+    "category": "系统",
+    "desc": "P-11 · 内置 `battle` 守卫（不在战斗中）拦下的那一句 —— 引擎 `guard_text_fn` 的供体之一（引擎给的中性键 `guard.battle_missing`）。逐字 = 宿主改前 `main.py` 那两句之一。"
   }
 }

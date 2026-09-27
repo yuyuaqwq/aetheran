@@ -12,6 +12,7 @@
 | `action_base_fn` | `content/rules/action_base.json` 的 `cast` 表 | 行动类别 → 第一段基准耗时（刻）|
 | `recover_base_fn` | `content/rules/action_base.json` 的 `recover` 表 | 行动类别 → 第二段基准耗时（刻）|
 | `route_miss_text_fn` | `content/miss_text.py`（槽位 `SYS_CMD_MISS`） | 路由未命中的回话（P-54 · 引擎**必需注入**，不装 ⇒ 玩家敲错一个词一句话都拿不到）|
+| `guard_text_fn` | `content/guard_text.py`（槽位 `SYS_GUARD_REGISTER` / `SYS_GUARD_BATTLE`） | 内置守卫（`player` / `battle`）拦下时的回话（P-11 · 宿主只传**中性键**，句子在本包 texts 域）|
 | `recover_model_fn` | 委托声明 `F6_act_time` | 第二段的时间模型（与第一段同一形状）|
 
 ★ 零双源纪律：本文件不手写任何公式或常数；钳位归声明的 `guard`/`clamp`，
@@ -187,6 +188,24 @@ def install_engine():
     if config.optional_hook("route_miss_text_fn") is None:
         raise config.EngineNotConfigured(
             "route_miss_text_fn 没装配上：引擎 config 不认识这个口（引擎版本旧？）")
+    # ★ P-11（2026-09-27）内置守卫（`player` / `battle`）拦下时的回话：**句子搬进包**了 ——
+    #   宿主 `main.py` 那两个参数改传**中性键**（引擎 `host/runtime.py::GUARD_KEYS`：
+    #   `guard.register_missing` / `guard.battle_missing`），句子由本包 texts 域渲染
+    #   （宿主面因此零游戏词，宿主自己的 `check_host_boundary.py` 才可能全绿）。
+    #   引擎那一头三态 fail-closed：装了本口 ⇒ 那个值当键用（答不上来当场抛）；
+    #   没装本口 ⇒ 值当字面量（老宿主逐字不变），但值**恰好是中性键** ⇒ 抛。
+    #   ⇒ 本包不挂这个口，宿主传的那两个键就**当场抛**（引擎既不编兜底、也不把键投给玩家）。
+    #   ★ 装配期对账（fail-closed）：映射的键集 == 引擎的中性键全集 + 两条槽位都真有字
+    #     （缺一条 ⇒ 守卫拦下时玩家拿到的是抛错，不是一句人话）。
+    from . import guard_text as _GUARD
+    _GUARD.check_domain()
+    config.mount(guard_text_fn=_GUARD.line)
+    # ★ 反「静默不装」（同 route_miss 那条）：`config.set_hook` 对**不认识的名字静默忽略**
+    #   ⇒ 装完回读一次：读不回来 = 引擎不认识这个口（版本旧）—— 症状是「守卫一拦就抛」，
+    #   要等线上才照得出来，所以在这里当场现形。
+    if config.optional_hook("guard_text_fn") is None:
+        raise config.EngineNotConfigured(
+            "guard_text_fn 没装配上：引擎 config 不认识这个口（引擎版本旧？）")
     _MOUNTED = True
 
 

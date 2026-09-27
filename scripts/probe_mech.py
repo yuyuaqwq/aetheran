@@ -1424,12 +1424,15 @@ _dirty = [ln for ln in (_git.stdout or "").splitlines() if ln.strip()]
 #     docs-only 提交时那写法会算出「代码 无」而**假红**。改成**自基准提交起 diff**
 #     （`<base>..HEAD` 的并集 —— 与「本批落了几笔」无关，且扫的面更宽）。
 #     ★ 换批时改两处：`_ENGINE_BASE`（本批**开工前**引擎的 HEAD）与 `_want_touched`。
-_ENGINE_BASE = "2c31c54"
-_want_touched = sorted(["extends/ext_combat/battle/battle.py",
-                        "extends/ext_combat/battle/landing.py",
-                        "extends/ext_combat/battle/serialize.py",
-                        "tests/test_battle_text_inject.py",
-                        "tests/test_cross_hand_state.py"])
+#   ★ P-11（2026-09-27）**换批**：本批的引擎改动 = 内置守卫拦截句读口那三份
+#     （`config.py` 新增 `guard_text_fn` 读口 · `host/runtime.py` 新增 `GUARD_KEYS` +
+#     `Host._guard_text` 三态 · `tests/test_host_contract.py` 那 16 条判据）——
+#     本包 `content/guard_text.py` 直接 `import GUARD_KEYS` ⇒ 换批必须跟着前移基准，
+#     否则这两个探针会把「本批的引擎改动」误判成越界。**强度不变**（代码落点多一个就红）。
+_ENGINE_BASE = "f31ee59"
+_want_touched = sorted(["saintess_engine/config.py",
+                        "saintess_engine/host/runtime.py",
+                        "tests/test_host_contract.py"])
 _committed = {p for p in subprocess.run(
     ["git", "diff", "--name-only", "%s..HEAD" % _ENGINE_BASE], cwd=ENGINE,
     capture_output=True, text=True).stdout.split() if p}
