@@ -14,6 +14,7 @@
 | `route_miss_text_fn` | `content/miss_text.py`（槽位 `SYS_CMD_MISS`） | 路由未命中的回话（P-54 · 引擎**必需注入**，不装 ⇒ 玩家敲错一个词一句话都拿不到）|
 | `guard_text_fn` | `content/guard_text.py`（槽位 `SYS_GUARD_REGISTER` / `SYS_GUARD_BATTLE`） | 内置守卫（`player` / `battle`）拦下时的回话（P-11 · 宿主只传**中性键**，句子在本包 texts 域）|
 | `recover_model_fn` | 委托声明 `F6_act_time` | 第二段的时间模型（与第一段同一形状）|
+| `cue_subs_fn` | `content/cues.py::cue_subs`（订阅表**装配期从引擎 `CUE_NAMES` 现生成**）| 表现事件（cue）订阅：引擎侧 cue 迁移下，已迁移点位的那一行由本包渲染（不装 = 引擎走旧路）|
 
 ★ 零双源纪律：本文件不手写任何公式或常数；钳位归声明的 `guard`/`clamp`，
 本文件只负责喂变量。速度形状是内容侧的选择（宪法 F6），不是引擎规则。
@@ -95,6 +96,7 @@ def install_engine():
     from ext_combat.battle import formulas as _formulas   # 引擎自带纯公式模块（引擎侧，非内容）
     from . import skills_lookup as _SL                     # 技能取件口 + kind 词表（同一份真源）
     from . import mech as _MECH                            # ★ fxmech：E5/E6 两条供体在这个模块里
+    from . import cues as _CUES                            # ★ cue 订阅表（引擎侧 cue 迁移的内容半边）
     config.mount(
         formulas=_formulas,                     # ★ 缺了它引擎走 _NullFormulas：伤害算不出来
         formula_table_fn=lambda: tbl,
@@ -132,7 +134,20 @@ def install_engine():
                         "exprs": ["atk*1"],
                         "cast": {"base": 60}, "recover": {"base": 0}, "range": 1, "mp": 0,
                         "_basic": True},
+        # ★ cue（2026-09-27）：表现事件（引擎把「结算里顺手拼玩家文案」改成发 cue）——
+        #   已迁移点位的那一行由**本包订阅者**渲染，措辞仍在 texts 域（`battle_text.json`）。
+        #   订阅表**不在这里写**、也不是手抄名单：`content/cues.py::cue_subs` 在装配期
+        #   现读引擎的 `CUE_NAMES` 生成 ⇒ 引擎每加一条点位，本包自动跟上；那条点位在本包
+        #   没有对应文案格时，装配期当场点名抛（`CueSubsError`，绝不静默丢那一行）。
+        cue_subs_fn=_CUES.cue_subs,
     )
+    # ★ 反「静默不装」（同 route_miss / guard_text 那两条）：`config.set_hook` 对**不认识的名字
+    #   静默忽略 ⇒ 装完回读一次。★ 只在引擎树**真有 cue 形状**时才要求（`ext_combat.battle.cues`
+    #   导得进来）：引擎主线还没合这个形状时本包照跑（那时已迁移点位内部落回 `render_via`，
+    #   而那张表也是本包的 ⇒ 屏上逐字节不变），不能因为「引擎版本旧」把整包拦死。
+    if _CUES.engine_has_cues() and config.optional_hook("cue_subs_fn") is None:
+        raise config.EngineNotConfigured(
+            "cue_subs_fn 没装配上：引擎认识 cue 形状，却不认这个口（引擎 config 版本旧？）")
     # ★ B3-27：机制那两张表 —— 「技能 mech 名词 → 引擎动词」（EFFECT_ACTIONS）与
     #   「状态语义」（EFFECT_RULES）。声明表**不能走 mount**（走的是 `load_game_rules`）。
     #   同一张真源：`content/rules/skill_mech.json`；出口只有一个：`content/mech.py`。

@@ -145,10 +145,19 @@ class _QuietOnce:
     def render_or(self, key, default, /, **slots):
         if self._armed and key == _ENGINE_DAMAGE_KEY:
             self._armed = False
-            return ""                     # 引擎照 append ⇒ 调用方剔掉这一格空串（见下）
+            return ""                     # 旧路（`render_via`）：引擎照 append ⇒ 调用方剔空串
+                                          # 新路（cue）：总线 `_render` 见到空串**直接不出行**
         if self._t is None:               # 没注入表 ⇒ 与 `render_or(None, …)` 同一条路
             return safe_format(default, slots)
         return self._t.render_or(key, default, **slots)
+
+    def __contains__(self, key) -> bool:
+        """★ 「表里有没有这一格」—— cue 那条路走 `render_required`/`text_hit`，它**问的就是这一句**。
+
+        缺了它：`key in self` 抛 `TypeError` ⇒ 引擎按「答不出 = 没有」处理 ⇒ 每个 cue 都出一行
+        坏数据（表现层静悄悄地全坏）。替身表必须对这两个口（`render_or` / `__contains__`）都成立。
+        """
+        return self._t is not None and key in self._t
 
     def __getattr__(self, name):          # 自检口透传（它不是表，只是这一笔的遮挡）
         if self._t is None:
@@ -158,14 +167,27 @@ class _QuietOnce:
 
 @contextlib.contextmanager
 def quiet_engine_damage(battle):
-    """★ **这一调** `LD.deal_damage` 里的引擎通用伤害行被顶掉（返回空串）。
+    """★ **这一调** `LD.deal_damage` 里的引擎通用伤害行被顶掉（旧路返回空串 / cue 路不出行）。
 
     用法（`content/mech.py::_self_cut`）：记下日志长度 → `with` 里落地 → 把新增里那格
     **空串**剔掉（引擎把渲染结果无条件 append 进 logs）⇒ 玩家那一屏只剩专用行一行。
+
+    ★ 2026-09-27（引擎侧 cue 迁移）：引擎把 `battle.landing.damage` 那一行改成**发 cue** ——
+      于是它渲染走的是 **cue 总线手里那张表**（`Build` 那一刻抓走的引用），光换 `battle.text`
+      **顶不掉**（实测：自付那一笔会多出一行「💥 … 受到 N 点伤害！」，与专用行重复）。
+      所以总线在 ⇒ **两张一起换**（同一个替身，共用一个「一次性」开关），还原时两张一起还。
+      总线不在（引擎树还没合 cue 形状 / 这场战斗没接 cue）⇒ 行为与接线前逐字相同。
     """
     _orig = getattr(battle, "text", None)
-    battle.text = _QuietOnce(_orig)
+    _bus = getattr(battle, "cues", None)
+    _bus_tbl = getattr(_bus, "table", None) if _bus is not None else None
+    _guard = _QuietOnce(_orig)
+    battle.text = _guard
+    if _bus is not None:
+        _bus.table = _guard
     try:
         yield
     finally:
         battle.text = _orig
+        if _bus is not None:
+            _bus.table = _bus_tbl
