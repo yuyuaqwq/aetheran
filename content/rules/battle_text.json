@@ -30,6 +30,7 @@
     "battle.effects.shield_gain": "COMBAT_EFFECTS_SHIELD_GAIN",
     "battle.effects.shield_pct": "COMBAT_EFFECTS_SHIELD_PCT",
     "battle.effects.stack_active": "COMBAT_EFFECTS_STACK_ACTIVE",
+    "battle.effects.stack_add": "COMBAT_EFFECTS_STACK_ADD",
     "battle.effects.stack_applied": "COMBAT_EFFECTS_STACK_APPLIED",
     "battle.effects.stack_set": "COMBAT_EFFECTS_STACK_SET",
     "battle.effects.stack_short": "COMBAT_EFFECTS_STACK_SHORT",

@@ -6575,6 +6575,17 @@
     "category": "战斗",
     "desc": "引擎槽位 `battle.effects.stack_active`（`extends/ext_combat/battle/effects.py:518` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
   },
+  "COMBAT_EFFECTS_STACK_ADD": {
+    "value": "✦ {key} {n}{cap}（+{amount}）",
+    "params": [
+      "amount",
+      "cap",
+      "key",
+      "n"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.effects.stack_add`（`extends/ext_combat/battle/effects.py:446` 的兑底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
   "COMBAT_EFFECTS_STACK_APPLIED": {
     "value": "💫 {name} 被【{key}】{turns} 刻！",
     "params": [
