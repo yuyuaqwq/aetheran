@@ -224,6 +224,24 @@ P-25 §② 剩下的 11 条支线里，**能按真源文档补上正当条件的
    **真实进度**为准）、写端走 `content/prog.resync`（接 / 交 / 放弃那三处照真实进度重写）。
    判据：`scripts/probe_qloop.py` ⑨（写端三拍 + 读端真搭话 + 两条反证：没做到 ⇒ 旗标没写且
    那句出不来；只塞一个脏旗标 ⇒ 那句**照样**出不来）。
+
+★ fxm3-questsnap（本波）：`require` 判「**接活后**新达成」（进度基线）
+--------------------------------------------------------------------
+【现象】三路试玩复现：主线 3「三张牌」只要**到过三条带**就能交（`看 3` 一行「还差」都没有、
+  `提示` 直接说「办完了」、`交 3` 白拿 **经验 118 / 铜板 30**），三条带的活一件没做；
+  主 4 交掉 +330 经验；主 11 交掉 **+4276**（与 `reward_exp` 逐字相等）。
+【根因】`require` 查的是**历史态**（历史上到过 / 打过 / 采过就算数），而「接活那一刻」没有基线
+  ⇒ 接活**前**干过的活也算进任务进度。
+【真源】`06_第一阶段垂直切片/24_任务线_v1.md §一` 每一块的「步骤」都是**接了之后要做的那几拍**
+  （主 3：「① 玛莎给三张委托（三条带各一张）② **各完成一次**（打怪/采集/送信）③ 回来交活」）
+  —— 是**代码没跟上文案**，真源一个字不动。
+【修法】接活那一下给这条委托落一份**进度基线** `flags.quests[<id>]["base"]`（`_set_base`，
+  在 `_hand_over` 之前 = 接活时塞到手上的东西算「接活后到手」）；判定与呈现一律走
+  「现在 − 基线」（`_since`）。读数按机器键记（`_ckey`），条件换顺序不影响基线。
+【老档】没有基线的档（本批之前接的活）⇒ 基线按 0 算，判定与改前**逐字节相同**；要更严
+  （缺基线一律拦住）只改 `_base_at` 一处 —— 取舍写在那两处的 docstring 里。
+【判据】`scripts/probe_quests.py` ㊳（三态：接活前干完 ⇒ 拦住 · 接活后真干一次 ⇒ 交得掉且
+  奖励只发一次 · 反证：把 `_set_base` 关掉 ⇒ 同一批当场红；含全 12 条主线的逐条矩阵）。
 """
 from __future__ import annotations
 
@@ -398,15 +416,151 @@ def _n_of(r):
         return 1
 
 
-def _been(p, loc, node=""):
-    """去过吗？—— 档上足迹两格都算：`foot.nodes`（第一回到）与 `foot.visits`（去过几回）。"""
+def _num(v) -> int:
+    """一格计数 → 非负整数（认不出的当 0 —— 档上这几本账只许往前长）。"""
+    try:
+        return max(0, int(v or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _visit_have(p, loc, node="") -> int:
+    """去过这一站 / 这张图的**趟数**（足迹两格合起来数：`foot.visits` 记趟、`foot.nodes` 记第一回）。
+
+    ★ 为什么要有「数」而不只是「有没有」（本波 · fxm3-questsnap）：进度快照要一个**可比的读数**
+      （「接活后又去过一趟」= 这个数变大了），布尔态比不了。
+      读数 = 这个节点的**趟数**（`foot.visits`，`note_step` 每走进来一次 +1）
+             + 「第一回到过」那一笔（`foot.nodes` 有这个键 ⇒ +1）——
+      ⇒ **只增不减**，且 `> 0` 与旧的「有没有这个键」逐条等价（老档 / 老条目行为一个字不变）；
+        而「先被 `mark_here` 记下节点、后来才真走进去一趟」这种档也能看出涨了一格。
+        · 点一个节点 ⇒ 那个键的读数
+        · 点整张图（`node` 省了）⇒ 这张图里所有节点的读数之和 —— 走进任何一个节点都会让它变大
+    """
     f = p.get("foot")
     f = f if isinstance(f, dict) else {}
-    keys = set((f.get("nodes") or {}).keys()) | set((f.get("visits") or {}).keys())
+    nds = f.get("nodes") if isinstance(f.get("nodes"), dict) else {}
+    vst = f.get("visits") if isinstance(f.get("visits"), dict) else {}
+    keys = set(nds.keys()) | set(vst.keys())
     pre = loc + ":"
+
+    def _of(k):
+        return _num(vst.get(k)) + (1 if k in nds else 0)
+
     if node:
-        return pre + node in keys
-    return any(k.startswith(pre) for k in keys)
+        k = pre + node
+        return _of(k) if k in keys else 0
+    return sum(_of(k) for k in keys if k.startswith(pre))
+
+
+def _been(p, loc, node=""):
+    """去过吗？—— 档上足迹两格都算：`foot.nodes`（第一回到）与 `foot.visits`（去过几回）。
+
+    ★ 布尔视图（`_visit_have(...) > 0`）—— 判定与呈现走的是 `_visit_have` / `_metric` 那个读数。
+    """
+    return _visit_have(p, loc, node) > 0
+
+
+# ── ★ fxm3-questsnap（本波）：`require` 判「**接活后**新达成」的进度基线 ──────────────
+# 【现象】三路试玩复现：主线 3「三张牌」只要**到过三条带**就能交（`看 3` 一行「还差」都没有、
+#   提示 直接说「办完了」、`交 3` 白拿 118 经验 / 30 铜板），三条带的活一件没做；主 4 交掉 +330；
+#   主 11 交掉 +4276（与 `reward_exp` 逐字相等）。
+# 【根因】`require` 查的是**历史态**（历史上到过 / 打过 / 采过就算数），而「接活那一刻」没有基线
+#   ⇒ 接活**前**干过的活也算进任务进度。
+# 【真源】`06_第一阶段垂直切片/24_任务线_v1.md §一` 每一块的「步骤」都是**接了之后要做的那几拍**
+#   （主 3：「① 玛莎给三张委托（三条带各一张）② **各完成一次**（打怪/采集/送信）③ 回来交活」）
+#   —— 是代码没跟上文案。**真源一个字不动**。
+# 【修法】接活那一下（`quest_accept`）给这条委托落一份**进度基线**：`flags.quests[<id>]["base"]`
+#   = 那一刻每条条件的读数；判定与呈现一律走「现在 − 基线」（`_since`）。
+#   · 基线在**发东西（`give`）之前**落：接活时塞到手上的那件东西（支线 25「还石头」的刻字石片）
+#     算「接活后到手」—— 真源那一句就是「小满把那块石头塞给你」。
+#   · 读数按**机器键**记（`_ckey`）：条件在域里换个顺序，基线不受影响。
+#   · 落基线与同一格上的 `done` / `at` **合并写**（悬赏跨游戏日重接读的 `_done_at` 就在那格上）。
+# 【老档】本批之前接的活 / 起手档直接塞 `flags.quests_active` 的档 ⇒ 没有基线 ⇒ 基线按 0 算，
+#   判定与改前**逐字节相同**（有意兼容：不清仓老档里进行中的委托；公测前没有真老档）。
+#   要更严（缺基线一律拦住）只改 `_base_at` 那一处一行 —— 取舍写在那个函数的 docstring 里。
+# 【一型例外】`enhance`（「有一件装备强化到 ≥ n」）是**状态**条件，不是「接活后新涨几级」
+#   （档上只有等级、没有「强化成功次数」那本账）⇒ 它照旧判**绝对值**，见 `_req_ok`。
+_BASE = "base"
+
+
+def _ckey(r) -> str:
+    """一条条件的**机器键**（基线按它记 —— 与域里的书写顺序无关，也不认任何中文）。"""
+    kind = str(r.get("kind") or "")
+    if kind == "visit":
+        return "visit|%s|%s" % (r.get("map") or "", r.get("node") or "")
+    if kind == "kill":
+        return "kill|%s|%s|%s" % (r.get("monster") or "", r.get("role") or "",
+                                  "daily" if r.get("daily") else "")
+    if kind == "item":
+        return "item|%s" % (r.get("item") or "")
+    if kind == "cook":
+        return "cook|%s" % (r.get("quality") or "")
+    if kind == "talk":
+        return "talk|%s" % (r.get("npc") or "")
+    return kind or "?"                     # enhance / ask：一条一件（上面几型按目标分）
+
+
+def _metric(p, r) -> int:
+    """这条条件**现在的读数**（接活快照与「现在 − 基线」都走它 —— 与 `_have_n` 同一把尺子）。
+
+    ★ 一型一读法，与 `_have_n` 认的是**同一本账**（改前 `_have_n` 里那些取值口原样搬过来）：
+      认不出的 kind / 没点名的目标一律回 0（与判定同一口径：fail-closed 不算做了）。
+    """
+    kind = r.get("kind")
+    if kind == "visit":
+        return _visit_have(p, str(r.get("map") or ""), str(r.get("node") or ""))
+    if kind == "kill":
+        return _kill_have(p, r) if (r.get("monster") or r.get("role")) else 0
+    if kind == "item":
+        return _bag_n(p, str(r.get("item") or ""))
+    if kind == "enhance":
+        return _enhance_have(p)
+    if kind == "cook":
+        return _cook_have(p, r)
+    if kind == "talk":
+        return _talk_have(p, r.get("npc")) if r.get("npc") else 0
+    if kind == "ask":
+        return _asked_have(p)
+    return 0
+
+
+def _base_snap(p, x) -> dict:
+    """这条委托**接活那一刻**的进度基线（`{机器键: 读数}`；没写 `require` ⇒ 空表）。"""
+    return {_ckey(r): _metric(p, r) for r in _require_of(x)}
+
+
+def _set_base(p, k, x) -> None:
+    """把进度基线写进 `flags.quests[<id>]["base"]`（接活那一拍 · 合并写，不动同一格上的别的键）。"""
+    book = dict((p.get("flags") or {}).get("quests") or {})
+    rec = book.get(k)
+    rec = dict(rec) if isinstance(rec, dict) else {}
+    rec[_BASE] = _base_snap(p, x)
+    book[k] = rec
+    _set(p, "quests", book)
+
+
+def _base_at(p, k, r) -> int:
+    """这条条件**接活那一刻**的读数（`flags.quests[k].base[机器键]`）。
+
+    ★ 两侧的取舍都写清（与 `_abandon_day` 那一族同一把尺子）：
+      · **没有基线**（老档：本批之前接的活 / 起手档直接塞 `flags.quests_active`）⇒ **0**
+        = 历史进度全算数 —— 与改前逐字节相同（不清仓老档里进行中的委托）。
+      · 基线**坏了**（不是 dict / 读不出的数）⇒ 同样回 0：那一格坏了不该把玩家永久锁住。
+      ⇒ 要更严（缺基线 / 坏基线一律**拦住**，只认「接活后新达成」）就改这一处：
+         把两个 `return 0` 换成 `return _metric(p, r)`（= 基线取「现在的读数」⇒ 差值恒 0 ⇒ 拦住）。
+    """
+    if not k:
+        return 0
+    rec = ((p.get("flags") or {}).get("quests") or {}).get(k)
+    base = rec.get(_BASE) if isinstance(rec, dict) else None
+    if not isinstance(base, dict):
+        return 0
+    return _num(base.get(_ckey(r)))
+
+
+def _since(p, k, r) -> int:
+    """「接活之后**新达成**了多少」= 现在 − 基线（负的一律当 0：这几本账只许往前长）。"""
+    return max(0, _metric(p, r) - _base_at(p, k, r))
 
 
 def _shadow(p):
@@ -479,29 +633,37 @@ def _bag_n(p, iid):
     return n
 
 
-def _req_ok(p, r):
-    """一条条件满足没有（认不出的 kind 一律算没满足 —— fail-closed，不静默放行）。"""
+def _req_ok(p, r, k=None) -> bool:
+    """一条条件满足没有 —— ★ 本波（fxm3-questsnap）：判的是「**接活后**新达成的量」（`_since`）。
+
+    `k` = 这条委托的 id（基线在 `flags.quests[k]["base"]`；不传 = 老档口径，基线 0）。
+    认不出的 kind / 认不出的目标一律算没满足（fail-closed，不静默放行）：
+      · `kill` —— 点名一只（`monster`）或点**某一档**（`role`，见 `_role_ids`）；两个都不写 ⇒ 没满足。
+        `role` + `daily` ⇒ 只算**今天点名的那一只**（`_kill_have` 里那一条）。
+      · `item` / `visit` / `talk` —— 目标写空了 ⇒ 没满足（不许白给）。
+    ★ `enhance` 是**状态**条件（「有一件装备强化到 ≥ n」）—— 判**绝对值**，不减基线：
+      真源写的是「把一件装备强化到 +3」（`28 §四` / `21 §二`），不是「接活后再涨 3 级」；
+      而档上只有等级、没有「强化成功次数」那本账 ⇒ 扭成增量就是**改口径**，不干。
+      （「接活那一刻已经 +3」这一种白拿要有成功次数账 —— 缺口登记在工作树 `_notes.md`，不自己造第二本账。）
+    """
     kind = r.get("kind")
     if kind == "visit":
-        return _been(p, str(r.get("map") or ""), str(r.get("node") or ""))
-    if kind == "kill":
-        # ★ B3-11：`kill` 两种写法 —— 点名一只（`monster`）或点**某一档**（`role`，见 `_role_ids`）。
-        #   两个都不写 ⇒ 没满足（fail-closed）；认不出的 role ⇒ 那一档取不到怪 ⇒ 计数 0 ⇒ 没满足。
-        # ★ B3-13：点档 + `daily` ⇒ 只算**今天点名的那一只**（`_kill_have` 里那一条）。
-        return bool(str(r.get("monster") or "") or str(r.get("role") or "")) \
-            and _kill_have(p, r) >= _n_of(r)
-    if kind == "item":
-        iid = str(r.get("item") or "")
-        return bool(iid) and _bag_n(p, iid) >= _n_of(r)
-    if kind == "enhance":                       # ★ B3-13：有一件装备强化到 ≥ n
+        if not str(r.get("map") or ""):
+            return False
+    elif kind == "kill":
+        if not (str(r.get("monster") or "") or str(r.get("role") or "")):
+            return False
+    elif kind == "item":
+        if not str(r.get("item") or ""):
+            return False
+    elif kind == "talk":
+        if not str(r.get("npc") or ""):
+            return False
+    elif kind not in ("enhance", "cook", "ask"):
+        return False
+    if kind == "enhance":
         return _enhance_have(p) >= _n_of(r)
-    if kind == "cook":                          # ★ B3-13：下过锅 ≥ n 次（可只数某一品阶的食材）
-        return _cook_have(p, r) >= _n_of(r)
-    if kind == "talk":                          # ★ B3-13：跟这个人搭过 ≥ n 次话
-        return bool(str(r.get("npc") or "")) and _talk_have(p, r.get("npc")) >= _n_of(r)
-    if kind == "ask":                           # ★ B3-13：搭过话的**人** ≥ n 个
-        return _asked_have(p) >= _n_of(r)
-    return False
+    return _since(p, k, r) >= _n_of(r)
 
 
 def _role_ids(role):
@@ -756,39 +918,34 @@ def _habitat_of(mid):
     return [(_name_of_node(m, n) or n) for m, n in where]
 
 
-def _have_n(p, r):
+def _have_n(p, r, k=None):
     """这一条条件「做到哪了」→ `(已达成数, 需要数)` —— **唯一一口**（达成数**封顶**在需要数上）。
 
     ★ QB-4：『还差…』那几行里的数（「你手上有 1」「你打过 2 只」）与『我的委托』的进度
       都从这里来 —— 进度不许自己再数一遍（两处数法 = 迟早对不上）。
+    ★ 本波（fxm3-questsnap）：这个「已达成数」就是**接活后新达成的量**（`_since`）——
+      与交活那把尺子 `_req_ok` 认的是同一个数（改前是绝对读数；老档基线 0 ⇒ 逐字节相同）。
       认不出的 kind ⇒ `(0, n)`（与判定同一口径：fail-closed 不算做了）。
       封顶那一刀对『还差…』那几行是**空操作**（那几行只在**没满足**时印，没满足 ⇒ 达成数 < 需要数），
       但它挡住「听够 4 回显示 4/3」这种读起来像坏了的数。
-    ★ 「去过某处」这一型没有数：去过 = 1、没去过 = 0（需要数恒 1）。
+    ★ 「去过某处」这一型的数是趟数（没去过 = 0），需要数恒 1。
+    ★ `enhance` 那一型走 `_enhance_have`（**绝对值** —— 与 `_req_ok` 同一把尺子，
+      不然「已达成」与屏上的「0/3」会打架）。
     """
     n = _n_of(r)
-    kind = r.get("kind")
-    if kind == "visit":
-        return (1 if _req_ok(p, r) else 0), 1
-    if kind == "item":
-        have = _bag_n(p, str(r.get("item") or ""))
-    elif kind == "kill":
-        have = _kill_have(p, r) if (r.get("monster") or r.get("role")) else 0
-    elif kind == "enhance":
+    if r.get("kind") == "enhance":
         have = _enhance_have(p)
-    elif kind == "cook":
-        have = _cook_have(p, r)
-    elif kind == "talk":
-        have = _talk_have(p, r.get("npc")) if r.get("npc") else 0
-    elif kind == "ask":
-        have = _asked_have(p)
     else:
-        have = 0
+        have = _since(p, k, r)
     return min(int(have), n), n
 
 
-def _req_lines(p, r):
-    """没满足的那一条 → 说人话的那一行。★ 只给名字不给机器键（id 不许出现在回话里）。"""
+def _req_lines(p, r, k=None):
+    """没满足的那一条 → 说人话的那一行。★ 只给名字不给机器键（id 不许出现在回话里）。
+
+    `k` = 这条委托的 id（本波：那几个「你手上有 N / 你打过 N 只」的数与判定走**同一个口** `_have_n`，
+    传了 k 才是「接活后新达成」的数；不传 = 老档口径，与改前逐字相同）。
+    """
     kind = r.get("kind")
     if kind == "visit":
         loc, node = str(r.get("map") or ""), str(r.get("node") or "")
@@ -807,7 +964,7 @@ def _req_lines(p, r):
             mid, name = "", _role_name(str(r.get("role") or ""))
         if not name:                       # 档 / 怪认不出 ⇒ 不糊一句空名字（fail-closed 的那一行）
             return [T("SYS_JOB_REQ_UNKNOWN")]
-        out = [T("SYS_JOB_REQ_KILL", monster=name, n=_n_of(r), have=_have_n(p, r)[0])]
+        out = [T("SYS_JOB_REQ_KILL", monster=name, n=_n_of(r), have=_have_n(p, r, k)[0])]
         # ★ QB-3：点名点到**一只**时，把它的出没地也说出来（点档那种没有「一只」可说）
         where = _habitat_of(mid) if mid else []
         if where:
@@ -815,7 +972,7 @@ def _req_lines(p, r):
         return out
     if kind == "item":
         iid = str(r.get("item") or "")
-        out = [T("SYS_JOB_REQ_ITEM", item=_item_name(iid), n=_n_of(r), have=_have_n(p, r)[0])]
+        out = [T("SYS_JOB_REQ_ITEM", item=_item_name(iid), n=_n_of(r), have=_have_n(p, r, k)[0])]
         # ★ fix-l（试玩 ranger b71/b85 · 副业 15「娜娜的药单」）：与上面 `kill` 那一支的
         #   「出没地」**同一口径** —— 缺的是**料**时把「从哪儿来」也说一遍。
         #   `强化` / `打造` 早就有这一栏（唯一出处口 = `cmds_recipe.src_lines` → `matsrc`：
@@ -828,28 +985,31 @@ def _req_lines(p, r):
             out.append(T("SYS_JOB_REQ_ITEM_WHERE", item=_item_name(iid), where=_where))
         return out
     if kind == "enhance":                  # ★ B3-13
-        return [T("SYS_JOB_REQ_ENHANCE", n=_n_of(r), have=_have_n(p, r)[0])]
+        return [T("SYS_JOB_REQ_ENHANCE", n=_n_of(r), have=_have_n(p, r, k)[0])]
     if kind == "cook":                     # ★ B3-13（带品阶的走品阶那条槽位）
         if r.get("quality"):
             return [T("SYS_JOB_REQ_COOK_GRADE", grade=r.get("quality"), n=_n_of(r),
-                      have=_have_n(p, r)[0])]
-        return [T("SYS_JOB_REQ_COOK", n=_n_of(r), have=_have_n(p, r)[0])]
+                      have=_have_n(p, r, k)[0])]
+        return [T("SYS_JOB_REQ_COOK", n=_n_of(r), have=_have_n(p, r, k)[0])]
     if kind == "talk":                     # ★ B3-13
         who = _npc_name(r.get("npc"))
         if not who:
             return [T("SYS_JOB_REQ_UNKNOWN")]
-        return [T("SYS_JOB_REQ_TALK", who=who, n=_n_of(r), have=_have_n(p, r)[0])]
+        return [T("SYS_JOB_REQ_TALK", who=who, n=_n_of(r), have=_have_n(p, r, k)[0])]
     if kind == "ask":                      # ★ B3-13
-        return [T("SYS_JOB_REQ_ASK", n=_n_of(r), have=_have_n(p, r)[0])]
+        return [T("SYS_JOB_REQ_ASK", n=_n_of(r), have=_have_n(p, r, k)[0])]
     return [T("SYS_JOB_REQ_UNKNOWN")]
 
 
-def _unmet(p, x):
-    """还没满足的那几条 → 要回的话（老条目没写 require ⇒ 空表 ⇒ 一行都不多，输出逐字节不变）。"""
+def _unmet(p, x, k=None):
+    """还没满足的那几条 → 要回的话（老条目没写 require ⇒ 空表 ⇒ 一行都不多，输出逐字节不变）。
+
+    `k` = 这条委托的 id（本波：判定走「接活后新达成」那一把尺子，见 `_req_ok`）。
+    """
     out = []
     for r in _require_of(x):
-        if not _req_ok(p, r):
-            out.extend(_req_lines(p, r))
+        if not _req_ok(p, r, k):
+            out.extend(_req_lines(p, r, k))
     return out
 
 
@@ -1070,6 +1230,16 @@ async def quest_accept(env, sink, uid, player):
         yield T("SYS_JOB_MARTHA")
         return
     _set(p, "quests_active", _mine(p) + [k])
+    # ★ fxm3-questsnap（本波）：**接活这一刻落进度基线** —— `flags.quests[k]["base"]` 里记下每条
+    #   条件现在的读数；从这一刻起 `require` 判的是「现在 − 基线」（`_since`）⇒ 接活**前**干过的
+    #   活不再算数（改前 `require` 查历史态：到过三条带就能交主 3，白拿 118 经验 / 30 铜板）。
+    #   · 位置 = 「已经接了 / 证 / 等级」三道门**之后**、`_hand_over` **之前**：
+    #     位置在这三道门之后 ⇒ 没真接下的那条（被拦住）一个字都不落档；
+    #     在 `_hand_over` 之前 ⇒ 接活时塞到手上的那件东西算「接活后到手」
+    #     （真源 `17 §QUEST_SIDE25_STORY`「小满把那块石头塞给你」）。
+    #   · 没写 `require` 的老条目 ⇒ 基线是空表（不多写一格没用的东西）。
+    if _require_of(x):
+        _set_base(p, k, x)                    # ★ 本波：接活快照（见文件抬头「进度基线」那一节）
     gained = _hand_over(p, x)                 # ★ 本波②：接活时**真发东西**（`quests.<id>.give`）
     PROG.resync(p, k)                         # ★ 本波③：旗标族的**写端**（接活那一拍）
     if player is not None:
@@ -1115,14 +1285,14 @@ async def quest_deliver(env, sink, uid, player):
             yield "  · %s" % qs.get(kk, {}).get("name", kk)
         return
     x = qs[k]
-    if not _obj_ok(x, p):
+    if not _obj_ok(x, p, k):              # ★ 本波：判「**接活后**新达成」（`k` = 基线在哪一格）
         if _no_wire(x):
             # ★ fxb②：这条的完成条件在数据面上还不存在（老条目那条死路径）—— 照实说
             #   「还没接线」，不糊一句「还没做完 + 一段与条件无关的进行中行文」。
             yield T("SYS_JOB_NO_WIRE")
             return
         yield T("SYS_JOB_NOT_DONE") + (_beat(x, "PROGRESS") or x["objective"])
-        for line in _unmet(p, x):          # ★ P-25：把「还差什么」说清楚（老条目这里一行都不多）
+        for line in _unmet(p, x, k):       # ★ P-25：把「还差什么」说清楚（老条目这里一行都不多）
             yield "  " + line
         return
     _set(p, "quests_active", [a for a in act if a != k])
@@ -1153,7 +1323,7 @@ async def quest_deliver(env, sink, uid, player):
         yield "（「%s」）" % x["hook"]
 
 
-def _obj_ok(x, p):
+def _obj_ok(x, p, k=None):
     """交活判据 —— ★ P-25：写了 `require` 的条目**逐条真查**（做没做，档上有账）。
 
     · 主线：**等级 + 逐步记账** —— ★ B4-2 落了 `require` 之后，判据就是
@@ -1161,12 +1331,14 @@ def _obj_ok(x, p):
       一句『交 1』就过」那条老路已经堵死）。没写 `require` 的主线仍只看等级。
     · 支线：写了 `require` 就逐条查；**没写的照旧**看 `flags.side_<名字>`
     ⇒ 没有 `require` 的老条目，这一支的行为逐字节不变（回归口径见任务卡 P-25）。
+    ★ 本波（fxm3-questsnap）：`k` = 这条委托的 id —— 逐条查走的是「**接活后**新达成」
+      （`_req_ok` → `_since`），不是历史态；不传 k = 老档口径（基线 0，与改前逐字节相同）。
     """
     reqs = _require_of(x)
     if x["chain"] == "main":
-        return p.get("level", 1) >= x["min_level"] and all(_req_ok(p, r) for r in reqs)
+        return p.get("level", 1) >= x["min_level"] and all(_req_ok(p, r, k) for r in reqs)
     if reqs:
-        return all(_req_ok(p, r) for r in reqs)
+        return all(_req_ok(p, r, k) for r in reqs)
     return bool((p.get("flags") or {}).get("side_" + x["name"]))
 
 
@@ -1217,7 +1389,7 @@ async def quest_abandon(env, sink, uid, player):
     yield T("SYS_JOB_ABANDONED", name=qs.get(k, {}).get("name", k))
 
 
-def _progress(x, p):
+def _progress(x, p, k=None):
     """这一条的**进度**那一格（`（已达成 / 需要）`）—— 没写 `require` 的老条目回空串（一个字不多）。
 
     ★ QB-4（试玩报告 P4 E-10）：『我的委托』原先只给一句 objective —— 玩家要先跑一趟『交』
@@ -1226,11 +1398,13 @@ def _progress(x, p):
       ＋ 同一条委托自己的 objective（`24_任务线_v1 §二` 支 9「听他讲完（三次）」——
       「（三次）」是**文档那一格自己写的**，所以进度就该按它数：`（1/3）`）。
     ★ 数与『还差…』那几行走**同一个口**（`_have_n` —— 它就是交活那把尺子的读数）。
+    ★ 本波（fxm3-questsnap）：`k` = 这条委托的 id ⇒ 数的是「**接活后**新达成」
+      （不传 k = 老档口径，与改前逐字节相同）。
     """
     reqs = _require_of(x)
     if not reqs:
         return ""
-    pairs = [_have_n(p, r) for r in reqs]
+    pairs = [_have_n(p, r, k) for r in reqs]
     return T("SYS_MINE_PROGRESS", done=sum(h for h, _n in pairs), n=sum(n for _h, n in pairs))
 
 
@@ -1257,10 +1431,10 @@ def _hint_lines(p):
         if _no_wire(x):
             continue                       # ★ 说不出一句可做的 ⇒ 不占这一屏（UX-4）
         out = [T("SYS_HINT_JOB", name=x.get("name", k), objective=x.get("objective", ""))]
-        if _obj_ok(x, p):
+        if _obj_ok(x, p, k):                # ★ 本波：与『交』同一把尺子（接活后新达成）
             out.append("  " + T("SYS_HINT_JOB_READY", order=x.get("order", 0)))
         else:
-            out += ["  " + ln for ln in _unmet(p, x)]
+            out += ["  " + ln for ln in _unmet(p, x, k)]
         return out
     return []
 
@@ -1277,7 +1451,7 @@ async def quest_mine(env, sink, uid, player):
             x = qs.get(k, {})
             # ★ fxb②：没接线的那几条在列表里也**带一句标记**（不然玩家只看得出它「没有进度」）
             yield "· %s —— %s%s%s" % (x.get("name", k), x.get("objective", ""),
-                                       _progress(x, p), _no_wire_line(x))
+                                       _progress(x, p, k), _no_wire_line(x))
     if done:
         yield T("SYS_MINE_DONE", n=len(done))
     # ★ B4-14：那半句评级与『评级』**走同一个门**（`cmds_self.has_card`）—— 没办证的人
