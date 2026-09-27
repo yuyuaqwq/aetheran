@@ -1126,7 +1126,28 @@ try:
     _w1b = _want_show(1) + [_r("SYS_BOARD_ACTIVE"), _r("SYS_BOARD_DELIVER", order=1)]
     if _g1b != _w1b:
         _BAD12.append(("看 1（已接）", _g1b, _w1b))
-    chk("★ `看 <编号>` 真敲四档：未接 / 支线编号 / 没有这张 / 已接 —— 整段与 quests 域 + texts 现算的期望"
+    #   ★ fix-r②：**手上真在跑的那一条压过「已交」那本历史账** —— 跨游戏日重接的悬赏
+    #     （fix-m-bounty 放行的那一档）会**同时在** `flags.quests_active` 与 `flags.quests_done`
+    #     （完成记录，有意不去掉）里；改前 `_done` 先判 ⇒ 同一屏上面刚印「还差：…（你打过 0 只）」，
+    #     下一行接一句「（已交）」，而『我的委托』把它算【进行中】（berserker b124 / knight b4~b5
+    #     两路实测）。这里**手工造出那个两本账并存的状态**（两路都真敲），判据只钉呈现顺序。
+    _fl12b = dict(_ad12.saved.get("flags") or {})
+    _fl12b["quests_active"] = ["q_main_01"]
+    _fl12b["quests_done"] = ["q_main_01"]
+    _ad12.saved["flags"] = _fl12b
+    _g1c = _say12("看 1")
+    _w1c = _want_show(1) + [_r("SYS_BOARD_ACTIVE"), _r("SYS_BOARD_DELIVER", order=1)]
+    if _g1c != _w1c:
+        _BAD12.append(("看 1（既在手上 · 又有完成记录）", _g1c, _w1c))
+    _fl12b2 = dict(_ad12.saved.get("flags") or {})
+    _fl12b2["quests_active"] = []
+    _ad12.saved["flags"] = _fl12b2
+    _g1d = _say12("看 1")                      # 只交过、手上没有 ⇒ 才是「（已交）」
+    _w1d = _want_show(1) + [_r("SYS_TRADE_MARK_DONE")]
+    if _g1d != _w1d:
+        _BAD12.append(("看 1（只交过）", _g1d, _w1d))
+    chk("★ `看 <编号>` 真敲六档：未接 / 支线编号 / 没有这张 / 已接 / **既在手上又有完成记录（进行中优先）** / "
+        "只交过 —— 整段与 quests 域 + texts 现算的期望"
         "逐字一致（编号就是 `order`，与『接』认的是同一个字段）",
         not [x for x in _BAD12 if x[0].startswith("看")],
         "%s" % [x for x in _BAD12 if x[0].startswith("看")][:2])
