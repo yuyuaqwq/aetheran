@@ -83,6 +83,25 @@ def flee_fail_pct() -> float:
     return float(rules()["flee_fail_pct"])
 
 
+def item_cap() -> int:
+    """**这一场**每件用几次的上限（唯一一口 = `rules/battle_cmds.json::item_uses_per_battle`）。
+
+    ★ fix-s：这个数原先只在 `Hand._item` 里现算一份 —— 而指令侧（`cmds_battle.battle_item`）
+      要在**玩家敲下那一刻**就知道「这一件已经用满了没有」（那句「这一场用过了」原先要等
+      这一手真轮到你才出，中间隔着别的日志 ⇒ 玩家第一眼以为药备好了）⇒ 抽成这一口，两处同源。
+    """
+    return int(rules().get("item_uses_per_battle") or 1)
+
+
+def item_capped(st, iid) -> bool:
+    """**这一场**这一件已经用满了吗（只读场那一格 `items_used`）。
+
+    没有场 / 这一格没记过这件 ⇒ `False`（fail-closed：没账 = 没满，指令侧照常走原来的路）。
+    """
+    used = dict(((st or {}).get("items_used") or {}))
+    return int(used.get(str(iid)) or 0) >= item_cap()
+
+
 # ══════════════════════════════════════════════════════════════
 # 取值小件
 # ══════════════════════════════════════════════════════════════
@@ -211,7 +230,7 @@ class Hand:
     # ---------------------------------------------------------- 战斗中用物
     def _item(self, battle, actor, iid, target=None):
         cat = CAT["item"]
-        cap = int(rules().get("item_uses_per_battle") or 1)
+        cap = item_cap()
         rec = _item_rec(iid)
         name = str(rec.get("name") or iid)
         if int(self.used.get(iid, 0)) >= cap:

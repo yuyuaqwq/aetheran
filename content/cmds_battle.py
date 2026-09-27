@@ -859,6 +859,18 @@ async def battle_item(env, sink, uid, player):
         if not _need_foe(env, p, uid):
             yield T("COMBAT_NEED_FOE")
             return
+        # ★ fix-s：这一件**这一场已经用满**了 ⇒ 这一手**开口就说那一句**（走 `head`，与别的手
+        #   同一个位置）。原先这一手照旧先说「备在手边」，而「用过了」那句要等这一手真轮到你才
+        #   由 `Hand._item` 用满那一支说 —— 中间隔着「🌀」与上一手的日志 ⇒ 玩家第一眼读到的是
+        #   「药备好了」（骑士第 3 轮报的就是这个次序）。
+        #   结算口径一个字不动：这一手照花、按**普攻**落（与 `Hand._item` 用满那一支同形）。
+        #   这一格只在**真有一场在跑**且这件已用满时才走。
+        if BA.item_capped(INST.live(env, uid), iid):
+            async for line in INST.take_turn(
+                    env, p, uid, player, action="attack",
+                    head=T("COMBAT_ITEM_CAP", name=rec.get("name", iid))):
+                yield line
+            return
         async for line in INST.take_turn(env, p, uid, player, head=_head, hand=hand):
             yield line
         return
