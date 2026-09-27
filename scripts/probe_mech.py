@@ -260,6 +260,25 @@ _mx = int(ST.actor_max_hp(_b, _c) or 0)
     "  · 自伤 = max_hp 的 %s（max_hp %d ⇒ 期望 %d · 实测 %s）"
     % (MECH.of("def_break")["self_dmg_pct"]["value"], _mx,
        int(round(_mx * float(MECH.of("def_break")["self_dmg_pct"]["value"]))), _cut or "没打出来"))
+# ★ 2026-09-27（这条判据原本是**偶发红** ⇒ 查出真 bug）：自伤那一笔原先**能被打架的人自己闪开** ——
+#   `LD.deal_damage(battle, None, caster, …)` 对 source=None 也照过闪避那一掷 ⇒ 偶尔 `real == 0`
+#   ⇒ 上面两条当场红（同一棵树连跑若干次里必有一次「自伤没打出来」）。
+#   修：引擎 `deal_damage` 加可选 `no_dodge`（内容侧自付那一笔传 True）；`_self_cut` 已跟账。
+#   这一条把那一掷**钉死**（dodge 拉满 = 面板上限 40% + `random.seed(1)` ⇒ 那一掷必「闪开」的
+#   输入）⇒ 改前**必红**、改后必绿：偶发红变成常驻判据。
+_c0 = fresh("cls_berserker", mid=DOG)
+_e0 = _c0.focus()
+_amt0 = int(round(int(ST.actor_max_hp(_c0, _e0) or 0) * float(MECH.of("def_break")["self_dmg_pct"]["value"])))
+_LD_roll = LD._roll_dodge
+try:
+    LD._roll_dodge = (lambda *a, **k: True)       # 钉住那一掷：这一笔一定「闪开」
+    _rl0 = LD.deal_damage(_c0, None, _e0, _amt0, [], no_dodge=True)     # 该落满
+    _rl1 = LD.deal_damage(_c0, None, _e0, _amt0, [])                    # 反证：不传 ⇒ 被闪掉
+finally:
+    LD._roll_dodge = _LD_roll
+(ok if _rl0 == _amt0 and _rl1 == 0 else bad)(
+    "★ 自伤不许被自己闪掉（钉住那一掷为「闪开」）：传 `no_dodge` ⇒ 该落满 %d（实 %d）· "
+    "反证不传 ⇒ 那一笔该被闪掉（实 %d）" % (_amt0, _rl0, _rl1))
 _bc = fresh("cls_berserker", mid=DOG)
 _c2 = _bc.focus()
 _t2 = (_bc.sides.get("enemy") or [None])[0]

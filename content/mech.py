@@ -394,10 +394,16 @@ def _self_cut(battle, caster, m: dict, logs) -> int:
         from . import battle_text as BT
         _n0 = len(logs)
         with BT.quiet_engine_damage(battle):
-            real = LD.deal_damage(battle, None, caster, cut, logs)
+            # ★ 2026-09-27（引擎 `no_dodge`）：**自己付给自己的这一笔没人能闪** ——
+            #   原先 source=None 也照过闪避那一掷 ⇒ 施放者能「闪开自己砍的这一刀」：
+            #   `real == 0` ⇒ 下面那条 `if real > 0` 不写行 ⇒ 屏上少一句、档上少扣血。
+            #   实测（probe_mech ⑥ 偶发红）：同一棵树连跑若干次里必有一次自伤「没打出来」。
+            real = LD.deal_damage(battle, None, caster, cut, logs, no_dodge=True)
         # 顶掉的那一行是**空串**（引擎把渲染结果无条件 append）⇒ 只剔这一笔新增里的空串
         logs[_n0:] = [x for x in logs[_n0:] if str(x) != ""]
-        if real > 0:                       # 全额被护盾吃掉 / 被闪掉 ⇒ 不谎报一笔没落的血
+        if real > 0:                       # 全额被护盾吃掉 ⇒ 不谎报一笔没落的血
+                                           #   （★ 2026-09-27：闪避那一格已由 `no_dodge` 关掉，
+                                           #    所以这里不会再有「被自己闪掉」那种 0）
             logs.append(T("COMBAT_MECH_SELF_CUT", n=real))
     return cut
 
