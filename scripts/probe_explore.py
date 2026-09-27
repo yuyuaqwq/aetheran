@@ -28,6 +28,10 @@
      钉子下在**候选 ≥ 3 的站**（一只候选的站分不出「就是那一只」与「候选名单」），
      并连精英那条口一起钉 —— 判据是「紧跟表头那一行**恰好**是钉死的那只 · 别的候选名一个都不许出现」
      + **反证**：没有候选的站（镇上）一个字都不出
+  ⑧-b ★ 本波（2026-09-27 · 任务③）：『遇敌』那一栏的**等级差提示** —— 这一站最弱的一只
+     （`explore.station_level` 现算的站基准）比玩家高 > 带阈（`rules/level_band.json`）
+     ⇒ 补一行 `SYS_LOOK_FOE_GAP`。正例（站基准最高那一站）· 两个反例（同级 / 镇上）·
+     **反证**（把 `combat.in_band` 换成恒真 ⇒ 那一行消失）。★ 只补呈现，怪的数值一个没动
   ⑨ **反证一**：把「威慑档」改成 ×1 ⇒ 掷中率变化**可复算**（800 次抽样现算，实测率 ≈ 现算率）
   ⑩ **反证二**：表拿掉（真把文件挪走）⇒ 回「不掷」：`ratio` 回 `None`、**`roll` 一次都不调**、
      屏上与「掷空」那一支逐字相同、档与场一个字不动
@@ -679,6 +683,49 @@ chk("★ 塔内维持现状：名字行走 `SYS_LOOK_FOE_ROOM`（副本那档一
     V("SYS_LOOK_FOE") in _room_look and bool(_room_name)
     and V("SYS_LOOK_FOE_ROOM", name=_room_name) in _room_look,
     "%s" % (_room_look[-3:],))
+
+# ══════════════════════════════════════════════════════════════
+# ⑧-b ★ 本波（2026-09-27 · 任务③）：『遇敌』那一栏的**等级差提示**
+#   口径：这一站**最弱的一只**（`explore.station_level` 现算的站基准）比玩家高 ≥5 级
+#   （= 整片都在等级带外 —— 唯一声明处 `content/rules/level_band.json`）⇒ 补一行
+#   `SYS_LOOK_FOE_GAP`。★ 这是**新增呈现**，不是降数值（P-30 后半「旧哨塔下 = 1 级必死场、
+#   两条退路都被堵」仍是未定口径 ⇒ 怪的 hp/atk 一个数都没动）。
+#   判据：正例（站基准最高的那一站 · 玩家按数据现算一个「差 ≥ 带阈+1」的等级）· 反例（同站
+#   同等级 ⇒ 一个字都不多说）· ★ 反证（把「带内」判据换成恒真 ⇒ 那一行当场消失）。
+# ══════════════════════════════════════════════════════════════
+print("\n⑧-b 任务③ `观察`「遇敌」那一栏的等级差提示（站基准 vs 玩家等级 · 只补呈现）")
+_GAP_AT = []
+for _l, _m in MAPS.items():
+    for _n in (_m.get("nodes") or []):
+        _b = EX.station_level(MS, str(_l), str(_n.get("id")), 1)
+        if _b:
+            _GAP_AT.append((str(_l), str(_n.get("id")), int(_b)))
+_GAP_AT.sort(key=lambda x: (-x[2], x[0], x[1]))
+_gl, _gn, _gbase = _GAP_AT[0]                          # 站基准最高那一站（现算，不手写）
+_BAND_MAX = int(json.load(io.open(os.path.join(REPO, "content", "rules", "level_band.json"),
+                                  encoding="utf-8"))["max_level_diff"]["value"])
+_plow = max(1, _gbase - _BAND_MAX - 1)                 # 差 = 带阈+1（≥5）⇒ 出带
+_GAP_HEAD, _ = parts("SYS_LOOK_FOE_GAP")
+_look_low = run(CA.look, player(loc=_gl, node=_gn, level=_plow), uid="u_exp")
+chk("★ 站基准最高那一站（%s · %s · 最弱一只 lv%d）· 玩家 %d 级（差 %d > 带阈 %d）⇒ 补那一行"
+    "（逐字 = 槽位渲染 `%s`）"
+    % (_gl, _gn, _gbase, _plow, _gbase - _plow, _BAND_MAX,
+       V("SYS_LOOK_FOE_GAP", gap=_gbase - _plow)),
+    V("SYS_LOOK_FOE_GAP", gap=_gbase - _plow) in _look_low, "%s" % (_look_low[-4:],))
+chk("★ 反例：同一站、把玩家放到**站基准同级**（差 0）⇒ 那一行一个字都不多说",
+    not any(str(x).startswith(_GAP_HEAD)
+            for x in run(CA.look, player(loc=_gl, node=_gn, level=_gbase), uid="u_exp")), "")
+chk("★ 反例：镇上（这一站一只候选都没有）⇒ 同样不说那一句",
+    not any(str(x).startswith(_GAP_HEAD)
+            for x in run(CA.look, player(loc=TOWN, node="wt_gate_n", level=1), uid="u_exp")), "")
+_keep_inband = CBO.in_band
+try:
+    CBO.in_band = (lambda *a, **k: True)               # 「永远在带内」⇒ 那一句不该再出
+    _look_off = run(CA.look, player(loc=_gl, node=_gn, level=_plow), uid="u_exp")
+finally:
+    CBO.in_band = _keep_inband
+chk("★ 反证：把 `combat.in_band` 换成恒真 ⇒ 那一行当场消失（判据真载重、不是恒真）",
+    not any(str(x).startswith(_GAP_HEAD) for x in _look_off), "%s" % (_look_off[-3:],))
 
 # ══════════════════════════════════════════════════════════════
 # ⑨ 反证一：把「威慑档」改成 ×1 ⇒ 掷中率变化可复算

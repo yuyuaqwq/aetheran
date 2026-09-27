@@ -1160,67 +1160,49 @@ async def flee(env, sink, uid, player):
     #   真源没写多人该按谁算，本波照**同一条规则**落地并登记（见本分支 `_notes.md §真源行`）。
     # ★ G2：分段推进 —— 走「场」，这一手 = 你的一手（30% 被拦下，掷骰走 `_flee_decide`）
     from . import instance as INST
-    if INST.route_needed(env, uid):
-        # ★ fxa（试玩 #4）：这一带有没有得打问 `_need_foe`（原先问 `_foe_name`，
-        #   那会在开场之前**先抽一只**，名字随后被开场那一抽换成另一只）。
-        if not _need_foe(env, p, uid):
-            yield T("COMBAT_NEED_FOE")
-            return
-        # ★ 跑成/被拦下都由 `_flee_decide` 说（它拿得到场，能记「这一场第几次跑」）
-        hand = BA.Hand("retreat", p=p)
-        async for line in INST.take_turn(env, p, uid, player, hand=hand,
-                                         decide=_flee_decide(uid, p)):
-            yield line
-        return
-    pick, ms, affixes, _mline = _meet(p, uid)
-    if not pick:
+    # ★ fxa（试玩 #4）：这一带有没有得打问 `_need_foe`（原先问 `_foe_name`，
+    #   那会在开场之前**先抽一只**，名字随后被开场那一抽换成另一只）。
+    if not _need_foe(env, p, uid):
         yield T("COMBAT_NEED_FOE")
         return
-    yield _mline
-    for line in encounter_lines(ms[pick[0]], p):
-        yield line
-    name = ms[pick[0]].get("name", pick[0])
-    from ext_combat.battle import schedule as SCH
-    # ★ 这一手用 `retreat` 那一档（move）+ `hand.lines` —— 掷败时那一手 = 「说一句 + 花一手」，
-    #   与『后撤』退不开**同一形状、同一档耗时**。
+    # ★ 本波（试玩 knight 第 2 轮 b70/b72 · 任务①）：**这一场还没开打 ⇒ 不替你开一场**。
+    #
+    #   旧口径：`route_needed` 那一档里「没有场 ⇒ 这一敲就是开场那一敲」与『攻击』同一条路
+    #   ⇒ `逃跑` **先真开一场**（屏上先出遇敌那一行 + `⚔ 第 1 手`），再掷骰；掷败就留在场里。
+    #   真客户端复现（西带 旧渡口 · 5 级骑士 · 244/300 · `before_4.log`）：
+    #     `后撤` ⇒「它这会儿没在出招 —— 你退开了，这一场没打。」（安全脱身、血一动不动）
+    #     紧接着 `逃跑` ⇒ 开场 →「先一步拦住了退路 —— 没跑成，这一手白花，这一场照打。」
+    #       ⇒ 244 血被拉进一场 410 血的精英仗（与骑士第 2 轮第 70/72 批同一现象）。
+    #   ⇒ 与『后撤』**统一成一条口径**：**不在场 = 没开打 ⇒ 0 风险走人**（不建场、不掷骰）。
+    #     真源 `04_指令总表 §五`「可能失败（三成被拦下 —— 跑成 ⇒ 这一场没打；被拦下 ⇒
+    #     这一手白花、这一场照打）」描述的是**已经在打的这一场**里的这一手 ⇒ 掷骰只在
+    #     「场在」时发生（`_flee_decide` 一个字没改，那一档的判据一条没松）。
+    #   ★ 这一敲走 `COMBAT_FLEE_OK`（「…甩在了后头 —— 这一场没打。」）——与『后撤』跑掉了
+    #     那一支同形（`COMBAT_RETREAT_OK`「…你退开了，这一场没打。」），并同样只往
+    #     `flags.last_battle` 写一条 `fled` 给『战斗日志』；不掷骰 = 不存在「被拦下」那一态。
+    #   ★ 顺带收口：`route_needed` 为 False 的两条（没 uid / 这一格有场但我不在名单里）
+    #     都伴随「我没有一场」⇒ 归入同一条冷启动口径；原先那条**单人老路**
+    #     （`_meet` → 建场 → 掷骰 → 照打）因此到不了，已删（不留死代码）。
+    if INST.live(env, uid) is None:
+        name = foe_here(p, uid)                       # 只读：这一格定下来的那一只（与『观察』同一个口）
+        yield T("COMBAT_FLEE_OK", name=name)
+        _note_battle(p, name, [], "fled")
+        if player is not None:
+            player.update(p)
+        _save(env)
+        return
+    # ── 已经在打：掷骰（跑成 / 被拦下都由 `_flee_decide` 说 —— 它拿得到场，能记「这一场第几次跑」）
+    #   ★ 这一手用 `retreat` 那一档（move）——被拦下时那一手 = 「说一句 + 花一手」，与『后撤』
+    #     退不开**同一形状、同一档耗时**（`battle_acts.CAT["retreat"] == "move"`）。
     #   ★ 不能拿字符串 `"flee"` 去 `human_act`：**引擎把 `flee` 当内置动作**
     #   （`ext_combat/battle/battle.py` 那条 `action not in ("attack","skill","defend","flee")`
     #   ⇒ 内置那一支**不查 `action_override`**，我们自己那一句就吐不出来）。走非内置那条口
     #   才轮得到内容侧说话 —— 这也是『后撤』当年为什么没撞上（它的动作名叫 `retreat`）。
     hand = BA.Hand("retreat", p=p)
-    _ids, _hm = AFFIX.spawn_plan(pick[0], list(affixes))
-    b = CB.build(p, _ids, ms, party=_party_now(env, p, uid), affixes=list(affixes),
-                 hp_mults=_hm, override=hand.override, uid=uid)
-    logs: list = []
-    SCH.advance(b, logs)                       # 推到你的决策点（快的对方该动的先动）
-    caster = b.focus()
-    if b.result is None and _flee_roll(uid, p, pick[0]) >= BA.flee_fail_pct():
-        # ── 跑成了：这一场不打（`fled`），血照当下的血（与『后撤』跑掉了那一支同形）
-        b.result = "fled"
-        pa = (b.sides.get(CB.PLAYER_SIDE) or [{}])[0]
-        p["hp"] = max(1, int(pa.get("hp", 0) or p.get("hp") or 1))
-        for line in _fmt(logs):
-            yield line
-        yield T("COMBAT_FLEE_OK", name=name)
-        _note_battle(p, name, logs, "fled")
-        if player is not None:
-            player.update(p)
-        _save(env)
-        return
-    # ── 被拦下：这一手白花（走 move 那一档耗时），这一场照打（**不额外挨打**）
-    hand.lines = [T("COMBAT_FLEE_BLOCK", name=name)]
-    if caster is not None and b.result is None:
-        _sub, _ended, _who = b.human_act("retreat", None, caster)
-        logs.extend(str(x) for x in (_sub or []))
-    # ★ 本波：进谱那一下挪到**打完知道胜负之后**（原先在打之前 ⇒ 输了也 `kills += 1`）
-    b.auto_run(logs)
-    seen = CX.note_kill(p, pick[0], win=(str(b.result) == "victory"))
-    pa = (b.sides.get(CB.PLAYER_SIDE) or [{}])[0]
-    for line in _fmt([str(x) for x in logs]):
+    async for line in INST.take_turn(env, p, uid, player, hand=hand,
+                                     decide=_flee_decide(uid, p)):
         yield line
-    async for line in _settle(env, p, uid, pick, ms, b.result, [str(x) for x in logs],
-                              int(pa.get("hp", 0)), seen, player, affixes=affixes):
-        yield line
+    return
 
 
 def _flee_roll(uid, p, mid, nth: int = 0) -> float:

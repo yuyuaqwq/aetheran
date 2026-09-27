@@ -10,6 +10,8 @@
 """
 from __future__ import annotations
 
+import json
+import os
 import random
 import re
 
@@ -522,11 +524,56 @@ def run_auto(player: dict, monster_ids, monsters: dict, *, seed: int | None = No
     return b.result, [str(x) for x in logs], int(pa.get("hp", 0))
 
 
+#: ★ 本波（2026-09-27 · 任务②③）：**等级带**那一格的唯一读口 —— 声明表 `content/rules/level_band.json`
+_BAND_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "rules", "level_band.json")
+_BAND_CACHE = None
+
+
+def band_rules() -> dict:
+    """`content/rules/level_band.json`（读一次；读不到 / 形状坏 ⇒ 当场抛 —— 没有默认值）。"""
+    global _BAND_CACHE
+    if _BAND_CACHE is None:
+        with open(_BAND_PATH, encoding="utf-8") as f:
+            got = json.load(f)
+        if not isinstance(got, dict):
+            raise ValueError("level_band.json 得是一张表：%r" % (got,))
+        _BAND_CACHE = got
+    return _BAND_CACHE
+
+
+def max_level_diff() -> int:
+    """**等级带**的宽度（唯一一口 = `rules/level_band.json::max_level_diff.value`）。
+
+    `|怪的等级 − 那个等级| ≤ 它` ⇒ 带内。这个数**不在代码里**（表缺 / 写成 bool / 负数 ⇒ 当场抛）。
+    边界「5」的来历（差 ≥ 5 ⇒ 出带）与两个读口见那份表的抬头。
+    """
+    n = (band_rules().get("max_level_diff") or {}).get("value")
+    if isinstance(n, bool) or not isinstance(n, int) or n < 0:
+        raise ValueError("level_band.json 的 max_level_diff.value 得是 0 以上的整数（没有默认值）：%r" % (n,))
+    return n
+
+
+def in_band(mon_lv, level) -> bool:
+    """这只怪的等级落在「这个等级」的带里吗 —— **两个读口共用这一条**（悬赏池 / 『观察』那句）。
+
+    · 悬赏轮换池（`cmds_quest._encounterable`）：`level` = 该档标称等级（单子上印的那个数）；
+    · 『观察』那一栏（`cmds_tower.foe_lines_here`）：`level` = 这一站的站基准（最弱那一只）。
+    fail-closed：等级取不到 / ≤ 0 ⇒ False（不猜、不兜底）。
+    """
+    try:
+        a, b = int(mon_lv), int(level)
+    except (TypeError, ValueError):
+        return False
+    if a <= 0 or b <= 0:
+        return False
+    return abs(a - b) <= max_level_diff()
+
+
 def encounter_cand(monsters: dict, loc: str, node: str, level: int, keep: int = 3):
     """这一格上「说得上话」的怪 → `(全部候选, 按等级最近的前 keep 只)`。
 
     ★ 两处共用这一处（同一把尺子）：
-      · 遇敌挑选 `pick_encounter`（玩家敲『攻击』那一下真挑哪一只）；
+       · 遇敌挑选 `pick_encounter`（玩家敲『攻击』那一下真挑哪一只）；
       · **悬赏轮换池的可遇性**（`cmds_quest._encounterable` / `_pool_of` —— 单子点名的怪
         必须在这一站按这一档的等级真碰得上）。
       两处要回答的是同一件事；各写一份 = 迟早对不上（K74 那一族）。

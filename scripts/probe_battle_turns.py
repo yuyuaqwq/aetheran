@@ -421,9 +421,10 @@ def main():
     finally:
         _unpin(saved)
 
-    # ── ④ 逃跑两态 + 同一场重掷 ──────────────────────────────────
+    # ── ④ 逃跑：★ 本波（任务①）**不在场 ⇒ 不建场、不掷骰** + 「已经在打」时失败率两态 + 同一场重掷
     print()
-    print("④ `逃跑` 失败率两态（探针自己现算种子）+ 同一场里再敲会**重掷**")
+    print("④ `逃跑`：不在场 ⇒ **不替你开一场**（本波）｜在场 ⇒ 失败率两态（探针自己现算种子）"
+          "+ 同一场里再敲会**重掷**")
     from content import battle_acts as BA                            # noqa: E402
     from content import calendar as CAL                              # noqa: E402
     rate = float(BA.flee_fail_pct())
@@ -434,6 +435,8 @@ def main():
 
         ★ 手气那一格的方向（P-57 原文）：`roll < 失败率` ⇒ **被拦下**（三成那一档）；
           `roll ≥ 失败率` ⇒ **跑成**。这里就按这个方向分两档（下面两态各真跑一次）。
+        ★ 本波（任务①）：**这一手只在「已经在打」时才掷** —— 不在场那一档一个骰子都不掷，
+          所以「手气最差」那个号在冷启动里也照样安全走人（④a 就是拿它验的）。
         """
         seed = "%s:flee:%s:%s:%s:%d" % (uid, MID, LOC, NODE, day)
         if nth:
@@ -445,6 +448,11 @@ def main():
     hit = [u for u in uids if _roll(u) >= rate]            # 跑成那一档
     chk("★ 两态的候选都真找到了（拦下 %d 个 / 跑成 %d 个 · 失败率 %.2f）"
         % (len(miss), len(hit), rate), bool(miss) and bool(hit))
+    # ★ 那两句**逐字**（本波）：`COMBAT_FLEE_BLOCK` 的值是 `{name}` 开头 ⇒ `_pre()` 前缀是**空串**、
+    #   `_has()` 对它恒真（判据会变成空的）⇒ 这一节一律拿 `slot(...)` 渲染出**整句**再比。
+    _mname = str((MON.get(MID) or {}).get("name") or MID)
+    _LINE_OK = slot("COMBAT_FLEE_OK", name=_mname)
+    _LINE_BLK = slot("COMBAT_FLEE_BLOCK", name=_mname)
     db = _fresh("flee")
     host, ad = _boot(db, "g_flee")
     for u in (miss[0], hit[0]):
@@ -452,21 +460,46 @@ def main():
     env = _E("g_flee")
     saved = _pin()
     try:
-        random.seed(20260926)
+        # ── ④a ★ 本波（任务①）：**不在场**（这一带站着怪、但没开打）⇒ 不建场、不掷骰、0 风险
+        #    旧口径：与『攻击』同一条路先开一场再掷骰 ⇒ 掷败就把人拉进这一场（knight b70/b72）。
+        #    这里拿**手气最差**那个号（`miss[0]`，冷启动若还掷必被拦下）来验「一个骰子都没掷」。
+        for u, tag in ((miss[0], "手气最差那个"), (hit[0], "跑成那档那个")):
+            random.seed(20260926)
+            _hp0 = int((PS.get_player("g_flee", u) or {}).get("hp") or 0)
+            o = _drive(host, ad, u, "逃跑")
+            s = INST.live(env, u)
+            _lb = ((PS.get_player("g_flee", u) or {}).get("flags") or {}).get("last_battle") or {}
+            chk("★ ④a 不在场敲 `逃跑`（%s）：**不建场**（场 = %s）· 出的是「…甩在了后头 —— "
+                "这一场没打」那一句 · 档上血不动（%d → %d）· `last_battle` 记 fled —— "
+                "冷启动**不掷骰**（那一档不存在「被拦下」）"
+                % (tag, s, _hp0, int((PS.get_player("g_flee", u) or {}).get("hp") or 0)),
+                s is None and _LINE_OK in o and _LINE_BLK not in o
+                and int((PS.get_player("g_flee", u) or {}).get("hp") or 0) == _hp0
+                and _lb.get("result") == "fled",
+                (o[:2], _lb.get("result")))
+        # ── ④b 「已经在打」（先用 `防御` 真开一场，不打死对面）⇒ 掷骰两态照旧（P-57 那一档）
         for u, want in ((miss[0], "block"), (hit[0], "ok")):
+            random.seed(20260926)
+            PS.group_del(INST.SCOPE, INST.battle_key(env, u))
+            _seed("g_flee", u)
+            random.seed(20260926)
+            _o_open = _drive(host, ad, u, "防御")           # 真开一场（防御不出伤 ⇒ 对面还是满血）
+            if INST.live(env, u) is None:
+                chk("★ ④b 前提：`防御` 真把这一场开起来了（%s）" % u, False, _o_open[:2])
+                continue
             random.seed(20260926)
             o = _drive(host, ad, u, "逃跑")
             s = INST.live(env, u)
             if want == "block":
-                chk("★ 掷败那个（%s：手气 %.3f < %.2f）⇒ 被拦下 · 这一手白花 · **这一场照打**"
+                chk("★ ④b 掷败那个（%s：手气 %.3f < %.2f）⇒ 被拦下 · 这一手白花 · **这一场照打**"
                     % (u, _roll(u), rate),
-                    _has(o, "COMBAT_FLEE_BLOCK") and s is not None
-                    and int(s.get("hands") or 0) == 1 and int(s.get("flee_tries") or 0) == 1, o[:3])
+                    _LINE_BLK in o and _LINE_OK not in o and s is not None
+                    and int(s.get("flee_tries") or 0) == 1, o[:3])
             else:
                 g0 = int((PS.get_player("g_flee", u) or {}).get("gold") or 0)
-                chk("★ 掷成那个（%s：手气 %.3f ≥ %.2f）⇒ 脱离 · 这一场**没打** · 场清干净"
+                chk("★ ④b 掷成那个（%s：手气 %.3f ≥ %.2f）⇒ 脱离 · 这一场**没打** · 场清干净"
                     % (u, _roll(u), rate),
-                    _has(o, "COMBAT_FLEE_OK") and s is None
+                    _LINE_OK in o and s is None
                     and int((PS.get_player("g_flee", u) or {}).get("gold") or 0) == g0, o[:3])
         # 同一场重掷：找一个 nth=0 被拦下、nth=1 跑得掉的号（现算，不手写）
         both = [u for u in uids if _roll(u) < rate and _roll(u, 1) >= rate]
@@ -476,11 +509,12 @@ def main():
             PS.group_del(INST.SCOPE, INST.battle_key(env, u))
             _seed("g_flee", u)
             random.seed(20260926)
+            _drive(host, ad, u, "防御")                     # ★ 同上：先真开一场（重掷只在「场里」谈得上）
             oa = _drive(host, ad, u, "逃跑")
             ob = _drive(host, ad, u, "逃跑")
-            chk("★ 同一场连敲两次 `逃跑`：第一次拦住（种子 = P-57 那颗）· 第二次**重掷**并跑掉"
+            chk("★ ④c 同一场连敲两次 `逃跑`：第一次拦住（种子 = P-57 那颗）· 第二次**重掷**并跑掉"
                 "（手气 %.3f → %.3f）" % (_roll(u), _roll(u, 1)),
-                _has(oa, "COMBAT_FLEE_BLOCK") and _has(ob, "COMBAT_FLEE_OK")
+                _LINE_BLK in oa and _LINE_OK in ob
                 and INST.live(env, u) is None, (oa[:1], ob[:1]))
     finally:
         _unpin(saved)
