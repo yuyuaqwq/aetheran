@@ -488,11 +488,17 @@ async def _settle(env, p, uid, pick, ms, res, logs, hp_after, seen, player, affi
         nth = int(seen_n.get(pick[0], 0))
         seen_n[pick[0]] = nth + 1
         f["drops_seen"] = seen_n
+        # ★ fxm2-horn：**手上已有的那几件**（`loot.held_ids` 唯一一口）—— `unique: true` 的池
+        #   按它「按档去重」（真源 `22_旧哨塔_逐间设计_v1 §12 塔顶`：「半截号角（如果 10 房没拿）」）。
+        #   原先这一支从来没问过背包 ⇒ `dp_boss_minor`（单条目 w=100 · 挂在五只可反复打的头目怪
+        #   上）每杀一只必掉一个（夜试玩实测进包 225 个）。只在**取背包那一刻**算一次：
+        #   别的池（没写 `unique` 的）收到它也只当没看见 —— 池里别的东西照旧掉。
+        held = LT.held_ids(p)
         drops = []
         for round_i in range(max(1, int(rw["drop_rounds"]))):
             _dseed = drop_seed(uid, pick[0], nth, round_i)
             for pool_id in (m.get("drops") or []):
-                drops.extend(LT.roll_pool(pool_id, level=plv,
+                drops.extend(LT.roll_pool(pool_id, level=plv, held=held,
                                          rnd=__import__("random").Random(_dseed)))
         # ★ B3-24：掉落按词条 PE 等比上调 + 富饶那条的「材料翻倍」（倍数在 rules/elite.json）
         drops = AFFIX.scale_drops(drops, affixes)
