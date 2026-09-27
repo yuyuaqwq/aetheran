@@ -109,6 +109,15 @@ fix-m-bounty 加的那一组（悬赏日常循环断链 · 看板列了交掉的
 ② `悬赏` 板那一段**只列还能接的**：已交那条不在板上 · 没交的照旧 · 全交掉 ⇒ **连表头都不印**；
 反证：把 `_done` 换回空表 ⇒ 已交那条又出现。
 
+fxm3-questsnap 加的那一组（接活即能交 · 白拿经验）：㊴（见文件尾部那一节）——
+`require` 判的是「**接活后**新达成」（接活那一下落进度基线 `flags.quests[<id>]["base"]`）：
+① 形状（基线逐条等于接活那一刻的读数 · 没写 `require` 的不落那一格）·
+② 态一「接活前把活干完」⇒ `看 <编号>` 还差 = 条件条数、`提示` 不说办完了、`交` 拦住且档不动 ·
+③ 态二「接活后真干一次」⇒ 交得掉、奖励逐字入档且**只发一次** ·
+④ 反证（关掉 `_set_base`）⇒ 主 3 / 主 4 / 主 11 当场又白拿 ·
+⑤ 老档（无基线）与改前逐字节相同（**有意兼容**，不是放宽）。
+真源：`24_任务线_v1.md §一` 每块的「步骤」（主 3「② **各完成一次**（打怪/采集/送信）」）。
+
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_quests.py
 """
 from __future__ import annotations
@@ -1741,11 +1750,28 @@ _GEAR = next(((k, v) for k, v in ITEMS.items()
               if not str(k).startswith("_") and v.get("slot")), (None, None))
 
 
-def _act_enhance(x):
+def _accept_then(x, p, accept_first):
+    """★ fxm3-questsnap：**先接活，再真做那一次** —— 返回接活那一段回话（不接就回空表）。
+
+    为什么要有它（本波口径）：`content/cmds_quest._req_ok` 现在判的是「**接活后**新达成」
+    （接活那一刻落一份进度基线 `flags.quests[<id>]["base"]`）。「先做 → 再接 → 交」那个老时序，
+    在新判据下**就该交不掉**（= ㊳ 要钉住的那一态）；这一档问的还是「这条支线真做得成、真交得掉」，
+    所以驱动时序回到玩家真实那一条：**接 → 做 → 交**。断言一个字没改（真做一次 ⇒ 交得掉），
+    而新时序还顺带把「接活那一刻基线真落了」也压在载重上（不落基线这条就红）。
+    """
+    if not accept_first:
+        return []
+    return _drive(CQ.quest_accept, p, "接 %d" % x["order"])
+
+
+def _act_enhance(x, accept_first=False):
     """真做：真的把一件装备强化到 +n（走 `cmds_recipe.enhance`，不是往档里写数）。
 
     ★ P3 BUG-2（本波 f4）：`强化` 现在有**地点门禁**（必须在铁匠铺那一站，与『铁匠铺』同口径）
       ⇒ 这一支的档要**站在那一站**（节点从 `npcs.funcs` 的 `smith` 现取，不手写）。
+
+    ★ fxm3-questsnap：`accept_first=True` ⇒ **先接活再真做**（`require` 判「接活后新达成」——
+      见 ㊳ 与 `_accept_then`）。
     """
     iid, rec = _GEAR
     if not iid:
@@ -1755,13 +1781,14 @@ def _act_enhance(x):
                 loc="windmill_town", node=_fn_enh("smith"),
                 bag={iid: 1, "i_material_iron_scrap": 9, "i_material_hard_bone": 9})
     out = []
+    out += _accept_then(x, p, accept_first)
     for _ in range(int(CQ._require_of(x)[0]["n"])):
         out += _drive(CR.enhance, p, "强化 %s" % rec.get("name"))
     lv = int(((p.get("enhance") or {}).get(iid) or {}).get("lv") or 0)
     return p, out, "强化到 +%d（%s）" % (lv, rec.get("name"))
 
 
-def _act_cook(x):
+def _act_cook(x, accept_first=False):
     """真做：真的下锅（走 `cmds_recipe.cook`；食材按配方给够 —— 账由锅自己记）。"""
     r0 = CQ._require_of(x)[0]
     n = int(r0.get("n") or 1)
@@ -1775,6 +1802,7 @@ def _act_cook(x):
         bag[str(e.get("id"))] = int(e.get("n") or 1) * n
     p = _player(level=1, bag=bag, flags={"card": 1})
     out = []
+    out += _accept_then(x, p, accept_first)
     for _ in range(n):
         out += _drive(CR.cook, p, "烹饪 %s" % rg.get("name"))
     return p, out, "下锅 %d 次（%s）" % (CQ._cook_have(p, r0), rg.get("name"))
@@ -1800,7 +1828,7 @@ def _band_hour(npc_id):
     return None
 
 
-def _act_talk(x):
+def _act_talk(x, accept_first=False):
     """真做：站到他那儿真的搭 N 次话（走 `cmds_talk.talk`）。
 
     ★ 有作息的那位：**先把假钟拨到他在的时辰**再跑（跑完还原）—— 见 `_band_hour`。
@@ -1825,6 +1853,7 @@ def _act_talk(x):
             #   否则刚补上的 `flags.card`（接活那道门要的）会被这一行冲掉。
             p["flags"] = dict(p.get("flags") or {}, **fl)
         out = []
+        out += _accept_then(x, p, accept_first)
         for _ in range(n):
             out += _drive(CT.talk, p, "搭话 %s" % who)
         return p, out, "跟「%s」搭话 %d 次（他在 %s）" % (who, CQ._talk_have(p, npc), spot[1])
@@ -1832,7 +1861,7 @@ def _act_talk(x):
         FC_Q.bind_host(**_saved)
 
 
-def _act_ask(x):
+def _act_ask(x, accept_first=False):
     """真做：真的跟 N 个**不同的人**搭话（走同一个 `talk` 实现体 —— 账按对话树记）。
 
     ★ 同 `_act_talk`：先把假钟拨到**昼**（在场的人最多）再挑人 —— 否则「问得到几个人」
@@ -1841,6 +1870,7 @@ def _act_ask(x):
     n = int(CQ._require_of(x)[0].get("n") or 1)
     p = _player(level=9, flags={"card": 1})
     out, hit = [], []
+    out += _accept_then(x, p, accept_first)
     _saved = dict(FC_Q.HANDLES)
     _at_day(CAL_Q.day_now(), 12.0)
     try:
@@ -1906,17 +1936,18 @@ for _qid in sorted(_EXP_KIND, key=lambda q: QE[q]["order"]):
         if _people < int(_r0["n"]):
             _nk_bad.append("%s 要问 %d 个人，镇上有对话树的只有 %d 位" % (_qid, _r0["n"], _people))
     # ── ★ 真做一次 → 真交一次（动作全走真指令，不是把账写进档）
-    _p, _out, _how = _ACT[_r0["kind"]](_x)
+    #   ★ fxm3-questsnap：时序 = **接 → 真做一次 → 真交一次**（`require` 判「接活后新达成」，
+    #     见 `_accept_then`）。断言一个字没改：真做一次 ⇒ 交得掉、没有取不到文案的行。
+    _p, _out, _how = _ACT[_r0["kind"]](_x, accept_first=True)
     if _p is None:
         _nk_bad.append("%s 的真做走不通：%s" % (_qid, _how))
         continue
-    _acc = _drive(CQ.quest_accept, _p, "接 %d" % _x["order"])
     _pay = _drive(CQ.quest_deliver, _p, "交 %d" % _x["order"])
     _deliv = any(ln.startswith("交了") for ln in _pay) \
         and _qid in ((_p.get("flags") or {}).get("quests_done") or [])
     if not _deliv:
         _nk_bad.append("%s 真做了（%s）却交不掉：%s" % (_qid, _how, _pay[:3]))
-    if any(MISSING in ln for ln in _out + _acc + _pay):
+    if any(MISSING in ln for ln in _out + _pay):
         _nk_bad.append("%s 有取不到文案的行" % _qid)
     _nk_lines.append("%s %-6s（编号 %-3d）条件 %s → 真做：%s → 真交：%s"
                      % ({"enhance": "强化", "cook": "烹饪", "talk": "搭话",
@@ -1926,7 +1957,9 @@ for _qid in sorted(_EXP_KIND, key=lambda q: QE[q]["order"]):
                          % (_x["reward_exp"], _x["reward_gold"]))))
 (ok if len(_EXP_KIND) == 7 and not _nk_bad else bad)(
     "★ 支线新四型 %d 条：与 24 §二「步骤」列逐条对账（含数词）· 量够达成 / 途径存在 · "
-    "**真做一次再真交一次**（动作走真指令：强化 / 下锅 / 搭话 / 问人；坏 %s）"
+    "**接 → 真做一次 → 真交一次**（动作走真指令：强化 / 下锅 / 搭话 / 问人；"
+    "★ fxm3-questsnap：时序改成「先接后做」—— 老时序「先做后接」在新判据下就该交不掉，"
+    "那一态由 ㊳ 钉着；坏 %s）"
     % (len(_EXP_KIND), _nk_bad or "无"))
 for _ln in _nk_lines:
     print("      %s" % _ln)
@@ -2686,6 +2719,240 @@ FC_Q.bind_host(**_FC_SAVED)                             # ★ 拨回真钟
     " 反证）（坏 %s）" % (_fb_bad or "无"))
 for _ln in _fb_lines:
     print("      %s" % _ln)
+
+# ══════════════════════════════════════════════════════════════
+# ㊴ ★ fxm3-questsnap：`require` 判的是「**接活后**新达成」（接活那一下落进度基线）
+#   【现象】三路试玩复现：主线 3「三张牌」只要**到过三条带**就能交（`看 3` 一行「还差」都没有、
+#     `提示` 直接说「办完了」、`交 3` 白拿 118 经验 / 30 铜板），三条带的活一件没做；
+#     主 4 交掉 +330 经验；主 11 交掉 +4276（与 `reward_exp` 逐字相等）。
+#   【根因】`require` 查的是**历史态**（历史上到过 / 打过 / 采过就算数），而「接活那一刻」没有基线
+#     ⇒ 接活**前**干过的活也算进任务进度。
+#   【真源】`24 §一` 每块的「步骤」都是**接了之后要做的那几拍**（主 3 步骤②「**各完成一次**
+#     （打怪/采集/送信）」）—— 代码没跟上文案，真源一个字不动。
+#   【判据】**三态 + 形状 + 反证 + 老档**，全部真敲指令（造档 → `接` → `看` / `提示` / `交`）：
+#     ① 形状：写了 `require` 的条目真接一次 ⇒ `flags.quests[<id>].base` 是 dict，**逐条等于**
+#        接活那一刻每条条件的读数（键 = `_ckey`）；**没写 `require` 的老条目**不落那一格。
+#     ② 态一「接活前把活干完」（起手档 = 万事俱备）：`看 <编号>` 的「还差」= 条件条数、
+#        每一条的缺项行与 `_unmet` 同一口；`提示` **不说**「办完了」；`交 <编号>` 拦住，
+#        经验 / 铜板一个字不动、`quests_done` 不长。
+#     ③ 态二「接活后真干一次」（把读数各推满一格）：交得掉 · 奖励**逐字** = 域里那两格 ·
+#        `flags.quests[<id>].step` = 条件条数；再交一次**不再发奖励**、不再回「交了」。
+#     ④ 反证：把 `_set_base` 关掉（= 改前那一版：接活不落基线）⇒ 主 3 / 主 4 / 主 11 **当场又白拿**；
+#        复原即绿（判据真咬在基线上）。
+#     ⑤ 老档（**有意差异登记**）：**没有基线**的档（= 本批之前接的活 / 起手档直接塞
+#        `quests_active`）判定与改前**逐字节相同**（主 3 到过三条带 ⇒ 交得掉）——
+#        这是**有意兼容**、不是放宽；要更严（缺基线一律拦）只改 `cmds_quest._base_at` 一处一行。
+print()
+print("── ★ fxm3-questsnap ㊴：`require` 判「接活后新达成」（接活落进度基线 · 三态 + 反证）")
+from content import cmds_more as _CMO39                                  # noqa: E402
+from content.town import _func_node as _FN39                             # noqa: E402
+from content.cmds_ast import T as _T39                                   # noqa: E402（槽位渲染：判据自己拼期望）
+
+_BOARD39 = _FN39("board")
+_DLG39 = st.domain("dialogues") or {}
+_at_day(1)                                                              # 悬赏那条「今日点名」要定日
+
+
+def _bump39(p, r, m=1):
+    """把这条条件的**读数**推 m 格 —— 只动那本账本身（= 模拟「接活后真干 m 次」）。
+
+    ★ 探针不另写一份读数口径：推完之后一律由 `CQ._since` 现算，判据只看「推得动 / 交得掉」。
+    """
+    kind = r.get("kind")
+    if kind == "visit":
+        loc, nd = str(r.get("map") or ""), str(r.get("node") or "")
+        if not nd:
+            nd = next((str(x["id"]) for x in ((MAPS.get(loc) or {}).get("nodes") or [])), "n_probe")
+        f = dict(p.get("foot") or {})
+        v = dict(f.get("visits") or {})
+        kk = "%s:%s" % (loc, nd)
+        v[kk] = int(v.get(kk) or 0) + m
+        f["visits"] = v
+        p["foot"] = f
+    elif kind == "kill":
+        mid = str(r.get("monster") or "")
+        if not mid:
+            role = str(r.get("role") or "")
+            mid = CQ._daily_pick(role, p) if r.get("daily") \
+                else next(iter(sorted(_role_ids_of(role))), "")
+        b = dict(p.get("books") or {})
+        mo = dict(b.get("monster") or {})
+        rec = dict(mo.get(mid) or {})
+        rec["kills"] = int(rec.get("kills") or 0) + m
+        rec.setdefault("day", 1)
+        mo[mid] = rec
+        b["monster"] = mo
+        p["books"] = b
+    elif kind == "item":
+        b = dict(p.get("bag") or {})
+        iid = str(r.get("item") or "")
+        b[iid] = int(b.get(iid) or 0) + m
+        p["bag"] = b
+    elif kind == "enhance":
+        e = {kk: (dict(vv) if isinstance(vv, dict) else vv)
+             for kk, vv in (p.get("enhance") or {}).items()}
+        iid = next(iter(e), "") or "_probe_gear"
+        rec = dict(e.get(iid) or {})
+        rec["lv"] = int(rec.get("lv") or 0) + m
+        e[iid] = rec
+        p["enhance"] = e
+    elif kind == "cook":
+        fl = dict(p.get("flags") or {})
+        ck = dict(fl.get("cooked") or {})
+        rid = next(iter(ck), "")
+        if not rid:
+            recs = _cook_recs(str(r.get("quality") or ""), known_only=True)
+            rid = recs[0] if recs else "_probe_dish"
+        ck[rid] = int(ck.get(rid) or 0) + m
+        fl["cooked"] = ck
+        p["flags"] = fl
+    elif kind == "talk":
+        fl = dict(p.get("flags") or {})
+        tk = dict(fl.get("talked") or {})
+        d = CQ._dlg_of(str(r.get("npc") or ""))
+        tk[d] = int(tk.get(d) or 0) + m
+        fl["talked"] = tk
+        p["flags"] = fl
+    else:                                   # ask：要多 **m 个不同的人**有账
+        fl = dict(p.get("flags") or {})
+        tk = dict(fl.get("talked") or {})
+        add = [kk for kk in sorted(_DLG39)
+               if not str(kk).startswith("_") and kk not in tk][:m]
+        if len(add) < m:
+            return False
+        for kk in add:
+            tk[kk] = 1
+        fl["talked"] = tk
+        p["flags"] = fl
+    return True
+
+
+def _mk39(x, k):
+    """万事俱备的档 + 站在板子那一站 + 带证 + **手上没有这条活**（接下来要真接一次）。"""
+    p = _sat_player(x, k, day=1)
+    fl = dict(p.get("flags") or {})
+    fl["quests_active"] = []
+    fl["card"] = 1
+    p["flags"] = fl
+    p["loc"], p["node"] = "windmill_town", _BOARD39
+    return p
+
+
+_b39, _l39, _base39 = [], [], [0]
+for _k39, _x39 in sorted(QE.items(), key=lambda kv: int(kv[1].get("order") or 0)):
+    _reqs39 = CQ._require_of(_x39)
+    if not _reqs39:
+        continue                              # 没写 require 的 4 条老支线不在这条判据的范围（走死路径）
+    _n39 = int(_x39["order"])
+    _reql = len(_reqs39)
+    p = _mk39(_x39, _k39)
+    _wantb = {CQ._ckey(r): CQ._metric(p, r) for r in _reqs39}       # 接活**那一刻**每条条件的读数
+    _e0, _g0 = int(p.get("exp") or 0), int(p.get("gold") or 0)
+    _acc39 = _drive(CQ.quest_accept, p, "接 %d" % _n39)
+    if _k39 not in ((p.get("flags") or {}).get("quests_active") or []):
+        _b39.append("%s 接不下：%s" % (_k39, _acc39[:2]))
+        continue
+    _base = ((p.get("flags") or {}).get("quests") or {}).get(_k39, {}).get(CQ._BASE)
+    if not isinstance(_base, dict):
+        _b39.append("%s 接活**没落进度基线**（flags.quests[%s].base = %s）" % (_k39, _k39, _base))
+    elif _base != _wantb:
+        _b39.append("%s 基线不是「接活那一刻的读数」：%s ≠ %s" % (_k39, _base, _wantb))
+    _base39[0] += 1
+    # ── 态一：接活前把活干完 ⇒ `看` 还差 · `提示` 不说办完了 · `交` 拦住
+    _o39 = _drive(_CMO39.board_show, p, "看 %d" % _n39)
+    _lack39 = [ln for ln in _o39 if "还差" in ln]
+    _unm39 = CQ._unmet(p, _x39, _k39)
+    if len(_lack39) != _reql:
+        _b39.append("%s（`看 %d`）「还差」说了 %d 条（条件 %d 条）：%s"
+                    % (_k39, _n39, len(_lack39), _reql, _o39[-4:]))
+    if not _unm39 or any(("  " + ln) not in _o39 for ln in _unm39):
+        _b39.append("%s（`看 %d`）缺的每一条没逐条说清（缺项 %s）：%s"
+                    % (_k39, _n39, _unm39, _o39[-4:]))
+    _h39 = CQ._hint_lines(p)
+    if not _h39 or any(_T39("SYS_HINT_JOB_READY", order=_n39) in ln for ln in _h39):
+        _b39.append("%s 接活后（活已干完）『提示』却说办完了：%s" % (_k39, _h39[:3]))
+    _pay0 = _drive(CQ.quest_deliver, p, "交 %d" % _n39)
+    if any(ln.startswith("交了") for ln in _pay0) \
+            or _k39 in ((p.get("flags") or {}).get("quests_done") or []) \
+            or int(p.get("exp") or 0) != _e0 or int(p.get("gold") or 0) != _g0:
+        _b39.append("★ %s「%s」：**接活前就把活干完，接活后一句就交掉了（白拿经验/铜板）**：%s"
+                    % (_k39, _x39["name"], _pay0[:3]))
+        continue
+    # ── 态二：接活后**真干一次** ⇒ 交得掉 · 奖励只发一次
+    for _r39 in _reqs39:
+        if not _bump39(p, _r39, CQ._n_of(_r39)):
+            _b39.append("%s：条件 %s 推不动（造不出「接活后再干一次」的账）"
+                        % (_k39, CQ._ckey(_r39)))
+    _pay1 = _drive(CQ.quest_deliver, p, "交 %d" % _n39)
+    _de = int(p.get("exp") or 0) - _e0
+    _dg = int(p.get("gold") or 0) - _g0
+    _rec39 = ((p.get("flags") or {}).get("quests") or {}).get(_k39) or {}
+    if not any(ln.startswith("交了") for ln in _pay1):
+        _b39.append("%s 接活后真干一次却交不掉：%s" % (_k39, _pay1[:3]))
+    if _de != int(_x39["reward_exp"]) or _dg != int(_x39["reward_gold"]):
+        _b39.append("%s 奖励没照单入档：经验 %+d（应 +%d）· 铜板 %+d（应 +%d）"
+                    % (_k39, _de, _x39["reward_exp"], _dg, _x39["reward_gold"]))
+    if int(_rec39.get("step") or -1) != _reql:
+        _b39.append("%s：flags.quests[%s].step = %s ≠ 条件条数 %d"
+                    % (_k39, _k39, _rec39.get("step"), _reql))
+    _pay2 = _drive(CQ.quest_deliver, p, "交 %d" % _n39)
+    if any(ln.startswith("交了") for ln in _pay2) \
+            or int(p.get("exp") or 0) != _e0 + int(_x39["reward_exp"]) \
+            or int(p.get("gold") or 0) != _g0 + int(_x39["reward_gold"]):
+        _b39.append("%s 再交一次又动了档（奖励只许发一次）：%s" % (_k39, _pay2[:3]))
+    if str(_x39.get("chain")) == "main":
+        _l39.append("主%-2d %-7s 条件 %d 条（%s）：接活（活已干完）⇒ 还差 %d 条 + 拦住 · "
+                    "接活后真干一次 ⇒ 交了（经验 +%d 铜板 +%d · 再交不动档）"
+                    % (_n39, _x39["name"], _reql, "/".join(str(r.get("kind")) for r in _reqs39),
+                       len(_lack39), _de, _dg))
+# ── ⑤ 老档兼容（**有意差异登记**）：没有基线 ⇒ 判定与改前逐字节相同（= 改前那一版）
+_old39 = []
+for _k9, _n9, _why in (("q_main_03", 3, "到过三条带"), ("q_main_04", 4, "万事俱备"),
+                       ("q_side_13", 25, "万事俱备")):
+    _x9 = QE.get(_k9) or {}
+    _p9 = _sat_player(_x9, _k9, day=1)             # ← 直接塞 quests_active：**没有基线**的老档
+    _p9["flags"] = dict(_p9.get("flags") or {}, card=1)
+    _d9 = _drive(CQ.quest_deliver, _p9, "交 %d" % _n9)
+    _ok9 = any(ln.startswith("交了") for ln in _d9)
+    _old39.append("%s（%s · 无基线）⇒ %s" % (_k9, _why, "交得掉（与改前逐字相同）" if _ok9 else "拦住了 ✗"))
+    if not _ok9:
+        _b39.append("★ 老档兼容路径的方向变了：%s（%s · 没有基线）改前交得掉、现在交不掉"
+                    % (_k9, _why))
+# ── ⑥ 形状的另一半：没写 `require` 的老条目接活**不落**那一格
+_p6 = _player(level=9, flags={"card": 1})
+_a6 = _drive(CQ.quest_accept, _p6, "接 22")        # q_side_10「带路」：没写 require
+_rec6 = ((_p6.get("flags") or {}).get("quests") or {}).get("q_side_10")
+if _rec6 is not None:
+    _b39.append("没写 `require` 的老条目接活竟然落了 flags.quests 那一格：%s" % (_rec6,))
+# ── ④ 反证：把 `_set_base` 关掉（= 改前那一版）⇒ 主 3 / 主 4 / 主 11 **当场又白拿**
+_REV39 = [("q_main_03", 3), ("q_main_04", 4), ("q_main_11", 11)]
+_rev39 = []
+_keep_sb39 = CQ._set_base
+try:
+    CQ._set_base = (lambda _pp, _kk, _xx: None)
+    for _k9, _n9 in _REV39:
+        _p9 = _mk39(QE.get(_k9) or {}, _k9)
+        _drive(CQ.quest_accept, _p9, "接 %d" % _n9)
+        _d9 = _drive(CQ.quest_deliver, _p9, "交 %d" % _n9)
+        if any(ln.startswith("交了") for ln in _d9):
+            _rev39.append((_k9, _d9[0][:24]))
+finally:
+    CQ._set_base = _keep_sb39
+if len(_rev39) != len(_REV39):
+    _b39.append("★ 反证没生效：把 `_set_base` 关掉之后只有 %d/%d 条又白拿"
+                "（判据没咬在基线上）：%s" % (len(_rev39), len(_REV39), _rev39))
+FC_Q.bind_host(**_FC_SAVED)                        # ★ 拨回真钟
+(ok if not _b39 else bad)(
+    "★ fxm3-questsnap ㊴：`require` 判「**接活后**新达成」—— 带 `require` 的条目**逐条**真敲"
+    "（接 → 看 / 提示 / 交）：① 接活那一刻落进度基线（逐条等于当时读数；没写 require 的不落）· "
+    "② 接活前把活干完 ⇒ 看还差 = 条件条数 + 提示不说办完了 + 交拦住且档不动 · "
+    "③ 接活后真干一次 ⇒ 交得掉且奖励逐字入档、**只发一次** · ④ 反证（关掉 `_set_base`）⇒ "
+    "主 3 / 主 4 / 主 11 当场又白拿 · ⑤ 老档（无基线）与改前逐字相同（有意兼容）"
+    "（基线落 %d 条 · 坏 %s）" % (_base39[0], _b39 or "无"))
+for _ln in _l39:
+    print("      %s" % _ln)
+print("      老档兼容（⑤）：%s" % " · ".join(_old39))
+print("      反证（④ · 关掉 `_set_base`）：%s" % " · ".join("%s → %s" % t for t in _rev39))
 
 for n in notes:
     print("  · " + n)

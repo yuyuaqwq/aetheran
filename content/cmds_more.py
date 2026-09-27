@@ -166,7 +166,9 @@ async def board_show(env, sink, uid, player):
     if x.get("insight"):
         yield T("SYS_JOB_INSIGHT", insight=x["insight"])
     yield T("SYS_BSHOW_REWARD", exp=x.get("reward_exp"), gold=x.get("reward_gold"))
-    for line in _unmet(p, x):
+    # ★ fxm3-questsnap（本波）：`k` 传下去 —— 单子上的「还差…」与『交』同一把尺子（接活后新达成）；
+    #   这条单子还没接 ⇒ 那一格上没有基线 ⇒ 老档口径（与改前逐字相同）。
+    for line in _unmet(p, x, k):
         yield "  " + line
     _nw = _no_wire_line(x)             # ★ fxb②：这条的完成条件还没接线 —— 单子上照实标出来
     if _nw:

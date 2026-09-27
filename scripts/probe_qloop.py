@@ -563,9 +563,11 @@ _row = next((ln for ln in _out if ln.startswith("· ")), "")
 if "（0/" in _row or "（1/" in _row:
     _b5.append(("没写 require 的老条目也被塞了进度", _row))
 # 反证 ⑤-a：把 `_progress` 关掉 ⇒ 那一格消失
+#   ★ fxm3-questsnap：`_progress` 多了一个可选形参（条目 id —— 「接活后新达成」那一把尺子要它）；
+#     这条反证钉的仍然是「关掉这一支 ⇒ 那一格消失」，签名跟着改，判据一个字没松。
 _keep_prog = CQ._progress
 try:
-    CQ._progress = (lambda _x, _p: "")
+    CQ._progress = (lambda _x, _p, _k=None: "")
     _p = _player(level=1, flags={"quests_active": ["q_side_09"], "talked": {_DLG: 1}})
     _out = _drive(CQ.quest_mine, _p, "我的委托")
 finally:
