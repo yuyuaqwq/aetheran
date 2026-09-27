@@ -1047,7 +1047,7 @@ async def defend(env, sink, uid, player):
     """`防御`（别名 防 / 守）—— 你这一手摆防御姿态（引擎内置动作，本文件不写任何机制）。
 
     ★ 原先是一句桩（「第一版还没接轮流制 —— 先打『攻击』打完一场」）；本批接成真动作。
-      引擎的 `defend` 给 `defending=True`（承伤减半那一档在引擎里）+ 类别耗时 40/30 刻
+      引擎的 `defend` 开一格**姿态窗口**（`effects["defend"]`，承伤减半那一档在引擎里）+ 类别耗时 40/30 刻
       （`content/rules/action_base.json`）—— 两样都不是本文件写的。
     """
     p = _p(player)

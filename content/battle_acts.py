@@ -157,13 +157,16 @@ def repanel(actor, p) -> None:
     **一个数都不动**（等于白亏一手，玩家看不出来）。
 
     只重挂**面板那一族键**（`player_actor` 给的全部键 + 栈 id）；战斗态一概不动：
-    `hp` / `mp` / `ct` / `charging` / `effects` / `shields` / `cooldown` / `defending` 原样留着
+    `hp` / `mp` / `ct` / `charging` / `effects` / `shields` / `cooldown` 原样留着
     （换手不该把人打回满血，也不该清掉身上的状态）。现血按**新的上限**钳一次。
+    ★ 2026-09-27：keep 名单里**删掉 `defending`** —— 引擎那边防御姿态早已收进状态容器
+    （`effects["defend"]` 窗口条目，读口 `window_open(target, DEFEND_TAG)`），裸 bool 兄弟字段
+    已不存在 ⇒ 这一格在名单里是死的（`if k in actor` 恒假）。真正的姿态态随 `effects` 一起留。
     """
     from . import combat as CB
     fresh = CB.player_actor(dict(p or {}), uid=str((actor or {}).get("uid") or ""))
     keep = {k: actor[k] for k in ("hp", "mp", "ct", "charging", "effects", "shields",
-                                  "cooldown", "defending") if k in actor}
+                                  "cooldown") if k in actor}
     for k, v in fresh.items():
         actor[k] = v
     actor.update(keep)

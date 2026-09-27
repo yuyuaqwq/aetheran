@@ -326,7 +326,7 @@ def _phase_enter(actor: dict, run: dict, ph: dict, i: int, logs: list) -> None:
         actor["_dmg_taken_mult"] = float(m["dmg_taken_mult"])
     # ★ `hold` 的两态（数据里的两种取值，不是同一个东西）：
     #   · `"block"`（站桩「不攻击，只挡」）⇒ 它这一手出**防御**：引擎的 `defend`
-    #     给 `defending=True`（承伤减半 —— 这才叫「挡」），且它照样进前摇窗口
+    #     开一格姿态窗口（`effects["defend"]`，承伤减半 —— 这才叫「挡」），且它照样进前摇窗口
     #     （所以「对方正押着一手 ⇒ 后撤退不开」那条判据在站桩里仍然成立）。
     #   · `True`（回塔「不再攻击，走向塔边」）⇒ 本刻**不出手**（钩子回 True 拦下），
     #     它只是在走。

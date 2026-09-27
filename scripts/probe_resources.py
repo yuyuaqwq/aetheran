@@ -469,6 +469,7 @@ print("══ ⑧ 引擎改动面（硬指标）")
 import subprocess as _sp                                                # noqa: E402
 _ENGINE_BASE8 = "8f85f7d"
 _want_t = sorted([
+    "README.md",
     "examples/minimal-game/content/apply.py",
     "examples/minimal-game/content/bridge.py",
     "examples/minimal-game/content/cues.py",
@@ -476,6 +477,7 @@ _want_t = sorted([
     "examples/minimal-game/tests/test_smoke.py",
     "extends/ext_combat/battle/actions.py",
     "extends/ext_combat/battle/actors.py",
+    "extends/ext_combat/battle/attributes.py",
     "extends/ext_combat/battle/battle.py",
     "extends/ext_combat/battle/cues.py",
     "extends/ext_combat/battle/effects.py",
@@ -493,16 +495,21 @@ _want_t = sorted([
     "saintess_engine/text/__init__.py",
     "saintess_engine/text/template.py",
     "tests/_cue_text_fixture.py",
+    "tests/test_attrs_write_port.py",
     "tests/test_battle_text_inject.py",
     "tests/test_cross_hand_state.py",
+    "tests/test_cue_coverage.py",
     "tests/test_cues_shape.py",
     "tests/test_dot_cur_hp_shape.py",
+    "tests/test_editor_wiki.py",
     "tests/test_engine_neutral_fallback.py",
     "tests/test_gauge_actions_frozen.py",
     "tests/test_segment_declaration.py",
     "tests/test_state_container.py",
     "tests/test_tags.py",
-    "tools/_cue_freeze.py",])
+    "tools/_cue_coverage.py",
+    "tools/_cue_freeze.py",
+    "tools/check_wiki_refs.py",])
 _out = _sp.run(["git", "-C", ENGINE, "status", "--porcelain"],
                capture_output=True, text=True, encoding="utf-8").stdout.strip()
 _committed = {p for p in _sp.run(
