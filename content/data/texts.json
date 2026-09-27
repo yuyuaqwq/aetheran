@@ -6374,5 +6374,441 @@
     "params": [],
     "category": "系统",
     "desc": "P-11 · 内置 `battle` 守卫（不在战斗中）拦下的那一句 —— 引擎 `guard_text_fn` 的供体之一（引擎给的中性键 `guard.battle_missing`）。逐字 = 宿主改前 `main.py` 那两句之一。"
+  },
+  "COMBAT_ACTIONS_EFFECT_ON": {
+    "value": "✨ {key} 生效！",
+    "params": [
+      "key"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.actions.effect_on`（`extends/ext_combat/battle/actions.py:627` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_ACTIONS_ENCHANT_FOLLOWUP": {
+    "value": "{tag} 附魔追击，追加 {dmg} 点伤害！",
+    "params": [
+      "dmg",
+      "tag"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.actions.enchant_followup`（`extends/ext_combat/battle/actions.py:571` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_ACTIONS_LIFESTEAL": {
+    "value": "🩸 吸血：回复 {heal} 点生命！",
+    "params": [
+      "heal"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.actions.lifesteal`（`extends/ext_combat/battle/actions.py:781` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_ACTIONS_SKILL_CAST": {
+    "value": "你施展【{name}】！",
+    "params": [
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.actions.skill_cast`（`extends/ext_combat/battle/actions.py:984` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_ACTIONS_SKILL_HEAL": {
+    "value": "你施展【{name}】，治愈了 {heal} 点生命！",
+    "params": [
+      "heal",
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.actions.skill_heal`（`extends/ext_combat/battle/actions.py:848` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_ACTIONS_SKILL_HEAL_FULL": {
+    "value": "你施展【{name}】，圣光治愈了你 {heal} 点生命！",
+    "params": [
+      "heal",
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.actions.skill_heal_full`（`extends/ext_combat/battle/actions.py:844` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_CORE_DEFEND": {
+    "value": "🛡 {name} 摆出防御姿态，受到的伤害减半！",
+    "params": [
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.core.defend`（`extends/ext_combat/battle/battle.py:632` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_CORE_FINISHED": {
+    "value": "战斗已结束！",
+    "params": [],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.core.finished`（`extends/ext_combat/battle/battle.py:296` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_CORE_FLED": {
+    "value": "💨 {name} 逃跑了！",
+    "params": [
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.core.fled`（`extends/ext_combat/battle/battle.py:638` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_CORE_NO_ACTOR": {
+    "value": "没有可行动的玩家！",
+    "params": [],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.core.no_actor`（`extends/ext_combat/battle/battle.py:294` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_CORE_SILENCED": {
+    "value": "🤐 {name} 被沉默，无法使用技能！(只能普攻/防御)",
+    "params": [
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.core.silenced`（`extends/ext_combat/battle/battle.py:508` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_CORE_UNKNOWN_ACTION": {
+    "value": "未知行动类型：{action}",
+    "params": [
+      "action"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.core.unknown_action`（`extends/ext_combat/battle/battle.py:547` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_EFFECTS_BUFF_BOOST": {
+    "value": "✦ {key} 提升（{op}×{mult}，持续 {turns} 刻）",
+    "params": [
+      "key",
+      "mult",
+      "op",
+      "turns"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.effects.buff_boost`（`extends/ext_combat/battle/effects.py:499` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_EFFECTS_CAST_BROKEN": {
+    "value": "💥 {name} 的出招被打断了！",
+    "params": [
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.effects.cast_broken`（`extends/ext_combat/battle/effects.py:707` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_EFFECTS_CLEANSE_NONE": {
+    "value": "✨ 净化（无减益可解）",
+    "params": [],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.effects.cleanse_none`（`extends/ext_combat/battle/effects.py:641` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_EFFECTS_CLEANSED": {
+    "value": "✨ 净化了 {names}！",
+    "params": [
+      "names"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.effects.cleansed`（`extends/ext_combat/battle/effects.py:638` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_EFFECTS_DAMAGED": {
+    "value": "💥 {name} 受到 {dmg} 点伤害！",
+    "params": [
+      "dmg",
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.effects.damaged`（`extends/ext_combat/battle/effects.py:746` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_EFFECTS_HEALED": {
+    "value": "✨ {name} 恢复了 {heal} 点生命！",
+    "params": [
+      "heal",
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.effects.healed`（`extends/ext_combat/battle/effects.py:686` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_EFFECTS_IMMUNE_CONTROL": {
+    "value": "🛡️ {name} 免疫控制：{key} 未生效",
+    "params": [
+      "key",
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.effects.immune_control`（`extends/ext_combat/battle/effects.py:370` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_EFFECTS_IMMUNE_DEBUFF": {
+    "value": "🚫 {name} 免疫【{key}】，异常未生效",
+    "params": [
+      "key",
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.effects.immune_debuff`（`extends/ext_combat/battle/effects.py:405` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_EFFECTS_ON_HIT_READY": {
+    "value": "✦ {key} 出手效果就绪（{turns} 刻内生效）",
+    "params": [
+      "key",
+      "turns"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.effects.on_hit_ready`（`extends/ext_combat/battle/effects.py:514` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_EFFECTS_SHIELD_GAIN": {
+    "value": "🛡️ {name} 获得护盾 {value} 点！",
+    "params": [
+      "name",
+      "value"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.effects.shield_gain`（`extends/ext_combat/battle/effects.py:603` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_EFFECTS_SHIELD_PCT": {
+    "value": "🛡️ {value:.0%}（持续 {turns} 刻）",
+    "params": [
+      "turns",
+      "value"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.effects.shield_pct`（`extends/ext_combat/battle/effects.py:479` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_EFFECTS_STACK_ACTIVE": {
+    "value": "✦ {key}（持续 {turns} 刻）",
+    "params": [
+      "key",
+      "turns"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.effects.stack_active`（`extends/ext_combat/battle/effects.py:518` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_EFFECTS_STACK_APPLIED": {
+    "value": "💫 {name} 被【{key}】{turns} 刻！",
+    "params": [
+      "key",
+      "name",
+      "turns"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.effects.stack_applied`（`extends/ext_combat/battle/effects.py:384` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_EFFECTS_STACK_SET": {
+    "value": "✦ {key} 置为 {n}",
+    "params": [
+      "key",
+      "n"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.effects.stack_set`（`extends/ext_combat/battle/effects.py:441` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_EFFECTS_STACK_SHORT": {
+    "value": "⚠️ {key} 不足（需 {amount}，当前 {cur}）",
+    "params": [
+      "amount",
+      "cur",
+      "key"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.effects.stack_short`（`extends/ext_combat/battle/effects.py:545` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_EFFECTS_STACK_SPENT": {
+    "value": "✦ 消耗 {amount} 点 {key}（剩余 {left}）",
+    "params": [
+      "amount",
+      "key",
+      "left"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.effects.stack_spent`（`extends/ext_combat/battle/effects.py:553` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_GAUGE_GAIN": {
+    "value": "💥 {bar} 积蓄 +{add}（{val}/{maxcap}）",
+    "params": [
+      "add",
+      "bar",
+      "maxcap",
+      "val"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.gauge.gain`（`extends/ext_combat/gauge/__init__.py:190` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_GAUGE_PHASE_PRESERVE": {
+    "value": "💢【{name}】阶段更迭：{bar}积蓄保留 {pct}%（{before} → {after}）",
+    "params": [
+      "after",
+      "bar",
+      "before",
+      "name",
+      "pct"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.gauge.phase_preserve`（`extends/ext_combat/gauge/actions.py:168` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_GAUGE_REFLECT": {
+    "value": "🪨 反震：反弹 {dmg} 点伤害！",
+    "params": [
+      "dmg"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.gauge.reflect`（`extends/ext_combat/gauge/actions.py:199` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_GAUGE_SHAKEN": {
+    "value": "💢 【{name}】被{bar}震慑，无法行动！",
+    "params": [
+      "bar",
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.gauge.shaken`（`extends/ext_combat/gauge/actions.py:91` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_GAUGE_TRIGGER": {
+    "value": "💢 【{bar}】触发！(第 {count} 次)",
+    "params": [
+      "bar",
+      "count"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.gauge.trigger`（`extends/ext_combat/gauge/__init__.py:235` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_LANDING_BLOCK_REDUCE": {
+    "value": "🛡️ 格挡！减免 {red} 点伤害！",
+    "params": [
+      "red"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.landing.block_reduce`（`extends/ext_combat/battle/landing.py:321` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_LANDING_DAMAGE": {
+    "value": "💥 {name} 受到 {dmg} 点伤害！",
+    "params": [
+      "dmg",
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.landing.damage`（`extends/ext_combat/battle/landing.py:424` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_LANDING_DEATH_GUARD": {
+    "value": "✨ {name} 濒死意志触发，保住了性命！",
+    "params": [
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.landing.death_guard`（`extends/ext_combat/battle/landing.py:356` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_LANDING_DODGED": {
+    "value": "💨 {name} 闪避了攻击！",
+    "params": [
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.landing.dodged`（`extends/ext_combat/battle/landing.py:278` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_LANDING_DOWN": {
+    "value": "💥 {name} 受到 {dmg} 点伤害，倒下了！",
+    "params": [
+      "dmg",
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.landing.down`（`extends/ext_combat/battle/landing.py:409` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_LANDING_GUARD_COVER": {
+    "value": "🛡️ 【{guard}】替【{target}】挡下了这一击！",
+    "params": [
+      "guard",
+      "target"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.landing.guard_cover`（`extends/ext_combat/battle/landing.py:76` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_LANDING_HEAL_FORBID": {
+    "value": "🩸 禁疗：治疗量 -{pct}%！",
+    "params": [
+      "pct"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.landing.heal_forbid`（`extends/ext_combat/battle/landing.py:533` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_LANDING_HEAL_SHARED": {
+    "value": "✨ 治疗由【{name}】分担",
+    "params": [
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.landing.heal_shared`（`extends/ext_combat/battle/landing.py:467` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_LANDING_HEAL_WOUND": {
+    "value": "🩸 重伤：治疗量 -{pct}%！",
+    "params": [
+      "pct"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.landing.heal_wound`（`extends/ext_combat/battle/landing.py:542` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_LANDING_MAGIC_RESIST": {
+    "value": "🛡️ 魔法抗性，减免 {red} 点魔法伤害！",
+    "params": [
+      "red"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.landing.magic_resist`（`extends/ext_combat/battle/landing.py:312` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_LANDING_PHYS_IMMUNE": {
+    "value": "🪨 物理免伤，减免 {red} 点物理伤害！",
+    "params": [
+      "red"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.landing.phys_immune`（`extends/ext_combat/battle/landing.py:305` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_LANDING_RESIST_REDUCE": {
+    "value": "🛡️ 元素抗性减免 {red} 点伤害！",
+    "params": [
+      "red"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.landing.resist_reduce`（`extends/ext_combat/battle/landing.py:114` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_LANDING_SHIELD_ABSORB": {
+    "value": "🛡️ {name} 的护盾吸收了 {absorb} 点伤害！",
+    "params": [
+      "absorb",
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.landing.shield_absorb`（`extends/ext_combat/battle/landing.py:382` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_LANDING_WOKEN": {
+    "value": "💥 目标被攻击惊醒！",
+    "params": [],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.landing.woken`（`extends/ext_combat/battle/landing.py:204` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_SCHEDULE_ACTOR_TURN": {
+    "value": "—— {name} 行动 ——",
+    "params": [
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.schedule.actor_turn`（`extends/ext_combat/battle/schedule.py:392` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_SCHEDULE_CAST_BEGIN": {
+    "value": "🌀 {name} 开始出招…",
+    "params": [
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.schedule.cast_begin`（`extends/ext_combat/battle/battle.py:573` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_SCHEDULE_REGEN_HP": {
+    "value": "🍲 {name} 持续恢复，恢复 {heal} 点生命！",
+    "params": [
+      "heal",
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.schedule.regen_hp`（`extends/ext_combat/battle/schedule.py:774` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_SCHEDULE_REGEN_MP": {
+    "value": "🍲 {name} 持续恢复，恢复 {heal} 点魔力！",
+    "params": [
+      "heal",
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "引擎槽位 `battle.schedule.regen_mp`（`extends/ext_combat/battle/schedule.py:787` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
   }
 }

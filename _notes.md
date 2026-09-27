@@ -12472,3 +12472,125 @@ AbilityTask），闸 = 阿斯特兰内容停点（`aetheran-plan/00_总纲/AETHE
   —— **本分支对真源只读**，请主线在合入时搬。
 · 本批**未 push · 未 merge master**（合入由主线做）；引擎仓未动（本批零引擎改动）。
 ```
+
+---
+
+# ast-text-truth · 战斗文案真源「断链」查清并接上（2026-09-27）
+
+> 主工作树 `C:/Users/yuyu/aetheran-package`（= 线上：宿主 `qqbot/data/plugins/dragonfall/framework/games/aetheran`
+> 是指向它的 junction）· 分支 `master` · 基线 `6d13a43`。**本批零引擎改动**（引擎侧那 2 处残留只报清单）。
+
+## 一、断链在哪（核实过 · file:line）
+
+```text
+本包的文案单源 = content/data/texts.json（927 条 · 键名 `COMBAT_/SCENE_/SYS_…` 前缀；
+              本包**没有** orlandia 那种 `text_specs.json`）
+战斗日志那一层 = content/rules/battle_text.json::slots（引擎 key → texts 槽位名）
+注入点         = content/combat.py:494-501  `Battle("monster", sides=…, …, text=BT.battle_text())`
+                 content/instance.py:857  `SER.from_state(dict(st["battle"]), text=BT.battle_text())`
+断点           = content/battle_text.py::table() 只把**声明过的** key 装进 TextTable
+                 ⇒ 引擎 `render_or` 对未声明的 key 走调用点兜底模板（中文内联在引擎里）
+```
+
+补键前：引擎 61 处键化调用点（唯一 key 59 个），本包**只声明了 8 条**（那 8 条是历次
+试玩「顶掉机器键 / 坏格式符 / 半角括号」的样板）⇒ 另外 51 条（含最常上屏的
+`battle.landing.damage`「💥 {name} 受到 {dmg} 点伤害！」）玩家看到的仍是引擎里的中文。
+
+## 二、要补进真源的**新文案槽位**（51 条 · 五列表行 · 键不带反引号）
+
+归属：`00_总纲/17_文案收口口径_v1.md`（槽位表下方新增一张小表即可，脚本按行全扫）。
+★ 值 = 引擎调用点兜底模板**逐字搬**（接线后屏上逐字节不变 —— 这是等价迁移，不是改文案）；
+★ 槽位名 = `COMBAT_` + 引擎 key 去掉 `battle.` 后全大写、点转下划线（判据 ⑨-2 钉着）。
+
+| 键 | 文案 | 参数 | 分类 | 出处 |
+|---|---|---|---|---|
+| COMBAT_ACTIONS_EFFECT_ON | ✨ {key} 生效！ | key | 战斗 | 引擎槽位 `battle.actions.effect_on`（actions.py:627 兜底模板逐字搬） |
+| COMBAT_ACTIONS_ENCHANT_FOLLOWUP | {tag} 附魔追击，追加 {dmg} 点伤害！ | dmg,tag | 战斗 | 引擎槽位 `battle.actions.enchant_followup`（actions.py:571 兜底模板逐字搬） |
+| COMBAT_ACTIONS_LIFESTEAL | 🩸 吸血：回复 {heal} 点生命！ | heal | 战斗 | 引擎槽位 `battle.actions.lifesteal`（actions.py:781 兜底模板逐字搬） |
+| COMBAT_ACTIONS_SKILL_CAST | 你施展【{name}】！ | name | 战斗 | 引擎槽位 `battle.actions.skill_cast`（actions.py:984 兜底模板逐字搬） |
+| COMBAT_ACTIONS_SKILL_HEAL | 你施展【{name}】，治愈了 {heal} 点生命！ | heal,name | 战斗 | 引擎槽位 `battle.actions.skill_heal`（actions.py:848 兜底模板逐字搬） |
+| COMBAT_ACTIONS_SKILL_HEAL_FULL | 你施展【{name}】，圣光治愈了你 {heal} 点生命！ | heal,name | 战斗 | 引擎槽位 `battle.actions.skill_heal_full`（actions.py:844 兜底模板逐字搬） |
+| COMBAT_CORE_DEFEND | 🛡 {name} 摆出防御姿态，受到的伤害减半！ | name | 战斗 | 引擎槽位 `battle.core.defend`（battle.py:632 兜底模板逐字搬） |
+| COMBAT_CORE_FINISHED | 战斗已结束！ | - | 战斗 | 引擎槽位 `battle.core.finished`（battle.py:296 兜底模板逐字搬） |
+| COMBAT_CORE_FLED | 💨 {name} 逃跑了！ | name | 战斗 | 引擎槽位 `battle.core.fled`（battle.py:638 兜底模板逐字搬） |
+| COMBAT_CORE_NO_ACTOR | 没有可行动的玩家！ | - | 战斗 | 引擎槽位 `battle.core.no_actor`（battle.py:294 兜底模板逐字搬） |
+| COMBAT_CORE_SILENCED | 🤐 {name} 被沉默，无法使用技能！(只能普攻/防御) | name | 战斗 | 引擎槽位 `battle.core.silenced`（battle.py:508 兜底模板逐字搬） |
+| COMBAT_CORE_UNKNOWN_ACTION | 未知行动类型：{action} | action | 战斗 | 引擎槽位 `battle.core.unknown_action`（battle.py:547 兜底模板逐字搬） |
+| COMBAT_EFFECTS_BUFF_BOOST | ✦ {key} 提升（{op}×{mult}，持续 {turns} 刻） | key,mult,op,turns | 战斗 | 引擎槽位 `battle.effects.buff_boost`（effects.py:499 兜底模板逐字搬） |
+| COMBAT_EFFECTS_CAST_BROKEN | 💥 {name} 的出招被打断了！ | name | 战斗 | 引擎槽位 `battle.effects.cast_broken`（effects.py:707 兜底模板逐字搬） |
+| COMBAT_EFFECTS_CLEANSE_NONE | ✨ 净化（无减益可解） | - | 战斗 | 引擎槽位 `battle.effects.cleanse_none`（effects.py:641 兜底模板逐字搬） |
+| COMBAT_EFFECTS_CLEANSED | ✨ 净化了 {names}！ | names | 战斗 | 引擎槽位 `battle.effects.cleansed`（effects.py:638 兜底模板逐字搬） |
+| COMBAT_EFFECTS_DAMAGED | 💥 {name} 受到 {dmg} 点伤害！ | dmg,name | 战斗 | 引擎槽位 `battle.effects.damaged`（effects.py:746 兜底模板逐字搬） |
+| COMBAT_EFFECTS_HEALED | ✨ {name} 恢复了 {heal} 点生命！ | heal,name | 战斗 | 引擎槽位 `battle.effects.healed`（effects.py:686 兜底模板逐字搬） |
+| COMBAT_EFFECTS_IMMUNE_CONTROL | 🛡️ {name} 免疫控制：{key} 未生效 | key,name | 战斗 | 引擎槽位 `battle.effects.immune_control`（effects.py:370 兜底模板逐字搬） |
+| COMBAT_EFFECTS_IMMUNE_DEBUFF | 🚫 {name} 免疫【{key}】，异常未生效 | key,name | 战斗 | 引擎槽位 `battle.effects.immune_debuff`（effects.py:405 兜底模板逐字搬） |
+| COMBAT_EFFECTS_ON_HIT_READY | ✦ {key} 出手效果就绪（{turns} 刻内生效） | key,turns | 战斗 | 引擎槽位 `battle.effects.on_hit_ready`（effects.py:514 兜底模板逐字搬） |
+| COMBAT_EFFECTS_SHIELD_GAIN | 🛡️ {name} 获得护盾 {value} 点！ | name,value | 战斗 | 引擎槽位 `battle.effects.shield_gain`（effects.py:603 兜底模板逐字搬） |
+| COMBAT_EFFECTS_SHIELD_PCT | 🛡️ {value:.0%}（持续 {turns} 刻） | turns,value | 战斗 | 引擎槽位 `battle.effects.shield_pct`（effects.py:479 兜底模板逐字搬） |
+| COMBAT_EFFECTS_STACK_ACTIVE | ✦ {key}（持续 {turns} 刻） | key,turns | 战斗 | 引擎槽位 `battle.effects.stack_active`（effects.py:518 兜底模板逐字搬） |
+| COMBAT_EFFECTS_STACK_APPLIED | 💫 {name} 被【{key}】{turns} 刻！ | key,name,turns | 战斗 | 引擎槽位 `battle.effects.stack_applied`（effects.py:384 兜底模板逐字搬） |
+| COMBAT_EFFECTS_STACK_SET | ✦ {key} 置为 {n} | key,n | 战斗 | 引擎槽位 `battle.effects.stack_set`（effects.py:441 兜底模板逐字搬） |
+| COMBAT_EFFECTS_STACK_SHORT | ⚠️ {key} 不足（需 {amount}，当前 {cur}） | amount,cur,key | 战斗 | 引擎槽位 `battle.effects.stack_short`（effects.py:545 兜底模板逐字搬） |
+| COMBAT_EFFECTS_STACK_SPENT | ✦ 消耗 {amount} 点 {key}（剩余 {left}） | amount,key,left | 战斗 | 引擎槽位 `battle.effects.stack_spent`（effects.py:553 兜底模板逐字搬） |
+| COMBAT_GAUGE_GAIN | 💥 {bar} 积蓄 +{add}（{val}/{maxcap}） | add,bar,maxcap,val | 战斗 | 引擎槽位 `battle.gauge.gain`（__init__.py:190 兜底模板逐字搬） |
+| COMBAT_GAUGE_PHASE_PRESERVE | 💢【{name}】阶段更迭：{bar}积蓄保留 {pct}%（{before} → {after}） | after,bar,before,name,pct | 战斗 | 引擎槽位 `battle.gauge.phase_preserve`（actions.py:168 兜底模板逐字搬） |
+| COMBAT_GAUGE_REFLECT | 🪨 反震：反弹 {dmg} 点伤害！ | dmg | 战斗 | 引擎槽位 `battle.gauge.reflect`（actions.py:199 兜底模板逐字搬） |
+| COMBAT_GAUGE_SHAKEN | 💢 【{name}】被{bar}震慑，无法行动！ | bar,name | 战斗 | 引擎槽位 `battle.gauge.shaken`（actions.py:91 兜底模板逐字搬） |
+| COMBAT_GAUGE_TRIGGER | 💢 【{bar}】触发！(第 {count} 次) | bar,count | 战斗 | 引擎槽位 `battle.gauge.trigger`（__init__.py:235 兜底模板逐字搬） |
+| COMBAT_LANDING_BLOCK_REDUCE | 🛡️ 格挡！减免 {red} 点伤害！ | red | 战斗 | 引擎槽位 `battle.landing.block_reduce`（landing.py:321 兜底模板逐字搬） |
+| COMBAT_LANDING_DAMAGE | 💥 {name} 受到 {dmg} 点伤害！ | dmg,name | 战斗 | 引擎槽位 `battle.landing.damage`（landing.py:424 兜底模板逐字搬） |
+| COMBAT_LANDING_DEATH_GUARD | ✨ {name} 濒死意志触发，保住了性命！ | name | 战斗 | 引擎槽位 `battle.landing.death_guard`（landing.py:356 兜底模板逐字搬） |
+| COMBAT_LANDING_DODGED | 💨 {name} 闪避了攻击！ | name | 战斗 | 引擎槽位 `battle.landing.dodged`（landing.py:278 兜底模板逐字搬） |
+| COMBAT_LANDING_DOWN | 💥 {name} 受到 {dmg} 点伤害，倒下了！ | dmg,name | 战斗 | 引擎槽位 `battle.landing.down`（landing.py:409 兜底模板逐字搬） |
+| COMBAT_LANDING_GUARD_COVER | 🛡️ 【{guard}】替【{target}】挡下了这一击！ | guard,target | 战斗 | 引擎槽位 `battle.landing.guard_cover`（landing.py:76 兜底模板逐字搬） |
+| COMBAT_LANDING_HEAL_FORBID | 🩸 禁疗：治疗量 -{pct}%！ | pct | 战斗 | 引擎槽位 `battle.landing.heal_forbid`（landing.py:533 兜底模板逐字搬） |
+| COMBAT_LANDING_HEAL_SHARED | ✨ 治疗由【{name}】分担 | name | 战斗 | 引擎槽位 `battle.landing.heal_shared`（landing.py:467 兜底模板逐字搬） |
+| COMBAT_LANDING_HEAL_WOUND | 🩸 重伤：治疗量 -{pct}%！ | pct | 战斗 | 引擎槽位 `battle.landing.heal_wound`（landing.py:542 兜底模板逐字搬） |
+| COMBAT_LANDING_MAGIC_RESIST | 🛡️ 魔法抗性，减免 {red} 点魔法伤害！ | red | 战斗 | 引擎槽位 `battle.landing.magic_resist`（landing.py:312 兜底模板逐字搬） |
+| COMBAT_LANDING_PHYS_IMMUNE | 🪨 物理免伤，减免 {red} 点物理伤害！ | red | 战斗 | 引擎槽位 `battle.landing.phys_immune`（landing.py:305 兜底模板逐字搬） |
+| COMBAT_LANDING_RESIST_REDUCE | 🛡️ 元素抗性减免 {red} 点伤害！ | red | 战斗 | 引擎槽位 `battle.landing.resist_reduce`（landing.py:114 兜底模板逐字搬） |
+| COMBAT_LANDING_SHIELD_ABSORB | 🛡️ {name} 的护盾吸收了 {absorb} 点伤害！ | absorb,name | 战斗 | 引擎槽位 `battle.landing.shield_absorb`（landing.py:382 兜底模板逐字搬） |
+| COMBAT_LANDING_WOKEN | 💥 目标被攻击惊醒！ | - | 战斗 | 引擎槽位 `battle.landing.woken`（landing.py:204 兜底模板逐字搬） |
+| COMBAT_SCHEDULE_ACTOR_TURN | —— {name} 行动 —— | name | 战斗 | 引擎槽位 `battle.schedule.actor_turn`（schedule.py:392 兜底模板逐字搬） |
+| COMBAT_SCHEDULE_CAST_BEGIN | 🌀 {name} 开始出招… | name | 战斗 | 引擎槽位 `battle.schedule.cast_begin`（battle.py:573 兜底模板逐字搬） |
+| COMBAT_SCHEDULE_REGEN_HP | 🍲 {name} 持续恢复，恢复 {heal} 点生命！ | heal,name | 战斗 | 引擎槽位 `battle.schedule.regen_hp`（schedule.py:774 兜底模板逐字搬） |
+| COMBAT_SCHEDULE_REGEN_MP | 🍲 {name} 持续恢复，恢复 {heal} 点魔力！ | heal,name | 战斗 | 引擎槽位 `battle.schedule.regen_mp`（schedule.py:787 兜底模板逐字搬） |
+
+这 51 条已按上表**逐字**落进本分支 `content/data/texts.json`（876 → 927 条），
+并在 `content/rules/battle_text.json::slots` 里声明成 8 + 51 = **59 条全量**
+（= 引擎键化调用点的全部）。真源表搬进来之后 `scripts/rebuild_syscopy.py` 认它们
+「已存在且一致」⇒ 幂等、零 diff。
+
+## 三、判据换向（`scripts/probe_elements.py` ⑨）
+
+老判据 `TextTable.unused() == ()` 是「只声明 8 条」那个时代的东西：声明铺到全量之后，
+它挡的**不再是死槽位**，而是「本探针没驱动过的那 48 条」（其中 5 条 `battle.gauge.*`
+本包今天根本没有 `enemy_bar` 声明 ⇒ 引擎那条路走不到）。换成的四条**全都新加**：
+
+```text
+⑨-g 把 59 条逐条真驱动一遍（引擎自己的口；骨架表那几格用临时夹具，finally 还原）
+⑨-1 静态双向：声明集合 == 引擎源码现扫出来的键化调用点集合（59 == 59；拼错/漏跟账当场红）
+⑨-2 命名：除 8 条手工槽位外，槽位名必须 == 派生式（防手抄漂移）
+⑨-3 运行时：本探针驱动到的**每一条**都命中内容侧槽位（`missing()` 里零条 `battle.*`）
+⑨-4 未驱动清单 == 登记表（7 条，逐条写明为什么够不着）· 条数锚点写死（两态互锁）
+```
+
+⑦ 那 7 条够不着的（写进探针 `NEED_DRIVE`，逐条有理由）：`battle.landing.woken`（本包没有
+`wake_on_hit` 状态）· `battle.actions.lifesteal`（本包没有任何吸血来源）·
+`battle.gauge.{gain,trigger,shaken,phase_preserve,reflect}`（本包没有 enemy_bar 声明）。
+
+## 四、端到端（真宿主 · 真指令 · 屏上输出）
+
+见 `hermes/workspace/gas-design/ast-text-truth.md` §3（命令与逐字屏上输出都在那儿）。
+
+## 五、没接上的（引擎侧 2 处 · 属主线）
+
+```text
+extends/ext_combat/battle/effects.py:439   裸 f-string（`op == "add"` 那支）：
+      logs.append(f"✦ {key} {_fmt_stack(n)}{cap_txt}（+{_fmt_stack(amount)}）")
+      含全角括号 + `{key}` 机器键、**无汉字** ⇒ 漏过「含汉字才算文案」的判据
+      （同分支 `op == "set"` 已键化成 battle.effects.stack_set）
+extends/ext_combat/battle/landing.py:483   通用治疗行：logs.append(label.format(_real=…, _planned=…))
+      模板由**调用方** `heal_actor(..., label=…)` 传入 ⇒ 引擎侧没有 key
+```
+
