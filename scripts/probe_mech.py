@@ -1429,16 +1429,48 @@ _dirty = [ln for ln in (_git.stdout or "").splitlines() if ln.strip()]
 #     `Host._guard_text` 三态 · `tests/test_host_contract.py` 那 16 条判据）——
 #     本包 `content/guard_text.py` 直接 `import GUARD_KEYS` ⇒ 换批必须跟着前移基准，
 #     否则这两个探针会把「本批的引擎改动」误判成越界。**强度不变**（代码落点多一个就红）。
-_ENGINE_BASE = "f31ee59"
+#   ★ 2026-09-27（**引擎侧 cue 解耦 B0–B5 那一批落到 main**）**换批**：本批引擎仓的落点 =
+#     表现事件（cue）形状 + 60 个点位从「引擎内联措辞」搬进 cue（`battle/*.py` · `gauge/*.py` ·
+#     `saintess_engine/cues.py` · `text/template.py` 删两个取表 helper）· 配套门禁与冻结尺子
+#     （`tools/_cue_freeze.py`）· 标签机制三笔（`tags.py` / `traits.py` / `state_effects.py` /
+#     `actors.py` / `battle.py` 的状态容器与注册表收口）。基准 = 那批开工前引擎的 HEAD。
+#     ⇒ 声明面变成 **34 份代码文件**（多一个就红 —— 强度不变，只是这一批面大）。
+_ENGINE_BASE = "8f85f7d"
 _want_touched = sorted([
-    # ★ 子模块指针（同一批的落账：games/orlandia → d98b348 —— 包侧 P-11 那条）
-    "games/orlandia",
+    "examples/minimal-game/content/apply.py",
+    "examples/minimal-game/content/bridge.py",
+    "examples/minimal-game/content/cues.py",
+    "examples/minimal-game/content/texts.py",
+    "examples/minimal-game/tests/test_smoke.py",
+    "extends/ext_combat/battle/actions.py",
+    "extends/ext_combat/battle/actors.py",
+    "extends/ext_combat/battle/battle.py",
+    "extends/ext_combat/battle/cues.py",
+    "extends/ext_combat/battle/effects.py",
+    "extends/ext_combat/battle/game_config.py",
+    "extends/ext_combat/battle/landing.py",
+    "extends/ext_combat/battle/schedule.py",
+    "extends/ext_combat/battle/state_effects.py",
+    "extends/ext_combat/battle/tags.py",
+    "extends/ext_combat/battle/traits.py",
+    "extends/ext_combat/gauge/__init__.py",
+    "extends/ext_combat/gauge/actions.py",
     "saintess_engine/config.py",
+    "saintess_engine/cues.py",
     "saintess_engine/host/runtime.py",
-    "tests/test_host_contract.py",
-    # ★ 本批引擎仓的第二笔：条数锚点随本包的 +2 条同步
-    #   （`len(body) == 3208 → 3210`）——同一批，落点同属本批声明面
-    "tests/test_texts_schema_contract.py"])
+    "saintess_engine/text/__init__.py",
+    "saintess_engine/text/template.py",
+    "tests/_cue_text_fixture.py",
+    "tests/test_battle_text_inject.py",
+    "tests/test_cross_hand_state.py",
+    "tests/test_cues_shape.py",
+    "tests/test_dot_cur_hp_shape.py",
+    "tests/test_engine_neutral_fallback.py",
+    "tests/test_gauge_actions_frozen.py",
+    "tests/test_segment_declaration.py",
+    "tests/test_state_container.py",
+    "tests/test_tags.py",
+    "tools/_cue_freeze.py",])
 _committed = {p for p in subprocess.run(
     ["git", "diff", "--name-only", "%s..HEAD" % _ENGINE_BASE], cwd=ENGINE,
     capture_output=True, text=True).stdout.split() if p}

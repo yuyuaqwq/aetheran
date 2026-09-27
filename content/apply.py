@@ -143,8 +143,8 @@ def install_engine():
     )
     # ★ 反「静默不装」（同 route_miss / guard_text 那两条）：`config.set_hook` 对**不认识的名字
     #   静默忽略 ⇒ 装完回读一次。★ 只在引擎树**真有 cue 形状**时才要求（`ext_combat.battle.cues`
-    #   导得进来）：引擎主线还没合这个形状时本包照跑（那时已迁移点位内部落回 `render_via`，
-    #   而那张表也是本包的 ⇒ 屏上逐字节不变），不能因为「引擎版本旧」把整包拦死。
+    #   导得进来）：引擎树没有这个形状时（旧检出）本包照跑 —— 那种引擎上战斗日志本来就不经过 cue，
+    #   不能因为「引擎版本旧」把整包拦死。
     if _CUES.engine_has_cues() and config.optional_hook("cue_subs_fn") is None:
         raise config.EngineNotConfigured(
             "cue_subs_fn 没装配上：引擎认识 cue 形状，却不认这个口（引擎 config 版本旧？）")

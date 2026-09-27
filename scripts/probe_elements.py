@@ -54,6 +54,7 @@ BT = st.optional_submodule("battle_text")
 SK = st.optional_submodule("skills_lookup")
 MON = st.domain("monsters")
 from ext_combat.battle import landing as LD                          # noqa: E402
+from ext_combat.battle.actors import DEFEND_TAG, open_window         # noqa: E402
 
 MID = "ms_shallow_ghoul"          # P-1 样例怪（既有怪）
 OTHER = "ms_field_mouse"          # 对照：不在样例里
@@ -405,7 +406,10 @@ try:
     _bk = CB.build({"cls": "cls_knight", "level": 16, "name": "探", "uid": "u_blk"},
                    [MID], MON, uid="u_blk")
     _ck = _bk.focus()
-    _ck["defending"] = True                       # 引擎那条格挡减半只看这一格（landing.py:170）
+    # ★ 2026-09-27：防御姿态**已收进状态容器**（引擎 `window_open(target, DEFEND_TAG)` 读
+    #   `effects["defend"]` 窗口条目，裸 bool 兄弟字段已删）⇒ 这里必须走引擎唯一的开窗口
+    #   （与 `battle.py` 的 defend 动作同款），写裸 bool 那一支**根本不开窗**、屏上是另一句。
+    open_window(_ck, DEFEND_TAG)
     _lg_bk = []
     LD.deal_damage(_bk, None, _ck, 20, _lg_bk)
 finally:
@@ -683,7 +687,15 @@ import ast as _ast9                                                       # noqa
 
 
 def _engine_text_keys() -> set:
-    """现扫引擎源码：`render_via` / `render_or` / `Battle._t` 的第一参（字面量 `battle.*`）。"""
+    """现扫引擎源码：**表现事件（cue）**调用点的 key 实参（字面量 `battle.*`）。
+
+    ★ 2026-09-27（引擎侧 B1–B5 走完之后）：旧三种调用形态
+      （`render_via(battle, "…")` / `render_or(text, "…")` / `Battle._t("…")`）**已从引擎删净**
+      —— B5 连 `render_via` / `text_of` 两个 helper 都删了 ⇒ 再扫旧形态只会扫到 0 条、
+      把 60 条声明全判成「多声明」。现在引擎侧唯一出口是
+      `_cue(battle, logs, "<key>", {槽位})` ⇒ 扫它的**第 3 个位置实参**。
+      （`emit` 是总线的对外别名，key 由调用方给，不在这里数。）
+    """
     out = set()
     root = os.path.join(ENGINE, "extends", "ext_combat")
     for _dp, _dn, _fns in os.walk(root):
@@ -696,10 +708,8 @@ def _engine_text_keys() -> set:
                 if not isinstance(_node, _ast9.Call):
                     continue
                 _f2 = _node.func
-                if isinstance(_f2, _ast9.Name) and _f2.id in ("render_via", "render_or"):
-                    _i = 1
-                elif isinstance(_f2, _ast9.Attribute) and _f2.attr == "_t":
-                    _i = 0
+                if isinstance(_f2, _ast9.Name) and _f2.id in ("_cue", "cue"):
+                    _i = 2
                 else:
                     continue
                 _a = _node.args

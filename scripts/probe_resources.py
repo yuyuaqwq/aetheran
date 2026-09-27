@@ -457,6 +457,9 @@ print()
 print("══ ⑧ 引擎改动面（硬指标）")
 #  ★ fxmech（2026-09-26）起：本批**动了引擎**（B4-4 两段耗时接线 + 一条可选否决口 `skill_gate_fn`）
 #    ⇒ 判据从「引擎零改动」改成**钉住改动面**：只许落在声明的那些文件里（多一个文件就红）。
+#    ★ 2026-09-27 **换批**（引擎侧 cue 解耦 B0–B5 落到 main）：基准 = `8f85f7d`（那批开工前
+#      引擎的 HEAD），声明面 = 那批落点（cue 形状 + 60 点位 + 标签机制三笔，共 34 份代码文件）。
+#      换批时改 `_ENGINE_BASE8`（本批开工前引擎的 HEAD）与 `_want_t`。
 #  ★ 2026-09-27（跨手状态三条那一批）**换锚不换强度**：原先只看 `git log -1`（HEAD 那一笔），
 #    而本批在引擎仓可以落好几笔（代码 → docs 落账 → 上一笔判据的 fixture 修）⇒ HEAD 是
 #    docs-only 提交时那写法会假红。改成**自基准提交起 diff**（`<base>..HEAD` 的并集）。
@@ -464,15 +467,42 @@ print("══ ⑧ 引擎改动面（硬指标）")
 #    ★ P-11（2026-09-27）**换批**：本批引擎改动 = 守卫拦截句读口那三份（见 `probe_mech` ⑮
 #      同一处换批说明）⇒ 基准前移到 `f31ee59`、声明表换本批那几份（含子模块指针与条数锚点那份）；强度不变（多一份就红）。
 import subprocess as _sp                                                # noqa: E402
-_ENGINE_BASE8 = "f31ee59"
+_ENGINE_BASE8 = "8f85f7d"
 _want_t = sorted([
-    # ★ 子模块指针（同批落账：games/orlandia → d98b348）
-    "games/orlandia",
+    "examples/minimal-game/content/apply.py",
+    "examples/minimal-game/content/bridge.py",
+    "examples/minimal-game/content/cues.py",
+    "examples/minimal-game/content/texts.py",
+    "examples/minimal-game/tests/test_smoke.py",
+    "extends/ext_combat/battle/actions.py",
+    "extends/ext_combat/battle/actors.py",
+    "extends/ext_combat/battle/battle.py",
+    "extends/ext_combat/battle/cues.py",
+    "extends/ext_combat/battle/effects.py",
+    "extends/ext_combat/battle/game_config.py",
+    "extends/ext_combat/battle/landing.py",
+    "extends/ext_combat/battle/schedule.py",
+    "extends/ext_combat/battle/state_effects.py",
+    "extends/ext_combat/battle/tags.py",
+    "extends/ext_combat/battle/traits.py",
+    "extends/ext_combat/gauge/__init__.py",
+    "extends/ext_combat/gauge/actions.py",
     "saintess_engine/config.py",
+    "saintess_engine/cues.py",
     "saintess_engine/host/runtime.py",
-    "tests/test_host_contract.py",
-    # ★ 本批引擎仓的第二笔：条数锚点随本包 +2 条同步（同批声明面）
-    "tests/test_texts_schema_contract.py"])
+    "saintess_engine/text/__init__.py",
+    "saintess_engine/text/template.py",
+    "tests/_cue_text_fixture.py",
+    "tests/test_battle_text_inject.py",
+    "tests/test_cross_hand_state.py",
+    "tests/test_cues_shape.py",
+    "tests/test_dot_cur_hp_shape.py",
+    "tests/test_engine_neutral_fallback.py",
+    "tests/test_gauge_actions_frozen.py",
+    "tests/test_segment_declaration.py",
+    "tests/test_state_container.py",
+    "tests/test_tags.py",
+    "tools/_cue_freeze.py",])
 _out = _sp.run(["git", "-C", ENGINE, "status", "--porcelain"],
                capture_output=True, text=True, encoding="utf-8").stdout.strip()
 _committed = {p for p in _sp.run(

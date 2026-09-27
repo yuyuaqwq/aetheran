@@ -324,31 +324,50 @@ finally:
 chk("⑥ 猴补一个假名字进引擎 `CUE_NAMES` ⇒ 构造 Battle 必抛（本包文案表里没有它那一格）",
     bool(_r3) and "battle.landing.probe_fake" in _r3, (_r3 or "（没抛）")[:110])
 
-_bonus = next(k for k in BT.slots() if k.startswith("battle.") and k not in _engine_names)
-#: ★ 现算：引擎**还没声明**、但本包文案表里已经有那一格的一个真 key（`battle_text.json`
-#:   有 59 条 `battle.*`，引擎声明随批次增长 ⇒ 「多一条」的那个 key 不许写死在这支探针里）。
-_pl_bonus = {str(p): "P_" + str(p)
-             for p in ((TX.get(BT.slots()[_bonus]) or {}).get("params") or [])}
-B2 = None
-_l2: list = []
-_b2_err = None
+#: ★ 2026-09-27（引擎侧 B1–B5 走完之后）：本包文案表与引擎声明**逐条对齐**（60 == 60），
+#:   不再有「多出来备用的一格」可挑 ⇒ 这里**进程内现造**一格当「引擎以后加的那条点位」，
+#:   与 ⑤ 段同款手法（往 slots 与 texts 各插一条、清表缓存、`finally` 还原，不动任何数据文件）。
+_BONUS = "battle.landing.probe_bonus"
+_BONUS_SLOT = "COMBAT_PROBE_BONUS"
+_bonus_entry = {"value": "探针点 {name}", "params": ["name"], "category": "战斗",
+                "desc": "本支 ⑥ 段进程内现造（模拟「引擎以后多加一条真 cue」）"}
+_rules_raw = BT._rules()
+_rules_raw["slots"][_BONUS] = _BONUS_SLOT      # ★ 插在 `slots` 子表里（`slots()` 每次返回副本）
+_tx_raw[_BONUS_SLOT] = _bonus_entry
+TX[_BONUS_SLOT] = _bonus_entry
+BT._CACHE.pop("table", None)
 try:
-    ECU.CUE_NAMES = tuple(_saved_names) + (_bonus,)
+    _bonus = _BONUS
+    _pl_bonus = {str(p): "P_" + str(p)
+                 for p in ((TX.get(BT.slots()[_bonus]) or {}).get("params") or [])}
+    B2 = None
+    _l2: list = []
+    _b2_err = None
     try:
-        B2 = _build()                           # 引擎声明多一条 ⇒ 本包订阅表跟着长，构造**不抛**
-    except Exception as _e:                     # noqa: BLE001 —— 抛了就是这一档红
-        _b2_err = "%s: %s" % (type(_e).__name__, _e)
-    if B2 is not None:
-        ECU.cue(B2, _l2, _bonus, payload=_pl_bonus)
+        ECU.CUE_NAMES = tuple(_saved_names) + (_bonus,)
+        try:
+            B2 = _build()                       # 引擎声明多一条 ⇒ 本包订阅表跟着长，构造**不抛**
+        except Exception as _e:                 # noqa: BLE001 —— 抛了就是这一档红
+            _b2_err = "%s: %s" % (type(_e).__name__, _e)
+        if B2 is not None:
+            ECU.cue(B2, _l2, _bonus, payload=_pl_bonus)
+    finally:
+        ECU.CUE_NAMES = _saved_names
+    # ★ 判据要在**还原之前**跑：`_want()` 会现读 `BT.slots()[_bonus]`，
+    #   而现造的那一格在 finally 里就被摘掉了（从前这一支靠「文案表里多出来的备用格」，
+    #   现在没有备用格 ⇒ 顺序错了就是 KeyError）。
+    _bus2 = ECU.cue_of(B2) if B2 is not None else None
+    chk("★ ⑥ 引擎声明里多一条**真** cue（`%s`，文案表有那一格）⇒ 本包自动跟上、构造不抛"
+        % _bonus,
+        _bus2 is not None and bool(_bus2.subs_of(_bonus)),
+        "构造回执：%s" % (_b2_err or ("总线带它 = %s" % bool(_bus2 is not None),)))
+    chk("★ ⑥ 且真发得出那一行（逐字节 == 文案表那一格）",
+        bool(_l2) and _l2[0] == _want(_bonus, _pl_bonus), "实得 %r" % (_l2,))
 finally:
-    ECU.CUE_NAMES = _saved_names
-_bus2 = ECU.cue_of(B2) if B2 is not None else None
-chk("★ ⑥ 引擎声明里多一条**真** cue（`%s`，文案表有那一格）⇒ 本包自动跟上、构造不抛"
-    % _bonus,
-    _bus2 is not None and bool(_bus2.subs_of(_bonus)),
-    "构造回执：%s" % (_b2_err or ("总线带它 = %s" % bool(_bus2 is not None),)))
-chk("★ ⑥ 且真发得出那一行（逐字节 == 文案表那一格）",
-    bool(_l2) and _l2[0] == _want(_bonus, _pl_bonus), "实得 %r" % (_l2,))
+    _rules_raw["slots"].pop(_BONUS, None)
+    _tx_raw.pop(_BONUS_SLOT, None)
+    TX.pop(_BONUS_SLOT, None)
+    BT._CACHE.pop("table", None)
 
 # ══════════════════════════════════════════════════════════════
 # ⑦ 反证：订阅表少一条 / 多一条引擎不认的 ⇒ 装配期对账当场抛

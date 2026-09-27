@@ -1,32 +1,39 @@
 # -*- coding: utf-8 -*-
-"""战斗日志的**文案槽位注入**（P-1）—— 引擎 `Battle(text=…)` 那一口的供体。
+"""战斗日志的**文案槽位注入**（P-1 / 引擎侧 B1–B5 走完后改口径）。
 
-引擎这一侧早就备好了口
+引擎这一侧现在长什么样（2026-09-27 之后）
 ------------------------------------------------------------------
     `ext_combat/battle/battle.py`   `Battle(..., text=None)`：**鸭子类型**，只要求
-                                    `render_or(key, default, **slots)`
-    `saintess_engine/text/template.py`
-                                    `render_or` 的语义：**未注入** 与 **表里缺该 key**
-                                    两条路径的输出**逐字节相同**（都走 `safe_format(default)`）
-    `landing.py:85` 等             `render_via(battle, "battle.landing.element_immune", "💠 免疫！…")`
-                                    —— 引擎只给 key + 兜底模板 + 槽位，措辞归内容侧的表
+                                    `render_or(key, default, **slots)`。
+                                    ★ B5 之后引擎自己的 60 个点位**都不走这个口了**
+                                    （`render_via` / `text_of` 已删）——它留给内容侧/第三方
+                                    自己的调用点。
+    战斗日志的措辞真源 = **表现事件（cue）**：
+        引擎 `_cue(battle, logs, "<key>", {槽位})`
+          → 订阅表（本包 `content/cues.py` 的 `cue_subs_fn`）
+            → 引擎 `render_required(key)`：**必须命中**（表不在 / 表里没这一格 ⇒ 抛）
+              → 本包这张表（`content/rules/battle_text.json` 的槽位 ↔ `content/data/texts.json` 的句子）
+    ⇒ **引擎侧已经没有「兜底模板」这回事**：不挂订阅 / 缺一格，都不会回落引擎的话，
+      而是装配期点名抛（`CueSubsError`）或落一行坏数据（诊断面同时报警）。
 
-本包此前**从不传 `text`** ⇒ 所有战斗日志走引擎兜底模板（中文内联在引擎里，且
-`{element}` 那个槽位是**机器码**，玩家会看到 `免疫fire伤害`）。本模块把声明过的**几条**
-接上 texts 域，别的一律不动（见纪律 2）。
+本模块管的那两件事
+------------------------------------------------------------------
+* 声明面：`battle_text.json` 的 `slots`（引擎 key → texts 槽位名）**全量 60 条**，
+  与引擎 `CUE_NAMES` 逐条对齐（引擎加一条点位 ⇒ 本包必须同批补一格，否则装配期抛）。
+* 运行面：把 texts 域的句子取出来交给引擎（本模块**不造字、不写文案**）。
 
 三条纪律
 ------------------------------------------------------------------
 1. ⚠️ **绝不抛**（本模块最重要的一条）：引擎把整块元素免疫/弱点逻辑包在
-   `try/except Exception: pass` 里（`landing.py:81-108`）——**渲染口一抛，免疫会连
+   `try/except Exception: pass` 里（`landing.py`）——**渲染口一抛，免疫会连
    「伤害归 0」一起静默失效**（不是少一行字，是该挡的没挡住）。所以本模块对任何输入
-   都返回字符串：没声明过的 key / 槽位缺 / 模板坏 ⇒ 一律走引擎兜底模板。
-   配套：槽位在不在 texts 域里，由**装配期**的 `check_slots()` 兜（fail-closed 落在
-   装配期，不落在这条吞异常的渲染路上）。
-2. **只声明要覆盖的那几条**：`content/rules/battle_text.json` 里没写的 key ⇒ 引擎兜底
-   模板原样输出 ⇒ 剩余几百条战斗日志与接线前**一字不差**。
+   都返回字符串：没声明过的 key / 槽位缺 / 模板坏 ⇒ 一律回字符串（宁可露机器键 + 探针报红）。
+   配套：**装配期** `check_slots()` / 引擎的 `check_domain()` 做 fail-closed（缺一条当场抛），
+   不把 fail-closed 压在这条吞异常的渲染路上。
+2. **声明就要全**：`battle_text.json` 里写了的 key 必须有格子；没写的 key 引擎也不会问
+   （引擎侧 60 个点位全在册）——「只声明 8 条」那种半接线口径已废。
 3. **不新增第二份文案真源**：值一律从 `content/data/texts.json`（文案唯一真源）现取；
-   本模块不造字、不写文案。缺槽位时**不兜一句自造的话**（宁可露出引擎兜底模板 + 探针报红）。
+   本模块不造字、不写文案。缺槽位时**不兜一句自造的话**（装配期就抛 + 探针报红）。
 """
 from __future__ import annotations
 
@@ -51,7 +58,7 @@ def _rules() -> dict:
             raise ValueError("battle_text.json 少了 `slots`（引擎槽位 → texts 槽位名）")
         for k, v in raw["slots"].items():
             if not str(k).startswith("battle."):
-                raise ValueError("引擎槽位名形如 `battle.<模块>.<事件>`（照 `render_via` 第一参逐字抄）：%r" % (k,))
+                raise ValueError("引擎槽位名形如 `battle.<模块>.<事件>`（照 `ext_combat.battle.cues.CUE_NAMES` / `_cue(...)` 第 3 个位置实参逐字抄）：%r" % (k,))
             if not isinstance(v, str) or not v:
                 raise ValueError("引擎槽位 %r 要指向一个 texts 槽位名：%r" % (k, v))
         _CACHE["rules"] = raw
@@ -94,8 +101,10 @@ def check_slots() -> dict:
 def table() -> TextTable:
     """引擎要的那张表（`render_or` 鸭子类型）—— 进程内只建一次。
 
-    ★ 表里**只有声明过的那几条**（其余 key 走引擎兜底模板）；引擎的 `TextTable` 自带
-    `missing()` / `unused()` 记账 ⇒ 探针靠它验「声明的槽位真被引擎请求过」（防死槽位）。
+    ★ 表里就是**声明的那 60 条**（引擎侧 60 个点位全在册）——「没写进本表的 key 走引擎兜底
+    模板」那个口径**已废**（B5 之后引擎侧没有任何兜底模板；引擎不会问本表以外的 key）。
+    引擎的 `TextTable` 自带 `missing()` / `unused()` 记账 ⇒ 探针靠它验
+    「声明的槽位真被引擎请求过」（防死槽位）。
     """
     if "table" not in _CACHE:
         tx = _texts()
