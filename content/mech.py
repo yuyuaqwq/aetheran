@@ -995,15 +995,14 @@ def segment_plan(actor, action, entry):
 
 
 def _used_of(battle) -> dict:
-    """本场「每场一次」那类机制的用量表 —— 挂在 battle 上（战斗对象一场一个 ⇒ 天然清零）。"""
-    box = getattr(battle, "_aeth_mech_used", None)
-    if not isinstance(box, dict):
-        box = {}
-        try:
-            setattr(battle, "_aeth_mech_used", box)
-        except Exception:                                   # noqa: BLE001
-            return {}                                       # 记账失败不许把出手也拦掉
-    return box
+    """本场「每场一次」那类机制的用量表 —— 挂在引擎的 **`battle.flags`**（战斗级跨手标记）上。
+
+    ★ 2026-09-27：原先挂在 `Battle` 的临时属性（`setattr(battle, "_aeth_mech_used")`）——
+    而本包「场」这条路由**每一手都要 `to_state`/`from_state` 往返一次**，临时属性过不了往返
+    ⇒ 计数每手清零，「每场一次 / 每场几层」整族机制形同不存在（焚身四轮试玩都复现）。
+    引擎侧 `serialize.py` 已把 `flags` 那一格接上（读写两端）⇒ 这一格随档走、跨手有效。
+    """
+    return battle.flags
 
 
 def _flag(m: dict, key: str) -> bool:
