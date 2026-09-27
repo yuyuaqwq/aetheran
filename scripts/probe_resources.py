@@ -462,12 +462,17 @@ print("══ ⑧ 引擎改动面（硬指标）")
 #    docs-only 提交时那写法会假红。改成**自基准提交起 diff**（`<base>..HEAD` 的并集）。
 #    ★ 换批时改 `_ENGINE_BASE8`（本批开工前引擎的 HEAD）与 `_want_t`。
 #    ★ P-11（2026-09-27）**换批**：本批引擎改动 = 守卫拦截句读口那三份（见 `probe_mech` ⑮
-#      同一处换批说明）⇒ 基准前移到 `f31ee59`、声明表换这三份；强度不变（多一份代码就红）。
+#      同一处换批说明）⇒ 基准前移到 `f31ee59`、声明表换本批那几份（含子模块指针与条数锚点那份）；强度不变（多一份就红）。
 import subprocess as _sp                                                # noqa: E402
 _ENGINE_BASE8 = "f31ee59"
-_want_t = sorted(["saintess_engine/config.py",
-                  "saintess_engine/host/runtime.py",
-                  "tests/test_host_contract.py"])
+_want_t = sorted([
+    # ★ 子模块指针（同批落账：games/orlandia → d98b348）
+    "games/orlandia",
+    "saintess_engine/config.py",
+    "saintess_engine/host/runtime.py",
+    "tests/test_host_contract.py",
+    # ★ 本批引擎仓的第二笔：条数锚点随本包 +2 条同步（同批声明面）
+    "tests/test_texts_schema_contract.py"])
 _out = _sp.run(["git", "-C", ENGINE, "status", "--porcelain"],
                capture_output=True, text=True, encoding="utf-8").stdout.strip()
 _committed = {p for p in _sp.run(

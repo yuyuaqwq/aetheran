@@ -1430,9 +1430,15 @@ _dirty = [ln for ln in (_git.stdout or "").splitlines() if ln.strip()]
 #     本包 `content/guard_text.py` 直接 `import GUARD_KEYS` ⇒ 换批必须跟着前移基准，
 #     否则这两个探针会把「本批的引擎改动」误判成越界。**强度不变**（代码落点多一个就红）。
 _ENGINE_BASE = "f31ee59"
-_want_touched = sorted(["saintess_engine/config.py",
-                        "saintess_engine/host/runtime.py",
-                        "tests/test_host_contract.py"])
+_want_touched = sorted([
+    # ★ 子模块指针（同一批的落账：games/orlandia → d98b348 —— 包侧 P-11 那条）
+    "games/orlandia",
+    "saintess_engine/config.py",
+    "saintess_engine/host/runtime.py",
+    "tests/test_host_contract.py",
+    # ★ 本批引擎仓的第二笔：条数锚点随本包的 +2 条同步
+    #   （`len(body) == 3208 → 3210`）——同一批，落点同属本批声明面
+    "tests/test_texts_schema_contract.py"])
 _committed = {p for p in subprocess.run(
     ["git", "diff", "--name-only", "%s..HEAD" % _ENGINE_BASE], cwd=ENGINE,
     capture_output=True, text=True).stdout.split() if p}
