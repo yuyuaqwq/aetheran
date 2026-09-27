@@ -164,11 +164,17 @@ async def board_show(env, sink, uid, player):
     _nw = _no_wire_line(x)             # ★ fxb②：这条的完成条件还没接线 —— 单子上照实标出来
     if _nw:
         yield "  " + _nw
-    if k in _done(p):
-        yield T("SYS_TRADE_MARK_DONE")
-    elif k in _mine(p):
+    # ★ fix-r②：**手上真在跑的那一条优先于「已交」那本历史账** —— 跨游戏日重接的悬赏
+    #   （fix-m-bounty 放行的那一档）会**同时在** `flags.quests_active`（进行中）与
+    #   `flags.quests_done`（完成记录，有意不去掉）里 ⇒ 改前 `_done` 压过 `_mine`，同一屏
+    #   上面刚印完「还差：…（你打过 0 只）」，下一行接一句「（已交）」，而『我的委托』把它算
+    #   【进行中】（berserker b124 / knight 第 3 轮 b4~b5 两路实测）。顺序反过来之后：
+    #   在手上 ⇒ 说「进行中 + 交单提示」；不在手上、只交过 ⇒ 才是「（已交）」。
+    if k in _mine(p):
         yield T("SYS_BOARD_ACTIVE")
         yield T("SYS_BOARD_DELIVER", order=x.get("order"))
+    elif k in _done(p):
+        yield T("SYS_TRADE_MARK_DONE")
     else:
         yield T("SYS_BOARD_NEXT", order=x.get("order"))
 
