@@ -5681,12 +5681,6 @@
     "category": "对话",
     "desc": "B4-19 未鉴定 · 认得这一门的那个人（`pools[].identify_by` 点名的）"
   },
-  "TALK_IDENTIFY_NONE": {
-    "value": "「拿来我看。」（他翻了两下）「……看不出。你留着吧。」",
-    "params": [],
-    "category": "对话",
-    "desc": "B4-19 未鉴定 · 杜林翻了两下（认不出锻造物）"
-  },
   "TALK_IDENTIFY_LIAN": {
     "value": "（她看了很久，没有说话。）",
     "params": [],
@@ -6196,7 +6190,7 @@
     "desc": "G2 分段推进 · 谁先动（它的 ct 更小）——同 §〇·五"
   },
   "COMBAT_TURN_FOE_DOING": {
-    "value": "◆ {name}正押着一手 —— 那一手还有 {left} 秒落到你身上。",
+    "value": "◆ {name}正押着一手 —— 那一手还有 {left} 刻落到你身上。",
     "params": [
       "name",
       "left"

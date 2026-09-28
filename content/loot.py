@@ -253,18 +253,29 @@ def appraisers_of(unid_id: str) -> tuple:
 
 
 def help_text_of(uid_id: str, npc_id: str) -> str | None:
-    """谁认得出这个（杜林认锻造物 / 莉安认铭文 / 柯尔只认铁 / 艾德认教会器物）。
+    """他看这一件会回什么：认得出这一门 / 他那句句子 / 不说话（`None` = 他没反应）。
 
-    ★ B4-19：三句话都走 texts 槽位（原先这里是三句内联 —— 文案真源只有 texts 域）。
+    ★ B4-19：话都走 texts 槽位（原先这里是内联字面量 —— 文案真源只有 texts 域）。
     ★ 「认得这一门的那个人」的判据 = `appraisers_of()`（域里的 `identify_by`，唯一一口）。
+    ★ L1123：认得出那一口优先；下面只剩「莉安另有一句」一个字面量（她不在任何池的
+      `identify_by` 里，却另有一句「看了很久」），其余一律回 `None`。
+      曾经还有一个 `npc_durin` 字面量并带着槽位 `TALK_IDENTIFY_NONE` ——
+      它**永远走不到**（杜林在三个 unid 池的 `identify_by` 里全部在列），已删。
     """
     from .cmds_ast import T                    # ★ B4-19：本地 import（免得包装载期成环）
     if npc_id in appraisers_of(uid_id):
         return T("TALK_IDENTIFY_KNOWN")
-    if npc_id == "npc_durin":
-        return T("TALK_IDENTIFY_NONE")
     if npc_id == "npc_lian":
+        # ★ 这一支是**活的**（她不在那两个池的 identify_by 里，却另有一句「看了很久」）
+        # —— 删它就是删一个玩家反复能看到的反应。
         return T("TALK_IDENTIFY_LIAN")
+    # ★ L1123：原先这里还内联了 npc_durin，而它**永远走不到**。
+    # 取证（契约口 + 实跑）：手上口只认 kind_key == "unidentified"，全仓只有三个这样的池，
+    # 而 npc_durin 在**三个的 identify_by 里全部在列**（道具 / 箭声 / 塔）
+    # ⇒ 上面那一口一定先回。实跑三池 × npc_durin = 3/3 全部返回 TALK_IDENTIFY_KNOWN，
+    #   无一次落到被删的那一支。
+    # 不留兼容壳：分支与它唯一的文案槽位 TALK_IDENTIFY_NONE 一起删（
+    #   那句『翻了两下』玩家一辈都拿不到）。
     return None
 
 
