@@ -120,13 +120,28 @@ def get_player(group_id, uid):
                             (str(group_id or ""), str(uid or ""))).fetchone()
         finally:
             c.close()
+    # ★ 审计 L1701：原为 `except Exception: return None`。**`None` 的含义被这一处偷走了** ——
+    # 上面 docstring 写明「`None` = 新玩家（引擎会问包要初始档）」，而坏档（存档半截 / 编码坏 /
+    # 迁移中断）与「查无此人」塌成同一个值 ⇒ 引擎把一个玩了几十小时的档**当成新玩家**，
+    # 走建号初始化，下一次落档就把原档**覆盖销毁**（实测：7 级 / 9999 金币的档被改成
+    # 1 级 / 0 金币，全程零报错）。真值判据 = 「这一行不存在」，坏档不是「不存在」。
     if not row:
         return None
     try:
         v = json.loads(row["data"])
-    except Exception:
-        return None
-    return v if isinstance(v, dict) else None
+    except Exception as _e:
+        raise RuntimeError(
+            "content.persistence.get_player：存档行存在但 JSON 解析失败（group_id=%r uid=%r）——"
+            "拒绝返回 None（None = 新玩家，引擎会走建号初始化并覆盖销毁原档）"
+            % (group_id, uid)
+        ) from _e
+    if not isinstance(v, dict):
+        raise RuntimeError(
+            "content.persistence.get_player：存档行的 data 顶层不是 dict（group_id=%r uid=%r，"
+            "实际 %s）—— 拒绝当作无存档返回 None（否则同上一条：覆盖销毁原档）"
+            % (group_id, uid, type(v).__name__)
+        )
+    return v
 
 
 def update_player(group_id, uid, **fields):
