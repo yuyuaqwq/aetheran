@@ -6399,9 +6399,10 @@
     "desc": "引擎槽位 `battle.actions.effect_on`（`extends/ext_combat/battle/actions.py:627` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
   },
   "COMBAT_ACTIONS_ENCHANT_FOLLOWUP": {
-    "value": "{tag} 附魔追击，追加 {dmg} 点伤害！",
+    "value": "{tag}【{t:.0f} 刻】附魔追击，追加 {dmg} 点伤害！",
     "params": [
       "dmg",
+      "t",
       "tag"
     ],
     "category": "战斗",
@@ -6498,11 +6499,12 @@
     "desc": "引擎槽位 `battle.core.unknown_action`（`extends/ext_combat/battle/battle.py:547` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
   },
   "COMBAT_EFFECTS_BUFF_BOOST": {
-    "value": "✦ {key} 提升（{op}×{mult}，持续 {turns} 刻）",
+    "value": "✦【{t:.0f} 刻】{key} 提升（{op}×{mult}，持续 {turns} 刻）",
     "params": [
       "key",
       "mult",
       "op",
+      "t",
       "turns"
     ],
     "category": "战斗",
@@ -6575,9 +6577,10 @@
     "desc": "引擎槽位 `battle.effects.immune_debuff`（`extends/ext_combat/battle/effects.py:405` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
   },
   "COMBAT_EFFECTS_ON_HIT_READY": {
-    "value": "✦ {key} 出手效果就绪（{turns} 刻内生效）",
+    "value": "✦【{t:.0f} 刻】{key} 出手效果就绪（{turns} 刻内生效）",
     "params": [
       "key",
+      "t",
       "turns"
     ],
     "category": "战斗",
@@ -6594,8 +6597,9 @@
     "desc": "引擎槽位 `battle.effects.shield_gain`（`extends/ext_combat/battle/effects.py:603` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
   },
   "COMBAT_EFFECTS_SHIELD_PCT": {
-    "value": "🛡️ {value:.0%}（持续 {turns} 刻）",
+    "value": "🛡️【{t:.0f} 刻】{value:.0%}（持续 {turns} 刻）",
     "params": [
+      "t",
       "turns",
       "value"
     ],
@@ -6603,9 +6607,10 @@
     "desc": "引擎槽位 `battle.effects.shield_pct`（`extends/ext_combat/battle/effects.py:479` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
   },
   "COMBAT_EFFECTS_STACK_ACTIVE": {
-    "value": "✦ {key}（持续 {turns} 刻）",
+    "value": "✦【{t:.0f} 刻】{key}（持续 {turns} 刻）",
     "params": [
       "key",
+      "t",
       "turns"
     ],
     "category": "战斗",
@@ -6624,10 +6629,11 @@
     "desc": "引擎槽位 `battle.effects.stack_add`（`extends/ext_combat/battle/effects.py:446` 的兑底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
   },
   "COMBAT_EFFECTS_STACK_APPLIED": {
-    "value": "💫 {name} 被【{key}】{turns} 刻！",
+    "value": "💫【{t:.0f} 刻】{name} 被【{key}】{turns} 刻！",
     "params": [
       "key",
       "name",
+      "t",
       "turns"
     ],
     "category": "战斗",
@@ -6767,9 +6773,10 @@
     "desc": "引擎槽位 `battle.landing.down`（`extends/ext_combat/battle/landing.py:409` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
   },
   "COMBAT_LANDING_GUARD_COVER": {
-    "value": "🛡️ 【{guard}】替【{target}】挡下了这一击！",
+    "value": "🛡️【{t:.0f} 刻】【{guard}】替【{target}】挡下了这一击！",
     "params": [
       "guard",
+      "t",
       "target"
     ],
     "category": "战斗",
