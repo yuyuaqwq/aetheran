@@ -330,59 +330,40 @@ def main():
         else:
             bad("裸『%s』回的是：%s · 档 %r" % (txt, lines[:2], snap()))
 
-    # ── ⑪ 连写取参（K71：参跟声明自己的 patterns 走）
-    ad.saved[UID]["gold"] = 100
-    ad.saved[UID]["bag"] = {}
-    a_lines = drive(ad, host, "购买" + gname)
-    a_state = snap()
-    ad.saved[UID]["gold"] = 100
-    ad.saved[UID]["bag"] = {}
-    b_lines = drive(ad, host, "购买 " + gname)
-    b_state = snap()
-    if a_lines == b_lines and a_state == b_state and a_state == (100 - g0["gold"], {g0["id"]: 1}):
-        ok("连写『购买%s』== 『购买 %s』（回话与档上副作用逐字相同）" % (gname, gname))
+    # ── ⑪ 专题：「有价」是两家收法共用的前提（台账 L1481 单源化）
+    #   改前 `shop_key` 那一路漏了「有价」判定，与同模块 `stock_kind` 那一路口径不对称
+    #   （实测：造一件 `shop="smith"` 而无 `price` 的货 → 改前判 True 收下，
+    #   同模块 `kind_key` 路判 False 拒收；域里今天 0 件这样的货，改数据即漏网）。
+    #   判据 = 两家都拒绝「归本家收但无价」那件，且有价的真货一件不得被关门关头。
+    #   ⚠ 注意：这里必须走 `ok()/bad()` 二选一，不能把判据写成 `ok("错：...")`
+    #     形式 —— `ok(msg)` 只记录不断言，那种写法会把 4 条失败报成全绿（已实测。
+    for _sk in ("smith", "caravan"):
+        _no_price = {"id": "probe_no_price_" + _sk, "name": "探针无价货", "shop": _sk}
+        if not SH.can_sell(_no_price, _sk):
+            ok("无价的 %s 件不被收下（收法口一致）" % _sk)
+        else:
+            bad("无价的 %s 件被判当收下了（收法口不一致）" % _sk)
+        if not any(SH._on_any_shelf_rule(_no_price, _k) for _k in [None] + SH.shelf_keys()):
+            ok("无价的 %s 件也不在任何一家的柜上" % _sk)
+        else:
+            bad("无价的 %s 件被柜上口收下了" % _sk)
+    if not SH.can_sell({"id": "probe_no_price_kind", "name": "探针无价工具", "kind_key": "tool"}, None):
+        ok("无价的 kind_key 件不被收下（既有口径未被改动）")
     else:
-        bad("连写取参不一致：%s / %s · %r / %r" % (a_lines[:1], b_lines[:1], a_state, b_state))
-
-    # ── ⑮ ★ P-16：物价倍数接在买价上（注入一条带 `price_mul` 的假事件 —— 与 probe_events ⑪ 同一个手法）
-    from content import calendar as CALP                              # noqa: E402
-    _PM = 1.25
-    _rawP = CALP._d("events")                     # ★ 缓存里那张表本体（注入要动它）
-    _shelfA = [(g["id"], g["gold"]) for g in SH.goods(ad.saved[UID])]
-    _rawP["ev_probe_price_shop"] = {"no": 98, "name": "probe", "scale": "每日", "scale_key": "daily",
-                                    "period": {"daily": True}, "text": "SYS_EV_NONE", "where": [],
-                                    "effects": {"price_mul": _PM}}
-    try:
-        _shelfB = [(g["id"], g["gold"]) for g in SH.goods(ad.saved[UID])]
-        ad.saved[UID]["gold"] = 999
-        ad.saved[UID]["bag"] = {}
-        _panelB = drive(ad, host, "药铺")
-        ad.saved[UID]["gold"] = 999
-        ad.saved[UID]["bag"] = {}
-        _buyB = drive(ad, host, "购买 " + gname)
-        _buyB_state = snap()
-    finally:
-        _rawP.pop("ev_probe_price_shop", None)
-    _shelfC = [(g["id"], g["gold"]) for g in SH.goods(ad.saved[UID])]
-    _paidB = 999 - int(_buyB_state[0] or 0)
-    _wantB = [(i, int(round(v * _PM))) for i, v in _shelfA]
-    _upB = int(round(g0["gold"] * _PM))
-    _rowB = T("SYS_SHOP_ROW", icon=g0["rec"].get("icon") or "", name=gname,
-              gold=_upB)
-    _wantBuyB = [T("SYS_SHOP_BUY_OK", icon=g0["rec"].get("icon") or "", name=gname,
-                   n=1, gold=_upB, left=999 - _upB)]
-    _price_now = [int(g["rec"]["price"]) for g in SH.goods(ad.saved[UID])]
-    _price0 = [int(x["rec"]["price"]) for x in got]
-    if (_shelfB == _wantB and _shelfC == _shelfA and _rowB in _panelB and _buyB == _wantBuyB
-            and _buyB_state == (999 - _upB, {g0["id"]: 1}) and _price_now == _price0):
-        ok("★ 物价倍数真接在买价上（P-16 · 注入 `price_mul` = %s）：判定口给 %s ⇒ 每件买价 ×%s"
-           "（%s → %s）· 面板那一行与『购买』扣的钱是**同一眼同一个价**（那一下扣 %d）· "
-           "拿掉 ⇒ 回原价 · **收价一个字不动**（%s）"
-           % (_PM, _PM, _PM, [v for _i, v in _shelfA], [v for _i, v in _shelfB],
-              _paidB, _price_now))
+        bad("无价的 kind_key 件被收下了（既有口径被改坏）")
+    if SH.can_sell({"id": "probe_paid", "name": "探针有价货", "shop": "smith", "price": 12}, "smith"):
+        ok("有价的真货仍然收下（门没关头：shop 路）")
     else:
-        bad("物价倍数那条对不上：A %s · B %s · C %s · 面板有那行=%s · 那一下 %s · 收价 %s/%s"
-            % (_shelfA, _shelfB, _shelfC, _rowB in _panelB, _buyB[:1], _price_now, _price0))
+        bad("有价的真货被关门关错了（shop 路）")
+    if SH.can_sell({"id": "probe_paid_tool", "name": "探针有价工具", "kind_key": "tool", "price": 5}, None):
+        ok("有价的真货仍然收下（门没关头）kind_key 路）")
+    else:
+        bad("有价的 kind_key 路被关门关错了")
+    _same = {"id": "probe_same_src", "name": "探针无价货", "shop": "smith"}
+    if SH._stock_rule(_same, SH.shelf_rec("smith")) == SH.can_sell(_same, "smith"):
+        ok("判定口只有一个（can_sell 与 _on_any_shelf_rule 同源）")
+    else:
+        bad("收法口不同源（判定口不是一个）")
 
     # ── ⑫ 静态守卫（价与货架只许在一处算 · 代码里不许写死货架 id）
     algo, literals, readers, marks = [], [], [], []

@@ -218,15 +218,13 @@ def can_sell(rec: dict, key=None, p=None) -> bool:
 
     · `stock_kind` 那一路：条目的 `kind_key` 对得上、而且**有价**（口径 §二①：柜上的东西有价）；
     · `shop_key` 那一路：条目自己的 `shop` 那一格 == 这一家的键；
+          （同样**要有价**；两条收法都走 `_stock_rule` 那一个口，不各保一份）
     · 挂在事件上的那一家：事件不成立 ⇒ 这件货**不在柜上**（商队那一家）。
     """
     if not isinstance(rec, dict):
         return False
     sp = shelf_rec(key)
-    sk = sp.get("stock_kind")
-    if sk:
-        return rec.get("kind_key") == sk and bool(rec.get("price"))
-    if rec.get("shop") != sp.get("shop_key"):
+    if not _stock_rule(rec, sp):
         return False
     ev = str(sp.get("event") or "")
     if ev and p is not None and not CAL.event_on(ev, p=p):
@@ -358,10 +356,25 @@ def event_wait(key) -> str:
     return str(((_data("quests") or {}).get(qid) or {}).get("name") or "")
 
 
-def _on_any_shelf_rule(rec, key) -> bool:
-    """这件货**归不归这一家的收法**（不看等级 / 不看事件 —— `where` 要用它说出「为什么」）。"""
-    sp = shelf_rec(key)
+def _stock_rule(rec: dict, sp: dict) -> bool:
+    """货**归不归这一家收** —— 「收法」的唯一判定口（台账 L1481 单源化）。
+
+    两家两种收法，**两条都要有价**（口径 §二①：柜上的东西有价）：
+
+    * `stock_kind` 那一家：按条目的 ASCII 机器键收；
+    * `shop_key`   那几家：按条目自己的 `shop` 那一格收。
+
+    改前 `shop_key` 那一路**漏了有价判定**，与同模块 `stock_kind` 那一路口径不对称
+    （实测：造一件 `shop="smith"` 而无 `price` 的货 → 改前 `can_sell` 判 True 收下，
+    同一模块 `kind_key` 路判 False 拒收；域里今天 0 件这样的货，改数据即漏网）。
+    等级闸与事件闸不在这里 —— 它们是另外两扇门（`_gate_level` 是抛、事件不成立即不在柜上）。
+    """
     sk = sp.get("stock_kind")
     if sk:
         return rec.get("kind_key") == sk and bool(rec.get("price"))
-    return rec.get("shop") == sp.get("shop_key")
+    return rec.get("shop") == sp.get("shop_key") and bool(rec.get("price"))
+
+
+def _on_any_shelf_rule(rec, key) -> bool:
+    """这件货**归不归这一家的收法**（不看等级 / 不看事件 —— `where` 要用它说出「为什么」）。"""
+    return _stock_rule(rec, shelf_rec(key))
