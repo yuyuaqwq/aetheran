@@ -251,33 +251,6 @@
     "category": "场景",
     "desc": "副本 · 塔顶（每间房要回答「这一间教什么」） · ★ 已写正文"
   },
-  "COMBAT_INTERRUPT_OK": {
-    "value": "⚔️【{t} 刻】{who} 打断成功 —— 「{skill}」被截断",
-    "params": [
-      "skill",
-      "t",
-      "who"
-    ],
-    "category": "战斗",
-    "desc": "打断成功"
-  },
-  "COMBAT_INTERRUPT_FAIL": {
-    "value": "⚠️【{t} 刻】{who} 的打断落空了",
-    "params": [
-      "t",
-      "who"
-    ],
-    "category": "战斗",
-    "desc": "打断失败"
-  },
-  "COMBAT_SUPERARMOR": {
-    "value": "🛡️ {who}纹丝不动 —— 霸体期间打断无效",
-    "params": [
-      "who"
-    ],
-    "category": "战斗",
-    "desc": "霸体挡打断"
-  },
   "COMBAT_CRIT": {
     "value": "✨【{t} 刻】{who}{act}{tgt}，暴击！造成 {dmg} 点伤害",
     "params": [
@@ -297,16 +270,6 @@
     ],
     "category": "战斗",
     "desc": "倒下"
-  },
-  "COMBAT_WINDOW": {
-    "value": "† {name}剩余 {t} 刻，{effect} †",
-    "params": [
-      "effect",
-      "name",
-      "t"
-    ],
-    "category": "战斗",
-    "desc": "窗口提示行"
   },
   "COMBAT_ELITE_SPAWN": {
     "value": "† {affix}的{name} †\n{hint}",
@@ -328,36 +291,6 @@
     ],
     "category": "战斗",
     "desc": "Boss 阶段转换"
-  },
-  "COMBAT_DOT": {
-    "value": "🩸 {who}受到 {dmg} 点伤害（{dot} {layers} 层 · 每刻 {per} · 剩余 {left} 刻）",
-    "params": [
-      "dmg",
-      "dot",
-      "layers",
-      "left",
-      "per",
-      "who"
-    ],
-    "category": "战斗",
-    "desc": "DoT 结算"
-  },
-  "COMBAT_DEFEND": {
-    "value": "🛡️ {who}进入防御",
-    "params": [
-      "who"
-    ],
-    "category": "战斗",
-    "desc": "防御"
-  },
-  "COMBAT_MISS": {
-    "value": "⚔️【{t} 刻】{who} 的攻击落空了",
-    "params": [
-      "t",
-      "who"
-    ],
-    "category": "战斗",
-    "desc": "未命中"
   },
   "SYS_BAG_FULL": {
     "value": "🎒 背包满了\n💡 旧装备可以「拆解」成材料，也可以「卖出」",
