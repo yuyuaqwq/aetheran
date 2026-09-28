@@ -92,9 +92,14 @@ def resolve(texts, loc, node, empty=False, variant=None):
     `empty=True`（★ 本波）：先试**人不在那一版**（`SCENE_<节点>_EMPTY`），再退老那一套。
       ★ 空版**不退地图级** —— 退过去就是把「踏进这张图的第一眼」（写着镇子北口那块石头）
         拿来当这一站的近景，正是 P1 BUG-4 / P4 BUG-1 那一族（东口读到「风车在镇子北口」）。
-        空版取不到就照老的那一套走（不静默给空字符串）。
+        空版缺位只许退**节点级**（`SCENE_<节点>`）；**节点级也没有 ⇒ 返 `None`**
+        （调用方 `cmds_ast._scene_line` 那行有 `【%s · %s】` 占位），不静默给空字符串。
+      ⇒ 这就是 `empty` 分支自己走一遍候选、而不是共用下面那个 for 的原因（共用就得带上地图级）。
     `variant`（★ g4-⑤）：**按状态分支**那一档 —— 先试 `SCENE_<节点>__<状态大写>`（例：
       `SCENE_WT_CHAPEL__FULL` 满血那一版），取不到就照老那一套走。状态名由调用方判好传进来。
+      ★ 优先级（g4-⑤ 台账 #2 点名、本轮补记）：`empty` > `variant` > 节点级。
+      调用方 `cmds_ast.py:832` 两处**同时**为真时以 `empty` 为准 —— 那是 `insert(0, …)` 的直接结果，
+      这里写明，不再让它只由调用先后隐式决定。今天两者不同时为真（唯一有变体的 `wt_chapel` 无 `_EMPTY` 槽）。
     """
     keys = [node_key(node)]
     if variant:
@@ -103,6 +108,15 @@ def resolve(texts, loc, node, empty=False, variant=None):
             keys.insert(0, v)
     if empty:
         keys.insert(0, empty_key(node))
+        # ★ 审计 L2529-1：`empty=True` 时**不把地图级塞进候选**。空版缺位只许退**节点级**
+        #   （`SCENE_<节点>`），退到地图级就是拿「踏进这张图的第一眼」当这一站的近景 ——
+        #   正是本函数 docstring :93-95 点名、而代码没兑现的那一族（东口读到「风车在镇子北口」）。
+        #   宁可回 None：调用方 `cmds_ast._scene_line` 那行有 `【%s · %s】` 占位，不拿宽景充近景。
+        for k in keys:
+            rec = texts.get(k)
+            if rec and (rec.get("value") or "").strip():
+                return k
+        return None
     keys.append(map_key(loc))
     for k in keys:
         rec = texts.get(k)
