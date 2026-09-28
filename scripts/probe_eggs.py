@@ -258,6 +258,25 @@ for r in (st.domain("recipes") or {}).values():
     if r.get("out"):
         produced.add(str(r["out"]))
 
+# ★ 装套可达性：`set` 取的是 **set_id**（`items.json` 的 `set_id`）、
+#   `worn`/`hold` 取的是**物品 id**。两者都要拿 `produced` 判实验，
+#   不得无条件写“无出产渠道”（就算没渠道也不是这个理由）。
+#   套装：一套里**任一件**能出就算能集齐 → 该 set_id 可达。
+PIECES_OF = {}
+for _iid, _rec in IT.items():
+    _sid = (_rec or {}).get("set_id")
+    if _sid:
+        PIECES_OF.setdefault(str(_sid), set()).add(str(_iid))
+
+
+def _reachable(ck, val):
+    """这个前置在今天的出产表里到不到底。"""
+    if ck == "set":
+        # 套装：那套的任一件在产出表里 → 能集齐
+        return bool(PIECES_OF.get(str(val), set()) & produced)
+    return str(val) in produced
+
+
 gaps, live = {}, []
 for eid, v in BOOK.items():
     why = []
@@ -265,16 +284,37 @@ for eid, v in BOOK.items():
         ck = _ck(field)
         if ck in ("race", "lore"):
             why.append("要种族/铭文（建号未落地）")
-        elif ck in ("set", "worn"):
-            why.append("要套装件（无出产渠道）")
-        elif ck == "hold" and str(val) not in produced:
-            why.append("%s 无出产渠道" % val)
+        elif ck in ("set", "worn", "hold") and not _reachable(ck, val):
+            why.append("%s 无出产渠道（%s）" % (val, ck))
     if why:
         gaps[eid] = sorted(set(why))
     else:
         live.append(eid)
 for eid in BOOK:
     print("  · %s：%s" % (eid, "今天撞得上" if eid in live else "等前置 —— " + "；".join(gaps[eid])))
+
+# ★ 带齿判据：它**读 `gaps` 本身**（不是另算一遍）——「归因逻辑」一旦退回旧写法就当场报红。
+#   口径（与判语措辞无关）：某条彩蛋的条件里若有**任何一条真的能达成**的前置
+#   （`set` 按「该套任一件在产出表就算可达」，`worn`/`hold` 按「该物品 id 在产出表」），
+#   那么这条彩蛋就**不许**带着「无出产渠道」这种判语进 `gaps`。
+#   反证：把上面 :287 那行退回 `elif ck in ("set","worn"): why.append("要套装件（无出产渠道）")`
+#   ⇒ 3 套全在产出表里却被写「无出产渠道」⇒ 本条立刻红。
+_bad = []
+for _eid, _v in BOOK.items():
+    for _f, _val in RB.walk(dict(_v["cond"]), []):
+        if _ck(_f) not in ("set", "worn", "hold"):
+            continue
+        if _reachable(_ck(_f), _val) and any("无出产渠道" in _r
+                                        for _r in gaps.get(_eid, [])):
+            _bad.append("%s（%s:%s实际可达）" % (_eid, _ck(_f), _val))
+chk("★ 归因不编造（真可达的前置不许报“无出产渠道”）",
+    not _bad, "已到产出表却被归因的：%s" % (_bad or "无"))
+chk("★ 套装件产出渠道逐件对账（套件 id → 产出表）",
+    all(PIECES_OF.get(s, set()) & produced for s in PIECES_OF),
+    "%d 套 / %d 件，完全无产出的：%s"
+    % (len(PIECES_OF), sum(len(v) for v in PIECES_OF.values()),
+       [s for s, v in sorted(PIECES_OF.items()) if not (v & produced)]))
+
 # 底线：今天能撞上的不少于 5 条（1 / 3 / 7 等建号选族 · 9 / 10 等套装出产渠道 —— 见口径 §六）；
 # 这条盯的是「别让前置把整层玩法捂死」，不是「必须全都能撞上」。
 chk("★ 今天就能撞上的 ≥ 5 条（不让前置换掉整层玩法）", len(live) >= 5, "%d 条：%s" % (len(live), live))
