@@ -158,7 +158,7 @@ def price_of(rec: dict, p=None, mul=None) -> int:
     return gold
 
 
-def sell_price_of(rec: dict, iid: str = "") -> int:
+def sell_price_of(rec: dict) -> int:
     """★ P3 BUG-4（本波 f4）：**铺子收一件东西给多少** —— 唯一一口（『卖出』与『旧货』都走它）。
 
     三档，fail-closed：
@@ -174,8 +174,10 @@ def sell_price_of(rec: dict, iid: str = "") -> int:
     （见 `sell_gear` 的 `_src`，另登记为真源待补行 · 本分支 `_notes.md`）。
     """
     r = rules()
-    if iid:
-        rec = rec or LT.rec_of(str(iid))
+    # ★ 死参数 `iid` 已删（审计 L1484）：全仓 14 处调用点**无一**传它
+    #   （cmds_more:352 · cmds_places:267 · probe_cmds 2 · probe_fix4_combat 5 ·
+    #   rebuild_shop 注释），原先那个 `rec = rec or LT.rec_of(str(iid))` 分支
+    #   是**零可达**的死路 —— 留着它只让人以为「可以只给 id 问价」。
     base = (rec or {}).get("price")
     if isinstance(base, (int, float)) and not isinstance(base, bool) and base > 0:
         return int(base)
