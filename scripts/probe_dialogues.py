@@ -591,17 +591,45 @@ if _k13 is None:
         "域里找不到「有 flag 句 + 有兜底句」的多句层（判据自身失效，请修夹具）")
 else:
     _sv13 = json.loads(json.dumps(_npc[_k13]))
-    for _lk in _LAY4:
+
+    def _rot_layerwise(npc_key, p, days=3):
+        """**层内逐层**各挑一句（老读端的样子：每层只认 `CT._pick_indexed` 的头一条）。
+        ★ 用的是**真的** `CT._pick_indexed`（不是复刻）—— 老缺陷就发生在这一个函数里。
+        """
+        _seen = []
+        for _d in range(days):
+            for _h in _HOURS:
+                for _w in _WEATH:
+                    for _lk in CT.LAYERS:
+                        if _lk not in _npc[npc_key]["nodes"]:
+                            continue
+                        _i, _t = CT._pick_indexed(_npc[npc_key]["nodes"][_lk].get("texts"),
+                                                 p, {"hour": _h, "weather": _w})
+                        if _t:
+                            _seen.append(_t)
+        return len(set(_seen))
+
+    _before13 = _rot_layerwise(_k13, _late_player(_k13))   # 老读端 · 句序正常
+    for _lk in _LAY4:                                        # 把 flag 句压回层首
         _ts = _npc[_k13]["nodes"].get(_lk, {}).get("texts", [])
         _fi = [i for i, t in enumerate(_ts) if "flag" in (t.get("need") or {})]
         if _fi and len(_ts) >= 2:
             _ts.insert(0, _ts.pop(_fi[0]))
-    _bad13 = _rot_late(_k13, _late_player(_k13))
-    _npc[_k13] = _sv13                      # 还原（判据不许改坏被测数据）
-    #   阈值 = 该位现值 - 1（不是全局底线）：证明「把 flag 句排回层首**真的有代价**」
-    chk("⑬-b ★ 反证：把 %s 的主线句排回层首 ⇒ 后期轮换至少掉 1 句（判据抓得住）"
-        % _k13, _bad13 <= _LATE[_k13] - 1,
-        "压完 %d 句（%d → %d，阈值 ≤ %d）" % (_bad13, _LATE[_k13], _bad13, _LATE[_k13] - 1))
+    _bad13 = _rot_layerwise(_k13, _late_player(_k13))      # 老读端 · 句序压坏
+    _new13 = _rot_late(_k13, _late_player(_k13))            # 真读端 · 同一棵压坏的树
+    _npc[_k13] = _sv13                                     # 还原（判据不许改坏被测数据）
+    # ★ 两条都要真量出来：① 老读端确实掉档（P1-14 那个缺陷真实 · 判据不恒真）
+    #   ② 同一棵压坏的树在真读端不掉档（= P1-16 的收益，也是它该被钉住的地方）
+    _chk13 = [("老读端没掉档（%d → %d，判据抓不住）" % (_before13, _bad13),
+               _bad13 < _before13),
+              ("真读端仍被句序影响（压坏后 %d 句 > 原值 %d —— 层内轮换没生效）"
+               % (_new13, _LATE[_k13]), _new13 <= _LATE[_k13])]
+    chk("⑬-b ★ 反证：把 %s 的主线句排回层首 —— 老读端掉档（%d → %d）· 真读端已免疫（%d ≤ %d）"
+        % (_k13, _before13, _bad13, _new13, _LATE[_k13]),
+        all(_okv for _e, _okv in _chk13),
+        " · ".join(_e for _e, _okv in _chk13 if not _okv) or
+        "两条都成立（老读端 %d → %d · 真读端 %d 不受句序影响）"
+        % (_before13, _bad13, _new13))
 
 print("      后期轮换分布：" + " · ".join("%s=%d" % (k.replace("dlg_", ""), v)
                                         for k, v in sorted(_LATE.items())))
@@ -746,6 +774,88 @@ _poi16 = _io8.open(os.path.join(str(REPO), "content", "cmds_ast.py"), encoding="
 _ok16 = "for nn in CT.LAYERS:" in _poi16
 chk("⑯-b ★ POI 触摸那条路的层序走 `CT.LAYERS`（不是自己那份）", _ok16,
     "for nn in CT.LAYERS: 在不在 = %s" % _ok16)
+
+# ⑰ ★ P1-16（2026-09-29 · 文案车道）—— **同一时刻连敲，不许整段重样**。
+#    ★ 为什么 ⑪/⑫/⑬ 三条都看不见这一条（它们是绿的，缺陷照样在）：
+#      ⑪-a/⑬-a 变的是**世界状态**（时辰 × 天气 × 进度）—— 玩家换了时辰自然换一句；
+#      ⑫-a 看的是**域里的形状**（某层有几句）—— 有 4 句就过。
+#      可玩家真实的动作是**连敲「搭话」**：他没挪窝、时辰没走、进度没变。
+#      此时 `_pick_layer` 每层只跑一次 `_pick_indexed`，而后者是
+#      「**按顺序挑第一条满足的**」⇒ **同一层永远只出得来第一句**。
+#      端到端实测（`e2e_drive.py "搭话 杜林" ×5`）：第 3/4/5 趟**逐字相同**，
+#      第 1 趟与第 5 趟也撞 —— 鱼鱼说的「观感不好」就是这一下。
+#    ★ 修法在**读端**（`cmds_talk._pick_layer`）：层内先挑「need 满足**且**还没听过」的那句，
+#      一句都没有才退回老口径 ⇒ 数据一个字没加，老口径也没删（从唯一入口降成兜底）。
+#    ★ 本判据**照真实动作量**：真造档 + 真调 `_pick_layer`，时辰/天气/进度**全部固定**，
+#      连敲 8 下，数拿到几句**不同**的台词。
+#    ★ 底线**量出来**不是拍的 —— 拿修之前那个状态跑同一把尺：最差 **3 句**（多棵），
+#      故底线取 **3**：卡在「不许退回修前」那一档，⑰-c 的反证负责证明判据抓得住。
+#      修后最差 4（masha）⇒ 下一步「逐步加严到 4」已在本批兑现。
+_SAME_HOUR, _SAME_WEATHER = "hr_night", "w_rain"
+_SAME_TALKS = 8
+
+
+def _rot_same(npc_key, talks=_SAME_TALKS, nodes=None):
+    """★ 世界状态**全固定**，连敲 N 下 —— 玩家连点「搭话」看到几句不同的。"""
+    _fl = {"talked": {}, "talk": {}, "quest_done": {}}
+    for _t in _PROG_FLAGS:
+        _fl[_t] = True
+    _p = {"flags": _fl,
+          "bag": {_b: 1 for _b in _BAGS},
+          "heard": {}, "level": 20, "cls": "cls_knight", "race": "human",
+          "equipped": {"weapon": "w_sword", "armor_top": "a_robe"}}
+    _seen = []
+    for _i in range(talks):
+        _fl["talked"][npc_key] = _i + 1
+        _ly, _idx, _txt = CT._pick_layer((nodes or _npc)[npc_key]["nodes"], _p,
+                                         {"hour": _SAME_HOUR, "weather": _SAME_WEATHER},
+                                         npc_key)
+        if _txt:
+            _seen.append(_txt)
+            CT.HD.note(_p, npc_key, _ly, _idx)
+    return len(set(_seen))
+
+
+_SAME = {k: _rot_same(k) for k in sorted(_npc)}
+_SAME_MIN = min(_SAME.values())
+_MIN_SAME = 4
+chk("⑰-a ★ 同一时刻连敲 %d 下：每位至少轮得到 %d 句不同台词"
+    "（时辰/天气/进度全固定 · 真敲 `_pick_layer` · 现值最差 %d 句）"
+    % (_SAME_TALKS, _MIN_SAME, _SAME_MIN),
+    _SAME_MIN >= _MIN_SAME,
+    "最差 %d 句（%s）" % (_SAME_MIN,
+                          "、".join("%s=%d" % (k.replace("dlg_", ""), v)
+                                    for k, v in sorted(_SAME.items()) if v <= _MIN_SAME)))
+print("      同刻轮换分布：" + " · ".join("%s=%d" % (k.replace("dlg_", ""), v)
+                                          for k, v in sorted(_SAME.items())))
+
+# ⑰-b **反证**：把某一层压成「只剩一条永远满足的」⇒ 同刻轮换必须掉到底线以下。
+#   ★ 压的是**真实的 _npc**（与 ⑫-b 同一个纪律：读 `dl` 的话那次替换根本不生效 ⇒ 尸绿）。
+#   ★ 压完必须**确实** < _MIN_SAME 才算数（压得最少 = 反证最锐）。
+# ⑰-b **反证**：把某一层压成「只剩一条永远满足的」⇒ 同刻轮换必须掉到底线以下。
+#   ★ 压的是**真实的 _npc**（与 ⑫-b 同一个纪律：读 `dl` 的话那次替换根本不生效 ⇒ 尸绿）。
+#   ★ 压完必须**确实** < _MIN_SAME 才算数（压得最少 = 反证最锐）。
+#   ★ **压整棵树，不只压一层**（初版只压 `daily`，而别层还兜着 ⇒ 只掉 1 句、
+#     刚够不到底线，判据看着「抓不住」）：把四层的 `texts` **各自**压到只剩
+#     那一条永真句（`need=null`；没有兜底就留空）⇒ 整棵树只剩一种话，
+#     同刻轮换必然塌到 1 —— 这才是「把原缺陷装回去」的形状。
+_npc_save17 = json.loads(json.dumps(_npc))
+_pick17 = sorted(_SAME, key=lambda k: _SAME[k])[0]
+for _k17 in _npc[_pick17]["nodes"]:
+    _ly17 = _k17
+    _kept17 = None
+    for _c in _npc_save17[_pick17]["nodes"][_ly17]["texts"]:
+        if _c.get("need") is None:
+            _kept17 = _c
+            break
+    _npc[_pick17]["nodes"][_ly17]["texts"] = [_kept17] if _kept17 else []
+_after17 = _rot_same(_pick17)
+_npc.clear()
+_npc.update(_npc_save17)
+chk("⑰-b ★ 反证：把 %s 整棵树的四层各压到只剩一条兜底 ⇒ 同刻轮换掉到 %d 以下（判据抓得住）"
+    % (_pick17.replace("dlg_", ""), _MIN_SAME),
+    _after17 < _MIN_SAME,
+    "压完 %d 句（%d → %d）" % (_after17, _SAME[_pick17], _after17))
 
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))

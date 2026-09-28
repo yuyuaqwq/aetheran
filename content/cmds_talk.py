@@ -176,6 +176,9 @@ def _pick_layer(nodes, p, st, dlg_id):
     """
     familiar = _talk_count(p, dlg_id) >= FAMILIAR_TALKS
     heard = set(HD.lines(p, dlg_id))
+    # ── ① 层间选层：**P-12 老口径，一字未改** ────────────────────────────────
+    #    层序 / 熟了才轮到 daily / 每层只取 `_pick_indexed` 的头一条 /
+    #    说过的层让位给没说的层 —— 全部照旧（装备事件那句与支线旗标都靠它送达）。
     cands = []                                     # 够层的那几层，按层序
     for layer in LAYERS:
         if layer not in nodes or not _layers_ok(layer, familiar):
@@ -190,10 +193,35 @@ def _pick_layer(nodes, p, st, dlg_id):
     #   每次都返回同一句，玩家连敲两下看到一模一样的回话。
     #   规格 25_ §一②「重复对话要轮换」管的正是这一段。
     #   ★ 数据本来就在：`HD.note` 每趟都记（不论熟不熟），只是读端被门挡住了。
-    for layer, idx, txt in cands:
-        if "%s#%s" % (layer, idx) not in heard:
-            return layer, idx, txt             # 还没听过的那一层先说
-    return cands[0]                                # 层序上第一层（初次那一档也走这儿）
+    _layer, _idx, _txt = cands[0]
+    for _l, _i, _t in cands:
+        if "%s#%s" % (_l, _i) not in heard:
+            _layer, _idx, _txt = _l, _i, _t        # 还没听过的那一层先说
+            break
+    # ── ② 层内轮换（P1-16 · 2026-09-29 · 文案车道）────────────────────────────
+    #   只有**老口径挑中的那句玩家已经听过了**，才在这一层里另找一句顶上。
+    #   ★ 为什么必须挂在「说过之后」：① 每层只取头一条 ⇒ 层一旦选定，句也就定死了；
+    #     同一个世界状态（时辰 / 天气 / 进度都不变）下连敲「搭话」，同一句反复出。
+    #     端到端实测（`e2e_drive.py "搭话 杜林" ×5`）：第 3/4/5 趟**逐字相同** ——
+    #     这正是鱼鱼说的「观感不好」（规格 25_ §一②「重复对话要轮换」）。
+    #   ★ ★ 三轮踩坑（都撞了别线已验收的真判据，教训留在这里）：
+    #     ① 「每层各挑一句再让层比」⇒ daily 有 4 句就永远让不完，hidden 饿死
+    #        （`probe_equip_events`：「带着那件 ⇒ 4 遍内必拿到那句」红）。
+    #     ② 「层选定后无条件层内换句」⇒ meet 换句后头一条还没听过，整个 meet 舍不得走，
+    #        4 遍全耗在 meet/daily，hidden 还是排不上（同一份契约，第二次红）。
+    #     ③ 「让位单位改成整层听完」⇒ 改坏了 P-12 语义（听过 `daily#0` 应当**换层**），
+    #        `probe_dialogues ⑧` 立刻红 —— 那是台账 P-12 亲自定的口径，不能动。
+    #     ⇒ 终版：**让位仍旧只看老口径那一格**（`heard` 记的就是它），
+    #        层内换句只顶「这一趟说哪句」，**不碰**让位计数。
+    if "%s#%s" % (_layer, _idx) in heard:
+        for _i2, _ln2 in enumerate(nodes[_layer].get("texts") or []):
+            if _i2 == _idx or "%s#%s" % (_layer, _i2) in heard:
+                continue
+            if _pick_indexed([_ln2], p, st)[1] is None:
+                continue                          # 这句此刻出不来（need 不满足）
+            _idx, _txt = _i2, _ln2.get("text")
+            break
+    return _layer, _idx, _txt
 
 
 # ══════════════════════════════════════════════════════════════
