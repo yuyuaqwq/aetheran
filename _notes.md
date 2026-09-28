@@ -13343,3 +13343,79 @@ P2 四件**全部收口**（1/2/3/4/6/7）⇒ 建议本车道 `pause`（队列�
    **0.0**（实测 pene_pct=0.0 / pene_flat=0.0）⇒ 穿透**静默算成 0**。
    拿一条 fail-closed 的红去换一个静默算错，是**更坏**的现状 ⇒ 维持红，登记为引擎立项：
    要么 `build_vars` 的入参集能覆盖内容侧声明的新变量，要么内容侧把两个穿透变量走**别的取值来源**。
+
+
+## P2 车道 · 2026-09-29 03:1x 夜班 —— 四件全部复核收口；本轮补 `probe_icon_consistency` ④（`af6feb3`）
+
+### 本轮现取数（不是引上一轮）
+```text
+文案槽位 924 条 · `_ROW` 28 条 · 抽到槽位的函数 180 个
+全量 61 支 = 3 绿 / 57 红，与基线**同红集**（56 × F1_eff_def + 1 × probe_generators/titles）
+```
+
+### ★ 前三轮的四条结论，本轮**逐条独立复核**后成立 ⇒ 不重做
+| 件 | 任务书原话 | 现查（2026-09-29 03:1x） | 处置 |
+|---|---|---|---|
+| P2-1 | 9 条裸文字 `_ROW` 统一 `· ` | `_ROW` 共 28 条，裸文字起头 **6** 条：`COMBAT_DROP_ROW`（全角冒号）· `SYS_CLS_ROW` / `SYS_RACE_ROW` / `SYS_RANKING_ROW`（`{i}` ①②③）· `SYS_EGG_ROW` / `SYS_TITLE_ROW`（`✦`）⇒ **每条自带行首标记**，再加 `· ` 是两层行首 | 不改（与 `0cd653c` 同结论） |
+| P2-2 | `SYS_ALLOC_OK` 的 ｜+⇒ 收敛 | `⇒` 全表 **0** 条（已归零）；现值 `{stat} +{n} → {stat} {now} ｜ 还剩 {left} 点` ⇒ **｜ 作行内分栏、`→` 作变化**，各司其职不冲突 | 不改 |
+| P2-2 | ★ vs ✦ 统一 | `★` 现存 **1** 条（`SYS_CLS_STAR` = 「★推荐」= 推荐标记）；`✦` 14 条全是「获得/解锁」⇒ 语义不同且不构成同类混用 | 不改 |
+| P2-4 | 29 条机器键槽位 | 现算仍是 **29** 条（`{key}`11 / `{kind}`8 / `{bar}`4 / `{stat}`3 / 其余各 1） | 见下 |
+
+### P2-4 本轮**重新取证**（结论与 `f0a6eb0` 一致，附本轮命令）
+```text
+① 内容侧自己灌的 12 条 ⇒ 逐条核过传的是显示名，不是漏
+   `SYS_ALLOC_OK` → `_stat_slot()` → `SYS_STAT_STR`（内容/cmds_ast.py:1442）
+   `SYS_*_KIND` 那几格 → 域里的中文 `kind`（有 name 兜底：`rec.get("kind") or kk`）
+② 引擎 cue 灌的 17 条 ⇒ 引擎 payload 原样是机器名
+   ★ `{bar}` 族**本包今天到不了屏**：`grep -rn enemy_bar content/` = **零命中**（本包没声明）
+     ⇒ `bar_def()` 回 {} 直接 return ⇒ 那 4 条 gauge 槽位今天不渲染
+   ★ `{key}` 族（11 条）是真泄漏：`grep -oE '"action": *"[^"]+"'` = 19 个 `aeth_*` 机器键
+     且**全表没有一条带显示名字段**（扫 name/label/title = 0 条）⇒ 没有可查的显示名表
+     ⇒ 属**槽位契约**要新增注入表，不是文案能补的缺口
+★ 引擎侧还查到一处同族不一致（`f0a6eb0` 已登记，本轮复读确认）：
+  gauge/__init__.py:233 bar_gain   {"bar": bar_key}            ← 裸机器名
+  gauge/__init__.py:280 trigger    {"bar": bname}              ← 有兜底
+  gauge/actions.py:93  shaken      {"bar": bd.get('name', key)} ← 有兜底
+  gauge/actions.py:178 phase_pres  {"bar": bd.get('name', key)} ← 有兜底
+  ⇒ 同一个 `{bar}` 槽位一族里**三条有兜底、唯独一条没有**。修它 = 改引擎 = 本车道铁律不许。
+```
+
+### ★ 本轮唯一交付：给 `probe_icon_consistency` 补判据 ④（`af6feb3`，93 增 / 0 删）
+```text
+缺口：① 只判「有的带图标、有的不带」；**结构上抓不到**「同一语义用了不同 emoji」
+      （同屏两条 section_head 一个 📜 一个 🔨 —— 两行都有图标，① 判绿但观感是乱的）
+      任务书明确授权钉「同一语义在同一界面内必须同一 emoji」。
+定义域（现算，不是猜）：同屏同角色且**全部带图标**的组 = 4 组 / 10 行
+      cmds_quest.py::board (2) · cmds_recipe.py::enhance (2) · ::forge (2) · ::smith (4)
+命中 = 0 处 ⇒ **texts.json 一个字未改**（本轮纯门禁，不动生成物）
+★ 判据纪律：只加强不替代（① 管有无，④ 只对「全带」的组开）· **不钉覆盖率**
+  （鱼鱼口径：emoji 少不是缺陷）· 反证用的替换 emoji **从表里现算**，不写死、不新造中文
+★ 反证有牙：把 SYS_BOARD_SIDE_HEAD 的行首锚 📜 换成 ★ ⇒ 当场红，还原回 0
+```
+
+### 门禁（本车道自己复跑，非引述）
+```text
+probe_icon_consistency rc=0（①0 · ②反证命中后还原0 · ③0 · ④0 · ④反证命中后还原0）
+probe_texts / probe_copy / probe_guard_text ⇒ 三支红，**红因同一条**：引擎侧
+  `F1_eff_def`（saintess_engine/formula/__init__.py:488 编译期 fail-closed，
+  13 名变量表无 pene_pct / pene_flat）⇒ 已登记三轮，本车道 0 改动、非红因
+全量 61 支 = 3 绿 / 57 红（与基线**同红集**）
+```
+
+### ★ 工作区里另有别车道**在途改动**（本车道一个字节没碰）
+```text
+`git status` 在我提交后仍显示：content/resources.py · content/rules/resources.json
+（mtime 03:14 = P1 在改 resources 族）；另有 texts.json / probe_copy.py / rebuild_syscopy.py
+的改动（半角→全角标点、P1 的 resources 门禁）在 P1 提交前一度与我同窗。
+⇒ 本提交**显式只 add scripts/probe_icon_consistency.py**，
+  `git show --stat` = 1 file changed, 93 insertions(+) ⇒ 别车道的活原样留在工作区。
+★ 教训复记：**共享文件（texts.json / rebuild_syscopy.py / probe_copy.py）并发写时，
+  提交前必须 `git diff --numstat` 逐个核归属**，本轮那 5 个文件一度同时带 M。
+```
+
+### 下一轮
+P2-1/2/3/4 **全部收口**（④ 已成常驻门禁）⇒ 建议本车道 `pause`（队列空，继续跑只是每轮空转烧额度），
+待有新的**只读审计发现**或鱼鱼给新口径再 `resume`。
+交主线的两件仍等立项，本车道一件不碰：**P2-4a** gauge bar_gain 补显示名兜底（引擎 1 行）·
+**P2-4b** 状态键显示名注入表（引擎新增 + 内容侧 24 条槽位 + 接线）。
+真源仓只读；未 push；未碰引擎；未改别车道文件面。
