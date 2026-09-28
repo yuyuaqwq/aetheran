@@ -303,7 +303,10 @@ def _affix_threshold_hook(battle: Battle):
             if th.get("once") and target.get(mark):
                 continue
             target[mark] = True
-            mult = float(th.get("atk_mult", 1) or 1)
+            # ★ L246 同族：atk_mult=0.0 是**合法**配置（该阈值发动后 atk 归零 = 缴械），
+            #   而 `0.0 or 1` 会被吞成 1 ⇒ 先取原值，只有 None 才回落 1.0。
+            _av = th.get("atk_mult")
+            mult = 1.0 if _av is None else float(_av)
             target["atk"] = int(round(float(target.get("atk", 0) or 0) * mult))
             return False
         return False

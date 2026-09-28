@@ -302,7 +302,11 @@ def scale_drops(drops, aids) -> list:
     per_kind: dict = {}
     for _aid, m in _mods(aids, CH_DROPS):
         kk = str(m.get("kind_key") or "")
-        per_kind[kk] = per_kind.get(kk, 1.0) * float(m.get("mult", 1) or 1)
+        # ★ L246 同族：mult=0.0 是**合法**配置（该档不掉落），而 `0.0 or 1` 会被吞成 1
+        #   ⇒ 先取原值，只有 None（真源没写）才回落 1.0。缺键语义不变。
+        _mv = m.get("mult")
+        _mf = 1.0 if _mv is None else float(_mv)
+        per_kind[kk] = per_kind.get(kk, 1.0) * _mf
     if not per_kind and abs(base - 1.0) < 1e-9:
         return list(drops or [])
     out = []
