@@ -18,6 +18,7 @@
 """
 from __future__ import annotations
 
+import io
 import json
 import os
 import random
@@ -34,13 +35,31 @@ _CACHE: dict = {}
 # ══════════════════════════════════════════════════════════════
 # 表：读 + 校验（形状坏就抛，不猜）
 # ══════════════════════════════════════════════════════════════
+def _read_table() -> dict:
+    """读真源并**逐字**交给 `_validate` —— 读不到 / 读坏 一律点名抛（台账 L1680-#2）。
+
+    ★ 这条口径与本模块 docstring 第 3 条（「表形状坏当场抛」）**逐字对齐**，也与
+      同包 `mana.py::table()` 的同款缺陷同一族（那一处本轮不叠，属另一份真源）。
+    ★ 原先的形态（`except Exception: raw = {}` + `_validate(raw) if raw else {}`）把
+      **语法错 / 文件缺失 / 编码错 / 空表**四种一律降级成「表读不到」⇒
+      `_validate` 对空 dict 反而被 `if raw else` 跳过（`resources` 键都查不到就放行）
+      ⇒ `triggers()` 见 `if not table(): return {}` 整块渠道静默消失、
+      职业资源全线退化成「不涨不花」，**装配期零报错**。
+    """
+    try:
+        text = io.open(_RULES, encoding="utf-8").read()
+    except OSError as e:
+        raise ValueError("resources.json 读不到（路径 %s）：%s" % (_RULES, e)) from e
+    try:
+        raw = json.loads(text)
+    except ValueError as e:
+        raise ValueError("resources.json 不是合法 JSON（%s）：%s" % (_RULES, e)) from e
+    return _validate(raw)
+
+
 def table() -> dict:
     if "t" not in _CACHE:
-        try:
-            raw = json.loads(open(_RULES, encoding="utf-8").read())
-        except Exception:                                   # noqa: BLE001
-            raw = {}
-        _CACHE["t"] = _validate(raw) if raw else {}
+        _CACHE["t"] = _read_table()
     return _CACHE["t"]
 
 
