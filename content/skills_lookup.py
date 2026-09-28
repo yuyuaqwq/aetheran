@@ -107,11 +107,20 @@ def takes_target(rec: dict) -> bool:
 
 
 def _norm_class(class_name: str | None) -> str | None:
-    """职业名或 id 都收（`骑士` 或 `cls_knight`）。
+    """职业名或 id 都收（`骑士` 或 `cls_knight`）—— **认不出就抛**（★ 审计 L3408）。
 
     ★ B3-6b-2d-b 复核：这是**入参解析**（中文名 → 机器键），不是「拿中文枚举当机器键」——
       与 `loot.match_ids` / `去 <地方>` 同一族（玩家/调用方给的是名字）。
       机器键本身（`owner_class` / actor 的 `class_name`）一律是 ASCII `cls_*`。
+
+    ★ L3408 原先的末行是 `return class_name`（**认不出就原样吐回去**）：职业名写错 /
+      存档脏 / 上游拼错一个字母时，`basic_skill_of` 拿它去筛 `owner_class` 恒筛不到
+      ⇒ 返回 `None` ⇒ 引擎 `resolve_basic_skill` 回落 `basic_fallback`
+      （普攻「挥击」）⇒ **玩家看不出来**，只看到「我怎么打不出职业技能了」。
+      口径与同文件 `kind_value` / `engine_kind` 统一（认不出 ⇒ 抛，点名合法值）。
+
+    ★ `None` / 空串**不是**「认不出的职业」：怪没有 `class_name`（引擎
+      `resolve_basic_skill` 会拿 `None` 来问），那是合法的一态，照旧返回 `None`。
     """
     if not class_name:
         return None
@@ -121,7 +130,11 @@ def _norm_class(class_name: str | None) -> str | None:
     for k, v in cs.items():
         if v.get("name") == class_name:
             return k
-    return class_name
+    known = " · ".join(sorted(cs))
+    names = " · ".join(sorted(str(v.get("name")) for v in cs.values()))
+    raise KeyError(
+        "classes.json 里没有职业 %r（机器键有的：%s；中文名有的：%s）"
+        % (class_name, known, names))
 
 
 def basic_kind() -> str:
