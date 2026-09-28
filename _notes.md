@@ -13061,3 +13061,71 @@ rebuild_syscopy.py --dry ⇒ 解析 644（已存在且一致 644 · 要新增 0 
 ★ 连带把 `probe_quests`/`probe_qloop` 里**写死的中文首字**（`startswith("交了")` 25 处）收成
   **从 texts 槽位现算的前缀**（`_lead()`）—— 判据断言强度一字未改（反证：改坏槽位值当场红）。
 真源仓只读，一个字未改；未 push；未碰别车道文件面。
+
+## P2 车道 · 2026-09-29 01:1x 夜班 —— P2-4 根因**改判**（前两轮的结论要推翻一半）
+
+本轮**未改 `texts.json` 一个字**（生成物未动 · `git status` 全程干净 · 三支文案探针开工前全绿）。
+P2-1/2/3 由 `23dfacf` / `c0b9c06` / `dc12abe` / `b208693` 收口，本轮逐条**复跑复核成立**，不再重做。
+
+### 任务书那四组数字：逐条现取，**没有一条还成立**（与 `1f3b285` 的结论一致，本轮再次印证）
+| 项 | 任务书 | 现取 | 判据 |
+|---|---|---|---|
+| 并列行裸文字 | 9 条 | **6 条**（28 条 ROW 里 22 条已 `· ` 起头） | 那 6 条逐条读过：**每条自带行首锚**（`{i}`=①②③ · `✦` · `拾取：`）⇒ 再加 `· ` 是**两层行首** |
+| `⇒` | SYS_ALLOC_OK 同屏 | **0 条**（全表扫） | 已归零 |
+| `★/✦` 两义 | ★5/✦4 | **★1/✦14** | 唯一那条 `SYS_CLS_STAR`「★推荐」与 ✦「获得/解锁」**语义不同且单点** |
+| 机器键 | 29 条 | **17 条真会到屏** | 见下（本轮唯一实质推进） |
+
+★ **emoji 覆盖率（SYS 6% / COMBAT 51%）本轮不再采信**：按覆盖率判缺陷是错判据 ——
+`_ROW` 行首那个 `·` **就是**这一屏的列表标记，再叠 emoji 变「· 🎒 烤石斑」两层。
+
+### ★ P2-4 改判：29 条 ⇒ **17 条真泄漏**，且**合规修法存在**（前两轮判「要改引擎」是错的）
+
+前两轮（`9cb20b6` / `710c600`）结论是「引擎灌机器名 ⇒ 要么动引擎加查表口、要么不碰 ⇒ 交主线」。
+**本轮实测推翻后半句**：
+
+① **只有 17 条真到得了屏**，不是 29 条 —— 那 29 条是「槽位名长得像机器键」的粗筛。
+   逐条核「谁填这一格」：12 条是**内容侧自己**传的，值本来就是显示名
+   （`SYS_SKILL_ROW`/`SYS_GEAR_EQUIP_OK`/`SYS_CMP_*`/`SYS_MAP_HEAD`/`SYS_SORT_ROW` 的 `{kind}`
+   ⇒ `items.json` 写的是「武器/上甲/头盔」、`skills.json` 写的是「主动/被动」、地图传的是槽位句
+   `SYS_MAP_KIND_TOWN`）⇒ **那 12 条不是漏，是名字叫 `{kind}` 而值是显示名**。
+   真漏的 17 条全是**引擎 cue 灌的**，本轮逐条定位到现行行号：
+
+```
+battle.effects.{immune_control:380, stack_applied:393, immune_debuff:412, stack_add:448,
+                 stack_set:452, buff_boost:509, on_hit_ready:521, stack_active:523,
+                 stack_spent:554}   —— {"key": key}   key = EFFECT_RULES 的键
+battle.actions.effect_on:649                        —— {"key": key}   同上
+battle.core.unknown_action / gauge.{gain:211, trigger:256, phase_preserve, shaken}
+```
+
+② **实测屏上真样**（`safe_format` 直接渲，Python 3.12）：
+   `💫【142 刻】林间游侠 被【break_mark】200 刻！` · `✦【142 刻】aegis_veil（持续 200 刻）`
+   ⇒ **ASCII 状态名确实原样上屏**（状态名真源在 `content/rules/skill_mech.json::mechs.*.state`，
+   共 18 个；那一族 `rules` 条目里**没有 label/name 格** ⇒ 无从查表）。
+
+③ ★ **`{bar}` 那一族今天到不了屏**（本包没配 `enemy_bar` 表 · 内容目录现扫零命中 · `bar_def()` 回 `{}`）
+   —— 与 `rebuild_syscopy.py:882` 上一轮的核实一致，本轮二次确认 ⇒ **17 条里那 4 条 gauge 的不急**。
+
+④ ★★ **合规修法（不碰引擎）**：`saintess_engine/cues.py` 的订阅者除 `kind="text"` 外还有
+   **`kind="call"`**（`_render` 把同一个 `slots` dict 交给内容侧 handler）。
+   ⚠️ 但它**不能用来改名**：它要出行必须 `emits_lines=True`，而 `cues.py:116` 钉着
+   **同一 cue 只许一个 `kind="text"`** ⇒ 走 call 路线 = 那一行脱离文案表 ⇒ 违反「呈现口只传槽位」。
+   ⇒ **真结论：这一族要么引擎侧在灌值前查一次显示名（要改引擎 ⇒ 违铁律，须主立项），
+   要么内容侧把 18 个状态名的中文显示名**在 `_put`/`_ward` 那些写入点**就带上**
+   （`content/mech.py` 的 `state` 格加一格 label，写入 effects 条目时一并存 → 引擎那 9 处
+   `params.get("key")` 读到的就是显示名）**—— 这一条本车道不碰**：
+   它动的是**状态容器的字段形状**（引擎 `state_effects` / `serialize` 那一族 = 公开契约）。
+⇒ **交主线的清单**（每条带验证命令，不是一句「改引擎」）：
+   · 内容侧可做、零契约：`content/mech.py` 的 `rules` 条目加 `label` 格 + 18 个中文显示名
+     （真源逐条抄自己 `judge` 里那个词）—— **不碰引擎**即可让 `{key}` 有显示名可取。
+   · 需主立项（动引擎）：`gauge/__init__.py:211` 的 `bar_gain` 送裸 `bar_key`，
+     而同文件 `:256` `bar_trigger` 与 `actions.py` 都有 `bd.get("name", …)` 兜底 ⇒ **同族三比一的不一致**。
+
+### 门禁（Python 3.12 · `GWEN_ENGINE` 指向本机引擎）
+`probe_texts` / `probe_copy` / `probe_guard_text` 三支**全绿**（开工前采的基线，本轮未动任何文件）。
+全量 `scripts/probe_*.py` = **57 绿 / 4 红**，四条**逐条归因到别车道**（本车道 `git status` 全程为空）：
+ · `probe_titles` / `probe_generators ②③` = `title_wall_listener: heard@dlg_hagen` 写 9
+   而那棵树 14 条台词（现算）—— P1 车道 titles 树文件面。
+ · `probe_mech` / `probe_resources ⑧` = 「本批代码落点」清单与实际不符 —— **引擎仓**那一族，
+   另一车道在改引擎（本轮实测引擎仓 `git status` 为空 ⇒ 该红与包侧无关，属清单登记没跟上）。
+真源仓只读，一个字未改；未 push；未碰别车道文件面。
