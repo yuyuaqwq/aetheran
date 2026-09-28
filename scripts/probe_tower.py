@@ -879,6 +879,23 @@ chk("★ 塔内那 %d 条进谱的（划痕 / 字条 / 信）真敲『读』：�
 
 # ④ 五条指令真接上：不是 SYS_CMD_SOON · 不漏内部 key / 文件路径 / 取不到文案
 soon = (TX.get("SYS_CMD_SOON") or {}).get("value") or ""
+#: ★ P0-2（2026-09-28）：标记从模板**现算**，不再靠「第一个『「』之前那截」。
+#:   旧写法在 `SYS_CMD_SOON` 改成以 `「` 开头的那一刻退化成空串 ⇒ `"" in line` 匹配一切。
+#:   现在取「去掉 `{name}` 之后长度 ≥ `_SOON_MIN` 的片段」，**逐个**查（覆盖面 ≥ 旧的一截）。
+#:   ⇒ 文案再改措辞，这一条判据不会跟着失灵。
+_SOON_MIN = 3
+_soon_frags = [f.strip() for f in soon.split("{name}") if len(f.strip()) >= _SOON_MIN] or []
+chk("★ SYS_CMD_SOON 的标记判据没退化（模板去掉 {name} 后至少一个片段长 ≥ %d）" % _SOON_MIN,
+    bool(soon) and bool(_soon_frags),
+    "退化了：模板 %r 给不出片段 ⇒ 本条判据会「什么都匹配」或「什么都不匹配」（P0-2 那次事故的同族）"
+    % soon[:40])
+#:   ★ 反证钉：那句话**真的上屏**的样子（取模板第一行 + 填一个真指令名）必须被标记命中。
+#:     否则「判据抓得住」这件事没人钉 —— 下一个人把取件改退化，绿灯照亮（正是 P0-2 之前
+#:     那个「`"" in line` 匹配一切」的形态）。空模板（`soon` 为空）时跳过本反证。
+if soon:
+    _probe0 = soon.split(chr(92) + "n")[0].replace("{name}", "进塔")
+    chk("  · 反证钉：那句话真的上屏时被标记命中",
+        any(f in _probe0 for f in _soon_frags), _probe0)
 keys = [k for d in ("items", "monsters", "pois", "classes", "races", "quests", "gathering",
                     "drop_pools", "recipes", "npcs", "skills", "eggs", "titles", "dialogues",
                     "maps", "texts", "commands") for k in (st.domain(d) or {})]
@@ -887,7 +904,7 @@ for cmd, got in list(outs.items()) + [(t, o) for t, o, _s in LOG]:
     for line in got:
         if MISSING in line or any(w in line for w in LEAKS):
             leak.append((cmd, line[:40]))
-        if soon and soon.replace("{name}", "").split("「")[0] in line:
+        if any(fr in line for fr in _soon_frags):
             leak.append((cmd, line[:40]))
 chk("★ 五条指令都接上了（声明的 bind 到位 · 回话里没有 %s）" % MISSING, not leak, "%s" % leak[:3])
 bound = [k for k in ("tower_enter", "tower_next", "tower_map", "tower_investigate", "tower_leave")

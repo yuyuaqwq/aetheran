@@ -326,6 +326,15 @@ _OWN7 = {_c7.split("@")[0] for _c7 in _code7}
 from content import cmds_quest as CQ                                      # noqa: E402
 
 
+#: ★ P0-2（2026-09-28 · 文案修 P0 车道）：「条件没满足时拦住」那一行的**期望串从槽位现算**
+#: （与 `probe_instance.py::slot` / `probe_party.py::_r` / 本文件 `_T39` 同一手法）。
+#: 起因：文案那句改了措辞（`还没做完` → `还没交差`），而 5 处判据把玩家可见的那句
+#: **写死成中文** ⇒ 文案一改、判据就假红。**断言的条数与强度一个字没动**，
+#: 变的只是「期望串从哪来」：从硬编码 → 照槽位。
+from content.cmds_ast import T as _T_JOBND                    # noqa: E402
+_JOB_NOT_DONE = _T_JOBND("SYS_JOB_NOT_DONE")
+
+
 def _beat_of(x, part):
     slot = CQ._slot_of(x, part)
     return (TX.get(slot) or {}).get("value") or ""
@@ -629,7 +638,7 @@ p2 = _player(level=5, gold=0, exp=0, foot={"nodes": {("%s:%s" % (r["map"], r["no
 paid = _drive(CQ.quest_deliver, p2, "交 %d" % order)
 done_ok = (p2.get("flags") or {}).get("quests", {}).get(qid, {}).get("done") is True
 taken_ok = qid in ((p1.get("flags") or {}).get("quests_active") or []) and any(QE[qid]["name"] in ln for ln in acc)
-(ok if taken_ok and any("还没做完" in ln for ln in blocked)
+(ok if taken_ok and any(_JOB_NOT_DONE in ln for ln in blocked)
  and not (p1.get("flags") or {}).get("quests_done")
  and any("交了" in ln for ln in paid) and qid in (p2.get("flags") or {}).get("quests_done", [])
  and p2.get("exp") == QE[qid]["reward_exp"] and p2.get("gold") == QE[qid]["reward_gold"] and done_ok else bad)(
@@ -1183,7 +1192,7 @@ for _kind, _k, _shape, _fix in _DRIVE:
     _want = {p: _beat_of(_x, p) for p in ("STORY", "PROGRESS", "DELIVER")}
     if _want["STORY"] not in _acc:
         _drive3.append((_k, "接", _acc[:2]))
-    if not any(ln.startswith("还没做完") and _want["PROGRESS"] in ln for ln in _nod):
+    if not any(ln.startswith(_JOB_NOT_DONE) and _want["PROGRESS"] in ln for ln in _nod):
         _drive3.append((_k, "交(没做完)", _nod[:2]))
     if _want["DELIVER"] not in _pay or _k not in (_p2.get("flags") or {}).get("quests_done", []):
         _drive3.append((_k, "交", _pay[:3]))
@@ -1361,9 +1370,9 @@ for _n in range(1, 13):
     _pay = _drive(CQ.quest_deliver, _full, "交 %d" % _n)
     if _want["STORY"] not in _acc:
         drive_bad.append((_n, "接", _acc[:2]))
-    if not any(ln.startswith("还没做完") and _want["PROGRESS"] in ln for ln in _nod):
+    if not any(ln.startswith(_JOB_NOT_DONE) and _want["PROGRESS"] in ln for ln in _nod):
         drive_bad.append((_n, "交(没做完)", _nod[:2]))
-    if not any(ln.startswith("还没做完") for ln in _idle_out) \
+    if not any(ln.startswith(_JOB_NOT_DONE) for ln in _idle_out) \
             or _k in ((_idle.get("flags") or {}).get("quests_done") or []):
         drive_bad.append((_n, "★ 接了就交（等级够 + 一步没做，竟然交掉了）", _idle_out[:3]))
     _lack21 = [ln for ln in _idle_out if "还差" in ln]
@@ -1455,7 +1464,7 @@ for _n in sorted(mainq):
                 or _k in ((_near.get("flags") or {}).get("quests_done") or []):
             _main_bad.append("主%d：缺第 %d 条（%s）竟然也交得掉"
                              % (_n, _i + 1, json.dumps(_r, ensure_ascii=False)))
-        elif not any(ln.startswith("还没做完") for ln in _out):
+        elif not any(ln.startswith(_JOB_NOT_DONE) for ln in _out):
             _main_bad.append("主%d：缺第 %d 条时没说「还没做完」：%s" % (_n, _i + 1, _out[:2]))
     # ④ 万事俱备 ⇒ 交得掉 + 奖励入档 + 逐步记账那本账
     _full = _sat_player(_x, _k)
@@ -1515,7 +1524,7 @@ for _n in sorted(mainq):
             or _k in ((_low.get("flags") or {}).get("quests_done") or []):
         _lv_bad.append("主%d：等级压到 %d（门槛 %d）竟然交得掉 —— 等级那一半不在载重"
                        % (_n, _low["level"], _x["min_level"]))
-    elif not any(ln.startswith("还没做完") for ln in _lv_out):
+    elif not any(ln.startswith(_JOB_NOT_DONE) for ln in _lv_out):
         _lv_bad.append("主%d：等级不够时没说「还没做完」：%s" % (_n, _lv_out[:2]))
     _full1 = _sat_player(_x, _k)
     _full1["level"] = int(_x["min_level"])
