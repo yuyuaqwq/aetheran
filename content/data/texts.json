@@ -6417,7 +6417,7 @@
     "desc": "引擎槽位 `battle.actions.lifesteal`（`extends/ext_combat/battle/actions.py:781` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
   },
   "COMBAT_ACTIONS_SKILL_CAST": {
-    "value": "【{t:.0f} 刻】你施展【{name}】！",
+    "value": "⚔️【{t:.0f} 刻】你施展【{name}】！",
     "params": [
       "name",
       "t"
@@ -6426,7 +6426,7 @@
     "desc": "引擎槽位 `battle.actions.skill_cast`（`extends/ext_combat/battle/actions.py:984` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
   },
   "COMBAT_ACTIONS_SKILL_HEAL": {
-    "value": "【{t:.0f} 刻】你施展【{name}】，治愈了 {heal} 点生命！",
+    "value": "✨【{t:.0f} 刻】你施展【{name}】，治愈了 {heal} 点生命！",
     "params": [
       "heal",
       "name",
@@ -6436,7 +6436,7 @@
     "desc": "引擎槽位 `battle.actions.skill_heal`（`extends/ext_combat/battle/actions.py:848` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
   },
   "COMBAT_ACTIONS_SKILL_HEAL_FULL": {
-    "value": "【{t:.0f} 刻】你施展【{name}】，圣光治愈了你 {heal} 点生命！",
+    "value": "✨【{t:.0f} 刻】你施展【{name}】，圣光治愈了你 {heal} 点生命！",
     "params": [
       "heal",
       "name",
@@ -6455,7 +6455,7 @@
     "desc": "引擎槽位 `battle.core.defend`（`extends/ext_combat/battle/battle.py:632` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
   },
   "COMBAT_CORE_FINISHED": {
-    "value": "【{t:.0f} 刻】战斗已结束！",
+    "value": "✔【{t:.0f} 刻】战斗已结束！",
     "params": [
       "t"
     ],
@@ -6472,7 +6472,7 @@
     "desc": "引擎槽位 `battle.core.fled`（`extends/ext_combat/battle/battle.py:638` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
   },
   "COMBAT_CORE_NO_ACTOR": {
-    "value": "【{t:.0f} 刻】没有可行动的玩家！",
+    "value": "⚠️【{t:.0f} 刻】没有可行动的玩家！",
     "params": [
       "t"
     ],
@@ -6489,7 +6489,7 @@
     "desc": "引擎槽位 `battle.core.silenced`（`extends/ext_combat/battle/battle.py:508` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
   },
   "COMBAT_CORE_UNKNOWN_ACTION": {
-    "value": "【{t:.0f} 刻】未知行动类型：{action}",
+    "value": "⚠️【{t:.0f} 刻】未知行动类型：{action}",
     "params": [
       "action",
       "t"
