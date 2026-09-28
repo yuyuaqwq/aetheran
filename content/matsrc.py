@@ -38,6 +38,38 @@ def _pool_entries(rec: dict):
     return list(rec.get("entries") or []) + list(rec.get("pool") or [])
 
 
+def _pools_yielding(want: str, drop_pools: dict) -> list:
+    """哪些**池**能掉出 `want` —— 直接命中 + 顺着「池里装着池」展开（审计 L2756-2）。
+
+    ★ 原实现只扫一层，于是 `unid_rare` 里装着的 `i_token_stone_shard` 查不到 ——
+      实测真渠道 6 只怪 / 3 个父池，`kill_foes` 返回 0 ⇒ `cmds_recipe` 落成
+      「眼下还没人知道它出在哪儿」，而那正是支线 `q_side_13` 的交付物。
+    ★ 动态项 `*armor_random` **不展开**（现抽才有具体件，出处行给不出），
+      与 `probe_sources` 「含嵌套池 + 动态格」的既有口径一致。
+    ★ 不递归、不展开嵌套：只判「这个池的条目里**直接**有它，或有一条**指向另一个池**」——
+      环（`dp_a` 装 `dp_b`、`dp_b` 装 `dp_a`）天然解不掉（每池只登记一次 + 单遍扫描），
+      且出处行要的是**能打到的怪**，一层展开已覆盖域里现有的 `unid_*` 一族。
+    """
+    out = []
+    seen = set()
+    for pid, v in sorted((drop_pools or {}).items()):
+        if str(pid).startswith("_") or not isinstance(v, dict) or str(pid) in seen:
+            continue
+        hit = False
+        for e in _pool_entries(v):
+            oid = str(e.get("out"))
+            if oid == want:
+                hit = True
+            elif not oid.startswith("*") and oid in (drop_pools or {}):
+                hit = True                                # 池套池 ⇒ 该父池也出它
+            if hit:
+                break
+        if hit:
+            out.append(str(pid))
+            seen.add(str(pid))
+    return out
+
+
 def _road_order(maps, loc: str, node: str) -> tuple:
     """（图序, 节点序）—— 按 `maps` 域里写的先后摆（= 玩家走的那条路的顺序）。
 
@@ -73,12 +105,7 @@ def gather_spots(iid: str, gathering: dict, maps: dict | None = None) -> list:
 def kill_foes(iid: str, drop_pools: dict, monsters: dict) -> tuple:
     """这件料由哪些**怪**掉（池里有它 ⇒ 挂了这个池的怪）—— `([怪…], [池 id…])`。"""
     want = str(iid)
-    pools = []
-    for pid, v in sorted((drop_pools or {}).items()):
-        if str(pid).startswith("_") or not isinstance(v, dict):
-            continue
-        if any(str(e.get("out")) == want for e in _pool_entries(v)):
-            pools.append(str(pid))
+    pools = _pools_yielding(want, drop_pools)
     foes = []
     for mid, m in sorted((monsters or {}).items()):
         if str(mid).startswith("_") or not isinstance(m, dict):

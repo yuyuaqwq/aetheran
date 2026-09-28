@@ -296,9 +296,16 @@ def main():
                            times=int(_v.get("times_per_day") or 1)))
         if len(_spots) > 3:                                 # 余下折进「等 N 处」
             parts.append(str(T("SYS_SRC_GATHER_MORE", n=len(_spots) - 3)).strip())
+        def _ent(v):
+            return list(v.get("entries") or []) + list(v.get("pool") or [])
+        # ★ 审计 L2756-2：池套池也算「这个池出它」（`unid_*` 自己就是池，被 `dp_*` 装着）。
+        #   这里原先只扫一层，于是探针的独立实现与实现体一起漏掉 `i_token_stone_shard`
+        #   —— 面板对账那条（③）拿「旧口径」当期望值，实现体修好后反而报红。
+        #   探针另写一份是为了「不与实现体同错」，**不是**为了复刻实现体的缺陷。
         _pl = [p for p, v in sorted(_dp.items()) if not p.startswith("_")
                and any(str(_e.get("out")) == iid
-                       for _e in list(v.get("entries") or []) + list(v.get("pool") or []))]
+                       or (not str(_e.get("out")).startswith("*")
+                           and str(_e.get("out")) in _dp) for _e in _ent(v))]
         _fo = sorted([(int(m.get("lv") or 0), k, m.get("name")) for k, m in _mo.items()
                       if isinstance(m, dict) and set(_pl).intersection(m.get("drops") or [])])
         if _fo:
