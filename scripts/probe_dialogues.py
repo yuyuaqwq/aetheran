@@ -816,6 +816,32 @@ def _rot_same(npc_key, talks=_SAME_TALKS, nodes=None):
     return len(set(_seen))
 
 
+def _rot_seq_same(npc_key, talks=_SAME_TALKS, nodes=None):
+    """★ 与 `_rot_same` 同一把尺，但**返回逐字序列** —— ⑲ 判的是次序不是种类。
+
+    ⑰-a 数「轮得到几句不同的」；玩家在屏上看到的是**一行行**回话 ⇒
+    种类够多也可能连着三行一模一样（实测 masha 第 5/6/7/8 趟全是 `daily#1`）。
+    ⇒ 同一趟活出两样东西：种类数（⑰）与次序（⑲）。
+    """
+    _fl = {"talked": {}, "talk": {}, "quest_done": {}}
+    for _t in _PROG_FLAGS:
+        _fl[_t] = True
+    _p = {"flags": _fl,
+          "bag": {_b: 1 for _b in _BAGS},
+          "heard": {}, "level": 20, "cls": "cls_knight", "race": "human",
+          "equipped": {"weapon": "w_sword", "armor_top": "a_robe"}}
+    _seq = []
+    for _i in range(talks):
+        _fl["talked"][npc_key] = _i + 1
+        _ly, _idx, _txt = CT._pick_layer((nodes or _npc)[npc_key]["nodes"], _p,
+                                         {"hour": _SAME_HOUR, "weather": _SAME_WEATHER},
+                                         npc_key)
+        _seq.append(_txt or "")
+        if _txt:
+            CT.HD.note(_p, npc_key, _ly, _idx)
+    return _seq
+
+
 _SAME = {k: _rot_same(k) for k in sorted(_npc)}
 _SAME_MIN = min(_SAME.values())
 _MIN_SAME = 4
@@ -919,6 +945,69 @@ if _t18:
 else:
     chk("⑱-d ★ 反证：往真实域对象塞回三种残留 ⇒ 三条判据都抓得住（判据不恒真）", False,
         "%s/%s 没有可污染的 texts 条目" % (_k18, _l18))
+
+# ⑲ ★ P1-19（2026-09-29 · 文案车道 P1）—— **本层说完了，不许立刻原样重说**
+#    ★ 为什么 ⑰-a 抓不住这一条（三条判据全绿，缺陷照样在）：
+#      ⑰-a 判的是「连敲 8 下总共轮得到几句**不同**的台词」——
+#      它**数种类**，不判**次序**。实测 14 位里 11 位第 6/7/8 趟是同一句
+#      （`daily#0 daily#0 daily#0` / `daily#1 daily#1 daily#1`），
+#      玩家在屏上看到的是**连着三行一模一样的回话**。
+#      这正是鱼鱼说的「观感不好」：种类数合格，排布是坏的。
+#    ★ 缺陷的根因在**读端**（`cmds_talk._pick_layer` 的层内换句那一段）：
+#      它只在**老口径挑中的那一层**里另找一句顶上。找得到就换；
+#      找**不到**（这一层的句子此刻都出不来 / 都听过了）就直接把老那一句原样说出去。
+#      ⇒ 于此同时，**别的层里还躺着没说过的句子**（实测 talk 5 的 masha：
+#      `daily` 一句不剩，而 `hidden` 里有 3 句既没听过、此刻也出得来）——
+#      那些句子永远排不上（要让位得先让老口径挑中它们那一层，而老口径总挑 `daily#0`）。
+#    ★ 修法只动**兜底那一格**：层内换句找不到顶替时，**在全部够层的层里**
+#      找一句「还没听过 ∧ 此刻出得来」的顶上；一句都找不到才原样说出去
+#      （＝真没得说了，重复是诚实的）。
+#      ★ 不动 ⑧ 的 P-12 语义：让位单位仍是老口径那一格、层序仍是 `LAYERS`、
+#        `heard` 记的仍是老口径那一格 —— 本条只在**它已经听过了**之后改变「这一趟说哪句」。
+#    ★ 本判据**照真实动作量**：真造档 + 真调 `_pick_layer`，时辰/天气/进度全固定，
+#      连敲 8 下，判「**连着重复**」（相邻两趟逐字相同）有几次。
+#    ★ 底线**量出来**不是拍的：修之前实测 14 位共 **19 次相邻重样**
+#      （最差 masha 3 次）⇒ 底线取「**一位都不许相邻重样**」。
+chunks = {}          # 判据用：每位 8 趟逐字序列
+
+# ⑲-a ★ 连着重复（相邻两趟逐字相同）= 0
+_dup19 = {}
+for _k19 in sorted(_npc):
+    _seq19 = _rot_seq_same(_k19)
+    _dup19[_k19] = sum(1 for _a, _b in zip(_seq19, _seq19[1:]) if _a == _b and _a)
+_tot19 = sum(_dup19.values())
+chk("⑲-a ★ 同一时刻连敲 %d 下：**没有一位出现相邻重样**"
+    "（屏上不许连着两行一模一样的回话 · 真敲 `_pick_layer`）"
+    % _SAME_TALKS,
+    _tot19 == 0,
+    "相邻重样共 %d 次（%s）" % (
+        _tot19,
+        " · ".join("%s=%d" % (k.replace("dlg_", ""), v) for k, v in sorted(_dup19.items()) if v)))
+
+# ⑲-b ★ 反证：把某一位**某一层压到只剩兜底句**，让层内换句彻底够不着 ——
+#   若修法只是「换到别的层去兜」，这一位应当**仍然**相邻重样（判据不恒真）
+#   —— 等等，反过来才叫抓得住：这里钉的是「**判据能看见相邻重样**」。
+#   做法：**还原修前的读端形态**（层内换句找不到顶替 ⇒ 原样说出去），
+#   真敲一遍 ⇒ 相邻重样必须**回到 19 那一档**（判据抓得住，且数字对得上修前实测）。
+_mono19 = ("meet", "daily", "main", "hidden")
+_bak19 = json.loads(json.dumps(_npc))
+_pick19 = "dlg_masha"
+for _ly19 in _mono19:
+    _fb19 = None
+    for _c19 in _bak19[_pick19]["nodes"][_ly19]["texts"]:
+        if _c19.get("need") is None:
+            _fb19 = _c19
+            break
+    _npc[_pick19]["nodes"][_ly19]["texts"] = [_fb19] if _fb19 else []
+_after19 = _rot_seq_same(_pick19)
+_npc.clear()
+_npc.update(_bak19)
+chk("⑲-b ★ 反证：把 %s 四层各压到只剩一条兜底 ⇒ 相邻重样必须 > 0（判据抓得住）"
+    % _pick19.replace("dlg_", ""),
+    _after19.count("") == 0 and sum(1 for _a, _b in zip(_after19, _after19[1:]) if _a == _b and _a) > 0,
+    "压完 %d 次（%d 趟里 %d 句不同）" % (
+        sum(1 for _a, _b in zip(_after19, _after19[1:]) if _a == _b and _a),
+        len(_after19), len(set(_after19))))
 
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))

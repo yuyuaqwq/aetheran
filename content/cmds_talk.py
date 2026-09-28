@@ -221,6 +221,30 @@ def _pick_layer(nodes, p, st, dlg_id):
                 continue                          # 这句此刻出不来（need 不满足）
             _idx, _txt = _i2, _ln2.get("text")
             break
+        else:
+            # ── ③ 层内换句**够不着**时的一格兜底（P1-19 · 2026-09-29 · 文案车道）─────
+            #   ★ 原状是「这一层找不到顶替 ⇒ 老那一句原样说出去」，而**别的层里
+            #     还躺着没说过的句子** —— 实测 talk 5 的玛莎：`daily` 一句不剩，
+            #     而 `hidden` 里有 3 句既没听过、此刻也出得来，永远排不上
+            #     （要让位得先让**老口径**挑中它们那一层，而老口径总挑 `daily` 的头一条）。
+            #     屏上的症状：第 5/6/7/8 趟**逐字相同** —— 种类数合格（⑰ 绿），
+            #     排布是坏的（⑲ 红）。这就是鱼鱼说的「观感不好」。
+            #   ★ 只动**这一格兜底**：层序仍是 `LAYERS`、让位单位仍是老口径那一格、
+            #     `heard` 记的仍是老口径那一格（⑧ 的 P-12 语义一个字没动）——
+            #     本条只在「老口径那一句玩家已经听过了」之后改变**这一趟说哪句**。
+            #   ★ 扫的是**够层**的那些层（`_layers_ok` 那道门照旧）⇒
+            #     「不熟时只有 meet 会说话」不被破：meet 在这里仍被门挡住。
+            #   ★ 层序用 `LAYERS` 变量（不是字面量）—— ⑯-a 的静态守卫就认这一格。
+            for _l3 in LAYERS:
+                if _l3 not in nodes or not _layers_ok(_l3, familiar):
+                    continue
+                for _i3, _ln3 in enumerate(nodes[_l3].get("texts") or []):
+                    if "%s#%s" % (_l3, _i3) in heard:
+                        continue
+                    if _pick_indexed([_ln3], p, st)[1] is None:
+                        continue                  # 这句此刻出不来（need 不满足）
+                    return _l3, _i3, _ln3.get("text")
+            # 一句都找不到 ⇒ 真的没得说了，重复是诚实的（照旧把老那一句说出去）
     return _layer, _idx, _txt
 
 
