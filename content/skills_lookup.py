@@ -34,10 +34,26 @@ _DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 _RULES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "rules")
 _C: dict = {}
 
-#: 引擎那份 kind 词表的键（`ext_combat/battle/actions.py` 比对的 5 个语义名）
-KIND_NAMES = ("phys", "magi", "true", "heal", "buff")
-
-#: 上面那 5 档里**吃「指定目标」**的一档（伤害三通道）—— 治疗 / 增益不吃（★ fix-j）。
+# ★ L1980-1：原先这里还有一行 `KIND_NAMES = ("phys","magi","true","heal","buff")`，
+#   本批**删掉**。删它的取证（四仓机器扫，不是推断）：
+#     ① 生产面：aetheran-package 全仓 `KIND_NAMES` 命中 = **仅定义处那一行**（本文件）；
+#        framework-engine 命中的是**同名但不同物**的两份（`examples/minimal-game`
+#        的 `content/data/rules.py:21` 与 `games/orlandia/content/mech/params.py:60`
+#        —— 那是**别的游戏的 kind 词表**（值是各自的中文用词），与本包这份无关，
+#        名字撞车而已）；宿主 framework 副本同 minimal-game 那份。
+#     ② 内容包**零挂载**：`apply.py` 挂给引擎的 `kinds=` 传的是 `SL.kinds()`
+#        （`content/rules/kinds.json` 现读），不是这个元组。
+#     ③ 引擎/测试零引用（`git grep KIND_NAMES` 逐仓跑过，见上）。
+#     ④ 无 `__all__` 导出。
+#   ⇒ 零消费者的死常量，且它与 `kinds.json` 的键**逐字重复** = 三份同名单的第三份。
+#   ★ **为什么不照台账建议做**（「把 probe 那份改为 import 本常量」）：那会让
+#     `probe_skills` 的三头对账断言变成 **`set(SL.kinds()) == set(SL.KIND_NAMES)`**
+#     —— 拿被测对象自己的常量去比它自己，**恒真**。那条断言的全部价值就在于
+#     probe 那份是**独立于被测代码**的第三方声明（它代表「引擎要哪 5 个名字」）。
+#     改成 import 等于把门禁的牙拔掉。⇒ 保留 probe 的独立声明，删死常量；
+#     并且**补上真正缺的那条比对**（见 `scripts/probe_skills.py` 引擎侧实扫）。
+#
+#: 引擎 kind 词表里**吃「指定目标」**的一档（伤害三通道）—— 治疗 / 增益不吃（★ fix-j）。
 #: ★ 键也是**引擎语义名**（不是域内用词），域内用词由 `kind_value()` 现算 ⇒ 代码里不写中文枚举。
 TARGET_KINDS = ("phys", "magi", "true")
 

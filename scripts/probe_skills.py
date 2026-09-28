@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import json
+import io
 import os
 import time
 import sys
@@ -120,6 +121,29 @@ chk("★ kinds 词表三头对账：引擎要的 5 个语义名 == kinds.json �
 _owned = {k: v for k, v in (sk or {}).items() if v.get("owner_class")}
 _badkind = [(k, v.get("kind_override")) for k, v in _owned.items() if v.get("kind_override") not in _KINDS.values()]
 chk("★ %d 条技能的 `kind_override` 都在 kinds 值域里" % len(_owned), not _badkind, "%s" % _badkind[:4])
+# ★ L1980-1 补上真正缺的那条比对：上面 `_ENGINE_NAMES` 是**手抄**的第三份名单，
+#   代表「引擎要哪 5 个名字」—— 它与引擎**没有任何机械关联**，所以「引擎改了名字
+#   忘了同步这里」这道洞是敞着的（审计原判断「删掉 skills_lookup.KIND_NAMES 后
+#   probe 仍全绿 = 少一个真源」成立；但台账建议的「probe 改 import 那个常量」是
+#   **错的**：那会变成 `set(kinds()) == set(KIND_NAMES)` 拿被测对象比自己，恒真）。
+#   ⇒ 正确的收法 = **让引擎自己成为第三个头**：静态扫引擎 `actions.py` 里
+#     `_kind("...")` 的全部实参，与本探针这份独立声明逐名对账。
+#     探针这份**必须继续独立**（它的价值就是「第三方声明」，不能改成 import）。
+#   ★ 引擎仓路径从环境变量取（`GWEN_FRAMEWORK_DIR`），取不到就**跳过并点名**
+#     —— 不是静默通过（判据 fail-closed：认不出引擎在哪 = 这条没跑成，不是过了）。
+_ENG16 = os.environ.get("GWEN_FRAMEWORK_DIR", "").strip()
+_acts16 = os.path.join(_ENG16, "extends", "ext_combat", "battle", "actions.py") if _ENG16 else ""
+_engine_wants16 = set()
+if _acts16 and os.path.isfile(_acts16):
+    import re as _re16
+    with io.open(_acts16, encoding="utf-8") as _fh16:
+        _engine_wants16 = set(_re16.findall(r'_kind\(\s*"([^"]+)"\s*\)', _fh16.read()))
+chk("★ 三头对账（补）：引擎 `actions.py` 实扫出来的 kind 名 == 本探针独立声明的 5 个"
+    "（引擎 %d 个：%s）—— 引擎改名忘了同步这边当场红"
+    % (len(_engine_wants16), " · ".join(sorted(_engine_wants16))),
+    bool(_ENG16) and os.path.isfile(_acts16) and _engine_wants16 == set(_ENGINE_NAMES),
+    "GWEN_FRAMEWORK_DIR=%s（未设 / 路径不存在 ⇒ 这条**没跑成**，不是过了）" % (_ENG16 or "<空>",))
+
 
 _badexpr = []
 for _k, _v in sorted(_owned.items()):
