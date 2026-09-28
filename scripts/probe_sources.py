@@ -84,9 +84,36 @@ MATS = sorted({e["id"] for v in enh.values() for e in (v.get("inputs") or [])})
 SETS = sorted(k for k in IT if str(k).startswith("i_set_"))
 INGS = sorted({e["id"] for v in cook.values() for e in (v.get("inputs") or [])})
 FOODS = sorted({v["out"] for v in cook.values()})
-MUST = sorted(set(MATS) | set(SETS) | set(INGS) | set(FOODS))
-print("  · 强化材料 %s · 套装件 %d 件 · 配方原料 %d 样 · 配方成品 %d 道 ⇒ 合 %d 个 id"
-      % (MATS, len(SETS), len(INGS), len(FOODS), len(MUST)))
+
+
+def _quest_requires(q: dict) -> set:
+    """任务 **要玩家交出去**的那些件（`require[].kind == "item"`）—— 现算，不写死清单。
+
+    ★ 台账 L2756-3：这一路原先**不在**「必须有渠道」里，而它是嵌套池那条高缺陷
+      （`matsrc.kill_foes` 只扫一层 ⇒ `i_token_stone_shard` 被报成「没人知道它出在哪儿」）
+      **能长期潜伏的根因** —— `i_token_stone_shard` 正是 `q_side_13` 的交付物，
+      玩家在那一屏读得到那句话，可它压根不在这道门的覆盖面里。
+      ⇒ 本门现在把「任务要交的件」也算进必须集合。
+      ★ 两种任务形状都收（`require` 是列表 = 多条并列；是 dict = 单条），
+        与 `cmds_quest` 那一支同一口径；认不出的形状**不猜**（当作没有门槛）。
+    """
+    out = set()
+    for qid, rec in (q or {}).items():
+        if str(qid).startswith("_") or not isinstance(rec, dict):
+            continue
+        rq = rec.get("require")
+        rows = rq if isinstance(rq, list) else ([rq] if isinstance(rq, dict) else [])
+        for e in rows:
+            if isinstance(e, dict) and e.get("kind") == "item" and e.get("item"):
+                out.add(str(e["item"]))
+    return out
+
+
+QITEMS = sorted(_quest_requires(Q))
+MUST = sorted(set(MATS) | set(SETS) | set(INGS) | set(FOODS) | set(QITEMS))
+print("  · 强化材料 %s · 套装件 %d 件 · 配方原料 %d 样 · 配方成品 %d 道 · "
+      "任务要交 %d 样 ⇒ 合 %d 个 id"
+      % (MATS, len(SETS), len(INGS), len(FOODS), len(QITEMS), len(MUST)))
 
 # ── ② 产出口：五路现算 ────────────────────────────────────────────
 def _grid_ids(grid: str, qual):
