@@ -107,7 +107,22 @@ def apply(alloc, stat, n) -> dict:
     key = str(stat or "")
     if key not in STATS:
         raise AllocError("认不出的维：%r（五维：%s）" % (stat, " / ".join(STATS)))
+    # ★ 台账 L2153-1：这一行原来是 `cnt = int(n)` —— 与本函数 docstring 第一段
+    #   （「只有**整数**能进这一口……当场抛而不是悄悄截断」）**直接矛盾**，实测
+    #   `apply({"STR":10},"STR",1.7)` ⇒ `{'STR':11}`（1.7 静默截成 1）、
+    #   `apply({"STR":10},"STR",-5)` ⇒ `{'STR':5}`（**收负数 = 白扣 5 点**）、
+    #   `apply({"STR":10},"STR",True)` ⇒ `{'STR':11}`（bool 被 `int()` 当 1 收）。
+    #   静默改数正是本模块承诺要治的那件事（fail-closed §1），故当场点名抛。
+    #   与下面「档上每一格」那段**同一把尺**：bool 不算数字、小数不放行、非正数不收。
+    if isinstance(n, bool) or not isinstance(n, (int, float)):
+        raise AllocError("要投的点数不是数字：%r" % (n,))
+    if float(n) != float(n) or float(n) in (float("inf"), float("-inf")):
+        raise AllocError("要投的点数不是有限数：%r" % (n,))
+    if float(n) != int(n):
+        raise AllocError("要投的点数是小数（%r）—— 点不可分，档上只有整数才敢往上加" % (n,))
     cnt = int(n)
+    if cnt < 1:
+        raise AllocError("要投的点数必须至少 1（%r）—— 投 0 或负数不是「加点」" % (n,))
     out = {}
     for k, v in (alloc or {}).items():
         k = str(k)
