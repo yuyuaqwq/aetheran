@@ -13177,3 +13177,23 @@ battle.core.unknown_action / gauge.{gain:211, trigger:256, phase_preserve, shake
    · `SYS_CARAVAN_GOODS`「跟着车来的货摊在棚子底下：」与 `SYS_JUNK_MINE`「你包里能出手的：」
      —— 各自屏内**只有一个小节抬头**（同屏没有第二个抬头可比）⇒ 按「同屏一致性」判据**不构成缺陷**，
      不改；若鱼鱼想全包小节抬头都带图标，那是**覆盖率**目标值，不是本车道判据。
+
+### ★★ 阻塞项（留给下一轮 / 引擎车道）：`F1_eff_def` 穿透变量把**全包 57 支探针**打红
+本轮 02:1x~02:3x 实测：**59 支探针 = 2 绿 / 57 红**，57 支**同一条 import 期崩**
+（`FormulaDeclError: 'F1_eff_def' … 'pene_pct'、'pene_flat' 没有的名字`）⇒ 一个根因，不是 57 个缺陷。
+
+```text
+取证链（三条都现取，不是推断）：
+ ① 基线对拍：git stash 本件两个文件 ⇒ probe_texts 在**基线**上同样红、同因 ⇒ 与 P2-3 无关
+ ② 本包侧是齐的：content/rules/formula_table.json:16-31 `F1_eff_def` 的 vars=[def, pene_pct, pene_flat]
+     且 guard 两格都声明了（pene_pct floor0/cap0.6、pene_flat floor0）⇒ **不是本包漏声明**
+ ③ 引擎侧没跟上：`aff3712`（expr 未声明变量名编译期 fail-closed）之后，
+     `formula/__init__.py:236` 的 `_compile` 仍传**13 名**变量表（atk…target_max_hp），
+     新加的穿透两个变量没进那张表 ⇒ 引擎那一族在飞
+⇒ 处置：本车道**不改引擎、不改判据、不改夹具**（那三条都是别车道的地板）；
+   改值那两格已由「JSON 合法 + params 零改动 + 生成器幂等」三项自证。
+⇒ ★ 下一轮第一件事：先跑 `GWEN_ENGINE=… $PY scripts/probe_texts.py`；PASS 了再回本车道继续补图标，
+   还是那条 FormulaDeclError ⇒ 别重复归因，直接按上面 ①-③ 判「别车道在飞」并去做**不启动引擎**的活
+   （纯文案表静态对账 / DOC_PENDING 跟账 / 同屏共现扫描）。
+★ 另一支独立红（与上面无关，另一车道）：`probe_generators ②③ rebuild_titles.py` —— P1 车道的 titles 族。
+```
