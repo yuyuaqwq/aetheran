@@ -351,6 +351,13 @@ def invite(p, uid, want, rows, tick) -> dict:
       没给名字 → 查无此人 → 就是你 → 不是队长 → 他还没建号 → 他已经在本队 →
       他在别人的队里 → 队满了 → 不在一处 → 已经邀过（没过期）→ 记下这一封。
     ★ 同不同一处是**预判**（按他档上那一份「现在在哪」）—— 权威的那一判在 `accept` 里。
+    ★ **`healed`（台账 L892）**：本函数**只在「副本」上改档**（宿主 `_p()` 出的是副本），
+      所以**自愈**（清掉已散那一格 / 顺带起队）发生后必须由返回码告诉宿主落档；
+      否则**早退那一支**（没建号 / 不在一处 / 队满 / 已在别队 / 重复邀）会把自愈随副本丢掉
+      ⇒ 真档上「我属于一个已散的队」永远留着，下一条指令又走进同一个坑。
+      契约（只报**自愈**，不报「写下这一封邀请」—— 那一条由 `code == INV_OK` 兜）：
+        `healed=True`  ⇒ 自愈动过档，宿主**无条件 commit**，哪怕 `code` 是错的；
+        `healed` 为假  ⇒ 没自愈，宿主照旧只在成功码时 commit。
     """
     me, want = str(uid), str(want or "").strip()
     if not want:
@@ -364,38 +371,47 @@ def invite(p, uid, want, rows, tick) -> dict:
     if hit == me:
         return {"code": INV_SELF}
     mem = membership(rows, p, uid)
+    healed = False                                 # ★ L892：自愈动过档 ⇒ 宿主必须落档
     if mem["stale"]:
         clear(p)                                   # 自愈：队长那支队不在了 ⇒ 我现在没队
         mem = membership(rows, p, uid)
+        healed = True
     if mem["role"] is None:
         create(p, uid, tick)                       # 单人打『邀请』= 顺带起个队（发起人即队长）
         mem = membership(rows, p, uid)
+        healed = True
     elif mem["role"] != ROLE_CAPTAIN:
         return {"code": INV_NOTCAP, "captain": mem["captain"],
-                "name": name_in(idx, mem["captain"])}
+                "name": name_in(idx, mem["captain"]), "healed": healed}
     t = idx.get(hit) or {}
     if not str(t.get("cls") or ""):
-        return {"code": INV_NOCLS, "name": name_in(idx, hit) or hit, "uid": hit}
+        return {"code": INV_NOCLS, "name": name_in(idx, hit) or hit, "uid": hit,
+                "healed": healed}
     tmem = membership(rows, t, hit)
     if tmem["role"] is not None:
         if tmem["pid"] and tmem["pid"] == mem["pid"]:
-            return {"code": INV_MEMBER, "name": name_in(idx, hit) or hit, "uid": hit}
+            return {"code": INV_MEMBER, "name": name_in(idx, hit) or hit, "uid": hit,
+                    "healed": healed}
         if not tmem["stale"]:
-            return {"code": INV_OTHER, "name": name_in(idx, hit) or hit, "uid": hit}
+            return {"code": INV_OTHER, "name": name_in(idx, hit) or hit, "uid": hit,
+                    "healed": healed}
     if len(mem["members"]) >= max_members():
-        return {"code": INV_FULL, "max": max_members(), "name": name_in(idx, hit) or hit, "uid": hit}
+        return {"code": INV_FULL, "max": max_members(), "name": name_in(idx, hit) or hit,
+                "uid": hit, "healed": healed}
     if not same_place(p, t):
         return {"code": INV_FAR, "name": name_in(idx, hit) or hit, "uid": hit,
-                "loc": str(t.get("loc") or ""), "node": str(t.get("node") or "")}
+                "loc": str(t.get("loc") or ""), "node": str(t.get("node") or ""),
+                "healed": healed}
     rec = rec_of(p) or {}
     live = {u: v for u, v in _live_invites(rec, tick).items() if u not in mem["members"]}
     if hit in live:
-        return {"code": INV_AGAIN, "name": name_in(idx, hit) or hit, "uid": hit}
+        return {"code": INV_AGAIN, "name": name_in(idx, hit) or hit, "uid": hit,
+                "healed": healed}
     live[hit] = {"tick": int(tick)}
     rec["invites"] = live
     _flags(p)["party"] = rec
     return {"code": INV_OK, "name": name_in(idx, hit) or hit, "uid": hit,
-            "ttl": invite_ttl_ticks()}
+            "ttl": invite_ttl_ticks(), "healed": healed}
 
 
 # ══════════════════════════════════════════════════════════════

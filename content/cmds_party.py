@@ -221,7 +221,10 @@ async def party_invite(env, sink, group_id, uid, player):
         yield T("SYS_PARTY_OFF")
         return
     r = PT.invite(p, uid, want, rows, PT.now_ticks())
-    if r.get("code") == PT.INV_OK:
+    # ★ L892：`healed` = 邀请这一支**自愈过档**（清掉已散那一格 / 顺带起队）。那是在**副本**上
+    #   改的 ⇒ 早退（没建号 / 不在一处 / 队满 / 已在别队 / 重复邀）时也必须落档，
+    #   否则真档上「我属于一个已散的队」永远留着。
+    if r.get("code") == PT.INV_OK or r.get("healed"):
         _commit(env, player, p)
     yield _inv_line(rows, p, uid, r)
 
