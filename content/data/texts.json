@@ -279,7 +279,7 @@
     "desc": "霸体挡打断"
   },
   "COMBAT_CRIT": {
-    "value": "✨ {t} 刻，{who}{act}{tgt}，暴击！造成 {dmg} 点伤害",
+    "value": "✨【{t} 刻】{who}{act}{tgt}，暴击！造成 {dmg} 点伤害",
     "params": [
       "act",
       "dmg",
