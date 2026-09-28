@@ -2431,7 +2431,7 @@
     "desc": "POI · effect.talk 指的是不存在的对话（fail-closed）"
   },
   "SYS_POI_EFFECT_TODO": {
-    "value": "（{name}：{keys} 还没接上。）",
+    "value": "（{name}：{keys} 这一下认不出来 —— 先当它没有。）",
     "params": [
       "keys",
       "name"
@@ -2449,7 +2449,7 @@
     "desc": "POI · 门槛判得出、不成立（不是静默不出现 · P-31）"
   },
   "SYS_POI_COND_TODO": {
-    "value": "（{name}的条件「{keys}」还没接上 —— 先当它没有。）",
+    "value": "（{name}的条件「{keys}」这一下算不出来 —— 先当它没开。）",
     "params": [
       "keys",
       "name"
@@ -3409,7 +3409,7 @@
     "desc": "P-23 · 敲一条**声明了但包内还没实现**的指令（原先把内部 key 与文件路径漏给玩家）"
   },
   "SYS_HP_UNSET": {
-    "value": "（{name}：职业基础 还没接上。）",
+    "value": "（{name}：还没定下怎么打 —— 先打『选职业』定一个，再来动手。）",
     "params": [
       "name"
     ],
@@ -3813,7 +3813,7 @@
     "desc": "学习 · 落档（整班一起记，免得丢默认那一班）"
   },
   "SYS_SKILL_STALE": {
-    "value": "（技能表里有 {n} 条现在认不出了 —— 数据换过。）",
+    "value": "（技能表里有 {n} 条认不出来了 —— 『技能』里还在的那些照旧能用。）",
     "params": [
       "n"
     ],

@@ -46,6 +46,10 @@ import io
 import json
 import os
 import re
+
+
+#: 判据锚点切分用的占位符正则（`_anchor` 用它把 `{…}` 整段剔掉；改的是**取值口径**，不改判据方向）。
+PH = re.compile(r"\{[^{}]*\}")
 import sys
 import time
 from pathlib import Path
@@ -132,6 +136,19 @@ RETIRED_DOC = {
 }
 
 ok = True
+
+
+def _anchor(value, minlen=6):
+    """判据锚点 = 模板里**最长的字面片段**（把 `{…}` 占位符整段剔掉）。
+
+    ★ 为什么不是 `split("{")[0]`：那一格的值是「（{name}：……」—— 占位符在**最前**，
+      切出来只剩一个全角括号 = **退化锚点**（几乎每一行都含它，判据等于没有）。
+    ★ 判据只加强：锚点必须**非退化**（够长），否则当场抛 —— 不让判据悄悄变弱。
+    """
+    best = max((s for s in PH.split(str(value or "")) if s.strip()), key=len, default="")
+    if len(best.strip()) < minlen:
+        raise AssertionError("判据锚点退化（%r → %r）" % (value, best))
+    return best.strip()
 
 
 def chk(label, cond, extra=""):
@@ -1118,8 +1135,14 @@ def main():
         "%s" % _noCls[:2])
     _noClsAtk = _drive(CBL.attack, _player(loc="belt_north", node="bn_bone", bag={}, flags={}),
                        "")
-    chk("★ P-27 还没择业的档 `攻击`：不开那一场、出一行点名行（职业基础 · 不猜数）",
-        bool(_noClsAtk) and any("职业基础" in ln for ln in _noClsAtk)
+    #  ★ P0-2：判据从「写死中文『职业基础』」改成**按槽位取前缀对** ——
+    #    措辞改过一轮（那句原是开发口吻「职业基础 还没接上」），写死中文必红。
+    #    ★ 不是放宽：先从 texts 现渲染出这一格，取「{name} 之前那一段」当锚 ——
+    #    出这一行必须**逐字是那个槽位渲染出来的**（换个别的槽位/自造一句都不许过）。
+    _hp_prefix = _anchor(CA.T("SYS_HP_UNSET", name=CA.T("SYS_NAME_UNKNOWN")))
+    chk("★ P-27 还没择业的档 `攻击`：不开那一场、出一行点名行（没定职业 · 不猜数 · 逐字取自 %s）"
+        % "SYS_HP_UNSET",
+        bool(_noClsAtk) and any(_hp_prefix and _hp_prefix in ln for ln in _noClsAtk)
         and not any("遭遇" in ln for ln in _noClsAtk), "%s" % _noClsAtk[:2])
     # ★ P-28（本批收口）：POI 的短时增益**真落到档上** —— 数据里那条给了数值（`stat` + `pct`），
     #   于是走的是「真增益」那一支，不再是「只写了名字 ⇒ 兜底回血」。

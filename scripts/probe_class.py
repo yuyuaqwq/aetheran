@@ -33,12 +33,15 @@ from __future__ import annotations
 import io
 import json
 import os
+import re
 import sys
 import time
 
 ENGINE = os.environ.get("GWEN_ENGINE", "C:/Users/yuyu/framework-engine")
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ENGINE)
+
+_PH = re.compile(r"\{[^{}]*\}")   # 判据锚点切分用（`_anchor` 用它剔掉 `{…}`）
 
 from saintess_engine.package import load_stack            # noqa: E402
 from saintess_engine.host.runtime import Host             # noqa: E402
@@ -88,6 +91,17 @@ def main():
         C = json.load(f)
     with io.open(os.path.join(REPO, "content", "data", "texts.json"), encoding="utf-8") as f:
         TX = json.load(f)
+
+    def _anchor(value, minlen=6):
+        """判据锚点 = 模板里**最长的字面片段**（把 `{…}` 占位符整段剔掉）。
+        ★ 为什么不是 `split("{")[0]`：`SYS_HP_UNSET` 的值是「（{name}：……」——
+          占位符在**最前**，切出来只剩一个全角括号 = **退化锚点**（判据等于没有）。
+        ★ 与 `scripts/probe_copy.py::_anchor` 同一口径（两处各抄一份，判据与被测物独立）。
+        """
+        best = max((s for s in _PH.split(str(value or "")) if s.strip()), key=len, default="")
+        if len(best.strip()) < minlen:
+            raise AssertionError("判据锚点退化（%r → %r）" % (value, best))
+        return best.strip()
 
     def T(key, **slots):
         s = TX[key]["value"]
@@ -275,8 +289,11 @@ def main():
     drive(ad3, host3, "往北", u3)
     # ★ G2：一条 `攻击` = 推一手 ⇒ 连敲两次，把「你这一手 + 对方那一手」都收进来再判
     j = NL.join(drive(ad3, host3, "攻击", u3) + drive(ad3, host3, "攻击", u3))
-    if "职业基础" in j:
-        bad("两步走完还是「职业基础 还没接上」：%s" % j[:160])
+    #  ★ P0-2：反证锚点改成**按槽位取前缀**（那句话的值改过一次，写死中文必红）。
+    #    判据方向一个字没变：两步走完 ⇒ 那一行**不许再出**（出 = 职业没真定上）。
+    _hp_prefix = _anchor(T("SYS_HP_UNSET"))
+    if _hp_prefix and _hp_prefix in j:
+        bad("两步走完还是「没定职业」那一行：%s" % j[:160])
     elif ("伤害" in j and "受到" in j) or T("COMBAT_NONE") in j:
         ok("两步走完 ⇒ 『攻击』真能打（这一场：%s）" % ("有伤害" if "受到" in j else "这一带没东西"))
     else:
