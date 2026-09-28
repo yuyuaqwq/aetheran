@@ -31,9 +31,16 @@ from .cmds_ast import _texts as _table
 
 #: 中性键 → texts 槽位。★ 键名**从引擎那份全集取**（不手写字符串镜像）：
 #:   引擎加了键 / 改了名，`check_domain()` 当场红，而不是等玩家撞上。
+#: ★ 键→槽位只认**键名**，不认下标（审计 L2614-1：原先写 `GUARD_KEYS[0]/[1]`）。
+#:   引擎那个元组是**位置元组**（`runtime.py:53`）、两键的语义只靠下标约定 ⇒ 一换序就是
+#:   **两句玩家可见文案整体对调**，而 `check_domain()` 只比 `set()` → 照样绿。
+#:   引擎不导出这两个键的**名字常量**，只有全集 ⇒ 故下这两个本包认的键名，
+#:   并在 `check_domain()` 里逐键**点名**比对（第 1 条建议）。
+GUARD_REGISTER_KEY = "guard.register_missing"
+GUARD_BATTLE_KEY = "guard.battle_missing"
 SLOTS = {
-    GUARD_KEYS[0]: "SYS_GUARD_REGISTER",
-    GUARD_KEYS[1]: "SYS_GUARD_BATTLE",
+    GUARD_REGISTER_KEY: "SYS_GUARD_REGISTER",
+    GUARD_BATTLE_KEY: "SYS_GUARD_BATTLE",
 }
 
 #: 取不到文案时 `T` 回的那串标记 —— 真源在 `cmds_ast.MISSING_MARK`（审计 L2614：原先逐字硬编码）
@@ -71,15 +78,25 @@ def line(key) -> str:
 
 
 def check_domain() -> dict:
-    """装配期对账（fail-closed）：① 映射的键集 == 引擎的中性键全集 ② 两条槽位都真有字。
+    """装配期对账（fail-closed）：① 映射的键集 == 引擎的中性键全集 ② 两条槽位都真有字。 ③ 逐键点名对应槽位。
 
     ② 是这一条的要点：宿主只传键，**句子在这两条槽位里** —— 缺一条，守卫拦下时玩家拿到的
     是抛错，不是一句人话。① 防的是「引擎加了键、本包没跟」（那时会静默少一句）。
+    ③ 防的是「键对不对应槽位」（集合相等看不出，需逐键点名）。
     """
     keys, want = set(SLOTS), set(GUARD_KEYS)
     if keys != want:
         raise KeyError("守卫键映射与引擎的中性键全集不一致：本包 %s / 引擎 %s"
                        % (sorted(keys), sorted(want)))
+    # ★ L2614-1：逐键**点名**比对——集合相等只能防「加/删键」，防不住
+    #   「锠射错位」（下标对调 / 键名对调）。两句文案是**玩家可见**的，
+    #   对调了也看不出来（文案都有字、键集也相等）——故此处逐键报名。
+    for key, want_slot in ((GUARD_REGISTER_KEY, "SYS_GUARD_REGISTER"),
+                           (GUARD_BATTLE_KEY, "SYS_GUARD_BATTLE")):
+        got = SLOTS.get(key)
+        if got != want_slot:
+            raise KeyError("守卫键 %r 应对应槽位 %r，现映的是 %r（两句玩家可见文案会"
+                           "整体对调）" % (key, want_slot, got))
     out = {}
     for key in sorted(SLOTS):
         slot = SLOTS[key]
