@@ -46,10 +46,6 @@ def entries() -> dict:
     return {k: v for k, v in data().items() if not str(k).startswith("_")}
 
 
-def meta() -> dict:
-    return dict(data().get("_meta") or {})
-
-
 def entry(eid: str) -> dict:
     return entries().get(str(eid)) or {}
 
@@ -73,6 +69,12 @@ def how_of(eid: str) -> str:
 
 
 def total() -> int:
+    """彩蛋总条数 —— ★ **全包唯一一处**算它的地方（台账 L2376 判据 3）。
+
+    ★ 原先 `_meta.count` 与这里 `len(entries())` **各自算同一个量**（两个维护点），
+      域里加/删一条就得改两处，漏一处就静默分叉。现已删掉域里的那一格：
+      条数只在这里现算，`_meta` 只留**说明性**字段（title / source / spec）。
+    """
     return len(entries())
 
 

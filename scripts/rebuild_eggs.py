@@ -233,8 +233,9 @@ def main2(src, conds, lines, dry) -> None:      # noqa: C901 —— 一段直叙
     if not txs["hour"] or not txs["weather"]:
         raise SystemExit("时辰/天气的中文名取不到 —— texts 域缺槽位")
 
+    # ★ L2376：`_meta` 只留说明性字段 —— **不写 count**。
+    #   条数由 `content/eggs.py::total()` 现算（唯一一处）；域里再存一份就是两个维护点。
     out = {"_meta": {
-        "count": len(src),
         "title": "十条彩蛋（跨文本呼应）",
         "source": "06_第一阶段垂直切片/19_世界热闹度与可发现物_v1.md 三 B",
         "spec": "00_总纲/15_彩蛋域口径_v1.md",
