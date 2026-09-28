@@ -155,6 +155,28 @@ allp = PS.all_players()
 chk("★ all_players 全量 = 4 条", len(allp) == 4, len(allp))
 chk("★ all_players 按群过滤", len(PS.all_players("g1")) == 2, PS.all_players("g1"))
 
+# ⑦ ★ 审计 L1702 三条（引擎侧零覆盖）：本模块不许再登记**从不读**的注入键。
+import re as _re
+_PERS_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                         "content", "persistence.py")
+with open(_PERS_PATH, encoding="utf-8") as _f:
+    _pers_src = _f.read()
+_PCT = chr(37) + "s"          # DDL 里的占位符：真源常量走 % 插值，不写字面量
+_h_block = _re.search(r"(?m)^_H = \{.*?\}", _pers_src, _re.S)
+_h_keys = set(_re.findall(r'"(\w+)"', _h_block.group(0))) if _h_block else set()
+chk("★ _H 只登记真读的两个键（log/tlog/attach_tlog/grant_reward 归 facade.HANDLES）",
+    _h_keys == {"db_path", "clock"}, "登记了=%s" % sorted(_h_keys))
+chk("★ threading.local 零消费者已删（_local 不再存在）",
+    not _re.search(r"(?m)^_local\s*=", _pers_src), "_local 仍在")
+_ddl = _re.search(r"CREATE TABLE IF NOT EXISTS (\S+) \(\s*k TEXT PRIMARY KEY, v TEXT", _pers_src)
+_ddl_name = _ddl.group(1) if _ddl else None
+chk("★ 元表建表 DDL 用真源常量 TBL_META（占位符插值），不写表名字面量",
+    _ddl_name == _PCT, "DDL 里写的=%r（期待占位符 %r）" % (_ddl_name, _PCT))
+#   反向：元表名在全文件只应作为 TBL_META 的定义出现一次；DDL/核列/读写都走常量。
+chk("★ 元表名在全文件只出现一次（就是 TBL_META 的定义行；DDL/核列/读写都走它）",
+    _pers_src.count(chr(34) + "aetheran_meta" + chr(34)) == 1,
+    "字面量出现 %d 次" % _pers_src.count(chr(34) + "aetheran_meta" + chr(34)))
+
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
 sys.exit(0 if ok else 1)

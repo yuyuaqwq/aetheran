@@ -10,7 +10,9 @@
 
 注入面（与奥兰迪亚同形，不另发明第三套）：
     宿主 `inject_handles()` → 引擎 `inject` → 引擎调包内 `bind_host(**inject)`
-    → 本模块 `bind(**handles)`：`db_path`（必给）/ `clock` / `log` / `tlog` / `grant_reward` …
+    → 本模块 `bind(**handles)`：**本模块只真读** `db_path`（必给）/ `clock` 两个；
+      `log` / `tlog` / `attach_tlog` / `grant_reward` 那一批由 `content/facade.py` 的
+      `HANDLES` 持有并消费（`facade.log()`），本模块零读取点（审计 L1702：别再登记）。
 
 ★ 不改动存档库路径的来历 —— 它是**部署信息**，由宿主解析后注入；包不知道自己在哪台机器上跑。
 ★★ 但**表名必须自带包前缀**（`aetheran_players` / `aetheran_meta`）：生产库是宿主共用的那一张，
@@ -44,10 +46,13 @@ META_COLS = ("k", "v")
 #: 分隔符只有这一处定义 —— 键里的两截都不许再含它，否则会撞别人的行）
 META_SEP = ":"
 
-_H = {"db_path": None, "clock": None, "log": None, "tlog": None,
-      "attach_tlog": None, "grant_reward": None}
+#: 注入句柄的**本模块真源**。只列**本模块真读的**两个键 ——
+#: `log` / `tlog` / `attach_tlog` / `grant_reward` 由 `content/facade.py` 的 `HANDLES`
+#: 持有并消费（`facade.log()` 等），本模块零读取点（审计 L1702：纯写零读）。
+#: ★ `bind(**handles)` 是**泛收**（`facade.bind_host` 会把整批句柄递进来）——
+#:   多余的键照收不误但**不再登记**：登记一个从不读的键 = 让人以为本模块会用它。
+_H = {"db_path": None, "clock": None}
 _LOCK = threading.RLock()
-_local = threading.local()
 
 
 def bind(**handles):
@@ -86,8 +91,8 @@ def connect():
     c.execute("""CREATE TABLE IF NOT EXISTS %s (
         group_id TEXT NOT NULL, uid TEXT NOT NULL, data TEXT NOT NULL,
         updated_at REAL NOT NULL, PRIMARY KEY (group_id, uid))""" % TBL)
-    c.execute("""CREATE TABLE IF NOT EXISTS aetheran_meta (
-        k TEXT PRIMARY KEY, v TEXT)""")
+    c.execute("""CREATE TABLE IF NOT EXISTS %s (
+        k TEXT PRIMARY KEY, v TEXT)""" % TBL_META)
     # ★ `IF NOT EXISTS` 撞上同名的**别人的**表时会**静默跳过**（2026-09-25 换包上线实测：
     #   奥兰迪亚的 `players` 在同一个库里 ⇒ 每次查询都 `no such column: data`）⇒ 当场核列、不对就抛。
     for _t, _cols in ((TBL, COLS), (TBL_META, META_COLS)):
