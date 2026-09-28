@@ -4375,6 +4375,12 @@
     "category": "系统",
     "desc": "B3-16b 镇上那几处 · 没走到那一站"
   },
+  "SYS_PLACE_AWAY_UNSET": {
+    "value": "这几处的人这轮不在镇上 —— 待你守在铺子前面，闻一声。",
+    "params": [],
+    "category": "系统",
+    "desc": "B3-16b 镇上那几处 · 叫不准那一站（函能人分在两处 / 没人）· L2474"
+  },
   "SYS_CHAPEL_HEAL": {
     "value": "{who}让你在长凳上坐下，把伤处看过一遍 —— 血回来了。",
     "params": [

@@ -84,7 +84,8 @@ def absent_here(loc: str, node: str, p=None, st: dict | None = None) -> list:
     return [(k, v) for k, v in base if k not in here]
 
 
-def town_gate(p, node=None, notown: str = "SYS_PLACE_NOTOWN", away: str = "SYS_PLACE_AWAY") -> str:
+def town_gate(p, node=None, notown: str = "SYS_PLACE_NOTOWN", away: str = "SYS_PLACE_AWAY",
+                away_unset: str = "SYS_PLACE_AWAY_UNSET") -> str:
     """「回镇上 / 走到那一站」这一族守卫的**唯一执行面**（`guard_desc`：在镇上 · 在公会 · 在铺子 · 在客栈）。
 
     返回该回的那一句（空串 = 放行）：
@@ -92,6 +93,11 @@ def town_gate(p, node=None, notown: str = "SYS_PLACE_NOTOWN", away: str = "SYS_P
       · 在镇上、但没走到那一站 ⇒ `away`（指路）。`node` 三种写法：
           `None` = 这一族**不核**那一站（旧货 / 商队 / 卖出 —— 铺子与歇脚处没有单独一站）；
           节点 id = 必须站到那一站；空串 = 叫不准那一站（也拦 —— fail-closed，不假装在）。
+
+    ★ L2474：「叫不准那一站」原先是**把空串灌进 `away`的 `{name}` 槽——
+      玩家看见的是『不在这儿 —— 打『去 』走一趟。』（**打出一个不存在的命令**）。
+      玩家手上没有任何句子可以引导他。现在走 `away_unset`（**无 `{name}` 参**）
+      —— 口径不变（仍然拦），只是不再玩家面上出现一个拼不凑的指引。
 
     ★ 为什么收成一个口（B4-12 · 端到端玩出来的真 bug）：同一条 `guard_desc` 原先**两种实现** ——
       客栈 / 教堂 / 旧货 / 登记 / 商队判脚下，而 **公会 / 悬赏 / 看 <编号> / 铁匠铺 一句都不判**：
@@ -102,6 +108,10 @@ def town_gate(p, node=None, notown: str = "SYS_PLACE_NOTOWN", away: str = "SYS_P
         return T(notown)
     if node is None:
         return ""
-    if not node or p.get("node") != node:
+    if not node:
+        # 叫不准那一站（函能人分在两处 / 一个都没有）——
+        # 不能拿空串去填 `away` 的 `{name}`：那会输出『打『去 』走一趟』。
+        return T(away_unset)
+    if p.get("node") != node:
         return T(away, name=_name_of_node(TOWN, node))
     return ""
