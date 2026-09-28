@@ -56,6 +56,7 @@
     "battle.landing.phys_immune": "COMBAT_LANDING_PHYS_IMMUNE",
     "battle.landing.resist_reduce": "COMBAT_LANDING_RESIST_REDUCE",
     "battle.landing.shield_absorb": "COMBAT_LANDING_SHIELD_ABSORB",
+    "battle.landing.taken_mult_skipped": "COMBAT_LANDING_TAKEN_MULT_SKIPPED",
     "battle.landing.taken_reduce": "COMBAT_LANDING_TAKEN_REDUCE",
     "battle.landing.woken": "COMBAT_LANDING_WOKEN",
     "battle.schedule.actor_turn": "COMBAT_SCHEDULE_ACTOR_TURN",

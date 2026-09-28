@@ -6788,6 +6788,16 @@
     "category": "战斗",
     "desc": "引擎槽位 `battle.landing.shield_absorb`（`extends/ext_combat/battle/landing.py:382` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
   },
+  "COMBAT_LANDING_TAKEN_MULT_SKIPPED": {
+    "value": "🛡️ {name} 减伤 {pct}%（本次事件乘区减伤 {mult_pct}% 已跳过，两条减伤不叠加）",
+    "params": [
+      "mult_pct",
+      "name",
+      "pct"
+    ],
+    "category": "战斗",
+    "desc": "★ 2026-09-28 承伤减免**两条通道互斥**（引擎 C 车道）：引擎新增点位 `battle.landing.taken_mult_skipped`（`extends/ext_combat/battle/landing.py` 的 `_skip_event_mult` 那一支）—— 同一 actor 身上既有声明了 `taken_pct` 的容器条目、又有 `taken_calc` 事件乘区时，**声明通道优先**、乘区被跳过，这一行说清「走了哪条、弃了哪条」（`pct` = 生效的声明比例，`mult_pct` = 被跳过的乘区本会给的比例）。★ 本包**没有声明任何 `taken_pct`**（`grep taken_pct content/` 零命中）⇒ 通道 A 恒 0 ⇒ 这句话**永不出口**，同 `COMBAT_LANDING_TAKEN_REDUCE` 是占位（引擎每加一条点位，本包 `cues.check_domain` 要求同步声明槽位 + texts 一格）。措辞随真源走（`00_总纲/17_文案收口口径_v1.md`）。"
+  },
   "COMBAT_LANDING_TAKEN_REDUCE": {
     "value": "🛡️ {name} 减伤 {pct}%！",
     "params": [

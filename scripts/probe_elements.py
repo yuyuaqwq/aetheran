@@ -763,6 +763,10 @@ NEED_DRIVE = {
         "承伤减免读点要容器里有条目声明了 `taken_pct`（引擎 `state_effects.taken_pct_keys`）；"
         "本包 `grep taken_pct content/` **零命中** —— 那一族今天一条都没声明"
         "（本包的承伤减伤走 `reduce_taken` 乘区那条老路，与这一族不是同一件事）⇒ 这一句永不出口",
+    # ★ 2026-09-28 承伤减免两条通道**互斥**（引擎 C 车道新增点位）
+    "battle.landing.taken_mult_skipped":
+        "互斥判定 `_skip_event_mult` 的「跳过」那一支要求通道 A（`taken_pct` 声明且封顶后 > 0）"
+        "**先**成立；本包 `grep taken_pct content/` **零命中** ⇒ 通道 A 恒 0 ⇒ 那一支永不进 ⇒ 这一句永不出口",
 }
 
 _eng_keys = _engine_text_keys()
