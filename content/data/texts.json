@@ -3244,7 +3244,7 @@
     "desc": "建号 · 没说选哪个"
   },
   "SYS_BOARD_SIDE_ROW": {
-    "value": "{order} {name} —— {objective}",
+    "value": "· {order} {name} —— {objective}",
     "params": [
       "order",
       "name",
