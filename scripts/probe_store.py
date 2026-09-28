@@ -142,10 +142,17 @@ p2 = fresh("many")
 PS.update_player("g1", "u1", level=1)
 PS.update_player("g1", "u2", level=2)
 PS.update_player("g2", "u1", level=3)
-chk("★ get_player_groups（同一个人在哪几个群）", sorted(PS.get_player_groups("u1")) == ["g1", "g2"],
-    PS.get_player_groups("u1"))
+PS.update_player("g3", "u9", level=9)                                    # 另一群人（两口必须分得开）
+chk("★ groups_of_player（同一个人在哪几个群）", sorted(PS.groups_of_player("u1")) == ["g1", "g2"],
+    PS.groups_of_player("u1"))
+# ★ 审计 L1702：广播群表那口是**零参**宿主契约（引擎 host/shell.py::_group_table 逐字这么调）——
+#   原先只有按 uid 那一支 ⇒ 升级即 TypeError，而包内零生产消费者、跑包内测试照不出来。
+chk("★ get_player_groups 零参 = 全部群（引擎调用形状）",
+    sorted(PS.get_player_groups()) == ["g1", "g2", "g3"], PS.get_player_groups())
+chk("★ 两口不串：零参 != 按 uid", sorted(PS.get_player_groups()) != sorted(PS.groups_of_player("u1")),
+    "零参=%s 按uid=%s" % (sorted(PS.get_player_groups()), sorted(PS.groups_of_player("u1"))))
 allp = PS.all_players()
-chk("★ all_players 全量 = 3 条", len(allp) == 3, len(allp))
+chk("★ all_players 全量 = 4 条", len(allp) == 4, len(allp))
 chk("★ all_players 按群过滤", len(PS.all_players("g1")) == 2, PS.all_players("g1"))
 
 print()

@@ -29,7 +29,8 @@ import threading
 import time
 
 __all__ = ["bind", "db_path", "clock", "init_db", "lock", "connect",
-           "get_player", "update_player", "get_player_groups", "all_players",
+           "get_player", "update_player", "get_player_groups", "groups_of_player",
+           "all_players",
            "meta_key", "group_get", "group_set", "group_del"]
 
 #: 存档表名（★ 带包前缀，理由见模块开头）；列 = 存档那一行的形状
@@ -168,7 +169,29 @@ def update_player(group_id, uid, **fields):
 
 
 # ── 附带查询（宿主/编辑器用） ───────────────────────────────
-def get_player_groups(uid):
+def get_player_groups():
+    """**广播群表**（引擎零参调的那一口，审计 L1702）—— 所有有玩家注册/活跃过的群号。
+
+    ★ 签名是**宿主契约**，不是随手写的：引擎 `host/shell.py::_group_table()` 逐字
+      `self._store.get_player_groups()`（**零参**），`_broadcast()` 的扇出全走它
+      ⇒ 原先写成 `get_player_groups(uid)` 时升级即 `TypeError`，而包内**零生产消费者**
+      （只有探针按 uid 调）⇒ 跑包内测试永远照不出来。
+      奥兰迪亚那份同名口（`content/persistence/players.py::get_player_groups`）也是零参，
+      两款游戏同一契约。
+    ★ 「某个人在哪几个群」是**另一个问题**，走 `groups_of_player(uid)` —— 不塞可选参数进来：
+      两套语义（群表 / 单人分布）名字必须能各自说清，否则调用方迟早拿错那一支。
+    """
+    with _LOCK:
+        c = connect()
+        try:
+            rows = c.execute("SELECT DISTINCT group_id FROM %s" % TBL).fetchall()
+        finally:
+            c.close()
+    return [r["group_id"] for r in rows]
+
+
+def groups_of_player(uid):
+    """某个 uid 落在哪几个群（**不是**广播群表 —— 那口是 `get_player_groups`）。"""
     with _LOCK:
         c = connect()
         try:
