@@ -466,6 +466,36 @@ def _stat_label(iid: str, stat: str) -> str:
     rid = (_item(iid).get("from_recipe") or "")
     return str((( _recipes().get(rid) or {}).get("buff") or {}).get("stat_name") or stat)
 
+#: 菜的增益只认这几档 —— 与 `content/cmds_ast.py::POI_BUFF_STATS` 是**同一份词表**（菜那套 + POI 那套），别另开一份。
+#:   主动 import 一个已经 import 我之的模块不会形成环（`cmds_ast` 本身 import `cmds_recipe`）。
+#:   这里只存**法中的档名**，不存数值：面板键映射那一份在 `gear.BUFF_KEY`，读口在 `gear.food_buff`。
+from .cmds_ast import POI_BUFF_STATS as _BUFF_STATS            # noqa: E402
+
+
+def _food_stat_of(iid: str, food: dict) -> str:
+    """这道菜的增益绑哪一档 —— **认不出就当场抛并点名**（不静默「面板一丝不涨」）。
+
+    ★ 为什么在**写入口**拒（而不是在读口丢）：读口 `gear.food_buff` 的 `BUFF_KEY.get(...)` 认不出就回 `{}`。
+      那样的表现是「菜被吃掉了、档上写了、面板一丝不涨」，玩家从头到尾没任何
+      可见反馈 —— 等于静默丢数据。拒在吃走实物**之前**，玩家不会白损一道菜。
+    ★ 与 POI 那一支口径对称：`cmds_ast._poi_buff_spec` 对 `POI_BUFF_STATS` 做的就是同一个判定，
+      那一支从来就没有静默宽宽的写入口 —— 本件把另一条写入口收到同一把尺子上。
+    ★ `pct <= 0` 也在这里拒：不增一份增益的菜就不该被吃掉。
+    """
+    stat = str(food.get("stat") or "")
+    if stat not in _BUFF_STATS:
+        raise ValueError(
+            "菜 %r 的 food.stat 认不出：%r（合法档：%s）—— 拒在吃掉之前，否则是「面板一丝不涨」的静默丢数据。"
+            % (iid, food.get("stat"), "、".join(_BUFF_STATS)))
+    try:
+        pct = int(food.get("pct") or 0)
+    except (TypeError, ValueError) as e:
+        raise ValueError(
+            "菜 %r 的 food.pct 不是整数：%r（%s）" % (iid, food.get("pct"), e)) from e
+    if pct <= 0:
+        raise ValueError(
+            "菜 %r 的 food.pct 不正：%r（增益必须为正，否则不该吃掉）" % (iid, pct))
+    return stat
 
 #: 药水的效果词表 —— **数值一律来自数据**（items 域那条记录的 `effect`），代码只认键名：
 #:   {"hp": 30}       固定回多少
@@ -538,7 +568,7 @@ async def item_use(env, sink, uid, player):
     food = rec.get("food") or {}
     if food:
         from . import facade
-        p["food_buff"] = {"stat": food.get("stat"), "pct": int(food.get("pct") or 0),
+        p["food_buff"] = {"stat": _food_stat_of(iid, food), "pct": int(food.get("pct") or 0),
                           "until": float(facade.clock()) + int(food.get("seconds") or 0)}
         CX.note_items(p, [iid])                # ★ 吃过也算（买来的菜也记）
         _take(p, iid, 1)
