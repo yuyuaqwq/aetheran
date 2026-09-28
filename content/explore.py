@@ -236,18 +236,29 @@ def miss_lines(p: dict, st: dict | None = None) -> list:
     本地 import `cmds_ast` / `cmds_gather`：它们要 import 本模块（模块级 import 会成环）。
     """
     from .cmds_ast import T, _name_of_node            # noqa: PLC0415
-    from .cmds_gather import _points_here             # noqa: PLC0415
+    from .cmds_gather import _points_here, _used, _times_of   # noqa: PLC0415
     from . import matsrc as MS                        # noqa: PLC0415（条数上限的唯一真源）
     st = st if isinstance(st, dict) else CAL.state()
     parts = []
-    for _gid, pt in sorted(_points_here(p), key=lambda kv: str(kv[0]))[:MS.MAX_SPOT]:
+    # ★ 审计 L2009-1/2/3（发现 #1/#2/#3）：这一行原来**先截断后过滤**，且只过整点门槛 ——
+    #   ① 采满的点照样进 `parts`，于是「探索」承诺「这一带能捡的：X」，玩家去敲「采集」却被回
+    #      「今天已经采过了」（同一份档、两条相反结论）；② 先 `[:MAX_SPOT]` 再过滤，站里超过
+    #      3 个点时，被截掉的可采点根本看不到（有可采点却印「没什么动静」）。
+    #   现在：**三道过滤全做完再截断**（门槛 / 今日未采满），与 `cmds_gather._do_gather` 走
+    #   **同一对读口**（`_used` / `_times_of`），两边不再各判各的。
+    for _gid, pt in sorted(_points_here(p), key=lambda kv: str(kv[0])):
         if not CAL.allows(pt.get("time"), st):
             continue                                  # 整点门槛没过（夜明砂那类）⇒ 不当「有」
+        times = _times_of(pt)
+        if _used(p, _gid) >= times:
+            continue                                  # 今天已翻满 ⇒ 采不动，不许承诺
         verb = str(pt.get("verb") or "")
         parts.append(T("SYS_SRC_GATHER",
                        verb=T("SYS_GATHER_VERB_%s" % verb.upper()) if verb else "",
                        node=_name_of_node(p["loc"], p["node"]),
-                       point=pt.get("name"), times=int(pt.get("times_per_day") or 0)))
+                       point=pt.get("name"), times=times))
+        if len(parts) >= MS.MAX_SPOT:
+            break                                     # 截断放在最后：滤完再取前 N 个
     if parts:
         return [T("SYS_EXPLORE_PICK", list=" · ".join(parts))]
     return [T("SYS_EXPLORE_CLEAR")]

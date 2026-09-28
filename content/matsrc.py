@@ -52,6 +52,9 @@ def _road_order(maps, loc: str, node: str) -> tuple:
 
 def gather_spots(iid: str, gathering: dict, maps: dict | None = None) -> list:
     """这件料出在哪些**采集点**上（池里有它）—— 按 `maps` 的图序 / 节点序摆（同点再按 id，稳定）。"""
+    # 本模块的「零包内 import」是探针依赖的**头注声明**（scripts/probe_* 直接 import 它），
+    # 所以取件口在这里局部取 —— 与 `explore.miss_lines` 同一写法。
+    from .cmds_gather import _times_of                # noqa: PLC0415（一天翻几遍的唯一读口）
     want = str(iid)
     out = []
     for gid, v in sorted((gathering or {}).items()):
@@ -62,7 +65,7 @@ def gather_spots(iid: str, gathering: dict, maps: dict | None = None) -> list:
         out.append({"id": str(gid), "verb": str(v.get("verb") or ""),
                     "name": str(v.get("name") or ""), "map": str(v.get("map") or ""),
                     "node": str(v.get("subarea") or ""),
-                    "times": int(v.get("times_per_day") or 1)})
+                    "times": _times_of(v)})
     out.sort(key=lambda s: (_road_order(maps, s["map"], s["node"]), s["id"]))
     return out
 

@@ -52,6 +52,23 @@ def _used(p, gid):
     return int(((p.get("flags") or {}).get("gather_used") or {}).get(gid, 0) or 0)
 
 
+def _times_of(pt):
+    """这个采集点**一天能翻几遍** —— 采集判定与「出处」提示的**唯一取件口**（审计 L2009-3）。
+
+    口径：缺 `times_per_day` ⇒ 3；给了就照给的走；`0` 是策划明说的「今天一次都不给翻」
+    （合法值，**不**被抬成 1/3）。回落**只认 `None`** —— `or 3` 会把合法 `0` 吞掉，
+    玩家会看到「一天 0 回」而采集那边照旧能翻。
+    """
+    raw = pt.get("times_per_day") if isinstance(pt, dict) else None
+    if raw is None:
+        return 3
+    n = int(raw)
+    if n < 1:
+        raise ValueError(f"采集点 {pt.get('id') or pt.get('name')!r} 的 times_per_day={n}"
+                         f" 不合法（须 ≥ 1）")
+    return n
+
+
 def _bump_used(p, gid):
     f = dict(p.get("flags") or {})
     u = dict(f.get("gather_used") or {})
@@ -148,7 +165,7 @@ async def _do_gather(env, sink, uid, player, verb: str, word: str):
         _save(env)
         yield T("SYS_TIME_GATED", what=pt["name"], when=pt["time"])
         return
-    times = max(1, int(pt.get("times_per_day", 3)))     # 这个点一天能翻几遍
+    times = _times_of(pt)                              # 这个点一天能翻几遍（唯一取件口）
     if _used(p, gid) >= times:
         yield T("SYS_GATHER_USED_TODAY", name=pt["name"])
         return
