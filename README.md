@@ -15,11 +15,11 @@
 |---|---|
 | `game.json` | `kind=game` · `depends` 10 个扩展包 · `domains` = commands/texts/tlogs |
 | `content/apply.py` | 装配入口：挂 **15 个**引擎 hook（`cue_subs_fn` / `panel_layers_fn` / `formula_*` / `time_model_fn` / 各类 `*_gate_fn` …）|
-| `content/*.py` | **55** 个模块 / **19 572** 行 —— 指令面、职业技能、战斗流程、任务与日历、副业、评级、图鉴… |
+| `content/*.py` | **56** 个模块 / **20 457** 行 —— 指令面、职业技能、战斗流程、任务与日历、副业、评级、图鉴… |
 | `content/data/*.json` | **44** 份域表（职业 / 技能 / 怪物 / 地图 / 任务 / NPC / 对话 / 配方 / 图鉴 / 节日…）|
 | `content/rules/` | 数值宪法声明（`formula_table` + `formula_bindings`）· 战斗文案（`battle_text`）· 效果规则 |
 | `editor/domains.json` | 三个域的编辑器元数据（**刻意不写 `$builtin`**）|
-| `scripts/probe_*.py` | **55** 支内容探针（每支都是一叠判据，含反证）|
+| `scripts/probe_*.py` | **60** 支内容探针（每支都是一叠判据，含反证）|
 
 ## 怎么验（可重跑）
 
