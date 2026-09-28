@@ -408,7 +408,11 @@ _ROT_SAME = {k: v for k, v in _ROT.items() if v < 3}
 #     那个提交（`6c5aafc^`）再跑本判据，最差那位正好 **3 句** ⇒ 底线 3 会让
 #     「修之前的原状」也绿，等于判据抓不住它要防的东西。
 #     现值最差 4（玛莎）⇒ 底线 4 卡在「修完不许退回去」的那一档上。
-_ROT_FLOOR = 4
+#   ★ 2026-09-29 加严一档：4 是 P1-9 刚修完那天的数，**现值最差已是 9**（玛莎）——
+#     底线 4 挡着改动，已能扛住「掉到 3」以外的一切回归 = 余量白留。
+#     底线 **8** = 现值 9 之下那一档（掉到 7 必红），而 ⑪-b 的反证把那位压到 1～3
+#     ⇒ 加严后反证照样破（不恒真）。只加严，不放宽。
+_ROT_FLOOR = 8
 _ROT_SAME = {k: v for k, v in _ROT.items() if v < _ROT_FLOOR}
 chk("⑪-a ★ 可观测轮换：48 趟（3 游戏日 × 4 时辰 × 4 天气）里，每位至少看到 %d 句不同台词"
     "（真敲 `_pick_layer` · 最差 %d 句 · 硬底线 ≥ %d · 逐步加严）"
@@ -525,7 +529,10 @@ chk("⑫-b ★ 反证：把 %s 压到 daily 只剩 %d 句%s ⇒ 单句层越过�
 #           从「按下标 0」改成「按 need.event 找那一句」（改判据要写清它在护什么）；
 #        ② derrick/nana 的 `holding` 族 —— 需**先**确认 `probe_equip_events`
 #           钉的「带着那件 ⇒ 每趟都看得到」能否改成「至少一趟看得到」。
-_LATE_MIN = 3
+#   ★ 2026-09-29 加严一档：3 同样是 P1-14 修完那天的数；**现值最差 9**（格雷）
+#     ⇒ 底线取 **8**（卡在现值下一档）。★ ⑬-b 的反证阈值**不看本底线**
+#     （它比的是「压完比它自己的现值至少少 1 句」），故这次加严不与它打架。
+_LATE_MIN = 8
 _Q_ALL = sorted(q for q in (st.domain("quests") or {}) if str(q).startswith("q_"))
 _MAIN_Q = [q for q in _Q_ALL if q.startswith("q_main_")]
 _SIDE_Q = [q for q in _Q_ALL if q.startswith("q_side_") and q != "q_side_04"]
