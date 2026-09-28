@@ -244,7 +244,10 @@ async def party_accept(env, sink, group_id, uid, player):
         yield T("SYS_PARTY_OFF")
         return
     r = PT.accept(p, uid, rows, PT.now_ticks())
-    if r.get("code") == PT.ACC_OK:
+    # ★ L892 同族：与 `party_invite` 同一口径——自愈（清掉已散那一格）是落在**副本**上做的，
+    #   早退（没人邀 / 过期 / 队满 / 队长不在同一处）那些支不写 `code == ACC_OK`，
+    #   所以不看 `healed` 就只在正常入队时落档，自愈随副本丢掉。
+    if r.get("code") == PT.ACC_OK or r.get("healed"):
         _commit(env, player, p)
     yield _acc_line(rows, p, uid, r)
 

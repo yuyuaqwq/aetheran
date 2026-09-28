@@ -450,30 +450,42 @@ def pending(rows, uid, tick, *, expired=False, p=None) -> list:
 
 
 def accept(p, uid, rows, tick) -> dict:
-    """『同意』—— 入队那一刻**再判一遍**（队长还在 · 队没满 · 还在同一处）。"""
+    """『同意』—— 入队那一刻**再判一遍**（队长还在 · 队没满 · 还在同一处）。
+
+    ★ **`healed`（台账 L892 同族）**：与 `invite` 同一个病根——本函数**只在「副本」上改档**，
+    所以**自愈**（清掉已散那一格）发生后必须由返回码告诉宿主落档；
+    否则**早退那一支**（没人邀 / 过期 / 队满 / 队长不在同一处）把自愈随副本丢掉
+    ⇒ 真档上「我属于一个已散的队」永远留着，下一条指令又走进同一个坑。
+    契约（与 `invite` 同一口径，只报**自愈**）：
+      `healed=True`  ⇒ 自愈动过档，宿主**无条件 commit**，即使 `code` 是错的；
+      `healed` 为假  ⇒ 没自愈（`ACC_IN` 那一支原本就不动档），宿主照旧只在成功码时 commit。
+    """
     me = str(uid)
     mine = rec_of(p)
+    healed = False                                 # ★ L892 同族：自愈动过档 ⇒ 宿主必须落档
     if mine:
         mem0 = membership(rows, p, uid)
         if not mem0["stale"]:
             return {"code": ACC_IN, "captain": mem0["captain"]}
         clear(p)                                   # 自愈：队长那支队不在了
+        healed = True
     cand = pending(rows, uid, tick, p=p)
     if not cand:
         old = pending(rows, uid, tick, expired=True, p=p)
         if old:
-            return {"code": ACC_EXPIRED, "captain": old[0]["captain"]}
-        return {"code": ACC_NONE}
+            return {"code": ACC_EXPIRED, "captain": old[0]["captain"], "healed": healed}
+        return {"code": ACC_NONE, "healed": healed}
     best = cand[0]
     idx = index(rows)
     cap = best["captain"]
     cdata = idx.get(cap) or {}
     if len(best["members"]) >= max_members():
         return {"code": ACC_FULL, "captain": cap, "name": name_in(idx, cap),
-                "max": max_members()}
+                "max": max_members(), "healed": healed}
     if not same_place(p, cdata):
         return {"code": ACC_FAR, "captain": cap, "name": name_in(idx, cap),
-                "loc": str(cdata.get("loc") or ""), "node": str(cdata.get("node") or "")}
+                "loc": str(cdata.get("loc") or ""), "node": str(cdata.get("node") or ""),
+                "healed": healed}
     _flags(p)[FLAG] = {"id": str(best["pid"]), "role": ROLE_MEMBER, "captain": cap}
     return {"code": ACC_OK, "captain": cap, "name": name_in(idx, cap),
             "n": len(best["members"]) + 1}
