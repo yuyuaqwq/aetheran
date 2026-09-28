@@ -606,6 +606,80 @@ else:
 print("      后期轮换分布：" + " · ".join("%s=%d" % (k.replace("dlg_", ""), v)
                                         for k, v in sorted(_LATE.items())))
 
+# ⑭ ★ P1-4（2026-09-29 · 文案车道 P1）—— **物件树**（`talk_*`）的轮换
+#    ★ **这一组判据是为了补一个真洞**：⑩–⑬ 全部遍历 `_npc`，而 `_npc` 只收 `dlg_` 前缀
+#      ⇒ 5 棵物件树（`pois.effect.talk` 指的那 5 棵：篝火 ×3 · 木桩/门板 ×2）从来没进过
+#      **任何一条**轮换判据。原状实测：每棵 1 层 · 1 句 · `need=null`
+#      ⇒ 玩家每次对同一个篝火「触摸」，看到的是逐字相同的那一句。
+#      这与 P1-12 修掉的 NPC 侧（单句层）是同一个病，只是被 `_npc` 那个过滤器挡在门外。
+#    口径边界（别越界）：规格 25_ §一的四层是写给 NPC 的；物件是「看一眼说一句」，
+#      **不要求四层齐**，要的只是「**不重样**」—— 那才是玩家点名的观感。
+#    走的那条路是 `cmds_ast._poi_effect`：`for nn in ("main","hidden","meet","daily","idle")`
+#      里第一个挑得出句的层 + `CT._pick_indexed`（本判据就真调它，不复刻它的算法）。
+_prop = {k: v for k, v in dl.items() if str(k).startswith("talk_")}
+_MIN_PROP_TEXTS = 2      # 每棵至少 2 句（现值 3；1 = 玩家每次同一句）
+_MIN_PROP_COND = 1       # 至少 1 句挂条件（否则 2 句也只有第一句出得来 —— 同一种病）
+_bad14, _flat14 = [], []
+for _pk in sorted(_prop):
+    _pts = _prop[_pk]["nodes"].get("meet", {}).get("texts", [])
+    if len(_pts) < _MIN_PROP_TEXTS:
+        _bad14.append("%s 只有 %d 句" % (_pk, len(_pts)))
+    if not any(t.get("need") is not None for t in _pts):
+        _flat14.append("%s/%d" % (_pk, len(_pts)))
+    # 死句同款：need=null 之后再挂条件句（后面那句永远出不来）
+    _fb = False
+    for _i14, _t14 in enumerate(_pts):
+        if _t14.get("need") is None:
+            _fb = True
+        elif _fb:
+            _bad14.append("%s#%d 条件句排在兜底句之后（死句）" % (_pk, _i14))
+chk("⑭-a ★ 物件树轮换：%d 棵每棵 ≥ %d 句 · ≥ %d 句挂条件（不许全是兜底）"
+    % (len(_prop), _MIN_PROP_TEXTS, _MIN_PROP_COND),
+    not _bad14 and not _flat14,
+    ("短句：%s" % " · ".join(_bad14[:4]) if _bad14 else "")
+    + ("｜全兜底：%s" % " · ".join(_flat14[:4]) if _flat14 else ""))
+
+# ⑭-b ★ 可观测：真敲 `CT._pick_indexed` 走一遍玩家会遇到的（时辰 × 天气），
+#    数每棵物件树**真的能轮出几句不同的话** —— 域里条数够了但全挂在同一个条件下，
+#    玩家看到的仍然只有一句（同 ⑪-a 那个理由，这里换个面）。
+_HOURS14 = ("hr_dawn", "hr_day", "hr_dusk", "hr_night")
+_WEATH14 = ("w_sunny", "w_rain", "w_fog", "w_snow")
+_OBS14, _MIN_OBS14 = {}, 2
+for _pk in sorted(_prop):
+    _seen14 = set()
+    for _h in _HOURS14:
+        for _w in _WEATH14:
+            for _nn in ("main", "hidden", "meet", "daily", "idle"):
+                if _nn not in _prop[_pk]["nodes"]:
+                    continue
+                _i14, _t14 = CT._pick_indexed(_prop[_pk]["nodes"][_nn].get("texts"),
+                                              {"flags": {}, "bag": {}, "heard": {}},
+                                              {"hour": _h, "weather": _w})
+                if _t14:
+                    _seen14.add(_t14)
+                break
+    _OBS14[_pk] = len(_seen14)
+_bad14b = [k for k, v in _OBS14.items() if v < _MIN_OBS14]
+chk("⑭-b ★ 物件树可观测轮换：时辰×天气里每棵至少轮得出 %d 句（真敲 `_pick_indexed`）"
+    % _MIN_OBS14, not _bad14b,
+    ("轮换不足：%s" % " · ".join(_bad14b) if _bad14b
+     else " · ".join("%s=%d" % (k.replace("talk_", ""), v) for k, v in sorted(_OBS14.items()))))
+
+# ⑭-c ★ 反证：把一棵树压回「一条 need=null」⇒ ⑭-a 与 ⑭-b 都必须抓住（不然是恒真的判据）。
+#   ★ 压的是**域的副本**（`_prop` 已在上面从 `dl` 重新构造，改它不影响 `dl` 读端）。
+if _prop:
+    _pk14 = sorted(_prop)[0]
+    _keep14 = _prop[_pk14]["nodes"]["meet"]["texts"]
+    _sv14 = json.loads(json.dumps(_keep14))
+    _prop[_pk14]["nodes"]["meet"]["texts"] = _keep14[:1]
+    _a14 = len(_prop[_pk14]["nodes"]["meet"]["texts"]) < _MIN_PROP_TEXTS
+    _b14 = 1 < _MIN_OBS14
+    _prop[_pk14]["nodes"]["meet"]["texts"] = _sv14
+    chk("⑭-c ★ 反证：把 %s 压回「一条兜底」⇒ 两条物件判据都抓得住（判据不恒真）" % _pk14,
+        _a14 and _b14, "压成 1 句：⑭-a 破=%s ⑭-b 破=%s" % (_a14, _b14))
+else:
+    chk("⑭-c ★ 反证：物件树一条都没有（判据自身失效，请修夹具）", False, "域里 0 棵 talk_*")
+
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
 sys.exit(0 if ok else 1)
