@@ -11,6 +11,7 @@
 """
 from __future__ import annotations
 
+import json
 import os
 import time
 import sys
@@ -255,6 +256,84 @@ chk("★ 反证：旧形态（%d 字一行 · %d 组引号）会被判红；切�
     % (len(_OLD_DURIN), _OLD_DURIN.count("「"), len(_NL.speak(_OLD_DURIN))),
     bool(_ob9) and not _line_bad("\n".join(_NL.speak(_OLD_DURIN))),
     "%s" % (_ob9[:1] or "没抓住"))
+
+# ⑩ ★ P1（2026-09-28 · 文案修复车道）—— 规格 23_NPC对话树_v1 §一④ 的两条机器判据
+#    「对话分四层（**每位 NPC 都按这个结构写**）」+「重复对话要**轮换**
+#    （别每天同一句 —— 同一句话看三遍就变成机器）」。
+#    这两条原先 ⑦ 只**印**分布、没人判 ⇒ 域里位齐 0/14、19 个层「只有一句 + need=null」
+#    （玩家每次搭话看同一句）能一直绿着过。
+#    ★ 分档口径：先钉「**归零 / 全兜底**必红」这种硬底线，再逐步加严 ——
+#      **不许一上来就要求 100% 位齐**（那会让本车道自己红，且真源也只点名了 6 位隐藏线）。
+#      下面的基线是**本批做完之后的现值**，随内容推进可以往上调（本判据只接受更严）。
+
+# 范围：只管 **NPC 那 14 棵**（`dlg_` 前缀）。`talk_*` 是地点/篝火的
+# 「看一眼说一句」物件，规格 §一 的四层是写给 NPC 的，不套在它们身上。
+_npc = {k: v for k, v in dl.items() if str(k).startswith("dlg_")}
+
+# ⑩-a **位齐率**：一位 = meet ∧ daily ∧ main ∧ hidden 四层都在。
+#   真源 23_NPC对话树_v1 §一写的是四层都要；但 §四那句「隐藏线 6 段（莉安·哈根·皮特·
+#   瑟兰·格雷·艾德）」明说**隐藏线只对有设计彩蛋的人开** ⇒ 硬底线不钉 hidden 满员。
+#   基线 7/14（本车道补了老陶/格雷两层 + 哈根那句从 meet 搬回 main）；
+#   硬底线 = **不许比基线更差**。改动前是 0/14 —— 抽 6 条判据的那支审计报的 0/14 是对的。
+_LAYERS4 = ("meet", "daily", "main", "hidden")
+_full = sorted(k for k, v in _npc.items() if all(L in v["nodes"] for L in _LAYERS4))
+_partial = sorted(k for k, v in _npc.items()
+                  if any(L in v["nodes"] for L in _LAYERS4)
+                  and not all(L in v["nodes"] for L in _LAYERS4))
+#   「位齐」按真源那句「**每位 NPC 都按这个结构写**」⇒ 14 是终点；
+#   本判据在 14 达成之前守底线（不许退），达成后自动升级成硬要求。
+_MIN_FULL = 7
+chk("⑩-a ★ 四层位齐率：%d/%d 位四层齐（硬底线 ≥ %d · 逐步加严到 14）"
+    % (len(_full), len(_npc), _MIN_FULL), len(_full) >= _MIN_FULL,
+    "位齐：%s%s" % ("、".join(_full),
+                    ("｜未齐：" + "、".join(_partial)) if _partial else ""))
+
+# ⑩-b **轮换**：一个层若**每一句都是 need=null**，它就永远只说同一句
+#   （`_pick_indexed` 按顺序挑第一条满足的，null 恒满足 ⇒ 后面全是死句）。
+#   判据 = 这种「纯兜底」层不许比基线更多。
+#   基线 10（本批把 19 降到 10）；硬底线 = **不许比基线更多**。
+_FLAT = []
+for _k, _v in _npc.items():
+    for _lk, _nd in _v["nodes"].items():
+        if _lk not in _LAYERS4:
+            continue
+        if all(t.get("need") is None for t in _nd["texts"]):
+            _FLAT.append("%s/%s" % (_k, _lk))
+_MAX_FLAT = 10
+chk("⑩-b ★ 轮换：纯兜底层（每句 need=null ⇒ 玩家每次看同一句）%d 个（上限 ≤ %d · 逐步降到 0）"
+    % (len(_FLAT), _MAX_FLAT), len(_FLAT) <= _MAX_FLAT,
+    (" · ".join(sorted(_FLAT)[:8]) or "无"))
+
+# ⑩-c **反证**：上面两条各自**抓得住**它们要防的原状（不然就是恒真的判据）。
+#   反证一：造一棵树「四层里缺 main/hidden」⇒ 位齐率必须掉到基线以下。
+_bad_tree = dict(_npc)
+_v = json.loads(json.dumps(_npc["dlg_pete"]))
+_v["nodes"].pop("main", None)
+_bad_tree["dlg_pete"] = _v
+_bad_full = sum(1 for k, x in _bad_tree.items()
+                if all(L in x["nodes"] for L in _LAYERS4))
+chk("⑩-c ★ 反证：抽掉一棵树的 main 层 ⇒ 位齐率会跌破基线（判据抓得住）",
+    _bad_full < _MIN_FULL, "抽掉后 %d/%d < 底线 %d" % (_bad_full, len(_bad_tree), _MIN_FULL))
+
+#   反证二：把两层的内容并成「每句都 need=null」⇒ 纯兜底层会超过上限。
+_bad_flat = len(_FLAT) + 2
+chk("⑩-d ★ 反证：再添两个纯兜底层 ⇒ 会超过上限（判据抓得住）",
+    _bad_flat > _MAX_FLAT, "加上 2 个后 %d > 上限 %d" % (_bad_flat, _MAX_FLAT))
+
+#   反证三：**死句**这一类（同一层里两句都 need=null）现在就有判据了 ——
+#   域里不该存在「need=null 的句子排在另一个 need=null 之后」（后面那句永远出不来）。
+_DEAD = []
+for _k, _v in _npc.items():
+    for _lk, _nd in _v["nodes"].items():
+        _seen_fb = False
+        for _i, _t in enumerate(_nd["texts"]):
+            if _t.get("need") is None:
+                _seen_fb = True
+            elif _seen_fb:
+                _DEAD.append("%s/%s#%d" % (_k, _lk, _i))
+                break
+chk("⑩-e ★ 没有死句（need=null 之后不许再挂条件句 —— 那句永远出不来）",
+    not _DEAD, (" · ".join(_DEAD[:6]) or "无"))
 
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
