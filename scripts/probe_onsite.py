@@ -66,7 +66,8 @@ from content import cmds_talk as CT                                  # noqa: E40
 from content import calendar as CAL                                  # noqa: E402
 from content import town as TW                                       # noqa: E402
 from content import affix as AFFIX                                   # noqa: E402
-from content.scene import resolve as SC_resolve, node_key as SC_nk, empty_key as SC_ek  # noqa: E402
+from content.scene import (resolve as SC_resolve, node_key as SC_nk, empty_key as SC_ek,  # noqa: E402
+                          map_key as SC_mk)
 
 TOWN = "windmill_town"
 
@@ -237,13 +238,30 @@ _bypass = CA._scene_line(TOWN, "wt_wall", CA._map_of(TOWN))
 chk("★ 反证（拆掉修复）：不走这一支（`empty=False`）⇒ 白天的第一行回到写着人的那句"
     "（%s）" % _bypass.split(chr(10))[-1],
     _bypass == scene_of("wt_wall") and "有人在旁边坐着" in _bypass)
-# 反证②：判法不是常量 —— 有人在的站 False，没人的站 True；且**没有空版槽位也照样出话**
+# 反证②：判法不是常量 —— 有人的站 False，没人的站 True；
+#   且「空版缺位时还能不静默取宽景当近景」这条路径**真质有牙**
+#   │ · 前一版拿 `bn_bone`（节点级槽**存在**）做用例 ⇒ 旧新两态都返回节点级
+#   │   文本（那个站的地图级与节点级本来就不同）⇒ 判断 **恒真**，防不住 L2529-1 的回退。
+#   │ 真正能区分的是 **`wt_gate_n`**：全表**唯一**一个“有基位 NPC 但**没有节点级槽**”的站
+#   │   （它的三个临居存在口下抄人…——就是 L2529-4 那条“缺槽”的实例）。
+#   │   新码 `empty=True` 且空版缺位 ⇒ `None`（交给调用方那行 `【%s · %s】` 占位）；
+#   │   旧码（816ab9a 之前）退地图级 ⇒ 站北口读到的是「风车在镇子北口」那宽景。
+#   └ 两态文本**真的不同**（下面三个 %s 把两者打出来）│ 判据是新码不能被旧码满足。
 chk("★ 反证②：`station_empty` 不是常量（白烛堂/艾德 = %s · 北墙根白天 = %s）；"
-    "野外节点（骨田）没有空版槽位也照样吐原版（不静默给空）"
-    % (TW.station_empty(TOWN, "wt_chapel", player()), TW.station_empty(TOWN, "wt_wall", player())),
+    "空版缺位时不静默拿宽景当近景 —— 北口（无节点级槽）=「%s」，"
+    "地图级宽景=「%s」（两者不同 ⇒ 新码返占位、退回地图级就会翻面）"
+    % (TW.station_empty(TOWN, "wt_chapel", player()), TW.station_empty(TOWN, "wt_wall", player()),
+       CA._scene_line(TOWN, "wt_gate_n", None, empty=True),
+       str((tx.get(SC_mk(TOWN)) or {}).get("value") or "")),
     TW.station_empty(TOWN, "wt_chapel", player()) is False
     and TW.station_empty(TOWN, "wt_wall", player()) is True
-    and CA._scene_line("belt_north", "bn_bone", None, empty=True) == scene_of("bn_bone"))
+    # —— 前一版的用例（多保留一个真实存在的站，作为「非空版→返节点级」这一半的验证）
+    and CA._scene_line("belt_north", "bn_bone", None, empty=True) == scene_of("bn_bone")
+    # —— 新增：真正能区分「空版缺位且节点级也缺」的那一支（L2529-1 的守门条件）
+    and SC_nk("wt_gate_n") not in tx and SC_ek("wt_gate_n") not in tx
+    and SC_resolve(tx, TOWN, "wt_gate_n", empty=True) is None
+    # —— 且不能是因为「非 empty 就拿地图级」才返 None（那是另一个行为）
+    and SC_resolve(tx, TOWN, "wt_gate_n") == SC_mk(TOWN))
 
 # ══════════════════════════════════════════════════════════════
 # ③ 上手这一站一样都上不了手 ⇒ 明说（P1 BUG-6）
