@@ -28,6 +28,7 @@ from . import loot as LT
 from . import gear as GB
 from . import shop as SH
 from . import matsrc as MS          # ★ Q-22：料的「从哪儿来」（唯一一口，本文件只传槽位）
+from . import calendar as CAL     # ★ 整点门槛的唯一出口（L2756-1：出处不承诺拿不到的点）
 
 
 def _recipes() -> dict:
@@ -119,7 +120,11 @@ def _src_of(iid: str) -> str:
     ★ 中文动作词（采/挖/钓/搜）走 `SYS_GATHER_VERB_*` 槽位（本文件不写中文）。
     """
     parts = []
-    spots = MS.gather_spots(iid, _data("gathering"), _data("maps"))
+    # ★ 台账 L2756-1：带整点门槛（夜 / 雨）的采集点，此刻拿不到就别列进出处 ——
+    #   与 `explore.miss_lines` 同一把尺（`CAL.allows`），两条口径不许各判各的。
+    _st = CAL.state()
+    spots = MS.gather_spots(iid, _data("gathering"), _data("maps"),
+                             gate=lambda pt: CAL.allows(pt.get("time"), _st))
     for sp in spots[:MS.MAX_SPOT]:
         parts.append(T("SYS_SRC_GATHER",
                        verb=T("SYS_GATHER_VERB_%s" % str(sp.get("verb") or "").upper()),

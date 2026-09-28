@@ -70,6 +70,7 @@ sys.path.insert(0, REPO)
 
 from saintess_engine.package import load_stack            # noqa: E402
 from saintess_engine.host.runtime import Host             # noqa: E402
+from content import calendar as CAL                    # noqa: E402  (整点门槛唯一出口 · L2756-1)
 
 NL = chr(10)
 TOWN = "windmill_town"
@@ -270,6 +271,7 @@ def main():
           怪最多点 3 只（实现体的 `MAX_KILL`）。
         """
         _g = _load("content/data/gathering.json")
+        _gst = CAL.state()
         _dp = _load("content/data/drop_pools.json")
         _mo = _load("content/data/monsters.json")
         _order = [k for k in maps if not str(k).startswith("_")]
@@ -284,6 +286,12 @@ def main():
             if _gid.startswith("_"):
                 continue
             if not any(str(_e.get("out")) == iid for _e in (_v.get("pool") or [])):
+                continue
+            # ★ 台账 L2756-1：带整点门槛（夜 / 雨）的点此刻拿不到，不列进出处 ——
+            #   与 `matsrc.gather_spots` 的 `gate` 同一口径。本探针这一份是**刻意独立的
+            #   第二实现**（L2756-2 定的规矩：探针不调被测函数，否则反证会假通过），
+            #   所以实现体改了门槛，**这一份必须同批跟上** —— 否则面板对账拿旧口径当期望值。
+            if not CAL.allows(_v.get("time"), _gst):
                 continue
             _spots.append((_road(_v.get("map"), _v.get("subarea")), _gid, _v))
         parts = []

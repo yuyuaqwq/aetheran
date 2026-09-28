@@ -82,8 +82,27 @@ def _road_order(maps, loc: str, node: str) -> tuple:
     return (mi, ni)
 
 
-def gather_spots(iid: str, gathering: dict, maps: dict | None = None) -> list:
-    """这件料出在哪些**采集点**上（池里有它）—— 按 `maps` 的图序 / 节点序摆（同点再按 id，稳定）。"""
+def gather_spots(iid: str, gathering: dict, maps: dict | None = None,
+                 gate=None) -> list:
+    """这件料出在哪些**采集点**上（池里有它）—— 按 `maps` 的图序 / 节点序摆（同点再按 id，稳定）。
+
+    ★ 台账 L2756-1：`gate` 是**整点门槛判据**（`lambda point: bool`），缺省恒真。
+
+      改前只认「池里有这件」，不读 `gathering.time` ⇒ 白天打开铁匠铺，屏上照样列
+      「钓『水最深的地方』」，玩家跑过去敲采集只得到一句「现在不是时候」
+      （`explore.miss_lines` 那一支走了 `CAL.allows`，铁匠铺这一支没走 ——
+      **同一份域、两条相反结论**）。实跑 3 个带门槛的点（夜 / 雨 / 夜）影响 **7 个料**，
+      其中 3 个材料的「唯一出处」是玩家此刻拿不到的。
+
+      ★ 门槛在**计数与排序之前**滤掉，而不是取前 N 处之后再说 —— 否则会造出一个
+        新形态：「前 3 处全没过门槛、第 4 处能采」却印成空行（`explore` 那一支
+        已经踩过同族坑，见 L2009-2「先截断后过滤」）。
+
+    ★ `gate` **由调用方注入**而不是这里 import `calendar` —— 本模块头注声明
+      「纯标准库，探针也能直接 import 它现算」；本地 import 一个包内模块会把
+      那条声明变成假的（探针 import 即炸）。判据本身是唯一真源 `calendar.allows`，
+      本模块只负责「在哪个时机滤」，不认任何门槛名。
+    """
     # 本模块的「零包内 import」是探针依赖的**头注声明**（scripts/probe_* 直接 import 它），
     # 所以取件口在这里局部取 —— 与 `explore.miss_lines` 同一写法。
     from .cmds_gather import _times_of                # noqa: PLC0415（一天翻几遍的唯一读口）
@@ -94,6 +113,8 @@ def gather_spots(iid: str, gathering: dict, maps: dict | None = None) -> list:
             continue
         if not any(str(e.get("out")) == want for e in (v.get("pool") or [])):
             continue
+        if gate is not None and not gate(v):
+            continue                                  # 整点门槛没过 ⇒ 这一刻拿不到，不列进出处
         out.append({"id": str(gid), "verb": str(v.get("verb") or ""),
                     "name": str(v.get("name") or ""), "map": str(v.get("map") or ""),
                     "node": str(v.get("subarea") or ""),
