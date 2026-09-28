@@ -12,17 +12,6 @@ from __future__ import annotations
 
 __all__ = ["selfcheck", "bump", "progress_of", "reset"]
 
-STATE_KEY = "weekly_progress"
-
-
-def _store():
-    """宿主存储口（经包门面取；缺 → None，不炸）。"""
-    try:
-        from .. import facade
-        return facade.HANDLES.get("persistence")
-    except Exception:
-        return None
-
 
 def selfcheck() -> str:
     """启动自检：返回一行可读结论（**不抛** = 本包没有会让玩家静默吃亏的周常链路）。"""
