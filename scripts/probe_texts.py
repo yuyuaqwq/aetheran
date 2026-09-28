@@ -9,6 +9,8 @@ import os
 import time
 import re
 import sys
+import io
+import json
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
@@ -294,6 +296,76 @@ chk("★ 有活读端、会真出刻的战斗行，刻数写成 `【N 刻】`（
 _dead_tl = sorted(k for k in _tl_all if k not in _TL_ALIVE)
 chk("★ 已登记「无读端、暂改不了」的刻数行（**不制造红**，只列清单等接上）：%d 条" % len(_dead_tl),
     True, " · ".join(_dead_tl))
+#: ★ P0-3（2026-09-28）：战斗族的「时间轴 + 行首图标」两条，**现算**判据。
+#:   之前这条只按「value 里含 `{t}`」枚举槽位 —— 那有两个**看不见的洞**：
+#:     ① 一条**根本没有时刻格**的行（`{tag}` 那一族）压根不会进这个集合（P0-1b 的 7 条）；
+#:     ② 集合里也不核**行首图标** ⇒ 6 条裸 `【N 刻】…` 混在 36 条 `图标【N 刻】…` 里（P0-3 的 6 条）。
+#:   ⇒ 取件口改成**活 cue 映射表**（`content/rules/battle_text.json`）—— 那才是
+#:     「哪些行真会上屏」的唯一权威，与 `probe_cues` 同一个来源。
+_BT_PATH = REPO / "content" / "rules" / "battle_text.json"
+_live_cue = set()
+if _BT_PATH.exists():
+    _bt = json.load(io.open(_BT_PATH, encoding="utf-8"))
+    def _slots(o, out):
+        if isinstance(o, dict):
+            for _v in o.values():
+                _slots(_v, out)
+        elif isinstance(o, list):
+            for _v in o:
+                _slots(_v, out)
+        elif isinstance(o, str) and o.startswith("COMBAT_"):
+            out.add(o)
+        return out
+    _slots(_bt, _live_cue)
+chk("★ 活 cue 映射表读得到（活槽位清单的取件口）", bool(_live_cue),
+    "battle_text.json 读不到或没解析出槽位：%s" % _BT_PATH)
+
+#: 按设计**不加**【N 刻】的三条，理由与 P0-1 提交消息同一口径：
+#:   两条是**续行片段**（`（…` 开头，接在上一行后面），一条是**标题行**（`—— … ——`）
+#:   ⇒ 加时刻会夹成怪相。**列在这里是刻意的**，不是漏网。
+_NO_TIME_BY_DESIGN = {
+    "COMBAT_BLOCKED_AMOUNT":        "续行片段（格挡后 X 点伤害）",
+    "COMBAT_NO_TARGET":             "续行片段（场上没有能打的了）",
+    "COMBAT_SCHEDULE_ACTOR_TURN":   "标题行（—— X 行动 ——）",
+}
+_HAS_TIME = re.compile(r"\{t(?::[^{}]*)?\}")   # ★ 精确匹配 {t} 与 {t:.0f}，**不吃 {tag}**
+_STAMP = re.compile(r"【\{t(?::[^{}]*)?\} ?刻】")
+_ICON = re.compile(u"[🌀-🫿☀-➿⏳]")
+#: ★ U+23F3（⏳ · 规格 §2.2「刻 / 冷却 / 等待」）在 Misc Technical 区，
+#:   不在 U+2600–U+27BF 也不在 U+1F300–U+1FAAF ⇒ 上面那条判据看不见它
+#:   （`COMBAT_SKILL_CD` 就栽在这儿）。显式补进字符类，**不是**给那一条开豁免。
+
+_live_vals = {k: _com[k] for k in sorted(_live_cue) if k in _com}
+_no_stamp = sorted(k for k, v in _live_vals.items()
+                   if not _STAMP.search(v) and k not in _NO_TIME_BY_DESIGN)
+chk("★ 每条活 cue 行都带【N 刻】（真源 §三 优化 1）· 按设计不加 %d 条：%s"
+    % (len(_NO_TIME_BY_DESIGN), " / ".join(sorted(_NO_TIME_BY_DESIGN))),
+    not _no_stamp, "这些活 cue 行一个时刻都没有：%s" % _no_stamp)
+
+#: ★ 反证：判据**抓得住**「一个时刻格都没有」那一族（用改之前的真值当反例）
+_pre_fix = {
+    "COMBAT_ACTIONS_ENCHANT_FOLLOWUP": "{tag} 附魔追击，追加 {dmg} 点伤害！",
+    "COMBAT_EFFECTS_STACK_APPLIED":    "💫 {name} 被【{key}】{turns} 刻！",
+    "COMBAT_LANDING_GUARD_COVER":      "🛡️ 【{guard}】替【{target}】挡下了这一击！",
+}
+chk("★ 反证：改之前那 7 条（一个时刻格都没有）会被上面那条判成红",
+    all((_STAMP.search(v) is None and k not in _NO_TIME_BY_DESIGN)
+        for k, v in _pre_fix.items()))
+
+#: 行首图标：活 cue 里不许出现「行首不是图标」的行（续行片段/标题行按设计豁免）
+#: ★ `{tag}` 那一族**行首就是图标**（引擎 `actions.py:576` 给 `bonus_tag`），
+#:   上屏实测是 `⚡【142 刻】附魔追击…` ⇒ 判据认它是「行首图标由引擎给」，不是漏图标。
+_ICON_SLOT = re.compile(r"^\{[a-z_]+\}")   # 行首就是一个整格占位（引擎填图标）
+_no_icon = sorted(k for k, v in _live_vals.items()
+                  if k not in _NO_TIME_BY_DESIGN
+                  and not _ICON.match(v) and not _ICON_SLOT.match(v))
+chk("★ 活 cue 行的行首统一是图标（战斗族只有一种行首形态）", not _no_icon,
+    "行首没有图标的活 cue 行：%s" % _no_icon)
+#: ★ 反证：改之前那 6 条裸 `【N 刻】…` 会被上面那条抓住
+chk("★ 反证：改之前 6 条裸【N 刻】…（无行首图标）会被上面那条判成红",
+    all(_ICON.match(v) is None
+        for v in ("【{t:.0f} 刻】你施展【{name}】！", "【{t:.0f} 刻】战斗已结束！")))
+
 #: 反证：旧写法（`{t} 刻，`）必红 —— 钉住「这条判据抓得住旧形态」
 _old_tl = "⚔️ {t} 刻，{who}打断成功"
 chk("★ 反证：旧写法 %r 不满足 `【N 刻】`（= 上面那条判据抓得住它）" % _old_tl,
