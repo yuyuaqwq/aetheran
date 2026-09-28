@@ -440,6 +440,39 @@ chk("⑪-b ★ 反证：把 %s 压成「只有一层一句」⇒ 可观测轮换
 print("      轮换分布：" + " · ".join("%s=%d" % (k.replace("dlg_", ""), v)
                                      for k, v in sorted(_ROT.items())))
 
+# ⑫ ★ P1-12（2026-09-28）—— **单句层**：位齐看的是「有没有这一层」，
+#    看不到「这一层里有几句」。
+#    ⑪ — ⑪ 判的都是「整树」（有多少个不同句子」，一个层里只有一句时下面三条全绿
+#    （位齐 14/14 · 无纯兜底层 · 可观测轮换全达标）—— 但玩家熟了以后连敲「搭话」，
+#    转到那一层时供可选的只剩一句 ⇒ 每次真的看到同一句。
+#    此就是审计报的那个「观感不好」。
+#    分档：先钉「不得超过当前基线」（现值 10，让本车道自己不红，
+#    也不接受「把断言放宽成不检查」的形式），随内容推进逐步降到 0。
+#    ★ 底线量出来的（不是拍的）：基线 0/14（位齐为 0）时全部 56 层都是单句层；
+#    现在 10/56。底线 10 卡在「不得倒回本批修之前」那一档上。
+_LAY4 = ("meet", "daily", "main", "hidden")
+_ONE = [("%s/%s" % (_k, _lk)) for _k, _v in _npc.items() for _lk in _LAY4
+        if len(_v["nodes"].get(_lk, {}).get("texts", [])) <= 1]
+_N_LAYERS = sum(1 for _k, _v in _npc.items() for _lk in _LAY4 if _lk in _v["nodes"])
+_MAX_ONE = 10
+chk("⑫-a ★ 单句层：%d/%d 个层只有一句（上限 ≤ %d · 逐步降到 0）"
+    % (len(_ONE), _N_LAYERS, _MAX_ONE), len(_ONE) <= _MAX_ONE,
+    ("·".join(sorted(_ONE)[:10]) or "无"))
+
+# ⑫-b **反证**：拿一个已有多句的层压成一句 ⇒ 单句层必须超上限（判据抓得住）。
+#   ★ 压的是**真实的 _npc**（不是 dl）—— 否则替掉树之后实际读的仍是原值 ⇒ 尸绿。
+_k12 = next((k for k in sorted(_npc) if len(_npc[k]["nodes"]["daily"]["texts"]) >= 2), None)
+if _k12 is None:
+    _k12 = sorted(_npc)[0]
+_sv12 = json.loads(json.dumps(_npc[_k12]))
+_npc[_k12]["nodes"]["daily"]["texts"] = _sv12["nodes"]["daily"]["texts"][:1]
+_bad12 = sum(1 for k, v in _npc.items() for lk in _LAY4
+             if len(v["nodes"].get(lk, {}).get("texts", [])) <= 1)
+_npc[_k12] = _sv12                       # 还原（判据不许改坏被测数据）
+chk("⑫-b ★ 反证：把 %s/daily 压成一句 ⇒ 单句层超过上限（判据抓得住）"
+    % _k12, _bad12 > _MAX_ONE,
+    "压完 %d 个（%d → %d）" % (_bad12, len(_ONE), _bad12))
+
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
 sys.exit(0 if ok else 1)
