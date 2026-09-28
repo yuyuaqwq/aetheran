@@ -13419,3 +13419,94 @@ P2-1/2/3/4 **全部收口**（④ 已成常驻门禁）⇒ 建议本车道 `paus
 交主线的两件仍等立项，本车道一件不碰：**P2-4a** gauge bar_gain 补显示名兜底（引擎 1 行）·
 **P2-4b** 状态键显示名注入表（引擎新增 + 内容侧 24 条槽位 + 接线）。
 真源仓只读；未 push；未碰引擎；未改别车道文件面。
+
+### P0 车道第二轮（04:0x~04:2x · aep0）：本轮 0 改动 —— 三件均已落地 + 拦下一条**别的车道正在写的脏树**
+
+```text
+① P0-1（战斗时间轴 · 【N 刻】）：**已落地**，实测全 texts 域带 `【{t} 刻】` 的 **60/140 条**；
+   在**战斗 cue 槽位**里是 **59/62**（`content/rules/battle_text.json::slots`，现算）。
+   未带的 3 条是 `COMBAT_BLOCKED_AMOUNT`「（格挡后 {dmg} 点伤害）」·
+   `COMBAT_NO_TARGET`「（场上没有能打的了…）」· `COMBAT_SCHEDULE_ACTOR_TURN`「—— {name} 行动 ——」
+   ⇒ 三条**结构上不是日志行**（续行片段 / 分隔行），**不该加**时间轴，加了会把对的改坏。
+   ⇒ 作业书「146 条 / 用该写法 0 条」的起点早被本车道自己修掉（0992b2e / 3c0b921 / b1a684d）。
+   ★ 规格自身有**口径冲突**（不是包的错）：`26_消息模板_v1.md` §三 优化1 写 `⚔️【142 刻】…`，
+     而同文件 §四 第 2/3 行与 §五 打样仍是旧写法 `⚔️ 142 刻，…`（逗号、无书名号）⇒ 真源两处打架。
+② P0-2：`COMBAT_FOCUS_PARTY` 现值已是玩家话（「队伍里现在没人能统一出手…」，6a3587b 改的）；
+   `COMBAT_FLEE_TODO` **本轮实锤零生产读端**（`grep -rn FLEE_TODO content/ scripts/ --include=*.py`
+   ⇒ 只剩 `probe_copy.py:131` 与 `probe_party.py:820` 两处**判据自述**），
+   而真源 `17_文案收口口径_v1.md:655` 那一行**仍在册**（仍写着「🚧 还没接上」）⇒ 真源只读 ⇒ **仍不能删**
+   （删了 = 两处口径打架）。**请主线删真源那一行**，之后本车道可退役该槽位。
+③ P0-3（emoji 统一）：59 条时间轴行**行首全部有图标**、无一条时间轴直接开头。
+   `{tag}`（`COMBAT_ACTIONS_ENCHANT_FOLLOWUP`）**不是机器键泄漏** —— 引擎
+   `extends/ext_combat/battle/actions.py:607` 传的是 `hit_buffs.get('bonus_tag') or '⚡'`，
+   即**图标槽位**（缺省 ⚡），与它同族的几条都这么用。
+```
+
+★ 真源 spec 自身的一处冲突（已报，不改）：
+
+```text
+`26_消息模板_v1.md` §四「十五类模板」第 2 行写 `⚔️ {t} 刻，{who}…`（逗号）、
+§五 打样也写 `⚔️ 142 刻，你攻击浅滩水鬼…` —— 与同文件 §三 优化1 的 `⚔️【142 刻】…`（书名号）**不一致**。
+本车道按**优化1**（书名号）落，因它是带「⇒ 所以」因果的那一段、且是任务书点名的口径。
+★ 另：§三 优化2 的**窗口提示行**（`† 破绽 还剩 180 刻 · 全队承伤 ×1.35 †`）
+  **在包内既无槽位也无读端**（`COMBAT_WINDOW` 这个键**不存在**于 texts 域；
+  `grep -rn '剩余.*刻\|WINDOW' content/*.py` 零命中）⇒ **优化2 整条没落地**（新登记）。
+```
+
+★★ 本轮拦下的**全局阻塞**（不是本车道引入，归因已双向取证）：
+
+```text
+症状：`for f in scripts/probe_*.py` **62 支里有 60 支在 import 期就红**（`probe_texts`/`cues`/`copy`
+  连回话都出不来）；`scripts/e2e_drive.py "状态"` 同样死在 import ⇒ **本包当前整个跑不起来**。
+报错：`FormulaDeclError: 条目 'F1_eff_def' 的 expr 编译失败：… 引用了变量表里没有的名字
+  'pene_flat'、'pene_pct'（当前生效的变量表 = 13 个）`
+★ 归因（双向取证，两条都跑了）：
+  ① **不是本包回归**：拿 `aff3712~1` 建了个 worktree 当引擎跑同一条 `probe_texts.py` ⇒ **全绿 ✓**。
+     `aff3712` = 引擎侧 `fix(expr): 审计 L1281 #3`（01:55，`compile_expr` 开始**按变量名校验**）。
+  ② **不是「引擎没跟上」**：引擎 `c3eb91b`(E4) 是**按设计**把表达式变量表改成
+     「内容侧声明 + 声明口」`config.mount(expr_vars_fn=…)`；本包 `grep expr_vars` = **零命中**
+     ⇒ 一直走引擎默认那张 13 名的表，而本包 `content/rules/formula_table.json::F1_eff_def`
+     声明了 `pene_pct`/`pene_flat` 两个穿透变量 ⇒ 编译期 fail-closed。**这是设计内的正确红。**
+★ 上两轮 `_notes` 把它记成「引擎立项 / 本车道不挂声明口」，理由是「挂上后 `build_vars` 回落成 0.0
+  ⇒ 穿透静默算成 0」。**本轮复核实测：那是对的、但结论下得太早** ——
+  挂声明口后必须把**整表**给足（`config.mount` 是**整表替换**，不是追加），
+  只加两个会立刻把 `def` 顶掉（实测报错变成「没有名字 'def'」）。
+  把包里 `formula_table.json` 全部 expr 引用到的名字**都**登记进去（41 个）后：
+  `FormulaTable.from_decl` 装载 OK，且穿透**真的进公式**（def=200/base=100 ⇒
+  (0,0)→60 · (0,50)→66 · (0.5,0)→75，与 `calc_damage` 兜底路径同向且可复算）。
+  ⇒ 全量门禁从「62 支里 60 支 import 红」变成 **55/62 绿**（剩 7 支红的归因见下）。
+★ 处置建议（**不是本车道的活** —— 那是公式域的接线，且要动 `content/apply.py` 装配面）：
+  内容侧挂一张**完整的** expr 变量表（默认 13 + 链式步 id/params/guard/random 名），
+  挂完必须 ① 复算穿透 ② 跑 e2e 真机 ③ 确认 `build_vars` 那条路的入参能覆盖新变量。
+```
+
+★ 本轮跑全量的 7 支红，**逐条归因，5 支是别的车道在途、1 支是真 bug、1 支是台账已登记项**：
+
+```text
+probe_titles / probe_generators  同一因：`rebuild_titles.py` 干跑 rc=1 ——
+  「title_wall_listener 条件对不上：heard@dlg_hagen 写的是 9，而那棵树有 17 条台词（现算）」。
+  ⇒ P1 车道 `rebuild_titles` 那条红的**目标数又动了**（aep1 交接单已预告「还要再 +1」）。
+probe_sources   `i_token_stone_shard` 拿不到（`ms_bone_wanderer` 掉 `unid_rare`）—— 在途内容面。
+probe_dialogues  ⑱-c 台词「」成对：`dlg_laotao/daily#4` 不成对 —— P1 车道在改对话树。
+probe_mech / probe_resources  ⑧「引擎仓工作区干净」**干净=False** ——
+  引擎树此刻有未提交改动（`saintess_engine/clock/timer.py` M + `games/orlandia` m + 新文件
+  `tests/test_timer_data_shape.py`）⇒ **别的车道在引擎侧施工中**，本车道不碰。
+★ **真 bug（不是假红）**：`scripts/probe_calendar.py:171` 用了 `io.open(...)` 但**全文件没有 `import io`**
+  （`git show HEAD:scripts/probe_calendar.py | grep -c '^import io'` = 0，提交 `4a26636` 就带着）⇒
+  一跑到 L171 就 `NameError: name 'io' is not defined`，该支的后半段判据**从来没跑过**。
+  本车道**没改**（文件面不在我的点成名单内，且探针文件正被 P1 车道在用）⇒ **已报，待认领**。
+```
+
+★ 让位记录（本轮一字未改）：
+
+```text
+04:13~04:14 三个文件在我跑全量期间变脏：`content/data/texts.json`（1 增 1 删）·
+`scripts/rebuild_syscopy.py`（+20 · 0 删）· `scripts/_baseline_instance_solo.json`（3/3），
+mtime 同分钟聚类 ⇒ **aep2 车道**（它的 `DOC_PENDING` 里写着「P2-10（2026-09-29 夜班 · aep2）」，
+改的是 `COMBAT_TURN_RES` 行首 `🔹`→`⚡`，理由是「同屏两条资源读数图标不一致」——**理由站得住**）。
+⇒ 这三个文件**正是本车道 P0 作业书点名的文件面**（`texts.json` 的 `COMBAT_*` 键 ·
+`battle_text.json` 的 cue 映射 · `rebuild_syscopy.py::DOC_PENDING`）⇒ **本轮让位，不提交任何东西**。
+★ 下一轮注意：`COMBAT_TURN_RES` 那个 `🔹`→`⚡` **与 P0-3（emoji 同屏一致）同族** ——
+  aep2 改完这条后，P0-3 的「同屏图标一致」这一小项就归它了，别重复做。
+```
+
