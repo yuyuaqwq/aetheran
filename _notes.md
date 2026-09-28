@@ -12987,3 +12987,31 @@ rebuild_syscopy.py --dry ⇒ 解析 644（已存在且一致 644 · 要新增 0 
 **P2 收口。** 四件里 P2-1/2 已被 P0/P1 做完（复核成立）、P2-3 无真缺陷可改
 （唯一候选已被 P1 登记且语义正确）、P2-4 两支都要改引擎 ⇒ 交主线立项。
 本车道**不再有待办**；余下的活属引擎立项与真源表搬账，都不在本车道权限内。
+
+---
+
+## P1-2 收尾（2026-09-28 23:3x · 文案修复车道 P1）
+
+数据侧两笔落完：**位齐 14/14 · 单句层 10 → 0 · 台词 141 → 151**。
+判据侧同步**收紧**（只加强不削弱）：`probe_dialogues ⑫-a` 上限 10 → 5 → 0；
+`⑫-b` 的反证压缩量改为自算（先层内逐句压，不够再压掉整层）。
+
+★ 本轮踩了一个**我自己的流程错误**，记在这里给下一位：
+
+```text
+事故：给 probe_titles 归因时跑了
+    git stash push -- content/data/dialogues.json scripts/probe_dialogues.py
+  但那两件本轮早已提交、工作区是干净的 ⇒ push 是**空操作**；
+  紧接着的 git stash pop 弹出的是**别车道早就躺在 stash@{0} 的旧中间态**
+  （WIP on master: 9f048be，含 P1-13/P1-14 时期的 probe_dialogues）
+  ⇒ 树被搞成半合并态（dialogues.json:694 带冲突标记 + probe_dialogues 重复了 ⑬）。
+
+没有丢任何东西：两笔提交在历史里完好；冲突只用
+  git checkout HEAD -- content/data/dialogues.json scripts/probe_dialogues.py
+复原（**没有**扫目录 checkout）；别车道那个 stash 原封未动（仍在 stash@{0}）。
+
+★ 判据教训：**取基线复现一律用 `git show <sha>:<path> > 临时文件`，
+  不要 stash/pop 工作区。**
+  stash 动的是整个仓的暂存面，而别车道的中间态与我的提交基线不是一回事；
+  弹出来的半成品会被误当成「我的改动」，`git diff` 也会把它算进我的 numstat。
+```
