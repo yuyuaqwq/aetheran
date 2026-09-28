@@ -858,7 +858,11 @@ _a4 = _b4.sides["enemy"][0]
 _ct0 = float(_a4.get("ct", -1))
 _lg4: list = []
 _b4.auto_run(_lg4)
-_first = next((x for x in _lg4 if "——" in str(x)), "")
+# ★ P0-4（2026-09-29）：原先用 `"——" in str(x)` 挖第一动行 —— 那是**把文案形态写死了**：`COMBAT_SCHEDULE_ACTOR_TURN`已从 `—— X 行动 ——` 改成 `🌀【N 刻】X 行动`（真源 26_ §三 优化 1）。
+#: 改成**识别发动令事件**「带刻数、再找有他名字那一行」——
+#: 判据要保护的意图（「它抢在玩家前面动手」）**不变**，取件口从「特定字符」换成「有意义的结构」。
+_first = next((x for x in _lg4
+               if "刻】" in str(x) and mo[_am]["name"] in str(x)), "")
 _b6 = _CB.build(_PL, [_am], mo, party=1)                                  # 对照：不带潜伏
 _ct_plain = float(_b6.sides["enemy"][0].get("ct", -1))
 chk("★ 潜伏：它抢在玩家前面动手（构建后 ct：带潜伏 %s / 对照组 %s；第一动 = 「%s」）"
