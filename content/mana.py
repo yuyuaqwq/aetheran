@@ -237,6 +237,23 @@ def settle_stamp() -> str:
     return str((table().get("settle") or {}).get(_K_STAMP) or "")
 
 
+def _ticks_of(day, hod) -> int:
+    """(游戏日, 当日小时) → 绝对游戏刻 —— **本仓这条换算的唯一一处**（审计 L1410-4）。
+
+    ★ 为什么收成单口：`content/party.py::now_ticks`（另一条同形换算）用 `int(hod*3600)`
+      截断、本函数原先用 `round(hod*3600)` 四舍五入，两边**各自都写着「钟源只有一个」**
+      却各算各的 ⇒ 同一时刻两个刻（实测 day 0-399 × 24h × 0.01h 抽样 **33200 格分歧**、
+      最大差 1 刻；样例 day=0 hod=1.13 ⇒ mana 4068 / party 4067）。真源是
+      `content/calendar.py::game_time`（产出 `(day, hod)` 那一对），**换算由本口承担** ——
+      取 `round`：`int()` 是截断，会把「已经过去的刻数」系统性少算；`round` 与日历那一侧一致。
+
+    ★ 零行为变化：对 `int(day)*_DAY_TICKS + int(round(float(hod)*_HOUR_TICKS))` **逐字相同**
+      （`_DAY_TICKS` / `_HOUR_TICKS` 就是 86400 / 3600，见本模块抬头那两格）——
+      本函数体就是原先那一行原封不动搬过来，改的只是「它有了一个名字」。
+    """
+    return int(day) * _DAY_TICKS + int(round(float(hod) * _HOUR_TICKS))
+
+
 def game_tick():
     """**战斗外那根钟** = 绝对游戏刻（`content/calendar.py::game_time` 现算）。
 
@@ -246,7 +263,7 @@ def game_tick():
     """
     from . import calendar as CAL                          # 本地 import：与 `_p` 里那一手同款
     day, hod = CAL.game_time()
-    return int(day) * _DAY_TICKS + int(round(float(hod) * _HOUR_TICKS))
+    return _ticks_of(day, hod)
 
 
 def settle(p, mp_now):
