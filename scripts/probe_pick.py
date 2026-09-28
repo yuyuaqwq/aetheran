@@ -371,8 +371,14 @@ def main():
     _rows = [ln for ln in _bag if ln.startswith("·")]
     _want_rows = ["· %s %s ×%s" % (items[i].get("icon", ""), LT.label_of(i), _sv["bag"][i])
                   for i in _sv["bag"]]
-    if _rows == _want_rows and any(" · %s ×" % gq1 in ln for ln in _rows):
-        ok("`背包` 逐字对账：重名的缀品阶（%s · %s）· 顺序照档上插入序" % (gq1, gq2))
+    # ★ P2-7：品阶那一截的**形态**从「名字 · 品阶」改成「名字（品阶）」——
+    #   起因是它打不回去（`split_quality` 没收「名字 · 品阶」这一写法）。
+    #   ⇒ 判据不再钉某一个字面量，改钉**两条契约**（都更硬、都不挑写法）：
+    #     ① 逐字对账：背包行 == 用 `label_of` 现算的那一行（一个字都不许旁路）；
+    #     ② 屏上那个显示名**自己就是一句能敲回去的话**（`match_ids` 只认得中那一条）。
+    if _rows == _want_rows and any(("%s（%s）" % (gname, gq1)) in ln for ln in _rows):
+        ok("`背包` 逐字对账：重名的缀品阶（%s（%s）· %s（%s））· 顺序照档上插入序"
+           % (gname, gq1, gname, gq2))
     else:
         bad("背包行不对：%s（该 %s）" % (_rows, _want_rows))
     _srt = say("整理背包", UID2)
@@ -388,7 +394,7 @@ def main():
     _plain = ["· %s %s ×%s" % (items[i].get("icon", ""), str(items[i].get("name")),
                                _one["bag"][i]) for i in _one["bag"]]
     _ugly = [ln for ln in _p + _q
-             if any(" · %s ×" % str(items[i].get("quality")) in ln for i in _one["bag"])]
+             if any(("（%s）×" % str(items[i].get("quality"))) in ln for i in _one["bag"])]
     _same = sorted(_p) == sorted(_plain)
     if short and short not in LT.ambiguous_names() and _same and not _ugly:
         ok("**不重名的**（%s / %s）一个字都没改 —— 品阶只在「域里重名」的那些上出现"
@@ -418,6 +424,26 @@ def main():
         bad("柜上出现同名多件了：%s" % {k: v for k, v in _sn.items() if len(v) > 1})
 
     print()
+    print("⑧ ★ P2-7 屏上那个显示名得能敲回去（fail-closed）")
+    # ★ 为什么单独一节：⑥ 核的是「渲染成什么样」，这一节核的是「**敲回去认不认**」。
+    #   两件事曾各绿各的 —— 行照 `label_of` 逐字对得上，可 `label_of` 给的那个形状
+    #   `split_quality` 根本不收 ⇒ 玩家照抄屏幕上那句话，回一句「背包里没有」。
+    #   ⇒ 判据 = **对每一档重名的条目**：`label_of` 给的显示名喂给 `match_ids`，
+    #     必须**只**命中它自己那一档（不认得 ⇒ 空；认多 ⇒ 又是另一种不规整）。
+    _rt = []
+    for _n in dup:
+        _ids = [i for i, v in items.items() if v.get("name") == _n and isinstance(v, dict)]
+        for _i in _ids:
+            _disp = LT.label_of(_i)
+            _hit = LT.match_ids(_ids, _disp)
+            if _hit != [_i]:
+                _rt.append("%s -> %r 认得 %s" % (_disp, _hit, [items[h].get("quality") for h in _hit]))
+    if not _rt:
+        ok("重名 %d 组 · 逐档把 `label_of` 的显示名喂回 `match_ids` 都只认自己那一档"
+           % len(dup))
+    else:
+        bad("屏上的显示名敲不回去：%s" % _rt[:6])
+
     print("----")
     print("通过 %d / 失败 %d" % (len(OK), len(BAD)))
     if BAD:
