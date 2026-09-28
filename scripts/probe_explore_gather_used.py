@@ -2,7 +2,7 @@
 """审计 L2009-1/2/3 反证探针（批次2）：miss_lines 的「今日已采满」/ 过滤顺序 / times 单一读口。"""
 from __future__ import annotations
 import copy, glob, io, os, sys
-REPO = os.path.abspath(os.path.dirname(__file__))
+REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 ENGINE = os.environ.get("GWEN_ENGINE", "C:/Users/yuyu/framework-engine")
 sys.path.insert(0, str(REPO)); sys.path.insert(0, ENGINE)
 from saintess_engine.package import load_stack                       # noqa: E402

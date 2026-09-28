@@ -2,7 +2,7 @@
 """Audit L2756-2 probe: matsrc.kill_foes must see the pool-inside-pool layer."""
 from __future__ import annotations
 import glob, os, sys
-REPO = os.path.abspath(os.path.dirname(__file__))
+REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, str(REPO)); sys.path.insert(0, os.environ.get("GWEN_ENGINE", "C:/Users/yuyu/framework-engine"))
 from saintess_engine.package import load_stack
 
