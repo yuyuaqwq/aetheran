@@ -450,13 +450,14 @@ print("      轮换分布：" + " · ".join("%s=%d" % (k.replace("dlg_", ""), v)
 #    分档：先钉「不得超过当前基线」（现值 10，让本车道自己不红，
 #    也不接受「把断言放宽成不检查」的形式），随内容推进逐步降到 0。
 #    ★ 底线量出来的（不是拍的）：基线 0/14（位齐为 0）时全部 56 层都是单句层；
-#    P1-12 修完 10/56；**P1-2 第一批（5 个 main 层）落完 5/56** ⇒ 上限 10 → 5。
-#    上限只会变小（判据只加强不削弱）；⑫-b 的压缩量随之上调，见那里。
+#    P1-12 修完 10/56 → P1-2 第一批 5/56 → **第二批（余下 5 个 main/hidden 层）0/56**
+#    ⇒ 上限 10 → 5 → 0：「逐步降到 0」这一步在本批兑现。
+#    上限只会变小（判据只加强不削弱）；⑫-b 的压缩口径随之上调，见那里。
 _LAY4 = ("meet", "daily", "main", "hidden")
 _ONE = [("%s/%s" % (_k, _lk)) for _k, _v in _npc.items() for _lk in _LAY4
         if len(_v["nodes"].get(_lk, {}).get("texts", [])) <= 1]
 _N_LAYERS = sum(1 for _k, _v in _npc.items() for _lk in _LAY4 if _lk in _v["nodes"])
-_MAX_ONE = 5
+_MAX_ONE = 0
 chk("⑫-a ★ 单句层：%d/%d 个层只有一句（上限 ≤ %d · 逐步降到 0）"
     % (len(_ONE), _N_LAYERS, _MAX_ONE), len(_ONE) <= _MAX_ONE,
     ("·".join(sorted(_ONE)[:10]) or "无"))
@@ -474,7 +475,6 @@ _sv12 = json.loads(json.dumps(_npc[_k12]))
 _base12 = len(_ONE)
 _keep12 = 0
 _bad12 = _base12
-#   一层层压：每压一层多一个单句层，直到越过新上限（少压一条就锐一分）。
 for _n12 in range(1, len(_sv12["nodes"]["daily"]["texts"]) + 1):
     _npc[_k12]["nodes"]["daily"]["texts"] = _sv12["nodes"]["daily"]["texts"][:_n12]
     _bad12 = sum(1 for k, v in _npc.items() for lk in _LAY4
@@ -482,9 +482,23 @@ for _n12 in range(1, len(_sv12["nodes"]["daily"]["texts"]) + 1):
     _keep12 = _n12
     if _bad12 > _MAX_ONE:
         break
+#   ★ **上限 0 之后光压一层不够了**（P1-2 第二批改的）：只在一位内部压，
+#     压出来最多 1 个单句层 —— 要越过 0 就得**压掉整层**（位齐随之 14 → 13）。
+#     少压一层就锐一分，所以先在层内压到底，不够才动结构。
+_drop12 = None
+if _bad12 <= _MAX_ONE:
+    for _lk12 in _LAY4:
+        if _lk12 in _npc[_k12]["nodes"] and _lk12 != "meet":
+            _npc[_k12]["nodes"].pop(_lk12)
+            _drop12 = _lk12
+            break
+    _bad12 = sum(1 for k, v in _npc.items() for lk in _LAY4
+                 if len(v["nodes"].get(lk, {}).get("texts", [])) <= 1)
 _npc[_k12] = _sv12                       # 还原（判据不许改坏被测数据）
-chk("⑫-b ★ 反证：把 %s/daily 压到只剩 %d 句 ⇒ 单句层越过上限 %d（判据抓得住）"
-    % (_k12, _keep12, _MAX_ONE), _bad12 > _MAX_ONE,
+chk("⑫-b ★ 反证：把 %s 压到 daily 只剩 %d 句%s ⇒ 单句层越过上限 %d（判据抓得住）"
+    % (_k12, _keep12,
+       ("、并抽掉整层 " + _drop12) if _drop12 else "", _MAX_ONE),
+    _bad12 > _MAX_ONE,
     "压完 %d 个（%d → %d）" % (_bad12, _base12, _bad12))
 
 # ⑬ ★ P1-14（2026-09-28）—— **主线句遮住同层分支**（后期玩家视角）
