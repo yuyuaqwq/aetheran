@@ -1406,7 +1406,7 @@
     "desc": "开出装备"
   },
   "UNID_RESULT_LORE": {
-    "value": "📜 {title}\n{text}\n💡 已进旧物谱",
+    "value": "📖 {title}\n{text}\n💡 已进旧物谱",
     "params": [
       "text",
       "title"
