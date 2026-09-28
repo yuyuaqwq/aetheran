@@ -6500,7 +6500,7 @@
     "desc": "引擎槽位 `battle.effects.immune_control`（`extends/ext_combat/battle/effects.py:370` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
   },
   "COMBAT_EFFECTS_IMMUNE_DEBUFF": {
-    "value": "🚫【{t:.0f} 刻】{name} 免疫【{key}】，异常未生效",
+    "value": "🛡️【{t:.0f} 刻】{name} 免疫【{key}】，异常未生效",
     "params": [
       "key",
       "name",
@@ -6630,7 +6630,7 @@
     "desc": "引擎槽位 `battle.gauge.phase_preserve`（`extends/ext_combat/gauge/actions.py:168` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
   },
   "COMBAT_GAUGE_REFLECT": {
-    "value": "🪨【{t:.0f} 刻】反震：反弹 {dmg} 点伤害！",
+    "value": "💢【{t:.0f} 刻】反震：反弹 {dmg} 点伤害！",
     "params": [
       "dmg",
       "t"
@@ -6752,7 +6752,7 @@
     "desc": "引擎槽位 `battle.landing.magic_resist`（`extends/ext_combat/battle/landing.py:312` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
   },
   "COMBAT_LANDING_PHYS_IMMUNE": {
-    "value": "🪨【{t:.0f} 刻】物理免伤，减免 {red} 点物理伤害！",
+    "value": "🛡️【{t:.0f} 刻】物理免伤，减免 {red} 点物理伤害！",
     "params": [
       "red",
       "t"

@@ -251,7 +251,7 @@ DOC_PENDING = {
                "★ 只改独立行；续行片段（`COMBAT_BLOCKED_AMOUNT`/`COMBAT_NO_TARGET`）"
                "与标题行（`COMBAT_SCHEDULE_ACTOR_TURN`）不加 —— 加了会夹成怪相。"
                "★ 引擎零改动；读端与取件逻辑一字未动。"},
-    "COMBAT_EFFECTS_IMMUNE_DEBUFF": {"old": "🚫 {name} 免疫【{key}】，异常未生效", "new": "🚫【{t:.0f} 刻】{name} 免疫【{key}】，异常未生效", "why": "P0-1（战斗时间轴 · 真源 26_ §三 优化 1「所有战斗日志行统一以【N 刻】开头」）："
+    "COMBAT_EFFECTS_IMMUNE_DEBUFF": {"old": "🚫 {name} 免疫【{key}】，异常未生效", "new": "🛡️【{t:.0f} 刻】{name} 免疫【{key}】，异常未生效", "why": "P0-1（战斗时间轴 · 真源 26_ §三 优化 1「所有战斗日志行统一以【N 刻】开头」）："
                "行首加【N 刻】。★ 硬阻塞已解除：引擎 901c8d8「cue payload 补一格绝对时刻 t」"
                "已进 engine HEAD（`ext_combat.battle.cues.TIME_SLOT`/`with_now`，每条 cue 都给）"
                "⇒ 本批 52 条活 cue 槽位**真能在屏上拿到刻**。"
@@ -261,7 +261,7 @@ DOC_PENDING = {
                "`⚔️【142 刻】你 · 攻击 · 伐木工`）。"
                "★ 只改独立行；续行片段（`COMBAT_BLOCKED_AMOUNT`/`COMBAT_NO_TARGET`）"
                "与标题行（`COMBAT_SCHEDULE_ACTOR_TURN`）不加 —— 加了会夹成怪相。"
-               "★ 引擎零改动；读端与取件逻辑一字未动。"},
+               "★ P2-13（2026-09-29 · 排版规整度）：行首锚 🪨 → 🛡️。与 `COMBAT_EFFECTS_IMMUNE_CONTROL`（免疫控制，已是 🛡️）同为「这一次没生效」一语，且两条由引擎 `effects.py::act_apply` **同一个函数**里两个 `_cue` 连着发（已真跑引擎取过一屏：两行相邻）；真源 26_ §2.2 的 emoji 语义分组表里**没有 🚫**。"},
     "COMBAT_EFFECTS_SHIELD_GAIN": {"old": "🛡️ {name} 获得护盾 {value} 点！", "new": "🛡️【{t:.0f} 刻】{name} 获得护盾 {value} 点！", "why": "P0-1（战斗时间轴 · 真源 26_ §三 优化 1「所有战斗日志行统一以【N 刻】开头」）："
                "行首加【N 刻】。★ 硬阻塞已解除：引擎 901c8d8「cue payload 补一格绝对时刻 t」"
                "已进 engine HEAD（`ext_combat.battle.cues.TIME_SLOT`/`with_now`，每条 cue 都给）"
@@ -361,7 +361,7 @@ DOC_PENDING = {
                "★ 只改独立行；续行片段（`COMBAT_BLOCKED_AMOUNT`/`COMBAT_NO_TARGET`）"
                "与标题行（`COMBAT_SCHEDULE_ACTOR_TURN`）不加 —— 加了会夹成怪相。"
                "★ 引擎零改动；读端与取件逻辑一字未动。"},
-    "COMBAT_GAUGE_REFLECT": {"old": "🪨 反震：反弹 {dmg} 点伤害！", "new": "🪨【{t:.0f} 刻】反震：反弹 {dmg} 点伤害！", "why": "P0-1（战斗时间轴 · 真源 26_ §三 优化 1「所有战斗日志行统一以【N 刻】开头」）："
+    "COMBAT_GAUGE_REFLECT": {"old": "🪨 反震：反弹 {dmg} 点伤害！", "new": "💢【{t:.0f} 刻】反震：反弹 {dmg} 点伤害！", "why": "P0-1（战斗时间轴 · 真源 26_ §三 优化 1「所有战斗日志行统一以【N 刻】开头」）："
                "行首加【N 刻】。★ 硬阻塞已解除：引擎 901c8d8「cue payload 补一格绝对时刻 t」"
                "已进 engine HEAD（`ext_combat.battle.cues.TIME_SLOT`/`with_now`，每条 cue 都给）"
                "⇒ 本批 52 条活 cue 槽位**真能在屏上拿到刻**。"
@@ -371,7 +371,7 @@ DOC_PENDING = {
                "`⚔️【142 刻】你 · 攻击 · 伐木工`）。"
                "★ 只改独立行；续行片段（`COMBAT_BLOCKED_AMOUNT`/`COMBAT_NO_TARGET`）"
                "与标题行（`COMBAT_SCHEDULE_ACTOR_TURN`）不加 —— 加了会夹成怪相。"
-               "★ 引擎零改动；读端与取件逻辑一字未动。"},
+               "★ P2-13（2026-09-29 · 排版规整度）：行首锚 🪨 → 💢。同族「效果回敬 / 触发」三张行已全是 💢（`COMBAT_GAUGE_TRIGGER` / `COMBAT_GAUGE_SHAKEN` / `COMBAT_GAUGE_PHASE_PRESERVE`），本条与它们同属一簇；更关键的是 🪨 当年被另两条占着（物理免伤 + 本条）、**一个图标持两个不相干的语义**；真源 26_ §2.2 表里没有 🪨。"},
     "COMBAT_GAUGE_SHAKEN": {"old": "💢 【{name}】被{bar}震慑，无法行动！", "new": "💢【{t:.0f} 刻】【{name}】被{bar}震慑，无法行动！", "why": "P0-1（战斗时间轴 · 真源 26_ §三 优化 1「所有战斗日志行统一以【N 刻】开头」）："
                "行首加【N 刻】。★ 硬阻塞已解除：引擎 901c8d8「cue payload 补一格绝对时刻 t」"
                "已进 engine HEAD（`ext_combat.battle.cues.TIME_SLOT`/`with_now`，每条 cue 都给）"
@@ -492,7 +492,7 @@ DOC_PENDING = {
                "★ 只改独立行；续行片段（`COMBAT_BLOCKED_AMOUNT`/`COMBAT_NO_TARGET`）"
                "与标题行（`COMBAT_SCHEDULE_ACTOR_TURN`）不加 —— 加了会夹成怪相。"
                "★ 引擎零改动；读端与取件逻辑一字未动。"},
-    "COMBAT_LANDING_PHYS_IMMUNE": {"old": "🪨 物理免伤，减免 {red} 点物理伤害！", "new": "🪨【{t:.0f} 刻】物理免伤，减免 {red} 点物理伤害！", "why": "P0-1（战斗时间轴 · 真源 26_ §三 优化 1「所有战斗日志行统一以【N 刻】开头」）："
+    "COMBAT_LANDING_PHYS_IMMUNE": {"old": "🪨 物理免伤，减免 {red} 点物理伤害！", "new": "🛡️【{t:.0f} 刻】物理免伤，减免 {red} 点物理伤害！", "why": "P0-1（战斗时间轴 · 真源 26_ §三 优化 1「所有战斗日志行统一以【N 刻】开头」）："
                "行首加【N 刻】。★ 硬阻塞已解除：引擎 901c8d8「cue payload 补一格绝对时刻 t」"
                "已进 engine HEAD（`ext_combat.battle.cues.TIME_SLOT`/`with_now`，每条 cue 都给）"
                "⇒ 本批 52 条活 cue 槽位**真能在屏上拿到刻**。"
@@ -502,7 +502,7 @@ DOC_PENDING = {
                "`⚔️【142 刻】你 · 攻击 · 伐木工`）。"
                "★ 只改独立行；续行片段（`COMBAT_BLOCKED_AMOUNT`/`COMBAT_NO_TARGET`）"
                "与标题行（`COMBAT_SCHEDULE_ACTOR_TURN`）不加 —— 加了会夹成怪相。"
-               "★ 引擎零改动；读端与取件逻辑一字未动。"},
+               "★ P2-13（2026-09-29 · 排版规整度）：行首锚 🪨 → 🛡️。同族三条（`COMBAT_LANDING_MAGIC_RESIST` / `COMBAT_LANDING_BLOCK_REDUCE` / `COMBAT_LANDING_RESIST_REDUCE`）**已经全是 🛡️**，只有本条不一样；且这三条由引擎 `landing.py::_apply_taken_reductions` **同一个函数**里三个 `_cue` 连着发（已真跑引擎取过一屏：减伤与格挡两行相邻）。真源 26_ §2.2 明写「🛡️ = 防御 / 减伤 / 霸体」。"},
     "COMBAT_LANDING_RESIST_REDUCE": {"old": "🛡️ 元素抗性减免 {red} 点伤害！", "new": "🛡️【{t:.0f} 刻】元素抗性减免 {red} 点伤害！", "why": "P0-1（战斗时间轴 · 真源 26_ §三 优化 1「所有战斗日志行统一以【N 刻】开头」）："
                "行首加【N 刻】。★ 硬阻塞已解除：引擎 901c8d8「cue payload 补一格绝对时刻 t」"
                "已进 engine HEAD（`ext_combat.battle.cues.TIME_SLOT`/`with_now`，每条 cue 都给）"
