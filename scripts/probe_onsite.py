@@ -583,6 +583,73 @@ chk("★ 反证（换时辰翻面）：夜 · 北墙根 ⇒ 他来了 —— 名
     "%s" % (_here_night[:4],))
 
 
+# ══════════════════════════════════════════════════════════════════════════
+# ⑯-边界 ★ L2474-2：把 `p["loc"] != TOWN` 这个判据的**真实边界**钉死。
+#   起因 = `content/town.py::town_gate` 抬头曾许诺「谁再自己写一遍
+#   `p["loc"] != TOWN`，`probe_cmds ⑰` 的覆盖面当场红」—— 实测**不成立**：
+#   ⑰ 覆盖面①按 `guard_desc` **字样**筛（`在镇上/在公会/在铺子/在客栈`），
+#   而 `hint` 的 `guard_desc = "随时"`（`commands.json`）压根不在那一族里，
+#   偏偏 `cmds_ast.py::hint` **合法地**手写了这一句 —— 它是**报信**不是**拦路**
+#   （野外时补一句「这儿是野外」；拦了就等于把整条指令封掉，语义不同）。
+#   ⇒ 那句注释是**虚假的安全感**：下一个人照它加手写守卫，门禁一声不响。
+#   本条只认**两个**合法落点，别处（任何文件、任何函数、模块级裸语句）再写一份当场红。
+#   ★ 用 ast 扫 `Compare`，**不扫注释/docstring**（town.py 里那两处提及在讲这段历史，
+#     扫文本会把自己打红 —— 判据必须剥注释）。
+# ══════════════════════════════════════════════════════════════════════════
+import ast as _astB16                                            # noqa: E402
+
+#: 合法落点 → 允许出现几次（超出即红；理由逐条写在下）
+_BUDGET16 = {("town.py", "town_gate"): 1, ("cmds_ast.py", "hint"): 2}
+
+
+def _town_cmp16(_node16):
+    """这个作用域里所有拿 `TOWN` 当比较右值的 `Compare` 节点。"""
+    out16 = []
+    for _x16 in _astB16.walk(_node16):
+        if (isinstance(_x16, _astB16.Compare)
+                and any(isinstance(o, _astB16.Name) and o.id == "TOWN" for o in _x16.comparators)):
+            out16.append(_x16)
+    return out16
+
+
+_hits16 = []
+for _f16 in sorted((REPO / "content").glob("*.py")):
+    _t16 = _astB16.parse(_f16.read_text(encoding="utf-8"))
+    for _n16 in _t16.body:
+        if isinstance(_n16, (_astB16.FunctionDef, _astB16.AsyncFunctionDef)):
+            _where16 = _n16.name
+        elif isinstance(_n16, _astB16.ClassDef):
+            for _m16 in _n16.body:
+                if isinstance(_m16, (_astB16.FunctionDef, _astB16.AsyncFunctionDef)):
+                    for _x16 in _town_cmp16(_m16):
+                        _hits16.append((_f16.name, "%s.%s" % (_n16.name, _m16.name), _x16.lineno))
+            continue
+        else:
+            _where16 = "模块级"
+        for _x16 in _town_cmp16(_n16):
+            _hits16.append((_f16.name, _where16, _x16.lineno))
+
+# 每个合法落点**允许出现几次**，超出即红（不是「只看在不在那个文件」）。
+#   `town.py::town_gate` = 1：拦路那一族的唯一执行面，一句就够。
+#   `cmds_ast.py::hint`  = 2：★ **两支互斥** —— `if lines:` 支（有活可提示时补一句野外）
+#     与它下面的 `if p["loc"] == TOWN: … else: …` 支（没活可提示时说清在镇上还是野外），
+#     同一行 `if lines:` 一进一出，两支**永不同时执行**。那是**同一次判定在两支里各算一遍**，
+#     不是两份拷贝；真要收成 `wild = p["loc"] != TOWN` 算一次再分派，得改
+#     `cmds_ast.py` —— **那是 batch_1 的文件面，本车道不碰** ⇒ 如实登记为已知形态 + 写明理由，
+#     不是默默放过（Step 3：否定性结论必须带依据，否则下一个人会再查一遍）。
+_bad16 = ["%s:%d %s" % (f, ln, w) for (f, w, ln) in _hits16 if (f, w) not in _BUDGET16]
+_cnt16 = {}
+for (f, w, _ln) in _hits16:
+    _cnt16[(f, w)] = _cnt16.get((f, w), 0) + 1
+_over16 = ["%s.%s %d>%d" % (f, w, c, _BUDGET16[(f, w)])
+           for (f, w), c in sorted(_cnt16.items()) if (f, w) in _BUDGET16 and c > _BUDGET16[(f, w)]]
+chk("★ 边界⑯：手写 `p[\"loc\"] != TOWN` 全包只落在两个合法口 —— `town_gate`（拦路唯一执行面，"
+    " 1 处）与 `cmds_ast::hint`（报信口，2 处**互斥分支**同一次判定）；实测 %d 处命中 / %d 处越界"
+    " / %d 处超额（⑰ 覆盖面按 guard_desc 字样筛、**盖不到** hint ⇒ 这条才是真边界，"
+    "原 town.py 注释那句是**虚假的安全感**）"
+    % (len(_hits16), len(_bad16), len(_over16)),
+    not _bad16 and not _over16, "越界:%s 超额:%s" % (_bad16[:4], _over16[:4]))
+
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
 sys.exit(0 if ok else 1)

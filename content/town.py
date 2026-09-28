@@ -27,7 +27,7 @@ def _func_spots(func: str, loc: str = TOWN) -> dict:
       而那三个模块 import `cmds_places` 会成环（`cmds_places` → `cmds_more` → `cmds_quest`）。
     """
     out: dict = {}
-    for k, v in (_data("npcs") or {}).items():
+    for k, v in _data("npcs").items():
         if not isinstance(v, dict) or v.get("map") != loc:
             continue
         if func not in (v.get("funcs") or []):
@@ -40,6 +40,19 @@ def _func_node(func: str, loc: str = TOWN) -> str:
     """带这个职能的人所在的那一站 —— **叫不准就给空串**（没有 / 分在两处都不猜）。"""
     spots = _func_spots(func, loc)
     return next(iter(spots)) if len(spots) == 1 else ""
+
+
+def _base_here(loc: str, node: str) -> dict:
+    """这一站的**基位名单** -> `{npc id: 记录}`：域里写着 `subarea` 停在这儿的那几位（不看条件）。
+
+    ★ L2474-3：原先这段判据**逐字两份**（`station_empty` / `absent_here` 各抄一遍），
+      而两条的口径注释都自称「同一份判定」—— 改一边就分叉，分叉的后果正是 P1 BUG-5
+      那一族（画面说「有人在旁边坐着」、名册说一个人都没有）。⇒ 收成这一口，两边都走它。
+    ★ **不带 `or {}`**（L2474-4）：域是必存在的（`probe_npcs` K65 钉住读法；基座
+      `cmds_ast.py:571` 同一份域读也不带）⇒ 域读不出来应当炸，不该静默当「空镇」。
+    """
+    return {k: v for k, v in _data("npcs").items()
+            if isinstance(v, dict) and v.get("map") == loc and v.get("subarea") == node}
 
 
 def station_empty(loc: str, node: str, p=None, st: dict | None = None) -> bool:
@@ -57,8 +70,7 @@ def station_empty(loc: str, node: str, p=None, st: dict | None = None) -> bool:
 
     基位就没人（野外 / 塔内 / 两个镇口）⇒ 恒 False（不进这一支；空版场景也只是可选的）。
     """
-    base = {k for k, v in (_data("npcs") or {}).items()
-            if isinstance(v, dict) and v.get("map") == loc and v.get("subarea") == node}
+    base = set(_base_here(loc, node))
     if not base:
         return False
     from .cmds_ast import _npcs_here                      # 本地 import：与 `town_gate` 同一个理由
@@ -75,8 +87,7 @@ def absent_here(loc: str, node: str, p=None, st: dict | None = None) -> list:
     消费端 = `cmds_ast.npc_gone_lines`（观察 / 搭话在「一个人都没有」时逐位点名 +
     他什么时候在 —— 31_NPC作息 §四）。位次 = 域里的插入序（稳定、可复现）。
     """
-    base = [(k, v) for k, v in (_data("npcs") or {}).items()
-            if isinstance(v, dict) and v.get("map") == loc and v.get("subarea") == node]
+    base = list(_base_here(loc, node).items())
     if not base:
         return []
     from .cmds_ast import _npcs_here                      # 本地 import：与 `town_gate` 同一个理由
@@ -102,7 +113,16 @@ def town_gate(p, node=None, notown: str = "SYS_PLACE_NOTOWN", away: str = "SYS_P
     ★ 为什么收成一个口（B4-12 · 端到端玩出来的真 bug）：同一条 `guard_desc` 原先**两种实现** ——
       客栈 / 教堂 / 旧货 / 登记 / 商队判脚下，而 **公会 / 悬赏 / 看 <编号> / 铁匠铺 一句都不判**：
       实测人站在骨田照样能把挂板墙看个遍、把活接了（同一个位置『登记』回的是「这几处都在镇上」）。
-      ⇒ 守卫只许有这一处；谁再自己写一遍 `p["loc"] != TOWN`，`probe_cmds ⑰` 的覆盖面当场红。
+    ★ **这道守卫管的是哪一族**（L2474-2 订正 · 原注释在这里说过头了）：
+      判据 `probe_cmds ⑰` 覆盖面①是**按 `guard_desc` 字样**筛的 ——
+      `在镇上 / 在公会 / 在铺子 / 在客栈` 那 16 条**拦路型**声明才在它眼里。
+      ⇒ 原话「谁再自己写一遍 `p["loc"] != TOWN`，当场红」**不成立**：`hint` 的
+      `guard_desc = "随时"`（`commands.json`）根本不在那一族里，而
+      `cmds_ast.py::hint` 恰恰**合法地**手写了这一句 —— 它不是「拦路」，
+      是**报信**（野外时补一句「这儿是野外」），拦了就等于把指令整条封掉，语义不同。
+      真实边界现已由门禁钉住（`probe_onsite` ⑯-边界）：**手写 `p["loc"] != TOWN` 只许出现在
+      `hint` 这一个报信函数里**；别处再写一份（不论新指令还是新一族）当场红。
+      —— 即：原来那句是**虚假的安全感**（下一个人照它加手写守卫不会被拦），现在是真的。
     """
     if p.get("loc") != TOWN:
         return T(notown)
