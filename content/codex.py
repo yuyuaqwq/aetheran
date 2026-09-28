@@ -268,6 +268,23 @@ def note_gather(p: dict, n: int = 1) -> None:
     _foot(p)["gathers"] += int(n)
 
 
+def note_interrupt(p: dict, n: int = 1) -> None:
+    """打断**真断成**了一次 → 足迹 `interrupts` 加一（称号「三次打断」的那个计数口）。
+
+    ★ 2026-09-28 审计 B 车道高②：这一格此前**全包零写手** —— `_foot` 只把它初始化成 0
+      （`codex.py:107`）、`foot()` 只汇总它（`:392`）、`content/titles.py:114` 读它 ⇒
+      「打断成功累计」那一个称号恒为 0、玩家永远看不到它出现。
+      域里那条登记（`content/data/titles.json::title_three_interrupts.why`）写的是
+      「等战斗交互层（轮流制）把『打断成功』写进去」—— 战斗交互层早已实装
+      （`content/battle_acts.py::Hand._interrupt` 里 `broke` 就是那个信号），那条登记**已过期**。
+    ★ **只数真断成**：对方那一下没被打断（`broke=False`）时那一下出的是 `COMBAT_INT_PUSH`
+      （只是把它下一次行动的到点时刻往后推），按 `titles.json` 的口径不算「打断成功」⇒ 不加。
+    ★ 写在**本模块**（不是 battle_acts 里直接改 `_foot`）：本模块头注写明足迹那一格
+      「★ 只在这里写」，那就守住这条（`note_kill` / `note_read` / `note_gather` 同一族）。
+    """
+    _foot(p)["interrupts"] += int(n)
+
+
 def reveal(p: dict, rid: str) -> bool:
     """问对人 → 问号换成名字（返回这条是不是刚认出来的）。"""
     b = _books(p).get("relic") or {}

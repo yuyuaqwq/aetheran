@@ -116,7 +116,7 @@
     "how": "打断成功累计 10 次",
     "seen": "",
     "where": "名字后面（观察 / 状态）",
-    "why": "21「打断成功累计 10 次」；计数口 foot.interrupts —— 等战斗交互层（轮流制）把「打断成功」写进去",
+    "why": "21「打断成功累计 10 次」；计数口 foot.interrupts —— 由 `content/codex.py::note_interrupt` 写（2026-09-28 接线：`content/battle_acts.py::Hand._interrupt` 里 `broke` 为真时落一次）",
     "cond": {
       "op": "ge",
       "left": {

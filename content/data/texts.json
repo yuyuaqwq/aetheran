@@ -2377,6 +2377,12 @@
     "category": "系统",
     "desc": "触摸 · 这处没东西"
   },
+  "SYS_SAVE_FAIL": {
+    "value": "这一下没存上：{why}\n刚才那一手不算数 —— 换一句话再说一次吧。",
+    "params": ["why"],
+    "category": "系统",
+    "desc": "落档失败（`content/cmds_ast.py::_save` 唯一的 `env.save()` 口抛异常时）· 2026-09-28 审计 B 车道高①：原 `_save` 逐字 `except Exception: pass` ⇒ 落库失败时全包 30+ 条指令照常回一句「成功」而档没落（玩家零可见）。口径与 `SYS_ALLOC_BAD_SAVE` 同族（坏档/坏库都当场点名，**不静默兜底**）· `{why}` = 异常的类名 + 原因（不是代码常量，见 `cmds_ast._save_why`）"
+  },
   "SYS_TOUCH_GET": {
     "value": "{icon}你摸到{name}。",
     "params": [

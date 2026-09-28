@@ -236,6 +236,17 @@ class Hand:
             EF.act_interrupt(battle, actor, tgt, {}, [])
         tgt["ct"] = float(tgt.get("ct") or 0) + push
         self.ok = True
+        if broke:
+            # ★ 2026-09-28 审计 B 车道高②（**本车道唯一一处改 battle_acts.py** · 作业书点名允许的
+            #   最小改动）：`broke`（这一下真把对方那一手截断了）此前只发回话、不落档 ⇒ 足迹里
+            #   `interrupts` 这一格**全包零写手**（`content/codex.py:107` 只做 0 值初始化、`:392`
+            #   只汇总、`content/titles.py:114` 读它）⇒「打断成功 N 次」那一个称号恒为 0、玩家永远
+            #   看不到它。★ 只在**真断成**时加（推后到点时刻那一支不算打断成功 —— 它出的回话是
+            #   `COMBAT_INT_PUSH`）；`self.p` 就是这一手的玩家档（`cmds_battle.interrupt` 传进来）。
+            #   写口是 `codex.note_interrupt`（不是就地改 `_foot`）：本包头注写明足迹那一格
+            #   「★ 只在 codex 写」，与 `note_kill` / `note_read` / `note_gather` 同一族。
+            from .codex import note_interrupt
+            note_interrupt(self.p)
         line = T("COMBAT_INT_BREAK") if broke else T("COMBAT_INT_PUSH", ticks=int(push))
         return ([line], cat, None)
 

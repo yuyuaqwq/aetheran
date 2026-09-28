@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from . import codex as CX
 from .cmds_ast import (_data, _in_fight, _map_scene, _move, _name_of_node, _node_of, _p, _save,
-                       _scene_line, _map_of, T, _pois_here)
+                       _scene_line, _map_of, T, _pois_here, _poi_read_slot)
 
 __all__ = ["tower_enter", "tower_next", "tower_map", "tower_investigate", "tower_leave",
            "door_hint_lines", "foe_lines_here", "step_guard_line"]
@@ -259,7 +259,10 @@ async def tower_enter(env, sink, uid, player):
     p = _go(p, _entry_node(), sink)
     if player is not None:
         player.update(p)
-    _save(env)
+    _bad = _save(env)
+    if _bad:
+        yield T("SYS_SAVE_FAIL", why=_bad)
+        return
     yield T("SYS_TOWER_ENTER")
     yield _map_scene(TOWER)                      # ★ 地图级 =「进门之后那一眼」（P-19 改写）
     yield T("SYS_TOWER_HINT")
@@ -303,7 +306,10 @@ async def tower_next(env, sink, uid, player):
     p = _go(p, dest, sink)
     if player is not None:
         player.update(p)
-    _save(env)
+    _bad = _save(env)
+    if _bad:
+        yield T("SYS_SAVE_FAIL", why=_bad)
+        return
     yield T("SYS_TOWER_UP", floor=fname, room=_name_of_node(TOWER, dest))
     yield _scene_line(TOWER, dest)
 
@@ -356,13 +362,22 @@ async def tower_investigate(env, sink, uid, player):
         if st_ == "no":                          # 门槛判得出不成立 ⇒ 这一条不读
             continue
         yield T("SYS_READ_HEAD", name=v.get("name"))
-        yield T(v["read_text"])
+        # ★ 2026-09-28 审计 B 车道高④（原先这里是 `yield T(v["read_text"])` —— 全仓最后一处
+        #   `read_text` 直读）：`cmds_ast._poi_read_slot` 才是「按真实经历取正文」的**唯一口**
+        #   （g4-⑩；另两个调用点 = `touch` / `read_thing`）。直读会绕过变体机制 ——
+        #   域里 `poi_stele_names` 带着 `text_variant={"read": "poi_named_birch"}`（读过白桦林
+        #   那棵刻着名字的树之后，碑上那一句该换一条），塔内这条正是它准备好的变体槽位，
+        #   却因为这里直读而**永远取不到**。改走那一个口（与那两个调用点同形）。
+        yield T(_poi_read_slot(v, p))
         if v.get("into_codex") and CX.note_read(p, pid):
             got.append(pid)
     if got:
         if player is not None:
             player.update(p)
-        _save(env)
+        _bad = _save(env)
+        if _bad:
+            yield T("SYS_SAVE_FAIL", why=_bad)
+            return
         for pid in got:
             yield T("SYS_CODEX_NEW", book=CX.label("relic"), name=CX.name_of("relic", pid))
 
@@ -404,6 +419,9 @@ async def tower_leave(env, sink, uid, player):
     CX.note_step(p, loc, node)
     if player is not None:
         player.update(p)
-    _save(env)
+    _bad = _save(env)
+    if _bad:
+        yield T("SYS_SAVE_FAIL", why=_bad)
+        return
     yield T("SYS_TOWER_LEAVE", name=_name_of_node(loc, node))
     yield _scene_line(loc, node)

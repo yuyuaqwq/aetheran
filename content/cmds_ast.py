@@ -231,12 +231,54 @@ def add_exp(p, n):
     return ups
 
 
+def _save_why(exc: Exception) -> str:
+    """落库失败**说给玩家听**的那一句原因 —— 异常的类名 + 它自己带的话。
+
+    ★ 为什么要点名到「类名 + 原话」而不是笼统一句「存不上」：`except Exception: pass`
+      那一支之所以是「高」级静默失败，正是因为它**什么都不说** —— 玩家拿到一句「做成了」，
+      重连之后发现东西没了，却不知道发生过什么。把真因摊开，维护的人与玩家都看得见。
+    ★ 不用玩家看不懂的机器词，但也不许把它藏起来：类名（`OSError` / `RuntimeError` …）是
+      这套仓通篇的错因写法（`SYS_ALLOC_BAD_SAVE` 的 `{why}` 同款），不是新发明。
+    ★ 空消息（`Exception()` 什么都不带）也有下文，不会印出一个空白的「：」。
+    """
+    msg = str(exc).strip()
+    return ("%s: %s" % (type(exc).__name__, msg)) if msg else type(exc).__name__
+
+
 def _save(env):
-    """★ 落档是处理器的责任（引擎 2026-09-15 起不再每条消息整档回写）。"""
+    """★ 落档是处理器的责任（引擎 2026-09-15 起不再每条消息整档回写）。
+
+    ★★ 2026-09-28 审计 B 车道高①（原先这里是 `try: env.save() / except Exception: pass`）：
+      `_save` 是**全包唯一落档口**（`cmds_battle` 等 16 个文件共 60 个调用点都走它）
+      ⇒ 那一行 `pass` 是**一次落库失败 ⇒ 全包 30+ 条指令都回一句「做成了」而档没落**，
+      玩家零可见（实测：把 `save_player` 弄抛，敲『往北』照样收到「你走出北门」两屏，
+      重连后位置弹回原处）。这是「不静默兜底」铁律上最该先拆的一处。
+    ⇒ **不吞**：落库失败一律把**原因**交回调用方，由调用方点名给玩家（`SYS_SAVE_FAIL`），
+      并且**当次操作的成功话术一并作废**（不许一边说「做成了」一边没存上）。
+      返回值 = `None`（存上了）or 原因字符串（没存上）；`env` 为空（无落档上下文）按**存上了**算
+      —— 那是「这一下本来就不改档」的读路径（`title_lines` / `egg_lines` 允许 `env=None`）。
+
+    ★ 为什么不干脆往上抛：实测引擎 `runtime.invoke` **不接处理器异常** ⇒ 抛出去 = 玩家收到
+      **0 行**（比现在还糟：连场景描述都没了，而且对玩家仍然是静默）。命名 + 当场点名才是
+      这个引擎面上唯一能让玩家看见的路（另两条车道正在改引擎的那几处）。
+
+    ★ 调用方的统一写法（16 处逐字同形；本包**不另发明一个包一层 try 的包装函数** ——
+      那正是把问题重新藏起来）：生成器实现体
+
+          _bad = _save(env)
+          if _bad:
+              yield T("SYS_SAVE_FAIL", why=_bad)
+              return                       # ★ 当次操作的成功话术一并作废
+
+      交 list 的那两个（`title_lines` / `egg_lines`）把 `yield`/`return` 换成 `return [那一行]`。
+    """
+    if env is None:
+        return None
     try:
         env.save()
-    except Exception:
-        pass
+    except Exception as exc:                      # noqa: BLE001 —— 这里就是「接住并点名」那一口
+        return _save_why(exc)
+    return None
 
 
 #: ★ B3-12（K57 的活口）：默认档里的**可变容器** —— 出档一律换新对象，别把默认档当草稿纸
@@ -380,7 +422,10 @@ async def be_race(env, sink, uid, player):
     p["race"] = kid.replace("race_", "")
     if player is not None:
         player.update(p)
-    _save(env)
+    _bad = _save(env)
+    if _bad:
+        yield T("SYS_SAVE_FAIL", why=_bad)
+        return
     yield T("SYS_RACE_DONE", name=rec.get("name", kid), line=rec.get("line") or "")
     for tal in (rec.get("talents") or []):
         yield T("SYS_RACE_TALENT", name=tal.get("name", ""), effect=tal.get("effect", ""))
@@ -542,7 +587,10 @@ async def be_class(env, sink, uid, player):
     p = _p(p)                       # ★ 出档口现算：上限这一格随职业落地（`hp` 跟着回满）
     if player is not None:
         player.update(p)
-    _save(env)
+    _bad = _save(env)
+    if _bad:
+        yield T("SYS_SAVE_FAIL", why=_bad)
+        return
     yield T("SYS_CLS_DONE", name=rec.get("name", kid))
     yield T("SYS_CLS_MECH", mech=rec.get("mech", ""))
     if p.get("hp_max"):
@@ -731,7 +779,9 @@ def title_lines(p, player=None, env=None) -> list:
         return []
     if player is not None:
         player.update(p)
-    _save(env)
+    _bad = _save(env)
+    if _bad:
+        return [T("SYS_SAVE_FAIL", why=_bad)]     # ★ 本函数交 list（不是 yield）· 成功话术一并作废
     return [T("SYS_TITLE_FOUND", name=TT.name_of(t)) for t in new]
 
 
@@ -745,7 +795,9 @@ def egg_lines(p, player=None, env=None) -> list:
         return []
     if player is not None:
         player.update(p)
-    _save(env)
+    _bad = _save(env)
+    if _bad:
+        return [T("SYS_SAVE_FAIL", why=_bad)]     # ★ 同上：本函数交 list（不是 yield）
     out = []
     for eid in new:
         out.append(T("SYS_EGG_FOUND", title=EG.title_of(eid)))
@@ -919,7 +971,10 @@ async def time_now(env, sink, uid, player):
     st = CAL.tick(p)                       # 钟源 = 宿主注入（facade.clock），本模块不自己取钟
     if player is not None:
         player.update(p)
-    _save(env)
+    _bad = _save(env)
+    if _bad:
+        yield T("SYS_SAVE_FAIL", why=_bad)
+        return
     yield T("SYS_WEATHER_CHANGE", place=_name_of_node(p["loc"], p["node"]),
             hour=st["hour_name"], weather=st["weather_name"],
             flavor=T(CAL.desc_slot(st["weather"], st)))
@@ -938,7 +993,10 @@ async def event_now(env, sink, uid, player):
     st = CAL.tick(p)                       # 与「时间」同一口径：把「今天」记到档上
     if player is not None:
         player.update(p)
-    _save(env)
+    _bad = _save(env)
+    if _bad:
+        yield T("SYS_SAVE_FAIL", why=_bad)
+        return
     yield T("SYS_EV_HEAD")
     on = CAL.events_now(st, p)
     if not on:
@@ -985,7 +1043,10 @@ async def go_north(env, sink, uid, player):
     p = _move(p, "belt_north", dest, sink)
     if player is not None:
         player.update(p)
-    _save(env)
+    _bad = _save(env)
+    if _bad:
+        yield T("SYS_SAVE_FAIL", why=_bad)
+        return
     yield T("SYS_MOVE_OUT_NORTH")
     yield _map_scene("belt_north")            # ★ B3-6a：地一屏从 texts 来（原先内联在代码里）
     for line in event_lines(p, "belt_north", dest, entered=True):    # ★ B3-5：一句进林描述
@@ -1012,7 +1073,10 @@ async def go_east(env, sink, uid, player):
     p = _move(p, "belt_east", dest, sink)
     if player is not None:
         player.update(p)
-    _save(env)
+    _bad = _save(env)
+    if _bad:
+        yield T("SYS_SAVE_FAIL", why=_bad)
+        return
     yield T("SYS_MOVE_OUT_EAST")
     yield _map_scene("belt_east")             # ★ B3-6a：同上
     for line in event_lines(p, "belt_east", dest, entered=True):    # ★ B3-5：同上
@@ -1039,7 +1103,10 @@ async def go_west(env, sink, uid, player):
     p = _move(p, "belt_west", dest, sink)
     if player is not None:
         player.update(p)
-    _save(env)
+    _bad = _save(env)
+    if _bad:
+        yield T("SYS_SAVE_FAIL", why=_bad)
+        return
     yield T("SYS_MOVE_OUT_WEST")
     yield _map_scene("belt_west")             # ★ B3-6a：同上
     for line in event_lines(p, "belt_west", dest, entered=True):    # ★ B3-5：同上
@@ -1075,7 +1142,10 @@ async def enter_town(env, sink, uid, player):
     CX.note_step(p, TOWN, "wt_gate_n")
     if player is not None:
         player.update(p)
-    _save(env)
+    _bad = _save(env)
+    if _bad:
+        yield T("SYS_SAVE_FAIL", why=_bad)
+        return
     yield _map_scene(TOWN)                                      # ★ B3-6a：进镇那一屏从 texts 来（原内联）
     yield T("SYS_TOWN_ENTER_HINT")
     # ★ fix5-nav（P1 BUG-11 / P3 体验）：`北口` 归站点（站名那一族）之后，「出镇走哪个词」要当面说清 ——
@@ -1103,7 +1173,10 @@ async def go_back(env, sink, uid, player):
     CX.note_step(p, loc, node)                # ★ B3-2：退回也是走到了一趟
     if player is not None:
         player.update(p)
-    _save(env)
+    _bad = _save(env)
+    if _bad:
+        yield T("SYS_SAVE_FAIL", why=_bad)
+        return
     yield T("SYS_MOVE_BACK", name=_name_of_node(loc, node))
 
 
@@ -1177,7 +1250,10 @@ async def go_to(env, sink, uid, player):
     CX.note_step(p, loc, hit)                 # ★ B3-2：走到的那一趟
     if player is not None:
         player.update(p)
-    _save(env)
+    _bad = _save(env)
+    if _bad:
+        yield T("SYS_SAVE_FAIL", why=_bad)
+        return
     yield T("SYS_MOVE_TO", name=_name_of_node(loc, hit))
     # ★ fix5-nav：走到塔门口那一格 —— 顺口说一句门能进（与 `观察` 同一支 · `door_hint_lines`）
     from .cmds_tower import door_hint_lines
@@ -1461,7 +1537,10 @@ async def alloc_points(env, sink, uid, player):
     p = _p(p)                     # ★ 出档口再算一遍：生命上限跟着加点一起动（P-27 同一个口）
     if player is not None:
         player.update(p)
-    _save(env)
+    _bad = _save(env)
+    if _bad:
+        yield T("SYS_SAVE_FAIL", why=_bad)
+        return
     yield T("SYS_ALLOC_OK", stat=_stat_slot(stat), n=cnt,
             now=int((p.get("alloc") or {}).get(stat) or 0), left=left - cnt)
     # ★ fix-n-small ①：**加点也报上限变化** —— 与「装备 / 卸下」那一条**同一句话、同一份数据源**：
@@ -1830,7 +1909,10 @@ async def poi_effect_lines(env, sink, uid, p, pid, rec, verb, player=None):
     if dirty:
         if player is not None:
             player.update(p)
-        _save(env)
+        _bad = _save(env)
+        if _bad:
+            yield T("SYS_SAVE_FAIL", why=_bad)
+            return
 
 
 # ══════════════════════════════════════════════════════════════
@@ -1911,7 +1993,10 @@ async def touch(env, sink, uid, player):
     if got:
         if player is not None:
             player.update(p)
-        _save(env)
+        _bad = _save(env)
+        if _bad:
+            yield T("SYS_SAVE_FAIL", why=_bad)
+            return
         for pid in got:
             yield T("SYS_CODEX_NEW", book=CX.label("relic"), name=CX.name_of("relic", pid))
     for line in egg_lines(p, player, env):      # ★ B3-1：读过东西那一处可能连上另一处
@@ -1965,7 +2050,10 @@ async def read_thing(env, sink, uid, player):
     if v.get("into_codex") and CX.note_read(p, k):        # ★ B3-10：空串 = 就地线索，不进谱（同 touch）
         if player is not None:
             player.update(p)
-        _save(env)
+        _bad = _save(env)
+        if _bad:
+            yield T("SYS_SAVE_FAIL", why=_bad)
+            return
         yield T("SYS_CODEX_NEW", book=CX.label("relic"), name=CX.name_of("relic", k))
 
 

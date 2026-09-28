@@ -206,10 +206,31 @@ def basic_skill_of(class_name: str):
     return v
 
 
-def skill_level_of(actor: dict, skill_name: str) -> int:
-    """技能等级（本包第一版：全按 1）。"""
-    return 1 if skill_name else 0
+# ★ 2026-09-28 审计 B 车道高③ —— **两个零消费者的死出口，本批删掉**（不留兼容壳）。
+#
+#   原先这里有两行「看着像接线、其实谁也没调」的函数：
+#       def skill_level_of(actor, skill_name): return 1 if skill_name else 0
+#       def skill_up(actor, skill_name, n=1):  return None
+#   删它们的理由（三条都实测过，不是推断）：
+#     ① **零挂载**：`git grep skill_level_of_fn / skill_up_fn` 在本包 = 0 处 ——
+#        引擎认的那两个 hook（`saintess_engine/config.py:58-60`）本包**从来没装过**。
+#     ② **零消费端**：本包唯一读技能等级的那一处（`content/mech.py:779`）走的是
+#        **引擎**的转发位 `GC.formulas().skill_level_of(...)`，不是这里这个函数。
+#        留着它 = 下一个读代码的人会以为「技能等级已经接好了」。
+#     ③ **它自己就是那条静默降级链的源头**：引擎 `extends/ext_combat/battle/formulas.py::skill_level_of`
+#        读 `skill_level_of_fn`，未装配就 `return 1` —— 技能等级恒按 1 级算。删掉本包这个
+#        恒 1 的假实现，降级链的那一半就断在这儿（**引擎那一半的 fail-closed 归车道 A/D**，
+#        见本批报告；本车道不碰引擎仓）。
+#
+#   ★ 为什么不「在这里装一个真实现」：本包**没有技能等级这个玩法**。三处取证 ——
+#     · 玩家档上没有 `skill_levels` 那一格（全包 0 处）；
+#     · `content/data/skills.json` 里那 48 条的 `lv` 是**解锁等级**（`cmds_skill._of_class` /
+#       `combat._default_skills` 都按它分「学会了 / 还没到等级」两拨），不是成长等级，
+#       拿它当等级填进去 = 把「几级能学」错当成「这条技几级」；
+#     · 真源里没有这一条口径：`aetheran-plan` 全树搜「技能等级/技能成长/技能点」只命中
+#       `02_数值宪法/_旧案参考/`（旧案调研材料）三处，不是在线规格。
+#     另外实测：即便把等级接上，本包今天**一个数都不会变**（`skill_power_mult` 的 `p` 来自
+#     未装配的 `skill_up_fn` ⇒ 恒 1.0；48 条技能没有一条带 `effect` / `buff_turns`，
+#     `_do_buff` 那条支走不到）。所以**不装**：真要开这个玩法，得先有真源口径。
+#     —— 真要开的时候，装的是 `skill_level_of_fn`（引擎认的那个名字），不是这里这两个。
 
-
-def skill_up(actor: dict, skill_name: str, n: int = 1):
-    return None
