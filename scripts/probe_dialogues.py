@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import json
+import re
 import os
 import time
 import sys
@@ -341,10 +342,16 @@ chk("⑩-a ★ 四层位齐率：%d/%d 位四层齐（硬底线 ≥ %d · 逐步
 
 # ⑩-b **轮换**：一个层若**每一句都是 need=null**，它就永远只说同一句
 #   （`_pick_indexed` 按顺序挑第一条满足的，null 恒满足 ⇒ 后面全是死句）。
-#   判据 = 这种「纯兜底」层不许比基线更多。
-#   基线 7（累计：19 → 10 → 7）；硬上限 = **不许比基线更多**（逐步降到 0）。
-#   余下 7 个集中在 meet（初次搭话）与两个 daily；meet 层是「还不熟时唯一会说话的那档」，
-#   轮换窗口天然小 ⇒ 下批优先给 daily 开轮换，meet 只在角色人设本身有第二条口气时补。
+#   判据 = 这种「纯兜底」层**一个都不许有**。
+#   基线走过的路：19 → 10 → 7 → **0**（累计四轮，每轮只加严不放宽）。
+#   ★ 2026-09-29 P1-4：现值已是 **0**，而上限还停在 7 ⇒ 这条判据**什么都拦不住**
+#     （要长到 7 个纯兜底层才红，而域里一个都没有 = 余量白留，正是「门槛数字没跟账」
+#     那一类假绿）。按分档口径把上限收成 0 = 硬底线，不是放宽：
+#     域里**此刻**就是 0，所以这一改**不会让本车道自己红**，只是把「已经做到的事钉住」。
+#   ★ 与 ⑩-d 反证的关系：⑩-d 的 `_need_add = max(1, 上限 - 现值 + 1)` 随基线自走
+#     ⇒ 上限收成 0 之后它要添 1 个（即 0+1 > 0）照样顶得破，**反证不恒真**。
+#   ★ 为什么不把 `idle` 也算进来：idle 是「不熟时的沉默占位」，规格 §一 的四层不含它；
+#     本判据只管 ⑩-a 点名的四层（`_LAYERS4`），与位齐判据同一条口径，不另开第二份。
 _FLAT = []
 for _k, _v in _npc.items():
     for _lk, _nd in _v["nodes"].items():
@@ -352,8 +359,8 @@ for _k, _v in _npc.items():
             continue
         if all(t.get("need") is None for t in _nd["texts"]):
             _FLAT.append("%s/%s" % (_k, _lk))
-_MAX_FLAT = 7
-chk("⑩-b ★ 轮换：纯兜底层（每句 need=null ⇒ 玩家每次看同一句）%d 个（上限 ≤ %d · 逐步降到 0）"
+_MAX_FLAT = 0
+chk("⑩-b ★ 轮换：纯兜底层（每句 need=null ⇒ 玩家每次看同一句）%d 个（硬上限 ≤ %d · 19→10→7→0）"
     % (len(_FLAT), _MAX_FLAT), len(_FLAT) <= _MAX_FLAT,
     (" · ".join(sorted(_FLAT)[:8]) or "无"))
 
@@ -1314,6 +1321,61 @@ _npc.update(_exh22_bak)
 chk("㉒-c 反证：把 %s 整棵树压到只剩一条无条件句 ⇒ ㉒-a 必抓到它（判据不恒真）"
     % _probe22.replace("dlg_", ""), _exh22 < _MIN_EXHAUSTED,
     "压完 %d 种（底线 %d · 尾部相邻重样 %d 次）" % (_exh22, _MIN_EXHAUSTED, _dup22b))
+
+# ㉓ ★ P1-5（2026-09-29 · 文案车道 P1）—— **情报量**：不许有「纯寒暄」
+#    本车道自己的口径写着一句「**一句台词至少给一点玩家现在还不知道、但需要知道的东西**，
+#    不许纯寒暄」—— 而 ㉓ 之前**没有任何一条判据在看这件事**：
+#    位齐（⑩-a）判的是层齐不齐、轮换（⑩-b/⑪）判的是重不重样，
+#    它们**一个字都没提信息量** ⇒ 一句「辛苦了」能一路绿到今天。
+#    ★ 为什么这条能机器判（别把「文笔好不好」也塞进来）：「纯寒暄」是**闭集** ——
+#      问候 / 致谢 / 寒暄连接词那几十个词，不含任何专名、方位、动机、传闻口径。
+#      判据 = 把台词里「」中的内容抽出来、去掉标点，若**每个字都来自寒暄词表** ⇒ 判寒暄。
+#      这不是「用词频次近似审美」，是**可枚举的精确判定**。
+#    ★ 域里现状（2026-09-29 实测）：**0 行纯寒暄**；最短的一句台词
+#      「骨头没少。」4 个字（哈根 daily#0），最长的 152 字。
+#      零引号的 17 行是**旁白**（5 棵物件树的 15 句 + 艾德/哈根隐藏线各一句沉默），
+#      那是「看一眼说一句」的物件世界与「他不说话」的角色写法，**不是寒暄** ⇒ 豁免。
+#      底线定 **0**（硬要求）：现值就是 0，这一改不会让本车道自己红，只把已做到的钉住。
+#    ★ 与 ⑩-b 同一条纪律：门槛跟**现值**走，不是跟「当初留的余量」走。
+_CHAT_CHARS = set("你好您在吗早上好晚上好辛苦了谢谢多谢不客气再见保重一路平安请问打扰了没事啊喂么不走了吧呀好的行嗯啊哦")
+_PUNCT = "。，、！？…—·「」 \t\r\n"
+
+
+def _speech_only(t):
+    """抽出台词本体：只留「」里的内容（旁白与动作括号一并去掉）。"""
+    return "".join(re.findall("「([^」]*)」", t or ""))
+
+
+def _is_chatter(s):
+    core = "".join(c for c in s if c not in _PUNCT)
+    return bool(core) and all(c in _CHAT_CHARS for c in core)
+
+
+_MIN_CHATTER = 0
+_CHATTER = []
+_ALLTXT = []
+for _k, _v in sorted(dl.items()):
+    for _lk, _nd in _v["nodes"].items():
+        for _i, _t in enumerate(_nd["texts"]):
+            _ALLTXT.append((_k, _lk, _i, _t))
+            if _is_chatter(_speech_only(_t.get("text"))):
+                _CHATTER.append("%s/%s#%d %s" % (_k, _lk, _i, _speech_only(_t.get("text"))))
+chk("㉓-a ★ 情报量：纯寒暄行（句子全是寒暄词 ⇒ 玩家还没从中拿到东西）%d 行 · 硬上限 ≤ %d"
+    " —— 现值 0（全部 %d 句台词里一句都没有）" % (len(_CHATTER), _MIN_CHATTER, len(_ALLTXT)),
+    len(_CHATTER) <= _MIN_CHATTER, (" · ".join(sorted(_CHATTER)[:6]) or "0 行"))
+
+# ㉓-b **反证**：塞一句真的寒暄进域 ⇒ 判据必须抓得住（不然就是恒真的判据）。
+_probe23 = sorted(_npc)[0]
+_lay23 = sorted(dl[_probe23]["nodes"])[0]
+_bak23 = json.loads(json.dumps(dl[_probe23]))
+dl[_probe23]["nodes"][_lay23]["texts"][0]["text"] = "「辛苦了。多谢。」"
+_caught23 = ["%s/%s#0" % (_probe23, _lay23)] if _is_chatter(
+    _speech_only(dl[_probe23]["nodes"][_lay23]["texts"][0]["text"])) else []
+# 按 key 精确还原（不整树清掉：其它判据已经跑完了，这里只把改动那一句还回去）
+dl[_probe23]["nodes"][_lay23]["texts"][0]["text"] = _bak23["nodes"][_lay23]["texts"][0]["text"]
+chk("㉓-b ★ 反证：塞一句「辛苦了。多谢。」进 %s 的 %s 层 ⇒ 判据必抓到（判据不恒真）"
+    % (_probe23.replace("dlg_", ""), _lay23), bool(_caught23),
+    "塞进 %s/%s#0 ⇒ %s" % (_probe23, _lay23, "抓到了" if _caught23 else "漏了（判据恒真）"))
 
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
