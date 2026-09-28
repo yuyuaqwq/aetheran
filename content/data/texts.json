@@ -1400,7 +1400,7 @@
     "desc": "配方一览 · 没学会的那几道"
   },
   "SYS_COOK_OK": {
-    "value": "【{name}】{icon} 做好了，进了背包。\n吃下去：{buff}（{minutes} 分钟）。",
+    "value": "📦 【{name}】{icon} 做好了，进了背包。\n吃下去：{buff}（{minutes} 分钟）。",
     "params": [
       "buff",
       "icon",
@@ -3494,7 +3494,7 @@
     "desc": "装备 · 已经穿上了"
   },
   "SYS_GEAR_EQUIP_OK": {
-    "value": "你穿上了{icon}{name}（{kind}）。",
+    "value": "📦 你穿上了{icon}{name}（{kind}）。",
     "params": [
       "icon",
       "kind",
@@ -3524,7 +3524,7 @@
     "desc": "装备 · 同一位子换下"
   },
   "SYS_GEAR_UNEQUIP_OK": {
-    "value": "你卸下了{icon}{name}（{kind}）—— 收进背包。",
+    "value": "📦 你卸下了{icon}{name}（{kind}）—— 收进背包。",
     "params": [
       "icon",
       "kind",
@@ -4630,7 +4630,7 @@
     "desc": "换武器 · 候选不止一件时那一行（本条声明没有参数 ⇒ 换哪件由数据说话）"
   },
   "COMBAT_SWAP_OK": {
-    "value": "你换上了{icon}{name}（{kind}）—— 这一手花在换手上。",
+    "value": "📦 你换上了{icon}{name}（{kind}）—— 这一手花在换手上。",
     "params": [
       "icon",
       "kind",

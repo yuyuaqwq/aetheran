@@ -390,5 +390,77 @@ else:
         chk(u"⑤ 还原 ⇒ 红集回到 0（判据没留下残留）", not scan_meter_emo(funcs))
 
 print()
+# ── ⑥ 「物品事务结果行」（行首形如 `{icon}{name}` 那一族）────────────────────
+# P2-11：全包里「动作成了」的结果行分两拨 —— 买/卖/丢/存取/打造都有行首语义锚（💰🗑️📦🔨），
+# 而穿上/卸下/换手/做饭那四条只是 `{icon}{name}` 起头 —— 那个 `{icon}` 是**物品自己的图标**
+# （内容数据的 icon 字段），不是行首锚；玩家一屏里两种子写法不一致。
+# 定义域现算（不手写名单）：行首形如 `{icon}{name}`（物品图标与名字相邻）。
+# ★ 不钉「emoji 覆盖率」（鱼鱼口径：emoji 少不是缺陷，只判一致性）——
+#   本条只判「同族结果行行首锚不统一」；归一组里部分行本来就没锚时，不开此依据。
+ITEM_ICON_PAIR = re.compile(r"\{icon\}\{name\}")
+
+
+def _is_item_row(slot):
+    return bool(ITEM_ICON_PAIR.search(_val(slot)))
+
+
+def scan_item_anchor(funcs):
+    """产出 [相对路径, 函数名, 行号, {emoji: [槽位…]}] —— 同屏物品事务结果行锚不统一。"""
+    out = []
+    for (rel, name), info in sorted(funcs.items()):
+        allslots = {s for s in _collect(rel, name, funcs) if s in TX}
+        grp = [s for s in allslots if _is_item_row(s)]
+        if len(grp) < 2:
+            continue
+        ems = {}
+        for s in grp:
+            e = _lead(_val(s))
+            if e:
+                ems.setdefault(e, []).append(s)
+        if ems and sum(len(v) for v in ems.values()) == len(grp) and len(ems) > 1:
+            out.append((rel, name, info[2], ems))
+    return out
+
+
+print(u"⑥ 同屏里那几行「物品事务的结果」（行首形如 {icon}{name}）")
+print(u"  · 定义域现算：分屏上落到 {icon}{name} 的槽位")
+_item_hits = scan_item_anchor(funcs)
+chk(u"⑥ 同屏物品事务结果行的行首锚不一致 = 0 处", not _item_hits,
+    u"" if not _item_hits
+    else u"\n".join(u"      %s::%s %s" % (h[0], h[1], h[3]) for h in _item_hits))
+
+# ⑥ 的反证：真盘 0 缺陷时没现成的不一致组 ⇒ 自己造一个（抽掉某一行锚，与 ④ 同法）。
+_p6 = None
+for (rel, name), info in sorted(funcs.items()):
+    allslots = {x for x in _collect(rel, name, funcs) if x in TX}
+    grp = [x for x in allslots if _is_item_row(x)]
+    if len(grp) < 2:
+        continue
+    ems = {}
+    for x in grp:
+        e = _lead(_val(x))
+        if e:
+            ems.setdefault(e, []).append(x)
+    if len(ems) == 1 and sum(len(v) for v in ems.values()) == len(grp):
+        _p6 = (rel, name, list(ems)[0], grp[0])
+        break
+if not _p6:
+    chk(u"⑥ 找得到反证注入点", False, u"★ 判据可能恒绿，请核")
+else:
+    _rel6, _fn6, _only6, _strip6 = _p6
+    _other6 = next((x for x in sorted(__EMO_FINDALL) if x != _only6), None)
+    if not _other6:
+        chk(u"⑥ 反证用 emoji 得到", False, u"表里只有一种行首锚")
+    else:
+        _orig6 = TX[_strip6]["value"]
+        try:
+            TX[_strip6]["value"] = EMO.sub(_other6, _orig6, count=1)
+            _h6 = scan_item_anchor(funcs)
+            chk(u"⑥ %s::%s 把 %s 的行首锚 %s 换成 %s ⇒ 判据当场红（有牙）"
+                % (_rel6, _fn6, _strip6, _only6, _other6), bool(_h6), u"命中 %d 处" % len(_h6))
+        finally:
+            TX[_strip6]["value"] = _orig6
+        chk(u"⑥ 还原 ⇒ 红集回到 0（判据没留下残留）", not scan_item_anchor(funcs))
+
 print(u"结果：%s" % (u"全绿 ✓" if ok else u"有红 ✗"))
 sys.exit(0 if ok else 1)
