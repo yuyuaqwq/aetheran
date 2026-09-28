@@ -34,8 +34,11 @@ def map_key(loc):
 
 
 #: 「这一站的人此刻都不在」那一版的键尾（`SCENE_<节点>_EMPTY`）—— 口径见 `resolve` 的 `empty`。
-#: ★ 这个字面量带 `%s`：`scripts/probe_copy` 的「模板拼出来的键也算被引用」认的是 `"%s_…"` 这种写法
-#:   （与 `slot_key` 的 `"SCENE_%s"` 同一手）—— 写成 `+ "_EMPTY"` 会让那一条查不出「谁引用了它」。
+#: ★ 它是**键尾的唯一真源**：`empty_key` 逐字由它拼，不另写一份字面量（审计 L2529-3）。
+#: ★ 关于「拼法会不会让 `scripts/probe_copy` ⑤ 查不出谁引用了它」：实测**不成立** ——
+#:   ⑤ 的模板判据认的是**含 `%s` 的字面量拼出的正则**，而本模块 `slot_key` 里那个
+#:   `"SCENE_%s"` 已经把 `SCENE_<任何>_EMPTY` 整个形状覆盖掉（实测 `SCENE_WT_WALL_EMPTY` 命中 True）。
+#:   所以这里用 `+` 拼不丢覆盖率；原先那条「写成 + 会让那一条查不出」的理由是**杜撰的**，已删。
 EMPTY_SUFFIX = "_EMPTY"
 
 
@@ -47,7 +50,7 @@ def empty_key(node):
     玩家照着画面去『搭话』只得到「这儿没有别人」（P1 BUG-5）。空版只在这一站**本该有人、
     此刻一个都没到场**时才用（判定 = `content/town.py::station_empty`）。
     """
-    return "%s_EMPTY" % node_key(node)
+    return node_key(node) + EMPTY_SUFFIX
 
 
 #: ★ g4-⑤：「按状态分支」那一档的变体后缀（`SCENE_<节点>__<状态>`）。
