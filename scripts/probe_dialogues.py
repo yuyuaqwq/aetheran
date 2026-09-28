@@ -356,6 +356,90 @@ for _k, _v in _npc.items():
 chk("⑩-e ★ 没有死句（need=null 之后不许再挂条件句 —— 那句永远出不来）",
     not _DEAD, (" · ".join(_DEAD[:6]) or "无"))
 
+# ⑪ ★ P1-9（2026-09-28）—— **可观测的轮换**：玩家连敲十下到底看到几句不重复的
+#    ★ 前面 ⑩-a/⑩-b 判的是**域里的形状**（位齐 · 有没有 need=null），
+#      它们全绿的那天，玩家看到的仍然是同一句 —— 因为 ⑩-b 只抓「整层都是 need=null」，
+#      抓不住「一层里有四句、但四句都挂在同一个条件上」这种（域里看着挺热闹，
+#      `_pick_indexed` 按顺序挑第一条满足的 ⇒ 同一时刻只有第一句出得来）。
+#      实测原状：按 3 个游戏日 × 4 时辰 × 4 天气跑 48 趟，14/14 位只有 2–4 句不重复。
+#    本判据因此**不数域里的条数**，改成**真敲**：造档 + 真调 `_pick_layer`，
+#      走一遍玩家会遇到的（时辰 × 天气）世界状态，数「拿到几句**不同**的台词」。
+#    分档：先钉「最差那位 < 3 句必红」这种硬底线（现值 3），随内容推进往上调，只接受更严。
+_LAY = ("meet", "daily", "main", "hidden")
+_HOURS = ("hr_dawn", "hr_day", "hr_dusk", "hr_night")
+_WEATH = ("w_sunny", "w_rain", "w_fog", "w_snow")
+_PROG_FLAGS = ("quest_return_stone_done", "main04_done", "main05_done", "main06_active",
+               "main08_done", "main09_done", "main10_active", "main11_done", "main12_done",
+               "oldroad_done", "nameline_done", "swordband_done", "quest_lamp_oil_done",
+               "asked_for_rain_herb")
+_BAGS = ("i_horn_half", "i_token_stone_shard", "i_set_sentry_gauntlet",
+         "i_set_northwall_amulet", "i_whetstone", "i_food_kao_shiban")
+
+
+def _rot_probe(npc_key, days=3, opened=True):
+    """照玩家会遇到的路线真搭话一遍（熟了之后 = 日常层主场景）→ 不重复台词数。"""
+    _fl = {"talked": {}, "talk": {}, "quest_done": {}}
+    for _t in _PROG_FLAGS:
+        _fl[_t] = bool(opened)
+    _p = {"flags": _fl,
+          "bag": {_b: (1 if opened else 0) for _b in _BAGS},
+          "heard": {}, "level": 5}
+    _seen = []
+    for _d in range(days):
+        for _h in _HOURS:
+            for _w in _WEATH:
+                _p["flags"]["talked"][npc_key] = _d * len(_HOURS) + 1
+                # ★ 取件走 `_npc`（不是 `dl`）—— 反证要在 `_npc` 上换掉一棵树，
+                #   读 `dl` 的话那次替换根本不生效 ⇒ 压完还是原值 = 判据恒绿 = 自己瞎了。
+                _ly, _idx, _txt = CT._pick_layer(_npc[npc_key]["nodes"], _p,
+                                                 {"hour": _h, "weather": _w}, npc_key)
+                if not _txt:
+                    continue
+                _seen.append(_txt)
+                CT.HD.note(_p, npc_key, _ly, _idx)
+    return len(set(_seen))
+
+
+_ROT = {k: _rot_probe(k) for k in sorted(_npc)}
+_ROT_MIN = min(_ROT.values())
+_ROT_SAME = {k: v for k, v in _ROT.items() if v < 3}
+#   ★ 底线定 **4** 而不是 3（这一步是量出来的，不是拍的）：把域回退到本批修之前的
+#     那个提交（`6c5aafc^`）再跑本判据，最差那位正好 **3 句** ⇒ 底线 3 会让
+#     「修之前的原状」也绿，等于判据抓不住它要防的东西。
+#     现值最差 4（玛莎）⇒ 底线 4 卡在「修完不许退回去」的那一档上。
+_ROT_FLOOR = 4
+_ROT_SAME = {k: v for k, v in _ROT.items() if v < _ROT_FLOOR}
+chk("⑪-a ★ 可观测轮换：48 趟（3 游戏日 × 4 时辰 × 4 天气）里，每位至少看到 %d 句不同台词"
+    "（真敲 `_pick_layer` · 最差 %d 句 · 硬底线 ≥ %d · 逐步加严）"
+    % (_ROT_FLOOR, _ROT_MIN, _ROT_FLOOR),
+    not _ROT_SAME, ("·".join("%s=%d" % (k, v) for k, v in sorted(_ROT_SAME.items()))
+                    or "14/14 达标"))
+
+# ⑪-b **反证**：把某位的**日常层**压成「只剩兜底那一句」⇒ 可观测轮换必须掉到 3 以下。
+#   ★ 与 ⑩-d 同族（那条判纯形状，这一条判**玩家真看到的东西**）。
+#   ★ **第一版这判据是错的（我自己踩的）**：只压 `daily` 而不动别的层，
+#     而 `main` / `hidden` 在同一趟里照样轮换 ⇒ 总量根本没降（压完还是 7/7 ⇒ 恒绿 = 门禁自己瞎了）。
+#     判据要抓的是**日常层**这一件事，就压**整棵树**：只留 `daily` 的兜底那一句、其余三层抽掉
+#     —— 那正是玩家「熟了之后一天到晚搭话」看到的全部内容，掉到 1 句才对。
+_probe_k = _full[0] if _full else sorted(_npc)[0]
+_saved = _npc[_probe_k]
+_strip = json.loads(json.dumps(_saved))
+_keep = [t for t in _strip["nodes"].get("daily", {}).get("texts", [])
+         if t.get("need") is None][:1] or _strip["nodes"]["daily"]["texts"][:1]
+#   ★ `meet` 也压成**一条**（还不熟那一档照样会说话，而它按天气/时辰分支能出好几句）——
+#     上一版只压 `daily`、留着原样的 `meet`，结果压完还是 3 句（7 → 3）⇒ 仍差一档才红。
+_npc[_probe_k] = {"nodes": {
+    "meet": {"texts": _strip["nodes"]["meet"]["texts"][:1]},
+    "daily": {"texts": _keep[:1]}}}
+_bad_rot = _rot_probe(_probe_k)
+_npc[_probe_k] = _saved                       # 还原（判据不许改坏被测数据）
+chk("⑪-b ★ 反证：把 %s 压成「只有一层一句」⇒ 可观测轮换掉到 %d 以下（判据抓得住）"
+    % (_probe_k, _ROT_FLOOR), _bad_rot < _ROT_FLOOR,
+    "压完 %d 句（%d → %d）" % (_bad_rot, _ROT[_probe_k], _bad_rot))
+
+print("      轮换分布：" + " · ".join("%s=%d" % (k.replace("dlg_", ""), v)
+                                     for k, v in sorted(_ROT.items())))
+
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
 sys.exit(0 if ok else 1)
