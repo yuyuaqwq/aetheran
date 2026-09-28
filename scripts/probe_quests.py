@@ -590,7 +590,24 @@ for label, arg in cases:
         if len(rows) < per.get(arg, 0):
             trade_bad.append((label, len(rows), per.get(arg)))
 head = trade_out["副业"]
-per_line = sum(1 for ln in head if any(ln.strip().startswith(t) for t in doc_trades))
+#: ★ 另一处「拿文案当机器键 grep」（P2-1 车道 2026-09-28 收的）：
+#:   原来 `ln.strip().startswith(t)` 直接拿**副业名**当行首去认那一行；P2-1 把并列行
+#:   统一成「行首一个 `· `」之后行首不再是那个名 ⇒ 四个副业被数成 **0 行**（判据本身没错，
+#:   是取件方式错了）。改成**剥掉行首锚点再认副业名** —— 锚点那一段从 `SYS_TRADE_ROW`
+#:   现取（`{trade}` 之前那截），不写死 `·`，措辞再改也不用回来动这条判据。
+_TRADE_PFX = (str((TX.get("SYS_TRADE_ROW") or {}).get("value") or "")
+              .split("{trade}")[0].strip())
+
+
+def _trade_line36(ln, t):
+    """这一行是副业 `t` 那一行吗（剥掉行首锚点后比对）。"""
+    body = ln.strip()
+    if not _TRADE_PFX or not body.startswith(_TRADE_PFX):
+        return False
+    return body[len(_TRADE_PFX):].lstrip().startswith(t)
+
+
+per_line = sum(1 for ln in head if any(_trade_line36(ln, t) for t in doc_trades))
 (ok if not miss_bad and not trade_bad and per_line == 4 else bad)(
     "★ 「副业」真跑：无参那屏四个副业各一行（实测 %d 行）· 四个带参都列得出那条线 · 错参回人话"
     "（取不到文案 %s · 带参异常 %s）" % (per_line, miss_bad or "无", trade_bad or "无"))
@@ -2403,6 +2420,26 @@ def _row36(v, mark=""):
                           mark=mark, level=v["min_level"])
 
 
+#: ★ 主线那一行的定位器 —— **从槽位取前缀**（P2 车道 2026-09-28）。
+#:   原来这里写死 `x.startswith("主线 ")`：那是**拿文案当机器键 grep**，
+#:   P2-1 把并列行统一成「行首 `· `」之后定位就失配了（判据没错，是取件方式错了）。
+#:   改法 = 用 `SYS_BOARD_MAIN_ROW` 现算的前缀去认它，措辞怎么改都不用回来动这条判据。
+def _is_main_row36(line, _v=None):
+    """这一行是**主线那一条**的板行吗 —— 现算，不认字面文案。
+
+    ★ 原来写死 `x.startswith("主线 ")`（拿文案当机器键 grep）；P2-1 把并列行统一成
+      「行首 `· `」之后那个定位就失配了。改成**用槽位把这一行整行算出来再比对** ——
+      行首锚点、编号、名字、等级四格全都由 `SYS_BOARD_MAIN_ROW` 现填，措辞怎么改都不用回来动判据。
+    ★ 用**整行相等**而不是「前缀」：只比前缀的话，行首那个 `· ` 会让三档悬赏行也误判成主线行。
+    """
+    v = _v or next((x for x in CQ._quests().values() if x["chain"] == "main"), None)
+    if not v:
+        return False
+    want = _slot36("SYS_BOARD_MAIN_ROW", order=v["order"], name=v["name"],
+                   mark="", level=v["min_level"]).strip()
+    return line.strip() == want
+
+
 def _board36(flags):
     return _drive(CQ.board, _player(loc=_TOWN36, node=_BRD36, level=_LV36, flags=flags), "")
 
@@ -2418,7 +2455,7 @@ for _k, _v in _BQ36:
 # ①b 段的先后：主线那一行 → 悬赏抬头 → 三档 → 尾注（别把谁挤掉）
 _MAIN36 = next((v for v in CQ._quests().values() if v["chain"] == "main"), None)
 _i_main = next((i for i, x in enumerate(_o36)
-                if _MAIN36 and x.startswith("主线 ") and str(_MAIN36["order"]) in x), -1)
+                if _MAIN36 and _is_main_row36(x, _MAIN36)), -1)
 _i_head = _o36.index(_HEAD36) if _HEAD36 in _o36 else -1
 _i_how = len(_o36) - 1 if _o36 and _o36[-1] == _HOW36 else -1
 if not (_i_main >= 0 and _i_main < _i_head < _i_how and _BQ36
@@ -2451,7 +2488,7 @@ finally:
     CQ._quests = _keep_q36
 if (_HEAD36 in _o36c) or any(_row36(v) in _o36c for _k, v in _BQ36):
     _bad36.append(("域里一条悬赏都没有，板上却列了", _o36c[:6]))
-if _MAIN36 and not any(x.startswith("主线 ") for x in _o36c):
+if _MAIN36 and not any(_is_main_row36(x, _MAIN36) for x in _o36c):
     _bad36.append(("反证那一支把主线那一段也弄没了", _o36c[:4]))
 (ok if not _bad36 else bad)(
     "★ P-61 `悬赏` 板列三档每日悬赏（源 24 §二 悬赏板 + 03 §一「三行列表」）：%s 行逐字 = "
@@ -2709,7 +2746,7 @@ else:
         _o9c = _board36({"card": 1, "quests_done": [k2 for k2, _v2 in _side_here]})
         if _SIDEHEAD_Q in _o9c or any(r in _o9c for r in _rows8):
             _fb_bad.append(("在场那位手上的活全交掉了，那一段（抬头 / 行）还在印", _o9c[-5:]))
-        if not any(x.startswith("主线 ") for x in _o9c):
+        if not any(_is_main_row36(x, _MAIN36) for x in _o9c):
             _fb_bad.append(("那一支把主线那一段也弄没了", _o9c[:4]))
         _fb_lines.append("全交掉（%s）⇒ 抬头与那几行都不印（板上剩 %d 行，主线那一段照旧）"
                          % ([k2 for k2, _v2 in _side_here], len(_o9c)))
