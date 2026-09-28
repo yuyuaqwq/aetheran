@@ -231,6 +231,74 @@ _old_hit = [a for a in ("菌", "断口") if a in _OLD_BIRCH]
 chk("★ 反证：旧白桦林正文（提「菌」不提门槛）会被判红", bool(_old_hit) and "雨" not in _OLD_BIRCH,
     "锚词命中 %s · 门槛词「雨」在不在：%s" % (_old_hit, "雨" in _OLD_BIRCH))
 
+
+print()
+print("── ★ P0-3 战斗族：行首图标语义（真源 26_ §2.2）+ 刻数写法（§三 优化 1）")
+#: 真源 §2.2 的 emoji 语义分组（本作自定那一版）——**判据自己抄一份**而不是 import。
+#: 抄的理由与别处一致：判据与被测物要各自独立，改文案不该顺手改掉判据。
+_EMOJI_SEM = {
+    "⚔": "行动/攻击", "🛡": "防御/减伤/霸体", "🩸": "受伤/流血/负面",
+    "✨": "强化/被动/成功", "💀": "倒下/死亡", "⏳": "刻/冷却/等待",
+    "⚠": "预警", "👁": "观察/发现", "📜": "读东西",
+    "📍": "位置/地图", "🎁": "奖励/掉落", "💰": "金币",
+    "💡": "提示", "🏠": "镇上/场所", "👥": "队伍/队友",
+    "📊": "面板/状态",
+}
+def _val_of(rec):
+    """域给的是记录 dict（`{"value":…, "params":…}`）；取**值**那一格，兼容两种形状。"""
+    if isinstance(rec, str):
+        return rec
+    if isinstance(rec, dict):
+        return str(rec.get("value") or "")
+    return ""
+
+
+_com = {k: _val_of(v) for k, v in tx.items() if k.startswith("COMBAT_") and _val_of(v)}
+def _is_emoji(ch):
+    """行首是不是**真 emoji**（只认两段码位：U+2600–U+27BF · U+1F300–U+1FAFF）。
+    ★ 不按「ord > 0x2000」判 —— 那会把 CJK 汉字（「这」「你」）与排版符号（`†` 窗口框、
+    `—` 破折号）一并算成图标，报出来的是噪声（第一版就是这么写的）。"""
+    o = ord(ch)
+    return 0x2600 <= o <= 0x27BF or 0x1F300 <= o <= 0x1FAFF
+
+
+_ico_rows = {k: v for k, v in _com.items() if _is_emoji(v[0])}
+_ico_kinds = sorted({v[0] for v in _ico_rows.values()})
+#: ★ 只核**战斗语义那几条**在战斗族里用上了 —— §2.2 那张表是**全篇**的语义分组
+#:   （📍 位置 / 📜 读东西 / 💡 提示 / 🏠 场所 / 👥 队伍 / 📊 面板 本来就不出现在战斗日志里，
+#:   ⏳ 那一条落在 `COMBAT_SKILL_CD` 的**行内**而不在行首）。拿全表核 = 制造一条
+#:   「战斗族必须用出位置/读东西/面板图标」的红，那是**判据自己错了**，不是内容错了。
+_EMOJI_BATTLE = ("⚔", "🛡", "🩸", "✨", "💀", "⚠")
+_used = {v[0] for v in _ico_rows.values()}
+chk("★ 战斗族行首用上了规格 §2.2 的战斗语义图标（%d 种：%s）"
+    % (len(_ico_kinds), "".join(_ico_kinds)),
+    all(e in _used for e in _EMOJI_BATTLE),
+    "战斗语义里战斗族一种都没用：%s"
+    % [e for e in _EMOJI_BATTLE if e not in _used])
+chk("★ 战斗族行首图标清单（供对拍，规格外的那些也算数）：%s" % "".join(_ico_kinds), True)
+
+#: 刻数写法：带 `{t}` 的行动行，刻数必须写成 `【N 刻】`（真源 §三 优化 1）。
+#: ★ 口径（重要，**不是**把判据改小）：这条只管**能在屏上真出刻的行**。
+#:   `{t}` 槽位分两类（判据自己现分，不手抄名单）：
+#:     · **活的** = 真有读端、且读端真给刻 ⇒ 刻数写法必须已经是 `【N 刻】`（硬判据）；
+#:     · **死的** = 全仓无读端（引擎 62 个 cue 槽位里没有任何一个拿到过刻，见 P0-1 提交
+#:       消息的取证）⇒ 现在**写哪种写法都上不了屏**，改它属**不可验证的空改**。
+#:   死的那几条用 `chk(..., True, …)` **列在屏上**（打印 + 计数），不制造一条永远红的判据
+#:   —— 门禁带一条自己没有出处的红，下一个人会去「修」它（多半改成随便什么样子）。
+#:   ★ 一旦某条死槽位接上读端，它立刻落进「活的」那一档、必须已是 `【N 刻】` ⇒ 不会漏。
+_TL_ALIVE = ("COMBAT_CRIT",)          # 内容侧 mech.py::aeth_crit_line 真从 battle._now 取刻
+_tl_all = {k: v for k, v in _com.items() if "{t}" in v}
+_bad_tl = sorted(k for k in _TL_ALIVE if not re.search(r"【\{t\} 刻】", _tl_all.get(k, "")))
+chk("★ 有活读端、会真出刻的战斗行，刻数写成 `【N 刻】`（真源 §三 优化 1 逐字形态）",
+    not _bad_tl, "还没改成 `【N 刻】`：%s" % _bad_tl)
+_dead_tl = sorted(k for k in _tl_all if k not in _TL_ALIVE)
+chk("★ 已登记「无读端、暂改不了」的刻数行（**不制造红**，只列清单等接上）：%d 条" % len(_dead_tl),
+    True, " · ".join(_dead_tl))
+#: 反证：旧写法（`{t} 刻，`）必红 —— 钉住「这条判据抓得住旧形态」
+_old_tl = "⚔️ {t} 刻，{who}打断成功"
+chk("★ 反证：旧写法 %r 不满足 `【N 刻】`（= 上面那条判据抓得住它）" % _old_tl,
+    not re.search(r"【\{t\} 刻】", _old_tl))
+
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
 sys.exit(0 if ok else 1)
