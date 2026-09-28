@@ -22,7 +22,7 @@ r"""探针：审计 B 车道「静默失败 / 静默降级」三条（2026-09-28
   ② ★ 打断真断成 ⇒ `foot.interrupts` 真的加一（真跑 `Hand._interrupt`，两态）
      · ②-a 对方在起手（`broke=True`）⇒ 计数 +1，且回话是 `COMBAT_INT_BREAK`
      · ②-b 对方没起手（`broke=False`，只推后到点时刻）⇒ 计数**不动**（不虚高）
-     · ②-c 读口通：`codex.foot()` 汇总到它、`titles.ctx()` 那一格读到它（称号「三次打断」的载体）
+     · ②-c 读口通：`codex.foot()` 汇总到它、`titles.ctx()` 那一格读到它（称号「十次打断」的载体）
      · ②-d **反证**：把 `note_interrupt` 猴补丁成空实现 ⇒ ②-a 立刻红
      · ②-e 静态守卫：`interrupts` 在 `content/` 里的**写点**存在（不是「只读不写」）
 
@@ -43,6 +43,7 @@ r"""探针：审计 B 车道「静默失败 / 静默降级」三条（2026-09-28
 """
 from __future__ import annotations
 
+import json
 import os
 import re
 import sys
@@ -317,14 +318,14 @@ chk("②-b 对方没起手（只把到点时刻推后）⇒ 计数**不动**（�
     _n0 == 0 and _l0 == [txt("COMBAT_INT_PUSH", ticks=58)] or (_n0 == 0 and _l0 and _l0 != [txt("COMBAT_INT_BREAK")]),
     "计数=%d 回话=%r" % (_n0, _l0))
 chk("②-c1 读口通：`codex.foot()` 汇总得到它", CX.foot(_p1)["interrupts"] == 1)
-chk("②-c2 读口通：称号那一格（`titles.ctx`）读到它 —— 「三次打断」不再是空的",
+chk("②-c2 读口通：称号那一格（`titles.ctx`）读到它 —— 「十次打断」不再是空的",
     TT.ctx(_p1, {})["interrupt"] == 1, "titles.ctx=%r" % (TT.ctx(_p1, {}).get("interrupt"),))
 # 造够 10 次 ⇒ 那个称号真能拿到（域里 right.const = 10）
 _p10 = CA._p({"cls": "cls_knight", "level": 5, "loc": "belt_north", "node": "bn_bone"})
 for _ in range(10):
     CX.note_interrupt(_p10)
-chk("②-c3 打断满 10 次 ⇒ 「三次打断」那一条**真拿得到**（之前恒 0、玩家永远看不到它）",
-    "title_three_interrupts" in TT.scan(_p10, {}),
+chk("②-c3 打断满 10 次 ⇒ 「十次打断」那一条**真拿得到**（之前恒 0、玩家永远看不到它）",
+    "title_ten_interrupts" in TT.scan(_p10, {}),
     "扫到：%s" % (TT.scan(_p10, {}),))
 
 # —— 反证：把 note_interrupt 打成空实现 ⇒ ②-a 立刻红 ——
@@ -346,6 +347,69 @@ for f in sorted((REPO / "content").glob("*.py")):
             _w.append("%s:%d" % (f.name, i))
 chk("②-e `interrupts` 在 `content/` 里有**生产写点**（不再「备好但没人写」）",
     len(_w) >= 2, "写点：%s" % (_w,))
+
+
+# ══════════════════════════════════════════════════════════════
+# ⑤ 称号「说出口的数」不许与「真条件」对不上（审计 L3874 · 玩家可见的名实不符）
+#
+#   起因：`title_three_interrupts` 名字印「三次打断」而 cond 要 **10** 次
+#   （`how`/`why`/写点注释三处都写 10）⇒ 玩家攒够 10 次，名字后面印「三次打断」。
+#   修法 = 名字与 id 跟 cond 对齐（改**数**才是改设计，那要鱼鱼拍板）。
+#   判据两条，**都是逐条现算**（不硬编码任何称号 id）：
+#     A「说明」口径：`how` 里写出来的阿拉伯数字（条件阈值，玩家看得见的那句）
+#       必须等于 `cond` 的 const —— 治「阈值改了、说明没跟」这一族。
+#     B「名字」口径：名字里「N次」那个 N（N 是中文数字）必须等于 const ——
+#       「次」就是次数，治「名字自称几次、条件要几次」这一族（本次那条就是它）。
+#     名字里不带次数的说法（「认得三种字的人」那种文字游戏）不在 B 口径内，
+#     但它在 A 口径里 ⇒ 阈值仍被钉住。
+_TITLES = json.loads((REPO / "content" / "data" / "titles.json").read_text(encoding="utf-8"))
+_CN_NUM = {"一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7,
+           "八": 8, "九": 9, "十": 10, "两": 2}
+
+
+def _const_of(cond):
+    """条件阈值（只看「字段 >= 常量」那一种形状）；其它形状回 None（无从判）。"""
+    if not isinstance(cond, dict):
+        return None
+    right = cond.get("right")
+    return right["const"] if isinstance(right, dict) and "const" in right else None
+
+
+def _said_gaps(titles):
+    """逐条现算「称号说出口的数」与 `cond` 阈值的差。"""
+    out = []
+    for k, v in titles.items():
+        if not isinstance(v, dict) or k.startswith("_"):
+            continue
+        cst = _const_of(v.get("cond"))
+        if cst is None:
+            continue
+        how_nums = [str(x) for x in re.findall(r"[0-9]+", str(v.get("how") or ""))]
+        if how_nums and how_nums != [str(cst)]:
+            out.append("%s how 写 %s 而 cond 是 %r" % (k, how_nums, cst))
+        m = re.search(r"([一二两三四五六七八九十])次", str(v.get("name") or ""))
+        if m and _CN_NUM.get(m.group(1)) != cst:
+            out.append("%s 名字说「%s次」而 cond 是 %r" % (k, m.group(1), cst))
+    return out
+
+
+_bad = _said_gaps(_TITLES)
+chk("⑤ 称号「说出口的数（how / 名字里的N次）」与 cond 阈值**逐条对得上**（玩家可见的名实不符）",
+    not _bad, "对不上：%s" % (_bad,))
+_part = [k for k, v in _TITLES.items()
+         if isinstance(v, dict) and not k.startswith("_")
+         and (re.findall(r"[0-9]+", str(v.get("how") or ""))
+               or re.search(r"[一二两三四五六七八九十]次", str(v.get("name") or "")))
+         and _const_of(v.get("cond")) is not None]
+chk("⑤-b 判据**不是空转**：至少 3 条称号真的参与了对账（说了数字的）",
+    len(_part) >= 3, "参与对账 %d 条：%s" % (len(_part), _part))
+# —— 反证：把名字改回「三次打断」⇒ 同一个对账器当场判红（证明判据不是恒真）——
+_fake = dict(_TITLES)
+_fake["title_ten_interrupts"] = dict(_fake.get("title_ten_interrupts") or {},
+                                     name="三次打断")
+_bad_fake = _said_gaps(_fake)
+chk("★ ⑤-c 反证：名字再写回「三次打断」，同一条对账**判得出**（判据不是恒真）",
+    any("三次" in s for s in _bad_fake), "对账器对旧名的判词：%s" % (_bad_fake,))
 
 
 # ══════════════════════════════════════════════════════════════

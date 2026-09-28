@@ -110,9 +110,9 @@
       }
     }
   },
-  "title_three_interrupts": {
+  "title_ten_interrupts": {
     "no": 5,
-    "name": "三次打断",
+    "name": "十次打断",
     "how": "打断成功累计 10 次",
     "seen": "",
     "where": "名字后面（观察 / 状态）",
