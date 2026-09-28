@@ -165,10 +165,26 @@ def update_player(group_id, uid, **fields):
                             (str(group_id or ""), str(uid or ""))).fetchone()
             cur = {}
             if row:
+                # ★ 审计 L1701-同族（写口）：读口 get_player 已在同一次修复里 fail-closed，
+                #   而这里仍把坏档塌成 {} —— 读-改-写会拿这个空 dict 当底，**下一次任意
+                #   落档就把原档覆盖销毁**（实测：7 级 / 9999 金币 → 1 级 / 0 金币，rc=True、
+                #   零报错）。两处必须同口径：行存在而内容坏 ⇒ 抛，绝不自己造一个空档。
                 try:
                     cur = json.loads(row["data"])
-                except Exception:                      # 库里那行坏了 ⇒ 从头来（不把坏数据当档）
-                    cur = {}
+                except Exception as _e:
+                    c.close()
+                    raise RuntimeError(
+                        "content.persistence.update_player：存档行存在但 JSON 解析失败"
+                        "（group_id=%r uid=%r）—— 拒绝从空档重建（会把原档覆盖销毁）"
+                        % (group_id, uid)
+                    ) from _e
+                if not isinstance(cur, dict):
+                    c.close()
+                    raise RuntimeError(
+                        "content.persistence.update_player：存档行的 data 顶层不是 dict"
+                        "（group_id=%r uid=%r，实际 %s）—— 拒绝从空档重建（会把原档覆盖销毁）"
+                        % (group_id, uid, type(cur).__name__)
+                    )
             if not isinstance(cur, dict):
                 cur = {}
             cur.update(fields)
