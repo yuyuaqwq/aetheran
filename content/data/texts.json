@@ -2691,7 +2691,7 @@
     "desc": "悬赏 · 已接标记"
   },
   "SYS_BOARD_MAIN_ROW": {
-    "value": "主线 {order} · {name}{mark}  等级 {level}+",
+    "value": "· 主线 {order} —— {name}{mark}  等级 {level}+",
     "params": [
       "order",
       "name",
@@ -2744,7 +2744,7 @@
     "desc": "P-61 悬赏板 · 三档悬赏那一栏的抬头"
   },
   "SYS_BOARD_BOUNTY_ROW": {
-    "value": "悬赏 {order} · {name}{mark}  等级 {level}+",
+    "value": "· 悬赏 {order} —— {name}{mark}  等级 {level}+",
     "params": [
       "order",
       "name",
@@ -3276,7 +3276,7 @@
     "desc": "副业 · 抬头（B3-3 生活职业任务）"
   },
   "SYS_TRADE_ROW": {
-    "value": "{trade} {n} 条 —— {what}",
+    "value": "· {trade} {n} 条 —— {what}",
     "params": [
       "trade",
       "n",

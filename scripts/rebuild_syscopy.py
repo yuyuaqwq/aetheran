@@ -127,6 +127,31 @@ DOC_PENDING = {
                "（现象 B · 骑士 / 狂战 / 法师）：补一句「面板按整数看」—— 加成乘的是那一件装备"
                "自己的主词条，+1..+3 累计不到半格。判据：`scripts/probe_recipes.py` ⑧-b / ⑨-b",
     },
+    # ===== P2-1（文案车道 aep2 · 并列行统一）：行首 `· ` 的口径 =====
+    #   判据取仓里**已经成立的 18 条**（`SYS_ACH_ROW` 等）：那 18 条一律「行首一个 `· `、
+    #   行内不出现 `·`」—— 行内分隔它们一律用 `——` / `：` / `→` / `×` / `｜`。
+    #   ⇒ 选定口径：**行首 `· ` 作条目锚点，行内 `·` 一律换成 `——`**（不搞第二个分隔符）。
+    #   只动**没有自带锚点**的 3 条；自带编号/图标的 4 条（`SYS_CLS_ROW` ①②③、`SYS_RANKING_ROW` {i}.、
+    #   `SYS_RACE_ROW` ①②③、`SYS_TITLE_ROW`/`SYS_EGG_ROW` 的 `✦`）保持不动 —— 再加一个 `· `
+    #   就是同屏两个锚点，���「规整」更远。详见分支 `_notes.md`。
+    "SYS_BOARD_MAIN_ROW": {
+        "old": "主线 {order} · {name}{mark}  等级 {level}+",
+        "new": "· 主线 {order} —— {name}{mark}  等级 {level}+",
+        "why": "P2-1：并列行统一（口径见上面那段）。这一条原来把 `·` 用在**行内**，"
+               "而同一界面的 `SYS_BOARD_BOUNTY_ROW` 同款 —— 统一成「行首 `· ` + 行内 `——`」。"
+               "★ 只改这一格的值，`{order}/{name}/{mark}/{level}` 四个槽位与取件点一个字没动。",
+    },
+    "SYS_BOARD_BOUNTY_ROW": {
+        "old": "悬赏 {order} · {name}{mark}  等级 {level}+",
+        "new": "· 悬赏 {order} —— {name}{mark}  等级 {level}+",
+        "why": "P2-1：同上（与 `SYS_BOARD_MAIN_ROW` 同一个界面的同款行，必须一起改）。",
+    },
+    "SYS_TRADE_ROW": {
+        "old": "{trade} {n} 条 —— {what}",
+        "new": "· {trade} {n} 条 —— {what}",
+        "why": "P2-1：这一条既没编号也没图标 ⇒ 补行首 `· `，与另外 18 条对齐。"
+               "★ 取件点 `content/cmds_quest.py` 那一处 `yield` 加两个空格的前缀，不动。",
+    },
     "COMBAT_MECH_ABSOLVE_NONE": {
         "old": "它身上没有能解的东西。",
         "new": "你身上没有能解的东西。",
