@@ -57,10 +57,32 @@ def classes() -> dict:
 # ══════════════════════════════════════════════════════════════
 # 一、点数：等级 → 总点数 − 已花 = 余额（**唯一口**）
 # ══════════════════════════════════════════════════════════════
+def _level_of(level) -> int:
+    """等级取值的**唯一校验口**：正常化到 ≥1 的整数，认不出就点名抛。
+
+    ★ 台账 L2153-3：`total_points` 原来是裸的 `max(1, int(level or 1))`，
+      坏等级会带着 **CPython 原生** `ValueError: invalid literal for int() ...`
+      / `TypeError: int() argument must be ...` 逃出本模块 —— 而 `AllocError`
+      的类 docstring 承诺的是「加点这条线上的两类错……**都当场点名**」。
+      调用方 `content/cmds_ast.py:1494` 只 `except AL.AllocError`
+      ⇒ 坏 `level` 直接冒泡，玩家看到裸英文异常文案。
+      这里只把**认不出的等级**收成 `AllocError`（本模块自己那一类），
+      合法等级（含 `"3"` 这种字符串数字）的取值逐字节不变。
+    """
+    if level is None or level == "":
+        return 1
+    if isinstance(level, bool) or not isinstance(level, (int, float, str)):
+        raise AllocError("等级不是一个数：%r" % (level,))
+    try:
+        lv = int(level)
+    except (TypeError, ValueError):
+        raise AllocError("等级不是一个整数：%r" % (level,)) from None
+    return lv if lv >= 1 else 1
+
+
 def total_points(level) -> int:
     """该等级一共该有多少点（建号 8 + 每级 3）。**不落档** —— 等级改了它自动跟着改。"""
-    lv = max(1, int(level or 1))
-    return LV1_POINTS + PER_LEVEL_POINTS * (lv - 1)
+    return LV1_POINTS + PER_LEVEL_POINTS * (_level_of(level) - 1)
 
 
 def spent(alloc) -> int:
