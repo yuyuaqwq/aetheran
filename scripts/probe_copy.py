@@ -544,6 +544,26 @@ def main():
         "没被引用且没登记：%s ｜ 登记陈旧（其实还在用）：%s ｜ 理由是空的：%s"
         % (_undecided[:6], _stale[:4], _noreason[:4]))
 
+    # ★ P0-2 续批：**半角括号残留**的常驻判据（全 texts 域，不限于战斗族）。
+    #   为什么加在这里、为什么是全域：项目里已经有同族前例——
+    #   `COMBAT_BLOCKED_AMOUNT`（引擎兜底的半角括号 → 全角）与 `probe_elements` ⑨-f
+    #   「那一屏一个半角括号都不许有」。但那一条只端屏的一个场景，
+    #   本轮扫出的是**第二个场景**：`COMBAT_CORE_SILENCED` / `COMBAT_GAUGE_TRIGGER`
+    #   两条是**活 cue 槽位**（`battle.core.silenced` / `battle.gauge.trigger` →
+    #   `content/rules/battle_text.json` 的映射在册），每次触发都上屏 ⇒ 玩家真会看见。
+    #   判据口径要点：① **逐码位量**，不是肉眼看（那两格的惊叹号本来就是 U+FF01，
+    #   直接用字面搜 `！` 会把它误报；真正的是 U+0028/U+0029）；
+    #   ② 只括括**括号**，不括括其他半角符号（斜杠、句点、冒号、百分号、数字间的半角空格都是正常的，
+    #   全屏括会误报）；③ 排除 **emoji 的 VS16 叠序**（那两个码位是图标的一部分，不是标点）。
+    _HALF_PAREN = re.compile(r"[一-鿿（），。！？]\s*[()]")
+    _paren_bad = []
+    for _k, _v in tx.items():
+        _val = _v.get("value") or "" if isinstance(_v, dict) else str(_v)
+        if _HALF_PAREN.search(_val):
+            _paren_bad.append("%s（半角 %s）" % (_k, _HALF_PAREN.search(_val).group(0).strip()))
+    chk("★ 全 texts 域一个半角括号都没有（中文语境该用「（）」，排除 emoji VS16 序列）",
+        not _paren_bad, "半角括号：%s" % (_paren_bad[:6],))
+
     # ⑥ 真跑实现体：产出的行里不许有取不到文案的标记
     from content import cmds_ast as CA                                    # noqa: E402
     from content import pager as PG                                       # noqa: E402
