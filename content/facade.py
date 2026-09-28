@@ -17,14 +17,27 @@ __all__ = ["bind_host", "HANDLES", "persistence", "db_path", "clock", "log", "tl
 
 from . import persistence
 
-#: 最近一次注入的句柄（只读用途；取件请用下面的函数）
+#: 觉察口（`log` / `tlog`）与宿主注入的句柄。**增量口径**
+#: —— 与 `persistence.bind`（`None` / 缺省 = 不改）同一口径。
 HANDLES: dict = {}
 
 
 def bind_host(**inject):
-    """宿主注入入口。返回收到的键（引擎不解释返回值，只为便于诊断）。"""
-    HANDLES.clear()
-    HANDLES.update(inject or {})
+    """宿主注入入口。返回收到的键（引擎不解释返回值，只为便于诊断）。
+
+    ★ 为什么不再 `clear()`（引擎 L2711）：
+        两边句柄口径相反 —— `persistence.bind` 是**增量**（`None` = 不改），
+        而这里原先整个 `clear()` 再 `update`，于是**覆盖**。
+        实跑：全绑 `{db_path,clock,log,tlog}` → 另起一次 `bind_host(clock=…)`
+          → `HANDLES` 只剩 `{clock}`，而 `persistence._H` 照旧保留全部 6 个
+          ⇒ **同一批句柄出两个真相**，且 `facade.log(…)` 静默返 `None`（
+          宿主回调**未被调用**，日志直接丢、零报错）。
+        口径：两边同一个「增量、`None` = 不改」，`HANDLES` 和
+        `persistence._H` 才不会对同一批句柄给出不同答案。
+    """
+    for _k, _v in (inject or {}).items():
+        if _v is not None:
+            HANDLES[_k] = _v
     persistence.bind(**HANDLES)
     return {"bound": sorted(HANDLES)}
 

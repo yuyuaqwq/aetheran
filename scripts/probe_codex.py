@@ -534,6 +534,24 @@ chk("★ 重看是只读的：该档一个字没动（`studied` 也没被写上�
     _run("端详 %s" % BOOK["relic"]["poi_stone_scripts"]["name"], _p15e, CC.relic_study) == _re15
     and not CM.studied(_p15e, "poi_stone_scripts"))
 
+# ⑯ ★ 宿主注入是增量口径（引擎 L2711）—— `facade.HANDLES` 与 `persistence._H`
+#   不得对同一批句柄给出不同答案；且二贡调用不得把前一次的句柄抹掉。
+_fac2_seen = []
+_fac2_log = lambda _m, *_a, **_k: _fac2_seen.append(_m)      # noqa: E731
+FAC2.bind_host(clock=lambda: _FIX, log=_fac2_log, db_path=_HANDLES["db_path"])
+_fac2_first_keys = set(FAC2.HANDLES)                             # 首次注入的键集
+FAC2.bind_host(clock=lambda: _FIX)                                # 只给钟（增量）
+FAC2.log("after-second-bind")
+chk("★ 宿主句柄是增量的：只重绑钟不得抹掉前一次的 `log`（旧写法静默丢日志）",
+    _fac2_seen == ["after-second-bind"], "实收到：%s" % _fac2_seen)
+#   形态：旧写法下 `HANDLES` 只剩 `{clock}`、`_H` 仍有 6 键 ⇒ 两边不一致。
+#   口径用「注入过的键都还在 HANDLES 里」表述 —— 不用「`HANDLES` 包含 `_H`」
+#   那个方向（`persistence.bind(**HANDLES)` 永远保证它，写成判据就是恒真）。
+chk("★ 两边句柄不出两个真相：注入过的键一个都不能从 `HANDLES` 里消失",
+    set(_fac2_first_keys) <= set(FAC2.HANDLES),
+    "首次注入=%s / 二次后 HANDLES=%s" % (sorted(_fac2_first_keys), sorted(FAC2.HANDLES)))
+FAC2.bind_host(**_HANDLES)                                        # 还原
+
 print()
 print("按谱：%s" % " · ".join("%s %d" % (LABEL[b], len(BOOK[b])) for b in BOOKS))
 print("旧物谱：读的 %d · 捡的 %d" % (len(read_ids), len(pick_ids)))
