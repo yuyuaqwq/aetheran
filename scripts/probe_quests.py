@@ -163,6 +163,34 @@ DP = st.domain("drop_pools")
 RC = st.domain("recipes")
 TX = st.domain("texts")
 
+
+#: ★ P2-3（2026-09-29）：「交活/接活」那几行原本**把中文写死**在判据里
+#:   （`startswith("交了")` / `startswith("接下")`，全文件 18 处）⇒ 文案一改图标，
+#:   判据就整体翻红，而那不是行为变了，只是句首多了个 `✔ `。
+#:   口径：**前缀从 texts 槽位现算**（取「emoji + 空格」那一段），
+#:   判据一句未改、断言强度不变 —— 收口的是 fixture 里的写死字面量，
+#:   不是断言本身（判据要钉的是「交得掉/交不掉」，不是「首两个字是『交了』」）。
+def _lead(slot: str) -> str:
+    """那一格行首的锚：**行首那一段连续的非中文前缀**（emoji 与其后空格）。
+
+    为什么这样取：判据要认的是「这一行是『交活那一行』」，而那行的身份锚
+    是**它带什么图标**，不是中文首字 —— 图标本来就是这条线在管的维度。
+    槽位里没有图标时它自然退化成原句前缀，判据强度不变。
+    """
+    v = str((TX.get(slot) or {}).get("value") or "")
+    head = v.split("　")[0]
+    i = 0
+    for ch in head:
+        if ch in "✔✅📜🎁🗑️ ":
+            i += 1
+        else:
+            break
+    return v[:i] if i else head
+
+
+_JOB_DELIVERED = _lead("SYS_JOB_DELIVERED")
+_JOB_TAKEN = _lead("SYS_JOB_TAKEN")
+
 #: 域里的**条目**（`_meta` 那类私有键不算条目 —— 与 content/cmds_quest.py::_quests 同口径）
 QE = {k: v for k, v in Q.items() if not str(k).startswith("_")}
 
@@ -1460,7 +1488,7 @@ for _n in sorted(mainq):
     for _i, _r in enumerate(_reqs):
         _near = _sat_player(_x, _k, skip=_i)
         _out = _drive(CQ.quest_deliver, _near, "交 %d" % _n)
-        if any(ln.startswith("交了") for ln in _out) \
+        if any(ln.startswith(_JOB_DELIVERED) for ln in _out) \
                 or _k in ((_near.get("flags") or {}).get("quests_done") or []):
             _main_bad.append("主%d：缺第 %d 条（%s）竟然也交得掉"
                              % (_n, _i + 1, json.dumps(_r, ensure_ascii=False)))
@@ -1471,7 +1499,7 @@ for _n in sorted(mainq):
     _exp0, _gold0 = int(_full.get("exp") or 0), int(_full.get("gold") or 0)
     _pay = _drive(CQ.quest_deliver, _full, "交 %d" % _n)
     _rec = (((_full.get("flags") or {}).get("quests") or {}).get(_k) or {})
-    if not any(ln.startswith("交了") for ln in _pay) \
+    if not any(ln.startswith(_JOB_DELIVERED) for ln in _pay) \
             or _k not in ((_full.get("flags") or {}).get("quests_done") or []):
         _main_bad.append("主%d「%s」万事俱备却交不掉：%s" % (_n, _x["name"], _pay[:3]))
     if _rec.get("done") is not True:
@@ -1520,7 +1548,7 @@ for _n in sorted(mainq):
     _low = _sat_player(_x, _k)
     _low["level"] = int(_x["min_level"]) - 1
     _lv_out = _drive(CQ.quest_deliver, _low, "交 %d" % _n)
-    if any(ln.startswith("交了") for ln in _lv_out) \
+    if any(ln.startswith(_JOB_DELIVERED) for ln in _lv_out) \
             or _k in ((_low.get("flags") or {}).get("quests_done") or []):
         _lv_bad.append("主%d：等级压到 %d（门槛 %d）竟然交得掉 —— 等级那一半不在载重"
                        % (_n, _low["level"], _x["min_level"]))
@@ -1529,11 +1557,11 @@ for _n in sorted(mainq):
     _full1 = _sat_player(_x, _k)
     _full1["level"] = int(_x["min_level"])
     _pay1 = _drive(CQ.quest_deliver, _full1, "交 %d" % _n)
-    if not any(ln.startswith("交了") for ln in _pay1):
+    if not any(ln.startswith(_JOB_DELIVERED) for ln in _pay1):
         _lv_bad.append("主%d：等级刚够（%d）也交不掉：%s" % (_n, _x["min_level"], _pay1[:2]))
     _lv_lines.append("主%-2d 门槛 %-2d：等级 %-2d（门槛下）拦住 · 等级 %-2d 交得掉 → 「%s…」"
                      % (_n, _x["min_level"], int(_x["min_level"]) - 1, _x["min_level"],
-                        next((ln for ln in _pay1 if ln.startswith("交了")), "?")[:14]))
+                        next((ln for ln in _pay1 if ln.startswith(_JOB_DELIVERED)), "?")[:14]))
     # ③ 条件途径存在（一把一个 kind）
     for _r in CQ._require_of(_x):
         _kind = _r.get("kind")
@@ -1593,7 +1621,7 @@ for _k, _x in sorted(side_q.items(), key=lambda kv: kv[1]["order"]):
         continue
     _p = _sat_player(_x, _k)
     _pay = _drive(CQ.quest_deliver, _p, "交 %d" % _n)
-    _deliv = any(ln.startswith("交了") for ln in _pay) \
+    _deliv = any(ln.startswith(_JOB_DELIVERED) for ln in _pay) \
         and _k in ((_p.get("flags") or {}).get("quests_done") or [])
     if _deliv:
         _can.append(_k)
@@ -1606,7 +1634,7 @@ for _k, _x in sorted(side_q.items(), key=lambda kv: kv[1]["order"]):
     _cant.append(_k)
     _q = _satiated(_k)
     _pay2 = _drive(CQ.quest_deliver, _q, "交 %d" % _n)
-    if any(ln.startswith("交了") for ln in _pay2):
+    if any(ln.startswith(_JOB_DELIVERED) for ln in _pay2):
         _m_bad.append((_k, "万事俱备的档竟然交掉了（那就不该在交不掉名单里）", _pay2[:2]))
     if _k not in _DEAD_SIDE:
         _m_bad.append((_k, "新死的一条（钉住名单里没有它）", _x["objective"]))
@@ -1981,7 +2009,7 @@ for _qid in sorted(_EXP_KIND, key=lambda q: QE[q]["order"]):
         _nk_bad.append("%s 的真做走不通：%s" % (_qid, _how))
         continue
     _pay = _drive(CQ.quest_deliver, _p, "交 %d" % _x["order"])
-    _deliv = any(ln.startswith("交了") for ln in _pay) \
+    _deliv = any(ln.startswith(_JOB_DELIVERED) for ln in _pay) \
         and _qid in ((_p.get("flags") or {}).get("quests_done") or [])
     if not _deliv:
         _nk_bad.append("%s 真做了（%s）却交不掉：%s" % (_qid, _how, _pay[:3]))
@@ -1991,7 +2019,7 @@ for _qid in sorted(_EXP_KIND, key=lambda q: QE[q]["order"]):
                      % ({"enhance": "强化", "cook": "烹饪", "talk": "搭话",
                          "ask": "问人"}[_r0["kind"]], _x["name"], _x["order"],
                         json.dumps(_want, ensure_ascii=False), _how,
-                        (next((ln for ln in _pay if ln.startswith("交了")), "?") + " · 经验 +%d 铜板 +%d"
+                        (next((ln for ln in _pay if ln.startswith(_JOB_DELIVERED)), "?") + " · 经验 +%d 铜板 +%d"
                          % (_x["reward_exp"], _x["reward_gold"]))))
 (ok if len(_EXP_KIND) == 7 and not _nk_bad else bad)(
     "★ 支线新四型 %d 条：与 24 §二「步骤」列逐条对账（含数词）· 量够达成 / 途径存在 · "
@@ -2180,7 +2208,7 @@ if _mon_name(_bpick) not in _lack_line:
 _pay2 = _drive(CQ.quest_deliver, _player(level=1, day=_ROT_D,
                                          books={"monster": {_bpick: {"day": _ROT_D, "kills": 1}}},
                                          flags={"quests_active": ["q_bounty_normal"]}), "交 101")
-if not any(ln.startswith("交了") for ln in _pay2):
+if not any(ln.startswith(_JOB_DELIVERED) for ln in _pay2):
     _rot_bad.append("打了点名的那只却交不掉：%s" % _pay2[:3])
 (ok if not _rot_bad and len(_roles) == 3 else bad)(
     "★ 悬赏「指定的」= 每天轮换挑一只（可复现 · 跨日必换〔拨钟造日〕· 探针自己算规格一致 · "
@@ -2194,7 +2222,7 @@ for _ln in _rot_lines:
     print("      %s" % _ln)
 print("      真跑：没做到 →「%s」｜打了「%s」→「%s」｜反证（拿掉过滤）：逐日对不上 %d 天"
       % (_lack_line[:40], _mon_name(_bpick),
-         next((ln for ln in _pay2 if ln.startswith("交了")), "?"), _off_diff))
+         next((ln for ln in _pay2 if ln.startswith(_JOB_DELIVERED)), "?"), _off_diff))
 FC_Q.bind_host(**_FC_SAVED)                                            # ★ B4-9：拨回真钟
 
 # ── ★ P-60（B4-25 顺手全扫记的那一笔 · 本批落）：每日轮换**只留一份写法**
@@ -2268,11 +2296,11 @@ for _kind, _qid, _n in (("主线", "q_main_01", 1), ("支线", "q_side_07", 19),
 # ② 有证档（`登记` 写的就是这一格）：接得下 + 档上真写下来
 _p_c1 = _player(level=9, flags={"card": 1})
 _o_c1 = _drive(CQ.quest_accept, _p_c1, "接 1")
-if not any(ln.startswith("接下") for ln in _o_c1) \
+if not any(ln.startswith(_JOB_TAKEN) for ln in _o_c1) \
         or "q_main_01" not in ((_p_c1.get("flags") or {}).get("quests_active") or []):
     _card_bad.append(("有证 · 接不下", _o_c1[:3]))
 _card_lines.append("有证 ⇒ 「%s」· 档上 quests_active=%s"
-                   % (next((ln for ln in _o_c1 if ln.startswith("接下")), "?"),
+                   % (next((ln for ln in _o_c1 if ln.startswith(_JOB_TAKEN)), "?"),
                       (_p_c1.get("flags") or {}).get("quests_active")))
 
 # ③ 顺序钉子：这条单子**自己**的状态优先（手上真有它 ⇒ 不许回「你没有证」）
@@ -2286,13 +2314,13 @@ _card_lines.append("无证 + 已经接过 ⇒ 「%s」" % (_o_c2[0][:20] if _o_c
 _p_c3 = _player(level=9, flags={"quests_active": ["q_main_01"],
                                 "talked": {CQ._dlg_of("npc_masha"): 1}})
 _o_c3 = _drive(CQ.quest_deliver, _p_c3, "交 1")
-if not any(ln.startswith("交了") for ln in _o_c3):
+if not any(ln.startswith(_JOB_DELIVERED) for ln in _o_c3):
     _card_bad.append(("无证 · 交活被连累", _o_c3[:3]))
 _o_c4 = _drive(CQ.quest_mine, _player(level=9, flags={"quests_active": ["q_main_01"]}), "")
 if not _o_c4 or any(MISSING in ln for ln in _o_c4):
     _card_bad.append(("无证 · 我的委托", _o_c4[:3]))
 _card_lines.append("无证 ⇒ 交活「%s」· 我的委托 %s 行照旧"
-                   % (next((ln for ln in _o_c3 if ln.startswith("交了")), "?"), len(_o_c4)))
+                   % (next((ln for ln in _o_c3 if ln.startswith(_JOB_DELIVERED)), "?"), len(_o_c4)))
 (ok if not _card_bad else bad)(
     "★ B4-27（P-53）「接 <编号>」的守卫「已登记 · 未接」：无证档**四条链都拦**且档原样 · "
     "有证档接得下 · 「已经接过」优先于这道门 · 交活 / 我的委托 不受连累（坏 %s）"
@@ -2987,7 +3015,7 @@ for _k39, _x39 in sorted(QE.items(), key=lambda kv: int(kv[1].get("order") or 0)
     _pay0 = _drive(CQ.quest_deliver, p, "交 %d" % _n39)
     if _unmet39:
         # 判定说还差 ⇒ 『交』必须拦住、档上的经验／铜板／已交名单一个字都不许动
-        if any(ln.startswith("交了") for ln in _pay0) \
+        if any(ln.startswith(_JOB_DELIVERED) for ln in _pay0) \
                 or _k39 in ((p.get("flags") or {}).get("quests_done") or []) \
                 or int(p.get("exp") or 0) != _e0 or int(p.get("gold") or 0) != _g0:
             _b39.append("★ %s「%s」：**接活前就把活干完，接活后一句就交掉了（白拿经验/铜板）**：%s"
@@ -2996,7 +3024,7 @@ for _k39, _x39 in sorted(QE.items(), key=lambda kv: int(kv[1].get("order") or 0)
     else:
         # ── 条件在接活那一刻**就**全达标 ⇒ 两种合法来源：状态型（enhance）· 接活那一下真给的
         #    （`give`）⇒ **有意**：接活后一句就交得掉（这就是上面那条线钉住的边界）
-        if not any(ln.startswith("交了") for ln in _pay0):
+        if not any(ln.startswith(_JOB_DELIVERED) for ln in _pay0):
             _b39.append("%s 条件在接活那一刻就全达标（状态型／接活给的）却交不掉：%s"
                         % (_k39, _pay0[:3]))
             continue
@@ -3006,7 +3034,7 @@ for _k39, _x39 in sorted(QE.items(), key=lambda kv: int(kv[1].get("order") or 0)
             _b39.append("%s 状态型那一跳奖励没照单入档：经验 %+d（应 +%d）· 铜板 %+d（应 +%d）"
                         % (_k39, _d0, _x39["reward_exp"], _dg0, _x39["reward_gold"]))
         _pay0b = _drive(CQ.quest_deliver, p, "交 %d" % _n39)
-        if any(ln.startswith("交了") for ln in _pay0b) \
+        if any(ln.startswith(_JOB_DELIVERED) for ln in _pay0b) \
                 or _tot39(p) != _t0 + int(_x39["reward_exp"]) \
                 or int(p.get("gold") or 0) != _g0 + int(_x39["reward_gold"]):
             _b39.append("%s 状态型那一跳之后再交一次又动了档（奖励只许发一次）：%s"
@@ -3025,7 +3053,7 @@ for _k39, _x39 in sorted(QE.items(), key=lambda kv: int(kv[1].get("order") or 0)
     _de = _tot39(p) - _t0
     _dg = int(p.get("gold") or 0) - _g0
     _rec39 = ((p.get("flags") or {}).get("quests") or {}).get(_k39) or {}
-    if not any(ln.startswith("交了") for ln in _pay1):
+    if not any(ln.startswith(_JOB_DELIVERED) for ln in _pay1):
         _b39.append("%s 接活后真干一次却交不掉：%s" % (_k39, _pay1[:3]))
     if _de != int(_x39["reward_exp"]) or _dg != int(_x39["reward_gold"]):
         _b39.append("%s 奖励没照单入档：经验 %+d（应 +%d）· 铜板 %+d（应 +%d）"
@@ -3034,7 +3062,7 @@ for _k39, _x39 in sorted(QE.items(), key=lambda kv: int(kv[1].get("order") or 0)
         _b39.append("%s：flags.quests[%s].step = %s ≠ 条件条数 %d"
                     % (_k39, _k39, _rec39.get("step"), _reql))
     _pay2 = _drive(CQ.quest_deliver, p, "交 %d" % _n39)
-    if any(ln.startswith("交了") for ln in _pay2) \
+    if any(ln.startswith(_JOB_DELIVERED) for ln in _pay2) \
             or _tot39(p) != _t0 + int(_x39["reward_exp"]) \
             or int(p.get("gold") or 0) != _g0 + int(_x39["reward_gold"]):
         _b39.append("%s 再交一次又动了档（奖励只许发一次）：%s" % (_k39, _pay2[:3]))
@@ -3051,7 +3079,7 @@ for _k9, _n9, _why in (("q_main_03", 3, "到过三条带"), ("q_main_04", 4, "�
     _p9 = _sat_player(_x9, _k9, day=1)             # ← 直接塞 quests_active：**没有基线**的老档
     _p9["flags"] = dict(_p9.get("flags") or {}, card=1)
     _d9 = _drive(CQ.quest_deliver, _p9, "交 %d" % _n9)
-    _ok9 = any(ln.startswith("交了") for ln in _d9)
+    _ok9 = any(ln.startswith(_JOB_DELIVERED) for ln in _d9)
     _old39.append("%s（%s · 无基线）⇒ %s" % (_k9, _why, "交得掉（与改前逐字相同）" if _ok9 else "拦住了 ✗"))
     if not _ok9:
         _b39.append("★ 老档兼容路径的方向变了：%s（%s · 没有基线）改前交得掉、现在交不掉"
@@ -3072,7 +3100,7 @@ try:
         _p9 = _mk39(QE.get(_k9) or {}, _k9)
         _drive(CQ.quest_accept, _p9, "接 %d" % _n9)
         _d9 = _drive(CQ.quest_deliver, _p9, "交 %d" % _n9)
-        if any(ln.startswith("交了") for ln in _d9):
+        if any(ln.startswith(_JOB_DELIVERED) for ln in _d9):
             _rev39.append((_k9, _d9[0][:24]))
 finally:
     CQ._set_base = _keep_sb39

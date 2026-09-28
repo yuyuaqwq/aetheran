@@ -94,6 +94,25 @@ DP = st.domain("drop_pools")
 NPCS = st.domain("npcs")
 TX = st.domain("texts")
 
+#: ★ P2-3（2026-09-29）：与 `probe_quests` 同一处收口 —— 「交活那一行」的判据
+#:   原本把中文首字写死（`startswith("交了")`，本文件 3 处）⇒ 文案句首加了 `✔ `
+#:   之后判据整体翻红，而行为一行没变。口径：前缀**从 texts 槽位现算**，
+#:   判据断言强度不变（仍要钉「交得掉/交不掉」，只是不再钉中文首字）。
+def _lead(slot: str) -> str:
+    """那一格行首的锚（行首那一段连续的非中文前缀：emoji 与其后空格）。"""
+    v = str((TX.get(slot) or {}).get("value") or "")
+    head = v.split("　")[0]
+    i = 0
+    for ch in head:
+        if ch in "✔✅📜🎁🗑️ ":
+            i += 1
+        else:
+            break
+    return v[:i] if i else head
+
+
+_JOB_DELIVERED = _lead("SYS_JOB_DELIVERED")
+
 _FC_SAVED = dict(FC.HANDLES)
 _SCS = CAL.scale_seconds()
 
@@ -175,7 +194,7 @@ def _q13p(bag, foot=True):
 
 
 def _delivered(p, out):
-    return any(ln.startswith("交了") for ln in out) \
+    return any(ln.startswith(_JOB_DELIVERED) for ln in out) \
         and "q_side_13" in ((p.get("flags") or {}).get("quests_done") or [])
 
 
@@ -185,7 +204,7 @@ _oa = _drive(CQ.quest_deliver, _pa, "交 25")
 if not _delivered(_pa, _oa):
     _b1.append(("容器那一档交不掉", _oa[:3]))
 _l1.append("容器那件（unid_rare「一块刻着字的石片」）→ %s"
-           % next((ln for ln in _oa if ln.startswith("交了")), "?"))
+           % next((ln for ln in _oa if ln.startswith(_JOB_DELIVERED)), "?"))
 # 正例 ①-b：真信物那条老路（逐字节不许动）
 _pb = _q13p({"i_token_stone_shard": 1})
 _ob = _drive(CQ.quest_deliver, _pb, "交 25")
@@ -514,7 +533,7 @@ else:
     _p2 = _player(level=9, flags={"quests_active": ["q_side_09"],
                                   "talked": {_DLG: 3}})
     _out = _drive(CQ.quest_deliver, _p2, "交 21")
-    if not any(ln.startswith("交了") for ln in _out):
+    if not any(ln.startswith(_JOB_DELIVERED) for ln in _out):
         _b4.append(("听够三次却交不掉（计数口径被动了）", _out[:3]))
     # 反证 ④-c：把 daily / main 两层摘掉（= 改前那棵树）⇒ 第 3 次当场静默
     _keep_data = CT._data

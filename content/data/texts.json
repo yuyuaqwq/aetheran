@@ -2732,7 +2732,7 @@
     "desc": "接活 · 等级不够（她那一句）"
   },
   "SYS_JOB_TAKEN": {
-    "value": "接下：{name}",
+    "value": "📜 接下：{name}",
     "params": [
       "name"
     ],
@@ -2885,7 +2885,7 @@
     "desc": "交活 · 前置没做（问过的人不够）"
   },
   "SYS_JOB_DELIVERED": {
-    "value": "交了：{name}",
+    "value": "✔ 交了：{name}",
     "params": [
       "name"
     ],

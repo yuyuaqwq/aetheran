@@ -994,6 +994,26 @@ DOC_PENDING = {
                "口径。只改这一格的值，槽位与取件点一个字没动。",
     },
 
+    "SYS_JOB_TAKEN": {
+        "old": "接下：{name}",
+        "new": "📜 接下：{name}",
+        "why": "P2-3（本车道真缺陷 · 同一界面内图标不一致）：真源 `17_文案收口口径_v1` L159 "
+               "给**同一族**的 `SYS_JOB_ABANDONED` 配了 `🗑️`，而接活/交活/奖励那三行没有 —— "
+               "实屏（e2e_drive 真敲『接 1』）四行同屏时，一行带图标三行不带。"
+               "口径：鱼鱼「emoji 少不算缺陷，但**同一界面内用法要一致**」；"
+               "📜 在本包已固化为「读东西/清单/单子」语义（`SYS_BOARD_BOUNTY_HEAD`·`SYS_BOARD_SIDE_HEAD`"
+               "·`SYS_SMITH_CRAFT_HEAD`·`SYS_SMITH_SRC_HEAD` 四条 **HEAD 全用它**）⇒ 接活那条归 📜。",
+    },
+    "SYS_JOB_DELIVERED": {
+        "old": "交了：{name}",
+        "new": "✔ 交了：{name}",
+        "why": "P2-3（同上那一条的另一半）：交活是**完成**语义 ⇒ 归 ✔，"
+               "与本包既有的 `COMBAT_DONE`『✔ 打完了。』·`COMBAT_CORE_FINISHED` 同一符号，"
+               "不自创 ✅（本包 ✅ 使用数为 0，写了就是新造）。"
+               "★ 奖励那一行 `SYS_JOB_REWARD`（经验+铜板）**不在这批里**：它与 `SYS_REWARD`"
+               "（💰 金币 +{gold}，✨ 经验 +{exp}）是同语义两套写法，牵涉到选哪一套当准，"
+               "属口径裁决 ⇒ 留交主线，本批不动。",
+    },
     "COMBAT_TURN_FOE_DOING": {
         "old": "◆ {name}正押着一手 —— 那一手还有 {left} 秒落到你身上。",
         "new": "◆ {name}正押着一手 —— 那一手还有 {left} 刻落到你身上。",
