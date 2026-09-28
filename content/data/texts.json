@@ -3655,7 +3655,7 @@
     "desc": "装备/卸下 · 面板派生的上限跟着变（P-27）"
   },
   "SYS_CMP_HEAD": {
-    "value": "【对比】{name}（{quality} · {kind}） ｜ 现在这件：{cur}",
+    "value": "【对比】{name}（{quality} · {kind}） · 现在这件：{cur}",
     "params": [
       "cur",
       "kind",
@@ -3721,7 +3721,7 @@
     "desc": "对比 · 收尾计数（不合成总分 —— 词条无权重）"
   },
   "SYS_SKILL_HEAD": {
-    "value": "【技能】{cls} · 已会 {known} 条 ｜ 还没到等级 {locked} 条",
+    "value": "【技能】{cls} · 已会 {known} 条 · 还没到等级 {locked} 条",
     "params": [
       "cls",
       "known",

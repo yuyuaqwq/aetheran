@@ -965,6 +965,33 @@ DOC_PENDING = {
                "生成器比对的是整格值、不是单行。取件点 `content/instance.py:770` "
                "与判定逻辑一个字没动；这一格 `params` 是空的，不涉及槽位。",
     },
+    # ===== P2-9（文案车道 aep2 · 同一行内分隔符收敛）=====
+    #   两条，都是端到端真机跑出来的（不是按审计清单逐条猜）：
+    #   ① SYS_SKILL_HEAD：47 条 _HEAD 槽位里**只有它一行同时出现 · 与 ｜**
+    #      （现算：其余用 · 的 HEAD 一律 ｜=0，用 ｜ 的一律 ·=0）。
+    #      且它自己的**双生句** SYS_RECIPE_HEAD（同为「会做 N 条 / 还没学会 M 条」）
+    #      两个分隔符都用 · ⇒ **以它为准，把 ｜ 收成 ·**。
+    #   ② SYS_CMP_HEAD：同一个对比界面里 SYS_CMP_VERDICT（结论行）已统一用 ·，
+    #      且 SYS_CMP_ROW / _NOTE_CUR / _NOTE_NEW 三条都是行首 · 锚点 ⇒
+    #      **拿它自己界面里那三条的口径统一拿下来。**
+    #   选定口径：**一行内不得同时出现 · 与 ｜。**不新造符号、不两边都留。
+    #   （下面的 · / ｜ 只是本文档里的占位名，实际值 = texts.json 里那两个字符。）
+    "SYS_SKILL_HEAD": {
+        "old": "【技能】{cls} · 已会 {known} 条 ｜ 还没到等级 {locked} 条",
+        "new": "【技能】{cls} · 已会 {known} 条 · 还没到等级 {locked} 条",
+        "why": "P2-9①：47 条 _HEAD 里唯一一行同时混 · 与 ｜ 的；且它自己的双生句 "
+               "SYS_RECIPE_HEAD（同为「会做 N / 还没学会 M」）两个分隔符都是 · ⇒ 以它为准。"
+               "只改这一格的值，cls/known/locked 三个槽位与取件点 content/cmds_skill.py:121 "
+               "一个字没动；两支采该槽位的探针（probe_cmds.py 711/819）是现取槽位的，"
+               "不硬编字符串字面量 ⇒ 跟随。",
+    },
+    "SYS_CMP_HEAD": {
+        "old": "【对比】{name}（{quality} · {kind}） ｜ 现在这件：{cur}",
+        "new": "【对比】{name}（{quality} · {kind}） · 现在这件：{cur}",
+        "why": "P2-9②：同一个对比界面里 SYS_CMP_ROW / _NOTE_CUR / _NOTE_NEW 三条都是行首 "
+               "· 锚点、SYS_CMP_VERDICT 也统一用 · 作分隔 ⇒ 拿它自己界面里那些行的"
+               "口径。只改这一格的值，槽位与取件点一个字没动。",
+    },
 }
 
 
