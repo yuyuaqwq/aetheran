@@ -13781,3 +13781,86 @@ rebuild_syscopy.py                                 连跑三遍「644 条 · 零
 ② `probe_dialogues` 里 `SYS_CLS_STAR`/`SYS_CLS_ROW` **命中 0 次**（`grep -c` = 0）⇒ 与本件无关；
 ③ 那支的红在 ⑬-b 反证（`dialogues.json` 的层首压句），与文案表无关。
 ⇒ **零回归**成立，但这条**不能只报「红集相同」** —— 成员变了就得逐条归因。
+
+### P2-13（`3a890c1`）：战斗屏两处「同语义两个行首锚」+ ★ 补上 icon 判据的**结构盲区**
+
+**本轮现扫现读，不是照抄台账。** P2-1/2/3/4 四件已由前几轮收口并落账
+（`9dad7f7` / `acebb6c` / `c9fab82`）⇒ 本轮不重排那四件，改为自己找新缺口。
+
+**三处改动（每处都有真跑引擎的一屏取证）**：
+
+```
+① COMBAT_LANDING_PHYS_IMMUNE  🪨 → 🛡️
+② COMBAT_EFFECTS_IMMUNE_DEBUFF 🚫 → 🛡️
+③ COMBAT_GAUGE_REFLECT        🪨 → 💢
+```
+
+- ① 同族三条（魔抗 / 格挡减免 / 元素抗性减免）早已全是 🛡️；四条由引擎
+  `landing.py::_apply_taken_reductions` **同一个函数**里的四个 `_cue` 连着发
+  ⇒ 改前真跑一屏：`🪨 物理免伤，减免 35 点` 与 `🛡️ 格挡！减免 41 点` 紧挨着。
+- ② 与 `IMMUNE_CONTROL`（已 🛡️）同为「这一次没生效」一语，两条由
+  `effects.py::act_apply` 同一个函数里两个 `_cue` 连着发。改前真跑：
+  `🛡️ 免疫控制：stun_x 未生效` / `🚫 免疫【bleeding】，异常未生效`。
+- ③ 「效果回敬 / 触发」一族已全是 💢（`GAUGE_TRIGGER`/`SHAKEN`/`PHASE_PRESERVE`）；
+  且 🪨 当时被 ① 与本条同时占着 —— **一个图标扛两个不相干的语义**。改后 🪨 零用途。
+- ★ 三条**只换行首锚，句子一字未动**。真源 26_ §2.2 的 emoji 语义分组表里
+  **没有 🪨 也没有 🚫**（它写明「🛡️ = 防御 / 减伤 / 霸体」）⇒ 改动是**往真源靠**，
+  不是自创词典。真源只读，一个字没改。
+
+**★★ 本批最值钱的一条：门禁的盲区不是「写松了」，是「够不着」**
+
+```
+scripts/probe_icon_consistency.py 的 ①~⑥ 靠 AST 扫 content/*.py 里的 T() 调用点
+拼「同一屏」。而战斗日志那 62 条（content/rules/battle_text.json::slots 全量）
+在本包里**零个 T() 调用点** —— 取件口是引擎 _cue → 订阅表 → 引擎 render_*
+（content/battle_text.py 文件头记的就是这件事）。
+⇒ 整个战斗屏在那一支的结构上隐形：它报「全绿」时压根没看过这 62 条。
+⇒ skill §7e「门禁的盲区常常是印而不判」的同族（本仓另一例：probe_dialogues:121
+   打印了 NPC 四层分布却不判）。
+```
+
+⇒ 新开 `scripts/probe_battle_icon_coherence.py` 补它，**两条并着跑（不替代）**：
+
+- 「同一屏」对战斗日志有**更硬的定义**：同一个引擎函数里连着发的那几条 cue
+  = 玩家看到它们挨着印的那一屏。**定义域现扫引擎源码**（AST 取每个 `_cue`
+  第三段实参所在的函数），不手写名单（域/表跟装载口·定义方走）。
+- ★ **第一版按「同屏同锚」判 → 假红，真踩了**：真源 §2.2 本来就 16 个语义覆盖
+  一整场；`act_apply` 一个函数发 8 条（增益/免疫/叠层/命中就绪四族）⇒ 4 处全是
+  「本来就该不同」。收成**「同屏 + 同一语义词」**才准。
+- 语义词表**每个都当跑核对过**。「生效」**被换掉**：它同时圈住
+  `ON_HIT_READY`（被动就绪，X 刻内生效）/ `ACTIONS_EFFECT_ON` / 两条 `IMMUNE`
+  —— 三个语义；改用「未生效」（全表只圈住那两条免疫行，恰好就是判据要管的那族）。
+- ★ **不钉「emoji 覆盖率」**（鱼鱼口径：emoji 少不是缺陷），只判一致性。
+- 反证：把 `IMMUNE_CONTROL` 的锚换成 ★ ⇒ 判据当场红（有牙）；还原 ⇒ 回到 0。
+
+**门禁（本车道自己复跑，非引述）**
+
+```
+probe_texts / probe_copy / probe_guard_text / probe_icon_consistency /
+probe_battle_icon_coherence / probe_elements / probe_class        全绿
+rebuild_syscopy.py                          连跑三遍「644 条 · 零新增 · 幂等」
+全量 64 支（新增本支探针后）                59 绿 / 5 红
+★ 红集与本件**逐条对拍 = 基线同集**，且已把那 5 支在 HEAD 版上单跑复核（同样红）
+  ⇒ 零回归：
+  · probe_generators + probe_titles   rebuild_titles 的 title_wall_listener 条件
+    对不上（heard@dlg_hagen 写 9，那棵树 22 条台词）—— 与文案表无关
+  · probe_sources                     i_token_stone_shard 打了 0 场
+  · probe_mech + probe_resources      **引擎仓工作区干净**那条硬指标
+    （引擎侧 `games/orlandia` 有别的车道在写，`m` 是别人的）
+```
+
+**★ 记一条给下一位的坑（我自己踩了，浪费一轮）**
+
+```
+基线取证别用 `git checkout HEAD -- <我的文件>` 之后「以为还能原样 checkout 回来」。
+实测：我在 checkout 之后又跑了一段带「已改则跳过」幂等判断的补写脚本，
+它读到的已是 HEAD 版文件、判「已是新值」而**什么也没做** ⇒ texts.json 少了一处改动，
+差点带着半份改动提交。补法：回放必须**无条件重放**（先查文件当前值再决定改什么，
+不许靠「我记得我改过了」），落盘后**逐条回读三个槽位的现值**再跑门禁。
+★ 同族：`git stash push -- <已提交路径>` 是空操作，但紧跟的 `stash pop` 会去弹
+  别人的 stash（前一版已记，见 P2-12）。
+```
+
+**边界**：真源 `aetheran-plan` 零改动 · 引擎仓零改动 · 不 push ·
+未碰别线文件面（`content/cmds_talk.py` 与后来的 `scripts/probe_dialogues.py`
+工作区脏 = 别车道在途，显式 add 时没带）。提交 1 笔 · 3 文件 · +215/−9。
