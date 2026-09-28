@@ -874,18 +874,24 @@ print("      同刻轮换分布：" + " · ".join("%s=%d" % (k.replace("dlg_", "
 #     同刻轮换必然塌到 1 —— 这才是「把原缺陷装回去」的形状。
 _npc_save17 = json.loads(json.dumps(_npc))
 _pick17 = sorted(_SAME, key=lambda k: _SAME[k])[0]
-for _k17 in _npc[_pick17]["nodes"]:
-    _ly17 = _k17
-    _kept17 = None
-    for _c in _npc_save17[_pick17]["nodes"][_ly17]["texts"]:
-        if _c.get("need") is None:
-            _kept17 = _c
-            break
-    _npc[_pick17]["nodes"][_ly17]["texts"] = [_kept17] if _kept17 else []
+# ★ 2026-09-29 P1-25：夹具修成**本判据自己写的意图**（此前是「每层各留一条」，
+#   压完还剩 4 句不同台词 ⇒ 擦着 `_MIN_SAME` 过；注释里要的却是「整棵树只剩一种话」）。
+#   现在**整棵树只留一条**（第一条永真句），其余层清空 ⇒ 压完必定塌到 1，反证更锐。
+#   ★ 门禁只加强：⑰-a 的底线与判据一个字未动，改的只是这条反证**怎么压**。
+_kept_all = None
+for _ly17 in _npc[_pick17]["nodes"]:
+    if _kept_all is None:
+        for _c in _npc_save17[_pick17]["nodes"][_ly17]["texts"]:
+            if _c.get("need") is None:
+                _kept_all = _c
+                break
+for _ly17 in _npc[_pick17]["nodes"]:
+    _npc[_pick17]["nodes"][_ly17]["texts"] = (
+        [_kept_all] if (_kept_all is not None and _ly17 == "meet") else [])
 _after17 = _rot_same(_pick17)
 _npc.clear()
 _npc.update(_npc_save17)
-chk("⑰-b ★ 反证：把 %s 整棵树的四层各压到只剩一条兜底 ⇒ 同刻轮换掉到 %d 以下（判据抓得住）"
+chk("⑰-b ★ 反证：把 %s 整棵树压到只剩一条兜底 ⇒ 同刻轮换掉到 %d 以下（判据抓得住）"
     % (_pick17.replace("dlg_", ""), _MIN_SAME),
     _after17 < _MIN_SAME,
     "压完 %d 句（%d → %d）" % (_after17, _SAME[_pick17], _after17))
