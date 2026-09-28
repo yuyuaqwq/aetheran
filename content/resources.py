@@ -291,14 +291,15 @@ def aeth_res_regen(battle, caster, target, params, logs):
     if every <= 0 or amount <= 0:
         return
     now = _now(battle)
-    nxt = float(caster.get("_res_at") or 0)
-    if nxt <= 0:
+    due = float(caster.get("_res_at") or 0)
+    if due <= 0:
         caster["_res_at"] = now + every
         return
-    if now < nxt:
+    if now < due:
         return
-    caster["_res_at"] = now + every
-    add(battle, caster, key, amount, logs)
+    n = 1 + int((now - due) // every)             # 这一步跨过了几个「该回的点」
+    caster["_res_at"] = due + n * every            # 书签按 due 推，不按 now 推（否则漂移持续累积）
+    add(battle, caster, key, amount * n, logs)
 
 
 def triggers() -> dict:
