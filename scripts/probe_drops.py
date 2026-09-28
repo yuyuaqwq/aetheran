@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import io
+import inspect
 import os
 import random
 import sys
@@ -484,6 +485,97 @@ print("  · 登记（不当判据）：同一件信物**另有采集点**一条�
       "`unique` 就**不动**」放它过去；**fxm5-gather-unique 已跟账**：那一条目现在写了"
       " `\"unique\": true`（与这里的池级 `unique` 同一个词、同一个语义），采集那条路也**按档"
       "去重**了 —— 判据 `probe_gather ⑫`（两态 + 反证 + 零误伤 + 跨渠道守卫）。")
+
+# ── ⑰ ★ 审计 L1122：`open_unid` 也吃**按等级那一刀**（未鉴定开出穿不上的装备）——
+#   病根：`open_unid` **硬传 `level=1` 且不传 `gated`** ⇒ 不管玩家几级，一律按 1 级那档抽。
+#   实测（改前）：1 级玩家开 `unid_rare` 3000 次 ⇒ **444 次（14.8%）** 是 `req.level > 1` 的档
+#   （遗物档 17 级 / 稀有档 10 级）—— 玩家侧读起来是「白捡一件 17 级遗物却穿不上」。
+#   `roll_pool` 那一侧 P-60（⑮）早已立同一条口径；这一段是**同一族漏在开箱这一支**。
+#   形状 = 与 `roll_pool` **同一对形参**（`level` / `gated`）· 缺省值 = 判据与工具那些
+#   「看池子本身」的调用**一字不变**（真调用端只有 `cmds_talk` 一处，它必须显式传）。
+_u_bad, _u_lines = [], []
+_UIDS = [k for k, v in LT.pools().items()
+         if isinstance(v, dict) and v.get("kind_key") == "unidentified"]
+_N_UNID = 3000
+# ★ 反证不许**崩**在本段（`open_unid` 一旦被改回不接那对形参，下面那句会 TypeError）——
+#   崩掉的判据只能证明「参数不匹配」，证不了「玩家会开出穿不上的东西」⇒ 归成一条 bad。
+try:
+    LT.open_unid("unid_common", level=1, gated=True, rnd=random.Random(0))
+except TypeError as _te:
+    bad("★ ① 开箱也按等级：`open_unid` **不接** `level=` / `gated=` 形参（%s）"
+        " ⇒ 改回按 1 级那一臂，玩家照样开出穿不上的档" % _te)
+for _L in _LV_ALL:
+    _over, _got = [], 0
+    _rnd = random.Random(20260928 + _L)
+    for _ in range(_N_UNID):
+        _r = LT.open_unid("unid_rare", level=_L, gated=True, rnd=_rnd)
+        _o = str((_r or {}).get("id", ""))
+        if not _o:
+            continue
+        _got += 1
+        if _o in IT and int((IT[_o].get("req") or {}).get("level") or 0) > _L:
+            _over.append((_L, _o, int(IT[_o]["req"]["level"])))
+    if _over or not _got:
+        _u_bad.append((_L, _over[:3], _got))
+    _u_lines.append("L%d 开 %d 次/越级 %d" % (_L, _got, len(_over)))
+(ok if not _u_bad else bad)(
+    "★ ① 开箱也按等级：`open_unid(gated=True)` 1..20 级各 %d 次 ⇒ **越级 0 件**（%s）"
+    % (_N_UNID, " · ".join(_u_lines[::5]) + " … 逐级见上"))
+
+# ② 两态对照：**不传**（改前那一臂）真出得来越级件 ⇒ ① 不是永真
+_u_ctl = []
+for _s in range(1000):
+    _o = str((LT.open_unid("unid_rare", rnd=random.Random(_s)) or {}).get("id", ""))
+    if _o in IT and int((IT[_o].get("req") or {}).get("level") or 0) > 1:
+        _u_ctl.append((_o, int(IT[_o]["req"]["level"])))
+(ok if _u_ctl else bad)(
+    "★ ② 两态对照：**不传等级**（改前：硬 `level=1` + 不传 `gated`）1 级真挑得出越级件"
+    "（%d/1000，例 %s）⇒ ① 不是永真" % (len(_u_ctl), _u_ctl[:3]))
+
+# ③ 形参形状对称：`open_unid` 与 `roll_pool` **同名同义**那一对（别让下个读者以为只有池侧能按等级）
+_sig_ok = ("level" in inspect.signature(LT.open_unid).parameters
+           and "gated" in inspect.signature(LT.open_unid).parameters)
+_dflt_ok = (inspect.signature(LT.open_unid).parameters["level"].default == 1
+            and inspect.signature(LT.open_unid).parameters["gated"].default is False)
+(ok if (_sig_ok and _dflt_ok) else bad)(
+    "★ ③ 形状与缺省：`open_unid(level=%r, gated=%r)` —— 缺省 = 看池子本身那一档，"
+    "判据与工具的调用**一字不变**"
+    % (inspect.signature(LT.open_unid).parameters["level"].default,
+       inspect.signature(LT.open_unid).parameters["gated"].default))
+
+# ④ 静态守卫：`content/*.py` 里 `open_unid(` 的调用点**只有 `cmds_talk` 一处**，
+#    且它**必须**带 `level=` + `gated=`（本族同 ⑯④：防下个读者照旧漏掉那对形参）
+_src_talk = io.open(os.path.join(REPO, "content", "cmds_talk.py"), encoding="utf-8").read()
+_u_calls, _u_missing = [], []
+for _f in sorted(os.listdir(os.path.join(REPO, "content"))):
+    if not _f.endswith(".py"):
+        continue
+    if _f == "loot.py":                      # 定义处不算调用点
+        continue
+    _lines = io.open(os.path.join(REPO, "content", _f), encoding="utf-8").read().splitlines()
+    for _i, _ln in enumerate(_lines):
+        if "open_unid(" not in _ln or _ln.lstrip().startswith("#"):
+            continue
+        _u_calls.append((_f, _i + 1))
+        _seg, _j = _ln, _i                # 跨行调用：并到「)」为止那一段整段看
+        while not _seg.rstrip().endswith(")") and _j + 1 < len(_lines):
+            _j += 1
+            _seg += " " + _lines[_j]
+        if not ("level=" in _seg and "gated=" in _seg):
+            _u_missing.append((_f, _i + 1, _ln.strip()[:70]))
+_u_static = [("调用点唯一（只在 cmds_talk）",
+              len(_u_calls) == 1 and _u_calls[0][0] == "cmds_talk.py"),
+             ("那一处带 level= 且 gated=", not _u_missing)]
+_bad_u_static = [n for n, v in _u_static if not v]
+(ok if not _bad_u_static else bad)(
+    "★ ④ 静态守卫：`content/*.py` 的 `open_unid(` 调用点 = %s · 缺 `level=/gated=` 的 %s —— 坏 %s"
+    % (_u_calls, _u_missing or "无", _bad_u_static or "无"))
+
+# ⑤ 真调用端走的就是**玩家自己的等级**（不是怪的、不是常量 1）
+_talk_lv = ('level=int(p.get("level") or 1)' in _src_talk and "gated=True" in _src_talk)
+(ok if _talk_lv else bad)(
+    "★ ⑤ 真调用端传的是玩家自己的等级（`cmds_talk._identify_lines`：`level=int(p.get(\"level\") or 1)`"
+    " + `gated=True`）—— 不是怪的等级、不是写死的 1")
 
 print()
 print("结果：%s" % ("全绿 ✓" if not fails else "有红 ✗"))

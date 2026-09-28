@@ -316,7 +316,10 @@ async def _identify_lines(p, npc_id, who, uid, player, env, just=()):
             left = 0
         if left <= 0:
             continue
-        got = LT.open_unid(uid_id, rnd=random.Random(_unid_seed(uid, CX.today(p), uid_id, left)))
+        # ★ 审计 L1122：把**玩家自己的等级**交给 `open_unid`（`gated=True` 吃那把按等级的刀）。
+        #   缺省是 `level=1 / gated=False` ⇒ 不传就等于「永远按 1 级抽」＝白捡穿不上的档。
+        got = LT.open_unid(uid_id, level=int(p.get("level") or 1), gated=True,
+                           rnd=random.Random(_unid_seed(uid, CX.today(p), uid_id, left)))
         if not got:
             continue                             # ★ fail-closed
         if left > 1:

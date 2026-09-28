@@ -218,8 +218,20 @@ def roll_pool(pool_id: str, *, level: int = 1, rnd: random.Random | None = None,
     return out
 
 
-def open_unid(unid_id: str, *, rnd: random.Random | None = None) -> dict:
-    """开一件未鉴定：返回 {id, kind_key, story?}（「开出了什么」）。"""
+def open_unid(unid_id: str, *, level: int = 1, rnd: random.Random | None = None,
+              gated: bool = False) -> dict:
+    """开一件未鉴定：返回 {id, kind_key, story?}（「开出了什么」）。
+
+    ★ P-60 同族（审计 L1122）：`level` / `gated` 与 `roll_pool` **同一对形参、同一个读法**
+      （那边读池上的 `level_gated`，这边由调用方显式传）。原先这里**硬传 `level=1` 且不传
+      `gated`** ⇒ 1 级玩家开未鉴定开出穿不上的装备：实跑 `unid_rare` 3000 次
+      **444 次（14.8%）** 是 `req.level > 1` 的档（遗物档 17 级 / 稀有档 10 级）。
+      玩家侧读起来是「白捡一件 17 级遗物却穿不上」；`roll_pool` 那一侧 P-60 已立同一条口径
+      （`dp_elite_gear` 声明 `level_gated` 后实跑只出这一级穿得上的）。
+      · 缺省 `level=1 / gated=False` = 判据与工具那些「看池子本身」的调用**一字不变**；
+      · 门禁写 `scripts/probe_drops.py ⑯-之五`：`content/*.py` 里 `open_unid(` 的调用点
+        唯一（`cmds_talk`），且它**必须**带 `level=` + `gated=`（免得下个读者照旧漏）。
+    """
     rnd = rnd or random.Random()
     u = pools().get(unid_id)
     if not u or u.get("kind_key") != "unidentified":
@@ -228,7 +240,7 @@ def open_unid(unid_id: str, *, rnd: random.Random | None = None) -> dict:
     e = _pick(u.get("pool") or [], rnd)
     if not e:
         return {}
-    oid = _resolve(str(e.get("out")), e, 1, rnd, it)
+    oid = _resolve(str(e.get("out")), e, level, rnd, it, gated=gated)
     if not oid:
         return {}
     r = {"id": oid, "kind_key": kind_key_of(oid, e.get("kind_key")), "from_unid": unid_id}
