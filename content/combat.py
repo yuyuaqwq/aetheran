@@ -489,7 +489,15 @@ def build(player: dict, monster_ids, monsters: dict, *, party: int | None = None
         _uids = [str(x.get("uid") or "") for x in _pl]
         if any(not u for u in _uids) or len(set(_uids)) != len(_uids):
             raise ValueError("players 里每份档都得带**各不相同**的 uid：%r" % (_uids,))
-        ps = [player_actor(x) for x in _pl]
+        # ★ 审计 L966：这一路原先**不传 uid** ⇒ `player_actor` 拿到 `uid=None`
+        #   ⇒ `panel_build._person_tag` 退回**档指纹**（`f-…`）。而上面 489 行刚校验过
+        #   「每份档都带**各不相同**的 uid」—— 身份就在手边却没往下传。
+        #   代价（实测 · 端到端跑出来的）：**同职业同等级同加点同装备的两个玩家共用
+        #   同一格面板栈**（`aetheran.cls_knight@10#f-c3cfe0dd80a0`，两人完全相同），
+        #   后造的盖先造的 ⇒ 甲开战后被乙改一份档就带走面板（B3-28 ① 当初修掉的那个
+        #   「同进程里同职业同等级共用一格」原样复发，且只在**多人那条路**上）。
+        #   ★ 单人那条路本来是对的（`player_actor(player, uid=uid)`）—— 只有这一行漏了。
+        ps = [player_actor(x, uid=str(x.get("uid") or "")) for x in _pl]
     else:
         ps = [player_actor(player, uid=uid)]
     es = []

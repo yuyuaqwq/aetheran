@@ -702,6 +702,50 @@ _f6b = _b7.script_hook is not None and _b7.script_hook(_b7, _bo7, _lg7) is True 
     "（%s）· 已经走到「回塔」那一场接回来 ⇒ 阶号也随档回来、不重演（%s）"
     % (repr(_lg6[-1])[:40] if _lg6 else "什么都没出", "没重演" if _f6b else "重演了 / 钩子没了"))
 
+print("")
+print("── ★ 审计 L966（多人那条路：每份档的身份必须传进面板栈）")
+#   病根（实测 · 端到端跑出来的）：`combat.build` 的多人分支 `ps = [player_actor(x) for x in _pl]`
+#   **不传 uid** ⇒ `panel_build._person_tag` 退回**档指纹**（`f-…`）。而上面 489 行
+#   刚校验过「每份档都带**各不相同**的 uid」—— 身份就在手边却没往下传。
+#   ⇒ 同职业同等级同加点同装备的两个玩家**共用同一格面板栈**，后造的盖先造的
+#   （B3-28 ① 当初修掉的那个「同进程里同职业同等级共用一格」在多人路上原样复发）。
+#   ★ 判据必须**真调 `combat.build` 的多人分支**（第一版我把 `player_actor(x, uid=…)`
+#     在探针里自己写了一遍 ⇒ 测的是探针自己、不是被测物，拆掉修正照样绿，已改正）。
+#   ★ 反证：把那行改回 `player_actor(x)` ⇒ 本条当场报红并打出两条一模一样的栈 id。
+_BAD966 = []
+
+
+def _seed966(_uid, _name):
+    return {"uid": _uid, "name": _name, "cls": "cls_knight", "level": 10,
+            "alloc": {"VIT": 5, "AGI": 5, "INT": 5}}
+
+
+try:
+    import content.combat as _CB966                                   # noqa: E402
+    from content import apply as _AP966                                # noqa: E402
+    _AP966.install_engine()                                           # 装配 action_base_fn 等
+    _ps966 = [_seed966("u-1", "甲"), _seed966("u-2", "乙")]
+    _bt966 = _CB966.build(player={}, players=_ps966, monster_ids=[], monsters={})
+    _acts966 = [a for _side in (_bt966.sides or {}).values() for a in _side]
+    _sids966 = [str(a.get("panel_stack") or "") for a in _acts966]
+    if len(_acts966) != 2:
+        _BAD966.append("多人场没造出两个 actor（实际 %d 个）" % len(_acts966))
+    elif len(set(_sids966)) != len(_sids966):
+        _BAD966.append("两个同格玩家共用一格面板栈：%s" % _sids966)
+    for _i966, _s966 in enumerate(_sids966):
+        if "#u-" not in _s966:
+            _BAD966.append("第 %d 个 actor 的栈 id 没带身份段（退回档指纹了）：%s" % (_i966, _s966))
+    # 单人那条路本来是对的（`player_actor(player, uid=uid)`）—— 钉住它别被改坏
+    _one966 = _CB966.player_actor(_seed966("u-9", "丙"), uid="u-9")
+    if "#u-u-9" not in str(_one966.get("panel_stack") or ""):
+        _BAD966.append("单人路把 uid 丢了：%s" % _one966.get("panel_stack"))
+    if _BAD966:
+        bad("★ 审计 L966：多人路两个同格玩家栈 id 两两不同且都带身份段 —— " + " · ".join(_BAD966))
+    else:
+        ok("★ 审计 L966：多人路两个同格玩家栈 id 两两不同且都带身份段 —— %s" % " · ".join(_sids966))
+except Exception as _exc966:                                           # noqa: BLE001
+    bad("★ 审计 L966：多人路身份透传跑得起来 —— %s: %s" % (type(_exc966).__name__, _exc966))
+
 print()
 print("结果：%s" % ("全绿 ✓" if not fails else "有红 ✗"))
 sys.exit(1 if fails else 0)
