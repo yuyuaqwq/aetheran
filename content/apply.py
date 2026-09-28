@@ -63,6 +63,102 @@ def _action() -> dict:
     return _ACTION
 
 
+# ★★ E4 声明口：`expr_vars_fn` —— 「公式表用到的变量名」由**本包自己声明**
+#   （引擎 E4 把表达式变量表从「引擎写死 13 名」改成「内容侧声明」，内容侧一声明**整表替换**）。
+#
+#   为什么必须有（2026-09-29 · 本车道 P0 实测）：引擎 `aff3712` 起 `compile_expr` **按变量名校验**
+#   （审计 L1281 #3，写错的变量名装配期就抛）。而本包 `content/rules/formula_table.json` 的
+#   13 条条目引用了 31 个**不在默认 13 名表里**的名字（`pene_pct` / `pene_flat` / `def_eff` /
+#   `K` / `heal_pow` / `var_roll` …）⇒ 装配方 `F1_eff_def` 第一条就抛 `FormulaDeclError`
+#   ⇒ **本包 63 支探针里 60 支在 import 期就死**（连 `load_stack` 都进不去）。
+#
+#   ★ **取值来源为什么是「入参优先、属性兜底」**（这一条是实测定的，别照抄默认表）：
+#   公式表**不**走 `expr.build_vars` 那条路。查全部消费端只有两处：
+#     ① 引擎 `ext_combat/battle/formulas.py::calc_damage` → `_tbl.run('damage_full', _v)`，
+#        `_v` 是**调用点现攒的完整 dict**（`level` / `def` / `pene_pct` / `mitigation` … 全在里面）；
+#     ② 本包 `content/mech.py` → `.eval('F8_heal'/'F10_block_mit', {...})`，同样传完整 dict。
+#   而 `build_vars`（技能/装备/食物那条路）**只认四个具名入参**（`player_lv`/`skill_lv`/
+#   `target_max_hp`/`base`）—— 实测本包**没有**任何技能/装备公式引用这 31 个名字
+#   （扫 `content/data/*.json` 的 `expr` 字段 = 0 命中）⇒ 那条路上这 31 个变量恒取 0
+#   **是设计内的**（它们只服务于公式表，不服务于技能公式）。
+#   声明里仍给 `else → stat` 兜底：某天真有内容侧按名字取属性时，缺了它会**静默算成 0**
+#   （引擎 `_value_of` 对缺键 `or 0`），而我们要的是「取到真值」或「当场红」。
+def _expr_vars() -> dict:
+    """本包声明的表达式变量表（引擎 `expr_vars_fn` 供体）。
+
+    以引擎默认表为底，**逐条补上**本包公式表用到、而默认表没有的名字 ——
+    名单不手打，从 `formula_table.json` 现解析（条目 `vars` / `guard` / `params.expr` /
+    `expr` / `item_expr` / `combine` / 链式 `steps`），⇒ 公式表加一条公式引了新变量，
+    这张表下一轮 `install_engine` 自动跟上，不会又红在「变量表里没有的名字」。
+    """
+    import re
+    from saintess_engine.expr import _DEFAULT_EXPR_VARS
+
+    decl = json.loads((_RULES / "formula_table.json").read_text(encoding="utf-8"))
+    entries = decl.get("entries", decl)
+    names = set()
+    for _eid, e in entries.items():
+        if not isinstance(e, dict):
+            continue
+        names |= set(e.get("vars") or [])
+        if isinstance(e.get("guard"), dict):
+            names |= set(e["guard"])
+        for _f in ("expr", "item_expr", "combine"):
+            if isinstance(e.get(_f), str):
+                names |= set(re.findall(r"[A-Za-z_][A-Za-z0-9_]*", e[_f]))
+        params = e.get("params")
+        if isinstance(params, dict):
+            names |= _names_in_params(params)
+        steps = e.get("steps") or []
+        for st in steps:
+            if not isinstance(st, dict):
+                continue
+            if isinstance(st.get("guard"), dict):
+                names |= set(st["guard"])
+            if isinstance(st.get("params"), dict):
+                names |= _names_in_params(st["params"])
+        # ★ 链式条目：**前一步的 `id` 就是后一步表达式里的变量名**
+        #   （`damage_full` 的 raw → after_amp → … → final，一条接一条算）。
+        #   漏了这一族 ⇒ 第一条带 `expr` 的 step 就报「变量表里没有的名字 'raw'」
+        #   （2026-09-29 实测：13→42 之后仍红在 `damage_full` 的 `raw`）。
+        for st in steps:
+            if isinstance(st, dict) and isinstance(st.get("id"), str):
+                names.add(st["id"])
+        # ★ `random`：引擎**唯一**的随机来源（F2 波动）。它在 `_inject_random` 里
+        #   **运行期**写进 `local`（`local[rnd['key']] = uniform(-pct, pct)`），
+        #   但名字仍要先在变量表里在位，否则 `compile_expr` 的按名校验会先红
+        #   （2026-09-29 实测：50 名之后红在 `damage_full.final` 的 `var_roll`）。
+        #   声明里给 0 兜底即可 —— 真实值永远由引擎那一行覆盖。
+        if isinstance(e.get("random"), dict) and isinstance(e["random"].get("key"), str):
+            names.add(e["random"]["key"])
+
+    tbl = dict(_DEFAULT_EXPR_VARS)
+    for n in sorted(names - set(tbl)):
+        src = {"from": "input", "key": n}
+        if n == "level":
+            # 公式表里的 `level` 语义 = 等级；`build_vars` 的具名入参叫 `player_lv`
+            src = {"from": "input", "key": "player_lv", "else": {"from": "stat", "key": "level"}}
+        else:
+            src["else"] = {"from": "stat", "key": n}
+        tbl[n] = {"label": n, "source": src}
+    return tbl
+
+
+def _names_in_params(params: dict) -> set:
+    """`params` 段里出现的变量名（含 `expr` 表达式里的与 `ref` 指向的入参名）。"""
+    import re
+    out = set()
+    for spec in params.values():
+        if not isinstance(spec, dict):
+            continue
+        if isinstance(spec.get("expr"), str):
+            out |= set(re.findall(r"[A-Za-z_][A-Za-z0-9_]*", spec["expr"]))
+        ref = spec.get("ref")
+        if isinstance(ref, str) and not ref.startswith("formula."):
+            out.add(ref)
+    return out
+
+
 def _action_base_fn(action):
     """`action_base_fn` 供体：行动类别 → 第一段基准（刻）；未知类别落 `default.cast`。"""
     a = _action()
@@ -91,6 +187,10 @@ def install_engine():
     global _MOUNTED
     if _MOUNTED:
         return
+    # ★ 顺序要紧：`expr_vars_fn` **必须先挂**，`_table()`（下面第一行）才会拿着
+    #   本包声明的变量表去编译那 13 条公式 ⇒ 反过来就是「先编译、后声明」⇒
+    #   编译期看不到本包的变量名 ⇒ 第一条就抛（2026-09-29 实测踩过）。
+    config.mount(expr_vars_fn=_expr_vars)
     tbl = _table()
     bind = _bindings()
     from ext_combat.battle import formulas as _formulas   # 引擎自带纯公式模块（引擎侧，非内容）
@@ -99,6 +199,8 @@ def install_engine():
     from . import cues as _CUES                            # ★ cue 订阅表（引擎侧 cue 迁移的内容半边）
     config.mount(
         formulas=_formulas,                     # ★ 缺了它引擎走 _NullFormulas：伤害算不出来
+        # ★ E4 声明口 `expr_vars_fn` 在**上一行之前**就挂好了（`_table()` 要先编译公式，
+        #   变量表必须先在位）；这里不重复挂，挂两次没意义。
         formula_table_fn=lambda: tbl,
         formula_bindings_fn=lambda slot: bind.get(slot),
         time_model_fn=_time_model,
