@@ -680,6 +680,36 @@ if _prop:
 else:
     chk("⑭-c ★ 反证：物件树一条都没有（判据自身失效，请修夹具）", False, "域里 0 棵 talk_*")
 
+# ⑮ ★ P1-5（2026-09-29 · 文案车道 P1）—— **域必须合自己的 schema**（这一条以前没人跑）
+#    ★ 原状：`schemas/dialogues.schema.json` 全仓只被 ⑧ 读过（查 `"start"` 在不在），
+#      **从没有一处拿它校域**。于是 5 棵物件树（`talk_*`）不匹配 `^dlg_[a-z_]+$`
+#      + `additionalProperties: false` ⇒ 域一直不合规，判据一条都没报。
+#    ★ fail-closed：**装不上 jsonschema 就红**（不许「环境缺个库就跳过」——
+#      跳过 = 这条判据又变成恒真，那正是它当初没被发现的原因）。
+#    ★ 口径：`^dlg_` 与 `^talk_` **两族都要在**（14 棵 NPC + 5 棵物件是域的事实）；
+#      P1-5 已把 `talk_` 那一族补进去，子树逐字复用 `dlg_` 那份（不许复制第二份形状）。
+try:
+    import jsonschema as _js15
+    _sch15 = json.loads((REPO / "schemas" / "dialogues.schema.json").read_text(encoding="utf-8"))
+    _v15 = _js15.Draft7Validator(_sch15)
+    _errs15 = ["%s%s" % ("/".join(str(x) for x in e.absolute_path) or "<root>", " · " + e.message[:60])
+               for e in _v15.iter_errors(dl)]
+    chk("⑮-a ★ 域合自己的 schema（真跑 jsonschema · %d 棵树）" % len(dl), not _errs15,
+        " · ".join(_errs15[:3]) if _errs15 else "0 处不合规")
+    _pats15 = sorted((_sch15.get("patternProperties") or {}).keys())
+    chk("⑮-b ★ schema 认两族（NPC `dlg_` + 物件 `talk_`；少一族 = 那族域一直不合规）",
+        any("dlg_" in p for p in _pats15) and any("talk_" in p for p in _pats15),
+        "patternProperties：%s" % " · ".join(_pats15))
+    # ⑮-c ★ 反证：塞一棵树名不合规的 id ⇒ 必须被抓（证明 ⑮-a 不是恒真）
+    _bad15 = dict(dl)
+    _bad15["写法不合法_1"] = {"nodes": {"meet": {"texts": [{"need": None, "text": "x"}]}}}
+    _r15 = list(_v15.iter_errors(_bad15))
+    chk("⑮-c ★ 反证：树名不合规 ⇒ schema 会拒绝（判据不恒真）", bool(_r15),
+        "塞了 %r ⇒ %d 处报错" % ("写法不合法_1", len(_r15)))
+except ImportError:
+    chk("⑮-a/b/c ★ 域合自己的 schema（真跑 jsonschema）", False,
+        "装不上 jsonschema —— fail-closed：跳过这条 = 判据恒真，正是它当初没被发现的原因")
+
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
 sys.exit(0 if ok else 1)
