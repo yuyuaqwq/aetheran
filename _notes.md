@@ -13655,3 +13655,85 @@ probe_generators               红 —— rebuild_titles（title_wall_listener �
 
 **P2-4a** gauge `bar_gain` 补显示名兜底（引擎 1 行）· **P2-4b** 状态键显示名注入表
 （引擎新增 + 内容侧 24 条槽位 + 接线）。本轮复核**结论不变**。
+
+### ★★ P0 车道（05:0x · aep0 · `9a4ec0e`）：**P0-1/2/3 三件复核=已落地**；★ 本轮真正做的 = **把连挂三轮的全局阻塞修掉了**（整包从 3/63 绿回到 57/63）
+
+```text
+【病症】probe_texts / probe_cues / probe_copy / e2e_drive 全死在 import 期：
+  FormulaDeclError: 条目 'F1_eff_def' 的 expr 编译失败：… 引用了变量表里没有的名字
+  'pene_flat'、'pene_pct'（当前生效的变量表 = 13 个）
+  ⇒ 实测 63 支探针里 **60 支 import 期红**，整包跑不起来（`状态` 都回不出来）。
+  ★ 前三轮（02:3x / 03:0x / 04:0x）都只把它「登记成引擎立项 / 本车道不挂声明口」就过去了。
+```
+
+**★★ 推翻前三轮结论的关键证据**（这是本轮最值钱的一条，别再被第四轮重犯）：
+
+```text
+前三轮的依据写的是「实测 `build_vars` 对 pene_pct/pene_flat 给 0.0 ⇒ 挂了会静默算成 0 ⇒ 别挂」。
+★ **那条证据测错了路**。公式表**不**走 `build_vars`。实测消费端只有两处，两处传的都是
+  「调用点现攒的完整 dict」：
+    ① 引擎 `extends/ext_combat/battle/formulas.py::calc_damage:519` → `_tbl.run('damage_full', _v)`
+       （`_v` 里 level/def/pene_pct/pene_flat/mitigation… 全在）
+    ② 本包 `content/mech.py:750,880` → `.eval('F8_heal'/'F10_block_mit', {...})`
+  而 `build_vars`（技能/装备/食物那条路）只认 player_lv/skill_lv/target_max_hp/base **四个具名入参**。
+  ★ 全包扫 `content/data/*.json` 的 `expr` 字段，引用那 31 个名字的公式 = **0 条**
+  ⇒ 那条路上这 31 个变量恒取 0 **是设计内的**（它们只服务公式表），挂声明**不引入**新的静默 0。
+判据（下次遇到「引擎要一个声明、本包没声明」先做这一步）：
+  **别看 `build_vars` 那种通用入口给了什么，要看「本包这个表**实际**被谁 `.eval`/`.run`、
+  传的是哪份 dict」。** 本轮前三分之一就栽在「照着通用入口的签名下结论」。
+```
+
+**修法（一处 · `content/apply.py` · +102/-0）**
+
+```text
+① 新增 `_expr_vars()` 供体；`install_engine()` 里**在 `_table()` 之前** `config.mount(expr_vars_fn=_expr_vars)`。
+   ★ 顺序是这批的命门：`_table()` 当场编译那 13 条公式，变量表必须先在位，否则又红在同一条
+   （本轮第一版就踩了：「先编译、后声明」）。
+② 名单**不手打**，从 `formula_table.json` 现解析，覆盖五种取名面：
+   条目 `vars` · `guard` · `params.expr`/`params.ref` · `expr`/`item_expr`/`combine` ·
+   链式 `steps` 的 **`id`**（前一步输出就是后一步的变量名）与 `steps.params` · **`random.key`**
+   ⇒ 以后公式表加公式引了新变量，下轮 `install` 自动跟上，不会又红在「变量表里没有的名字」。
+   ★ 两种漏法都实测撞过：漏 `steps.id` → 红在 `raw`/`after_def`（13→42 之后仍红）；
+     漏 `random.key` → 红在 `var_roll`（42→50 之后仍红）。漏一个就还是那条 import 红。
+③ 每条给 `else → stat` 兜底：引擎 `_value_of` 对缺键 `or 0`，缺兜底会**静默算成 0**。
+```
+
+**验收（改动后现取）**
+
+```text
+· probe_texts 全绿 ✓（含它自带 3 条反证仍能判红）
+· 五条公式逐项真算对：F1_eff_def 50.0 · F1_def_mit 0.142857 · F2_hit_rate 0.8 ·
+  F3_crit_rate 0.0005 · F8_heal 18.0
+  （★ F1_def_mit/F3_crit_rate 的 `K` 走 `params.ref → const.K_def=300`/`const.K_rate=500`，
+    不是我传的 30/100 —— 我第一版拿手算期望对不上，以为算错了，**是我期望写错**。）
+· damage_full 穿透 30%+10 → 44（>0，没被静默压成 0）
+· ★ 端到端真跑：e2e `我是 人类 → 名字 → 选职业 狂战士 → 往北 → 探索/自动`
+  = 屏上 **31 行时间轴**（`🌀【59 刻】…`/`💥【118 刻】田鼠 受到 12 点伤害！`），
+  伤害数 12/13/15 各不相同 ⇒ 公式真在跑，不是走缓存或兜底。
+  ★ 那 31 行在修之前**一行都出不来**（整包 import 就死了）—— 这就是本轮修好它的直接证据。
+· 全量 63 支：**57 绿 / 6 红**（修之前是 3 绿 / 60 红）。余下 6 支**逐条在 `HEAD~1` 基线上复现同因**，
+  与本件无关：probe_calendar（探针自身缺 `import io` 的 NameError）· probe_titles +
+  probe_generators（`title_wall_listener` 的 `heard@dlg_hagen 写的是 9，那棵树有 17 条`）·
+  probe_sources（`i_token_stone_shard` 掉 `unid_rare` 打了 0 场）· probe_mech / probe_resources
+  （**引擎仓脏树**那条硬指标，引擎侧有别的车道在写）。
+```
+
+**★ 顺带更正作业书两处过期数字（别再当未做项重排）**
+
+```text
+① 「COMBAT_ 共 146 条 · 用【N 刻】写法的 0 条 · 带 {t} 的 5 条」—— 实测 **140 / 60 / 1**。
+   P0-1（时间轴）早由本车道前几轮落地：0992b2e（7 条活 cue 补刻）· 3c0b921（补漏 3 条）· b1a684d（行首图标 6 条）。
+   活 cue 62 条里无刻数的只剩 3 条，且**结构上本就该没有**（`COMBAT_NO_TARGET` 括号续行 ·
+   `COMBAT_BLOCKED_AMOUNT` 格挡续行 · `COMBAT_SCHEDULE_ACTOR_TURN` 分隔行）—— 加刻数会把对的改坏。
+② 「`COMBAT_WINDOW` 逐字一致、是对的 ⇒ 只有时间轴没接」—— 该键**在 texts 域根本不存在**
+   （两仓 grep 0 命中）。即规格 §三 **优化 2「窗口提示行」从没接过**（不是「已接且正确」）。
+   ⇒ 那才是真缺口：落点要碰 `content/cmds_battle.py` 的呈现层（+ `mech.py`/`battle_acts.py` 机制那半），
+   **与本车道文件面不交**（本车道只碰 texts.json 的 COMBAT_* 键 + battle_text.json + DOC_PENDING）
+   ⇒ 维持登记，交给能改那三个文件的车道。P0-2 的 `COMBAT_FLEE_TODO`（🚧 还在）同理：
+   实锤**零生产读端**（`grep -rn COMBAT_FLEE_TODO content/ --include=*.py` = 0），
+   而真源 `00_总纲/17_文案收口口径_v1.md:655` 那一行**仍在册** ⇒ 真源只读 ⇒ 不能删（删了=两处口径打架）。
+   **请主线删真源那一行**，之后本车道可退役该槽位。
+```
+
+本轮：提交 1 笔（`9a4ec0e` · 1 文件 · +102/-0 · 显式 add 未带 `dialogues.json` 与 `probe_dialogues.py`
+—— P1 车道的在途改动，原样留在工作区）；引擎仓零改动；真源 `aetheran-plan` 零改动；未 push。
