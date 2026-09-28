@@ -710,6 +710,43 @@ except ImportError:
     chk("⑮-a/b/c ★ 域合自己的 schema（真跑 jsonschema）", False,
         "装不上 jsonschema —— fail-closed：跳过这条 = 判据恒真，正是它当初没被发现的原因")
 
+
+# ⑯ ★ P1-6（2026-09-29 · 文案车道 P1）—— **取句层序只有一份**（静态守卫）
+#    `cmds_talk.LAYERS` 是层序的**唯一口**（模块头原话：谁再把那一格接回来就是开第二个
+#    口径）。原状：`cmds_ast._poi_effect` 另硬写了一份**顺序相反**的层序（P-12 之前的
+#    旧口径，撤了没跟着撤）⇒ POI 触摸先出 `main`（刚认识就剧透）。已改走 `CT.LAYERS`。
+#    ★ 判据不认「哪几层」，只认「有几份」：层序赋值 / `for … in (` 遍历目标里，
+#      唯一定义处（`content/cmds_talk.py:LAYERS`）之外一份都不许有。
+#    ★ 扫法：先剥掉源码里的引号字符再匹配（正则里因此不出现引号类），
+#      且只认「赋值 / 遍历目标」两种真形状 —— 注释里提到那份旧层序是正常的
+#      （要讲清它为什么被撤），扫全文会把注释当第二口径 ⇒ 判据恒绿 = 自己瞎了。
+import re as _re16                                                       # noqa: E402
+
+_LAYER16 = ("meet", "daily", "main", "hidden", "idle")
+_ALT16 = "|".join(_LAYER16)
+_PAT16 = _re16.compile(r"[(]\s*(?:" + _ALT16 + r")\s*(?:,\s*(?:" + _ALT16 + r")\s*){2,}[)]")
+_def16 = _re16.compile(r"^\s*(?:LAYERS\s*=|for\s+\w+\s+in\s+)")
+_dup16 = []
+for _f16 in sorted(_glob8.glob(os.path.join(str(REPO), "content", "*.py"))):
+    for _n16, _l16 in enumerate(_io8.open(_f16, encoding="utf-8").read().split("\n"), 1):
+        _t16 = _l16.split("#", 1)[0]           # 去掉行内注释
+        if not _t16.strip() or not _def16.match(_t16):
+            continue
+        _bare16 = _t16.replace(chr(34), "").replace(chr(39), "")   # 剥引号
+        for _m16 in _PAT16.finditer(_bare16):
+            if _f16.endswith("cmds_talk.py") and "LAYERS" in _l16:
+                continue                       # 唯一口自身
+            _dup16.append("%s:%d  %s" % (os.path.basename(_f16), _n16, _m16.group(0)))
+chk("⑯-a ★ 取句层序只有一份（层序赋值/遍历目标里不许有第二份字面量）",
+    not _dup16, (" · ".join(_dup16[:4]) or "0 份（唯一口 = content/cmds_talk.py:LAYERS）"))
+
+# ⑯-b ★ POI 触摸那条路的层序确实走 `CT.LAYERS`（★ 真抓住原缺陷的就是这一条：
+#   把 cmds_ast 改回硬写元组，⑯-b 立刻红；⑯-a 负责「别处再冒出来第二份」）。
+_poi16 = _io8.open(os.path.join(str(REPO), "content", "cmds_ast.py"), encoding="utf-8").read()
+_ok16 = "for nn in CT.LAYERS:" in _poi16
+chk("⑯-b ★ POI 触摸那条路的层序走 `CT.LAYERS`（不是自己那份）", _ok16,
+    "for nn in CT.LAYERS: 在不在 = %s" % _ok16)
+
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
 sys.exit(0 if ok else 1)

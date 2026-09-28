@@ -1895,7 +1895,25 @@ async def poi_effect_lines(env, sink, uid, p, pid, rec, verb, player=None):
         if nodes:
             from . import cmds_talk as CT         # 择优那一支只有一处，不抄第二份
             st = CAL.state()
-            for nn in ("main", "hidden", "meet", "daily", "idle"):
+            # ★ P1-6（2026-09-29 · 文案车道 P1）：层序**只认 `CT.LAYERS`**。
+            #   原先这里硬写了一份 ("main","hidden","meet","daily","idle") —— 与
+            #   `cmds_talk.LAYERS`（meet → daily → main → hidden → idle）
+            #   **顺序正好相反**（那一版是 P-12 之前的旧口径，撤了没跟着撤）。
+            #   后果：POI 的 `effect.talk` 碰到**同时有 meet 与 main** 的树时，
+            #   先出 main —— 玩家还没「熟」就先看到那一层（与 P-12 修掉的
+            #   「刚认识就剧透」同一个病，只是这条路上没人钉过）。
+            #   ★ 不新建第二份常量：直接复用 `CT.LAYERS`（择优逻辑只有一处，
+            #   层序也只有一处 —— 判据见 `probe_dialogues ⑯`）。
+            # ★ P1-6（2026-09-29 · 文案车道 P1）：层序**只认 `CT.LAYERS`**。
+            #   原先这里硬写了一份 ("main","hidden","meet","daily","idle") —— 与
+            #   `cmds_talk.LAYERS`（meet → daily → main → hidden → idle）
+            #   **顺序正好相反**（那一版是 P-12 之前的旧口径，撤了没跟着撤）。
+            #   后果：POI 的 `effect.talk` 碰到**同时有 meet 与 main** 的树时，
+            #   先出 main —— 玩家还没「熟」就先看到那一层（与 P-12 修掉的
+            #   「刚认识就剧透」同一个病，只是这条路上没人钉过）。
+            #   ★ 不新建第二份常量：直接复用 `CT.LAYERS`（择优逻辑只有一处，
+            #   层序也只有一处 —— 判据见 `probe_dialogues ⑯`）。
+            for nn in CT.LAYERS:
                 if nn in nodes:
                     _idx, said = CT._pick_indexed(nodes[nn].get("texts"), p, st)
                     if said:
