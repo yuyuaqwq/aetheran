@@ -1009,6 +1009,82 @@ chk("⑲-b ★ 反证：把 %s 四层各压到只剩一条兜底 ⇒ 相邻重�
         sum(1 for _a, _b in zip(_after19, _after19[1:]) if _a == _b and _a),
         len(_after19), len(set(_after19))))
 
+# ─────────────────────────────────────────────────────────────────────────────
+# ⑳ ★ P1-3（2026-09-29 · 文案车道 P1）—— **⑰/⑲ 的量法盲区**：真实世界状态下的相邻重样
+#   ★ 盲区是什么（先说清，否则这条看着像重复钉 ⑲）
+#     ⑰-a 把 `_PROG_FLAGS`（**全部主线旗标**）置真再连敲 8 下，⑲-a 同理
+#     ⇒ 量的是「**主线全通的世界**里能轮换出几句 / 会不会相邻重样」。
+#     而**玩家刚进镇时一条旗标都没有**：条件句（`need` 里有 `flag`/`holding`/`event`）
+#     全都不满足 ⇒ 出得来的只有无条件句 ⇒ 域里那一层无条件句够不够，直接决定观感。
+#     **这一段没有任何既有判据覆盖。**
+#   ★ 实测（真调 `_pick_layer` · **存档无旗标** · 4 时辰 × 2 天气 = 8 种世界状态）：
+#     修之前 dlg_cole 2.5 次/局 · dlg_derrick 3.4 · dlg_ed 3.0 · dlg_hagen 2.0 · dlg_pete 2.4
+#     （相邻两趟逐字相同 = 玩家在屏上连着看到两行一模一样的回话 —— 鱼鱼说的「观感不好」）
+#   ★ 底线**量出来**不是拍的：整批补完 5 位之后最差一位是 **derrick 3.4**，
+#     14 位平均 **1.56** ⇒ 底线取「**每位平均 ≤ 4 次**」（卡在「不许退回修前」那一档）。
+#     ★ **不许一上来就要求 0**：那是 ⑲-a 在**全旗标**世界里的口径，
+#       拿来套「无旗标」世界会逼着内容侧去堆句子，而不是先把该有的内容补齐。
+#     下一轮逐步加严（derrick 那一层无条件句只有 1 句，是剩下最大的一块）。
+# ─────────────────────────────────────────────────────────────────────────────
+_REAL_STATES = [(h, w)
+                for h in ("hr_dawn", "hr_day", "hr_dusk", "hr_night")
+                for w in ("w_clear", "w_rain")]
+
+
+def _rot_dup_unflagged(npc_key, hour, weather, talks=_SAME_TALKS, nodes=None):
+    """★ 与 ⑲ 同一把尺（相邻两趟逐字相同），但**存档里一条旗标都没有**。
+
+    这是 `⑰-a` / `⑲-a` 量的那个世界的**反面**：条件句全都不满足，
+    出得动的只有无条件句 —— 「层里的无条件句够不够」在这里才现形。
+    """
+    _fl = {"talked": {}, "talk": {}, "quest_done": {}}      # ★ 不置任何旗标
+    _p = {"flags": _fl,
+          "bag": {}, "heard": {}, "level": 5,
+          "cls": "cls_knight", "race": "human", "equipped": {}}
+    _seq = []
+    for _i in range(talks):
+        _fl["talked"][npc_key] = _i + 1
+        _ly, _idx, _txt = CT._pick_layer((nodes or _npc)[npc_key]["nodes"], _p,
+                                         {"hour": hour, "weather": weather}, npc_key)
+        _seq.append(_txt or "")
+        if _txt:
+            CT.HD.note(_p, npc_key, _ly, _idx)
+    return sum(1 for _a, _b in zip(_seq, _seq[1:]) if _a == _b and _a)
+
+
+_dup20 = {}
+for _k20 in sorted(_npc):
+    _v20 = [_rot_dup_unflagged(_k20, _h, _w) for _h, _w in _REAL_STATES]
+    _dup20[_k20] = sum(_v20) / float(len(_v20))          # 8 种世界状态的均值
+_MAX_UNFLAGGED_AVG = 4.0
+_tot20 = max(_dup20.values())
+chk("⑳-a ★ **无旗标**存档下（条件句全不满足，只剩无条件句可用）：每位平均相邻重样 ≤ %.1f 次"
+    "（%d 时辰 × %d 天气 = %d 种世界状态 · 真敲 `_pick_layer` · 现值最差 %.2f）"
+    % (_MAX_UNFLAGGED_AVG, len(set(h for h, _ in _REAL_STATES)),
+       len(set(w for _, w in _REAL_STATES)), len(_REAL_STATES), _tot20),
+    _tot20 <= _MAX_UNFLAGGED_AVG,
+    "最差 %.2f（%s）" % (_tot20,
+                         "、".join("%s=%.2f" % (k.replace("dlg_", ""), v)
+                                   for k, v in sorted(_dup20.items())
+                                   if v >= _MAX_UNFLAGGED_AVG)))
+print("      无旗标·相邻重样分布：" + " · ".join(
+    "%s=%.2f" % (k.replace("dlg_", ""), v) for k, v in sorted(_dup20.items())))
+
+# ⑳-b **反证**：把某一位的 `daily` 压回到「只有 1 条无条件句」——
+#   逼回「补句之前」的形态，若判据抓得住，这一位的均值必须**明显变差**。
+_dup20_bak = json.loads(json.dumps(_npc))
+_probe20 = "dlg_derrick"
+_keep20 = [c for c in _dup20_bak[_probe20]["nodes"]["daily"]["texts"]
+           if c.get("need") is None][:1]
+_npc[_probe20]["nodes"]["daily"]["texts"] = _keep20
+_after20 = sum(_rot_dup_unflagged(_probe20, _h, _w) for _h, _w in _REAL_STATES)     / float(len(_REAL_STATES))
+_npc.clear()
+_npc.update(_dup20_bak)
+chk("⑳-b ★ 反证：把 %s 的 daily 压回「只剩 1 条无条件句」⇒ 均值必须**变差**（判据抓得住）"
+    % _probe20.replace("dlg_", ""),
+    _after20 > _dup20[_probe20],
+    "压完 %.2f（原 %.2f）" % (_after20, _dup20[_probe20]))
+
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
 sys.exit(0 if ok else 1)
