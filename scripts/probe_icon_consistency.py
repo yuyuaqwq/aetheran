@@ -216,6 +216,99 @@ for k, v in sorted(_mixed_bad.items()):
     print(u"      U+%04X 形态混用：%s" % (k, v))
 chk(u"③ 带/不带 VS16 混用的 codepoint = 0 个", not _mixed_bad, u"%s" % (_mixed_bad,))
 
+# ── ④ 同一屏同一角色的若干行「全都带图标」时，行首锚必须是**同一个** emoji ──
+# ① 只判「有的带、有的不带」；skill §7d 的另一种真问题是「同一语义在不同槽位用了不同
+# emoji」（例：同屏两条 section_head 分别用 📜 与 🔨）。那一类 ① 结构上抓不到
+# （它只看有无，不看是哪一个）⇒ 本条补上，判据只加强、不替代 ①。
+# ★ 刻意只对「全带」的组开：既有「有/无」不齐的归 ①，这里只管「带的不是同一个」。
+__EMO_FINDALL = set()
+for _s in TX:
+    __EMO_FINDALL.update(EMO.findall(_val(_s)))
+
+
+def _lead(v):
+    m = EMO.match(v.strip())
+    return m.group(0) if m else None
+
+
+def scan_diff_emo(funcs):
+    """产出 [(相对路径, 函数名, 行号, 角色, {emoji: [槽位…]})] —— 同屏同角色全带图标却不同锚。"""
+    out = []
+    for (rel, name), info in sorted(funcs.items()):
+        allslots = {s for s in _collect(rel, name, funcs) if s in TX}
+        if len(allslots) < MIN_ROWS:
+            continue
+        by_role = {}
+        for s in allslots:
+            by_role.setdefault(_role(s, _val(s)), []).append(s)
+        for role, group in sorted(by_role.items()):
+            if role == OTHER_ROLE or len(group) < MIN_ROWS:
+                continue
+            ems = {}
+            for s in group:
+                e = _lead(_val(s))
+                if e:
+                    ems.setdefault(e, []).append(s)
+            # 全带才判（部分带 ⇒ 归 ①）
+            if ems and sum(len(v) for v in ems.values()) == len(group) and len(ems) > 1:
+                out.append((rel, name, info[2], role, ems))
+    return out
+
+
+print(u"④ 同屏同角色的行**全都带图标**时，行首锚必须是同一个 emoji（① 只判有无，抓不到这一类）")
+_diff_hits = scan_diff_emo(funcs)
+for rel, fn, line, role, ems in _diff_hits:
+    print(u"  ✗ %s :: %s (L%d) 角色=%s" % (rel, fn, line, role))
+    for e, ss in sorted(ems.items()):
+        print(u"      %s %s" % (e, ss))
+        for s in ss:
+            print(u"           %-26s %s" % (s, _val(s)[:46]))
+chk(u"④ 同屏同角色的行首锚不一致 = 0 处", not _diff_hits, u"%d 处" % len(_diff_hits))
+
+# ④ 的反证：真盘 0 缺陷时没有现成的不一致组 ⇒ 自己造一个 ——
+# 找一组「全带且本来同锚」的，把其中一行的锚换成**表里已存在的另一个** emoji。
+_p4 = None
+for (rel, name), _info in sorted(funcs.items()):
+    allslots = {s for s in _collect(rel, name, funcs) if s in TX}
+    if len(allslots) < MIN_ROWS:
+        continue
+    by_role = {}
+    for s in allslots:
+        by_role.setdefault(_role(s, _val(s)), []).append(s)
+    for role, group in sorted(by_role.items()):
+        if role == OTHER_ROLE or len(group) < MIN_ROWS:
+            continue
+        ems = {}
+        for s in group:
+            e = _lead(_val(s))
+            if e:
+                ems.setdefault(e, []).append(s)
+        if (ems and sum(len(v) for v in ems.values()) == len(group)
+                and len(ems) == 1):
+            only = list(ems)[0]
+            other = next((x for x in sorted(__EMO_FINDALL) if x != only), None)
+            if other:
+                _p4 = (rel, name, role, group[0], only, other)
+                break
+    if _p4:
+        break
+
+if not _p4:
+    chk(u"④ 找得到反证注入点", False, u"★ 判据可能恒绿，请核")
+else:
+    _rel, _fn, _role_, _strip, _only, _other = _p4
+    _orig4 = TX[_strip]["value"]
+    try:
+        TX[_strip]["value"] = EMO.sub(_other, _orig4, count=1)
+        _h4 = scan_diff_emo(funcs)
+        chk(u"④ %s::%s（%s）把 %s 的行首锚 %s 换成 %s ⇒ 判据当场红（有牙）"
+            % (_rel, _fn, _role_, _strip, _only, _other), bool(_h4), u"命中 %d 处" % len(_h4))
+        if _h4:
+            print(u"      反证命中：%s :: %s" % (_h4[0][0], _h4[0][1]))
+    finally:
+        TX[_strip]["value"] = _orig4
+    chk(u"④ 还原 ⇒ 红集回到 0（判据没留下残留）", not scan_diff_emo(funcs))
+
 print()
 print(u"结果：%s" % (u"全绿 ✓" if ok else u"有红 ✗"))
 sys.exit(0 if ok else 1)
