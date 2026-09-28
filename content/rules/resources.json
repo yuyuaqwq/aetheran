@@ -7,7 +7,7 @@
     "on_block": "格挡成功（本包自己掷的格挡，见 resources.py 的 taken_calc）",
     "hit_basic": "普攻命中（引擎事件 `attack_hit`）",
     "hit_skill": "技能命中（引擎事件 `skill_hit`）",
-    "ally_hurt": "友方一次受伤超过其上限的 15%（单人也算自己；引擎 `on_taken` 带 dmg）",
+    "ally_hurt": {"note": "友方一次受伤超过其上限的 over_pct（单人也算自己；引擎 `on_taken` 带 dmg）", "over_pct": 0.15},
     "regen": "自然回复（每 N 刻回 1，靠 `time_advance`）"
   },
   "resources": {
@@ -42,7 +42,7 @@
         "on_cast": 0
       },
       "_src": "04_法师_v2 §三：星屑 +1 · 冰棱 +1 · 焰痕 +2（上限 6）—— 三条都写在**技能自己**的 `res_gain` 上，走 on_cast 的通用那条路，所以这里不重复给数字。",
-      "_note": "引燃 / 垂星的 `res_cost: 99` = 「清空全部层数」的约定值；引擎判据是「有该条目就必须足额」⇒ 层数不够时放不出来（这就是设计要的「先铺后打」）。"
+      "_note": "引燃 / 垂星要「清空全部层数」—— 那个约定**已经迁到技能自己声明的 `consume_all`**（引擎 `actions.py:341-345` 在 `act_cast` 里 pop 掉那个条目），本表不再给层数写「清空」用的哨兵值。引擎判据仍是「有该条目就必须足额」⇒ 层数不够时放不出来（这就是设计要的「先铺后打」）；层数快照由 `mech.py` 的 `aeth_burst_trace` 在清空**之前**留一份。"
     },
     "RES_LITANY": {
       "name": "祷言",

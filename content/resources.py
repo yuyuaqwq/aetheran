@@ -69,7 +69,10 @@ def _validate(t: dict) -> dict:
         raise ValueError("resources.json 形状坏：要有顶层 `resources`（dict）")
     chans = t.get("channels") or {}
     if not isinstance(chans, dict) or not chans:
-        raise ValueError("resources.json 形状坏：要有顶层 `channels`（渠道名 → 说明）")
+        raise ValueError("resources.json 形状坏：要有顶层 `channels`（渠道名 → 说明 / 参数）")
+    for _cn, _cv in chans.items():
+        if isinstance(_cv, dict):
+            _note_of_channel(_cn, _cv)
     for key, rec in (t["resources"] or {}).items():
         if not isinstance(rec, dict):
             raise ValueError("资源 %r 的记录不是 dict" % key)
@@ -87,6 +90,41 @@ def _validate(t: dict) -> dict:
             if not isinstance(reg, dict) or not str(reg.get("every") or ""):
                 raise ValueError("资源 %r 的 `regen` 要写 `every`（每几刻回一次）" % key)
     return t
+
+
+def _note_of_channel(name: str, cv: dict) -> str:
+    """渠道条目的说明 —— 字符串形态直接是它，对象形态取 `note` 那一格（台账 L1680-#4）。
+
+    ★ 渠道条目现在是**两种形态并存**：纯说明的写字符串（ ``on_cast`` 等六条），
+      带参数的写成 `{"note": …, "over_pct": …}`（ ``ally_hurt`` —— 那个 15% 阈值
+      原来**在代码里是裸常量**、表里也写了一份说明，两处维护；台账 L1680-#4）。
+      两种都合法，但**带参数的那条必须把 `note` 写出来**（说明是本表的既有约定，
+      丢了就成了「阈值在表里、口径不知道从哪来」）。
+    """
+    note = str(cv.get("note") or "").strip()
+    if not note:
+        raise ValueError("渠道 %r 用了对象形态却没写 `note`（说明是这张表的既有约定）" % name)
+    return note
+
+
+def hurt_over_pct() -> float:
+    """`ally_hurt` 那条渠道的「受伤超过上限百分之几」—— **单一取值口**（台账 L1680-#4）。
+
+    ★ 原先是 `resources.py:269` 的裸常量 `mx * 0.15`，而 `resources.json` 的
+      `channels.ally_hurt` 说明里也把 15% 写死了一份 ⇒ **同一阈值两处维护**
+      （改表不改代码 = 表的说明骗人；改代码不改表 = 反过来）。本函数是唯一的读口。
+    ★ 认不出 / 形状坏 ⇒ **当场抛并点名**（本项目铁律：不留静默兜底）。
+    """
+    cv = channels().get("ally_hurt")
+    if not isinstance(cv, dict):
+        raise ValueError("渠道 `ally_hurt` 必须是对象形态（要带 over_pct 这个阈值），现在 %r"
+                         % type(cv).__name__)
+    raw = cv.get("over_pct")
+    if isinstance(raw, bool) or not isinstance(raw, (int, float)):
+        raise ValueError("渠道 `ally_hurt` 的 `over_pct` 必须是数字（现在 %r）" % (raw,))
+    if not (0.0 < float(raw) < 1.0):
+        raise ValueError("渠道 `ally_hurt` 的 `over_pct` 必须在 0 与 1 之间（现在 %r）" % (raw,))
+    return float(raw)
 
 
 def resources() -> dict:
@@ -266,7 +304,7 @@ def aeth_res_on_taken(battle, caster, target, params, logs):
             mx = int(ST.actor_max_hp(battle, caster) or 0)
         except Exception:                                   # noqa: BLE001
             mx = 0
-        if mx > 0 and dmg > mx * 0.15:
+        if mx > 0 and dmg > mx * hurt_over_pct():
             add(battle, caster, key, pct, logs)
     # ★ 倒下清空**不在这里**：濒死的这一下 `on_taken` 根本不触发
     #   （`landing` 里 `if target.get("hp", 0) > 0:` 才 fire —— 死者走 on_death/on_kill）
