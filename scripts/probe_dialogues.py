@@ -25,10 +25,14 @@ sys.path.insert(0, ENGINE)
 from saintess_engine.package import load_stack                       # noqa: E402
 
 ok = True
-#: ★ 本波（P1 BUG-7）加的两个：`hurt`（有伤 —— 生命没满）· `equipped`（那一格上有东西）。
-#:   两个字都在 `content/cmds_talk._pick_indexed` 里各有一支（下面 ③ 的静态守卫钉着）。
-NEED_KINDS = {"flag", "quest_done", "quest_active", "time", "event", "holding",
-              "weather", "codex", "flag_not", "hurt", "equipped"}
+#: ★★ P1-27（2026-09-29 · 文案车道 P1）：这份词表**不在探针里**了 ——
+#:   读端 `content/cmds_talk.NEED_KINDS` 是**唯一一份**（它才是「认得哪些键」的定义方；
+#:   探针只是消费者）。原先这里是探针自己抄的常量，两份各写各的**已经漂了**：
+#:     · 探针认得、读端**没有**分支 ⇒ `quest_active` / `flag_not`
+#:       ⇒ 域里用上这两个键，那一句**无条件对所有档说**，零报错（静默洗成兜底句）；
+#:     · 读端认得、探针**没有** ⇒ `last` / `codex`
+#:       ⇒ 域里正当用上它们，③ 会**误报**「词表里没有」。
+#:   漂移的取证与修法见同提交消息；`NEED_KINDS` 此刻在下面 import（延迟到 ③ 之前）。
 MAX_CHARS = 400          # 一屏字数硬约束（消息模板 §优化 3）
 
 
@@ -84,14 +88,16 @@ chk("★ 没有孤立的对话树（NPC 或 POI 至少一处引得到）", not (
 # ③ need 条件合法 —— ★ 本波加强：从「至少要认得一个键」改成「**每个**键都得在词表里
 #   （欠一个就是落到 `else: ok = True` 的静默兜底：那一句会被**所有**档听到）」
 #   + 静态守卫：域里用到的每个键，在 `content/cmds_talk.py` 里都得有它自己的分支。
+from content import cmds_talk as CT                                       # noqa: E402  （本段要用它真敲）
+from content.cmds_talk import NEED_KINDS                                  # noqa: E402  唯一一份
 bad3 = []
 for k, v in dl.items():
     for nk, nd in v["nodes"].items():
         for t in nd["texts"]:
             nd_ = t.get("need")
-            if nd_ and (set(nd_) - NEED_KINDS):
-                bad3.append("%s/%s=%s" % (k, nk, sorted(set(nd_) - NEED_KINDS)))
-chk("★ need 条件的**每个**键都在词表里（%s）" % " · ".join(sorted(NEED_KINDS)),
+            if nd_ and (set(nd_) - set(NEED_KINDS)):
+                bad3.append("%s/%s=%s" % (k, nk, sorted(set(nd_) - set(NEED_KINDS))))
+chk("★ need 条件的**每个**键都在**读端**词表里（%s）" % " · ".join(sorted(NEED_KINDS)),
     not bad3, " · ".join(bad3))
 _ct_src = (REPO / "content" / "cmds_talk.py").read_text(encoding="utf-8")
 _used_kinds = {kk for v in dl.values() for nd in v["nodes"].values()
@@ -99,6 +105,40 @@ _used_kinds = {kk for v in dl.values() for nd in v["nodes"].values()
 _nobranch = sorted(kk for kk in _used_kinds if ('k == "%s"' % kk) not in _ct_src)
 chk("★ 域里用到的 need 键在 `_pick_indexed` 里各有一支（没分支 = 写了等于没写：静默满足）",
     not _nobranch, "没分支：%s" % _nobranch)
+
+# ㉓-a ★★ P1-27（2026-09-29 · 文案车道 P1）—— **认不出的键 fail-closed**（原来是静默满足）
+#    缺陷本体：`_pick_indexed` 的末尾是 `else: ok = True`（认不出 = 当满足）⇒ 一个拼错的
+#    条件键（`tim` 之于 `time`）会把那一句**无条件说给所有档听**，而域与 schema 都拦不住
+#    （schema 不约束 need 的键名；③ 的词表只查「域里已用的键」，管不到「拼错的键」）。
+#    后果按本车道自己的口径说：条件句被静默洗成兜底句 = 剧透提前 + 观感重样。
+#    判据是**可观测**的：真敲读端，一个生造键必须**出不来**，而 need=null 兜底句**仍要出得来**
+#    （防「fail-closed 过头、把兜底也打死」这种改坏）。
+_ck27 = {"flags": {}, "bag": {}, "equipped": {}, "hp": 999}
+_unknown27 = sorted(set(NEED_KINDS) | {"tim", "not_a_real_key", "quest_active", "flag_not"})
+_leak27 = [kk for kk in _unknown27
+           if CT._pick_indexed([{"need": {kk: "x"}, "text": "不该出"}], _ck27)[1]]
+chk("㉓-a ★ 生造的 need 键一律**出不来**（认不出 = 不满足，不是 = 满足）", not _leak27,
+    "漏出去：%s" % _leak27 if _leak27 else "试了 %d 个键全挡住" % len(_unknown27))
+# 真跑一遍未改态的读端（临时把 else 分支改回「满足」）—— 判据自身要能分辨
+_old27 = CT._pick_indexed
+def _pick_satisfy_unknown(lines, p, st=None):
+    """未改态读端：把「认不出的键」当**满足**（改前的真行为）—— 只给这条反证用。"""
+    out = []
+    for ln in (lines or []):
+        nd = dict(ln.get("need") or {})
+        if nd:
+            known = {kk: vv for kk, vv in nd.items() if kk in set(NEED_KINDS)}
+            if len(known) != len(nd):          # 有生造键 ⇒ 改前：无条件满足
+                out.append({"need": None, "text": ln.get("text")})
+            else:
+                out.append({"need": nd, "text": ln.get("text")})
+        else:
+            out.append(ln)
+    return _old27(out, p, st)
+_leak27b = [kk for kk in ("tim", "not_a_real_key", "quest_active", "flag_not")
+            if _pick_satisfy_unknown([{"need": {kk: "x"}, "text": "改前会漏"}], _ck27)[1]]
+chk("㉓-b ★ 反证：按「认不出=满足」的旧读端，㉓-a 必抓到 %d 处（判据不恒真）" % len(_leak27b),
+    len(_leak27b) >= 4, "旧读端漏出：%s" % _leak27b)
 
 # ④ 每节点至少一条 + 台词非空
 bad4 = [("%s/%s" % (k, nk)) for k, v in dl.items() for nk, nd in v["nodes"].items()

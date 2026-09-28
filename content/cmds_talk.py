@@ -48,6 +48,14 @@ def _arg(env, default=""):
     return AV.arg_of(env, default=default)
 
 
+#: ★★ P1-27（2026-09-29 · 文案车道 P1）：**条件键词表的唯一一份**。
+#: 读端认得哪些键，就在这里列全 —— `scripts/probe_dialogues.py` ③ 直接 import 它
+#: （原先那份是探针自己抄的常量，两份各写各的，已经漂了：见同提交里的取证）。
+#: ★ 一行一个分支，**顺序 = `_pick_indexed` 里判定的顺序**，别当无序集合看。
+NEED_KINDS = ("flag", "holding", "time", "weather", "event", "last",
+              "quest_done", "hurt", "equipped", "codex")
+
+
 def _pick_indexed(lines, p, st=None):
     """按 need 条件择优：**按顺序挑第一条满足的**（照奥兰迪亚的精华）。
 
@@ -103,7 +111,15 @@ def _pick_indexed(lines, p, st=None):
                 if not (bk and rid and CX.has(p, bk, rid)):
                     ok = False
             else:
-                ok = True
+                # ★★ P1-27（2026-09-29 · 文案车道 P1）：**认不出的键按不满足算**（fail-closed）。
+                #   原先这里是 `ok = True` —— 认不出 = **当成满足** ⇒ 一个拼错的键
+                #   （`tim` 之于 `time`）会让那一句**无条件地说给所有档听**，
+                #   而域里/ schema 里**没有任何一处能拦住它**（schema 不约束 need 的键名，
+                #   探针 ③ 词表也只查「域里已用的键」，管不到「拼错的键」）。
+                #   那正是「条件句被静默洗成兜底句」的最短路径：条件越严越该更早说，
+                #   拼错一次 = 这一句对所有人无条件开放。
+                #   取舍：宁可落到兜底那一句（域里每层末位都有 need=null）也不越权放行。
+                ok = False
         if ok:
             return i, ln.get("text")
     return None, None
