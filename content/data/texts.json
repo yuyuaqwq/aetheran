@@ -252,7 +252,7 @@
     "desc": "副本 · 塔顶（每间房要回答「这一间教什么」） · ★ 已写正文"
   },
   "COMBAT_INTERRUPT_OK": {
-    "value": "⚔️ {t} 刻，{who}打断成功，「{skill}」被截断",
+    "value": "⚔️【{t} 刻】{who} 打断成功 —— 「{skill}」被截断",
     "params": [
       "skill",
       "t",
@@ -262,7 +262,7 @@
     "desc": "打断成功"
   },
   "COMBAT_INTERRUPT_FAIL": {
-    "value": "⚠️ {t} 刻，{who}的打断落空了",
+    "value": "⚠️【{t} 刻】{who} 的打断落空了",
     "params": [
       "t",
       "who"
@@ -351,7 +351,7 @@
     "desc": "防御"
   },
   "COMBAT_MISS": {
-    "value": "⚔️ {t} 刻，{who}的攻击落空了",
+    "value": "⚔️【{t} 刻】{who} 的攻击落空了",
     "params": [
       "t",
       "who"
