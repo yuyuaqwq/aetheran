@@ -591,7 +591,25 @@ _n_slot = sum(len(re.findall(r"_poi_read_slot\(", (f).read_text(encoding="utf-8"
 chk("④-d2 `_poi_read_slot` 有 3 个调用点（触摸 / 读 / 塔内调查）—— 同一个口",
     _n_slot >= 4, "%d 处（含定义）" % _n_slot)
 
-
+# ⑥ 判据打在**公开那一口** `station_level` 上（不打 `_mon_lv` 那个新助手 ——
+# 打助手的话，把 `station_level` 那一行改回 `or 1` 而助手还留着，判据照样全绿 = 假绿）。
+# 用 `encounter_cand` 猴补把候选钉成「一只 0 级的」⇒ 不依赖真实域数据。
+_EX = __import__("content.explore", fromlist=["station_level"])
+_CB = __import__("content.combat", fromlist=["encounter_cand"])
+_cb0, _sl0 = _CB.encounter_cand, _EX.station_level
+try:
+    _CB.encounter_cand = lambda ms, loc, node, lv: (["m_zero"], [])   # 一只 0 级的怪
+    _r_zero = _sl0({"m_zero": {"lv": 0}}, "belt_north", "bn_bone", 3)
+    _CB.encounter_cand = lambda ms, loc, node, lv: (["m_nokey"], [])   # 那只**没填** lv
+    _r_nokey = _sl0({"m_nokey": {}}, "belt_north", "bn_bone", 3)
+    _CB.encounter_cand = lambda ms, loc, node, lv: (["m_seven"], [])   # 正常值
+    _r_seven = _sl0({"m_seven": {"lv": 7}}, "belt_north", "bn_bone", 3)
+finally:
+    _CB.encounter_cand = _cb0
+chk("⑥ 站基准：怪**没填** lv ⇒ 回落 1（旧默认，零行为变化）", _r_nokey == 1, "%s" % (_r_nokey,))
+chk("⑥-b ★ 怪**lv=0** ⇒ 站基准就是 0（不再被 `or 1` 吞成 1）",
+    _r_zero == 0, "%s" % (_r_zero,))
+chk("⑥-c 正常值原样（零行为变化的边界）", _r_seven == 7, "%s" % (_r_seven,))
 print()
 print("结果：%s" % ("有红 ✗" if not ok else "全绿 ✓"))
 sys.exit(0 if ok else 1)

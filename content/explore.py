@@ -97,15 +97,32 @@ def band_of(loc: str, node: str) -> str:
     return str(band.get("default") or "")
 
 
+def _mon_lv(ms: dict, key: str) -> int:
+    """一只怪的基准等级（**缺键**才回落 1，键在而值是 0 就取 0）—— 审计 L2009-4。
+
+    原先这一格是 `(...).get("lv", 1) or 1`：那个 `or 1` 吞掉**合法 falsy 的 0 级**
+    （Step 2b 尾注那一族）。0 不是「没填」而是「最低那一档」，抬成 1 会让站基准
+    凭空高一级 ⇒ 威慑档 / 越级倍率整档算错，且玩家看不出为什么。
+    """
+    raw = (ms.get(key) or {}).get("lv")
+    return 1 if raw is None else int(raw)
+
+
 def station_level(ms: dict, loc: str, node: str, level: int):
     """这一站的**基准等级** —— 在这一站说得上话的怪里**最低的那一级**；一只都没有 ⇒ `None`。
 
     「说得上话的怪」走 `combat.encounter_cand` 那一口（**唯一一处**：遇敌挑选与悬赏轮换池
-    都问它）—— 本函数只用它的**全部候选**那一格（`near` 那一格跟玩家等级走，站基准不能跟人走）。
+      都问它）—— 本函数只用它的**全部候选**那一格（`near` 那一格跟玩家等级走，站基准不能跟人走）。
+
+    ★ 审计 L2009-4：这一行原先是 `int((ms.get(k) or {}).get("lv", 1) or 1)` ——
+      那个 `or 1` 把**合法 falsy 的 0 级**抬成 1（Step 2b 尾注那一族：回落只认 `None`）。
+      `lv` 是域里的怪物基准等级，`0` 不是「没填」而是「最低那一档」，把它抬成 1
+      ⇒ 这一站的基准凭空高一级 → 威慑档 / 越级倍率**整档算错**，玩家看不出为什么。
+      现在走 `_mon_lv` 那一格：**键不在**才回落 1，**键在而值是 `0`** 就如实取 `0`。
     """
     from . import combat as CB                    # 本地 import：`combat → panel_build → cmds_ast`（成环）
     cand, _near = CB.encounter_cand(ms or {}, loc, node, int(level or 1))
-    lvs = [int((ms.get(k) or {}).get("lv", 1) or 1) for k in cand]
+    lvs = [_mon_lv(ms, k) for k in cand]
     return min(lvs) if lvs else None
 
 
