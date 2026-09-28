@@ -2295,7 +2295,7 @@
     "desc": "状态 · 第三行"
   },
   "SYS_STATUS_IN_FIGHT": {
-    "value": "⚔ 手上这一场还没打完 —— 敲『战斗日志』看打到哪儿了，或者『逃跑』脱身。",
+    "value": "⚔️ 手上这一场还没打完 —— 敲『战斗日志』看打到哪儿了，或者『逃跑』脱身。",
     "params": [],
     "category": "系统",
     "desc": "状态 · 第四行（fix-l）：手上还留着一场时补一行 —— 走不动的原因原先要等玩家敲『去 X』被拦才知道"
@@ -6151,7 +6151,7 @@
     "desc": "战斗屏 · 职业资源（守誓值 / 准星 / 印记 / 祷言）那一条读数 —— 名字与上限现取自 `content/rules/resources.json`（2026-09-27 夜班试玩 w3：法师的「印记」原先任何一页都没有读数）"
   },
   "COMBAT_TURN_STATE": {
-    "value": "⚔ 第 {n} 手 —— 你 {hp}/{hp_max}　｜　{name} {foe_hp}/{foe_hp_max}",
+    "value": "⚔️ 第 {n} 手 —— 你 {hp}/{hp_max}　｜　{name} {foe_hp}/{foe_hp_max}",
     "params": [
       "n",
       "hp",
@@ -6433,7 +6433,7 @@
     "desc": "引擎槽位 `battle.actions.skill_heal_full`（`extends/ext_combat/battle/actions.py:844` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
   },
   "COMBAT_CORE_DEFEND": {
-    "value": "🛡 {name} 摆出防御姿态，受到的伤害减半！",
+    "value": "🛡️ {name} 摆出防御姿态，受到的伤害减半！",
     "params": [
       "name"
     ],

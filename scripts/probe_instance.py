@@ -305,6 +305,16 @@ def solo_transcript():
 #         `save.hp 158 → 156`。命令序列与其余 4 条 row 逐字相同（新旧两份 `--dump` 逐行 diff 过）。
 #     新口径的常驻判据：`framework-engine/tests/test_cross_hand_state.py` ①（姿态期内减半 → 自己下一次
 #     行动到期 → 到期后全额；含「被控跳过也算一次行动」与「死亡那条老路未改」两态）。
+# ★ P2-6（2026-09-28 · 文案车道 aep2）**第十次刷新** —— 同样是**有意**的呈现变更，且**只动了一个字符**（emoji 字形形态）：
+#   原因：`COMBAT_CORE_DEFEND` 用的是**裸** `U+1F6E1` 🛡，而同一 codepoint 在本包其余 14 处
+#     都带 `U+FE0F`（彩色 emoji 呈现）。同一屏里一处彩色、一处单色描边 → 观感不一致。
+#   → 改成带 `U+FE0F`。依据 = 众数（14 : 1），**不是**「想要图标」。
+#     另：`U+2694` 也混用两种形态，但那是 2:2 打平 → **刻意不动**（无依据）。
+#   ⇒ 逐行 diff 过：5 条指令 · 5 个 row 一一对应，**全副本只差 1 行**（那一行里的
+#     🛡 多了一个 `U+FE0F`），删/改 0 行 · `save` 那几格**逐字相同**。
+#   常驻判据（只强不弱）：同一 codepoint 不许「带 U+FE0F」与「裸」**同时**
+#     出现在文案域里（含反证：塞个裸形态当场红）。
+#   ★ 本条**不能当「emoji 覆盖率」类指标**（原话：「适当的 emoji 会更好」）。
 # ══════════════════════════════════════════════════════════════
 BASELINE_PATH = os.path.join(str(REPO), "scripts", "_baseline_instance_solo.json")
 
@@ -908,6 +918,48 @@ def main():
         "走的人从 members 与 sides **一起**摘（剩下的人接着打、轮转不再落在他身上）· "
         "摘完 ≤1 人 / 队长退（解散）⇒ 这一场收掉 · 人不在这一场里 / 手上没场 ⇒ 一个字都不动",
         not _B11, "%s" % _B11[:2])
+
+    # ══ P2-6（文案车道 aep2）· emoji 字形形态一致性 ══
+    # ★ 判据口径（只强不弱）：**同一个 codepoint 不许带 U+FE0F 与裸形态同时出现**。
+    #   理由 = 观感（一处彩色一处单色描边 = 同一个图标长得不一样）。
+    #   ★ 本条**不管「覆盖率」、不管「每界面至少 N 个图标」** —— 原话是
+    #     「适当的 emoji 会更好」，把优点当指标会让别的线为凑数脏加图标。
+    _mixed = {}
+    for _k, _v in (TX or {}).items():
+        _s = str((_v or {}).get("value") or "")
+        for _i, _ch in enumerate(_s):
+            _o = ord(_ch)
+            if not ((0x1F300 <= _o <= 0x1FAFF) or (0x2600 <= _o <= 0x27BF)
+                    or (0x2B00 <= _o <= 0x2BFF)):
+                continue
+            _vs = (_i + 1 < len(_s)) and (_s[_i + 1] == "️")
+            _mixed.setdefault(_o, {True: [], False: []})[_vs].append(_k)
+    _bad_mixed = {hex(_o): (v[True][:2], v[False][:2]) for _o, v in _mixed.items()
+                  if v[True] and v[False]}
+    chk("★ P2-6 emoji 字形形态：同一 codepoint 不同时出现「带 U+FE0F」与「裸」"
+        "（同一个图标长得不一样 = 观感破功；不管覆盖率）",
+        not _bad_mixed, "%s" % (_bad_mixed,))
+    # 反证（不弱化判据）：拿一个**已统一**的 codepoint，强行混入裸形态
+    #   → 上面那条必须变红。（否则这条判据可能是死的）
+    _uni = [o for o, v in _mixed.items() if v[True] and not v[False]]
+    if _uni:
+        _cp = _uni[0]
+        _k0 = _mixed[_cp][True][0]
+        _bad_val = (str(TX[_k0]["value"])[:1] + chr(_cp)
+                    + str(TX[_k0]["value"])[1:])          # 首个字符前插一个同 codepoint 裸形态
+        _t = {}
+        for _k, _v in TX.items():
+            _s = _bad_val if _k == _k0 else str((_v or {}).get("value") or "")
+            for _i, _ch in enumerate(_s):
+                _o = ord(_ch)
+                if ((0x1F300 <= _o <= 0x1FAFF) or (0x2600 <= _o <= 0x27BF)
+                        or (0x2B00 <= _o <= 0x2BFF)):
+                    _t.setdefault(_o, {True: 0, False: 0})[
+                        ((_i + 1 < len(_s)) and (_s[_i + 1] == "️"))] += 1
+        chk("★ P2-6 反证：归一形态的 codepoint 被塞个裸形态 → 上一条当场红"
+            "（否则判据可能是死的）",
+            bool(_t.get(_cp, {}).get(True)) and bool(_t.get(_cp, {}).get(False)),
+            "cp=%s 槽位=%s" % (hex(_cp), _k0))
 
     print()
     print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
