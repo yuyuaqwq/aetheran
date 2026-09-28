@@ -185,10 +185,14 @@ def _pick_layer(nodes, p, st, dlg_id):
             cands.append((layer, idx, txt))
     if not cands:
         return None, None, None
-    if familiar:
-        for layer, idx, txt in cands:
-            if "%s#%s" % (layer, idx) not in heard:
-                return layer, idx, txt             # 还没听过的那一层先说
+    # ★ P1-7（2026-09-28）：去重**不再只对熟了的人生效**。
+    #   原先整段挂在 `if familiar:` 下面 ⇒ 「还不熟」时（只有 meet 会说话）
+    #   每次都返回同一句，玩家连敲两下看到一模一样的回话。
+    #   规格 25_ §一②「重复对话要轮换」管的正是这一段。
+    #   ★ 数据本来就在：`HD.note` 每趟都记（不论熟不熟），只是读端被门挡住了。
+    for layer, idx, txt in cands:
+        if "%s#%s" % (layer, idx) not in heard:
+            return layer, idx, txt             # 还没听过的那一层先说
     return cands[0]                                # 层序上第一层（初次那一档也走这儿）
 
 

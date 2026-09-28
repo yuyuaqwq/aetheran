@@ -332,10 +332,14 @@ chk("⑩-c ★ 反证：抽掉一棵已位齐树的 main 层 ⇒ 位齐率会跌
     % (_probe_tree, _bad_full, len(_bad_tree), _MIN_FULL))
 
 #   反证二：把两层的内容并成「每句都 need=null」⇒ 纯兜底层会超过上限。
-#   ★ 加 3 个（原来写死 +2：现值 7 + 2 = 9 恰好还 ≤ 上限 ⇒ 反证恒真）。
-_bad_flat = len(_FLAT) + 3
-chk("⑩-d ★ 反证：再添三个纯兜底层 ⇒ 会超过上限（判据抓得住）",
-    _bad_flat > _MAX_FLAT, "加上 3 个后 %d > 上限 %d" % (_bad_flat, _MAX_FLAT))
+#   ★ 2026-09-28 P1-7：纯兜底层已降到 **0**，写死的「+3」不再能顶破上限（0+3 ≤ 7
+#     ⇒ 判据恒真 = 门禁自己瞎了）。改成**自己算要加几个**： max(1, 上限 - 现值 + 1)
+#     ⇒ 无论现值是 7 还是 0，这一条都真的顶得破（反证随基线走，不是把断言放宽）。
+_need_add = max(1, _MAX_FLAT - len(_FLAT) + 1)
+_bad_flat = len(_FLAT) + _need_add
+chk("⑩-d ★ 反证：再添 %d 个纯兜底层 ⇒ 会超过上限（判据抓得住）" % _need_add,
+    _bad_flat > _MAX_FLAT,
+    "现值 %d + 添 %d = %d > 上限 %d" % (len(_FLAT), _need_add, _bad_flat, _MAX_FLAT))
 
 #   反证三：**死句**这一类（同一层里两句都 need=null）现在就有判据了 ——
 #   域里不该存在「need=null 的句子排在另一个 need=null 之后」（后面那句永远出不来）。
