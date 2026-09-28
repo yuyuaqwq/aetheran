@@ -25,7 +25,7 @@ from __future__ import annotations
 
 from saintess_engine.host.runtime import GUARD_KEYS
 
-from .cmds_ast import T
+from .cmds_ast import MISSING_MARK, T
 #: texts 域的**唯一**读口（与 `T` 同一份缓存 —— 本模块不再自己读一遍文件）
 from .cmds_ast import _texts as _table
 
@@ -36,8 +36,8 @@ SLOTS = {
     GUARD_KEYS[1]: "SYS_GUARD_BATTLE",
 }
 
-#: 取不到文案时 `T` 回的那串标记（fail-closed：宁可当场抛，也不把这串东西给玩家）
-_MARK = "[MISSING TEXT"
+#: 取不到文案时 `T` 回的那串标记 —— 真源在 `cmds_ast.MISSING_MARK`（审计 L2614：原先逐字硬编码）
+_MARK = MISSING_MARK
 
 
 def _missing(slot):
@@ -60,10 +60,14 @@ def line(key) -> str:
       引擎那头「装了却给不出文本 ⇒ 抛」的同一条规矩，本包这一头照办。
     """
     slot = slot_of(key)
-    out = str(T(slot))
-    if _MARK in out:
+    # ★ 判据打在**记录**上，不打在渲染结果上（审计 L2614 · 高）：守卫句不嵌玩家输入，
+    #   但「渲染结果里没有标记串」并不等于「取到了文案」—— 上游把标记文案一改，
+    #   这条检查就静默失效、标记串被原样投给玩家（docstring 承诺过绝不漏）。
+    #   真正该问的是「那一条槽位在不在 texts 域里、有没有字」。
+    rec = _table().get(slot) or {}
+    if not rec or _MARK in str(rec.get("value") or "") or not str(rec.get("value") or "").strip():
         raise _missing(slot)
-    return out
+    return str(T(slot))
 
 
 def check_domain() -> dict:

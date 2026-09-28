@@ -32,7 +32,7 @@ from __future__ import annotations
 import json
 import os
 
-from .cmds_ast import T
+from .cmds_ast import MISSING_MARK, T
 
 _RULES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "rules", "mana.json")
 _CACHE: dict = {}
@@ -149,7 +149,7 @@ def check_domain() -> dict:
     if not t:
         raise ValueError("mana.json 读不到或形状坏（法力渠道的唯一真源）")
     line = str(T(_slot_name()))
-    if not line.strip() or "[MISSING TEXT" in line:
+    if not line.strip() or MISSING_MARK in line:
         raise KeyError("mana.json 的 gate.slot 在 texts 域里取不到：%r" % (_slot_name(),))
     return t
 

@@ -38,11 +38,17 @@ def _texts():
     return _data("texts")
 
 
+#: 取不到文案时 `T` 回的那串标记（**真源** · fail-closed：宁可当场显形，也不静默编一句）。
+#: ★ 全包**只有这一处**写得出它 —— 别处要判「取不到文案」就 import 这个常量
+#:   （审计 L2212 / L2614：原先 4 处逐字硬编码，改上游标记文案时下游 3 处静默失效）。
+MISSING_MARK = "[MISSING TEXT"
+
+
 def T(key: str, **slots):
     """取一条文案（fail-closed：缺 key 直接回显 key，不静默）。"""
     rec = _texts().get(key)
     if not rec:
-        return "[MISSING TEXT: %s]" % key
+        return "%s: %s]" % (MISSING_MARK, key)
     s = rec.get("value", "")
     for k, v in slots.items():
         s = s.replace("{%s}" % k, str(v))

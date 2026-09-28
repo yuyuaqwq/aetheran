@@ -33,7 +33,7 @@ import json
 import os
 import re
 
-from .cmds_ast import T
+from .cmds_ast import MISSING_MARK, T
 
 _DIR = os.path.dirname(os.path.abspath(__file__))
 _TEXT = os.path.join(_DIR, "data", "texts.json")
@@ -47,8 +47,8 @@ SLOT = "SYS_CMD_MISS"
 #: 占位那一格（`{word}`）不算引用：它不是指令名。
 _QUOTED = re.compile("[\u300c\u300e]([^\u300d\u300f]+)[\u300d\u300f]")
 
-#: 取不到文案时 `T` 回的那串标记（fail-closed：宁可当场抛，也不把这串东西给玩家）
-_MARK = "[MISSING TEXT"
+#: 取不到文案时 `T` 回的那串标记 —— 真源在 `cmds_ast.MISSING_MARK`（审计 L2212：原先 4 处逐字硬编码）
+_MARK = MISSING_MARK
 
 #: 回显那个词最多留几个字（★ F6 · QA P4 E-13）
 #: 玩家敲 32 字长句时，原先是**整句原样回显**一遍 —— 在群里等于刷一长条。
@@ -102,10 +102,16 @@ def line(text, prefix=None) -> str:              # noqa: ARG002 —— prefix �
       它自己已经「装了却给不出文本 ⇒ 抛」，本包这一头照同一条规矩办。
     ★ F6：回显的那个词超长就截断（`ECHO_MAX`）—— 别把玩家那句 32 字原样贴回群里。
     """
-    out = str(T(SLOT, word=echoed(text)))
-    if _MARK in out:
-        raise KeyError("路由未命中的回话取不到文案（槽位 %r 不在 texts 域里）" % (SLOT,))
-    return out
+    # ★ 判据打在**记录**上，不打在渲染结果上（审计 L2212 · 高）：`out` 里嵌着**玩家敲的词**
+    #   —— 玩家只要打出「[MISSING TEXT」这几个字，原先那条 `if _MARK in out` 就会把这句
+    #   回话**误判成缺文案**并抛 KeyError，机器人当场被打死（玩家可见的崩）。
+    #   正确问法是「那一条槽位**在不在域里**」（与装配期 `check_domain` 同一口径），
+    #   回显内容一个字都不参与判定。
+    rec = slot_record()
+    tmpl = str(rec.get("value") or "")
+    if not rec or _MARK in tmpl or not tmpl.strip():
+        raise KeyError("路由未命中的回话取不到文案（槽位 %r 不在 texts 域里、或模板空着）" % (SLOT,))
+    return str(T(SLOT, word=echoed(text)))
 
 
 def echoed(text) -> str:
