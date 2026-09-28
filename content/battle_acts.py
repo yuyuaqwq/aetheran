@@ -196,6 +196,12 @@ class Hand:
     · `item`  : 用物那一件（id）
     · `lines` : 由调用方渲染好的槽位行（换手 / 退不开 那两种「这一手 = 说一句」的动作）
     · `used`  : **这一场**里用了几次（物品 id → 次）—— 上限的记账就在这儿，跨手有效
+
+    ★ 2026-09-29 审计 L1102：原先还有一个 `self.ok`（「这一手是否真的做成了」），
+      两支各写一处、**全包零读点**（连 `scripts/probe_battle_turns.py` 那几处 `ok` 都是各探针
+      自己的 `global ok` 计数变量，与它无关）⇒ 删掉。它那行注释自称「探针/回话用」是**说谎的**
+      —— 正因如此它一直没人销号；要写回执判据请读 `override` 的**返回值**
+      （`(logs, cast, recover)`：成交与否由 `cat` 与那几条日志讲，不由一个没人读的字段讲）。
     """
 
     def __init__(self, kind, *, p=None, item=None, lines=None, used=None):
@@ -206,7 +212,6 @@ class Hand:
         # ★ G2：每件用几次的记账 —— 由调用方给（走「场」时那一格是 `场["items_used"]`，
         #   跨手有效）；不给 = 自己一份（一次结算那条老路：一个 Hand 就是整场）。
         self.used = dict(used) if used is not None else {}
-        self.ok = False                     # 这一手是否真的做成了（探针/回话用）
 
     # ---------------------------------------------------------- 引擎回调
     def override(self, battle, action, actor, skill_name, target):
@@ -235,7 +240,6 @@ class Hand:
             # 它自己那句日志丢掉（玩家看到的那句走下方槽位，措辞归内容侧）。
             EF.act_interrupt(battle, actor, tgt, {}, [])
         tgt["ct"] = float(tgt.get("ct") or 0) + push
-        self.ok = True
         if broke:
             # ★ 2026-09-28 审计 B 车道高②（**本车道唯一一处改 battle_acts.py** · 作业书点名允许的
             #   最小改动）：`broke`（这一下真把对方那一手截断了）此前只发回话、不落档 ⇒ 足迹里
@@ -281,7 +285,6 @@ class Hand:
         actor["hp"] = min(int(mx), hp0 + int(gain))
         _take(self.p, iid, 1)
         self.used[iid] = int(self.used.get(iid, 0)) + 1
-        self.ok = True
         # 报的是**真回了多少**（被上限截掉的不算）—— 与 `使用` 那条路同一个槽位
         return ([T("SYS_USE_HEAL", name=name, heal=max(0, actor["hp"] - hp0),
                    hp=actor["hp"], hp_max=int(mx))], cat, None)
