@@ -1072,7 +1072,11 @@ _dup20 = {}
 for _k20 in sorted(_npc):
     _v20 = [_rot_dup_unflagged(_k20, _h, _w) for _h, _w in _REAL_STATES]
     _dup20[_k20] = sum(_v20) / float(len(_v20))          # 8 种世界状态的均值
-_MAX_UNFLAGGED_AVG = 1.0
+_MAX_UNFLAGGED_AVG = 0.0      # ★ 2026-09-29 P1-2 第五批收档：1.0 → 0.0
+#   现值 0.00（14 位全 0，8 种世界状态 × 8 趟）⇒ 上一档 0.75 是 0.00 之上半档余量，
+#   本轮把 ed/grey/masha 的 daily 与 5 位的第二句 meet 补齐后收到 0.0。
+#   ★ 与 ⑲-a 同一口径（那里就是 0）—— 「玩家刚进镇一条旗标都没有」时
+#     不许看到任何一位相邻重样。**仍不许靠加句子放宽**：破了就补句，不动判据。
 _tot20 = max(_dup20.values())
 chk("⑳-a ★ **无旗标**存档下（条件句全不满足，只剩无条件句可用）：每位平均相邻重样 ≤ %.1f 次"
     "（%d 时辰 × %d 天气 = %d 种世界状态 · 真敲 `_pick_layer` · 现值最差 %.2f）"
@@ -1105,6 +1109,54 @@ chk("⑳-b ★ 反证：把 %s 的 daily 压回「只剩 1 条无条件句」⇒
     (_after20 - _dup20[_probe20]) >= _MUST_WORSEN,
     "压完 %.2f（原 %.2f，差 %+.2f）" % (_after20, _dup20[_probe20],
                                         _after20 - _dup20[_probe20]))
+
+# ㉑ ★ P1-2 第五批（2026-09-29）—— **meet 层「无条件句只有一句」**的结构性判据
+#   ★ 为什么要有这条（本轮真挖出来的东西，前 20 条判据全都盖不到）：
+#     `_layers_ok` 的熟门槛挂在 **talk 次数**（FAMILIAR_TALKS=3）上，**不是**挂在 `heard` 上
+#     ⇒ 新存档的第 1、2 趟都算「不熟」⇒ **那一档只有 `meet` 够层**（daily 被门挡住）
+#     ⇒ 而每位的 `meet` 若只有 **1 句无条件**，第 1 趟与第 2 趟**必然逐字相同**：
+#     玩家刚进门就连着看到两行一模一样的回话 —— 鱼鱼说的「观感不好」最狠的那一下。
+#     ★ ⑳-a 量的是 **daily** 那一池 ⇒ 它**测不到这个洞**（实测：ed 的 daily 补到 7 句无条件，
+#       ⑳-a 仍 0.75）。⇒ 这是一条独立判据，不是 ⑳ 的重复。
+#   ★ 底线**量出来**不是拍的：补句之前 14 位**全都**只有 1 句无条件 meet
+#     （`meet` 两句 = 1 句条件 + 1 句兜底）⇒ 补句之后 5 位改成 2 句，其余 9 位仍 1 句。
+#     ★ 收档决策（2026-09-29 本轮做完）：先把剩下 9 位也补到 2 句，再把底线取 **2**
+#       —— 即「每一位的 meet 都至少有两句无条件」＝ 刚进门的前两趟**结构上就不可能**重样。
+#       上一版取 1 是「不许比谁都少」的软底线，**它的反证写不出来**（压到 1 不越界、
+#       1 < 1 恒 False ⇒ ㉑-b 恒红）。⇒ 底线取 2，反证才有意义（压到 1 必越界）。
+#       ★ 代价是多一句就多一处可重样位 ⇒ 同批同跑 ⑳-a 验它仍是 0.00（已验）。
+_MEET_UNCOND_MIN = 2
+_meet_uncond = {}
+for _k21 in sorted(_npc):
+    if not _k21.startswith("dlg_"):
+        continue
+    _meet21 = _npc[_k21]["nodes"].get("meet", {}).get("texts", [])
+    _meet_uncond[_k21] = sum(1 for _t in _meet21 if not _t.get("need"))
+_thin21 = [k for k, v in _meet_uncond.items() if v < _MEET_UNCOND_MIN]
+chk("㉑-a ★ meet 层无条件句 ≥ %d 句（新手档只够 meet 说话 ⇒ 只有 1 句就必然第 1/2 趟重样）"
+    " —— 现值最薄 %d 句" % (_MEET_UNCOND_MIN,
+                            min(_meet_uncond.values()) if _meet_uncond else 0),
+    not _thin21,
+    "只有 1 句无条件 meet 的：%s" % "、".join(k.replace("dlg_", "") for k in _thin21))
+print("      meet·无条件句数分布：" + " · ".join(
+    "%s=%d" % (k.replace("dlg_", ""), v) for k, v in sorted(_meet_uncond.items())))
+
+# ㉑-b **反证**：把某位压回「meet 只剩 1 句无条件」⇒ 必须被 ㉑-a 抓到（判据不恒真）
+_meet21_bak = json.loads(json.dumps(_npc))
+# ★ 靶子按**现值**动态挑（别写死一个名字，免得下一位补完 ed 就又写成恒真）。
+_probe21 = min((k for k in _meet_uncond if k.startswith("dlg_")),
+               key=lambda k: (_meet_uncond[k], k))
+_npc[_probe21]["nodes"]["meet"]["texts"] = [
+    c for c in _meet21_bak[_probe21]["nodes"]["meet"]["texts"] if c.get("need") is None][:1]
+_thin21_b = [k for k in _npc
+             if k.startswith("dlg_")
+             and sum(1 for _t in _npc[k]["nodes"].get("meet", {}).get("texts", [])
+                     if not _t.get("need")) < _MEET_UNCOND_MIN]
+_npc.clear()
+_npc.update(_meet21_bak)
+chk("㉑-b 反证：把 %s 的 meet 压回「只剩 1 句无条件」⇒ ㉑-a 必抓到它（判据不恒真）"
+    % _probe21.replace("dlg_", ""), bool(_thin21_b), "越界者：%s"
+    % "、".join(k.replace("dlg_", "") for k in _thin21_b))
 
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
