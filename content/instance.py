@@ -71,7 +71,7 @@ import os
 
 from . import persistence as PS
 from . import skills_lookup as SK
-from .cmds_ast import T, _p, hp_cap_or_line
+from .cmds_ast import T, _p, hp_cap_or_line, _save_why
 
 #: 共同档里的作用域名（这一套数据是谁在用）—— 键形状 `<scope>:<group_id>`
 SCOPE = "instance"
@@ -569,7 +569,9 @@ async def take_turn(env, p, uid, player, *, head="", hand=None, action=None, ski
         yield head                                   # ④ 上一手的结果（这一手说的话 + 过程）
     for line in _fmt(logs):
         yield line
-    _write_back(env, p, player, b, u)                # 我这一手的血真落到档上（下一敲按它接着走）
+    _bad = _write_back(env, p, player, b, u)         # 我这一手的血真落到档上（下一敲按它接着走）
+    if _bad:
+        yield _bad                                     # ★ 落库失败：点名，当次这一下不算数
     if b.result is not None:
         async for line in _finish(env, grp, key, st, p, u, player, str(b.result)):
             yield line
@@ -605,12 +607,16 @@ async def take_auto(env, p, uid, player):
             yield line
         for line in _fmt(logs):
             yield line
-        _write_back(env, p, player, b, u)
+        _bad = _write_back(env, p, player, b, u)
+        if _bad:
+            yield _bad                                 # ★ 落库失败：点名，当次这一下不算数
         return
     save(key, st)
     for line in _fmt(logs):
         yield line
-    _write_back(env, p, player, b, u)
+    _bad = _write_back(env, p, player, b, u)
+    if _bad:
+        yield _bad                                     # ★ 落库失败：点名，当次这一下不算数
     async for line in _finish(env, grp, key, st, p, u, player, str(b.result)):
         yield line
 
@@ -882,32 +888,52 @@ def _defend(st, uid):
     return bool(ended), [str(x) for x in (sub or [])]
 
 
-def _write_back(env, p, player, b, uid) -> None:
+def _write_back(env, p, player, b, uid):
     """把我这一手的**血**真落回档（引擎那边 actor 的现血 —— 下一敲按它接着走）。
 
     倒地的这一档不写 0（他的下场由结算说话：回白烛堂 / 血回满）；其余各格原样。
     ★ 「不动档」那条只对**没轮到我的那两敲**成立（等待 / 超时）；轮到我出手这一敲，
       血是这一场的真状态，必须落回，否则下一敲拿旧血续命。
     ★ 落档是处理器的责任：`player.update(p)` 只是把格盖回宿主那份 dict，
-      真写库还得 `env.save()`（与单人那条 `_save(env)` 同款）。
+      真写库还得 `env.save()`。
+
+    ★★ 2026-09-29 审计 afix2：落库失败**不许静默**（原写法 `except Exception: pass`）。
+      这是 `cmds_ast._save` 已修掉的洞的**第二份副本** —— 那一口是全包唯一落档口，
+      那边已改成「返回失败原因、调用方点名给玩家（`SYS_SAVE_FAIL`）、当次成功话术作废」；
+      本模块自己那份 `_save` 仍是 `pass` ⇒ 同一个洞从另一边开着：
+      血没落库，而玩家照样收到「挨打了 / 轮到你」那一整屏 ⇒ 重连血回满、这一场白挨，
+      且全程零报错（挂机的人不像单人那样每敲都整档回写，**只有这一敲**靠这里落血）。
+
+      ⇒ **不吞**：交回一行 `SYS_SAVE_FAIL`（带原因，由 `cmds_ast._save_why` 出），
+        调用方把那一行 yield 出去**并**当次操作的成功话术一并作废。
+      返回值 = `None`（落上了）或那一行文案。
     """
     a = b.find_actor(uid)
     if a is None:
-        return
+        return None
     hp = int(a.get("hp", 0) or 0)
-    if hp > 0:
-        p["hp"] = hp
-        if player is not None:
-            player.update(p)
-        _save(env)
+    if hp <= 0:
+        return None                          # 倒地那档不写 0（下场由结算说话）
+    p["hp"] = hp
+    if player is not None:
+        player.update(p)
+    return _save(env)
 
 
-def _save(env) -> None:
-    """落档（宿主回调；没给 / 抛了都不阻断回话 —— 与 `cmds_ast._save` 同款）。"""
+def _save(env):
+    """落档（宿主回调）。**抛错就把原因交回调用方**，不静默、不另造兜底。
+
+    ★ 本函数**刻意不做** `except: pass`：`cmds_ast._save` 是同款（已按「接住并点名」那
+      一口改成返回失败原因），两份兜底口径不同就又会漂一份。`env is None` = 这一下
+      本来就不改档（无落档上下文的读路径），按**存上了**算。
+    """
+    if env is None:
+        return None
     try:
         env.save()
-    except Exception:                                        # noqa: BLE001
-        pass
+    except Exception as exc:                           # noqa: BLE001 —— 接住并点名那一口
+        return T("SYS_SAVE_FAIL", why=_save_why(exc))
+    return None
 
 
 async def _finish(env, grp, key, st, p, uid, player, res):
