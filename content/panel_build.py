@@ -47,6 +47,11 @@ RATE_KEYS = ("crit", "eva")
 #:   谁要那两个率，走 `rate_of_actor()` 这一口 —— 别再自己扫层。
 RATE_LAYER_ID = "rate"
 
+#: 引擎**按率读**的那两个键（宪法 rating 键 `crit` / `eva` 率化之后落到栈上的名字）。
+#: 同一个值上**既不能当数值键落 base、也不能当 rating 再率一次** —— 两处都是上面那条
+#: 「恒 100% 暴击」的成因，`ensure_stack` 逐出 base 时按这一份。
+_RATE_ENGINE_KEYS = ("crit", "dodge")
+
 
 def rate_of(rating: float) -> float:
     """数值 → 率（宪法 F3 形状 `r/(r+K_rate)`）。**玩家与怪共用这一把尺**。"""
@@ -252,6 +257,10 @@ def build_actor(cls_id: str, level: int, alloc: dict | None = None,
     #   B3-14 把 eva 率化（从三层里摘掉）之后那一行就**再也没出过**（`PANEL_ROWS` 里写着 EVA，
     #   取不到 —— 死行）。这里把数值放回来，页面读 `eva`。
     actor["eva"] = eva_rating
+    # ★ 审计 L1242：`crit` 的 rating **也**要落快照（B4-21 只补了 `eva` 那一个）。
+    #   续战那一侧靠它重算率（`ensure_stack` 拿 `crit_rating` / `eva` 现算 `rate_of`）——
+    #   缺了它就只能读回「装备那一份」，恒 100% 暴击。
+    actor["crit_rating"] = crit_rating
     return actor
 
 
@@ -286,10 +295,34 @@ def ensure_stack(actor) -> bool:
         return True
     vals = {k: actor[k] for k in _PANEL_KEYS
             if k in actor and isinstance(actor[k], (int, float)) and not isinstance(actor[k], bool)}
+    # ★ 审计 L1242：`crit` / `dodge` **不是数值键**，而是**率**——引擎按率读它们
+    #   （`actions.py` 的 `random.random() < st["crit"]` · `landing.py` 的
+    #   `min(st["dodge"], 0.40)`，两处读点写在 `RATE_KEYS` 的注释里）。
+    #   ★ 病根（实测 · 端到端跑出来的）：`_layers_of` 把 `RATE_KEYS` 从三层**摘掉**
+    #     （三层相加对非线性率无意义），于是快照里那两格只剩**装备那一份的 rating**
+    #     —— 骑士 10 级：面板 24.0 + 装备 10，快照 `crit` = **10**（不是率 0.0637）；
+    #     `eva` 那一格倒是总额（`build_actor` 结尾 B4-21 专门放回去的）。
+    #     原先把这两格当数值键**抄进 base**、且 `layers` 写空 ⇒ 引擎 `stats.py` 走
+    #     `PanelStack.resolve` 读 base ⇒ `crit` 读成 **10.0**、`dodge` 读成 **4.0**
+    #     ⇒ 续战后**恒 100% 暴击 + 恒 40% 闪避**（同文件 B3-14/B4-21 刚修掉的那个
+    #     「六职业恒 40% 闪避」原样复发）；而呈现面 `rate_of_actor` 只认层 ⇒ 印「0%」
+    #     ⇒ **页面与实机反向**。同一次续战内两场战斗差一个数量级。
+    #   ★ 修法（对称 `build_actor` 的率层）：① 快照补一格 `crit_rating`（`eva_rating`
+    #     早就在，B4-21 只补了它一半 —— 这就是「补一半」）；② 这里按 rating **现算率**
+    #     写进一条同 id 的 `set` 层；③ `crit` / `dodge` **逐出 base**（引擎按率读，
+    #     落 base 等于把 rating 当率用）。不补 0：缺哪一格就不登记那一格。
+    vals = {k: v for k, v in vals.items() if k not in _RATE_ENGINE_KEYS}
+    rate_vals = {}
+    for _rk, _rating in (("crit", actor.get("crit_rating")), ("dodge", actor.get("eva"))):
+        if isinstance(_rating, (int, float)) and not isinstance(_rating, bool):
+            rate_vals[_rk] = rate_of(_rating)
     _REGISTRY[sid] = {
         "version": 1,
         "base": {"mode": "value", "value": dict(vals)},
-        "layers": [],
+        "layers": ([{"id": RATE_LAYER_ID, "src": T("SYS_PANEL_CRIT_RATE"),
+                     "group": "rate", "mode": "set",
+                     "keys": sorted(rate_vals), "values": dict(rate_vals)}]
+                   if rate_vals else []),
         "emit": {"int_keys": [k for k in INT_KEYS if k in vals], "round": 4},
     }
     return True

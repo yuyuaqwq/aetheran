@@ -307,6 +307,62 @@ else:
         % (_ITS[_CRIT_ITEM]["name"], _cv, _c0, _c1), _c1 > _c0)
 
 print("")
+print("── ⑥-补 ★ 审计 L1242（续战补登记：crit / dodge 必须是**率**，不是 rating）")
+#   病根（实测 · 端到端跑出来的）：`ensure_stack` 把快照里那两格当**数值键**抄进 base、
+#   `layers` 写空 ⇒ 引擎 `stats.py` 走 `PanelStack.resolve` 读 base ⇒
+#   骑士 10 级（面板 24.0 + 装备 10）续战后 crit 读成 **10.0** ⇒ **恒 100% 暴击**、
+#   dodge 读成 4.0 ⇒ **恒 40% 闪避**（B3-14/B4-21 刚修掉的「六职业恒 40% 闪避」原样复发），
+#   而呈现面 `rate_of_actor` 只认层 ⇒ 印「0%」⇒ **页面与实机反向**。
+#   判据 = ① 续战（清 `_REGISTRY` 再 `ensure_stack`）后**逐键全等**开战那一刻的率
+#          ② 引擎真读口 `actor_stats` 读到的也是那个率
+#          ③ 率必须落在 [0, 0.75] / [0, 0.40]（= 断言它没被当成 rating 直接落 base）
+#   ★ 反证：拆掉 `ensure_stack` 的率层 ⇒ 这三条全红（不是恒真断言）。
+_BAD1242, _BASE1242 = [], []
+for _cid2, _lv2, _al2, _ge2 in (
+        ("cls_knight", 10, {"hp": 5, "crit": 5, "eva": 5}, {"crit": 10, "eva": 4}),
+        ("cls_assassin", 20, {"crit": 8, "eva": 8}, {"crit": 6, "eva": 6}),
+        ("cls_mage", 1, None, None)):
+    _a7 = panel_build.build_actor(_cid2, _lv2, _al2, _ge2)
+    _w0 = (float(panel_build.rate_of_actor(_a7, "crit")),
+           float(panel_build.rate_of_actor(_a7, "dodge")))
+    _sv7 = dict(panel_build._REGISTRY)
+    panel_build._REGISTRY.clear()                       # 模拟「换一个进程续战」
+    try:
+        panel_build.ensure_stack(_a7)
+        _d7 = panel_build.stacks().get(_a7.get("panel_stack")) or {}
+        _bv7 = (_d7.get("base") or {}).get("value") or {}
+        _lv7 = (_d7.get("layers") or [])
+        # ★ 判据 B 就在**续战窗口内**查补登记那一份（我第一版写在 finally 之后，
+        #   拿到的是开战那一份真声明 ⇒ 查的不是被测物，已改正）。
+        for _k in ("crit", "dodge"):
+            if _k in _bv7:
+                _BASE1242.append("%s：补登记的 base.value 含 %s=%s（引擎按率读 ⇒ 恒 100%%）"
+                                 % (_cid2, _k, _bv7[_k]))
+        if not any(_l.get("id") == panel_build.RATE_LAYER_ID for _l in _lv7):
+            _BAD1242.append("%s：补登记没有 %s 层（率层是引擎唯一的读口）"
+                            % (_cid2, panel_build.RATE_LAYER_ID))
+        _w1 = (float(panel_build.rate_of_actor(_a7, "crit")),
+               float(panel_build.rate_of_actor(_a7, "dodge")))
+        _e1 = actor_stats(None, _a7)
+    finally:
+        panel_build._REGISTRY.clear()
+        panel_build._REGISTRY.update(_sv7)
+    _tag = "%s L%d" % (_cid2, _lv2)
+    if _w0 != _w1:
+        _BAD1242.append("%s：续战率 %s ≠ 开战率 %s" % (_tag, _w1, _w0))
+    for _k, _lo, _hi in (("crit", 0.0, 0.75), ("dodge", 0.0, 0.40)):
+        if not (_lo <= _w1[0 if _k == "crit" else 1] <= _hi):
+            _BAD1242.append("%s：%s=%s 不在 [%s, %s]（被当成 rating 落 base 了？）"
+                            % (_tag, _k, _w1[0 if _k == "crit" else 1], _lo, _hi))
+        _e = _e1.get(_k, 0.0)
+        if abs(float(_e) - _w0[0 if _k == "crit" else 1]) > 1e-4:
+            _BAD1242.append("%s：引擎实读 %s=%s ≠ 开战率 %s" % (_tag, _k, _e, _w0))
+chk("★ 续战补登记后 crit / dodge 逐键全等开战那一刻，且引擎真读口读到的是率不是 rating（3 组）",
+    not _BAD1242, " · ".join(_BAD1242))
+chk("★ 续战不把 crit / dodge 抄进 base（引擎按率读，落 base = rating 当率用 ⇒ 恒 100%）",
+    not _BASE1242, " · ".join(_BASE1242))
+
+print("")
 print("── ⑦ ★ P-34（甲案：玩家自己加点）：点数只有一个口 · **上界（铺满）与下界（零加点）两头都用数字钉住**")
 #   真源：`00_总纲/05_系统总表与阶段开放_v1.md`「五维加点（建号 8 + 每级 3）」
 #        `06_第一阶段垂直切片/04_指令总表.md`「加点 <属性> [次数]」
