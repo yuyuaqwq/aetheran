@@ -5248,7 +5248,7 @@
     "desc": "⑦ 建号第二步 · 菜单头（替掉会重报一遍族别的 SYS_CLS_HEAD —— 那一步的族刚定过 · fix3-⑦）"
   },
   "SYS_CLS_ROW": {
-    "value": "{i}{star} {icon} {name}（{role}） —— {desc}",
+    "value": "{i} {icon} {name}（{role}）{star} —— {desc}",
     "params": [
       "i",
       "star",
@@ -5261,7 +5261,7 @@
     "desc": "B4-7 建号第二步 · 每种打法一行（名 · 定位 · 一句自述）"
   },
   "SYS_CLS_STAR": {
-    "value": "★推荐",
+    "value": " ★推荐",
     "params": [],
     "category": "系统",
     "desc": "B4-7 建号第二步 · 与你那一族合得上的那行（races.recommend；「任意」不算）"
