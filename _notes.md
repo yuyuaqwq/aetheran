@@ -12864,3 +12864,28 @@ rebuild_syscopy.py --dry ⇒ 解析 644 条（已存在且一致 644 · 要新�
 
 `%TEMP%/p2_4_keyprobe.py`（import 写错、已弃用）· `%TEMP%/p2_4_screen.py`（**P2-4 的取证脚本**，
 上面那段 `act_apply` 实屏输出就是它跑出来的；留着给主线复跑 4a/4b 时用）。
+
+### 附：全量门禁红集基线（供下一轮对拍 · 2026-09-28 22:47）
+
+全量 58 支：**PASS 51 / FAIL 7**。★ **7 条红全部与本车道无关**（本车道只动了 `_notes.md`，
+一个 docs 文件；下面每条都归因到具体车道/文件）：
+
+```text
+probe_explore_gather_used  probe_matsrc_nested_pool
+  ⇒ 脚本自己的路径取错：REPO = os.path.dirname(__file__) ⇒ 指向 scripts/（缺 game.json）
+    ⇒ PackageError: 不是包目录。**引入于 40a85f2（别车道）**，同族正常探针写的是
+      `Path(__file__).resolve().parent.parent` ⇒ 两支各自单跑复现，与本车道无关。
+probe_mech  probe_resources
+  ⇒ 红项是「★ 引擎仓工作区干净」—— 引擎仓 4 条未提交（docs/engine-wiki/reference/space.md、
+    extends/ext_world/space/graph.py、extends/ext_world/tests/test_space.py、games/orlandia）
+    是**引擎车道正在施工**（引擎 HEAD 8384004）。**共享只读依赖被并发写** ⇒ 等 60s 重跑口径。
+probe_titles  probe_generators
+  ⇒ titles/dialogues 族口径不符（title_wall_listener: heard@dlg_hagen 写的是 9，
+    那棵树现算 13 条）。`content/data/dialogues.json` mtime 22:02 = 另一车道在改对话树。
+probe_instance
+  ⇒ 末行 OK（反证那条绿），红在别处；与本车道文件面零交。
+```
+
+★ 本车道自身面全绿：`probe_texts` / `probe_copy` / `probe_guard_text` / `probe_cues` /
+`probe_combat` 全 rc=0；`rebuild_syscopy.py` 连跑两次「无新增 —— 数据不变（幂等）」。
+⇒ 下一轮判据 = **红集与上表同值**（不要求全绿）；出现第 8 条红才是本车道引入。
