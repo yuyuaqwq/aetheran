@@ -1724,7 +1724,7 @@
     "desc": "旧物谱 · 问号尾注"
   },
   "SYS_CODEX_NEW": {
-    "value": "★ 新进谱：{book} · {name}",
+    "value": "✦ 新进谱：{book} · {name}",
     "params": [
       "book",
       "name"
@@ -1733,7 +1733,7 @@
     "desc": "新记进谱"
   },
   "SYS_CODEX_REVEAL": {
-    "value": "★ 旧物谱：「{name}」认出来了。",
+    "value": "✦ 旧物谱：「{name}」认出来了。",
     "params": [
       "name"
     ],
@@ -2967,7 +2967,7 @@
     "desc": "交活 · 奖励那一行"
   },
   "SYS_JOB_LEVELUP": {
-    "value": "★ 你升到 {level} 级了。",
+    "value": "✦ 你升到 {level} 级了。",
     "params": [
       "level"
     ],
@@ -4036,7 +4036,7 @@
     "desc": "P-34 加点（B3-15）"
   },
   "SYS_ALLOC_OK": {
-    "value": "{stat} +{n} ⇒ {stat} {now} ｜ 还剩 {left} 点",
+    "value": "{stat} +{n} → {stat} {now} ｜ 还剩 {left} 点",
     "params": [
       "stat",
       "n",
@@ -6011,7 +6011,7 @@
     "desc": "fix5-nav · 进镇尾注第二句 —— 站名归站点之后的出门口径（真源 17_文案收口口径 里 SYS_TOWN_ENTER_HINT 那条的**待改行**见本分支 _notes.md）"
   },
   "SYS_UNID_OPENED": {
-    "value": "★ {who}把它看明白了 —— 原来是：",
+    "value": "✦ {who}把它看明白了 —— 原来是：",
     "params": [
       "who"
     ],
