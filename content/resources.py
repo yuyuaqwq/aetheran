@@ -113,10 +113,6 @@ def gain_of(key: str, channel: str) -> int:
     return int((of(key).get("gain") or {}).get(channel) or 0)
 
 
-def owner_of(key: str) -> str:
-    return str(of(key).get("owner_class") or "")
-
-
 def res_of_class(cls: str) -> str:
     """这个职业的资源码（一个职业最多一条 —— 多过一条在 `check_domain` 里点名）。"""
     if not cls:
