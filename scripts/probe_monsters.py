@@ -893,6 +893,24 @@ chk("★ 材料倍数 = (1 + PE×%s) × 富饶的 %s（PE %d → 按 PE 那半 %
        _got_rows[0]["n"]),
     _got_rows[0]["n"] == _want_n and _got_rows[1]["n"] == 3 and _bare == _rows)
 
+# ㉑c ★ 台账 L1148：「按 PE 那半」原先被关在 `per_kind` 命中的那一支里
+#   —— 全表只有 `af_bountiful` 带 `drops` 通道、而它自己 `pe=0` ⇒ **PE 加成从未生效过**。
+#   这两条钉住修好之后的行为：① PE 非零但**没有**带 drops 通道的词条，材料那档仍要涨；
+#   ② 反向边界：非材料那档**不吃** base（真源只声明了「材料那半」，装备那半未接线）。
+_paid = [a for a, v in AFA.items()
+         if isinstance(v, dict) and (v.get("pe") or 0) and "drops" not in (v.get("mods") or {})]
+_pe_aids = _paid[:2]
+_pe_val = _AF.pe_of(_pe_aids)
+_base_only = float(_dm["base"]) + _pe_val * float(_dm["per_pe"])
+_rows2 = [{"id": "x", "n": 10, "kind_key": "material"}, {"id": "y", "n": 10, "kind_key": "gear"}]
+_got2 = _AF.scale_drops(_rows2, _pe_aids)
+chk("★ 台账 L1148：不带 `drops` 通道的词条，材料那档仍吃 PE（PE %d → %s；%d 份 → %s）"
+    % (_pe_val, round(_base_only, 4), 10, _got2[0]["n"]),
+    _pe_val > 0 and _got2[0]["n"] == max(1, int(round(10 * _base_only))))
+chk("★ 同上：非材料那档**不吃** PE（真源只声明材料那半 · 精制装备那半未接线 ⇒ %s 不变）"
+    % _got2[1]["n"],
+    _got2[1]["n"] == 10)
+
 # ㉒ ★ 观察那行**逐字走 texts 槽位**，且与「攻击」的遭遇是**同一个东西**
 _tx = st.domain("texts")
 _line_ok, _same_ok, _hit_n = True, True, 0

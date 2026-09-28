@@ -48,6 +48,21 @@ CH_SHIELDS = "shields"
 CH_DROPS = "drops"
 
 
+def _material_key() -> str:
+    """判定「这一格是不是材料」用的机器键 —— 真源 `content/loot.py::K_MATERIAL_KEY`
+    （与 `items.schema.json` 的 `kind_key` enum 同值）。
+
+    ★ 取值**不在本模块新写**：局部取那一口（`matsrc` / `elite_of` 同一写法），
+      免得同一份 ASCII 键在两处各存一份、将来分叉无处可查。
+    """
+    from .loot import K_MATERIAL_KEY                # noqa: PLC0415
+    return str(K_MATERIAL_KEY)
+
+
+#: 赋值一次（`scale_drops` 每格都要比，用函数调用会重复 import）
+_MATERIAL_KEY = _material_key()
+
+
 class AffixError(Exception):
     """词条数据坏了（键名对不上 / 值不成形状）—— 当场抛，不静默兜底。"""
 
@@ -265,8 +280,22 @@ def spawn_plan(mid: str, aids) -> tuple:
 def scale_drops(drops, aids) -> list:
     """材料倍数（09_ §四 按 PE 等比上调 + 富饶 的「材料翻倍」）。
 
-    倍数 = (1 + PE × material_drop_mult.per_pe) × Π(命中那几条的 drops.mult)
-    —— 只乘命中那一类（`drops.kind_key`）；一件都没命中 ⇒ 原样返回（不动 `n`）。
+    倍数分两段，各自带自己的适用范围（★ 台账 L1148）：
+
+    | 段 | 乘到哪一档 | 什么时候生效 |
+    |---|---|---|
+    | `base` = 1 + PE×`per_pe` | **材料**（`loot.K_MATERIAL_KEY`） | **无条件** —— 有 PE 就有 |
+    | `m` = Π(命中那几条的 `drops.mult`) | 词条点名的 `kind_key` | 词条带 `drops` 通道才生效 |
+
+    ★ 为什么必须拆开（原先两段挂在同一个 `if` 的两端）：`base` 算完之后只在
+      `per_kind` 命中时才被用上 ⇒ **一条不带 `drops` 通道的精英拿不到任何 PE 加成**。
+      实跑材料 10 份 / PE=20（`per_pe` = 1/48 ⇒ 期望 14）得到 **10**，一字不差，
+      不报错、不留痕；全表只有 `af_bountiful` 带 `drops` 通道，而它自己 `pe=0`
+      ⇒ 这一整段从上线起就没跑过。
+
+    其余档（装备 / 杂物 / 未鉴定）**只吃 `per_kind`**，与真源逐字对齐 ——
+    真源 `_src` 明写「精制装备掉率那半（1+PE/60）落在**掉落池权重**那一层，本批未接线」
+    ⇒ 那一半**继续不接线**（不扩面），本函数只把真源声明为已接线的「材料那半」接上。
     """
     base = float(rules()["material_drop_mult"]["base"]) + \
         pe_of(aids) * float(rules()["material_drop_mult"]["per_pe"])
@@ -279,11 +308,15 @@ def scale_drops(drops, aids) -> list:
     out = []
     for d in (drops or []):
         e = dict(d)
-        m = per_kind.get(str(e.get("kind_key") or ""))
-        if m is None:
+        kk = str(e.get("kind_key") or "")
+        # 材料那档吃 base（无条件）；其余档只吃 per_kind —— 缺档 = 1.0 = 原样不动 n。
+        m = per_kind.get(kk)
+        if kk == _MATERIAL_KEY:
+            m = base * (m if m is not None else 1.0)
+        elif m is None:
             out.append(e)
             continue
-        e["n"] = max(1, int(round(float(e.get("n", 1) or 1) * base * m)))
+        e["n"] = max(1, int(round(float(e.get("n", 1) or 1) * m)))
         out.append(e)
     return out
 
