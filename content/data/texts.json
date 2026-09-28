@@ -6809,9 +6809,10 @@
     "desc": "引擎槽位 `battle.landing.woken`（`extends/ext_combat/battle/landing.py:204` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
   },
   "COMBAT_SCHEDULE_ACTOR_TURN": {
-    "value": "—— {name} 行动 ——",
+    "value": "🌀【{t:.0f} 刻】{name} 行动",
     "params": [
-      "name"
+      "name",
+      "t"
     ],
     "category": "战斗",
     "desc": "引擎槽位 `battle.schedule.actor_turn`（`extends/ext_combat/battle/schedule.py:392` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
