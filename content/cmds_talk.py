@@ -229,54 +229,9 @@ def _pick_layer(nodes, p, st, dlg_id):
     #        `probe_dialogues ⑧` 立刻红 —— 那是台账 P-12 亲自定的口径，不能动。
     #     ⇒ 终版：**让位仍旧只看老口径那一格**（`heard` 记的就是它），
     #        层内换句只顶「这一趟说哪句」，**不碰**让位计数。
-    if "%s#%s" % (_layer, _idx) in heard:
-        for _i2, _ln2 in enumerate(nodes[_layer].get("texts") or []):
-            if _i2 == _idx or "%s#%s" % (_layer, _i2) in heard:
-                continue
-            if _pick_indexed([_ln2], p, st)[1] is None:
-                continue                          # 这句此刻出不来（need 不满足）
-            _idx, _txt = _i2, _ln2.get("text")
-            break
-        else:
-            # ── ③ 层内换句**够不着**时的一格兜底（P1-19 · 2026-09-29 · 文案车道）─────
-            #   ★ 原状是「这一层找不到顶替 ⇒ 老那一句原样说出去」，而**别的层里
-            #     还躺着没说过的句子** —— 实测 talk 5 的玛莎：`daily` 一句不剩，
-            #     而 `hidden` 里有 3 句既没听过、此刻也出得来，永远排不上
-            #     （要让位得先让**老口径**挑中它们那一层，而老口径总挑 `daily` 的头一条）。
-            #     屏上的症状：第 5/6/7/8 趟**逐字相同** —— 种类数合格（⑰ 绿），
-            #     排布是坏的（⑲ 红）。这就是鱼鱼说的「观感不好」。
-            #   ★ 只动**这一格兜底**：层序仍是 `LAYERS`、让位单位仍是老口径那一格、
-            #     `heard` 记的仍是老口径那一格（⑧ 的 P-12 语义一个字没动）——
-            #     本条只在「老口径那一句玩家已经听过了」之后改变**这一趟说哪句**。
-            #   ★ 扫的是**够层**的那些层（`_layers_ok` 那道门照旧）⇒
-            #     「不熟时只有 meet 会说话」不被破：meet 在这里仍被门挡住。
-            #   ★ 层序用 `LAYERS` 变量（不是字面量）—— ⑯-a 的静态守卫就认这一格。
-            for _l3 in LAYERS:
-                if _l3 not in nodes or not _layers_ok(_l3, familiar):
-                    continue
-                for _i3, _ln3 in enumerate(nodes[_l3].get("texts") or []):
-                    if "%s#%s" % (_l3, _i3) in heard:
-                        continue
-                    if _pick_indexed([_ln3], p, st)[1] is None:
-                        continue                  # 这句此刻出不来（need 不满足）
-                    return _l3, _i3, _ln3.get("text")
-            # ── ④ ★ P1-26（2026-09-29 · 文案车道）：全都说过了 —— **在这一层里轮换** ──
-            #   走到这一格 = 「老口径那一句听过」+「整棵树里没有一句是没听过且此刻出得来的」。
-            #   原状：把老那一句**原样说出去** ⇒ 玩家从第 9~11 趟起（中期存档实测）到第 80 趟
-            #   看到的永远是同一句。14 位 NPC **无一例外**。
-            #   ★ 为什么既有 21 条判据全绿也看不见它：⑰ / ⑲ / ⑳ 量的是「**没听过时**能轮几句」
-            #     且只连敲 8 下 —— 8 句之内用不完一个池子 ⇒ 结构性地测不到「全听过之后」这一档。
-            #   ★ 只动这一格：**层的选择一个字没改**（仍是 `_layers_ok` 过的层序第一档），
-            #     `heard` 记的仍是这一趟真说出去的那句，P-12 语义（⑧）不动。
-            #   ★ 轮换口径用 `_talk_count`（搭话次数，含这一趟）—— 那是**档上现成的纯数据**，
-            #     不新建容器、不改存档形状；`⑧` 的假树每层各 1 句 ⇒ 可用集合只有 1 个 ⇒ 原样返回。
-            _avail = [_i4 for _i4, _ln4 in enumerate(nodes[_layer].get("texts") or [])
-                      if _pick_indexed([_ln4], p, st)[1] is not None]
-            if len(_avail) > 1:
-                _i4 = _avail[_talk_count(p, dlg_id) % len(_avail)]
-                return _layer, _i4, (nodes[_layer]["texts"][_i4] or {}).get("text")
-            # 一句都找不到 ⇒ 真的没得说了，重复是诚实的（照旧把老那一句说出去）
-    return _layer, _idx, _txt
+    # ★ P1-28：② 层内换句 · ③ 全树兜底 · ④ 轮换 三档已提成共享口 `rotate()` ——
+    #   NPC 这条路与 POI 触摸那条路（`cmds_ast`）走的是**同一份**逻辑。
+    return rotate(nodes, p, st, dlg_id, (_layer, _idx, _txt), familiar, heard)
 
 
 # ══════════════════════════════════════════════════════════════
@@ -476,3 +431,90 @@ async def ask_way(env, sink, uid, player):
     #   三处的取舍（近的三处）与屏宽都不动，只把**这件事说清**并指到看全部的那条指令（不新增遍历口）。
     if len(nb) > 3:
         yield T("SYS_ASK_MORE", n=len(nb))
+
+
+def note_talk(p, dlg_id):
+    """「这一趟搭过话」记一笔 —— **薄口**，`_note_talk` 是唯一写入口。
+
+    ★ `rotate` 第 ④ 档（全都说过了之后在层内轮换）靠它选句；
+      物件树那条路原先不记 ⇒ 计数恒 0 ⇒ 那一档永远挑第一句。
+    """
+    _note_talk(p, dlg_id)
+
+
+def note_heard(p, dlg_id, layer, idx):
+    """「这一趟说出去的是哪一句」记一笔 —— **薄口**，`HD.note` 是唯一写入口。
+
+    ★ 两条路（`ask` 与 POI 触摸）都走这里 ⇒ `heard` 那格的写口只有一处
+      （真源 16_称号域口径 §四：`heard = {树 id: {层#序号: 游戏日}}`）。
+    """
+    return HD.note(p, dlg_id, layer, idx)
+
+
+def rotate(nodes, p, st, dlg_id, picked, familiar=None, heard=None):
+    """老口径已经挑好一句了 —— 这一趟**改说哪一句**（层内轮换三档）。
+
+    ★ 这段原本长在 `_pick_layer` 末尾（P1-16 / P1-19 / P1-26 三档）。
+      P1-28 把它提成共享口：POI 触摸那条路（`cmds_ast` 的 `effect.talk`）
+      原来只调 `_pick_indexed`（「按顺序挑第一条满足的」）⇒ 固定世界状态下
+      每趟都挑中同一句，玩家连敲两次物件看到**逐字相同**的一段。
+      NPC 那条路早修过，物件树没接上 —— 现在两边走同一份逻辑。
+    ★ 一条逻辑只留一份：`_pick_layer` 自己也是调这里（不是抄第二份）。
+    ★ 层序、够层判定（`_layers_ok`）、need 择优**一个字节没动** ——
+      这里只改「这一趟说哪句」。
+
+    `picked` = `(层, 序号, 台词)`，即老口径挑中的那一句。
+    """
+    _layer, _idx, _txt = picked
+    if familiar is None:
+        familiar = _talk_count(p, dlg_id) >= FAMILIAR_TALKS
+    if heard is None:
+        heard = set(HD.lines(p, dlg_id))
+    if "%s#%s" % (_layer, _idx) in heard:
+        for _i2, _ln2 in enumerate(nodes[_layer].get("texts") or []):
+            if _i2 == _idx or "%s#%s" % (_layer, _i2) in heard:
+                continue
+            if _pick_indexed([_ln2], p, st)[1] is None:
+                continue                          # 这句此刻出不来（need 不满足）
+            _idx, _txt = _i2, _ln2.get("text")
+            break
+        else:
+            # ── ③ 层内换句**够不着**时的一格兜底（P1-19 · 2026-09-29 · 文案车道）─────
+            #   ★ 原状是「这一层找不到顶替 ⇒ 老那一句原样说出去」，而**别的层里
+            #     还躺着没说过的句子** —— 实测 talk 5 的玛莎：`daily` 一句不剩，
+            #     而 `hidden` 里有 3 句既没听过、此刻也出得来，永远排不上
+            #     （要让位得先让**老口径**挑中它们那一层，而老口径总挑 `daily` 的头一条）。
+            #     屏上的症状：第 5/6/7/8 趟**逐字相同** —— 种类数合格（⑰ 绿），
+            #     排布是坏的（⑲ 红）。这就是鱼鱼说的「观感不好」。
+            #   ★ 只动**这一格兜底**：层序仍是 `LAYERS`、让位单位仍是老口径那一格、
+            #     `heard` 记的仍是老口径那一格（⑧ 的 P-12 语义一个字没动）——
+            #     本条只在「老口径那一句玩家已经听过了」之后改变**这一趟说哪句**。
+            #   ★ 扫的是**够层**的那些层（`_layers_ok` 那道门照旧）⇒
+            #     「不熟时只有 meet 会说话」不被破：meet 在这里仍被门挡住。
+            #   ★ 层序用 `LAYERS` 变量（不是字面量）—— ⑯-a 的静态守卫就认这一格。
+            for _l3 in LAYERS:
+                if _l3 not in nodes or not _layers_ok(_l3, familiar):
+                    continue
+                for _i3, _ln3 in enumerate(nodes[_l3].get("texts") or []):
+                    if "%s#%s" % (_l3, _i3) in heard:
+                        continue
+                    if _pick_indexed([_ln3], p, st)[1] is None:
+                        continue                  # 这句此刻出不来（need 不满足）
+                    return _l3, _i3, _ln3.get("text")
+            # ── ④ ★ P1-26（2026-09-29 · 文案车道）：全都说过了 —— **在这一层里轮换** ──
+            #   走到这一格 = 「老口径那一句听过」+「整棵树里没有一句是没听过且此刻出得来的」。
+            #   原状：把老那一句**原样说出去** ⇒ 玩家从第 9~11 趟起（中期存档实测）到第 80 趟
+            #   看到的永远是同一句。14 位 NPC **无一例外**。
+            #   ★ 为什么既有 21 条判据全绿也看不见它：⑰ / ⑲ / ⑳ 量的是「**没听过时**能轮几句」
+            #     且只连敲 8 下 —— 8 句之内用不完一个池子 ⇒ 结构性地测不到「全听过之后」这一档。
+            #   ★ 只动这一格：**层的选择一个字没改**（仍是 `_layers_ok` 过的层序第一档），
+            #     `heard` 记的仍是这一趟真说出去的那句，P-12 语义（⑧）不动。
+            #   ★ 轮换口径用 `_talk_count`（搭话次数，含这一趟）—— 那是**档上现成的纯数据**，
+            #     不新建容器、不改存档形状；`⑧` 的假树每层各 1 句 ⇒ 可用集合只有 1 个 ⇒ 原样返回。
+            _avail = [_i4 for _i4, _ln4 in enumerate(nodes[_layer].get("texts") or [])
+                      if _pick_indexed([_ln4], p, st)[1] is not None]
+            if len(_avail) > 1:
+                _i4 = _avail[_talk_count(p, dlg_id) % len(_avail)]
+                return _layer, _i4, (nodes[_layer]["texts"][_i4] or {}).get("text")
+            # 一句都找不到 ⇒ 真的没得说了，重复是诚实的（照旧把老那一句说出去）
+    return _layer, _idx, _txt

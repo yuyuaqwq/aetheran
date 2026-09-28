@@ -1904,20 +1904,33 @@ async def poi_effect_lines(env, sink, uid, p, pid, rec, verb, player=None):
             #   「刚认识就剧透」同一个病，只是这条路上没人钉过）。
             #   ★ 不新建第二份常量：直接复用 `CT.LAYERS`（择优逻辑只有一处，
             #   层序也只有一处 —— 判据见 `probe_dialogues ⑯`）。
-            # ★ P1-6（2026-09-29 · 文案车道 P1）：层序**只认 `CT.LAYERS`**。
-            #   原先这里硬写了一份 ("main","hidden","meet","daily","idle") —— 与
-            #   `cmds_talk.LAYERS`（meet → daily → main → hidden → idle）
-            #   **顺序正好相反**（那一版是 P-12 之前的旧口径，撤了没跟着撤）。
-            #   后果：POI 的 `effect.talk` 碰到**同时有 meet 与 main** 的树时，
-            #   先出 main —— 玩家还没「熟」就先看到那一层（与 P-12 修掉的
-            #   「刚认识就剧透」同一个病，只是这条路上没人钉过）。
-            #   ★ 不新建第二份常量：直接复用 `CT.LAYERS`（择优逻辑只有一处，
-            #   层序也只有一处 —— 判据见 `probe_dialogues ⑯`）。
+            _picked = None
             for nn in CT.LAYERS:
                 if nn in nodes:
                     _idx, said = CT._pick_indexed(nodes[nn].get("texts"), p, st)
                     if said:
+                        _picked = (nn, _idx, said)
                         break
+            # ★ P1-28（2026-09-29 · 文案车道 P1）：这一条路原来**只调 `_pick_indexed`** ——
+            #   那是「按顺序挑第一条满足的」，于是固定世界状态（时辰 / 天气 / 进度都不变）
+            #   下每趟都挑中同一句 ⇒ 玩家连敲两次篝火，看到的是**逐字相同**的一段。
+            #   NPC 那条路（`cmds_talk._pick_layer`）早就修过这一档（P1-16 / P1-19 / P1-26），
+            #   唯独 POI 触摸这条路没接上去 —— 物件树一个句池都轮换不了。
+            #   修法**不新造机制**：走读端已有的 `CT.rotate`（heard + 搭话次数那套现成容器），
+            #   与 NPC 同一口径、同一份存档形状、同一处判定。
+            #   ★ 层序、够层判定、need 择优一个字节没动 —— 只改「这一趟说哪句」。
+            if _picked is not None:
+                _rl, _ri, said = CT.rotate(nodes, p, st, str(eff.get("talk")), _picked)
+                # ★ P1-28：把「这一趟说出去的是哪一句」记下来 —— 轮换判据就是它
+                #   （`heard` 那套现成容器）。这条路原先从不记 ⇒ 每趟都像第一趟
+                #   ⇒ 轮换那一档永远进不去。NPC 那条路在 `cmds_talk.ask` 里记，
+                #   这里补上同一次记账（同一份存档形状、同一格键）。
+                if said:
+                    CT.note_heard(p, str(eff.get("talk")), _rl, _ri)
+                    #   搭过几次也要记 —— `rotate` 第 ④ 档（全都说过了之后在层内轮换）
+                    #   用 `_talk_count` 选句；不记它就是恒 0 ⇒ 那一档又冻回第一句。
+                    CT.note_talk(p, str(eff.get("talk")))
+                    dirty = True
         if said:
             consumed.add("talk")
             for one in str(said).split("\n"):

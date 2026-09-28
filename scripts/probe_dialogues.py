@@ -1377,6 +1377,123 @@ chk("㉓-b ★ 反证：塞一句「辛苦了。多谢。」进 %s 的 %s 层 �
     % (_probe23.replace("dlg_", ""), _lay23), bool(_caught23),
     "塞进 %s/%s#0 ⇒ %s" % (_probe23, _lay23, "抓到了" if _caught23 else "漏了（判据恒真）"))
 
+# ㉔ ★ P1-28（2026-09-29 · 文案车道 P1）—— **物件树同刻连敲不许整段重样**。
+#    ⑰-a 量的是 `dlg_` 那 14 棵 NPC；物件树（`talk_*`）一个都没算进去 ——
+#    而玩家对着一堆篝火「连敲两下」正是这个动作。
+#    根因（P1-28 修）：POI 触摸那条路原先只调 `_pick_indexed`（按顺序挑第一条满足的），
+#    绕过了 NPC 那边的 `heard` 轮换 ⇒ 固定世界状态下每趟挑中同一句。
+#    实测（修前，真敲读端）：五棵物件树在同一世界状态下连敲，**每趟逐字相同**。
+#    这就是鱼鱼说的「观感不好」在物件这一族上的形状。
+#
+# ★★ 判据本身连踩两个坑（写在这里，别再犯第三遍）：
+#   ① 第一版在探针里**自己重写一遍**取句 + 轮换 + 记账的循环 ⇒ 它量的是「探针那套写法」
+#      而不是产品那条路 —— 把产品侧的 `CT.rotate` 回退掉之后它**照样绿**（尸绿）。
+#   ② 第二版改成真敲 `poi_effect_lines` 了，却以为「给 `_pick_indexed` 传 hour/weather
+#      就能固定世界状态」—— **错**：那条路内部自己调 `CAL.state()`（不接参），
+#      时辰与天气来自 `facade.clock()` ⇒ 8 趟里世界状态照旧在动，数字好看但**量错了东西**。
+#   ⇒ 终版：照 `probe_weather._time_screen` 的现成办法，把 `FA.clock` / `CAL.facade.clock`
+#     钉到算好的 epoch（`finally` 复原），**整趟世界状态真的不动**，再真敲那个函数。
+_MIN_OBS_FIXED24 = 2      # 每棵在同一时刻连敲 8 次，至少轮得出 2 句
+_HOUR_HOURS24 = (2.0, 13.0, 18.5, 22.0)      # 晨 / 昼 / 暮 / 夜 各取一点（时辰表里见 `calendar.hours`）
+
+
+class _E24(object):
+    """`poi_effect_lines` 要的那个 env（只要一个 `save`）—— 同 `probe_pois._E11`。"""
+
+    def __init__(self, text=""):
+        self.text = text
+
+    def save(self):
+        pass
+
+
+def _epoch_for24(game_day, hour_of_day):
+    """游戏日 + 当日小时 → 宿主那根钟的 epoch（`calendar.game_time` 的逆运算）。"""
+    from content import calendar as CAL24
+    sec_per_day = CAL24.scale_seconds()
+    return (game_day * 86400.0 + hour_of_day * 3600.0) * (sec_per_day / 86400.0)
+
+
+def _poi_touch24(pid, epoch, p24):
+    """真敲一次「触摸这个 POI」（**钟钉在 epoch**）→ 屏上那几行。"""
+    import asyncio as _asyncio24
+    import content.cmds_ast as CA24
+    from content import facade as FA24
+    from content import calendar as CAL24
+    _old24 = FA24.clock
+    FA24.clock = lambda: epoch
+    CAL24.facade.clock = lambda: epoch            # `calendar._epoch` 读的就是它
+    _p24 = p24                     # ★ 档由调用方建一次并跨趟带（连敲 8 下 = 同一个玩家）
+    out24 = []
+    rec24 = {"id": pid, "effect": {"talk": pid}}
+    try:
+        async def _go24():
+            async for _l24 in CA24.poi_effect_lines(_E24(), None, "u_aep1", _p24, pid, rec24, "touch"):
+                out24.append(str(_l24))
+
+        _asyncio24.run(_go24())
+    finally:
+        FA24.clock = _old24
+        CAL24.facade.clock = _old24
+    return out24
+
+
+_OBS_FIXED24 = {}
+for _pk24 in sorted(_prop):
+    _worst24, _wk24 = 99, None
+    for _hod24 in _HOUR_HOURS24:
+        _ep24 = _epoch_for24(1, _hod24)            # 同一个游戏日 —— 只变时辰，不跨日
+        import content.cmds_ast as _CAa24
+        _pa24 = dict(_CAa24.DEFAULT_PLAYER)
+        _pa24.update({"race": "human", "heard": {}})     # 同一个玩家，8 趟共用
+        _say24 = [chr(10).join(_poi_touch24(_pk24, _ep24, _pa24)) for _i24 in range(8)]
+        if len(set(_say24)) < _worst24:
+            _worst24, _wk24 = len(set(_say24)), _hod24
+    _OBS_FIXED24[_pk24] = (_worst24, _wk24)
+_bad24 = [k for k, (v, _) in _OBS_FIXED24.items() if v < _MIN_OBS_FIXED24]
+chk("㉔-a ★ 物件树**同刻连敲**（钟已钉死 · 同一游戏日同一时刻 · 连敲 8 次 · 真敲 "
+    "`poi_effect_lines`）：每棵至少轮得出 %d 句" % _MIN_OBS_FIXED24, not _bad24,
+    ("轮换不足：%s" % " · ".join("%s=%d" % (k, _OBS_FIXED24[k][0]) for k in _bad24) if _bad24
+     else " · ".join("%s=%d" % (k.replace("talk_", ""), v) for k, (v, _) in sorted(_OBS_FIXED24.items()))))
+
+# ㉔-b **反证**：把一棵树压回「只剩一条无条件兜底」⇒ ㉔-a 必须抓到（不然是恒真的判据）。
+#   ★ 压的是**真实的域对象 _prop**（㉔-a 读的就是它）⇒ 压完读到的确实是压过的值。
+_probe24 = sorted(_prop)[0]
+_bak24 = json.loads(json.dumps(_prop[_probe24]))
+# ★★ 压得**彻底**，而且压的是**产品真正读的那份对象**：
+   #   `cmds_ast._data("dialogues")` 有**自己那份缓存**（`_CACHE`），与探针手里的 `dl`
+   #   **不是同一个对象**（实测 `is` 为 False）⇒ 只改 `_prop` 的话产品侧读到的仍是原树
+   #   ⇒ 那就是「反证打不动被测行为」的尸绿。
+   #   两处都改（`_prop` 给判据读的那份 · `_real24` 给产品读的那份），量完按 key 还原。
+_one24 = _bak24["nodes"]["meet"]["texts"][-1]["text"]
+_flat24 = {"nodes": {"meet": {"texts": [{"need": None, "text": _one24}]}}}
+_prop[_probe24] = _flat24
+import content.cmds_ast as CA24_global24
+_real24 = CA24_global24._data("dialogues")
+_bakreal24 = json.loads(json.dumps(_real24[_probe24]))
+_real24[_probe24] = _flat24
+_w24 = 99
+for _hod24 in _HOUR_HOURS24:
+    _ep24 = _epoch_for24(1, _hod24)
+    import content.cmds_ast as _CAb24
+    _pb24 = dict(_CAb24.DEFAULT_PLAYER)
+    _pb24.update({"race": "human", "heard": {}})
+    _s24 = set(chr(10).join(_poi_touch24(_probe24, _ep24, _pb24)) for _i24 in range(8))
+    if len(_s24) < _w24:
+        _w24 = len(_s24)
+_prop[_probe24] = _bak24                              # 按 key 精确还原
+_real24[_probe24] = _bakreal24                        # ★ 产品那份也要还原（否则后面判据全读到压过的值）
+chk("㉔-b ★ 反证：把 %s 压回「只剩一条无条件兜底」⇒ ㉔-a 必抓到（判据不恒真）"
+    % _probe24.replace("talk_", ""), _w24 < _MIN_OBS_FIXED24,
+    "压完 %d 句（底线 %d）" % (_w24, _MIN_OBS_FIXED24))
+
+# ㉔-c ★ **单一真源**：物件树那条路必须走 `CT.rotate` + `CT.note_heard` 两个共享口，
+#   不许自己抄一份（抄了就会出现「修了一处、下一处还是重样」）。
+_poi24 = _io8.open(os.path.join(str(REPO), "content", "cmds_ast.py"), encoding="utf-8").read()
+_ok24 = ("CT.rotate(" in _poi24) and ("CT.note_heard(" in _poi24)
+chk("㉔-c ★ POI 触摸那条路的轮换/记账走 `CT.rotate` + `CT.note_heard`（不抄第二份）", _ok24,
+    "rotate=%s note_heard=%s" % ("CT.rotate(" in _poi24, "CT.note_heard(" in _poi24))
+
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
 sys.exit(0 if ok else 1)
