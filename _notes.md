@@ -13864,3 +13864,73 @@ rebuild_syscopy.py                          连跑三遍「644 条 · 零新增 
 **边界**：真源 `aetheran-plan` 零改动 · 引擎仓零改动 · 不 push ·
 未碰别线文件面（`content/cmds_talk.py` 与后来的 `scripts/probe_dialogues.py`
 工作区脏 = 别车道在途，显式 add 时没带）。提交 1 笔 · 3 文件 · +215/−9。
+
+## P2-15（2026-09-29 07:3x 夜班 · aep2）—— 全包最后两处「同一行内 `·` 与 `｜` 同现」（`0b49ff0`）
+
+**作业书四个数字全部过期**（照例先独立复核，不照抄）：
+`P2-1` 并列行 9 条裸文字 → 现存 **6** 条且**逐条自带行首锚**（`{i}` ①②③ / `✦` / `拾取：`）⇒ 不改；
+`P2-2` 符号混用 → `SYS_ALLOC_OK` 早已是 `→`、`★` 全表只剩 1 条且是界面角标（非「获得」语义）⇒ 不构成混用；
+`P2-3` 补图标 → 前几轮（P2-3/P2-7/P2-11/P2-14）已补完且有 6 条常驻判据在位；
+`P2-4` 机器键 29 条 → **复核成立**：引擎 `extends/ext_combat/gauge/__init__.py:232` 与
+`battle/effects.py:523` 直传 `bar_key` / `key`，本包 `grep` 无状态键显示名表 ⇒ 交主线，本车道零改动。
+
+⇒ 本轮不重排那四件，改为自己现扫现读出来的一类残留缺口。
+
+### 本轮唯一交付：P2-15
+
+**口径**沿用 P2-9 已定的「一行内不得同时出现 `·` 与 `｜`」
+（`·` = 字段/抬头分隔、`｜` = 行内分栏；两者各司其职仍保留，收敛的只是同屏混排这一种形态）。
+
+**★ 为什么 P2-9 漏了这两条**（这才是本轮最值钱的一条）：P2-9 按 **`_HEAD` 后缀**找族，
+而这两个键名**都不带后缀**（`SYS_CLS_EDGE` / `SYS_ORIGIN_HOME`）⇒ 落在族外。
+⇒ **找族的启发式本身就是覆盖面**：「按后缀扫」会系统性漏掉命名不带后缀的那一族。
+本轮改按**真渲染 + 形态**（行内 ` · ` 与 `｜` 同现）重扫全表才捞出来。
+
+**两条都真跑过 e2e 取证**（不是只看 JSON）：
+
+```text
+· SYS_CLS_EDGE     `职业` 屏：同屏 SYS_CLS_MECH「节奏 · {mech}」是纯 `·` 行内写法，
+                   它自己却插了 ｜      改前屏上：`优势 · 6.9% ｜ 弱点 · 1.329`
+· SYS_ORIGIN_HOME  `出身` 屏：同屏 SYS_ORIGIN_WHY「你为什么来：{why}」用全角冒号，
+                   整屏无任何 ｜         改前屏上：`家乡 · 银月林海 ｜ 寿数 · 长到记不清`
+改后两屏各自读起来一致（六行 `优势 · X · 弱点 · Y` 齐 / 出身屏三行同一套记法）。
+```
+
+改法与 P2-9 那两条**同形**（`｜` 让位 `·`）；只改这两格的值 ——
+`params`（adv/weak · home/life）与取件点（`content/cmds_ast.py::_cls_edge_line` /
+`_origin_home_line`）一个字没动；采这两条的探针（`probe_class ⑫` / `probe_races ⑫`）
+是现取槽位的，不硬编字面量 ⇒ 跟随。真源只读（改值走 `DOC_PENDING` 登记，两态互锁、第三态当场抛）。
+
+### 扫过但**刻意不改**的（逐条有理由，免下一轮当缺口捡回来）
+
+| 候选 | 实屏 | 为什么不动 |
+|---|---|---|
+| `SYS_ATTR_*` / `SYS_PARTY_*` 0% 图标 | 属性屏 / 队伍屏 | 两屏各自用 **`【】` + 行首 `· `** 这一套（`b208693` 定的两族锚）**屏内完全一致**；`📊`/`👥` 没占位不是缺陷 |
+| `SYS_CLS_EDGE` 那屏的 `SYS_CLS_VIEW`（`【🏹 游侠】`）与 `SYS_CLS_LEAD`（`📜`）混用 | 建号菜单 | **不同屏**（`be_class` 的两个互斥分支），跨屏不同不算不一致 |
+| `COMBAT_DROP_ROW` / `SYS_GATHER_GET` / `SYS_JOB_GIVE` 零锚 | 结算屏 / 采集屏 / 交活屏 | 五条拾取行（`拾取：`/`得到：`）**彼此自成一族且全族都裸** ⇒ 自洽；鱼鱼口径「emoji 少不是缺陷」，要修得是同族不一致，不是缺 |
+| 13 条「首行带图标、次行不带」 | 各界面 | 首行 = 那一句话，次行 = 正文/括注（`（…）`）；这是**分层**不是不一致 |
+
+### 门禁（本车道自己复跑，非引述）
+
+```
+probe_texts / probe_copy / probe_guard_text / probe_icon_consistency /
+probe_battle_icon_coherence / probe_class(28/0) / probe_races / probe_cmds /
+probe_qloop / probe_quests / probe_instance                              全绿
+rebuild_syscopy.py          连跑三遍「644 条 · 零新增 · 幂等」（待跟账 106 → 108）
+e2e_drive 职业 / 出身 两屏  改后实跑复核
+全量 65 支 = 60 绿 / 5 红 —— **红集与基线同集同因**（逐条对过）：
+  · probe_mech / probe_resources —— 引擎仓工作区脏（8 条，别的车道在写）⇒ 脏树红
+  · probe_generators / probe_titles —— rebuild_titles 的 title_wall_listener 条件写 9、
+    那棵树已 22 条（P1 车道 NPC 轮换那批）⇒ 与本件零关系
+    （grep：rebuild_titles.py 对 SYS_CLS_EDGE / SYS_ORIGIN_HOME 命中 **0** 次）
+  · probe_sources —— i_token_stone_shard 打了 0 场
+```
+
+★ `git diff --numstat` 的「删」列 = 2（就是那两格改值的那一行，**不是**文件重排）；
+提交显式文件清单 2 个，未带 P1 在途的 `content/data/dialogues.json`（留在工作区）。
+
+### 留给下一轮
+
+- **P2-4a / P2-4b** 仍交主线（要改引擎）：gauge `bar_gain` 补显示名兜底 · 状态键显示名注入表。
+- 真源 `17_文案收口口径_v1.md` 待主线跟账 `SYS_CLS_EDGE` / `SYS_ORIGIN_HOME` 两行（`:884` / `:890`）。
+- 建议 `pause`（P2-1..P2-15 队列已空，继续跑只是每轮空转烧额度），待新审计或鱼鱼给新口径再 `resume`。
