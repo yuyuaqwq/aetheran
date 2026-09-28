@@ -5652,7 +5652,7 @@
     "desc": "P-54 · 路由未命中的回话（引擎 `route_miss_text_fn` 的供体 · 指向的「帮助」取自本包 commands.json 的可见声明）"
   },
   "SYS_CLS_EDGE": {
-    "value": "优势 · {adv} ｜ 弱点 · {weak}",
+    "value": "优势 · {adv} · 弱点 · {weak}",
     "params": [
       "adv",
       "weak"
@@ -5661,7 +5661,7 @@
     "desc": "P-50 建号第二步 · 每门一句优势 + 一句弱点（句子在 classes 域：adv / weak 两格）"
   },
   "SYS_ORIGIN_HOME": {
-    "value": "家乡 · {home} ｜ 寿数 · {life}",
+    "value": "家乡 · {home} · 寿数 · {life}",
     "params": [
       "home",
       "life"
