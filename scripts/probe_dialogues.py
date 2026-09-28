@@ -857,6 +857,69 @@ chk("⑰-b ★ 反证：把 %s 整棵树的四层各压到只剩一条兜底 ⇒
     _after17 < _MIN_SAME,
     "压完 %d 句（%d → %d）" % (_after17, _SAME[_pick17], _after17))
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ⑱ ★ 玩家可见文本的「渲染残留」与「引号不成对」（2026-09-29 · 文案车道 P1）
+#   ⑰ 把「同一句话反复出」钉住了；但还有一类**读端修不了**的缺陷 ——
+#   域里那句话本身就带着不该出现在屏上的东西：
+#     ① **markdown 强调标记 `**` 漏进纯文本聊天**（屏上是聊天窗，不是渲染器 ⇒ 玩家看见两个星号）
+#     ② **ASCII 双引号 "** 混进中文台词（与全角「」同段出现）
+#     ③ **「」不成对**：半句话被 `（动作）` 行打断，前一段话的 」被挤掉 ⇒ 屏上少一个引号
+#   ★ 三条都是**端到端实测抓到的**（`e2e_drive.py "搭话 杜林"` 屏上原样印出「是**人**缝的」），
+#     不是读代码猜的；本批已修（38 处 ** · 3 处 ASCII " · 9 条不成对）。
+#   ★ 与 ⑨ 的关系：⑨ 管「切行后每行的长度/空行/一行的引号组数」，
+#     ⑱ 管**整条**的字符集与引号配对 —— ⑨ 全绿时这三条照样能红。
+# ─────────────────────────────────────────────────────────────────────────────
+import re as _re18                                                   # noqa: E402
+
+_MD18 = _re18.compile(r"\*\*|__|(?<!\*)\*(?!\*)")
+_bad18 = {"md": [], "ascii_q": [], "unbalanced": []}
+
+for _k18, _v18 in dl.items():
+    for _lk18, _nd18 in _v18["nodes"].items():
+        for _ti18, _t18 in enumerate(_nd18.get("texts", [])):
+            _s18 = str(_t18.get("text", ""))
+            _where = "%s/%s#%d" % (_k18, _lk18, _ti18)
+            if _MD18.search(_s18):
+                _bad18["md"].append((_where, _MD18.search(_s18).group(0)))
+            if '"' in _s18 or "'" in _s18:
+                _bad18["ascii_q"].append((_where, repr(_s18)[:40]))
+            if _s18.count("「") != _s18.count("」"):
+                _bad18["unbalanced"].append(
+                    (_where, "「%d 」%d" % (_s18.count("「"), _s18.count("」"))))
+
+chk("⑱-a ★ 台词里没有 markdown 强调标记（屏是聊天窗，不是渲染器）  —— 命中：%d"
+    % len(_bad18["md"]), not _bad18["md"],
+    ("；".join("%s %r" % (w, g) for w, g in _bad18["md"][:4])) if _bad18["md"] else "")
+chk("⑱-b ★ 台词里没有 ASCII 引号（中文台词一律用「」）  —— 命中：%d" % len(_bad18["ascii_q"]),
+    not _bad18["ascii_q"],
+    ("；".join("%s %s" % (w, g) for w, g in _bad18["ascii_q"][:4])) if _bad18["ascii_q"] else "")
+chk("⑱-c ★ 每条台词的「」成对（动作插在话中间不许吃掉引号）  —— 不成对：%d"
+    % len(_bad18["unbalanced"]), not _bad18["unbalanced"],
+    ("；".join("%s %s" % (w, g) for w, g in _bad18["unbalanced"][:4]))
+    if _bad18["unbalanced"] else "")
+
+# ⑱-d 反证：把三种形态各塞一条进**真实域对象**（不是副本）⇒ 三条判据必须同时红。
+#   ★ 与 ⑫-b/⑰-b 同一个纪律：改副本的话读端根本不生效 ⇒ 尸绿。
+_saved18 = json.loads(json.dumps(dl))
+_k18 = sorted(dl)[0]
+_l18 = sorted(dl[_k18]["nodes"])[0]
+_t18 = dl[_k18]["nodes"][_l18]["texts"]
+if _t18:
+    _victim18 = _t18[0]
+    _orig18 = _victim18["text"]
+    _victim18["text"] = _orig18 + "\n「反证**加粗**的。」\n「反证\"直引号\"的。」\n「反证少个引号"
+    _md18 = bool(_MD18.search(_victim18["text"]))
+    _aq18 = ('"' in _victim18["text"]) or ("'" in _victim18["text"])
+    _ub18 = _victim18["text"].count("「") != _victim18["text"].count("」")
+    _victim18["text"] = _orig18
+    chk("⑱-d ★ 反证：往真实域对象塞回三种残留 ⇒ 三条判据都抓得住（判据不恒真）",
+        _md18 and _aq18 and _ub18,
+        "md=%s ascii=%s 不成对=%s" % (_md18, _aq18, _ub18))
+else:
+    chk("⑱-d ★ 反证：往真实域对象塞回三种残留 ⇒ 三条判据都抓得住（判据不恒真）", False,
+        "%s/%s 没有可污染的 texts 条目" % (_k18, _l18))
+
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
 sys.exit(0 if ok else 1)
