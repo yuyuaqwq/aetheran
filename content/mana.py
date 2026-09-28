@@ -47,6 +47,9 @@ _K_STAMP = "stamp"
 _K_WHEN = "when"
 _K_MODE = "mode"
 _K_MODES = "modes"
+#: `settle.when` 的合法值（结算在哪一刻发生 = **代码**决定：`cmds_battle._settle` 调 `settle`）。
+#: 只有一个合法值；写别的名字 = 表与实现脱节，当场抛而不是照旧跑（审计 L1410-5）。
+_SETTLE_WHENS = frozenset({"battle_end"})
 
 #: 游戏钟的单位换算（1 游戏日 = 86400 游戏秒 · 1 小时 = 3600 游戏秒）——
 #: 与 `content/calendar.py::game_time` 同一把尺（真源 `05_玩法数值口径 §七`：游戏内 1 天 = 现实 2 小时）
@@ -115,6 +118,14 @@ def _validate(t: dict) -> dict:
     for k in (_K_WHEN, _K_FIELD, _K_STAMP):
         if not str(stt.get(k) or ""):
             raise ValueError("mana.json 的 `settle.%s` 空着（结算口要的四个名字之一）" % k)
+    # ★ 审计 L1410-5：`settle.when` 原先只查「非空」—— 改成任何别的名字照样过，
+    #   而它与 `initial.mode` / `gate.rule` / `cap_gain.mode` 那三处「不在自己声明的
+    #   名单里就抛」的口径不一致（同族：声明了 fail-closed、实际不 fail-closed）。
+    #   合法值只有 `battle_end` 一个（结算由 `cmds_battle._settle` 那一处触发），
+    #   认不出就点名抛，不静默当「照旧那样跑」。
+    if str(stt.get(_K_WHEN) or "") not in _SETTLE_WHENS:
+        raise ValueError("mana.json 的 `settle.when` 认不出（合法值 %s）：%r"
+                         % ("/".join(sorted(_SETTLE_WHENS)), stt.get(_K_WHEN)))
     cg = t.get("cap_gain")
     if not isinstance(cg, dict) or str(cg.get(_K_MODE) or "") not in (cg.get(_K_MODES) or {}):
         raise ValueError("mana.json 的 `cap_gain.mode` 不在它自己声明的 `modes` 里：%r"
