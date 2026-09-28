@@ -213,7 +213,55 @@ _lg_ctl = []
 d_ctl = LD.deal_damage(b_off, None, e_off, 100, _lg_ctl, element=fire)
 chk("⑤ 免疫：同样 100 点计划伤害 ⇒ 真扣血 **0**（对照臂 = %d）" % d_ctl, d_imm == 0 and d_ctl > 0)
 _tx = st.domain("texts")
-_want_imm_line = _tx[BT.slots()["battle.landing.element_immune"]]["value"].replace("{name}", e_on.get("name"))
+#  ★ P0-1：期望值改**现渲染**（引擎 `safe_format` + 这条 cue 真拿到的 t）——
+#    原先 `.replace("{name}", …)` 是手填，填不到 `{t:.0f}` ⇒ 期望里留着字面量 `【{t:.0f} 刻】`
+#    （战斗时间轴 P0-1 之后暴露的）。判据只加强：多一个占位符就红。
+def _render_line(cue_key, _battle=None, **slots):
+    """按 texts 那一格 + 引擎 `safe_format` **现渲染**出期望那一行。
+    ★ 时刻 `t` 取**给的那一场**的钟（`_battle` 或外层 `b_on`）—— 战斗时间轴 P0-1 之后
+      每一行都带刻 ⇒ 拿别的场次的期望来比必然对不上（那正是 ⑦ 两条红的原因）。"""
+    tpl = _tx[BT.slots()[cue_key]]["value"]
+    from saintess_engine.text import safe_format
+    b = _battle if _battle is not None else b_on
+    s = safe_format(tpl, dict(slots, t=float(getattr(b, "_now", 0) or 0)))
+    if "{" in s:                      # 还有没填上的占位符 ⇒ 当场抛（不许拿半成品当期望）
+        raise AssertionError("槽位 %s 渲染后仍有占位符：%r" % (cue_key, s))
+    return s
+
+
+def _body_of(cue_key, **slots):
+    """槽位模板渲染成「**正文那一行**」：时刻那一格也归一化成 `【…】`。
+
+    ★ 与 `_has_cue_line` 同一口径：两侧都把 `【…】` 换成同一个占位 ⇒ 比的是**正文**，
+      时刻那一格的**合法性**由 `_TS_RE` 单独钉（见那里）。
+    """
+    tpl = _tx[BT.slots()[cue_key]]["value"]
+    from saintess_engine.text import safe_format
+    s = safe_format(tpl, dict(slots, t=0))
+    return re.sub(r"【[^】]*】", "【…】", s)
+
+
+#: 时刻那一格的**合法形态**（真源 26_ §三 优化 1 逐字：`【N 刻】`）。
+_TS_RE = re.compile(r"【\d+ 刻】")
+
+
+def _has_cue_line(lines, body):
+    """日志里有没有**那一行**：正文逐字对 + **时刻那一格必须存在且合法**。
+
+    ★ 为什么不能两侧都归一化成 `【…】`：那样「时刻被抠掉」也判过绿（实测反证：
+      把那一行的 `【38 刻】` 去掉，判据照样过）。⇒ 时刻单独用 `_TS_RE` 钉住，
+      正文比对时**保留**时刻那一格本身（只把别的【…】换掉）。
+    """
+    for ln in lines:
+        s = str(ln)
+        if not _TS_RE.search(s):
+            continue                      # 时刻格缺失 / 不合法 ⇒ 不算这一行
+        if re.sub(r"【[^】]*】", "【…】", s) == body:
+            return True
+    return False
+
+
+_want_imm_line = _render_line("battle.landing.element_immune", name=e_on.get("name"))
 chk("⑤ 免疫那行日志**逐字** = texts 槽位渲染（%s）" % _want_imm_line, _want_imm_line in _lg_imm)
 chk("⑤ 对照臂（撤掉样例）没有那行 · 也没走槽位外的机器码", not any("免疫" in x for x in _lg_ctl))
 
@@ -226,7 +274,7 @@ d_ct2 = LD.deal_damage(b_off, None, e_off, 100, _lg_ct2, element=ice)
 chk("⑥ 弱点：伤害 == int(基线 × 真源那个倍数)（%d × %s ⇒ %d，实测 %d）"
     % (d_ct2, mult["strong"], int(d_ct2 * mult["strong"]), d_wk),
     d_ct2 > 0 and d_wk == int(d_ct2 * mult["strong"]))
-_want_wk_line = _tx[BT.slots()["battle.landing.element_weak"]]["value"].replace("{name}", e_on.get("name"))
+_want_wk_line = _render_line("battle.landing.element_weak", name=e_on.get("name"))
 chk("⑥ 弱点那行日志**逐字** = texts 槽位渲染（%s）" % _want_wk_line, _want_wk_line in _lg_wk)
 chk("⑥ 两行都**不含**元素机器名（%s）" % " / ".join(labels),
     not any(lbl in _want_imm_line + _want_wk_line for lbl in labels))
@@ -257,12 +305,20 @@ d_wk_off, lg_wk_off, _r2 = _cast("cls_mage", "冰棱", False)
 chk("⑦ 真战斗 · 弱点：冰棱打样例怪 ⇒ 伤害 == int(对照 × 倍数)（%d × %s ⇒ %d，实测 %d）"
     % (d_wk_off, mult["strong"], int(d_wk_off * mult["strong"]), d_wk_on),
     d_wk_off > 0 and d_wk_on == int(d_wk_off * mult["strong"]))
-chk("⑦ 真战斗 · 弱点：那行日志真出现在战斗日志里", _want_wk_line in lg_wk_on and _want_wk_line not in lg_wk_off)
+#  ★ P0-1：战斗时间轴之后，**时刻那一格是「cue 发出那一刻」**（实测：手末 _now=57，
+#    而那行印的是 38）⇒ 判据不能拿某一刻去硬比。改成**按槽位取正文那一段**去对：
+#    模板剔掉 `{t:.0f}` 那一格后余下的正文必须**逐字**出现在这一场日志里，对照臂不许有。
+#    ★ 判据只加强：正文逐字 + 时刻那一格仍是合法的 `【N 刻】`（不许缺）。
+_wk_body = _body_of("battle.landing.element_weak", name=e_on.get("name"))
+chk("⑦ 真战斗 · 弱点：那行日志真出现在战斗日志里（且对照臂没有）",
+    _has_cue_line(lg_wk_on, _wk_body) and not _has_cue_line(lg_wk_off, _wk_body))
 
 d_im_on, lg_im_on, _r3 = _cast("cls_berserker", "焚身", True)
 d_im_off, lg_im_off, _r4 = _cast("cls_berserker", "焚身", False)
 chk("⑦ 真战斗 · 免疫：焚身打样例怪 ⇒ 伤害 **0**（对照 %d）" % d_im_off, d_im_on == 0 and d_im_off > 0)
-chk("⑦ 真战斗 · 免疫：那行日志真出现在战斗日志里", _want_imm_line in lg_im_on and _want_imm_line not in lg_im_off)
+_im_body = _body_of("battle.landing.element_immune", name=e_on.get("name"))
+chk("⑦ 真战斗 · 免疫：那行日志真出现在战斗日志里（且对照臂没有）",
+    _has_cue_line(lg_im_on, _im_body) and not _has_cue_line(lg_im_off, _im_body))
 chk("⑦ 真战斗 · 这一手之外照旧打得下去（还没分出胜负 ⇒ result 为 None · 不因为元素这格崩掉）",
     all(r is None or r in ("victory", "defeat", "fled") for r in (_r1, _r2, _r3, _r4)))
 

@@ -352,8 +352,11 @@ for _cid in sorted(_BASIS):
     _pl = {"cls": _cid, "level": 10, "uid": "u_ch", "name": "试", "alloc": _RBM.alloc_of(10, _cid)}
     _pl["hp"] = CA.hp_cap(_pl)
     _res, _logs, _ = CB.run_auto(_pl, [_MID], MON, seed=4242)
+    #  ★ P0-1：行首多了 `【N 刻】` ⇒ 原先那句 `"💥 %s 受到"`（图标后一个空格）再也匹配不上。
+    #    改成「按**正文**取」：那一行必须含 `<怪名> 受到 <n> 点伤害` 这一段（时刻格不参与）。
+    _foe = MON[_MID].get("name", _MID)
     _dmg = [int(x) for x in (_DMG_RE.search(l).group(1) for l in _logs
-                             if ("💥 %s 受到" % MON[_MID].get("name", _MID)) in l and _DMG_RE.search(l))]
+                             if ("%s 受到" % _foe) in l and _DMG_RE.search(l))]
     _st = _stats(None, PB.build_actor(_cid, 10, _pl["alloc"]))
     _basis_v = float(_st.get(_BASIS[_cid], 0))
     if not _dmg:
@@ -382,7 +385,8 @@ for _mid, _tier in _TIERS:
         _pl = {"cls": _med, "level": _lv, "uid": "u_bal", "name": "试", "alloc": _RBM.alloc_of(_lv, _med)}
         _pl["hp"] = CA.hp_cap(_pl)
         _res, _logs, _ = CB.run_auto(_pl, [_mid], MON, seed=9000 + _s)
-        _acts.append(sum(1 for x in _logs if ("🌀 %s 开始出招" % _pl["name"]) in x))
+        #  ★ P0-1：同上（时刻格不参与匹配，正文逐字）
+        _acts.append(sum(1 for x in _logs if ("%s 开始出招" % _pl["name"]) in x))
     _acts.sort()
     _me = _acts[len(_acts) // 2]
     _BAL_ROWS.append((_m["name"], _tier, _lv, _m["panel"]["hp"], _design, _med, _me))
