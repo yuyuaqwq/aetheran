@@ -205,13 +205,47 @@ def weather_of(day: int) -> str:
     return weather_raw(day)
 
 
+#: ★ 保底锚点：这场雨是 `weather_of` 的「回头找最近一场雨」的终止条件（审计 L1059）。
+#:   它掉出抽签分布 = 保底逻辑连兜底的路都没了（`weather_of` 那个 while 永远找不到 r）。
+RAIN_ID = "w_rain"
+
+
+def _weight_of(wid: str, raw) -> int:
+    """一条天气权重取值 —— fail-closed（审计 L1059）。
+
+    原先这里只有一句 `int(v["weight"])`，于是这些坏值全部**静默通过**：
+      `0`      ⇒ 该天气抽签永不可达（分布里少一档，玩家侧表现为「这场永远不出现」）
+      `-5`     ⇒ 同上，且 `weather_raw` 的累加器在负数档上乱序
+      `True`   ⇒ 当成 1（有损）
+      `"15"`   ⇒ 当成 15（表里写字符串也照收）
+      `15.9`   ⇒ 有损截断成 15
+      缺 `weight` / 键不存在 ⇒ KeyError 从**消费端**炸（`weather_of` / `weather_raw`），
+      而真正该报错的地方是这一行
+    ⇒ 认不出就抛，点名是哪条天气、拿到什么。天气权重是**玩法承诺**（雨还有保底），
+      静默把它变成 0 比报错糟得多。
+    """
+    if isinstance(raw, bool) or not isinstance(raw, int):
+        raise ValueError("weather.%s.weight must be an int (got %r) - table is the only source"
+                         % (wid, raw))
+    if raw <= 0:
+        raise ValueError("weather.%s.weight must be a positive int (got %d)"
+                         " - zero/negative makes this weather unreachable" % (wid, raw))
+    return raw
+
+
 def weather_weights(day: int) -> dict:
     """这一天各天气的权重（表里的 weight × 开场事件的 `weather_mul`）—— 只归一处。
 
     ★ 天气是**全服一天一张**（不跟人走）⇒ 世界级事件（看主线）不参与加权；
       只有按游戏日算的窗（限时 / 每日）能影响天气。没有这类事件时 = 表里的数原样。
+    ★ 出口 fail-closed（L1059）：缺保底锚点 / 权重非正整数 / 事件倍率算成 0 或负数
+      一律当场抛并点名 —— 权重表一旦缺一档，`weather_raw` 的分布与 `weather_of` 的
+      回头找雨都会静默失真（雨那档更糟：保底直接失效）。
     """
-    out = {wid: int(v["weight"]) for wid, v in weathers().items()}
+    wmap = weathers()
+    if RAIN_ID not in wmap:
+        raise ValueError("weather domain has no %s (the guarantee anchor)" % RAIN_ID)
+    out = {wid: _weight_of(wid, (v or {}).get("weight")) for wid, v in wmap.items()}
     st = {"game_day": int(day)}
     for eid, rec in sorted(events().items()):
         per = rec.get("period") or {}
@@ -221,7 +255,8 @@ def weather_weights(day: int) -> dict:
             continue
         for wid, mul in ((rec.get("effects") or {}).get("weather_mul") or {}).items():
             if wid in out:
-                out[wid] = int(out[wid]) * int(mul)
+                out[wid] = _weight_of("%s x event %s weather_mul" % (wid, eid),
+                                      int(out[wid]) * int(mul))
     return out
 
 
