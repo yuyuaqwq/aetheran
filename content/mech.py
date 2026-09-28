@@ -880,9 +880,14 @@ def aeth_block_roll(battle, caster, target, params, logs):
         mit = float(_AP._table().eval("F10_block_mit", {"block": blk}))
     except Exception:                                   # noqa: BLE001
         mit = 0.0
-    if mit > 0:
-        cur = ctx.get("mult")
-        ctx["mult"] = (1.0 if cur is None else float(cur)) * (1.0 - mit)
+    if mit <= 0:
+        # 【L408】mit ≤ 0 整条返回：不打折、不回誓、不播报。
+        #   改前实跑（block=0 · F10=0.0）：掉血 100（零减免正确）、
+        #   守誓层 0→26（额外 +20）、仍播「举盾挡下 —— 这一下轻了 **0 点**」。
+        #   与本函数 docstring 的 fail-closed 承诺相反（「→ 一个字段都不写」）。
+        return
+    cur = ctx.get("mult")
+    ctx["mult"] = (1.0 if cur is None else float(cur)) * (1.0 - mit)
     # 回誓：账本那条（渠道表）+ 这条被动自己那半
     key = RES.res_of_class(str(caster.get("class_name") or ""))
     oath = int(RES.gain_of(key, "on_block")) + int(_num(m, "oath_bonus"))

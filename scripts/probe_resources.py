@@ -160,6 +160,33 @@ def restore_block(saved):
         MECH.of("block_oath")["block_chance"] = saved
 
 
+def zero_block():
+    """fixture：把职业面板的 `block` 压到 **0**（base + growth 都压）。
+
+    为什么必须走 `panel_build.classes()` 这一个入口（不是改域文件、不是 `actor["block"]`）：
+      · `actor["block"]` 只在**无职业**那条路被读（引擎 `stats._monster_base_stats`），
+        玩家那面走的是**面板栈** ⇒ 改 actor 字段对玩家完全无效（实测压了仍是 48）；
+      · 面板栈的读口是 `panel_build.classes()` 返回的那份（`cls_rec` / `_layers_of` / `panel_of`
+        三处都从这儿拿）⇒ 改它一个地方，三条读路同时生效。
+      · 压的是 `base` 与 `growth` 两格：只压 base 时 `30 + 1.2×(lv-1)` 仍留下 47.4。
+    返回挂载前的 `(base, growth)` 供 `restore_block_value` 还原。
+    """
+    _c = PB.classes().get("cls_knight") or {}
+    _saved = (_c.get("base", {}).get("block"), _c.get("growth", {}).get("block"))
+    _c.get("base", {})["block"] = 0
+    _c.get("growth", {})["block"] = 0
+    return _saved
+
+
+def restore_block_value(saved):
+    (sb, sg) = saved
+    _c = PB.classes().get("cls_knight") or {}
+    if sb is not None:
+        _c.get("base", {})["block"] = sb
+    if sg is not None:
+        _c.get("growth", {})["block"] = sg
+
+
 def no_dodge():
     """fixture：把**闪避上限**临时压成 0 —— 挨打那一档要问渠道，不能问命中率。
 
@@ -375,6 +402,7 @@ chk("⑤ 倒下 ⇒ 资源清空（真源「队友倒下清空」按含自己落
 print()
 print("══ ⑥ 格挡（骑士被动「格挡回誓」：真源 F10 减免 + 回誓）")
 from content import apply as _AP                                   # noqa: E402
+from content import panel_build as PB                            # noqa: E402  【L408】零减免 fixture 的读口
 
 _b7 = build("cls_knight", 16, uid="u_res7")
 _c7 = focus(_b7)
@@ -429,6 +457,35 @@ _lg8 = []
 for _i in range(12):
     LD.deal_damage(_b8, None, _c8, 10, _lg8)
 chk("⑥ 等级没到 16 ⇒ 一次都不格挡（12 次全无「举盾挡下」）", not any("举盾挡下" in x for x in _lg8))
+_bA = no_block()                       # fixture：先押住面板层，让 F10 落到 0（见下）
+restore_block(_bA)
+_bB = zero_block()                     # ★ fixture：把职业面板的 block 压到 0（F10 = 0/(0+K) = 0）
+try:
+    _b9b = build("cls_knight", 16, uid="u_resA")
+    _c9b = focus(_b9b)
+    _blk0 = float(ST.actor_stats(_b9b, _c9b).get("block", 0) or 0)
+    _mit0 = float(_AP._table().eval("F10_block_mit", {"block": _blk0}))
+    put(_c9b, "RES_OATH", 0)
+    _hpA = int(_c9b.get("hp") or 0)
+    _randA = random.random
+    _lgA = []
+    try:
+        random.random = lambda: 0.10        # 掷中（block_chance 未被动，0.10 < 声明值）⇒ 撞的就是「mit」这一格
+        LD.deal_damage(_b9b, None, _c9b, 100, _lgA)
+    finally:
+        random.random = _randA
+    _dA = _hpA - int(_c9b.get("hp") or 0)
+    _oathA = int((((_c9b.get("effects") or {}).get("RES_OATH")) or {}).get("stacks") or 0)
+    chk("⑥ ★ 面板 block=%g ⇒ F10=%.4f（真源公式求值，不是写死的数）" % (_blk0, _mit0),
+        _mit0 == 0.0, "⇒ 零减免")
+    chk("⑥ ★ 【L408】掷中但 F10=0 ⇒ 一个字段都不写（承伤 100 全额 · 守誓只剩受击那一条 %d · 不播「举盾挡下」）"
+        % RES.gain_of("RES_OATH", "on_taken"),
+        _dA == 100 and _oathA == RES.gain_of("RES_OATH", "on_taken")
+        and not any("举盾挡下" in x for x in _lgA),
+        "实测掉 %d 点 · 层 %d · 举盾行 %d 条" % (_dA, _oathA, sum(1 for x in _lgA if "举盾挡下" in x)))
+finally:
+    restore_block_value(_bB)
+
 
 print()
 print("══ ⑦ 反证：不装配（资源表读不到）⇒ 一个字段都不写")
