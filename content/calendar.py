@@ -198,10 +198,16 @@ def weather_of(day: int) -> str:
     """
     n = rain_max_gap_days()
     r = int(day)
-    while weather_raw(r) != "w_rain":         # 最近一次「抽签就是雨」的日子（伪随机 ⇒ 实际几天的量级）
+    # ★ 审计 L1058：保底锚点**走 `RAIN_ID` 那一格**（原先这两行把 `"w_rain"` 字面量硬编在
+    #   函数体里，而 `RAIN_ID` 就声明在下面 5 行 —— 同一个锚点两个名字）。
+    #   真实代价不是「不优雅」：锚点一旦改名（合法编辑），`weather_weights` 的
+    #   `if RAIN_ID not in wmap` 仍绿（域里当然有那个 id），而这个 while **认不出雨**
+    #   ⇒ 一路 `r -= 1` **无下界回溯** = 整进程挂死（台账 L1083 的铁证形态，
+    #   L1059 补的出口校验只挡「域里没这一档」、挡不住「锚点改名」）。
+    while weather_raw(r) != RAIN_ID:          # 最近一次「抽签就是雨」的日子（伪随机 ⇒ 实际几天的量级）
         r -= 1
     if (int(day) - r) % n == 0:
-        return "w_rain"
+        return RAIN_ID
     return weather_raw(day)
 
 

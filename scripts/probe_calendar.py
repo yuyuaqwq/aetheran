@@ -157,6 +157,68 @@ gid, pt = "gt_be_herb_1", (CAL._d("gathering") or {})["gt_be_herb_1"]
 chk("★ 采集门槛：那条雨后才长的菌，晴天采不到",
     CAL.allows(pt.get("time"), rain_st) and not CAL.allows(pt.get("time"), day), "门槛=%s" % pt.get("time"))
 
+# ── ⑪ ★ 审计 L1058：保底锚点**单一真源**（`RAIN_ID` 那一格，不许函数体里再写一遍字面量）——
+#   病根：`weather_of` 的 `while weather_raw(r) != "w_rain"` / `return "w_rain"` 两行把锚点
+#   **硬编在函数体里**，而 `RAIN_ID = "w_rain"` 就声明在下面几行 ⇒ 同一个锚点两个名字。
+#   真实代价 = **整进程挂死**，不是「不优雅」：锚点改名（合法编辑）时
+#   `weather_weights` 的 `if RAIN_ID not in wmap` 仍**绿**（域里当然有那一档），
+#   而这个 while 认不出雨 ⇒ 一路 `r -= 1` 无下界回溯（L1083 的铁证形态；
+#   L1059 补的出口校验只挡「域里没这一档」、**挡不住「锚点改名」**）。
+#   三条：① 静态：函数体里不再有 `"w_rain"` 字面量，锚点一律走 `RAIN_ID`
+#        ② 行为：注入「域里雨那档改名 + RAIN_ID 跟着改」⇒ **必须在有界时间内返回**
+#           （改前 = 挂死；用子进程跑，不许把本探针自己拖死）
+#        ③ 注入的域文件必须逐字节复原（探针不许留脏数据）
+_src_cal = io.open(os.path.join(REPO, "content", "calendar.py"), encoding="utf-8").read()
+# ★ 只看**函数体**：`def weather_of` 到下一个顶格行（下一个 def / 常量赋值）之间。
+#   第一版取固定 4000 字，会把下面那行 `RAIN_ID = "w_rain"` 一并吃进来
+#   ⇒ 判据把自己的真源判成「残留」= 假红（当场自纠）。
+_lines = _src_cal.splitlines()
+_i0 = next(i for i, l in enumerate(_lines) if l.startswith("def weather_of"))
+_body = []
+for _l in _lines[_i0 + 1:]:
+    if _l and not _l[0].isspace():            # 顶格 ⇒ 已出函数体
+        break
+    _body.append(_l)
+_lit = [l.strip()[:64] for l in _body
+        if '"w_rain"' in l and not l.strip().startswith("#")]
+chk("★ ① `weather_of` 函数体里不再硬编锚点字面量（残留 %s）—— 单一真源 = RAIN_ID"
+    % (_lit or "无"), not _lit)
+
+# ② 行为：把「域里雨那档改名 + RAIN_ID 跟着改」塞进**子进程**跑（有界超时）。
+#    真跑本函数（不在探针里重写一遍算法），锚点已单源 ⇒ 认得出新锚点 ⇒ 立刻返回。
+import json as _json
+import subprocess as _sp
+_WP = os.path.join(REPO, "content", "data", "weather.json")
+_orig_w = io.open(_WP, encoding="utf-8", newline="").read()
+_new_anchor = "w_rain_renamed"
+_CHILD = (
+    "import sys, os\n"
+    "os.chdir(%r); sys.path.insert(0, %r)\n"
+    "from content import calendar as CAL\n"
+    "CAL.RAIN_ID = %r\n"
+    "try:\n"
+    "    print(CAL.weather_of(252))\n"
+    "except Exception as e:\n"
+    "    print('RAISED:' + type(e).__name__)\n" % (REPO, REPO, _new_anchor)
+)
+try:
+    _d = _json.loads(_orig_w)
+    _d[_new_anchor] = _d.pop("w_rain")
+    io.open(_WP, "w", encoding="utf-8", newline="").write(
+        _json.dumps(_d, ensure_ascii=False, indent=2))
+    try:
+        _r = _sp.run([sys.executable, "-c", _CHILD], capture_output=True, timeout=25)
+        _out = _r.stdout.decode("utf-8", "replace").strip()
+        _ok = bool(_out) and not _out.startswith("Traceback")
+    except _sp.TimeoutExpired:
+        _out, _ok = "25s 未返回（无下界回溯 = 整进程挂死）", False
+finally:
+    io.open(_WP, "w", encoding="utf-8", newline="").write(_orig_w)
+chk("★ ② 锚点改名后**有界返回**（注入：域里雨那档改 id + RAIN_ID 跟着改 ⇒ %s）"
+    "—— 改前这一档挂死" % _out, _ok)
+chk("★ ③ 域文件注入后逐字节复原（探针不许留脏数据）",
+    io.open(_WP, encoding="utf-8", newline="").read() == _orig_w, "长度 %d" % len(_orig_w))
+
 print()
 print("结果：%s" % ("全绿 ✓" if not fails else "有红 ✗（%d）" % len(fails)))
 sys.exit(1 if fails else 0)
