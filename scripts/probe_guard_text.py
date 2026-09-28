@@ -211,8 +211,15 @@ finally:
         _bag[_slot0] = _backup
 chk("④ 槽位拿掉 ⇒ 装配期对账当场抛（%s）" % ((_r1 or "没抛")[:52],), bool(_r1))
 chk("④ 键→槽位映射缺一个键 ⇒ 也当场抛（%s）" % ((_r2 or "没抛")[:52],), bool(_r2))
-chk("④ 撤改验证后装回去 ⇒ 对账又绿（两态）",
-    bool(GT.check_domain()) and _guard("player", _env_none) == FROZEN[GUARD_KEYS[0]])
+# ★ L2614-#4：check_domain 现在**只校验不产出**（返 None）⇒ 这里改成「不抛就算过」，
+#   不再用 bool(返回值) —— 那是拿一个已删的产物当判据。
+_ok4 = True
+try:
+    GT.check_domain()
+except Exception:
+    _ok4 = False
+chk("④ 撤改验证后装回去 ⇒ 对账又绿（两态 · 不抛 = 过）",
+    _ok4 and _guard("player", _env_none) == FROZEN[GUARD_KEYS[0]])
 
 # ══════════════════════════════════════════════════════════════
 # ⑤ 注入生效：改表值 ⇒ 回话跟着变（句子真源只有表）

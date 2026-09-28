@@ -77,8 +77,8 @@ def line(key) -> str:
     return str(T(slot))
 
 
-def check_domain() -> dict:
-    """装配期对账（fail-closed）：① 映射的键集 == 引擎的中性键全集 ② 两条槽位都真有字。 ③ 逐键点名对应槽位。
+def check_domain() -> None:
+    """装配期对账（fail-closed），**只校验不产出**：① 映射的键集 == 引擎的中性键全集 ② 两条槽位都真有字。 ③ 逐键点名对应槽位。
 
     ② 是这一条的要点：宿主只传键，**句子在这两条槽位里** —— 缺一条，守卫拦下时玩家拿到的
     是抛错，不是一句人话。① 防的是「引擎加了键、本包没跟」（那时会静默少一句）。
@@ -97,12 +97,16 @@ def check_domain() -> dict:
         if got != want_slot:
             raise KeyError("守卫键 %r 应对应槽位 %r，现映的是 %r（两句玩家可见文案会"
                            "整体对调）" % (key, want_slot, got))
-    out = {}
     for key in sorted(SLOTS):
         slot = SLOTS[key]
         value = str((_table().get(slot) or {}).get("value") or "")
         if not value.strip() or _MARK in value:
             raise KeyError("守卫拦截句槽位 %r 不在 texts 域里（或空着）—— 守卫拦下时玩家"
                            "拿到的会是抛错，不是一句人话" % (slot,))
-        out[key] = _table()[slot]
-    return out
+    # ★ 审计 L2614-#4：原先这里还 `out[key] = _table()[slot]` 并 `return out`，
+    #   而**零消费者要那个 dict**（`content/apply.py:216` 调完直接丢弃；唯一的读点
+    #   `scripts/probe_guard_text.py:215` 只写 `bool(...)` 看非空）⇒ 是个死返回值。
+    #   这轮循环的**真正职责是校验**（缺槽位/空字当场抛），校验完就结束：
+    #   留一个没人读的 dict 只会让人以为「对账结果」是个可消费的产物。
+    #   ⇒ 改成 `return None`（无产物），与同族 `mech.py::check_domain` / `elements.py::check_domain`
+    #   的口径一致 —— 那两个也只做校验、不返回可消费对象。
