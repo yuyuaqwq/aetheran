@@ -13585,3 +13585,73 @@ P2-1/2/3/4/6/7/8/9 **全部收口**，本轮补上 P2-10 ⇒ 仍建议 `pause`�
 交主线的两件仍等立项，本车道一件不碰：**P2-4a** gauge `bar_gain` 补显示名兜底（引擎 1 行）·
 **P2-4b** 状态键显示名注入表（引擎新增 + 内容侧 24 条槽位 + 接线）。
 真源仓只读；未 push；未碰引擎；未改别车道文件面；未改台账。
+
+## P2 车道 · 2026-09-29 05:0x 夜班 —— P2-11：物品事务结果行行首锚（`0e5622e`）
+
+本轮先**独立复核**任务书的四个数字（P2-1/2/3/4），结论：P2-1 与 P2-2 已被 P0/P1 车道收口、
+P2-3 已有常驻门禁 ①②③④⑤、P2-4 两支都要改引擎 ⇒ 交主线。**任务书那四个数字已过期**，
+本轮的活是自己现扫现读出来的一类缺口（不是照抄台账）。
+
+### ★ 本轮唯一交付：P2-11（**本车道真缺陷 · 同族结果行行首锚不统一**）
+
+全包「动作成了」的结果行（`*_OK` / `*_DONE` / `*_UP`）里，「物品事务」分成两拨：
+
+```
+带行首语义锚   💰 买/卖（SYS_SHOP_BUY_OK · SYS_SELL_OK）· 🗑️ 丢（SYS_DROP_OK）
+               📦 存取（SYS_STASH_IN_OK / SYS_STASH_OUT_OK）
+               🔨 打造/强化（SYS_SMITH_CRAFT_OK · SYS_ENHANCE_OK）
+不带行首锚     SYS_GEAR_EQUIP_OK · SYS_GEAR_UNEQUIP_OK · COMBAT_SWAP_OK · SYS_COOK_OK
+```
+
+后四条都是 `{icon}{name}` 起头 —— **那个 `{icon}` 是物品自己的图标**（内容数据的 `icon`
+字段，种类随物品变），不是这一行的行首语义锚。玩家一屏里连着看到
+`📦 放进箱子：…` 与 `你穿上了🗡…（单手剑）。` ⇒ 同族两拨写法。
+
+口径与「该不该补 emoji」的区分（这条是本批最要紧的一句）：
+**这不是「emoji 覆盖率低」**（那不是判据 —— emoji 少不算缺陷，鱼鱼原话）。
+要修的是**同一类事务的结果行行首锚不统一**。
+`SYS_COOK_OK` 原句行首是【】不是图标 ⇒ 【】与图标是两族锚（`b208693` 定）⇒ **补图标，不动【】**。
+
+改法：四条各补同一枚物品事务锚 **📦**（与已固化的 📦 存取箱子同族；不用 🎒 ——
+奥兰迪亚词典里 🎒 偏「背包那一屏的抬头」，不是每一次物品动作的结果）。
+改完全包 `{icon}{name}` 相邻那 **9 条全部有行首锚**（现算：COMBAT_SWAP_OK · SYS_DROP_OK ·
+SYS_GEAR_EQUIP_OK · SYS_GEAR_UNEQUIP_OK · SYS_SELL_OK · SYS_SHOP_BUY_OK ·
+SYS_SMITH_CRAFT_OK · SYS_STASH_IN_OK · SYS_STASH_OUT_OK）。
+
+★ 只在行首加一格图标 + 一个空格；`{icon}{name}`（物品自身图标与名字）**一字未动**（内容数据）。
+取件点 5 处与 `params` 一个字未动；判据侧全部用槽位现算期望 ⇒ 改值自动跟随，未改任何既有探针。
+
+### ★ 判据 ⑥（`scripts/probe_icon_consistency.py` · 72 增 0 删 · 只加强不替代）
+
+①④ 的 `_role` 把这类行归到别处 ⇒ 结构上看不到这一类。⑥ 的**定义域现算、不手写名单**：
+行首形如 `{icon}{name}`。★ 仍然不钉 emoji 覆盖率，只判一致性。
+有牙：改后真盘 0 处；反证把 `COMBAT_SWAP_OK` 的锚换成 ★ ⇒ 当场命中 1 处
+（`content/cmds_battle.py::swap_weapon`），还原回 0 ⇒ 判据没留下残留。
+
+### 门禁（本车道自己复跑，非引述）
+
+```
+probe_icon_consistency   全绿（①0 · ②③④⑤⑥ 主判据 0 · ②④⑤⑥ 反证各命中后还原 0）
+probe_texts/copy/guard_text  红 —— 红因同一条且早于本件：引擎侧 F1_eff_def
+probe_generators               红 —— rebuild_titles（title_wall_listener 条件对不上）
+全量 57 支  **基线与改后红集逐字相同**（git stash 本车道 3 个文件复跑对拍：57 = 57、diff 为空）
+```
+
+★ 红集对拍用的是 `git stash push -- <本车道 3 个文件>`（不是 stash 全部）⇒ 别车道在途改动
+原地保留。全量两次都 57 红 = 基线值，**零回归**。
+
+### ★ 本轮踩到的一个坑（下一位照它接手）
+
+**`DOC_PENDING` 只授权、不落盘。** 第一次跑 `rebuild_syscopy.py` 报「数据不变（幂等）」，
+`texts.json` 一个字没变 —— 因为生成器的作用是「按真源表核 + 新增缺失槽位」，
+**改值那一格得自己定点改域**（`DOC_PENDING` 登记的是「允许的两态」，让生成器不报 clash）。
+参照 `00313af`（P2-10）的做法：定点改 `texts.json` + 登记 `DOC_PENDING` + 连跑三遍验幂等。
+
+★ 落盘两个技术坑：① `json.dump` 整体重写会把中文转义/格式搅乱 ⇒ **定点逐行改 + `json.loads` 自检**
+（fail-closed，绝不写坏）；② Python 写 `"\ud83d\udce6"` 这种 surrogate 对**会抛
+`UnicodeEncodeError: surrogates not allowed`** ⇒ 直接写字符 `"\U0001F4E6"`。
+
+### 交主线的两件仍等立项（本车道一件不碰）
+
+**P2-4a** gauge `bar_gain` 补显示名兜底（引擎 1 行）· **P2-4b** 状态键显示名注入表
+（引擎新增 + 内容侧 24 条槽位 + 接线）。本轮复核**结论不变**。
