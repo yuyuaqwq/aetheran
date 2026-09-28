@@ -309,6 +309,86 @@ else:
         TX[_strip]["value"] = _orig4
     chk(u"④ 还原 ⇒ 红集回到 0（判据没留下残留）", not scan_diff_emo(funcs))
 
+# ── ⑤ 「资源读数行」（label + {a}/{b} 比例、全屏都行尽的那一类）──────────
+# ④ 与 ④ 的缺口：那两条采用的 `_role` 把「不带括号、不以 ·/① 起头、不是 _ROW/_HEAD」
+# 的行归到 `OTHER_ROLE` ⇒ **结构上就看不到**。但它们是同一屏上相连的两行读数（
+# P2-10：`COMBAT_TURN_MP` · ⚡）与 `COMBAT_TURN_RES`（原来 🔹）—— 两行都是「资源读数」一个语义，
+# 图标却各用一个，一屏两行读数一个上一个下。
+# 定义域现算（不手写名单）：单行且以 `【…】` / 简短标签 + `{a}/{b}` 比例结尾（后面不再有句子）。
+# ★ 判据只加强不替代：只对「同屏里全部带图标」的组开（部分带 → 归 ①）；
+#   ★ 不钉「emoji 覆盖率」（鱼鱼口径：emoji 少不是缺陷，只判一致性）。
+METER = re.compile(u"^\s*\S+\s*(?:【[^】]{0,12}】|\S{1,8}?)?\s*"
+                   u"\{[A-Za-z_][\w.:\[\]]*\}/\{[A-Za-z_][\w.:\[\]]*\}\s*$")
+
+
+def _is_meter(slot):
+    return bool(METER.match(_val(slot)))
+
+
+def scan_meter_emo(funcs):
+    """产出 [相对路径, 函数名, {emoji: [槽位…]}] —— 同屏读数行全带图标却不同锚。"""
+    out = []
+    for (rel, name), info in sorted(funcs.items()):
+        allslots = {s for s in _collect(rel, name, funcs) if s in TX}
+        grp = [s for s in allslots if _is_meter(s)]
+        if len(grp) < 2:
+            continue
+        ems = {}
+        for s in grp:
+            e = _lead(_val(s))
+            if e:
+                ems.setdefault(e, []).append(s)
+        if ems and sum(len(v) for v in ems.values()) == len(grp) and len(ems) > 1:
+            out.append((rel, name, info[2], ems))
+    return out
+
+
+print(u"⑤ 同屏里那几行「资源读数」（label + 比例）全部带图标时，"
+      u"行首锚必须是同一个 emoji（①④都归 OTHER_ROLE，结构上看不到这一类）")
+_meter_hits = scan_meter_emo(funcs)
+for rel, fn, line, ems in _meter_hits:
+    print(u"  ✗ %s :: %s (L%d)" % (rel, fn, line))
+    for e, ss in sorted(ems.items()):
+        print(u"      %s %s" % (e, ss))
+        for s in ss:
+            print(u"           %-26s %s" % (s, _val(s)[:46]))
+chk(u"⑤ 同屏资源读数行的行首锚不一致 = 0 处", not _meter_hits,
+    u"%d 处" % len(_meter_hits))
+
+# ⑤ 的反证：真盘 0 缺陷时没有现成的不一致组 ⇒ 自己造一个——
+# 找一组「本来同锚」的读数行，把其中一行的锚换成**表里已存在的另一个** emoji。
+_p5 = None
+for (rel, name), info in sorted(funcs.items()):
+    allslots = {s for s in _collect(rel, name, funcs) if s in TX}
+    grp = [s for s in allslots if _is_meter(s)]
+    if len(grp) < 2:
+        continue
+    ems = {}
+    for s in grp:
+        e = _lead(_val(s))
+        if e:
+            ems.setdefault(e, []).append(s)
+    if ems and len(ems) == 1 and sum(len(v) for v in ems.values()) == len(grp):
+        _p5 = (rel, name, list(ems)[0], grp[0])
+        break
+if not _p5:
+    chk(u"⑤ 找得到反证注入点", False, u"★ 判据可能恒绿，请核")
+else:
+    _rel, _fn, _only, _strip = _p5
+    _other = next((x for x in sorted(__EMO_FINDALL) if x != _only), None)
+    if not _other:
+        chk(u"⑤ 反证用 emoji 得到", False, u"★ 表里只有一种行首锚")
+    else:
+        _orig5 = TX[_strip]["value"]
+        try:
+            TX[_strip]["value"] = EMO.sub(_other, _orig5, count=1)
+            _h5 = scan_meter_emo(funcs)
+            chk(u"⑤ %s::%s 把 %s 的行首锚 %s 换成 %s ⇒ 判据当场红（有牙）"
+                % (_rel, _fn, _strip, _only, _other), bool(_h5), u"命中 %d 处" % len(_h5))
+        finally:
+            TX[_strip]["value"] = _orig5
+        chk(u"⑤ 还原 ⇒ 红集回到 0（判据没留下残留）", not scan_meter_emo(funcs))
+
 print()
 print(u"结果：%s" % (u"全绿 ✓" if ok else u"有红 ✗"))
 sys.exit(0 if ok else 1)
