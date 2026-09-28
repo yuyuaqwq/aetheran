@@ -13737,3 +13737,47 @@ probe_generators               红 —— rebuild_titles（title_wall_listener �
 
 本轮：提交 1 笔（`9a4ec0e` · 1 文件 · +102/-0 · 显式 add 未带 `dialogues.json` 与 `probe_dialogues.py`
 —— P1 车道的在途改动，原样留在工作区）；引擎仓零改动；真源 `aetheran-plan` 零改动；未 push。
+
+### P2-12（`554500c`）：六职业菜单的推荐角标自带分隔 —— 本车道现扫现读出来的
+
+**不是照抄台账**。P2-1/P2-2/P2-3 复核成立（前者已被 P0·P1 收口、后者的 6 条常驻判据已在位），
+本轮自己扫出来的是这一条。
+
+**现象**：`SYS_CLS_ROW` 模板 `{i}{star} {icon} …` + `SYS_CLS_STAR` = `★推荐` ⇒ 两者紧贴。
+真渲染（`race_elf` 那一族 recommend = 法师/游侠）：
+
+```
+改前   ③★推荐 🏹 游侠（远程输出） —— …      ← 序号与角标之间零空格
+改后   ③ 🏹 游侠（远程输出） ★推荐 —— …      ← 六行齐
+不带角标   ① 🛡️ 骑士（坦克） —— …            ← 无多余空格（逐行验过）
+```
+
+**根因不在模板，在角标那格自己没带分隔**。仓里「可选后缀」的先例 = `SYS_BOARD_ACTIVE`
+`（进行中）`（用法 `{name}{mark}`）⇒ 靠全角括号自带前导分隔。`SYS_CLS_STAR` 当年是当
+「行首锚」写的，改到后缀位置没跟着补。
+
+**★ 为什么没选「`{i} {star} {icon}`」**：`star` 空时留**双空格**（`①  🏹 骑士`），
+六行里四行多一格 ⇒ 更不齐（也真渲染验过 —— 备选方案要先渲染再看，别凭想象定）。
+
+**★ 记一条给下一位的坑**：`git stash push -- <已提交的路径>` 是**空操作**，
+但紧跟着的 `git stash pop` 会去弹**别人**的 stash（本仓当时有 P1 线留下的
+`dialogues.json` + `probe_dialogues.py`）⇒ 撞上工作区脏文件就 abort。
+**正确做法**：想验「基线态」用 `git checkout <基线sha> -- <路径>` 或**直接读 HEAD 版**，
+别用 stash 往返（那会动别人的 stash）。实测它 abort 后别人的 stash 完好（`git stash show` 复核过）。
+
+**门禁（本车道自己复跑，非引述）**：
+
+```
+probe_texts / probe_copy / probe_guard_text / probe_icon_consistency / probe_class   全绿
+probe_class                                        通过 28 / 失败 0（⑫ 角标跟族走那条仍绿）
+rebuild_syscopy.py                                 连跑三遍「644 条 · 零新增 · 幂等」
+全量 63 支                                         红 7（与基线同数）
+```
+
+**红集归因（★ 两次对拍都不同，逐条查清了）**：基线 7 红 → 改后 7 红，但**成员换了两个**
+（`probe_onsite` 转绿、`probe_dialogues` 转红）—— 因为**别的车道在同时改这两个文件**
+（`scripts/probe_dialogues.py` 工作区脏、+90 行；`dialogues.json` 最后提交是 P1 线的 `f243053`）。
+取证三条：① 我这一轮提交**只含 2 个文件**（`git show --name-only HEAD`）；
+② `probe_dialogues` 里 `SYS_CLS_STAR`/`SYS_CLS_ROW` **命中 0 次**（`grep -c` = 0）⇒ 与本件无关；
+③ 那支的红在 ⑬-b 反证（`dialogues.json` 的层首压句），与文案表无关。
+⇒ **零回归**成立，但这条**不能只报「红集相同」** —— 成员变了就得逐条归因。
