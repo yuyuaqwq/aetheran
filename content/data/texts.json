@@ -5148,9 +5148,10 @@
     "desc": "机制 · 反击兑现（on_taken 那一刀）"
   },
   "COMBAT_BLOCKED_AMOUNT": {
-    "value": "（格挡后 {dmg} 点伤害）",
+    "value": "🛡️【{t:.0f} 刻】格挡后 {dmg} 点伤害",
     "params": [
-      "dmg"
+      "dmg",
+      "t"
     ],
     "category": "战斗",
     "desc": "fix-a-screen ③：顶掉引擎那句兜底模板 `battle.landing.blocked_amount`（兜底是**半角括号** `(格挡后 {dmg} 点伤害)` —— 全屏唯一一处半角括号，骑士路试玩报的）。措辞照旧，只把括号改成全角。"
@@ -5224,8 +5225,10 @@
     "desc": "战斗 · 资源不足（顶掉引擎那句坏格式符的兜底；★ 不显示资源机器键，玩家自己那一条资源不用点名） ★ B4-23：两个数按宪法 §一 整数显示（引擎传的是 float ⇒ 原先印「6.0 点」）。"
   },
   "COMBAT_NO_TARGET": {
-    "value": "（场上没有能打的了 —— 这一场就到这儿。）",
-    "params": [],
+    "value": "⚠️【{t:.0f} 刻】场上没有能打的了 —— 这一场就到这儿。",
+    "params": [
+      "t"
+    ],
     "category": "战斗",
     "desc": "⑥ 顶掉引擎兜底那句「但没有可攻击的目标！」（引擎槽位 battle.actions.no_target · 声明在 content/rules/battle_text.json · fix3-⑥）"
   },

@@ -424,7 +424,14 @@ chk("⑨-b 这一场渲染出来的**每一条**日志都没有小数尾巴（�
 _bn = CB.build({"cls": "cls_assassin", "level": 16, "name": "探", "uid": "u_nt"}, [], MON, uid="u_nt")
 _nt_slot = BT.slots()["battle.actions.no_target"]
 _lg_nt = [str(x) for x in (_bn.human_act("skill", "SKILL_SHD_bleed", _bn.focus())[0] or [])]
-_nt_line = [x for x in _lg_nt if str(_tx[_nt_slot]["value"]) in x]
+#: ★ 2026-09-29（P0-1 收口 · aep0）：取**前缀**再匹配，不拿整条模板去 `in` 一条已渲染的行。
+#:   本轮给这一格补了【N 刻】（`⚠️【{t:.0f} 刻】场上没有能打的了 …`）⇒ 渲染出来的那行
+#:   里 `{t:.0f}` 已被**填成刻数**，整条模板（含花括号）永远不是任何一行的子串 ⇒ 原写法
+#:   必然匹配不上（实测红：⑨-c「（没出）」）。
+#:   ★ 判据一个字没动 —— 它保护的东西（这一格**真被引擎请求过** + 引擎兜底那句不上屏）
+#:     与「怎么找那一行」无关；同段 `_ctl_pre` 早就是这个写法，这里只是对齐它。
+_nt_pre = str(_tx[_nt_slot]["value"]).split("{")[0]     # 前缀现算，别手写那句
+_nt_line = [x for x in _lg_nt if _nt_pre in x]
 chk("⑨-c 场上没有可攻击目标那一手 ⇒ 走槽位渲染（%s）—— 引擎兜底那句"
     "「但没有可攻击的目标！」不上屏" % (_nt_line[:1] or "（没出）"),
     bool(_nt_line) and not any("没有可攻击的目标" in x for x in _lg_nt))
