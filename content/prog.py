@@ -79,8 +79,29 @@ _NAMED = {
     "swordband_done": ("q_side_16", "done"),
 }
 
-#: 状态三种：`done` 交掉 · `active` 在手上 · `taken` 接过或交掉
+#: 状态三种（**唯一真源**）：`done` 交掉 · `active` 在手上 · `taken` 接过或交掉
+#: ★ 审计 L1211：原先这一行是个**零消费者**的常量（`grep STATES` 全仓只回本行）⇒
+#:   谁新增一个状态、谁把 `_NAMED` 的状态字面量写错，两边都**没有任何一处**会发现。
+#:   现在它是 `truth()` 唯一的合法值表（末行的 else 收口按它抛）⇒ 加状态只改这一处，
+#:   而漏改的后果从「静默放宽成 done or act」变成**当场抛**。
 STATES = ("done", "active", "taken")
+
+
+def _check_named() -> None:
+    """`_NAMED` 每一行的状态字面量都必须在 `STATES` 里（**导入期**跑一次）。
+
+    与 `truth()` 末行的收口同一把尺，但落点更早：表里写错状态不必等玩家敲一句话
+    才发现 —— 装配期就点名是哪一条 slug。`main<NN>_<状态>` 那一族由 `_MAIN_SLUG`
+    的正则直接约束（语法只认 `done|active`），拼不出来的压根走不到 `truth`。
+    """
+    for slug, pair in sorted(_NAMED.items()):
+        state = (pair or (None, None))[1]
+        if state not in STATES:
+            raise ValueError("prog._NAMED[%r] 的状态 %r 不在 STATES（%s）里"
+                             % (slug, state, " · ".join(STATES)))
+
+
+_check_named()
 
 
 def map_slug(slug):
@@ -147,7 +168,14 @@ def truth(p, slug) -> bool:
     act = qid in (((p or {}).get("flags") or {}).get("quests_active") or [])
     if state == "active":
         return bool(act)
-    return bool(done or act)
+    if state == "taken":
+        return bool(done or act)
+    # ★ 审计 L1211（高）：原先末行是**无 else 的** `return bool(done or act)` —— 那是三种状态里
+    #   **最宽**的口径（既看交没交、又看在不在手上）。任何新增 / 写错的状态一律落到这一行，
+    #   静默按「done 或 active」判 ⇒ 台词白刷 / 旗标白写，**全链零报错**（判据 2 的教科书形态）。
+    #   与同模块 `map_slug` 的 fail-closed（认不出回 None）同一把尺：认不出状态就抛，点名是谁。
+    raise ValueError("prog：委托 %r 的状态 %r 不在 STATES（%s）里"
+                     % (qid, state, " · ".join(STATES)))
 
 
 def flag_ok(p, token) -> bool:
