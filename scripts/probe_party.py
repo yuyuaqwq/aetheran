@@ -677,6 +677,31 @@ chk("★ 站在一起但**血空**的队友不算人数（直调：%s → 人数
          for r in _SYN2],
         _SYN_P.get("hp"), (_SYN_P.get("loc"), _SYN_P.get("node")),
         _SYN[1]["data"].get("hp"), (_SYN[1]["data"].get("loc"), _SYN[1]["data"].get("node"))))
+# ★ 审计 L892-#1（高）坏档那条的判据夹具：一个**写坏了 role** 的队友。
+#   旧码下他静默从名册消失（3 -> 2 人 ⇒ Boss 悄悄变弱），本轮起必须被看见。
+_BRKP = dict(_SYN[1]["data"])
+_BRKP["flags"] = {"party": {"id": _PID, "role": "captain_typo", "captain": "u_a"}}
+_SYN3 = [_SYN[0], _SYN[1], {"uid": "u_c", "data": _BRKP}]
+_SYN3_OK = [_SYN[0], _SYN[1],
+            {"uid": "u_c", "data": dict(_SYN[2 - 1]["data"], uid="u_c", hp=70)}]
+_BRK = PT.membership(_SYN3, _SYN_P, "u_a")
+_BRK_CNT = PT.present_count(_SYN_P, "u_a", _SYN3)
+_OK = PT.membership(_SYN3_OK, _SYN_P, "u_a")
+_OK_CNT = PT.present_count(_SYN_P, "u_a", _SYN3_OK)
+chk("★ 队友档**坏**了（role 写坏）不静默少人：`present_count` 回 `None` = 不知道几个人 ⇒ 不缩放"
+    "（旧码回 2 ⇒ Boss 血 7412 悄悄变 4447）· broken 带上原话点名（%s）"
+    % ([b.get("why") for b in _BRK.get("broken") or []][:1]),
+    _BRK_CNT is None
+    and bool(_BRK.get("broken"))
+    and "u_c" not in (_BRK.get("members") or [])
+    and "role" in str((_BRK.get("broken") or [{}])[0].get("why", "")),
+    "人数 %s · 名册 %s · broken %s" % (_BRK_CNT, _BRK.get("members"), _BRK.get("broken")))
+chk("★ 同一支里**没坏**的人照旧算进去（好数据零行为变化：名册 %s 人 / 在场 %s 人；"
+    "u_b 那份血是 0（上一档刚钉过「血空不算人数」⇒ 活人 %s））"
+    % (len(_OK.get("members") or []), _OK_CNT, _OK_CNT),
+    _OK_CNT == 2 and _OK.get("members") == ["u_a", "u_b", "u_c"] and not _OK.get("broken"),
+    "人数 %s · 名册 %s" % (_OK_CNT, _OK.get("members")))
+
 chk("★ 单人那档与 B3-17 之前**逐字相同**（party=1 ⇒ 那只 Boss 的面板照旧 ÷2：%s）"
     % int(CBT.monster_actor(_BOSS, MON[_BOSS], party=1).get("max_hp")),
     _SEC[0][1] == 1
