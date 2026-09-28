@@ -146,6 +146,7 @@ import glob as _glob8                                                       # no
 import io as _io8                                                           # noqa: E402
 
 from content import cmds_talk as CT                                         # noqa: E402
+from content.cmds_ast import hp_cap_or_line                     # noqa: E402  ⑬ 用：后期档要真的生命上限
 
 _FIVE = {_ly: {"texts": [{"need": None, "text": _ly.upper()}]}
          for _ly in ("meet", "daily", "main", "hidden", "idle")}
@@ -472,6 +473,111 @@ _npc[_k12] = _sv12                       # 还原（判据不许改坏被测数�
 chk("⑫-b ★ 反证：把 %s/daily 压成一句 ⇒ 单句层超过上限（判据抓得住）"
     % _k12, _bad12 > _MAX_ONE,
     "压完 %d 个（%d → %d）" % (_bad12, len(_ONE), _bad12))
+
+# ⑬ ★ P1-14（2026-09-28）—— **主线句遮住同层分支**（后期玩家视角）
+#    ⑪-a 判「整树能轮换几句」、⑫-a 判「这一层有几句」—— 两条全绿的那天，
+#    后期玩家看到的**仍然永远是同一句**：`_pick_indexed`
+#    （`content/cmds_talk.py:51`）**按序挑第一条满足的**，而 `need: {"flag": 主线进度}`
+#    一旦达成就**永久成立** ⇒ 排在层首时，该层后面的时辰 / 天气分支**永远轮不到**。
+#    ★ ⑪-a 为什么看不见这一条：它的夹具只写 `flags[token]=True`，而
+#      `content/prog.py::flag_ok` 对表里的 slug 走**真实进度**
+#      （`flags.quests_done` / `quests_active`）⇒ 夹具里那些主线句**一条都不成立**，
+#      正好绕开了「被遮住」的那一面。⇒ 本判据另造一个**真玩家档**（主线真交完）。
+#    ★ 只加强：⑬ 是**新增**的，前面的判据一行未改。
+#    ★ 底线**量出来**，不是拍的 —— 拿 `5ee1c47^`（P1-14 之前原状）真跑一遍：
+#         修前合计 62 · 最差 **3 句** · 修后合计 **75** · 最差 3 句
+#         （升 7 位 / 平 7 位 / **降 0 位**）
+#      ⇒ 底线取 **3**：卡在「不许再退」那一档（= 修前最差），而 ⑬-b 的反证
+#        负责证明判据**抓得住**（把 flag 句压回层首，那位立刻掉到 3 以下）。
+#      ★ 为什么不取 4：bella 的遮住源是 `event`（`ev_caravan_arrived` =
+#        `from_main: q_main_03` ⇒ 主线一过就**永久成立**，与 flag 同性质），
+#        而 `probe_events ⑯` **按下标**钉死「那句必须在下标 0」——
+#        那是商队事件的**送达契约**，本批不碰（碰它 = 改别线已验收过的判据）。
+#      ⇒ 「逐步加严」的下一步（登记在案，不在本批）：
+#        ① bella/daily 的 `event` 句后移 —— 需**先**把 `probe_events ⑯`
+#           从「按下标 0」改成「按 need.event 找那一句」（改判据要写清它在护什么）；
+#        ② derrick/nana 的 `holding` 族 —— 需**先**确认 `probe_equip_events`
+#           钉的「带着那件 ⇒ 每趟都看得到」能否改成「至少一趟看得到」。
+_LATE_MIN = 3
+_Q_ALL = sorted(q for q in (st.domain("quests") or {}) if str(q).startswith("q_"))
+_MAIN_Q = [q for q in _Q_ALL if q.startswith("q_main_")]
+_SIDE_Q = [q for q in _Q_ALL if q.startswith("q_side_") and q != "q_side_04"]
+_BAG_ALL = {b: 1 for b in _BAGS}
+for _extra in ("i_material_herb_rare", "i_set_northwall_shard", "i_junk_boot",
+               "i_token_underwater_steps", "i_clue_page"):
+    _BAG_ALL[_extra] = 1
+
+
+def _late_player(npc_key):
+    """一个**真玩家档**：职业已定 · 主线交完 · 背包里有那些认得出东西的道具。"""
+    _cap, _ = hp_cap_or_line({"cls": "cls_knight", "level": 20, "flags": {"talked": {}}})
+    return {"flags": {"talked": {npc_key: 99}, "talk": {},
+                      "quests_done": list(_MAIN_Q) + list(_SIDE_Q), "quests_active": []},
+            "bag": dict(_BAG_ALL), "heard": {}, "level": 20,
+            "cls": "cls_knight", "race": "human", "hp": _cap or 100,
+            "equipped": {"weapon": "w_sword", "armor_top": "a_robe"}}
+
+
+def _rot_late(npc_key, p, days=3):
+    """后期档下真敲 `_pick_layer`，数拿到几句**不同**台词（夹具与 ⑪-a 不同）。"""
+    _seen = []
+    for _d in range(days):
+        for _h in _HOURS:
+            for _w in _WEATH:
+                _ly, _idx, _txt = CT._pick_layer(_npc[npc_key]["nodes"], p,
+                                                 {"hour": _h, "weather": _w}, npc_key)
+                if _txt:
+                    _seen.append(_txt)
+                    CT.HD.note(p, npc_key, _ly, _idx)
+    return len(set(_seen))
+
+
+_LATE = {k: _rot_late(k, _late_player(k)) for k in sorted(_npc)}
+_LATE_SAME = {k: v for k, v in _LATE.items() if v < _LATE_MIN}
+chk("⑬-a ★ 后期档（主线真交完 · 背包满）里，每位至少轮得到 %d 句不同台词"
+    "（真敲 `_pick_layer` · 现值最差 %d 句 · 夹具与 ⑪-a 不同：旗标走**真实进度**）"
+    % (_LATE_MIN, min(_LATE.values())), not _LATE_SAME,
+    ("·".join("%s=%d" % (k, v) for k, v in sorted(_LATE_SAME.items())) or "14/14 达标"))
+
+# ⑬-b **反证**：把某一层里那条主线（flag）句**挪到层首** —— 复现 P1-14 修之前的形态
+#   ⇒ 那位必须掉一档（判据抓得住）。压完立刻还原。
+#   ★ 压的是**真实的 _npc**，压的是**该层第一条 flag 句**，不碰别的层。
+#   ★ 这一条量的是「那位在修之后剩下的余量」：把 flag 句压回最前 = 还原永久遮住
+#     ⇒ **必须比它自己的现值至少少 1 句**，才说明「那条底线不是白设的」。
+#     （第一版拿 `_LATE_MIN` 当阈值，量出来是 5 → 3，`< 3` 不成立 ⇒ 恒红；
+#       阈值改成「相对现值掉一档」，判据才真的在证明自己。）
+#   ★★ **候选位必须排除「别线按下标钉着的剧情层」**：`dlg_cole/daily` 的 flag 句
+#     被 `probe_qloop ⑧` 钉死必须在层首（「主 4 交掉 ⇒ 头一句必须是那句」）——
+#     拿它当反证靶子等于要求「把别人的判据弄红」，那条是**真契约**，不碰。
+_PINNED_LAYER = ("dlg_cole", "daily")
+_k13 = next((k for k in sorted(_npc)
+             if (k, "daily") != _PINNED_LAYER
+             and any(any("flag" in (t.get("need") or {}) for t in
+                        _npc[k]["nodes"].get(lk, {}).get("texts", []))
+                    and any((t.get("need") or {}) for t in
+                            _npc[k]["nodes"].get(lk, {}).get("texts", []))
+                    and any(t.get("need") is None for t in
+                            _npc[k]["nodes"].get(lk, {}).get("texts", []))
+                    for lk in _LAY4)), None)
+if _k13 is None:
+    chk("⑬-b ★ 反证：把主线句排回层首 ⇒ 后期轮换跌破底线（判据抓得住）", False,
+        "域里找不到「有 flag 句 + 有兜底句」的多句层（判据自身失效，请修夹具）")
+else:
+    _sv13 = json.loads(json.dumps(_npc[_k13]))
+    for _lk in _LAY4:
+        _ts = _npc[_k13]["nodes"].get(_lk, {}).get("texts", [])
+        _fi = [i for i, t in enumerate(_ts) if "flag" in (t.get("need") or {})]
+        if _fi and len(_ts) >= 2:
+            _ts.insert(0, _ts.pop(_fi[0]))
+    _bad13 = _rot_late(_k13, _late_player(_k13))
+    _npc[_k13] = _sv13                      # 还原（判据不许改坏被测数据）
+    #   阈值 = 该位现值 - 1（不是全局底线）：证明「把 flag 句排回层首**真的有代价**」
+    chk("⑬-b ★ 反证：把 %s 的主线句排回层首 ⇒ 后期轮换至少掉 1 句（判据抓得住）"
+        % _k13, _bad13 <= _LATE[_k13] - 1,
+        "压完 %d 句（%d → %d，阈值 ≤ %d）" % (_bad13, _LATE[_k13], _bad13, _LATE[_k13] - 1))
+
+print("      后期轮换分布：" + " · ".join("%s=%d" % (k.replace("dlg_", ""), v)
+                                        for k, v in sorted(_LATE.items())))
 
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
