@@ -244,6 +244,21 @@ def _pick_layer(nodes, p, st, dlg_id):
                     if _pick_indexed([_ln3], p, st)[1] is None:
                         continue                  # 这句此刻出不来（need 不满足）
                     return _l3, _i3, _ln3.get("text")
+            # ── ④ ★ P1-26（2026-09-29 · 文案车道）：全都说过了 —— **在这一层里轮换** ──
+            #   走到这一格 = 「老口径那一句听过」+「整棵树里没有一句是没听过且此刻出得来的」。
+            #   原状：把老那一句**原样说出去** ⇒ 玩家从第 9~11 趟起（中期存档实测）到第 80 趟
+            #   看到的永远是同一句。14 位 NPC **无一例外**。
+            #   ★ 为什么既有 21 条判据全绿也看不见它：⑰ / ⑲ / ⑳ 量的是「**没听过时**能轮几句」
+            #     且只连敲 8 下 —— 8 句之内用不完一个池子 ⇒ 结构性地测不到「全听过之后」这一档。
+            #   ★ 只动这一格：**层的选择一个字没改**（仍是 `_layers_ok` 过的层序第一档），
+            #     `heard` 记的仍是这一趟真说出去的那句，P-12 语义（⑧）不动。
+            #   ★ 轮换口径用 `_talk_count`（搭话次数，含这一趟）—— 那是**档上现成的纯数据**，
+            #     不新建容器、不改存档形状；`⑧` 的假树每层各 1 句 ⇒ 可用集合只有 1 个 ⇒ 原样返回。
+            _avail = [_i4 for _i4, _ln4 in enumerate(nodes[_layer].get("texts") or [])
+                      if _pick_indexed([_ln4], p, st)[1] is not None]
+            if len(_avail) > 1:
+                _i4 = _avail[_talk_count(p, dlg_id) % len(_avail)]
+                return _layer, _i4, (nodes[_layer]["texts"][_i4] or {}).get("text")
             # 一句都找不到 ⇒ 真的没得说了，重复是诚实的（照旧把老那一句说出去）
     return _layer, _idx, _txt
 

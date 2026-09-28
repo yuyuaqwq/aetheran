@@ -1164,6 +1164,117 @@ chk("㉑-b 反证：把 %s 的 meet 压回「只剩 1 句无条件」⇒ ㉑-a �
     % _probe21.replace("dlg_", ""), bool(_thin21_b), "越界者：%s"
     % "、".join(k.replace("dlg_", "") for k in _thin21_b))
 
+# ─────────────────────────────────────────────────────────────────────────────
+# ㉒ ★ P1-26（2026-09-29 · 文案车道）—— **全听过之后**：观感从「多样」塌成「冻结」
+#   ⑪—⑳ 全都量过，但**每一把尺都架在「还没听完」那一档**：
+#     ⑰ / ⑲ 量的是「**没听过时**连敲 8 下」· ⑳ 量的是「存档里一条旗标都没有」
+#     · ⑫ 量的是**域里的形状**（某个层有几句）· ⑬ 量的是「后期档（旗标全真）」。
+#   ⇒ 每一把尺的 8~12 趟**都用不完一个池子** ⇒ 结构性地测不到
+#     「**整棵树都说过了**」这一档。
+#   ★ 那一档的实测（修之前，真敲 `_pick_layer` · 中期存档 · 连敲 20 趟）：
+#       dlg_bella 第 10 趟起 · dlg_cole 第 9 趟起 · dlg_pete/seran/xiaoman 第 9 趟起 …
+#       ⇒ **14 位无一例外**，第 9~11 趟到第 80 趟永远是同一句
+#       （读端 ③ 那一格把「老那一句」原样说出去）。
+#   ★ 「中期存档」不是刁难人的夹具：主线推到 main08 之后条件句陆续出得来，
+#     池子就那么深 —— 玩家每天跟同一批 NPC 说话，**第 10 趟是必然会到的**。
+#   ★ 与 ⑲ 的区别：⑲ 判「**相邻两趟**逐字相同」（新玩家档就能撞上），
+#     ㉒ 判「**听得越多越不动**」（后期档才现形）—— 两者互补，不是同一条。
+# ─────────────────────────────────────────────────────────────────────────────
+_MID_FLAGS = ("main04_done", "main05_done", "main08_done", "main09_done",
+              "main10_done", "main11_done", "nameline_done")
+
+
+def _rot_exhausted(npc_key, all_heard, talks=20, nodes=None):
+    """**中期存档**（旗标推到 main08 一带）连敲 `talks` 下。
+
+    · `all_heard=False` —— 正常流程：一路听着听着就撞上冻结
+    · `all_heard=True`  —— 玩家把这位能听的**全听完了**，再敲还能不能换
+    ★ 两档都真敲 `_pick_layer`（夹具与 ⑰ 不同：旗标走**中期真实进度**，
+      而 ⑰ 量的是「全旗标」的后期档、⑳ 量的是「一条旗标都没有」的新手档）。
+    """
+    _fl = {"talked": {}, "quest_done": {}}
+    for _f in _MID_FLAGS:
+        _fl[_f] = True
+    _p = {"flags": _fl, "bag": {}, "heard": {}, "level": 12,
+          "cls": "cls_knight", "race": "human", "equipped": {}}
+    _nodes = (nodes or _npc)[npc_key]["nodes"]
+    # ★ 「全听过」这一档必须**一开始就是熟的**（`_talk_count ≥ FAMILIAR_TALKS`）——
+    #   否则前两趟还在 `meet`（还不熟），而 `meet` 与 `daily` 挑的是**不同的池子**，
+    #   「每层都听过」在 `meet` 上根本轮不出第二句 —— 计数因此虚高
+    #   （第一版夹具就栽在这：未修的代码也能凑出 2 种 ⇒ ㉒-a 恒绿 = 门禁自己瞎了）。
+    #   ⇒ 底数给 99：既是熟的，又让「这一趟是第几次搭话」继续往前走（④ 轮换用得到它）。
+    _base = 99 if all_heard else 0
+    if all_heard:                                   # 全听过：每层每句都记进 heard
+        for _lk, _nd in _nodes.items():
+            for _i in range(len(_nd.get("texts") or [])):
+                CT.HD.note(_p, npc_key, _lk, _i)
+    _seq = []
+    for _i in range(talks):
+        _fl["talked"][npc_key] = _base + _i + 1
+        _ly, _idx, _txt = CT._pick_layer(_nodes, _p,
+                                        {"hour": _SAME_HOUR, "weather": _SAME_WEATHER},
+                                        npc_key)
+        _seq.append(_txt or "")
+        if _txt:
+            CT.HD.note(_p, npc_key, _ly, _idx)
+    return _seq
+
+
+# ㉒-a **「听完了还能不能换」**：全听过之后仍能轮换出 ≥ 2 句不同的台词。
+#   ★ 底线 = 2（**不是 1**）：只有 1 句就是「玩家每次看到同一句」= 这次要修的那个病。
+#   ★ 这条在修之前的实测 = 14 位全 1 ⇒ 修完之后才是 6~9。
+_EXH = {k: len(set(_rot_exhausted(k, True))) for k in sorted(_npc)}
+_MIN_EXHAUSTED = 2
+_thin22 = [k for k, v in _EXH.items() if v < _MIN_EXHAUSTED]
+chk("㉒-a ★ 全听过之后：每位仍能轮换出 ≥ %d 句不同台词（14 位全听得完）"
+    % _MIN_EXHAUSTED, not _thin22,
+    "现值最薄 %d 句（%s）" % (min(_EXH.values()) if _EXH else 0,
+                              "、".join(k.replace("dlg_", "") for k in _thin22) or "无"))
+print("      全听过·轮换分布：" + " · ".join(
+    "%s=%d" % (k.replace("dlg_", ""), v) for k, v in sorted(_EXH.items())))
+
+# ㉒-b **「听得越多越不动」**：正常流程下，**最后一趟那一半**不许冻在同一句上。
+#   ★ 量的是**尾部**而不是全程：⑰ 量全程 8 趟的种类数（8 趟用不完池子 ⇒ 恒绿），
+#     这里量「第 11~20 趟」—— 池子见底之后的那一段，正是缺陷现形的地方。
+#   ★ 判据 = 尾部里相邻重样 0 次（与 ⑲ 同一把尺，不同夹具：中期存档 + 20 趟）。
+_TAIL_TALKS = 20
+_dup22 = {}
+for _k22 in sorted(_npc):
+    _sq = _rot_exhausted(_k22, False, talks=_TAIL_TALKS)
+    _tail = _sq[_TAIL_TALKS // 2:]                    # ★ 后一半 = 第 11~20 趟
+    _dup22[_k22] = sum(1 for _a, _b in zip(_tail, _tail[1:]) if _a == _b and _a)
+_tot22 = sum(_dup22.values())
+chk("㉒-b ★ 中期存档连敲 %d 下：第 %d 趟往后不许相邻重样（听全之后不许冻住）"
+    % (_TAIL_TALKS, _TAIL_TALKS // 2 + 1), _tot22 == 0,
+    "尾部相邻重样共 %d 次（%s）" % (
+        _tot22,
+        " · ".join("%s=%d" % (k.replace("dlg_", ""), v)
+                   for k, v in sorted(_dup22.items()) if v)))
+print("      中期·尾部轮换分布：" + " · ".join(
+    "%s=%d" % (k.replace("dlg_", ""), len(set(_rot_exhausted(k, False, talks=_TAIL_TALKS)[_TAIL_TALKS // 2:])))
+    for k in sorted(_npc)))
+
+# ㉒-c **反证**：把某位**整棵树压到只剩一条无条件句** ⇒ ㉒-a 必抓到它（判据不恒真）。
+#   ★ 压的是真实的 `_npc`（不是副本表）—— ⑧ 的教训：替掉树之后实际读的仍是原值 ⇒ 尸绿。
+#   ★ 压完也该让 ㉒-b 抓到（尾部必然全是同一句）：两条一起验，才知道它们不是恒真。
+_exh22_bak = json.loads(json.dumps(_npc))
+_probe22 = sorted(_npc)[0]
+_one22 = next((_c for _c in _exh22_bak[_probe22]["nodes"]["daily"]["texts"]
+               if not _c.get("need")), None)
+for _lk22 in list(_npc[_probe22]["nodes"]):
+    _npc[_probe22]["nodes"][_lk22] = {"texts": ([_one22] if _one22 is not None else [])}
+_exh22 = len(set(_rot_exhausted(_probe22, True)))
+_dup22b = 0
+if _exh22 < _MIN_EXHAUSTED:                          # 条件句出不来才量尾部（夹具口径一致）
+    _sq22b = _rot_exhausted(_probe22, False, talks=_TAIL_TALKS)
+    _tb22b = _sq22b[_TAIL_TALKS // 2:]
+    _dup22b = sum(1 for _a, _b in zip(_tb22b, _tb22b[1:]) if _a == _b and _a)
+_npc.clear()
+_npc.update(_exh22_bak)
+chk("㉒-c 反证：把 %s 整棵树压到只剩一条无条件句 ⇒ ㉒-a 必抓到它（判据不恒真）"
+    % _probe22.replace("dlg_", ""), _exh22 < _MIN_EXHAUSTED,
+    "压完 %d 种（底线 %d · 尾部相邻重样 %d 次）" % (_exh22, _MIN_EXHAUSTED, _dup22b))
+
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
 sys.exit(0 if ok else 1)
