@@ -184,14 +184,47 @@ def create(p, uid, tick) -> dict:
     return r
 
 
-def _safe_rec(d):
-    """别人的档 → 那一格；形状坏 ⇒ 当成「没队」跳过（不因为别人档坏而炸掉我的命令）。"""
+def _rec_checked(d):
+    """别人的档 → `(那一格, 坏在哪)`。**坏档不降级成「没队」**，原话带出来交给调用方。
+
+    ★ 审计 L892-#1（高）：原先这一格叫 `_safe_rec`、坏档一律回 `None`，而 `None` 在名册
+      那条路上**与「这个键不在名册里」同义** ⇒ 一名队员的 `role` 写坏时他静默从名册消失
+      ⇒ `present_count` 3→2 ⇒ `ms_boss_oath_sentry` 血倍数 0.85→0.6
+      （7412 → 6300 变 4447，**悄悄削弱 29.4%**），全程零回话零异常 ——
+      与本模块抬头「绝不因为不知道而悄悄把团队内容削弱」直接矛盾（同一份抬头里，
+      坏**自己**的档是抛的，坏**别人**的档却降级）。
+
+      现在把「坏」与「没有」**分成两路**：`rec` 为 `None` 而 `err` 非 `None` = 数据坏了，
+      认得出坏在哪一行；两个都空才是「没队」。**不留 `_safe_rec` 那个壳** ——
+      四个读口各自明写自己要哪一路。
+    """
     try:
-        return rec_of(d if isinstance(d, dict) else {})
-    except PartyError:
-        return None
+        return rec_of(d if isinstance(d, dict) else {}), None
+    except PartyError as exc:
+        return None, str(exc)
 
 
+def _roster(idx: dict, captain: str, pid) -> dict:
+    """一个队现在的成员（现算）= 队长 + 档上写着「我在他这个队里」的人。
+
+    返回 `{"members": [...], "broken": [{"uid", "why"}...]}`：**坏档单列、不混进名册**。
+    「坏档跳过」这个意图保留（别队的坏档不该炸掉我的命令），但**必须被看见** ——
+    `present_count` 见到 `broken` 非空就回 `None`（= 不知道几个人 ⇒ 不缩放），
+    与「存档读不出来」那条同一口径。
+    """
+    mem = [str(captain)]
+    broken = []
+    for u, d in (idx or {}).items():
+        if u == str(captain):
+            continue
+        r, err = _rec_checked(d)
+        if err is not None:
+            broken.append({"uid": u, "why": err})
+            continue
+        if r and r.get("role") == ROLE_MEMBER and str(r.get("id")) == str(pid) \
+                and str(r.get("captain")) == str(captain):
+            mem.append(u)
+    return {"members": sorted(set(mem)), "broken": broken}
 # ══════════════════════════════════════════════════════════════
 # 本群存档（名册现算的唯一原料）
 # ══════════════════════════════════════════════════════════════
@@ -214,21 +247,6 @@ def index(rows: dict) -> dict:
     return out
 
 
-def _roster(idx: dict, captain: str, pid, with_self=None) -> list:
-    """一个队现在的成员（现算）：队长 + 档上写着「我在他这个队里」的人。"""
-    mem = [str(captain)]
-    for u, d in (idx or {}).items():
-        if u == str(captain):
-            continue
-        r = _safe_rec(d)
-        if r and r.get("role") == ROLE_MEMBER and str(r.get("id")) == str(pid) \
-                and str(r.get("captain")) == str(captain):
-            mem.append(u)
-    if with_self is not None and str(with_self) not in mem:
-        mem.append(str(with_self))
-    return sorted(set(mem))
-
-
 def membership(rows, p, uid) -> dict:
     """我这一队现在是什么样：`{"role", "pid", "captain", "members", "stale"}`。
 
@@ -242,15 +260,18 @@ def membership(rows, p, uid) -> dict:
         return {"role": None, "pid": None, "captain": None, "members": [me], "stale": False}
     idx = index(rows)
     if mine.get("role") == ROLE_CAPTAIN:
+        r = _roster(idx, me, mine["id"])
         return {"role": ROLE_CAPTAIN, "pid": str(mine["id"]), "captain": me,
-                "members": _roster(idx, me, mine["id"]), "stale": False}
+                "members": r["members"], "broken": r["broken"], "stale": False}
     cap = str(mine.get("captain") or "")
-    crec = _safe_rec(idx.get(cap))
+    crec, cerr = _rec_checked(idx.get(cap))
     if not crec or crec.get("role") != ROLE_CAPTAIN or str(crec.get("id")) != str(mine["id"]):
         return {"role": ROLE_MEMBER, "pid": str(mine.get("id")), "captain": cap,
-                "members": [me], "stale": True}
+                "members": [me], "broken": ([] if cerr is None else
+                                           [{"uid": cap, "why": cerr}]), "stale": True}
+    r = _roster(idx, cap, mine["id"])
     return {"role": ROLE_MEMBER, "pid": str(mine["id"]), "captain": cap,
-            "members": _roster(idx, cap, mine["id"]), "stale": False}
+            "members": r["members"], "broken": r["broken"], "stale": False}
 
 
 def members_of(group_id, uid) -> list:
@@ -271,7 +292,7 @@ def members_of(group_id, uid) -> list:
         return [me]
     idx = index(rows)
     mine = idx.get(me)
-    if not isinstance(mine, dict) or not _safe_rec(mine):
+    if not isinstance(mine, dict) or not _rec_checked(mine)[0]:
         return [me]
     out = list(members_present(rows, mine, me) or [])
     if me not in out:
@@ -427,11 +448,11 @@ def pending(rows, uid, tick, *, expired=False, p=None) -> list:
     """
     ttl = invite_ttl_ticks()
     idx = index(rows)
-    mine = rec_of(p) if p is not None else _safe_rec((idx.get(str(uid)) or {}))
+    mine, _merr = _rec_checked(p) if p is not None else _rec_checked(idx.get(str(uid)) or {})
     my_pid = str((mine or {}).get("id") or "")
     out = []
     for u, d in idx.items():
-        r = _safe_rec(d)
+        r, _rerr = _rec_checked(d)
         if not r or r.get("role") != ROLE_CAPTAIN:
             continue
         if my_pid and (mine or {}).get("role") == ROLE_MEMBER and str(r.get("id")) == my_pid:
@@ -444,7 +465,7 @@ def pending(rows, uid, tick, *, expired=False, p=None) -> list:
         if not ((left < 0) if expired else (left >= 0)):
             continue
         out.append({"captain": u, "pid": str(r.get("id")), "tick": at, "left": left,
-                    "members": _roster(idx, u, r.get("id"))})
+                    "members": _roster(idx, u, r.get("id"))["members"]})
     out.sort(key=lambda x: (-x["tick"], x["captain"]))
     return out
 
@@ -511,11 +532,6 @@ def leave(p, uid, rows) -> dict:
     return {"code": LV_MEMBER, "captain": cap, "name": name_in(idx, cap)}
 
 
-def disband(p, uid, rows) -> dict:
-    """解散 —— 队长那一支（`leave` 的同一条路；单独给一个名字，调用方读着清楚）。"""
-    return leave(p, uid, rows)
-
-
 # ══════════════════════════════════════════════════════════════
 # 进战那一刻：真实人数（cmds_battle 那三处 party=… 的唯一来源）
 # ══════════════════════════════════════════════════════════════
@@ -560,5 +576,8 @@ def present_count(p, uid, rows) -> int | None:
     if not rec_of(p):
         return 1
     if rows is None:
+        return None
+    mem = membership(rows, p, uid)
+    if mem.get("broken"):
         return None
     return max(1, len(members_present(rows, p, uid)))
