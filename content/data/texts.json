@@ -2608,7 +2608,7 @@
     "desc": "公会 · 尾注"
   },
   "SYS_BOARD_HEAD": {
-    "value": "【挂板墙】板上钉着一叠单子。最新的一张还有墨味。",
+    "value": "📜 【挂板墙】板上钉着一叠单子。最新的一张还有墨味。",
     "params": [],
     "category": "系统",
     "desc": "悬赏 · 抬头"
@@ -3654,7 +3654,7 @@
     "desc": "对比 · 收尾计数（不合成总分 —— 词条无权重）"
   },
   "SYS_SKILL_HEAD": {
-    "value": "【技能】{cls} · 已会 {known} 条 · 还没到等级 {locked} 条",
+    "value": "📜 【技能】{cls} · 已会 {known} 条 · 还没到等级 {locked} 条",
     "params": [
       "cls",
       "known",
@@ -3873,7 +3873,7 @@
     "desc": "B3-12 单子全文 · 报酬"
   },
   "SYS_ATTR_HEAD": {
-    "value": "【属性】{who} · {cls} · {level} 级",
+    "value": "📊 【属性】{who} · {cls} · {level} 级",
     "params": [
       "who",
       "cls",
@@ -3883,7 +3883,7 @@
     "desc": "B3-12 属性 · 抬头"
   },
   "SYS_ATTR_VITAL": {
-    "value": "生命上限 {hp} ｜ 法力 {mo} ｜ 暴击率 {crit}%",
+    "value": "📊 生命上限 {hp} ｜ 法力 {mo} ｜ 暴击率 {crit}%",
     "params": [
       "hp",
       "mo",

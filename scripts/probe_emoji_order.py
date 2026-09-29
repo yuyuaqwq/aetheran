@@ -107,6 +107,20 @@ def collect(texts):
     return forms, rows
 
 
+def heads_of(texts):
+    """每个「屏」的抬头类槽位 -> {槽位: 有没有行首图标}。抬头 = 槽名以 _HEAD / _HEAD_OPEN 收尾。"""
+    out = defaultdict(dict)
+    for slot in sorted(texts):
+        if not (slot.endswith("_HEAD") or slot.endswith("_HEAD_OPEN")):
+            continue
+        rec = texts[slot]
+        val = rec.get("value", "") if isinstance(rec, dict) else ""
+        if not val:
+            continue
+        out[screen_of(slot)][slot] = bool(lead(val.split(chr(10))[0]))
+    return out
+
+
 def check(texts):
     forms, rows = collect(texts)
     bad = []
@@ -131,6 +145,15 @@ def check(texts):
     for scr, m in sorted(rows.items()):
         if len(set(m.values())) > 1:
             bad.append(("③", scr, "并列行锚点不齐", sorted(set(m.values())), sorted(m)))
+
+    #: ④ 同一屏的**抬头类**槽位，行首图标有无必须一致
+    #:    （一屏三行抬头、两行带图标一行不带 = 字面的「不规整」；真源 26_ §2.2 只管「图标+语义」，
+    #:     没管抬头 ⇒ 这条是本包自定的**一致性**判据，不钉覆盖率：全屏都不带图标照样绿。）
+    for scr, m in sorted(heads_of(texts).items()):
+        if len(set(m.values())) > 1:
+            have = sorted(s for s, b in m.items() if b)
+            bare = sorted(s for s, b in m.items() if not b)
+            bad.append(("④", scr, "同屏抬头锚点不齐", ["有=%s" % have, "无=%s" % bare], have + bare))
 
     return bad, forms, rows
 
@@ -172,7 +195,10 @@ def selftest(texts):
         # ③ 要同屏**有两条以上**并列行才谈得上「齐不齐」：SYS_BOARD 有三条
         ("③ 并列行锚点不齐（同屏三条改一条）",
          "SYS_BOARD_SIDE_ROW", "📜 · {order} {name} —— {objective}", True),
-        ("④ 对照组：只改措辞、三个锚点形态都不碰",
+        # ④ 要同屏**有两条以上抬头**才谈得上「齐不齐」：SYS_BOARD 有三条（BOUNTY/BOARD/SIDE）
+        ("④ 同屏抬头锚点不齐（同屏三条抬头拿掉一条的图标）",
+         "SYS_BOARD_HEAD", "【挂板墙】板上钉着一叠单子。最新的一张还有墨味。", True),
+        ("⑤ 对照组：只改措辞、三个锚点形态都不碰",
          "SYS_STATUS_VITALS", "📊 气血 {hp}/{hp_max} ｜ 法力 {mo}/{mo_max} ｜ 铜板 {gold}", False),
     ]
     ok = True
@@ -214,7 +240,7 @@ def main():
     print("槽位 %d · 有图标的屏 %d · 并列行屏 %d"
           % (len(texts), len(forms), len(rows)))
     if not bad:
-        print("\n✓ 图标规整度通过（同屏同图标同接法 · 同屏同接法同字形 · 并列行锚点齐）")
+        print("\n✓ 图标规整度通过（同屏同图标同接法 · 同屏同接法同字形 · 并列行锚点齐 · 同屏抬头锚点齐）")
         return 0
     print("\n✗ 规整度缺陷 %d 处（只算同屏内；跨屏不同不算问题）" % len(bad))
     for tag, scr, key, detail, slots in bad:
