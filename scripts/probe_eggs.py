@@ -246,6 +246,25 @@ slots = set(re.findall(r'SYS_EGG_[A-Z_]+', src_ast + src_talk
 miss_slot = sorted(s for s in slots if s not in TX)
 chk("★ 彩蛋用到的文案槽位都在 texts 域（%d 个）" % len(slots), not miss_slot and len(slots) == 7, miss_slot)
 
+# ⑨b ★ L2373：`title_of` 不许把机器键当抬头（玩家可见面）
+#   改前 `entry(eid).get("title") or str(eid)` ⇒ 标题缺失时 SYS_EGG_FOUND 抬头
+#   直接印 `egg_one_hand`。本条同时钉住「数据侧标题齐全」与「读口认不出就抛」两格。
+_bad_title = [k for k, v in BOOK.items() if not v.get("title")]
+chk("★ eggs 每条都有 title（抬头不许回落成机器键）", not _bad_title, _bad_title[:4])
+try:
+    from content import eggs as _EG                                   # noqa: E402
+    _EG.title_of("egg_不存在的条目")
+    _fallback_raised = False
+except KeyError:
+    _fallback_raised = True
+except Exception as _e:                                                # 抛错类型不对也算不合格
+    _fallback_raised = False
+    print("    （title_of 抛的是 %s，不是 KeyError）" % type(_e).__name__)
+chk("★ title_of 读不到就点名抛（不再回落 str(eid)）", _fallback_raised, "回落 = 机器键上屏")
+# 端到端：真调读口渲染抬头，标题里不许含机器键形态
+_bad_ui = [k for k in BOOK if re.search(r"eg_[a-z0-9_]+", str(_EG_title := BOOK[k]["title"]))]
+chk("★ 抬头文案里没有机器键（egg_xxx）", not _bad_ui, _bad_ui[:4])
+
 # ⑩ 可达性（信息行 + 一条底线）：今天的数据里几条撞得上
 produced = set()
 for g in (st.domain("gathering") or {}).values():

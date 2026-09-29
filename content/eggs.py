@@ -51,8 +51,18 @@ def entry(eid: str) -> dict:
 
 
 def title_of(eid: str) -> str:
-    """两条相呼应的东西（照 19 文档那一行）。"""
-    return entry(eid).get("title") or str(eid)
+    """两条相呼应的东西（照 19 文档那一行）。
+
+    ★ L2373：读不到标题**点名抛**，不再回落 `str(eid)`。回落会把机器键
+    （`egg_one_hand`）原样塞进玩家可见的 `SYS_EGG_FOUND` 抬头（`cmds_ast.py:809`）
+    ⇒ 条件/数据配错时玩家看到的是「你忽然把两件事连起来了 —— egg_one_hand」，
+    而入口 `scan()` 不报错、别处也无从发现。认不出 ⇒ 抛（本项目核心铁律）。
+    """
+    e = entry(eid)
+    t = e.get("title")
+    if not t:
+        raise KeyError("eggs 域条目 %r 缺 title（抬头是玩家可见文案，不许回落成机器键）" % (eid,))
+    return t
 
 
 def line_of(eid: str) -> str:
