@@ -360,7 +360,7 @@ except OSError:
 STEPS = ["装备对比 拾荒人的重剑", "脱离", "买药", "放弃", "技能 挥击"]
 lines, saved = {}, {}
 try:
-    _ad = _Ad(STEPS, seed={"level": 1, "gold": 30, "hp": 100, "bag": {}, "equipped": {}, "codex": {},
+    _ad = _Ad(STEPS, seed={"race": "human", "cls": "cls_knight", "name": "试刀", "level": 1, "gold": 30, "hp": 100, "bag": {}, "equipped": {}, "codex": {},
                            "flags": {"quests_active": ["q_main_01"]}})
     _host = Host(_ad, str(REPO), inject={"db_path": _db, "clock": lambda: _FIXED})
     _host.boot()
@@ -416,10 +416,10 @@ chk("★ 裸 `放弃` 不许命中 skill_cast（改前回「放技能 ／ 技能
 chk("★ 裸 `放弃` 不许动档（quest_abandon 空参会取 act[0]，静默丢第一条委托）",
     ((saved.get("flags") or {}).get("quests_active") or []) == ["q_main_01"],
     (saved.get("flags") or {}).get("quests_active"))
-chk("★ `技能 挥击` 仍归 skill_cast（主词与双字别名没被改坏）—— ★ B3-23 接上实现体之后"
-    "这条改成更硬的写法：回的是实现体那句真话（无职业档 = 「%s」），不再是 soon 兜底句"
-    % (TX.get("SYS_SKILL_NOCLS") or {}).get("value", ""),
-    _first("技能 挥击") == (TX.get("SYS_SKILL_NOCLS") or {}).get("value", "")
+chk("★ `技能 挥击` 仍归 skill_cast（主词与双字别名没被改坏）—— ★ 2026-09-30（注册面改造）："
+    "「无职业」档现被注册守卫引回建号（不可达）；这条改盯**本门外的真话**：回的是实现体那句"
+    "「放不出来」（不再是 soon 兜底句），也没落到别家指令",
+    _first("技能 挥击") == (TX.get("COMBAT_SKILL_BAD") or {}).get("value", "").replace("{name}", "挥击")
     and _first("技能 挥击") != soon_text("skill_cast"),
     _first("技能 挥击"))
 
@@ -590,7 +590,7 @@ try:
     except OSError:
         pass
     _seed = {"level": 3, "gold": 30, "hp": 100, "bag": {}, "equipped": {}, "codex": {},
-             "flags": {}, "prev": [], "race": "human"}
+             "flags": {}, "prev": [], "race": "human", "cls": "cls_knight", "name": "试刀"}
     _ad2 = _Ad([], seed=_seed)
     _host2 = Host(_ad2, str(REPO), inject={"db_path": _db2, "clock": lambda: _FIXED})
     _host2.boot()
@@ -701,7 +701,7 @@ try:
     #   （3 级 = 14 点，力量 9 ≥ 9）。这不是放宽判据：是让 fixture 符合游戏规则
     #   （一个 0 加点的档本来就穿不上精制装备）。
     _ALLOC9 = {"STR": 9}
-    _SEED9 = {"cls": "cls_knight", "race": "human", "level": 3, "hp": 100, "gold": 30,
+    _SEED9 = {"cls": "cls_knight", "race": "human", "name": "试刀", "level": 3, "hp": 100, "gold": 30,
               "alloc": dict(_ALLOC9),
               "bag": {_W1: 1, _W2: 1}, "equipped": {}, "codex": {}, "flags": {},
               "loc": "belt_north", "node": "bn_bone"}
@@ -782,7 +782,7 @@ try:
         os.remove(_db9b)
     except OSError:
         pass
-    _ad9b = _Ad([], seed={"cls": "cls_knight", "race": "human", "level": 3, "hp": 100,
+    _ad9b = _Ad([], seed={"cls": "cls_knight", "race": "human", "name": "试刀", "level": 3, "hp": 100,
                           "alloc": dict(_ALLOC9), "bag": {_W1: 1},
                           "equipped": {}, "codex": {}, "flags": {}})
     _host9b = Host(_ad9b, str(REPO), inject={"db_path": _db9b, "clock": lambda: _FIXED})
@@ -853,7 +853,7 @@ try:
         len(_hi10) == 18 and sorted({l for _k, l in _hi10}) == [11, 14, 16],
         "%s" % _hi10[:4])
 
-    _knt10 = {"cls": "cls_knight", "level": 3, "race": "human", "hp": 100,
+    _knt10 = {"cls": "cls_knight", "level": 3, "race": "human", "name": "试刀", "hp": 100,
               "bag": {}, "equipped": {}, "flags": {}, "codex": {}}
     _av10, _lk10 = CSK._of_class("cls_knight", 3)
     _name10 = [v.get("name") for _k, v in _av10]           # 3 级此刻解锁的（不是全职业那 8 条）
@@ -997,7 +997,7 @@ try:
         if _new11 not in _IT9:
             _bad11.append((_lab11, "夹具不在物品表里：%s" % _new11))
             continue
-        _p11 = {"cls": "cls_knight", "level": 3, "hp": 100, "bag": {_new11: 1},
+        _p11 = {"cls": "cls_knight", "race": "human", "name": "试刀", "level": 3, "hp": 100, "bag": {_new11: 1},
                 "equipped": ({_IT9[_new11]["slot"]: _cur11} if _cur11 else {}),
                 "flags": {}, "codex": {}}
         _got11 = _drive9(CG11.item_compare, _p11, "对比 %s" % _IT9[_new11]["name"])
@@ -1107,7 +1107,7 @@ try:
     # ★ g4：那一件的**名字从域里现取**（本批改名：骨头 → 残骸）—— 别在探针里手打玩家词
     _BONE_NM12 = str((CA9._data("items").get(_BONE12) or {}).get("name") or _BONE12)
     _WPN12 = _W1
-    _SEED12 = {"cls": "cls_knight", "race": "human", "level": 3, "exp": 0, "hp": 100,
+    _SEED12 = {"cls": "cls_knight", "race": "human", "name": "试刀", "level": 3, "exp": 0, "hp": 100,
                "gold": 30, "loc": "windmill_town", "node": "wt_inn", "prev": [],
                "bag": {_POT12: 2, _SCRAP12: 5, _BONE12: 3, _WPN12: 1}, "equipped": {},
                "codex": {}, "flags": {"card": 1}}          # ★ B4-27：接活那道门要证
@@ -1204,8 +1204,8 @@ try:
                            _AL13.of_record(_recA), _grA, buffs=_bfA)
     _capA = int(PB.hp_cap(dict(_recA)))
     _gA = _say12("属性")
-    _wA = [_r("SYS_ATTR_HEAD", who=_r("SYS_NAME_UNKNOWN"), cls=_CL9["cls_knight"]["name"],
-              level=_recA.get("level")),
+    _wA = [_r("SYS_ATTR_HEAD", who=(_recA.get("name") or _r("SYS_NAME_UNKNOWN")),
+              cls=_CL9["cls_knight"]["name"], level=_recA.get("level")),
            _r("SYS_ATTR_VITAL", hp=_num12(_actA.get("max_hp")), mo=_num12(_actA.get("max_mp")),
               crit=_crit_pct21(str(_recA.get("cls")), int(_recA.get("level") or 1),
                                 _AL13.of_record(_recA), _grA))] + _rows12(_actA) + [
@@ -1669,7 +1669,7 @@ try:
 
     _INN_NODE16 = CPL16.STASH_NODE
 
-    _SEED16 = {"cls": "cls_knight", "race": "human", "level": 3, "exp": 0, "hp": 20, "gold": 30,
+    _SEED16 = {"cls": "cls_knight", "race": "human", "name": "试刀", "level": 3, "exp": 0, "hp": 20, "gold": 30,
                "loc": "windmill_town", "node": "wt_gate_n", "prev": [],
                "bag": {"i_junk_bone": 3, "i_material_iron_scrap": 2}, "equipped": {},
                "codex": {}, "flags": {}}
@@ -1881,7 +1881,10 @@ try:
     # ── 登记 / 改名 / 评级：在公会那一站 · 先要名字 · 证与进度 ──────────────
     _cmp16("登记（人在客栈）", _say16("登记"), [_r("SYS_PLACE_AWAY", name=_nname16(_GUILD_NODE16))])
     _say16("去 %s" % _nname16(_GUILD_NODE16))
-    _cmp16("登记（档上还没名字）", _say16("登记"), [_r("SYS_REG_ASKNAME")])
+    # ★ 2026-09-30（注册面改造）：注册守卫（`hook:register`）先行 ——「档上没名字」那一下
+    #   现在由守卫引回起名（SYS_REG_ASKNAME 的原档不可达）；序列在此把名字摘掉来演它。
+    _ad16.saved.pop("name", None)
+    _cmp16("登记（档上还没名字）", _say16("登记"), [_r("SYS_GUARD_NAME")])
     _cmp16("改名（没带名字）", _say16("改名"), [_r("SYS_RENAME_ASK")])
     _cmp16("改名（第一次）", _say16("改名 张三"), [_r("SYS_RENAME_DONE", name="张三")])
     _ren16 = (_sv16().get("flags") or {}).get("renamed")
@@ -1997,7 +2000,7 @@ try:
                 and _RIR13.family_of(k).split("_")[1] == _C13[4:])           # 同职业的无门槛件（普通）
     # ★ 同一家族的四个品阶**共用一个名字**（真源：装备的全名 = 名字 + 路线）⇒ 每个起手档里只放一件，
     #   否则 `装备 <名字>` 会命中背包里排序在前的那一件（那是既有口径，不是本批的事）。
-    _BASE13 = {"cls": _C13, "race": "human", "level": _R13["level"], "hp": 100, "gold": 30,
+    _BASE13 = {"cls": _C13, "race": "human", "name": "试刀", "level": _R13["level"], "hp": 100, "gold": 30,
                "bag": {_W13: 1}, "equipped": {}, "codex": {}, "flags": {}}
 
     def _run13(seed, text):
@@ -2031,7 +2034,7 @@ try:
             or (_s_enuf.get("bag") or {}):
         _b13.append(("加点够了却没穿上 / 没摘背包", _o_enuf[:1], _s_enuf.get("equipped"),
                      _s_enuf.get("bag")))
-    _o_free, _s_free = _run13({"cls": _C13, "race": "human", "level": 1, "hp": 100, "gold": 30,
+    _o_free, _s_free = _run13({"cls": _C13, "race": "human", "name": "试刀", "level": 1, "hp": 100, "gold": 30,
                                "bag": {_F13: 1}, "equipped": {}, "codex": {}, "flags": {},
                                "alloc": {}}, "装备 %s" % _IT13[_F13]["name"])
     if _o_free[:1] != [_r("SYS_GEAR_EQUIP_OK", icon=_IT13[_F13].get("icon", ""),
@@ -2078,7 +2081,7 @@ try:
     _MON23 = st.domain("monsters") or {}
     _MS23, _MF23 = "ms_field_mouse", "ms_birch_crow"        # 田鼠（3 级 · 慢）· 林鸦（4 级 · 快）
     _POT23, _WPN23 = "i_potion_minor", "i_weapon_assassin_venom_common"
-    _BASE23 = {"cls": "cls_assassin", "race": "human", "level": 5, "exp": 0, "gold": 0, "hp": 40,
+    _BASE23 = {"cls": "cls_assassin", "race": "human", "name": "试刀", "level": 5, "exp": 0, "gold": 0, "hp": 40,
                "loc": "belt_north", "node": "bn_bone", "prev": [], "bag": {_POT23: 3},
                "equipped": {}, "codex": {}, "flags": {}}
     chk("★ 六条都挂了 bind（%s）" % " · ".join(BATTLE6),
@@ -2279,8 +2282,10 @@ try:
     _o_sk_ok, _s_sk_ok = _say23(dict(_BASE23), "技能 %s" % _INT_NAME)
     if _o_sk_bad != [_r("COMBAT_SKILL_BAD", name="没有这条技能")]:
         _B23.append(("放技能 认不出", _o_sk_bad))
-    if _o_sk_nocls != [_r("SYS_SKILL_NOCLS")]:
-        _B23.append(("放技能 没择业", _o_sk_nocls))
+    # ★ 2026-09-30（注册面改造）：注册守卫先行 —— 「没择业」这一门由守卫引回建号
+    #   （SYS_SKILL_NOCLS 的原档不可达；技能域自己的门在建号走完后由「认不出」把守）。
+    if _o_sk_nocls != [_r("SYS_GUARD_REGISTER")]:
+        _B23.append(("放技能 没择业（守卫引回建号那一下）", _o_sk_nocls))
     if _o_sk_ok[:1] != [_MEET23] \
             or _r("COMBAT_SKILL_HEAD", name=_INT_NAME) not in _o_sk_ok \
             or _field23() is None or int((_field23() or {}).get("hands") or 0) != 1 \
