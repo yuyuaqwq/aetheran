@@ -426,6 +426,101 @@ try:
 finally:
     MANA._CACHE["t"] = _save_t
 
+# ══════════════════════════════════════════════════════════════════════
+# ⑨ 战斗内已结过的那一段，结算口不许再结一遍（审计 L1410-1）
+# ══════════════════════════════════════════════════════════════════════
+# 机制：战斗内那笔回蓝走**战斗钟**（引擎 `battle._now`）· 结算口走**游戏钟**（墙上钟）——
+#       两把尺不是同一把（游戏内 1 天 = 现实 2 小时 ⇒ 墙钟被放大约 12 倍成游戏刻）。
+#       修法 = 结算口**只结到开战刻**、书签也落在开战刻 ⇒ 两笔各结各的那一段。
+#   ★ 判据把游戏钟做成**可控的**（`settle` 走 `game_tick()`，猴补它在发币那一格），
+#     于是「这一场占了多少游戏刻」可以手摆 —— 不然测的是墙钟（固定时钟）碰巧的取值。
+#   ★ 打**公开口 `settle`**（三格那个），不打在自己新抽的 `battle_start_tick` 上
+#     （本车道第 32 轮踩过：助手正确 ≠ 调用点正确）。
+_real_gt9 = MANA.game_tick
+_CLOCK9 = {"now": 0}
+MANA.game_tick = lambda: float(_CLOCK9["now"])
+
+# ★ 这一组要**三格** `settle`（第三格 = 开战刻）。产品码退回两格时：把整组判红并说清缺哪一格，
+#   而不是让判据自己崩在 TypeError 上（崩掉看不出是哪一条红，也会被当成「环境问题」）。
+try:
+    MANA.settle({}, 0, 0.0)
+    _3ARG = True
+except TypeError:
+    _3ARG = False
+if not _3ARG:
+    chk("★ ⑨ 结算口必须收「开战刻」那一格（三格 settle）—— 现在只有两格 ⇒ 战斗内已结过的那一段会再结一遍",
+        False, "settle() 不接第三格（审计 L1410-1 未落地）")
+
+
+def _seg9(battle_ground_ticks, after_ticks):
+    """造一档真战斗，算出「[书签, 开战刻]」这一段结算口该结几点 / 落档现蓝。
+    返回 (结算口回了几点, 落档现蓝, 开战刻, 战斗内回了多少)。"""
+    _CLOCK9["now"] = 0
+    _d = {"mo_max": 10 ** 6, "mo": 0, MANA.settle_stamp(): 0}      # 上一笔结在 0 刻
+    _CLOCK9["now"] = battle_ground_ticks                            # 战斗外先走这么多刻
+    _b = CB.build(_pl(cls="cls_mage", level=10, mo=0, uid="u_mana"), ["syn_bag"], _MONS, uid="u_mana")
+    for _ in range(8):
+        SCH.advance(_b, [])
+        _c = _b.focus()
+        if _c is None or _b.result is not None:
+            break
+        _b.human_act("defend", None, _c)
+    _a = _b.focus()
+    _inner = int(_a.get("mp") or 0) if _a else 0
+    _start = _a.get("_mp_game_at")                                  # 开战刻（战斗内第一拍落的）
+    _CLOCK9["now"] = battle_ground_ticks + after_ticks              # 收尾那一刻（战斗已打过 after 刻墙钟）
+    _g = MANA.settle(_d, _inner, _start)
+    return _g, int(_d.get(MANA.settle_field()) or 0), _start, _inner
+
+
+if _3ARG:
+  try:
+    # 期望口径**现算**：战斗外那一段 = [0, 开战刻]（书签落在 0、开战刻 = battle_ground_ticks）
+    # ⇒ 应结 floor(battle_ground_ticks / every) 点。战斗内那几刻**不归结算口**。
+    _g9, _m9, _s9, _i9 = _seg9(1000, 200)
+    _want9 = int(1000 // _EVERY)
+    chk("⑨-a 真战斗 + 真场：拿得到开战刻，战斗内回 %s 点、结算口结 %s 点" % (_i9, _g9),
+        _s9 is not None and _g9 >= 0, "开战刻 %s" % (_s9,))
+    chk("⑨-b ★ 战斗内那一段不许再结一遍：战斗外 %s 刻 ⇒ 结算口**只**结 floor(%s/%s)=%s 点（旧口径会结 %s 点）"
+        % (1000, 1000, _EVERY, _want9, int((1000 + 200) // _EVERY)),
+        _g9 == _want9, "实得 %s" % (_g9,))
+    # 撤改验证：第三格不传 = 旧口径 ⇒ 同输入**确实**多结
+    _CLOCK9["now"] = 0
+    _d_old = {"mo_max": 10 ** 6, "mo": 0, MANA.settle_stamp(): 0}
+    _CLOCK9["now"] = 1200
+    _gold = MANA.settle(_d_old, 0)
+    chk("⑨-c ★ 撤改验证：第三格不传（回到旧口径）⇒ 同一份输入确实多结 %s 点（%s → %s）"
+        % (_gold - _want9, _want9, _gold), _gold > _want9)
+    # 书签落**开战刻**（不是「现在」）⇒ 战斗内那 200 刻不结、也不吞掉
+    _CLOCK9["now"] = 0
+    _d_bm = {"mo_max": 10 ** 6, "mo": 0, MANA.settle_stamp(): 0}
+    _CLOCK9["now"] = 1000
+    _b2 = CB.build(_pl(cls="cls_mage", level=10, mo=0, uid="u_mana"), ["syn_bag"], _MONS, uid="u_mana")
+    for _ in range(8):
+        SCH.advance(_b2, [])
+        _c2 = _b2.focus()
+        if _c2 is None or _b2.result is not None:
+            break
+        _b2.human_act("defend", None, _c2)
+    _a2 = _b2.focus()
+    _s2 = _a2.get("_mp_game_at")
+    _CLOCK9["now"] = 1200
+    MANA.settle(_d_bm, int(_a2.get("mp") or 0), _s2)
+    chk("⑨-d 书签落在**开战刻**（%s）而不是「现在」（1200）—— 战斗内那 200 刻不结、也不被吞掉"
+        % (_d_bm.get(MANA.settle_stamp()),),
+        _s2 is not None and _d_bm.get(MANA.settle_stamp()) == _s2)
+    # ⑨-e ★ 那 200 刻不许**被吞掉**（书签落开战刻只是「挪后」，不是「丢掉」）：
+    #   再结一次账（模拟下一场收尾），这 200 刻 + 后面的 200 刻要**整块**结出来。
+    _CLOCK9["now"] = 1400
+    _g9b = MANA.settle(_d_bm, 0)
+    _want9b = int(400 // _EVERY)
+    chk("⑨-e ★ 战斗内挪后的那 200 刻**没被吞掉**：再结一次账 ⇒ [开战刻, 1400] 共 400 刻结 %s 点"
+        % (_g9b,), _g9b == _want9b, "现算 floor(400/%s)=%s" % (_EVERY, _want9b))
+  finally:
+    MANA.game_tick = _real_gt9
+else:
+    MANA.game_tick = _real_gt9
+
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
 sys.exit(0 if ok else 1)

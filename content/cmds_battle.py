@@ -451,8 +451,11 @@ async def _settle(env, p, uid, pick, ms, res, logs, hp_after, seen, player, affi
     #   `mana.settle`（写回现蓝 + 按游戏钟补上「战斗外那一段回蓝」+ 记书签）。
     #   改前这一格**只有读端、没有写端** ⇒ 放 8 次技能 `状态` 仍报 85/85、跨场一个点都不扣。
     #   `_mp_after` 拿不到（没在打的那条老路）⇒ 传 None ⇒ `settle` 一个字段都不写（不猜数）。
+    #   ★ 审计 L1410-1：第三格传**开战刻**（`battle_start_tick` 从「场」里现读，同 `_mp_after`
+    #     那一口）—— 战斗内那笔回蓝是按**战斗钟**结的，本口按**游戏钟**结，两把尺不是同一把；
+    #     拿不到开战刻就只补「上次结账 → 现在」，不把这一场**在打的那一段**重复结一遍。
     from . import mana as MANA
-    MANA.settle(p, _mp_after(env, uid))
+    MANA.settle(p, _mp_after(env, uid), MANA.battle_start_tick(env, uid))
     yield "━" * 12
     if res == "victory":
         yield T("COMBAT_DONE")

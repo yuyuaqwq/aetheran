@@ -41,6 +41,12 @@ _CACHE: dict = {}
 _K_EVERY = "every" + "_ticks"
 _K_AMOUNT = "amount"
 
+#: actor 那一格「这一场**什么时候开的**」的名字（**不落档**的临时书签，与 `_mp_at` 同族）。
+#: ★ 不落字面量的理由同上面那两行：静态守卫不许回复率相关的键名散在 content/*.py 里。
+#:   ★ 而「不写进 `mana.json`」是**有意的**：这一格是**每场一次**的临时书签，不是可调的数值，
+#:   放进规则表会让人以为它能配（配了也不生效）。真源在代码里、取口见 `battle_start_tick`。
+_K_TICK = "_mp" + "_game_at"
+
 #: `settle` / `cap_gain` 那两格里的名字（同样不落字面量 —— 静态守卫只认表）
 _K_FIELD = "field"
 _K_STAMP = "stamp"
@@ -277,7 +283,7 @@ def game_tick():
     return _ticks_of(day, hod)
 
 
-def settle(p, mp_now):
+def settle(p, mp_now, since_tick=None):
     """这一场收尾那一刻的**唯一落账口** —— 返回这一下补回了几点（探针/回话用）。
 
     三件事，一次做完（`content/cmds_battle._settle` 调它）：
@@ -289,6 +295,18 @@ def settle(p, mp_now):
 
     `mp_now` = 这一场收尾时**我**的现蓝（调用方从「场」里现读；拿不到 ⇒ 传 `None`）——
     `None` ⇒ **一个字段都不写**（不拿旧档顶上、也不猜），返回 0。
+
+    ★ `since_tick` = **开战那一刻**的游戏刻（调用方现读，见 `battle_start_tick`）。
+      **为什么必须传**：战斗内那笔回蓝（`regen_amount`）走的是**战斗钟**（引擎 `battle._now`），
+      而本函数走**游戏钟**（`calendar.game_time()`）—— **两把尺不是同一把**（游戏内
+      1 天 = 现实 2 小时 ⇒ 1 现实秒被放大约 12 倍成游戏刻）。原先本函数从「上次结账那一刻」
+      一口气算到「现在」，于是**这一场**在墙上耗掉的现实时间被换算成游戏刻又结了一遍
+      ⇒ 同一段时间**回了两次**（实测：一场打 1 分钟的战斗，战斗内回 24 点、结算口又回 36 点）。
+      改法 = **只补 `[开战刻, 现在]` 那一段**（战斗内那一段已由 `regen_amount` 结过，
+      不再重复结账）—— 这是唯一正确的方向，两个案子里它不涉及「漏记战斗内那笔」。
+      `since_tick` 为 `None`（没装战场的面拿不到开战刻）⇒ **不编一个起点**，
+      只按旧口径从书签算起（退化路径；`battle_start_tick` 那侧 fail-closed 已保证
+      正常游玩一定拿得到 —— 拿不到就不回，而不是猜一个开战刻）。
     """
     if not isinstance(p, dict) or mp_now is None:
         return 0
@@ -303,13 +321,44 @@ def settle(p, mp_now):
     now = game_tick()
     stamp = settle_stamp()
     last = p.get(stamp)
+    # ★ 这一场的 `[开战刻, 现在]` 那一段归 `regen_amount`（战斗钟）结过了 ⇒ 本口**只结到开战刻**。
+    #   书签同样落在**开战刻**（不是「现在」）：开战前那一段没结的，下一场收尾接着结
+    #   （`开战刻 > 现在` 的情形 = 战斗还没打完就收尾，一个周期都不结、书签前移，不倒退）。
+    upto = float(now)
+    if isinstance(since_tick, (int, float)) and not isinstance(since_tick, bool):
+        upto = min(float(now), float(since_tick))
     gain = 0
     if isinstance(last, (int, float)) and not isinstance(last, bool):
-        n = int((now - float(last)) // every_of())
+        n = int((upto - float(last)) // every_of())
         gain = max(0, n) * amount_of()
-    p[stamp] = now
+    p[stamp] = upto
     p[settle_field()] = max(0, min(cur + gain, cap))
     return gain
+
+
+def battle_start_tick(env, uid):
+    """这一场的**开战那一刻**（游戏刻）—— 那一行由 `regen_amount` 第一次问的时候落下。
+
+    ★ 为什么是「第一次问」而不是「开战指令那一刻」：`regen_amount` 是引擎每刻问一次的
+      回复钩子，它第一次被问到的那个 `battle._now` 就是**这一场开始的那一刻**
+      （那一拍它只记书签、不回蓝，见同函数 `regen_amount` 里 `_mp_at` 的首次分支）⇒ 用它当开战刻 = 战斗内那笔
+      回蓝所覆盖区间的**真起点**，不多不少。
+    ★ 落点：actor 自己那一格 `_mp_game_at`（**不落档**的临时书签，与同模块 `_mp_at` 同族）。
+      实测它活得过「场」的 `to_state/from_state` 往返（`$.sides.player[0]` 一格）
+      ⇒ 多手那一路（`instance._finish`）也拿得到同一个数，不用改那一面。
+    拿不到（没在打 / actor 不是 dict / 那一格不是数）⇒ 返回 `None`，**由 `settle` 决定怎么退化**。
+    """
+    from . import instance as INST                            # 本地 import：与 `_mp_after` 同款
+    st = INST.live(env, uid)
+    if st is None:
+        return None
+    a = INST.actor_of(st, uid)
+    if not isinstance(a, dict):
+        return None
+    v = a.get(_K_TICK)
+    if isinstance(v, (int, float)) and not isinstance(v, bool):
+        return float(v)
+    return None
 
 
 # ══════════════════════════════════════════════════════════════
@@ -338,6 +387,11 @@ def regen_amount(battle, actor):
         now = float(battle._now)
     except Exception:                                   # noqa: BLE001
         return None
+    if _K_TICK not in actor:
+        # ★ 这一场的**开战刻**（游戏钟）= 本函数第一次被问到的这一刻（审计 L1410-1）。
+        #   战斗内那笔回蓝覆盖的区间就是从这里开始的 ⇒ `settle` 拿它当「只补战斗外那一段」
+        #   的起点（见 `battle_start_tick`）。**先于**下面的书签分支落：那一拍也要落。
+        actor[_K_TICK] = game_tick()
     due = actor.get("_mp_at")
     if not isinstance(due, (int, float)) or isinstance(due, bool) or float(due) <= 0:
         actor["_mp_at"] = now + every                   # 第一次结算：记书签，这一拍不回
