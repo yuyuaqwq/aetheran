@@ -41,6 +41,45 @@ PH_CARD = "_boss_phases"
 PH_RUN = "_boss_ph"
 #: 阶段条目里**改面板**的那几个键（只声明了的才改 —— 没声明的沿用上一阶）。
 _PH_NUMS = ("atk_mult", "def_add", "dmg_taken_mult", "act_rate_mult")
+
+# ══════════════════════════════════════════════════════════════
+# ★ 身份标签（traits）—— 包侧向引擎**声明**的机制标记
+# ══════════════════════════════════════════════════════════════
+#: 档位机器键 → 挂到 actor 上的**身份标签**（引擎 `battle/traits.py` 读的就是这一格）。
+#:
+#: ★ 为什么要这张表（2026-09-29 · 缺陷 #410）：引擎 2026-09-25 审计 E3 把两处 boss 判定
+#:   从「读 `is_boss` / `role == "boss"`」改成**只读 `actor["traits"]`**
+#:   （`extends/ext_combat/battle/effects.py:394-396` 控制时长减半 ·
+#:     `extends/ext_combat/battle/schedule.py:649` DoT 标签档折扣）。
+#:   而本包**只写 `a["is_boss"]`**（`monster_actor`）⇒ `traits.of(boss_actor)` 回**空集**
+#:   ⇒ 引擎那两处判定 100% 恒 False（不是偶发）。实测（域里唯一那只 boss
+#:   `ms_boss_oath_sentry`）：`traits.of({"role":"boss","is_boss":True}) == frozenset()`。
+#:   引擎侧**零游戏名词**（它只问「身上有没有名单里的标签」，名单与标签名全归内容侧），
+#:   所以缺口在包侧补：**由本包声明档位 → 标签**。
+#:
+#: 标签名取档位机器键原样（`boss` / `elite` / `warden` / `chief` / `normal`）—— 与
+#:   `rebuild_monsters.ROLE_KEY` 那张表和域里 `role_key` 逐字一致，且**所有怪都带**：
+#:   引擎把 `traits` 当**通用机制标记**面用（谁能吃「控制减半 / DoT 折扣」这类声明由
+#:   声明方在 `ctrl_half_traits` / `trait_tags` 里给名单），不是「Boss 专用字段」。
+#:   ★ 本包当前**不声明**那两个名单（见下），所以今天挂这些标签**行为零变化**；
+#:     门禁钉的是「身份必须真的走到引擎那个面上」这条接线本身（改前那条判据红）。
+#:
+#: ★ 为什么 `normal` 也带：`is_boss` / `is_elite` 那两个布尔只覆盖两档，而标签面是
+#:   **全档位**的身份声明 —— 少一档就会让「这只怪没有身份」成为默认，而引擎的口径恰恰
+#:   是「名单里没有 = 这条规则不适用于它」，两边正好对上。缺 `role_key` ⇒ 不写这一格
+#:   （actor 里连 `role` 都可能是空串，那是「不知道」而不是「普通」—— 不静默顶一个）。
+#:
+#: ★ 阶段一（B3-6b-2d-keys-2）写下的 `is_boss` / `role` **一个字都没动**：它们各有各的
+#:   消费方（`role` = 域里那个档位名逐字透传 / `is_boss` = 包内机器判定），本表是
+#:   **新增**的一格，引擎只多认一个它本来就在等的字段。
+TRAIT_BY_ROLE_KEY = {
+    "normal": ("normal",),
+    "elite": ("elite",),
+    "chief": ("chief",),
+    "warden": ("warden",),
+    "boss": ("boss",),
+}
+
 #: 一个阶段条目没声明时的那一套（= 与接线前逐字相同：atk/def/spd 原样、承伤无乘区、出手）。
 _PH_DEFAULTS = {"atk_mult": 1.0, "def_add": 0.0, "dmg_taken_mult": None,
                 "act_rate_mult": 1.0, "hold": False}
@@ -232,6 +271,18 @@ def monster_actor(mid: str, m: dict, *, party: int | None = None, affixes=None,
     #   缺了档位名 ⇒ 拿机器键顶上（两个都不在 ⇒ 空串，两条路在引擎那边都是「不是 boss」）。
     a["role"] = m.get("role") or m.get("role_key") or ""
     a["is_boss"] = (m.get("role_key") == "boss")   # 原先比 `a["role"] == "boss"`（那一档的值恰好是 ASCII）
+    # ★ 缺陷 #410（2026-09-29 · 引擎审计 E3 之后）：上面那两个**游戏字段**引擎早就不读了 ——
+    #   引擎只认 `actor["traits"]`（`battle/effects.py:394-396` 控制时长减半 ·
+    #   `battle/schedule.py:649` DoT 标签档折扣）。只写 `is_boss` ⇒ `traits.of()` 回空集
+    #   ⇒ 那两处判定恒 False（100% 失效）。身份由**档位 → 标签**那张表声明
+    #   （`TRAIT_BY_ROLE_KEY`，标签名 = 机器键原样）。**写口只有这一处**，消费端全在引擎。
+    #   机器键不在表里（域里写了新档位却忘了声明）⇒ 当场抛，不静默当「没身份」。
+    _rk = str(m.get("role_key") or "")
+    if _rk:
+        if _rk not in TRAIT_BY_ROLE_KEY:
+            raise KeyError("怪的档位机器键 %r 不在身份标签声明表里（身份必须声明，不许静默当普通）"
+                           "：%s" % (_rk, mid))
+        a["traits"] = list(TRAIT_BY_ROLE_KEY[_rk])
     # ★ P-1（元素通道）：承伤方的免疫/弱点表 —— 引擎落地层读的就是这两个字段
     #   （`ext_combat/battle/landing.py` 的 N10-B4：`element_immune` 含该元素 ⇒ 伤害归 0；
     #   `element_weak[元素] > 1` ⇒ ×倍率）。**挂什么由声明说话**（`content/rules/elements.json`

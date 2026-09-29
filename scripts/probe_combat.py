@@ -263,6 +263,65 @@ _actor_bad = [k for k, m in MON.items()
                   or a.get("is_boss") != (m.get("role") == "boss"))(CB.monster_actor(k, m))]
 (ok if not _actor_bad else bad)("★ 怪 actor：`role` 照旧透传域里那个档位名 · `is_boss` 与 `role == \"boss\"` "
                                 "逐只相同（%d 只；例外 %s）" % (len(MON), _actor_bad or "无"))
+# ★★ 缺陷 #410（2026-09-29）：**引擎只读 `actor["traits"]`** —— 审计 E3 之后 `is_boss` /
+#   `role` 在引擎那两处 boss 判定里已经是死字段（`battle/effects.py:394-396` 控制时长
+#   减半 · `battle/schedule.py:649` DoT 标签档折扣）。只写 `is_boss` ⇒ `traits.of()` 回空集
+#   ⇒ 那两处恒 False，**100% 失效**（不是偶发）。
+#   判据钉的是**接线本身**：走包侧真实的 `monster_actor` 造 actor，用引擎**自己那个**判定口
+#   （`ext_combat.battle.traits`）问，不复述包内的口径。
+#   四条：
+#     ① 每只怪的 traits 非空（缺 `role_key` 的合成怪不算「必须带」——那是「不知道」）；
+#     ② Boss 那一档必须带 `boss` 标记（这一条改前必红）；
+#     ③ 标签**逐字**等于域里那台机器键（不另起一套名字，防双源）；
+#     ④ 引擎那两个读点此刻确实是「不声明 = 不适用」（本包今天没声明那两个名单
+#        ⇒ 身份标签挂上**行为零变化**；这一条钉住「别顺手给控制/DoT 编一个折扣数字」——
+#        那是设计口径。真源 `00_总纲/05_系统总表与阶段开放_v1.md:31`「控制 P1 不开」）。
+from ext_combat.battle import traits as _TR                       # 引擎那个判定口
+from ext_combat.battle import game_config as _GC2                 # EFFECT_RULES 挂载面
+
+_TR_EMPTY, _TR_BOSS, _TR_MISMATCH = [], [], []
+for _k, _m in MON.items():
+    if not str(_m.get("role_key") or "").strip():
+        continue                                    # 域里没给机器键 = 「不知道」，不强制
+    _t = _TR.of(CB.monster_actor(_k, _m))
+    if not _t:
+        _TR_EMPTY.append(_k)
+    if _m.get("role_key") == "boss" and "boss" not in _t:
+        _TR_BOSS.append(_k)
+    if str(_m.get("role_key")) not in _t:
+        _TR_MISMATCH.append(_k)
+(ok if not _TR_EMPTY else bad)("★ 身份标签接上引擎了：每只有机器键的怪 `traits.of(actor)` 非空"
+                              "（%d 只；空 %s）" % (len(MON), _TR_EMPTY or "无"))
+(ok if not _TR_BOSS else bad)("★★ Boss 身份真的进了 traits（引擎唯一认的那个面）"
+                              "—— 缺标记的：%s" % (_TR_BOSS or "无"))
+(ok if not _TR_MISMATCH else bad)("★★ 标签名 = 域里那台机器键原样（不另起一套名字）"
+                                 "；对不上的：%s" % (_TR_MISMATCH or "无"))
+# ④ 本包**没有**声明那两个名单 ⇒ 引擎那两处判定恒 False（与接线前逐字相同：行为零变化）。
+_ER = _GC2.get_effect_rules() or {}
+_CTRL_DECL = sorted(k for k, r in _ER.items() if isinstance(r, dict) and r.get("ctrl_half_traits"))
+_DOT_DECL = sorted(k for k, r in _ER.items()
+                   if isinstance(r, dict) and isinstance(r.get("period"), dict)
+                   and r["period"].get("trait_tags"))
+(ok if not _CTRL_DECL and not _DOT_DECL else bad)(
+    "★★ 本包**不**声明 `ctrl_half_traits` / `trait_tags`（挂标签因此行为零变化；"
+    "两个读点此刻都是「不声明 = 不适用」）—— 声明了控制减半的：%s · 声明了 DoT 标签档的：%s"
+    % (_CTRL_DECL or "无", _DOT_DECL or "无"))
+#   ★ 反证要有牙：把 boss 的标签**摘掉**（只动那一个字段）⇒ 引擎那个判定口必须立刻
+#     变 False。判「引擎不认游戏字段」这件事，得**跑出来**而不是读注释读出来。
+_probe_boss = next((k for k, m in MON.items() if m.get("role_key") == "boss"), None)
+if _probe_boss is None:
+    bad("★★ 反证没跑：域里一只 boss 都没有")
+else:
+    _pa = CB.monster_actor(_probe_boss, MON[_probe_boss])
+    _kept = _pa.get("traits")
+    try:
+        _pa["traits"] = []
+        _blunt = _TR.has(_pa, "boss")
+    finally:
+        _pa["traits"] = _kept
+    (ok if _blunt is False else bad)(
+        "★★ 反证：摘掉 boss 的标签后引擎判定立刻变 False（`traits.has` 只认标签面；"
+        "证明这条判据有牙、不是恒真）")
 # ★ B3-7（副本内容）合入后：**档位白名单删掉了** —— 遇敌唯一的门改成 `habitat`
 #   （原先只放 普通/精英/头目 ⇒ 层主 / Boss 永远打不上）。所以候选闸的定义随之改成
 #   「挂了 habitat 的怪」，判据换成两条更贴意图的：野外/村镇不许混进 层主/Boss；塔里真挑得出。
