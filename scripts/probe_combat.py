@@ -604,10 +604,26 @@ _PH_NOTE0, _PH_TIP0 = _PH0["line"], _PH0["tip"]
 
 
 def _ph_slot(**kw):
+    """P0-1 续批四（2026-09-29 · 文案车道 aep0）：这一格带上刻。
+
+    真源 26_ §三 优化 1 逐字「所有战斗日志行统一以 【N 刻】 开头」—— 阶段演出那一行经
+    `logs.append` 进**持久战斗日志**，与同族 23 条行动行同面 ⇒ 必须能读出刻数。
+    这正是 A3 行动序那一课要教的东西：玩家能自己看出「我比它快几刻」。
+
+    ★ 这里照生产口径现算 `t`，不是写死一个数：内容侧 `content/combat.py::_phase_enter`
+      取的是 `int(round(float(getattr(battle, "_now", 0.0) or 0.0)))`，引擎公开面
+      `ext_combat.battle.battle.now_of(battle)` 是同一个式子 ⇒ 夹具与生产同源；
+      将来读端换刻源时这条判据会跟着一起红（而不是各算各的、静默通过）。
+    """
     s = (_PH_TX.get("COMBAT_BOSS_PHASE") or {}).get("value", "")
     for k, v in kw.items():
         s = s.replace("{%s}" % k, str(v))
     return s
+
+
+def _ph_t(battle) -> int:
+    """刻数取件 = 生产那一处的式子（引擎 `now_of` 的实现）。"""
+    return int(round(float(getattr(battle, "_now", 0.0) or 0.0)))
 
 
 _PH_PL = {"cls": "cls_knight", "level": 20, "uid": "u_ph", "name": "试",
@@ -628,7 +644,8 @@ try:
     _ph0 = [_bo["atk"], _bo["def"], _bo["spd"]]
     _r0 = _b.script_hook(_b, _bo, _PLG)
     if not (_r0 is True and len(_PLG) == 1
-            and _PLG[0] == _ph_slot(name=_BOSS_NM, phase="站桩", note=_PH_NOTE0, tip=_PH_TIP0)):
+            and _PLG[0] == _ph_slot(t=_ph_t(_b), name=_BOSS_NM, phase="站桩",
+                                        note=_PH_NOTE0, tip=_PH_TIP0)):
         _PHB.append(("第 0 阶站桩", _r0, _PLG[:1]))
     # ③ 血掉到 90% ⇒ 列阵：def+60 / atk×1.3；这一阶**会出手**（钩子回 False）
     _bo["hp"] = int(int(_bo["max_hp"]) * 0.9)
@@ -663,6 +680,22 @@ _ph_seq = [x.split("\n")[0] for x in _PLG]
 (ok if not _PHB else bad)(
     "★ 阶段卡真按血带换 + 面板逐阶落上去（半路真跑：%s）· `hold` 那两阶真不出手"
     % " → ".join(x.split("「")[-1].rstrip("」") for x in _ph_seq))
+
+# P0-1 续批四（aep0）：钉住「行首图标 + 【N 刻】」与「刻数就是那一刻的战斗钟」。
+#:   取件 = 本条真正跑出来的那一行（`_PLG`），不是模板字符串 —— 改模板但读端没接刻 ⇒ 也会红。
+_PH_L1 = (_PLG[0].split("\n")[0] if _PLG else "")
+(ok if _PH_L1.startswith("⚠️【") and "刻】" in _PH_L1 else bad)(
+    "★ Boss 阶段演出行：行首是图标且带【N 刻】（真源 §三 优化 1 · 持久战斗日志那一族）  —— %r" % _PH_L1)
+#: 反证：改之前那一版（无刻）必红 —— 钉住「这条判据抓得住它」
+_bad_old = "⚠️ {name} 进入「{phase}」".replace("{name}", "哨塔的守望者").replace("{phase}", "站桩")
+(ok if not (_bad_old.startswith("⚠️【") and "刻】" in _bad_old) else bad)(
+    "★ 反证：旧写法 %r 不满足上面那条判据" % _bad_old)
+# ★ 抗回归：屏上那一行的刻 == 读端那一刻的战斗钟（不是写死的装饰数字）
+_STAMP = _re.compile(r"【(\d+) 刻】")
+_m = _STAMP.search(_PH_L1)
+(ok if (_m is not None and int(_m.group(1)) == _ph_t(_b)) else bad)(
+    "★ 屏上那一行的刻数 == 那一刻的战斗钟  —— 屏=%r 钟=%r"
+    % (_m.group(1) if _m else None, _ph_t(_b)))
 
 # ⑤ fail-closed：缺演出行 / 血带不递减 ⇒ 装配期当场抛（不许静默出一行空话）
 def _ph_broken(mut):

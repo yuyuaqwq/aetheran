@@ -314,15 +314,20 @@ def _affix_threshold_hook(battle: Battle):
     return hook
 
 
-def _phase_enter(actor: dict, run: dict, ph: dict, i: int, logs: list) -> None:
+def _phase_enter(battle, actor: dict, run: dict, ph: dict, i: int, logs: list) -> None:
     """进第 `i` 阶：把这一阶的面板修正落到 actor 上 + 出一句演出。
 
     ★ 面板一律**从基数重算**（`run["base"]` 是这一场开场那一刻的 atk/def/spd），而且
       **没声明的格 = 回到原面板**（不沿用上一阶）—— 因为阶段会**来回走**（列阵⇄散架），
       沿用上一阶的话「回到列阵」会把散架的 def−120 / 频率×0.5 一路带回去。
       每一阶都是一份**写全的姿态**（数据里逐格声明，见 `monsters.mods.phases`）。
-    ★ 演出那一行走 texts 槽位 `COMBAT_BOSS_PHASE`（`⚠️ {name}进入「{phase}」/ 👁️ {note} /
-      💡 {tip}`）—— 本文件一个中文都不写，`line` / `tip` 两格从数据来。
+    ★ 演出那一行走 texts 槽位 `COMBAT_BOSS_PHASE`（`⚠️【{t} 刻】{name} 进入「{phase}」/
+      👁️ {note} / 💡 {tip}`）—— 本文件一个中文都不写，`line` / `tip` 两格从数据来。
+    ★ 刻数（真源 26_ §三 优化 1「所有战斗日志行统一以【N 刻】开头」）：这一行经
+      `logs.append` 进**持久战斗日志**，与同族 23 条行动行同面 ⇒ 必须带刻。
+      刻源 = `battle._now`（战斗绝对时刻，引擎给的原值，不自己算）。
+      ★ 写 `t=int(round(...))` 而不是格式符 `{t:.0f}` —— 内容侧 `T()` 是字面 replace
+      （`content/cmds_ast.py:53-55`），格式符不会被替换、会把 `{t:.0f}` 原样打上屏。
     """
     m = run["m"]
     for k in _PH_NUMS:
@@ -348,11 +353,12 @@ def _phase_enter(actor: dict, run: dict, ph: dict, i: int, logs: list) -> None:
         actor.pop("auto_act", None)                # 下一阶要还手了（不还手的态由上面那句表达）
     run["i"], run["n"] = int(i), 0
     from .cmds_ast import T                        # ★ 本地 import（免得包装载期成环）
-    logs.append(T("COMBAT_BOSS_PHASE", name=actor.get("name", ""), phase=ph.get("name", ""),
+    logs.append(T("COMBAT_BOSS_PHASE", t=int(round(float(getattr(battle, "_now", 0.0) or 0.0))),
+                  name=actor.get("name", ""), phase=ph.get("name", ""),
                   note=ph.get("line", ""), tip=ph.get("tip", "")))
 
 
-def _phase_frame(actor: dict, logs: list) -> bool:
+def _phase_frame(battle, actor: dict, logs: list) -> bool:
     """这一动：该不该换阶（换了就出演出并**拦下本刻**）/ 不换就照这一阶的 `hold` 决定出不出手。
 
     ★ 换阶只认**血那一档**（`hp_below`）—— 四阶 = 四条触发，逐条照真源
@@ -389,7 +395,7 @@ def _phase_frame(actor: dict, logs: list) -> bool:
         if _below is not None and (float(actor.get("hp", 0) or 0) / _mx) < float(_below):
             nxt = i + 1                            # 血掉过这一档 ⇒ 换下一阶（顺序 = 真源那四阶）
     if nxt is not None and nxt < len(card):
-        _phase_enter(actor, run, card[nxt], nxt, logs)
+        _phase_enter(battle, actor, run, card[nxt], nxt, logs)
         return True                                # ★ 演出刻：本刻不出手，照推 ct（照导演帧的语义）
     # 不换阶：照这一阶的姿态出手 / 不出手（`hold` 的三态见 `_phase_enter`）
     return run["m"].get("hold") is True            # 回塔「不再攻击」= 本刻拦下；其余照常出手
@@ -435,7 +441,7 @@ def _boss_phase_hook(battle: Battle):
     def hook(b, actor, logs):
         for a in cards:
             if a is actor:
-                return _phase_frame(a, logs)
+                return _phase_frame(b, a, logs)
         return False
 
     return hook

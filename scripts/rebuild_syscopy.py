@@ -1334,6 +1334,12 @@ DOC_PENDING = {
         "why": "P0-4（2029-09-29 · 文案修复车道 P0 · 真机试玩取证）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」，而这一条是**孤立一行**（不是续行片段）：e2e_drive 真打一场「—— 田鼠 行动 ——」是整场战斗日志里**唯一**无刻数、且无行首图标的行（日志里其余每一行都带 🌀【N 刻】）。引擎侧 `battle.schedule.actor_turn`（schedule.py:393）的 payload 经 `with_now` 已补 `TIME_SLOT`（每条 cue 都有）。→ 图标用同族的 🌀（手法）与 `COMBAT_SCHEDULE_CAST_BEGIN` 当成一家，去掉装饰用的长横。★ 判据变动：`probe_texts._NO_TIME_BY_DESIGN` 删掉这一条豁免（两条**续行片段**仍留）。",
     },
 
+    # ★ P0-1 续批四（2026-09-29 · aep0）：Boss 阶段演出那一行补【N 刻】 —— 战斗日志面最后一条漏网的。
+    "COMBAT_BOSS_PHASE": {
+        "old": "⚠️ {name} 进入「{phase}」\n👁️ {note}\n💡 {tip}",
+        "new": "⚠️【{t} 刻】{name} 进入「{phase}」\n👁️ {note}\n💡 {tip}",
+        "why": "P0-1 续批四（2026-09-29 · 文案车道 aep0 · 真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」）：★ **这是「进持久战斗日志的那一族」最后一条没带刻的**（本轮现算：24 条经 logs.append / hand.lines 进日志的战斗行，改之前 23 条已带、只有这一条没有）。★ **为什么前几轮一直漏**（探针与 AST 两处盲区叠加，与上一批 `_grant`/`_ward` 同族病）：① probe_texts 那两条刻数判据按 content/rules/battle_text.json（引擎 62 个 cue）取件，而这一格是**内容侧**在 `content/combat.py::_phase_enter` 里 `logs.append` 的 ⇒ 取不到；② 枚举入口只找 `logs.append` 的调用点形参，而 `_phase_enter` 是**经 hook 回调**进去的（`Battle.script_hook(b, actor, logs)`）⇒ 只看 `logs` 变量名的那一族也漏。★ 本轮**只加强不削弱**：给 probe_combat 加两条判据（行首图标 + 【N 刻】、「屏上那一行的刻 == 那一刻的战斗钟」），取件从**真跑出来的那一行**（`_PLG[0]`）现算、刻数按引擎公开面 `now_of` 同一个式子现算 ⇒ 读端改刻源或忘传 t 都会当场红；另加一条反证（旧写法必红）。★ 值写**纯 {t} 不写 {t:.0f}**：内容侧 T() 是字面 replace（content/cmds_ast.py:53-55），格式符会被原样打上屏；引擎 cue 那一族走 str.format 才写 {t:.0f} —— 两侧形态不同是有原因的，别合并。★ 读端补刻在**一处**（`_phase_enter` 那一行取 `int(round(float(getattr(battle,\"_now\",0.0) or 0.0)))`），靠 `hook(b, ...)` 现传的 `b` —— **别在调用点逐个补**。★ 本格**不在**真源 17_ 槽位表里（grep COMBAT_BOSS_PHASE 17_文案收口口径_v1 = 0 命中）⇒ 不是生成器拥有的行、不与真源打架；登记在册是为了两态互锁（不登记就红在 probe_copy ⑤ 与 probe_generators ②③）。",
+    },
     # ★ P0-1 续批（2026-09-29 · aep0）：内容侧机制日志那一族补【N 刻】—— 见各条 why。
     "COMBAT_MECH_SELF_CUT": {
         "old": "你劈出这一下，自己先见了血（−{n}）。",
