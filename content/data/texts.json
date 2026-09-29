@@ -4683,7 +4683,7 @@
     "desc": "集火 · 单人"
   },
   "COMBAT_FOCUS_NAMED": {
-    "value": "「{name}」认得出来 —— 但集火得有人跟你一起打。",
+    "value": "「{name}」找得到 —— 但集火得有人跟你一起打。",
     "params": [
       "name"
     ],
@@ -5811,9 +5811,10 @@
     "desc": "歇脚 · 脚下没火 —— 点名哪儿有火"
   },
   "COMBAT_FOCUS_MISS": {
-    "value": "「{name}」认不出是哪一只 —— 『集火 <目标>』写一只认得出的怪。",
+    "value": "「{name}」这一带没有 —— 眼前只看得见 {here}。",
     "params": [
-      "name"
+      "name",
+      "here"
     ],
     "category": "战斗",
     "desc": "集火 · 名字认不出（与「没组队」分开说）"

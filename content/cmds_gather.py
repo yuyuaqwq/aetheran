@@ -99,15 +99,26 @@ def _first_dig_fill(p, verb: str, got: list) -> list:
     试玩三家实测「三处挖光、0 件铁屑」⇒ 当天强化做不了（铁屑只有挖掘这一条源）。
     只补「这一铲没出铁屑」那一种情况 ⇒ **任何一铲的产出只增不减**，单点权重一格不动。
     档上只记「保底用在哪一天」（一个整数，不依赖 `flags` 的跨日清理）。
+
+    ★ 台账 #198：原先「今天第几天」读的是档上那格 `p["day"]`（`today = int(p.get("day") or 0)`）——
+      可它只是 `calendar.tick()` 留下的**跨日标记**，全仓只有几个入口在刷（`calendar.py:282`
+      明写「别读 `p["day"]`」）。坏形态有两样，都会让**玩家白刷材料**：
+        ① `p["day"]` 还是 0（这档还没 tick 过 / 别的入口没刷到）⇒ 下面那道
+           `today != 0` 的自保把它当成「还没补过」⇒ **同一天连挖三铲各白拿 1 件铁屑**；
+        ② 那是上一回 tick 那天的旧值 ⇒ 跨日之后额度算在昨天头上。
+      处置：**日期戳一律走 `calendar.day_now()`**（与 `eggs.py:127` / `codex.today()` 同一把尺 ——
+      现算，宿主注入的那根钟），档上那格 `p["day"]` 一个字都不读。判据 `probe_gather ⑬`。
     """
     r = _gather_rules().get("first_dig") or {}
     if str(r.get("verb") or "") != str(verb) or not r.get("out"):
         return []
     if any(str(d.get("id")) == str(r.get("out")) for d in got):
         return []                                   # 这一铲自己就出了 ⇒ 不补（不叠加）
-    day = int((p.get("flags") or {}).get("gather_first_dig_day") or 0)
-    today = int(p.get("day") or 0)
-    if day == today and today != 0:
+    today = CAL.day_now()                          # ★ B4-9 / 台账 #198：现算，不读 p["day"]
+    day_raw = (p.get("flags") or {}).get("gather_first_dig_day")
+    # ★ 认**键在不在**，不拿 0 当「没补过」（`or 0` 那一下正是白刷的另一半：
+    #   真游戏日 0 时补过一次之后，同日第二铲会因 `0 == 0` 但 `today == 0` 而放行）。
+    if day_raw is not None and int(day_raw) == today:
         return []                                   # 今天已经补过
     f = dict(p.get("flags") or {})
     f["gather_first_dig_day"] = today

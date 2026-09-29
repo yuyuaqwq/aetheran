@@ -188,6 +188,13 @@ print()
 print("⑪ ★ 每天第一次「挖掘」的保底（rules/gather.json::first_dig）")
 import io as _io                                          # noqa: E402
 import json as _json                                      # noqa: E402
+import ast as _ast                                        # noqa: E402
+
+
+def _imp_calendar():
+    """`content.calendar` —— 本节要拨它的假钟（判据 #198 要「今天」现算 ⇒ 得控钟）。"""
+    from content import calendar as _c                 # noqa: E402
+    return _c
 
 _R = os.path.join(str(REPO), "content", "rules", "gather.json")
 try:
@@ -244,16 +251,69 @@ if _rule:
         bad("⑪ content.cmds_gather 导不进来：%s" % _e)
     if _CG is not None:
         _out = str(_rule.get("out"))
-        _p1 = {"day": 777001, "flags": {}, "bag": {}}
-        _r1 = _CG._first_dig_fill(_p1, str(_rule.get("verb")), [])
-        _r2 = _CG._first_dig_fill(_p1, str(_rule.get("verb")), [])
-        _r3 = _CG._first_dig_fill({"day": 777002, "flags": dict(_p1["flags"])}, str(_rule.get("verb")), [])
-        _r4 = _CG._first_dig_fill({"day": 777003, "flags": {}}, str(_rule.get("verb")),
-                                  [{"id": _out, "n": 1}])
+        # ★ 台账 #198：「今天第几天」改走 `calendar.day_now()`（现算）之后，本节那四态
+        #   **不能靠档上 `p["day"]` 摆日子**了 ⇒ 假钟直接拨（`facade.bind_host` 那条现成口），
+        #   用游戏日 777001 / 777002 / 777003 三天逐个验，判据只加强不削弱。
+        _CAL = sys.modules.get("content.calendar") or _imp_calendar()
+        _SCALE = float(_CAL.scale_seconds())
+        _fac = _CAL.facade
+        _clock0 = _fac.clock()
+        try:
+            _fac.bind_host(clock=lambda: _SCALE * 777001.5)      # 游戏日 777001（当日正午）
+            _p1 = {"day": 777001, "flags": {}, "bag": {}}
+            _r1 = _CG._first_dig_fill(_p1, str(_rule.get("verb")), [])
+            _r2 = _CG._first_dig_fill(_p1, str(_rule.get("verb")), [])
+            _fac.bind_host(clock=lambda: _SCALE * 777002.5)      # 跨到次日
+            _r3 = _CG._first_dig_fill({"day": 777002, "flags": dict(_p1["flags"])},
+                                      str(_rule.get("verb")), [])
+            _fac.bind_host(clock=lambda: _SCALE * 777003.5)
+            _r4 = _CG._first_dig_fill({"day": 777003, "flags": {}}, str(_rule.get("verb")),
+                                      [{"id": _out, "n": 1}])
+        finally:
+            _fac.bind_host(clock=_clock0)
         (ok if [d["id"] for d in _r1] == [_out] else bad)("⑪ 空手那一铲 ⇒ 补 %r" % ([d["id"] for d in _r1],))
         (ok if _r2 == [] else bad)("⑪ 同一天第二铲不补（当天额度只一次）⇒ %r" % (_r2,))
         (ok if [d["id"] for d in _r3] == [_out] else bad)("⑪ 次日第一铲又补 ⇒ %r" % ([d["id"] for d in _r3],))
         (ok if _r4 == [] else bad)("⑪ 这一铲自己就出了 ⇒ 不叠加 ⇒ %r" % (_r4,))
+
+        # ── ⑬ ★ 台账 #198：保底「今天」的**唯一口径** = `calendar.day_now()`（现算），
+        #      档上那格 `p["day"]` 一个字都不许读（`calendar.py:282` 的 B4-9：它只是 `tick()`
+        #      留下的跨日标记，只有几个入口在刷 ⇒ 读它要么拿到 0、要么拿到上一回 tick 的旧值）。
+        #      病根形态（改前都成立）：① `p["day"]` 是 0 ⇒ `today != 0` 那道自保失效 ⇒
+        #      **同一天连挖三铲各白拿 1 件铁屑**；② 旧值 ⇒ 跨日额度算在昨天头上。
+        #      判据三条：真游戏日 0 连三铲只补一次 · 静态守卫「一个 `p["day"]` 字面量都不许有」
+        #      · 假钟往前一天仍只补一次（钉住「现算」而不是「读档」）。
+        _fac.bind_host(clock=lambda: 0.0)
+        try:
+            _dg0 = int(_CAL.day_now())
+            _p0 = {"day": 0, "flags": {}, "bag": {}}
+            _g3 = [[d["id"] for d in _CG._first_dig_fill(_p0, str(_rule.get("verb")), [])]
+                   for _ in range(3)]
+            _n3 = sum(1 for x in _g3 if x)
+            (ok if (_dg0 == 0 and _n3 == 1) else bad)(
+                "⑬ 真游戏日 0 连挖三铲 ⇒ 只补 %d 次（%r）—— 白刷已堵"
+                % (_n3, [len(x) for x in _g3]))
+            _fac.bind_host(clock=lambda: _SCALE * 1.5)          # 游戏日 0 → 1（同一份档接着补）
+            _g4 = [[d["id"] for d in _CG._first_dig_fill(_p0, str(_rule.get("verb")), [])]
+                   for _ in range(3)]
+            (ok if sum(1 for x in _g4 if x) == 1 else bad)(
+                "⑬ 假钟拨到游戏日 1 ⇒ 只补 %d 次（%r）—— 走的是现算不是档上那格"
+                % (sum(1 for x in _g4 if x), [len(x) for x in _g4]))
+        finally:
+            _fac.bind_host(clock=_clock0)
+        _src13g = _io.open(os.path.join(str(REPO), "content", "cmds_gather.py"), encoding="utf-8").read()
+        _tree13g = _ast.parse(_src13g)
+        _pday13 = [n for n in _ast.walk(_tree13g)
+                   if isinstance(n, _ast.Subscript) and isinstance(n.value, _ast.Name)
+                   and n.value.id == "p" and isinstance(n.slice, _ast.Constant)
+                   and n.slice.value == "day"]
+        _pday13 += [n for n in _ast.walk(_tree13g)
+                    if isinstance(n, _ast.Call) and getattr(n.func, "attr", None) == "get"
+                    and isinstance(n.func.value, _ast.Name) and n.func.value.id == "p"
+                    and n.args and isinstance(n.args[0], _ast.Constant) and n.args[0].value == "day"]
+        (ok if not _pday13 else bad)(
+            "⑬ 静态守卫：`cmds_gather.py` 里**读档上 `p[\"day\"]` 的点 %d 个**（须 0 —— "
+            "那格只是 `tick()` 的跨日标记，读它就白刷）" % (len(_pday13),))
 print()
 # ══════════════════════════════════════════════════════════════
 # ⑫ ★ fxm5-gather-unique：`unique` 采集点**按档去重**（号角室石台 → 半截号角）
