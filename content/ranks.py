@@ -93,13 +93,47 @@ def next_of(tier_id) -> dict:
     raise RuntimeError("认不出的档：%r（口径表里是 %s）" % (tier_id, ids()))
 
 
+#: 台账 #218：门槛取值的**唯一校验口** —— 一格坏值就当场点名抛，**不许 `or 0` 兜**。
+#: ★ 为什么这条要单独一个口：`meets` 原先写的是
+#:     `int(tier.get("need_done") or 0) >= ...`  ⇒ **缺键 / `""` / `0` 全被 `or` 吞成 0**，
+#:     于是 `need_done` 整个消失时门槛**静默变成 0** ⇒ 没交委托的玩家直接升到银档
+#:     （真源 `05_玩法数值口径 §一`：银 = 交 15 条 + 打掉 1 头目）。
+#:     门槛是**玩法承诺**（`calendar._weight_of` 同一族理由：静默变宽松比报错糟得多），
+#:     且 `rules()` 只校验「键存在」不校验「值是 ≥0 的整数」⇒ 值坏了在这儿才判得出。
+def _need_of(tier: dict, key: str) -> int:
+    """一档的门槛（`need_done` / `need_chief`）—— 缺键 / 非整数 / 负数 ⇒ **当场抛**。
+
+    ★ `0` 是**合法**门槛（见习档 / 铜档的 `need_chief`）⇒ 只认 `isinstance(int)`，
+      不拿真假值去判（`if not v` 会把合法的 0 当缺键）。
+    ★ 字符串数字（`"15"`）也判坏：表由 `scripts/rebuild_ranks.py` 生成，形状坏在那儿就该红，
+      不在这里悄悄收下（口径与 `calendar._weight_of` / `cmds_gear.req_of` 一致）。
+    """
+    if not isinstance(tier, dict):
+        raise RuntimeError("评级门槛那一格不是一份表：%r" % (tier,))
+    v = tier.get(key)
+    if isinstance(v, bool) or not isinstance(v, int):
+        raise RuntimeError("评级表第 %r 档的 %s 不是整数：%r —— 门槛判不了"
+                           "（fail-closed，不当 0 放过去）" % (tier.get("id"), key, v))
+    if v < 0:
+        raise RuntimeError("评级表第 %r 档的 %s 是负数：%r —— 门槛判不了"
+                           "（fail-closed，不当 0 放过去）" % (tier.get("id"), key, v))
+    return int(v)
+
+
 def meets(stats, tier) -> bool:
-    """够不够这一档的门槛 —— `stats = {"done": 已交条数, "chief": 打掉的头目数}`。"""
-    try:
-        return (int(stats.get("done") or 0) >= int(tier.get("need_done") or 0)
-                and int(stats.get("chief") or 0) >= int(tier.get("need_chief") or 0))
-    except (TypeError, ValueError):
-        return False
+    """够不够这一档的门槛 —— `stats = {"done": 已交条数, "chief": 打掉头目数}`。
+
+    ★ 台账 #218：**门槛坏 ⇒ 抛**（原 try/except 返回 False 会把「玩家不够」与「表坏了」
+      混成一句，回话还是「你还差 N 条」，坏表被彻底吞掉）；`stats` 那一侧仍归一化成 0
+      （那是**玩家自己**的账：没交就是 0 条，正是「还差 5 条」那一句的意思）。
+    ★ 两个门槛**先各自取完再比**（不许写成一串 `and`）：`and` 会短路 ——
+      `done >= need_of("need_done")` 为假时右半边根本不求值 ⇒ `need_chief` 缺键/坏值
+      **只有玩家先过了第一个门槛才会抛**（判据 ⑨ 抓到的就是这一条）。
+    """
+    st = stats if isinstance(stats, dict) else {}
+    done, chief = int(st.get("done") or 0), int(st.get("chief") or 0)
+    need_done, need_chief = _need_of(tier, "need_done"), _need_of(tier, "need_chief")
+    return done >= need_done and chief >= need_chief
 
 
 def set_rank(record, tier_id) -> None:

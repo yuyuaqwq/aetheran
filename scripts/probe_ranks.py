@@ -369,6 +369,80 @@ def main():
     else:
         bad("`我的委托` 里没有那一行：%s" % mine[-3:])
 
+    # ── ⑨ ★ 台账 #218：门槛**坏值 ⇒ 当场抛**（fail-closed），绝不用 `or 0` 静默吞成 0
+    #   病根（`meets` 原先那两行）：
+    #       `int(tier.get("need_done") or 0) >= int(tier.get("need_chief") or 0)`
+    #   `or 0` 把**缺键 / `""`** 全吞成 0 ⇒ 门槛静默变 0 ⇒ **没交委托的玩家能直接升到银档**
+    #   （真源 `05_玩法数值口径 §一`：铜 = 交 5 条 · 银 = 交 15 条 + 打掉 1 头目）。
+    #   `rules()` 只校验「键存在」不校验「值是 ≥0 的整数」⇒ 值坏了只有消费端判得出。
+    #   判据三条：① 坏门槛五种形态都抛并点名（缺键/""/字符串/负数/bool）
+    #            ② 静态守卫：`meets` 里**一个 `or` 都不许有**在门槛那一侧
+    #            ③ 真表逐档两态照旧（合法 `0` 门槛是合法的，不当缺键）
+    sys.path.insert(0, REPO)
+    try:
+        from content import ranks as _RK                     # noqa: E402
+    except Exception as _e:
+        _RK = None
+        bad("⑨ content.ranks 导不进来：%s" % _e)
+    if _RK is not None:
+        # 每种坏形态配一个**必须在点名里出现**的串（值本身，不是标签 —— 标签谁都行）
+        _badtiers = ((('need_done',), {"id": "t", "need_done": "", "need_chief": 0}, "''"),
+                     (('need_done',), {"id": "t", "need_chief": 0}, "缺键 ⇒ None"),
+                     (('need_chief',), {"id": "t", "need_done": 3}, "缺键 ⇒ None"),
+                     (('need_done',), {"id": "t", "need_done": "15", "need_chief": 0}, "'15'"),
+                     (('need_done',), {"id": "t", "need_done": -1, "need_chief": 0}, "-1"),
+                     (('need_done',), {"id": "t", "need_done": True, "need_chief": 0}, "True"))
+        _silent, _raised = [], []
+        for _keys, _t, _why in _badtiers:
+            try:
+                _res = _RK.meets({"done": 0, "chief": 0}, _t)
+                _silent.append("%s ⇒ %r（没抛）" % (_why, _res))
+            except Exception as _e2:
+                _msg = "%s %s" % (str(_e2), repr(_e2))
+                _hit = all(str(k) in _msg for k in _keys)
+                if _hit:
+                    _raised.append(_why)
+                else:
+                    _silent.append("%s 抛了但没点名是哪一格（%s）" % (_why, _e2))
+        if not _silent:
+            ok("⑨ 门槛坏值六形态（`\"\"` / need_done 缺键 / need_chief 缺键 / 字符串 / 负数 / bool）"
+               "⇒ 全部当场抛并点名是哪一格：%s" % "、".join(_raised))
+        else:
+            bad("⑨ 门槛坏值没全抛并点名：%s" % _silent)
+        # 真表两态照旧（合法的 0 门槛是合法门槛，不是缺键）
+        _mism = []
+        for _t in _RK.ladder():
+            _want0 = (int(_t["need_done"]) == 0 and int(_t["need_chief"]) == 0)
+            if _RK.meets({"done": 999, "chief": 999}, _t) is not True:
+                _mism.append("%s · 999/999 没过" % _t["id"])
+            if _RK.meets({"done": 0, "chief": 0}, _t) is not _want0:
+                _mism.append("%s · 0/0 ⇒ %r（门槛 %s/%s）"
+                             % (_t["id"], _RK.meets({"done": 0, "chief": 0}, _t),
+                                _t["need_done"], _t["need_chief"]))
+        if not _mism:
+            ok("⑨ 真表逐档两态照旧（0/0 那档门槛合法为 0 ⇒ 够；其余不够）")
+        else:
+            bad("⑨ 真表两态翻了：%s" % _mism)
+        # 静态守卫：门槛那一侧**不许**再出现 `X.get("need_done"|"need_chief") or …` ——
+        #   那个 `or` 就是「缺键 / `""` 被吞成 0」的病根。`stats` 那侧的 `or 0` 是**合法**的
+        #   （没交委托就是 0 条 —— 玩家自己的账，正是「你还差 5 条」那一句）⇒ 只按键名钉。
+        _rtree = ast.parse(io.open(os.path.join(REPO, "content", "ranks.py"), encoding="utf-8").read())
+        _or218 = []
+        for _x in ast.walk(_rtree):
+            if not (isinstance(_x, ast.BoolOp) and isinstance(_x.op, ast.Or)):
+                continue
+            for _v in _x.values:
+                if (isinstance(_v, ast.Call) and isinstance(_v.func, ast.Attribute)
+                        and _v.func.attr == "get" and _v.args
+                        and isinstance(_v.args[0], ast.Constant)
+                        and _v.args[0].value in ("need_done", "need_chief")):
+                    _or218.append(ast.dump(_x)[:80])
+        if not _or218:
+            ok("⑨ 静态守卫：全仓**没有** `X.get(\"need_done\"/\"need_chief\") or …` 那种吞门槛的写法"
+               "（`stats` 那侧的 `or 0` 是合法的，不算）")
+        else:
+            bad("⑨ 门槛一侧又有 `or` 兜底 ⇒ 门槛会静默变 0：%s" % _or218)
+
     # ── ⑧ 覆盖面：两条 handler 都真调 ranks 模块
     decl = _load("content/data/commands.json")
     want_fn = {}
