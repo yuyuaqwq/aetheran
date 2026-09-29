@@ -45,6 +45,9 @@ __all__ = ["NameMapError", "load", "name_of", "translate", "check_domain",
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _RULES = os.path.join(_HERE, "rules", "name_map.json")
+#: ★ 资源键真源（**只读文件**，绝不走 content.resources 的运行期缓存）——
+#:   理由见 _want_res_keys() 的注释：装配期判据不能被 fixture 清空缓存影响。
+_RES_RULES = os.path.join(_HERE, "rules", "resources.json")
 
 _CACHE: dict = {}
 
@@ -134,9 +137,20 @@ def _want_state_keys() -> set:
 
 
 def _want_res_keys() -> set:
-    """资源键现算全集（真源 = resources.json 的 resources 段）。"""
-    from . import resources as _RES
-    return {str(k) for k in _RES.resources()}
+    """资源键现算全集（真源 = resources.json 的 resources 段）。
+
+    ★ **现读那张 json，不走 `content.resources.resources()`**：
+      本函数是**装配期**的对账，而 `resources()` 读的是**运行期缓存** `resources._CACHE["t"]`
+      —— 那个缓存会被 fixture 合法地清空（`probe_resources` 的 ⑦ 反证就是
+      「表读不到 ⇒ 一个字段都不写」，它把 `_CACHE["t"]` 设成 `{}`）。
+      走缓存 ⇒ 那一刻真源「看起来」没有资源键 ⇒ 4 条全被判成**孤儿**当场抛，
+      把一条**设计中的反证**炸成装配错误（2026-09-29 实测：probe_resources ⑦ 处崩）。
+      ⇒ 装配期判据只认**真源文件本身**，不被运行期状态影响。
+    """
+    with open(_RES_RULES, encoding="utf-8") as f:
+        raw = json.load(f)
+    res = (raw.get("resources") or {})
+    return {str(k) for k in res}
 
 
 class TranslatedTable:
