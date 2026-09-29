@@ -239,6 +239,20 @@ def groups_of_player(uid):
 
 
 def all_players(group_id=None):
+    """本群（或全库）所有玩家档 —— 榜 / 名册的唯一原料。
+
+    ★ fail-closed（★ 审计 L1702-同族，读口余量）：原为 `except Exception: d = {}` ——
+      **坏档被静默降级成空档**。`{}` 在下面两个消费端里**与「这个人没有档」完全同义**：
+
+        · `content/cmds_self.py::_board_rows`  `d.get("name")` 空 ⇒ 整行 `continue`
+          ⇒ 玩了几十小时的玩家**从榜上消失**（实测：三人库得榜 2 人，零报错）；
+        · `content/party.py::rows_of` 名册 docstring 白纸黑字写着「读不到 ⇒ 抛」，
+          却在 `d if isinstance(d, dict) else {}` 那一步又被降级一次
+          ⇒ **同族反例**（本模块 :128 / :179 / group_get 三处早已 fail-closed，唯独这里漏了）。
+
+      与 `get_player` / `update_player` / `group_get` 同一把尺：**行在、但值读不出来
+      ≠ 没有存档**。宁可整口喊出来（点名 uid），也不要让一个人的档被当成空白。
+    """
     with _LOCK:
         c = connect()
         try:
@@ -253,8 +267,18 @@ def all_players(group_id=None):
     for r in rows:
         try:
             d = json.loads(r["data"])
-        except Exception:
-            d = {}
+        except Exception as exc:                                # noqa: BLE001
+            raise RuntimeError(
+                "%s：存档行读不出来（group_id=%r uid=%r）—— 拒绝降级成空档"
+                "（{} 在榜/名册里与「没有这个人」同义 ⇒ 玩家会从榜上凭空消失）：%s"
+                % (__name__, r["group_id"], r["uid"], exc)
+            ) from exc
+        if not isinstance(d, dict):
+            raise RuntimeError(
+                "%s：存档行的 data 顶层不是 dict（group_id=%r uid=%r，实际 %s）"
+                "—— 拒绝降级成空档（同上）"
+                % (__name__, r["group_id"], r["uid"], type(d).__name__)
+            )
         out.append({"group_id": r["group_id"], "uid": r["uid"], "data": d})
     return out
 

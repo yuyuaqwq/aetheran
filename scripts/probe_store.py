@@ -177,6 +177,49 @@ chk("★ 元表名在全文件只出现一次（就是 TBL_META 的定义行；D
     _pers_src.count(chr(34) + "aetheran_meta" + chr(34)) == 1,
     "字面量出现 %d 次" % _pers_src.count(chr(34) + "aetheran_meta" + chr(34)))
 
+# ⑧ ★ 审计 L1702-同族（读口余量 · 0ca00bf 之后修）：all_players 的坏档不得被静默降级成 {}。
+#    修之前：`except Exception: d = {}` ⇒ 三人库得榜 2 人，玩家从榜上凭空消失且零报错。
+#    本组 4 条：① 坏 JSON 抛并点名 uid ② 顶层非 dict 抛 ③ 好档逐条原样（零行为变化）
+#              ④ 静态守卫：全文件不许再有裸 `d = {}` 降级（第 25 轮纪律：判据要独立第三方读源）
+print("⑧ all_players 坏档 fail-closed（不降级成空档）")
+p3 = fresh("corrupt")
+PS.update_player("g1", "u_ok1", name="甲", level=5, exp=99)
+PS.update_player("g1", "u_ok2", name="乙", level=7, exp=99)
+PS.update_player("g2", "u_far", name="丙", level=9, exp=99)
+_c3 = sqlite3.connect(p3)
+_c3.execute("INSERT INTO %s VALUES(?,?,?,?)" % PS.TBL, ("g1", "u_bad", "{not json", 0.0))
+_c3.commit()
+_c3.close()
+try:
+    PS.all_players("g1")
+    chk("★ 坏档行 ⇒ all_players 当场抛（不静默降级）", False, "竟然正常返回了")
+except RuntimeError as _ex:
+    chk("★ 坏档行 ⇒ all_players 当场抛（不静默降级）", True)
+    chk("★ 报错点名了出事那个 uid（'u_bad'）", "u_bad" in str(_ex), str(_ex)[:120])
+_c4 = sqlite3.connect(p3)
+_c4.execute("UPDATE %s SET data=? WHERE uid=?" % PS.TBL, ("[1,2,3]", "u_bad"))
+_c4.commit()
+_c4.close()
+try:
+    PS.all_players("g1")
+    chk("★ data 顶层非 dict ⇒ 当场抛（不降级）", False, "竟然正常返回了")
+except RuntimeError as _ex2:
+    chk("★ data 顶层非 dict ⇒ 当场抛（不降级）", "u_bad" in str(_ex2), str(_ex2)[:120])
+_good = {r["uid"]: r["data"] for r in PS.all_players("g2")}
+chk("★ 好数据零行为变化（g2 那一条原样回来）",
+    _good == {"u_far": {"name": "丙", "level": 9, "exp": 99}}, _good)
+#  ④ 静态守卫（独立读源，不 import）：全文件不许再有「解析失败就造空档」的降级写法。
+#     （第 25 轮纪律：判据要独立第三方读源，别拿被测对象自己比自己。）
+_all_fn = _re.search(r"(?m)^def all_players\(.*?(?=^def |^# ──)", _pers_src, _re.S)
+_body = _all_fn.group(0) if _all_fn else ""
+if not _body:
+    chk("★ 取得到 all_players 源码（fail-closed：取空即判红）", False, "函数体没取到")
+else:
+    chk("★ 取得到 all_players 源码（fail-closed：取空即判红）", True, "函数体 %d 字" % len(_body))
+_hits = _re.findall(r"(?m)^\s*d = \{\}\s*$", _body)
+chk("★ all_players 内不再有「解析失败 → d = {}」降级", not _hits,
+    "仍有一行裸 d = {}" if _hits else "零处降级")
+
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
 sys.exit(0 if ok else 1)
