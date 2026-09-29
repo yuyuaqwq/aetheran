@@ -1099,7 +1099,10 @@ def skill_gate(battle, actor, info):
     if pct > 0:
         need = _self_cut_raw(battle, actor, m)          # 「该付多少」（不含保底那道闸）
         hp = int((actor or {}).get("hp") or 0)
-        if hp < need:                                   # 真源「血 < 12% 时这一手不可用」
+        # 审计 L409：原写法 hp < need 在 hp == need 那一档**放行**（付完按真源剩 0 血 = 死），
+        #   而本函数 docstring（+ 表里 min_hp_pct._src）自写的判据是「hp − 这一笔 ≥ 1」。
+        #   ⇒ 按 docstring 收紧 1 点；保底留 1 血那一档仍由 _self_cut_amount 独立兜着。
+        if hp - need < 1:                               # 真源「付完还得剩得下血」
             return [T("COMBAT_MECH_HP_GATE", name=str((info or {}).get("name") or ""),
                       need=need, cur=hp)]
     if _flag(m, "once_per_battle"):
