@@ -1764,6 +1764,39 @@ finally:
     assert json.dumps(dl["dlg_lian"], ensure_ascii=False, sort_keys=True) ==         json.dumps(_bak26, ensure_ascii=False, sort_keys=True)
 
 
+# ㉖-d ★ P1-36（2026-09-29 · 文案车道 aep1）—— 把 ㉖ 的**宽档**也钉成硬底线。
+#   缺陷本体：㉖-a 的硬底线是「100% 复制 0 对」（_D26=0.95），而 0.60~0.95 那一档
+#   **只印数不判**（`_WARN26` 只在 ㉖-a 的 extra 里报一句）。实测那正是两条真换皮：
+#     dlg_ed   idle#2 ~ idle#3  r=0.62 —— 两句「我教过你的，都还在那儿。」开头逐字相同
+#     dlg_grey idle#2 ~ idle#3  r=0.65 —— 两句「你还来。」开头 + 同一句「我他妈就烦话多的」收尾
+#   ⇒ 同一个 idle 层里，玩家连敲两趟会看到**同一个开头**、同一个拖腔，
+#     中间只差一个动作括号 —— 就是「观感不好」的那一档。
+#   本单元已把那两对改写（按各自人设另起入口与收尾）⇒ 现值 0，故可把宽档升成硬底线。
+#   ★ 纯追加：㉖-a / ㉖-b / ㉖-c 一字未改；本条只**复用**它们那份 `_d26_pairs`
+#     （全仓不留第二份换皮算法，也不另抄一个相似度阈值）。
+_WIDE_BASE26 = 0         # 棘轮：现值 0 对（艾德/格雷两对已在 P1-36 改掉）
+chk("㉖-d ★ 换皮宽档（同一层里两句台词 r≥%.2f，即**开头或收尾逐字相同**）≤ %d 对（棘轮）"
+    % (_WARN26, _WIDE_BASE26),
+    len(_wide26) <= _WIDE_BASE26,
+    "宽档：%s" % _wide26 if _wide26
+    else "同层 %d 层逐对过完 · ≥%.2f 的 0 对（= 基线，钉住不许回来）"
+         % (sum(len(v) for v in _by26.values()), _WARN26))
+
+# ㉖-e ★ 反证：把 dlg_grey 的 idle#3 开头按回 idle#2 那句 ⇒ ㉖-d 必抓到（判据不恒真）。
+_bak26d = json.loads(json.dumps(dl["dlg_grey"]))
+try:
+    _a2 = _bak26d["nodes"]["idle"]["texts"][2]["text"]
+    dl["dlg_grey"]["nodes"]["idle"]["texts"][3]["text"] = _a2
+    _, _wide_probe26 = _d26_pairs({k: v["nodes"] for k, v in dl.items()})
+    chk("㉖-e ★ 反证：把 dlg_grey 的 idle#3 压回 idle#2 那句 ⇒ ㉖-d 必抓到（判据不恒真）",
+        any(x[0] == "dlg_grey" and x[1] == "idle" for x in _wide_probe26),
+        "压完 %d 对（抓到了：%s）" % (len(_wide_probe26),
+                                    [x for x in _wide_probe26 if x[0] == "dlg_grey"]))
+finally:
+    dl["dlg_grey"] = _bak26d              # 按 key 精确还原（不留痕）
+    assert json.dumps(dl["dlg_grey"], ensure_ascii=False, sort_keys=True) ==         json.dumps(_bak26d, ensure_ascii=False, sort_keys=True)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # ㉗ ★ P1-33（2026-09-29 · 文案车道 aep1）—— **`idle` 层没有任何判据管**
 #    缺陷本体：`idle` 是 `CT.LAYERS` 的**第五层**（读端 `cmds_talk._pick_layer`
