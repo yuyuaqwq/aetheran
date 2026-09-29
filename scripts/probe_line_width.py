@@ -2,8 +2,9 @@
 """P4 行宽门禁 —— 三档判据（只加强不削弱）
 
 档① 硬上限 20  · 战斗 cue / 面板行 / 列表行（ROW/LINE/ITEM/CELL/PANEL/COMBAT/STAT/NUM）
-档② 软目标 14  · 提示行 / 问句（HINT/ASK/TIP/BAD/NOTICE/WARN/引导）—— 只统计，不判红
-档③ 长文体   · SCENE/READ/HELP/任务 STORY/世界动静/称号/彩蛋 —— 只查「有没有按 <=14 分段」
+档② 软目标 14  · 提示行 / 问句（HINT/ASK/TIP/BAD/NOTICE/WARN/引导）+ 帮助面板（SYS_HELP_*）
+                 —— 只统计，不判红（帮助 = 指令表，照奥兰迪亚套式不折 · 收红批二纠分类）
+档③ 长文体   · SCENE/READ/任务 STORY/世界动静/称号/彩蛋/真 LORE 槽 —— 只查「有没有按 <=14 分段」
 
 宽度口径：全角 1 · 半角/emoji 0.5（unicodedata.east_asian_width）
 鱼鱼原话「一般一行只能放 14 个字」是**软目标**，不是一刀切硬上限
@@ -23,12 +24,24 @@ TEXTS = os.path.join(PKG, "content", "data", "texts.json")
 
 K1 = re.compile(r"(ROW|LINE|ITEM|CELL|PANEL|COMBAT|BATTLE|STAT|NUM)")
 K2 = re.compile(r"(HINT|ASK|TIP|BAD|NOTICE|WARN)")
-K3 = re.compile(r"(SCENE|READ|HELP|NOTE|INTRO|DESC|LORE|STORY)")
+# ★ 2026-09-30 收红批二（两处分类修正）：
+#   · HELP 从这里删掉 —— 帮助面板（SYS_HELP_*）改由 tier() 前置分支接走（档②，见下）；
+#     K3 里留 HELP 只会误伤（SYS_EXPLORE_* 一类不涉帮助的键若含它）。
+#   · LORE 加**词界**：`SYS_EXPLORE_CLEAR` 的「EX**PLORE**」曾被子串命中误归档③
+#     （它是探索提示行，该档②）；真 LORE 槽（UNID_RESULT_LORE / SYS_ITEM_LORE）照旧命中。
+K3 = re.compile(r"(SCENE|READ|NOTE|INTRO|DESC|(?<![A-Z])LORE(?![A-Z])|STORY)")
 CAT2 = {"引导"}
 CAT3 = {"NPC", "对话", "彩蛋", "称号", "世界动静"}
 
 
 def tier(key, cat):
+    # ★ 2026-09-30 收红批二：帮助面板（`SYS_HELP_*`）= **指令表**（照奥兰迪亚套式 ——
+    #   其帮助行宽 33-85.5 不折、鱼鱼认可）⇒ 不归「长文体（≤14 分段）」那档；
+    #   按**提示行**处理（档② 软目标 · 只统计不判红 · 不静默）。
+    #   ★ 这不是「放宽」：档③ 的 HELP 归类是 K3 关键字的误伤（旧版帮助是单行短句、
+    #     新形态照奥兰迪亚），按奥兰迪亚基准纠分类；场景/可读物/世界动静等照旧硬红。
+    if str(key).startswith("SYS_HELP"):
+        return 2
     for i, rx in enumerate((K1, K2, K3), 1):
         if rx.search(key):
             return i
