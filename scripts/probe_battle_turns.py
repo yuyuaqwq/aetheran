@@ -37,6 +37,7 @@ import asyncio
 import json
 import os
 import random
+import re
 import sys
 import time
 from pathlib import Path
@@ -174,11 +175,28 @@ MON = None
 TX = None
 
 
+#: ★ P0-1 续（2026-09-29 · aep0）：战斗日志行逐字带【N 刻】（真源 26_ §三 优化 1），
+#:   那一格是**战斗绝对时刻**、只有读端知道 ⇒ `slot()` 对含 `{t}` 的槽位换通配，
+#:   断言走 `_hit()`。★ 强度不降：通配只覆盖刻数那一格，其余全部逐字对。
+_STAMP_T = re.compile(r"^[^【]*【[^】]*刻】")
+
+
 def slot(key, **kw):
     s = (TX.get(key) or {}).get("value", "")
     for k, v in kw.items():
         s = s.replace("{%s}" % k, str(v))
+    if "{t" in s:
+        assert _STAMP_T.match(s), "战斗日志行首必须带【…刻】：%r" % s
+        s = s.replace("{t}", "*")
     return s
+
+
+def _hit(exp, out):
+    """无通配走 `in`（逐字），有通配走正则整行 —— 与 probe_cmds / probe_party / probe_silent 同一手法。"""
+    if "*" in exp:
+        rx = re.compile("^" + ".*".join(re.escape(p) for p in exp.split("*")) + "$")
+        return any(rx.match(str(x).strip()) for x in out)
+    return exp in out
 
 
 def _pre(key):
@@ -186,7 +204,39 @@ def _pre(key):
     return slot(key).split("{")[0]
 
 
-def _has(lines, key):
+def _foe_name_of2(env, uid):
+    """这一场**对方**那只的显示名（现读，不手打名字）。
+
+    ★ 取法：`hand.lines` 那一句里**已经写着对手的名字**（实现侧是
+      `T("COMBAT_RETREAT_BLOCK", name=…)`，名字从这一场现读）⇒ 认「正押着一手」
+      那一行，取「】」之后到动作词之前那一段。
+      ★ 不取「第一族行动行」：那可能是**玩家自己**（实测先取到「分段」）。
+      不从「遭遇：」那一行取：它不一定留在持久日志首行（实测取到空串）。
+    """
+    from content import instance as INST          # 与本文件其它调用点同形
+    MARK = "正押着一手"
+    for ln in INST.live_logs(env, uid) or []:
+        t = str(ln)
+        if MARK not in t or "】" not in t:
+            continue
+        rest = t.split("】", 1)[1]
+        k = rest.find(" " + MARK)
+        if k > 0:
+            return rest[:k].strip()
+    return ""
+
+
+def _has(lines, key, **kw):
+    """这一屏里有没有「那一槽位」出的那一行。
+
+    ★ P0-1 续（2026-09-29 · aep0）：战斗日志行**开头**就是【N 刻】、刻数只有读端知道
+      ⇒ `_pre()` 的前缀里留着一个未渲染的 `{t}`，`startswith` 恒不上。
+      含 `{t}` 的槽位改走 `_hit()` 整行对（通配只覆盖刻数那一格）；其余槽位**仍走前缀**，
+      行为与原来逐字相同（零行为变化）。
+    """
+    raw = (TX.get(key) or {}).get("value", "") or ""
+    if "{t" in raw:
+        return _hit(slot(key, **kw), lines)
     p = _pre(key)
     return any(str(x).startswith(p) for x in lines)
 
@@ -310,7 +360,7 @@ def main():
         o2 = _drive(host, ad, "u_p", "使用 伤药")
         bag2 = dict((PS.get_player("g_pill", "u_p") or {}).get("bag") or {})
         chk("★ 同一场第 2 瓶 ⇒ 照实说「这一场用过了」（`COMBAT_ITEM_CAP`）+ **不再扣药**",
-            _has(o2, "COMBAT_ITEM_CAP")
+            _has(o2, "COMBAT_ITEM_CAP", name="伤药")
             and int(bag2.get("i_potion_minor") or 0) == int(bag2_0.get("i_potion_minor") or 0),
             o2[-3:])
     finally:
@@ -451,6 +501,9 @@ def main():
     # ★ 那两句**逐字**（本波）：`COMBAT_FLEE_BLOCK` 的值是 `{name}` 开头 ⇒ `_pre()` 前缀是**空串**、
     #   `_has()` 对它恒真（判据会变成空的）⇒ 这一节一律拿 `slot(...)` 渲染出**整句**再比。
     _mname = str((MON.get(MID) or {}).get("name") or MID)
+    # ★ P0-1 续（aep0）：冷启动（**没有场**）走 `COMBAT_FLEE_COLD`（只当回话、无刻）；
+    #   场里那一手走 `COMBAT_FLEE_OK`（带【N 刻】、真进战斗日志）。两个读端两个语义。
+    _LINE_COLD = slot("COMBAT_FLEE_COLD", name=_mname)
     _LINE_OK = slot("COMBAT_FLEE_OK", name=_mname)
     _LINE_BLK = slot("COMBAT_FLEE_BLOCK", name=_mname)
     db = _fresh("flee")
@@ -473,7 +526,7 @@ def main():
                 "这一场没打」那一句 · 档上血不动（%d → %d）· `last_battle` 记 fled —— "
                 "冷启动**不掷骰**（那一档不存在「被拦下」）"
                 % (tag, s, _hp0, int((PS.get_player("g_flee", u) or {}).get("hp") or 0)),
-                s is None and _LINE_OK in o and _LINE_BLK not in o
+                s is None and _hit(_LINE_COLD, o) and not _hit(_LINE_BLK, o)
                 and int((PS.get_player("g_flee", u) or {}).get("hp") or 0) == _hp0
                 and _lb.get("result") == "fled",
                 (o[:2], _lb.get("result")))
@@ -493,13 +546,13 @@ def main():
             if want == "block":
                 chk("★ ④b 掷败那个（%s：手气 %.3f < %.2f）⇒ 被拦下 · 这一手白花 · **这一场照打**"
                     % (u, _roll(u), rate),
-                    _LINE_BLK in o and _LINE_OK not in o and s is not None
+                    _hit(_LINE_BLK, o) and not _hit(_LINE_OK, o) and s is not None
                     and int(s.get("flee_tries") or 0) == 1, o[:3])
             else:
                 g0 = int((PS.get_player("g_flee", u) or {}).get("gold") or 0)
                 chk("★ ④b 掷成那个（%s：手气 %.3f ≥ %.2f）⇒ 脱离 · 这一场**没打** · 场清干净"
                     % (u, _roll(u), rate),
-                    _LINE_OK in o and s is None
+                    _hit(_LINE_OK, o) and s is None
                     and int((PS.get_player("g_flee", u) or {}).get("gold") or 0) == g0, o[:3])
         # 同一场重掷：找一个 nth=0 被拦下、nth=1 跑得掉的号（现算，不手写）
         both = [u for u in uids if _roll(u) < rate and _roll(u, 1) >= rate]
@@ -514,7 +567,7 @@ def main():
             ob = _drive(host, ad, u, "逃跑")
             chk("★ ④c 同一场连敲两次 `逃跑`：第一次拦住（种子 = P-57 那颗）· 第二次**重掷**并跑掉"
                 "（手气 %.3f → %.3f）" % (_roll(u), _roll(u, 1)),
-                _LINE_BLK in oa and _LINE_OK in ob
+                _hit(_LINE_BLK, oa) and _hit(_LINE_OK, ob)
                 and INST.live(env, u) is None, (oa[:1], ob[:1]))
     finally:
         _unpin(saved)
@@ -681,7 +734,8 @@ def main():
         o2 = _drive(host, ad, "u_r2", "后撤")
         s2 = INST.live(env, "u_r2")
         chk("★ `后撤` 乙档（对方正押着一手）⇒ 退不开（`COMBAT_RETREAT_BLOCK`）· 这一手白花 · 这一场照打",
-            _has(o2, "COMBAT_RETREAT_BLOCK") and s2 is not None
+            _has(INST.live_logs(env, "u_r2"), "COMBAT_RETREAT_BLOCK",
+                 name=_foe_name_of2(env, "u_r2")) and s2 is not None
             and int(s2.get("hands") or 0) == int(s0.get("hands") or 0) + 1, o2[-2:])
     finally:
         _unpin(saved)
@@ -926,7 +980,7 @@ def main():
         o = _drive(host, ad, "u_fhC", "使用 伤药")             # 第 2 瓶：回落成普攻那一手
         b1 = _foe_hps(INST.live(env, "u_fhC"))
         chk("★ ⑤ 用满上限那一手回落成普攻 ⇒ **也打在锁的那一只上**（%s → %s）" % (b0, b1),
-            _has(o, "COMBAT_ITEM_CAP") and b0[0] > b1[0] and b1[1:] == b0[1:], (b0, b1))
+            _has(o, "COMBAT_ITEM_CAP", name="伤药") and b0[0] > b1[0] and b1[1:] == b0[1:], (b0, b1))
         # ⑥ 增益：态挂在**自己**身上，敌人身上没有那一条
         _key = str(MECH.of("shield_ally").get("state") or "")
         random.seed(20260926)

@@ -320,9 +320,9 @@ def _retreat_decide():
         now0 = float(getattr(b, "_now", 0) or 0)
         for a in (b.sides.get(CB.ENEMY_SIDE) or []):
             if actor_alive(a) and SCH.pending_left(a, now0) > 0:
-                logs.append(T("COMBAT_RETREAT_BLOCK", name=name))
+                logs.append(T("COMBAT_RETREAT_BLOCK", t=int(round(now0)), name=name))
                 return None
-        logs.append(T("COMBAT_RETREAT_OK"))
+        logs.append(T("COMBAT_RETREAT_OK", t=int(round(now0))))
         return "fled"
     return _d
 
@@ -342,9 +342,11 @@ def _flee_decide(uid, p):
         n = int(st.get("flee_tries") or 0)
         st["flee_tries"] = n + 1
         if _flee_roll(uid, p, m, n) >= BA.flee_fail_pct():
-            logs.append(T("COMBAT_FLEE_OK", name=name))
+            logs.append(T("COMBAT_FLEE_OK", t=int(round(float(getattr(b, "_now", 0) or 0))),
+                           name=name))
             return "fled"
-        logs.append(T("COMBAT_FLEE_BLOCK", name=name))
+        logs.append(T("COMBAT_FLEE_BLOCK", t=int(round(float(getattr(b, "_now", 0) or 0))),
+                              name=name))
         return None
     return _d
 
@@ -654,7 +656,11 @@ async def interrupt(env, sink, uid, player):
         yield _line
         return
     act = BA.interrupt_action_of(p)
-    head = T("COMBAT_INT_HEAD", skill=act.get("name", "")) if act else T("COMBAT_INT_PLAIN")
+    # ★ P0-1 续（aep0）：这是**开场前的抬头**（随 `head=` 交出去，不是战斗日志里的一行）
+    #   ⇒ 那一格刻数读不到（此刻这一手还没打），用不带刻的抬头那两格；
+    #   场里真断成那一句仍走 `COMBAT_INT_BREAK`（带【N 刻】、进战斗日志）。
+    head = (T("COMBAT_INT_HEAD_A", skill=act.get("name", "")) if act
+            else T("COMBAT_INT_PLAIN_A"))
     hand = BA.Hand("interrupt", p=p)
     # ★ B3-26：在场里 ⇒ 走「场」那道（打断要「花掉你这一手」，得先轮到你）
     #   ★ G2：没得打的地方先说**同族那一句**（`COMBAT_NEED_FOE`，与 P4 收口的口径一致）
@@ -740,7 +746,8 @@ async def retreat(env, sink, uid, player):
         _save(env)
         return
     # ── 退不开：这一手白花（走 move 那一档耗时），这一场照打
-    hand.lines = [T("COMBAT_RETREAT_BLOCK", name=ms[pick[0]].get("name", pick[0]))]
+    hand.lines = [T("COMBAT_RETREAT_BLOCK", t=int(round(now)),
+                          name=ms[pick[0]].get("name", pick[0]))]
     if caster is not None and b.result is None:
         _sub, _ended, _who = b.human_act("retreat", None, caster)
         logs.extend(str(x) for x in (_sub or []))
@@ -1191,7 +1198,10 @@ async def flee(env, sink, uid, player):
     #     （`_meet` → 建场 → 掷骰 → 照打）因此到不了，已删（不留死代码）。
     if INST.live(env, uid) is None:
         name = foe_here(p, uid)                       # 只读：这一格定下来的那一只（与『观察』同一个口）
-        yield T("COMBAT_FLEE_OK", name=name)
+        # ★ P0-1 续（aep0）：**冷启动这一支没有场**（`_note_battle` 收到 `[]`）
+        #   ⇒ 这一句只是回话、永远不进战斗日志，不该带【N 刻】（那一格是战斗绝对时刻，
+        #   这里没有战斗可读）。场里那一手仍走 `COMBAT_FLEE_OK`（带刻）—— 两者拆开。
+        yield T("COMBAT_FLEE_COLD", name=name)
         _note_battle(p, name, [], "fled")
         if player is not None:
             player.update(p)

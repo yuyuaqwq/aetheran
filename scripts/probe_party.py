@@ -99,11 +99,27 @@ MP = st.domain("maps") or {}
 DECL = st.command_declarations()
 
 
+#: ★ P0-1 续（2026-09-29 · aep0）：战斗日志行现在**逐字带【N 刻】**（真源 26_ §三 优化 1），
+#:   而那一格是**战斗绝对时刻** —— 只有读端（`_flee_decide` 里的 `Battle._now`）知道，
+#:   夹具算不出来。⇒ 下面这个「现算期望」对含 `{t}` 的槽位**只对行首锚**
+#:   （`图标【…刻】`那一段），与 `probe_texts._ctl_pre` 同一手法（对前缀，不对整条模板）。
+#:   ★ 判据要保护的是「这一手跑成了/被拦下了、出的是哪一句」—— 刻数不是它保护的东西；
+#:     刻数本身由 `probe_texts`（活 cue 行必带【N 刻】）钉着，未削弱。
+#: ★ 锚只取**外廓**（`图标【` … `刻】`），中间那一格刻数**不参与匹配** ——
+#:   夹具算不出战斗绝对时刻（只有读端知道），而屏上是「⚔️【127 刻】」；
+#:   若把未渲染的 `{t}` 留在锚里，`in` 必然不上。刻数本身由 `probe_texts`
+#:   （活 cue 行必带【N 刻】）单独钉着 ⇒ 判据未削弱。
+_STAMP_PRE = re.compile(r"^([^【]*【)[^】]*(刻】)")
+
+
 def _r(key, **kw):
-    """槽位现算的期望串（不手写镜像表）。"""
+    """槽位现算的期望串（不手写镜像表）。含 `{t}` 的战斗日志行只对**行首锚**。"""
     s = (TX.get(key) or {}).get("value", "")
     for k, v in kw.items():
         s = s.replace("{%s}" % k, str(v))
+    if "{t" in s:
+        assert _STAMP_PRE.match(s), "战斗日志行首必须带【…刻】（真源 26_ §三 优化 1）：%r" % s
+        s = s.replace("{t}", "*")        # ★ 整句逐字，只把**刻数那一格**换成通配
     return s
 
 
@@ -862,7 +878,7 @@ def _multi_flee_criterion():
             else _r("COMBAT_FLEE_BLOCK", name=_NAME7)
         random.seed(20260926)
         _o1, _st1, _lb1, _h1 = _drive_party7(_fast, _slow)
-        if _exp not in _o1:
+        if not _hit(_exp, _o1):
             _bad.append(("多人场那一掷与现算的种子不符（那一场已先摆好）", _fast, _o1[:4], _exp))
         if _st1 is not None and sorted(_st1.get("members") or []) != sorted(_pair):
             _bad.append(("那一场不是多人那一格", _st1.get("members")))
@@ -879,11 +895,11 @@ def _multi_flee_criterion():
             _oc, _stc, _lbc, _hc = _drive_party7(_fast, _slow)
         finally:
             _BA7.flee_fail_pct = _keep
-        if not (_r("COMBAT_FLEE_BLOCK", name=_NAME7) in _ob and _stb is not None
+        if not (_hit(_r("COMBAT_FLEE_BLOCK", name=_NAME7), _ob) and _stb is not None
                 and int(_stb.get("hands") or 0) == _hb + 1):
             _bad.append(("多人场被拦下那一档不对（这一场应当还在、且这一手真花了）",
                          _ob[:3], None if _stb is None else (_hb, _stb.get("hands"))))
-        if not (_r("COMBAT_FLEE_OK", name=_NAME7) in _oc and _stc is None
+        if not (_hit(_r("COMBAT_FLEE_OK", name=_NAME7), _oc) and _stc is None
                 and _lbc.get("result") == "fled"):
             _bad.append(("多人场跑成那一档不对（这一场应当清干净、记 fled）",
                          _oc[:3], _lbc.get("result")))
@@ -1035,6 +1051,17 @@ def _drive7(uid, warm=False):
     return _o, _st, _lb, _b0, (_hp0, int(_d2.get("hp") or 0), _a0)
 
 
+#: ★ P0-1 续（aep0）：`_r()` 对含 `{t}` 的槽位给出的是**带通配**的行首锚
+#:   （`图标【*刻】` —— 刻数是战斗绝对时刻，只有读端知道）。
+#:   ⇒ 断言点一律走 `_hit()`：无通配走 `in`（逐字，最紧），有通配走正则（只对那一段）。
+#:   ★ 判据强度不降：通配**只覆盖刻数那一格**，句子本体、图标、行尾全部逐字对。
+def _hit(exp, out):
+    if "*" in exp:
+        rx = re.compile("^" + ".*".join(re.escape(p) for p in exp.split("*")) + "$")
+        return any(rx.match(x.strip()) for x in out)
+    return exp in out
+
+
 def _sig7(out, st, lb, exp):
     """这一拍的「结果签名」= 走的是哪一边 + 这一场还在不在 + `last_battle` 记成什么。
 
@@ -1044,7 +1071,7 @@ def _sig7(out, st, lb, exp):
       分段之后**跑成也走结算那一段**（要写 `last_battle` 那一格）⇒ 代理换成**这一场还在不在**
       （`fled` ⇒ 场清干净）；「没打」的**实质**（没有掉落 / 没有经验）另有一条逐数判据。
     """
-    return (exp in out, st is not None, lb.get("result"))
+    return (_hit(exp, out), st is not None, lb.get("result"))
 
 
 try:
@@ -1055,6 +1082,15 @@ try:
         for _u in sorted(NAMES):                 # 先全清干净：别让 §二 建的那支队影响人数
             _set_party(_u, None)
         _u_ok, _u_no = _FLY7[0], _STOP7[0]
+        # ★ P0-1 续（aep0）：冷启动（没在打）走 `COMBAT_FLEE_COLD`（**无场、无刻**，
+        #   只当回话）；场里那一手走 `COMBAT_FLEE_OK`（带【N 刻】、进战斗日志）。
+        #   `_r` 对含 {t} 的槽位只对行首锚（见上面 `_STAMP_PRE` 的说明）。
+        # ★ P0-1 续（aep0）：两个读端两个语义，各归各位 ——
+        #   · 冷启动（`INST.live(...) is None`，**根本没有场**、`_note_battle` 收到 `[]`）
+        #     ⇒ `COMBAT_FLEE_COLD`，只当回话、不带刻（那一格是战斗绝对时刻，没有战斗可读）。
+        #   · 场里那一手（掷骰）⇒ `COMBAT_FLEE_OK` / `COMBAT_FLEE_BLOCK`，
+        #     带【N 刻】且真进战斗日志（`_r` 对含 {t} 的槽位只对**行首锚**）。
+        _EXP_COLD = _r("COMBAT_FLEE_COLD", name=_NAME7)
         _EXP_OK = _r("COMBAT_FLEE_OK", name=_NAME7)
         _EXP_NO = _r("COMBAT_FLEE_BLOCK", name=_NAME7)
         # ── ① ★ 本波（任务①）：**不在场（这一场还没开打）⇒ 不建场、不掷骰、0 风险**
@@ -1063,9 +1099,9 @@ try:
         for _u, _tag in ((_u_no, "手气最差那个"), (_u_ok, "跑成那档那个")):
             random.seed(20260926)
             _o_c, _st_c, _lb_c, _b_c, (_hp0_c, _hp1_c, _a_c) = _drive7(_u)
-            if _EXP_OK not in _o_c:
+            if not _hit(_EXP_COLD, _o_c):
                 _B7.append(("冷启动（%s）没有「这一场没打」那一句" % _tag, _o_c[:3]))
-            if _EXP_NO in _o_c:
+            if _hit(_EXP_NO, _o_c):
                 _B7.append(("冷启动（%s）竟然出了「被拦下」那一句（= 还在掷骰）" % _tag, _o_c[:3]))
             if _st_c is not None:
                 _B7.append(("冷启动（%s）竟然建了场" % _tag, list((_st_c or {}).keys())))
@@ -1087,15 +1123,15 @@ try:
         random.seed(20260926)
         _o_no2, _st_no2, _lb_no2, _b_no2, _x_no2 = _drive7(_u_no, warm=True)
         _B7b = []
-        if _EXP_OK not in _o_ok:
+        if not _hit(_EXP_OK, _o_ok):
             _B7b.append(("跑成那一档没有那一句", _o_ok[:3]))
         if _lb_ok.get("result") != "fled":
             _B7b.append(("跑成却没记 fled", _lb_ok.get("result")))
         if _st_ok is not None:
             _B7b.append(("跑成竟然还留着这一场", list((_st_ok or {}).keys())))
-        if _EXP_NO not in _o_no:
+        if not _hit(_EXP_NO, _o_no):
             _B7b.append(("被拦下那一档没有那一句", _o_no[:4]))
-        if _EXP_OK in _o_no:
+        if _hit(_EXP_OK, _o_no):
             _B7b.append(("被拦下却出了「跑成」那一句", _o_no[:4]))
         if _lb_no.get("result") == "fled":
             _B7b.append(("被拦下却记成 fled", _lb_no.get("result")))
@@ -1129,10 +1165,10 @@ try:
             _BA7.flee_fail_pct = _keep_rate7
         chk("★ P-57 反证（率只有一个口、真被读 · **场里**那一档）：临时改成 1.0 ⇒ 原来跑成的 %s "
             "当场被拦下（%s）· 改成 0.0 ⇒ 原来被拦下的 %s 当场跑成（%s）"
-            % (_u_ok, (_EXP_NO in _o_r1 and _st_r1 is not None),
-               _u_no, (_EXP_OK in _o_r2 and _st_r2 is None and _lb_r2.get("result") == "fled")),
-            _EXP_NO in _o_r1 and _st_r1 is not None
-            and _EXP_OK in _o_r2 and _st_r2 is None and _lb_r2.get("result") == "fled")
+            % (_u_ok, (_hit(_EXP_NO, _o_r1) and _st_r1 is not None),
+               _u_no, (_hit(_EXP_OK, _o_r2) and _st_r2 is None and _lb_r2.get("result") == "fled")),
+            _hit(_EXP_NO, _o_r1) and _st_r1 is not None
+            and _hit(_EXP_OK, _o_r2) and _st_r2 is None and _lb_r2.get("result") == "fled")
 finally:
     CBT.build, CBT.pick_encounter = _REAL_BUILD, _REAL_PICK
 

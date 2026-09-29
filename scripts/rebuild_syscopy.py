@@ -1274,6 +1274,140 @@ DOC_PENDING = {
         "why": "P0-4（2029-09-29 · 文案修复车道 P0 · 真机试玩取证）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」，而这一条是**孤立一行**（不是续行片段）：e2e_drive 真打一场「—— 田鼠 行动 ——」是整场战斗日志里**唯一**无刻数、且无行首图标的行（日志里其余每一行都带 🌀【N 刻】）。引擎侧 `battle.schedule.actor_turn`（schedule.py:393）的 payload 经 `with_now` 已补 `TIME_SLOT`（每条 cue 都有）。→ 图标用同族的 🌀（手法）与 `COMBAT_SCHEDULE_CAST_BEGIN` 当成一家，去掉装饰用的长横。★ 判据变动：`probe_texts._NO_TIME_BY_DESIGN` 删掉这一条豁免（两条**续行片段**仍留）。",
     },
 
+    # ★ P0-1 续批（2026-09-29 · aep0）：内容侧机制日志那一族补【N 刻】—— 见各条 why。
+    "COMBAT_MECH_SELF_CUT": {
+        "old": "你劈出这一下，自己先见了血（−{n}）。",
+        "new": "🩸【{t} 刻】你劈出这一下，自己先见了血（−{n}）。",
+        "why": "P0-1 续（2026-09-29 · 文案修复车道 aep0 · 真机试玩取证）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」。★ **判据的结构盲区**：probe_texts 那两条（活 cue 行带刻 / 行首统一图标）只按 content/rules/battle_text.json（引擎 62 个 cue）取件，**取不到内容侧 content/mech.py 那一族机制日志** ⇒ 这 18 格进的是**持久战斗日志**（_note_battle 把 logs 原样落档、『战斗日志』读它），实测屏上整场只有它们读不出刻数。★ 本格值写**纯 {t} 不写 {t:.0f}**：内容侧 T() 是**字面 replace**（content/cmds_ast.py:53-55），实测 '{t:.0f}' 永远不会被替换、会把字面量打上屏；引擎 cue 那一族走 str.format 才写 {t:.0f} —— 两侧形态不同是有原因的，**别合并**。★ 图标按真源 26_ §2.2 语义分组逐条选（⚔️ 行动 · 🛡️ 防御/减伤 · 🩸 受伤/流血 · ✨ 强化/成功），并把 COMBAT_MECH_IMMUNE / MITIGATE 原有的 ✨ / 🛡️ 提到行首统一位置。★ 只改这一格的值与 params；读端（content/mech.py 各 logs.append）同步补 t=int(round(_now(battle)))。★ 这 18 格**不在**真源槽位表里（grep '| COMBAT_MECH_… |' 17_文案收口口径_v1 = 0 命中）⇒ 不是生成器拥有的行，不与真源打架。",
+    },
+    "COMBAT_MECH_SEVER": {
+        "old": "它那一手被你截断 —— 【{name}】身上露出破绽：{turns} 刻里挨的每一下都多受 {pct}%，谁都吃得着。",
+        "new": "⚔️【{t} 刻】它那一手被你截断 —— 【{name}】身上露出破绽：{turns} 刻里挨的每一下都多受 {pct}%，谁都吃得着。",
+        "why": "P0-1 续（2026-09-29 · 文案修复车道 aep0 · 真机试玩取证）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」。★ **判据的结构盲区**：probe_texts 那两条（活 cue 行带刻 / 行首统一图标）只按 content/rules/battle_text.json（引擎 62 个 cue）取件，**取不到内容侧 content/mech.py 那一族机制日志** ⇒ 这 18 格进的是**持久战斗日志**（_note_battle 把 logs 原样落档、『战斗日志』读它），实测屏上整场只有它们读不出刻数。★ 本格值写**纯 {t} 不写 {t:.0f}**：内容侧 T() 是**字面 replace**（content/cmds_ast.py:53-55），实测 '{t:.0f}' 永远不会被替换、会把字面量打上屏；引擎 cue 那一族走 str.format 才写 {t:.0f} —— 两侧形态不同是有原因的，**别合并**。★ 图标按真源 26_ §2.2 语义分组逐条选（⚔️ 行动 · 🛡️ 防御/减伤 · 🩸 受伤/流血 · ✨ 强化/成功），并把 COMBAT_MECH_IMMUNE / MITIGATE 原有的 ✨ / 🛡️ 提到行首统一位置。★ 只改这一格的值与 params；读端（content/mech.py 各 logs.append）同步补 t=int(round(_now(battle)))。★ 这 18 格**不在**真源槽位表里（grep '| COMBAT_MECH_… |' 17_文案收口口径_v1 = 0 命中）⇒ 不是生成器拥有的行，不与真源打架。",
+    },
+    "COMBAT_MECH_SUNDER": {
+        "old": "【{name}】的甲被劈开 —— 防御 −{pct}%，{turns} 刻。",
+        "new": "⚔️【{t} 刻】【{name}】的甲被劈开 —— 防御 −{pct}%，{turns} 刻。",
+        "why": "P0-1 续（2026-09-29 · 文案修复车道 aep0 · 真机试玩取证）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」。★ **判据的结构盲区**：probe_texts 那两条（活 cue 行带刻 / 行首统一图标）只按 content/rules/battle_text.json（引擎 62 个 cue）取件，**取不到内容侧 content/mech.py 那一族机制日志** ⇒ 这 18 格进的是**持久战斗日志**（_note_battle 把 logs 原样落档、『战斗日志』读它），实测屏上整场只有它们读不出刻数。★ 本格值写**纯 {t} 不写 {t:.0f}**：内容侧 T() 是**字面 replace**（content/cmds_ast.py:53-55），实测 '{t:.0f}' 永远不会被替换、会把字面量打上屏；引擎 cue 那一族走 str.format 才写 {t:.0f} —— 两侧形态不同是有原因的，**别合并**。★ 图标按真源 26_ §2.2 语义分组逐条选（⚔️ 行动 · 🛡️ 防御/减伤 · 🩸 受伤/流血 · ✨ 强化/成功），并把 COMBAT_MECH_IMMUNE / MITIGATE 原有的 ✨ / 🛡️ 提到行首统一位置。★ 只改这一格的值与 params；读端（content/mech.py 各 logs.append）同步补 t=int(round(_now(battle)))。★ 这 18 格**不在**真源槽位表里（grep '| COMBAT_MECH_… |' 17_文案收口口径_v1 = 0 命中）⇒ 不是生成器拥有的行，不与真源打架。",
+    },
+    "COMBAT_MECH_TAUNT": {
+        "old": "你吼了一声 —— 这几刻（{turns} 刻）它只会冲你来。",
+        "new": "⚔️【{t} 刻】你吼了一声 —— 这几刻（{turns} 刻）它只会冲你来。",
+        "why": "P0-1 续（2026-09-29 · 文案修复车道 aep0 · 真机试玩取证）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」。★ **判据的结构盲区**：probe_texts 那两条（活 cue 行带刻 / 行首统一图标）只按 content/rules/battle_text.json（引擎 62 个 cue）取件，**取不到内容侧 content/mech.py 那一族机制日志** ⇒ 这 18 格进的是**持久战斗日志**（_note_battle 把 logs 原样落档、『战斗日志』读它），实测屏上整场只有它们读不出刻数。★ 本格值写**纯 {t} 不写 {t:.0f}**：内容侧 T() 是**字面 replace**（content/cmds_ast.py:53-55），实测 '{t:.0f}' 永远不会被替换、会把字面量打上屏；引擎 cue 那一族走 str.format 才写 {t:.0f} —— 两侧形态不同是有原因的，**别合并**。★ 图标按真源 26_ §2.2 语义分组逐条选（⚔️ 行动 · 🛡️ 防御/减伤 · 🩸 受伤/流血 · ✨ 强化/成功），并把 COMBAT_MECH_IMMUNE / MITIGATE 原有的 ✨ / 🛡️ 提到行首统一位置。★ 只改这一格的值与 params；读端（content/mech.py 各 logs.append）同步补 t=int(round(_now(battle)))。★ 这 18 格**不在**真源槽位表里（grep '| COMBAT_MECH_… |' 17_文案收口口径_v1 = 0 命中）⇒ 不是生成器拥有的行，不与真源打架。",
+    },
+    "COMBAT_MECH_MATINS": {
+        "old": "光落下来 —— {turns} 刻内，打上来的东西到不了身上。",
+        "new": "✨【{t} 刻】光落下来 —— {turns} 刻内，打上来的东西到不了身上。",
+        "why": "P0-1 续（2026-09-29 · 文案修复车道 aep0 · 真机试玩取证）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」。★ **判据的结构盲区**：probe_texts 那两条（活 cue 行带刻 / 行首统一图标）只按 content/rules/battle_text.json（引擎 62 个 cue）取件，**取不到内容侧 content/mech.py 那一族机制日志** ⇒ 这 18 格进的是**持久战斗日志**（_note_battle 把 logs 原样落档、『战斗日志』读它），实测屏上整场只有它们读不出刻数。★ 本格值写**纯 {t} 不写 {t:.0f}**：内容侧 T() 是**字面 replace**（content/cmds_ast.py:53-55），实测 '{t:.0f}' 永远不会被替换、会把字面量打上屏；引擎 cue 那一族走 str.format 才写 {t:.0f} —— 两侧形态不同是有原因的，**别合并**。★ 图标按真源 26_ §2.2 语义分组逐条选（⚔️ 行动 · 🛡️ 防御/减伤 · 🩸 受伤/流血 · ✨ 强化/成功），并把 COMBAT_MECH_IMMUNE / MITIGATE 原有的 ✨ / 🛡️ 提到行首统一位置。★ 只改这一格的值与 params；读端（content/mech.py 各 logs.append）同步补 t=int(round(_now(battle)))。★ 这 18 格**不在**真源槽位表里（grep '| COMBAT_MECH_… |' 17_文案收口口径_v1 = 0 命中）⇒ 不是生成器拥有的行，不与真源打架。",
+    },
+    "COMBAT_MECH_QUICKSTEP": {
+        "old": "你抢了半拍 —— 下一次出手的到点时刻最多提前 {ticks} 刻，再早也早不过此刻。",
+        "new": "✨【{t} 刻】你抢了半拍 —— 下一次出手的到点时刻最多提前 {ticks} 刻，再早也早不过此刻。",
+        "why": "P0-1 续（2026-09-29 · 文案修复车道 aep0 · 真机试玩取证）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」。★ **判据的结构盲区**：probe_texts 那两条（活 cue 行带刻 / 行首统一图标）只按 content/rules/battle_text.json（引擎 62 个 cue）取件，**取不到内容侧 content/mech.py 那一族机制日志** ⇒ 这 18 格进的是**持久战斗日志**（_note_battle 把 logs 原样落档、『战斗日志』读它），实测屏上整场只有它们读不出刻数。★ 本格值写**纯 {t} 不写 {t:.0f}**：内容侧 T() 是**字面 replace**（content/cmds_ast.py:53-55），实测 '{t:.0f}' 永远不会被替换、会把字面量打上屏；引擎 cue 那一族走 str.format 才写 {t:.0f} —— 两侧形态不同是有原因的，**别合并**。★ 图标按真源 26_ §2.2 语义分组逐条选（⚔️ 行动 · 🛡️ 防御/减伤 · 🩸 受伤/流血 · ✨ 强化/成功），并把 COMBAT_MECH_IMMUNE / MITIGATE 原有的 ✨ / 🛡️ 提到行首统一位置。★ 只改这一格的值与 params；读端（content/mech.py 各 logs.append）同步补 t=int(round(_now(battle)))。★ 这 18 格**不在**真源槽位表里（grep '| COMBAT_MECH_… |' 17_文案收口口径_v1 = 0 命中）⇒ 不是生成器拥有的行，不与真源打架。",
+    },
+    "COMBAT_MECH_OATHWALL": {
+        "old": "你把盾立起来 —— 到你下一次行动之前（约 {turns} 刻），落上来的东西轻 {pct}%。",
+        "new": "🛡️【{t} 刻】你把盾立起来 —— 到你下一次行动之前（约 {turns} 刻），落上来的东西轻 {pct}%。",
+        "why": "P0-1 续（2026-09-29 · 文案修复车道 aep0 · 真机试玩取证）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」。★ **判据的结构盲区**：probe_texts 那两条（活 cue 行带刻 / 行首统一图标）只按 content/rules/battle_text.json（引擎 62 个 cue）取件，**取不到内容侧 content/mech.py 那一族机制日志** ⇒ 这 18 格进的是**持久战斗日志**（_note_battle 把 logs 原样落档、『战斗日志』读它），实测屏上整场只有它们读不出刻数。★ 本格值写**纯 {t} 不写 {t:.0f}**：内容侧 T() 是**字面 replace**（content/cmds_ast.py:53-55），实测 '{t:.0f}' 永远不会被替换、会把字面量打上屏；引擎 cue 那一族走 str.format 才写 {t:.0f} —— 两侧形态不同是有原因的，**别合并**。★ 图标按真源 26_ §2.2 语义分组逐条选（⚔️ 行动 · 🛡️ 防御/减伤 · 🩸 受伤/流血 · ✨ 强化/成功），并把 COMBAT_MECH_IMMUNE / MITIGATE 原有的 ✨ / 🛡️ 提到行首统一位置。★ 只改这一格的值与 params；读端（content/mech.py 各 logs.append）同步补 t=int(round(_now(battle)))。★ 这 18 格**不在**真源槽位表里（grep '| COMBAT_MECH_… |' 17_文案收口口径_v1 = 0 命中）⇒ 不是生成器拥有的行，不与真源打架。",
+    },
+    "COMBAT_MECH_ABSOLVE_NONE": {
+        "old": "你身上没有能解的东西。",
+        "new": "✨【{t} 刻】你身上没有能解的东西。",
+        "why": "P0-1 续（2026-09-29 · 文案修复车道 aep0 · 真机试玩取证）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」。★ **判据的结构盲区**：probe_texts 那两条（活 cue 行带刻 / 行首统一图标）只按 content/rules/battle_text.json（引擎 62 个 cue）取件，**取不到内容侧 content/mech.py 那一族机制日志** ⇒ 这 18 格进的是**持久战斗日志**（_note_battle 把 logs 原样落档、『战斗日志』读它），实测屏上整场只有它们读不出刻数。★ 本格值写**纯 {t} 不写 {t:.0f}**：内容侧 T() 是**字面 replace**（content/cmds_ast.py:53-55），实测 '{t:.0f}' 永远不会被替换、会把字面量打上屏；引擎 cue 那一族走 str.format 才写 {t:.0f} —— 两侧形态不同是有原因的，**别合并**。★ 图标按真源 26_ §2.2 语义分组逐条选（⚔️ 行动 · 🛡️ 防御/减伤 · 🩸 受伤/流血 · ✨ 强化/成功），并把 COMBAT_MECH_IMMUNE / MITIGATE 原有的 ✨ / 🛡️ 提到行首统一位置。★ 只改这一格的值与 params；读端（content/mech.py 各 logs.append）同步补 t=int(round(_now(battle)))。★ 这 18 格**不在**真源槽位表里（grep '| COMBAT_MECH_… |' 17_文案收口口径_v1 = 0 命中）⇒ 不是生成器拥有的行，不与真源打架。",
+    },
+    "COMBAT_MECH_ABSOLVE": {
+        "old": "你把它身上那根线解开了。",
+        "new": "✨【{t} 刻】你把它身上那根线解开了。",
+        "why": "P0-1 续（2026-09-29 · 文案修复车道 aep0 · 真机试玩取证）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」。★ **判据的结构盲区**：probe_texts 那两条（活 cue 行带刻 / 行首统一图标）只按 content/rules/battle_text.json（引擎 62 个 cue）取件，**取不到内容侧 content/mech.py 那一族机制日志** ⇒ 这 18 格进的是**持久战斗日志**（_note_battle 把 logs 原样落档、『战斗日志』读它），实测屏上整场只有它们读不出刻数。★ 本格值写**纯 {t} 不写 {t:.0f}**：内容侧 T() 是**字面 replace**（content/cmds_ast.py:53-55），实测 '{t:.0f}' 永远不会被替换、会把字面量打上屏；引擎 cue 那一族走 str.format 才写 {t:.0f} —— 两侧形态不同是有原因的，**别合并**。★ 图标按真源 26_ §2.2 语义分组逐条选（⚔️ 行动 · 🛡️ 防御/减伤 · 🩸 受伤/流血 · ✨ 强化/成功），并把 COMBAT_MECH_IMMUNE / MITIGATE 原有的 ✨ / 🛡️ 提到行首统一位置。★ 只改这一格的值与 params；读端（content/mech.py 各 logs.append）同步补 t=int(round(_now(battle)))。★ 这 18 格**不在**真源槽位表里（grep '| COMBAT_MECH_… |' 17_文案收口口径_v1 = 0 命中）⇒ 不是生成器拥有的行，不与真源打架。",
+    },
+    "COMBAT_MECH_LULLABY": {
+        "old": "你把这口气吹进去 —— {turns} 刻再生，每刻回 {per} 点。",
+        "new": "✨【{t} 刻】你把这口气吹进去 —— {turns} 刻再生，每刻回 {per} 点。",
+        "why": "P0-1 续（2026-09-29 · 文案修复车道 aep0 · 真机试玩取证）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」。★ **判据的结构盲区**：probe_texts 那两条（活 cue 行带刻 / 行首统一图标）只按 content/rules/battle_text.json（引擎 62 个 cue）取件，**取不到内容侧 content/mech.py 那一族机制日志** ⇒ 这 18 格进的是**持久战斗日志**（_note_battle 把 logs 原样落档、『战斗日志』读它），实测屏上整场只有它们读不出刻数。★ 本格值写**纯 {t} 不写 {t:.0f}**：内容侧 T() 是**字面 replace**（content/cmds_ast.py:53-55），实测 '{t:.0f}' 永远不会被替换、会把字面量打上屏；引擎 cue 那一族走 str.format 才写 {t:.0f} —— 两侧形态不同是有原因的，**别合并**。★ 图标按真源 26_ §2.2 语义分组逐条选（⚔️ 行动 · 🛡️ 防御/减伤 · 🩸 受伤/流血 · ✨ 强化/成功），并把 COMBAT_MECH_IMMUNE / MITIGATE 原有的 ✨ / 🛡️ 提到行首统一位置。★ 只改这一格的值与 params；读端（content/mech.py 各 logs.append）同步补 t=int(round(_now(battle)))。★ 这 18 格**不在**真源槽位表里（grep '| COMBAT_MECH_… |' 17_文案收口口径_v1 = 0 命中）⇒ 不是生成器拥有的行，不与真源打架。",
+    },
+    "COMBAT_MECH_BLOCK": {
+        "old": "🛡️ 举盾挡下 —— 这一下轻了 {n} 点，守誓 +{oath}（现在 {cur}）。",
+        "new": "🛡️【{t} 刻】举盾挡下 —— 这一下轻了 {n} 点，守誓 +{oath}（现在 {cur}）。",
+        "why": "P0-1 续（2026-09-29 · 文案修复车道 aep0 · 真机试玩取证）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」。★ **判据的结构盲区**：probe_texts 那两条（活 cue 行带刻 / 行首统一图标）只按 content/rules/battle_text.json（引擎 62 个 cue）取件，**取不到内容侧 content/mech.py 那一族机制日志** ⇒ 这 18 格进的是**持久战斗日志**（_note_battle 把 logs 原样落档、『战斗日志』读它），实测屏上整场只有它们读不出刻数。★ 本格值写**纯 {t} 不写 {t:.0f}**：内容侧 T() 是**字面 replace**（content/cmds_ast.py:53-55），实测 '{t:.0f}' 永远不会被替换、会把字面量打上屏；引擎 cue 那一族走 str.format 才写 {t:.0f} —— 两侧形态不同是有原因的，**别合并**。★ 图标按真源 26_ §2.2 语义分组逐条选（⚔️ 行动 · 🛡️ 防御/减伤 · 🩸 受伤/流血 · ✨ 强化/成功），并把 COMBAT_MECH_IMMUNE / MITIGATE 原有的 ✨ / 🛡️ 提到行首统一位置。★ 只改这一格的值与 params；读端（content/mech.py 各 logs.append）同步补 t=int(round(_now(battle)))。★ 这 18 格**不在**真源槽位表里（grep '| COMBAT_MECH_… |' 17_文案收口口径_v1 = 0 命中）⇒ 不是生成器拥有的行，不与真源打架。",
+    },
+    "COMBAT_MECH_DAZE": {
+        "old": "星砸在【{name}】头上 —— 它晕了 {turns} 刻，下一手什么都做不了。",
+        "new": "✨【{t} 刻】星砸在【{name}】头上 —— 它晕了 {turns} 刻，下一手什么都做不了。",
+        "why": "P0-1 续（2026-09-29 · 文案修复车道 aep0 · 真机试玩取证）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」。★ **判据的结构盲区**：probe_texts 那两条（活 cue 行带刻 / 行首统一图标）只按 content/rules/battle_text.json（引擎 62 个 cue）取件，**取不到内容侧 content/mech.py 那一族机制日志** ⇒ 这 18 格进的是**持久战斗日志**（_note_battle 把 logs 原样落档、『战斗日志』读它），实测屏上整场只有它们读不出刻数。★ 本格值写**纯 {t} 不写 {t:.0f}**：内容侧 T() 是**字面 replace**（content/cmds_ast.py:53-55），实测 '{t:.0f}' 永远不会被替换、会把字面量打上屏；引擎 cue 那一族走 str.format 才写 {t:.0f} —— 两侧形态不同是有原因的，**别合并**。★ 图标按真源 26_ §2.2 语义分组逐条选（⚔️ 行动 · 🛡️ 防御/减伤 · 🩸 受伤/流血 · ✨ 强化/成功），并把 COMBAT_MECH_IMMUNE / MITIGATE 原有的 ✨ / 🛡️ 提到行首统一位置。★ 只改这一格的值与 params；读端（content/mech.py 各 logs.append）同步补 t=int(round(_now(battle)))。★ 这 18 格**不在**真源槽位表里（grep '| COMBAT_MECH_… |' 17_文案收口口径_v1 = 0 命中）⇒ 不是生成器拥有的行，不与真源打架。",
+    },
+    "COMBAT_MECH_PINDOWN": {
+        "old": "箭钉在它起手的地方 —— 【{name}】{turns} 刻里慢 {pct}%。",
+        "new": "✨【{t} 刻】箭钉在它起手的地方 —— 【{name}】{turns} 刻里慢 {pct}%。",
+        "why": "P0-1 续（2026-09-29 · 文案修复车道 aep0 · 真机试玩取证）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」。★ **判据的结构盲区**：probe_texts 那两条（活 cue 行带刻 / 行首统一图标）只按 content/rules/battle_text.json（引擎 62 个 cue）取件，**取不到内容侧 content/mech.py 那一族机制日志** ⇒ 这 18 格进的是**持久战斗日志**（_note_battle 把 logs 原样落档、『战斗日志』读它），实测屏上整场只有它们读不出刻数。★ 本格值写**纯 {t} 不写 {t:.0f}**：内容侧 T() 是**字面 replace**（content/cmds_ast.py:53-55），实测 '{t:.0f}' 永远不会被替换、会把字面量打上屏；引擎 cue 那一族走 str.format 才写 {t:.0f} —— 两侧形态不同是有原因的，**别合并**。★ 图标按真源 26_ §2.2 语义分组逐条选（⚔️ 行动 · 🛡️ 防御/减伤 · 🩸 受伤/流血 · ✨ 强化/成功），并把 COMBAT_MECH_IMMUNE / MITIGATE 原有的 ✨ / 🛡️ 提到行首统一位置。★ 只改这一格的值与 params；读端（content/mech.py 各 logs.append）同步补 t=int(round(_now(battle)))。★ 这 18 格**不在**真源槽位表里（grep '| COMBAT_MECH_… |' 17_文案收口口径_v1 = 0 命中）⇒ 不是生成器拥有的行，不与真源打架。",
+    },
+    "COMBAT_MECH_SILENCE": {
+        "old": "一声闷雷压下去 —— 【{name}】这 {turns} 刻里用不出技能。",
+        "new": "✨【{t} 刻】一声闷雷压下去 —— 【{name}】这 {turns} 刻里用不出技能。",
+        "why": "P0-1 续（2026-09-29 · 文案修复车道 aep0 · 真机试玩取证）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」。★ **判据的结构盲区**：probe_texts 那两条（活 cue 行带刻 / 行首统一图标）只按 content/rules/battle_text.json（引擎 62 个 cue）取件，**取不到内容侧 content/mech.py 那一族机制日志** ⇒ 这 18 格进的是**持久战斗日志**（_note_battle 把 logs 原样落档、『战斗日志』读它），实测屏上整场只有它们读不出刻数。★ 本格值写**纯 {t} 不写 {t:.0f}**：内容侧 T() 是**字面 replace**（content/cmds_ast.py:53-55），实测 '{t:.0f}' 永远不会被替换、会把字面量打上屏；引擎 cue 那一族走 str.format 才写 {t:.0f} —— 两侧形态不同是有原因的，**别合并**。★ 图标按真源 26_ §2.2 语义分组逐条选（⚔️ 行动 · 🛡️ 防御/减伤 · 🩸 受伤/流血 · ✨ 强化/成功），并把 COMBAT_MECH_IMMUNE / MITIGATE 原有的 ✨ / 🛡️ 提到行首统一位置。★ 只改这一格的值与 params；读端（content/mech.py 各 logs.append）同步补 t=int(round(_now(battle)))。★ 这 18 格**不在**真源槽位表里（grep '| COMBAT_MECH_… |' 17_文案收口口径_v1 = 0 命中）⇒ 不是生成器拥有的行，不与真源打架。",
+    },
+    "COMBAT_MECH_BLEED": {
+        "old": "刀口拉得很深 —— 【{name}】{turns} 刻里每 {intv} 刻失一次血（{stacks} 层）。",
+        "new": "🩸【{t} 刻】刀口拉得很深 —— 【{name}】{turns} 刻里每 {intv} 刻失一次血（{stacks} 层）。",
+        "why": "P0-1 续（2026-09-29 · 文案修复车道 aep0 · 真机试玩取证）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」。★ **判据的结构盲区**：probe_texts 那两条（活 cue 行带刻 / 行首统一图标）只按 content/rules/battle_text.json（引擎 62 个 cue）取件，**取不到内容侧 content/mech.py 那一族机制日志** ⇒ 这 18 格进的是**持久战斗日志**（_note_battle 把 logs 原样落档、『战斗日志』读它），实测屏上整场只有它们读不出刻数。★ 本格值写**纯 {t} 不写 {t:.0f}**：内容侧 T() 是**字面 replace**（content/cmds_ast.py:53-55），实测 '{t:.0f}' 永远不会被替换、会把字面量打上屏；引擎 cue 那一族走 str.format 才写 {t:.0f} —— 两侧形态不同是有原因的，**别合并**。★ 图标按真源 26_ §2.2 语义分组逐条选（⚔️ 行动 · 🛡️ 防御/减伤 · 🩸 受伤/流血 · ✨ 强化/成功），并把 COMBAT_MECH_IMMUNE / MITIGATE 原有的 ✨ / 🛡️ 提到行首统一位置。★ 只改这一格的值与 params；读端（content/mech.py 各 logs.append）同步补 t=int(round(_now(battle)))。★ 这 18 格**不在**真源槽位表里（grep '| COMBAT_MECH_… |' 17_文案收口口径_v1 = 0 命中）⇒ 不是生成器拥有的行，不与真源打架。",
+    },
+    "COMBAT_MECH_TRANCE": {
+        "old": "它的爪子撞在你的刀口上 —— 它自己挨了 {n} 点。",
+        "new": "✨【{t} 刻】它的爪子撞在你的刀口上 —— 它自己挨了 {n} 点。",
+        "why": "P0-1 续（2026-09-29 · 文案修复车道 aep0 · 真机试玩取证）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」。★ **判据的结构盲区**：probe_texts 那两条（活 cue 行带刻 / 行首统一图标）只按 content/rules/battle_text.json（引擎 62 个 cue）取件，**取不到内容侧 content/mech.py 那一族机制日志** ⇒ 这 18 格进的是**持久战斗日志**（_note_battle 把 logs 原样落档、『战斗日志』读它），实测屏上整场只有它们读不出刻数。★ 本格值写**纯 {t} 不写 {t:.0f}**：内容侧 T() 是**字面 replace**（content/cmds_ast.py:53-55），实测 '{t:.0f}' 永远不会被替换、会把字面量打上屏；引擎 cue 那一族走 str.format 才写 {t:.0f} —— 两侧形态不同是有原因的，**别合并**。★ 图标按真源 26_ §2.2 语义分组逐条选（⚔️ 行动 · 🛡️ 防御/减伤 · 🩸 受伤/流血 · ✨ 强化/成功），并把 COMBAT_MECH_IMMUNE / MITIGATE 原有的 ✨ / 🛡️ 提到行首统一位置。★ 只改这一格的值与 params；读端（content/mech.py 各 logs.append）同步补 t=int(round(_now(battle)))。★ 这 18 格**不在**真源槽位表里（grep '| COMBAT_MECH_… |' 17_文案收口口径_v1 = 0 命中）⇒ 不是生成器拥有的行，不与真源打架。",
+    },
+    "COMBAT_MECH_IMMUNE": {
+        "old": "✨ 这一下到不了身上。",
+        "new": "✨【{t} 刻】这一下到不了身上。",
+        "why": "P0-1 续（2026-09-29 · 文案修复车道 aep0 · 真机试玩取证）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」。★ **判据的结构盲区**：probe_texts 那两条（活 cue 行带刻 / 行首统一图标）只按 content/rules/battle_text.json（引擎 62 个 cue）取件，**取不到内容侧 content/mech.py 那一族机制日志** ⇒ 这 18 格进的是**持久战斗日志**（_note_battle 把 logs 原样落档、『战斗日志』读它），实测屏上整场只有它们读不出刻数。★ 本格值写**纯 {t} 不写 {t:.0f}**：内容侧 T() 是**字面 replace**（content/cmds_ast.py:53-55），实测 '{t:.0f}' 永远不会被替换、会把字面量打上屏；引擎 cue 那一族走 str.format 才写 {t:.0f} —— 两侧形态不同是有原因的，**别合并**。★ 图标按真源 26_ §2.2 语义分组逐条选（⚔️ 行动 · 🛡️ 防御/减伤 · 🩸 受伤/流血 · ✨ 强化/成功），并把 COMBAT_MECH_IMMUNE / MITIGATE 原有的 ✨ / 🛡️ 提到行首统一位置。★ 只改这一格的值与 params；读端（content/mech.py 各 logs.append）同步补 t=int(round(_now(battle)))。★ 这 18 格**不在**真源槽位表里（grep '| COMBAT_MECH_… |' 17_文案收口口径_v1 = 0 命中）⇒ 不是生成器拥有的行，不与真源打架。",
+    },
+    "COMBAT_MECH_MITIGATE": {
+        "old": "🛡️ 这一下被卸掉了 {pct}%。",
+        "new": "🛡️【{t} 刻】这一下被卸掉了 {pct}%。",
+        "why": "P0-1 续（2026-09-29 · 文案修复车道 aep0 · 真机试玩取证）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」。★ **判据的结构盲区**：probe_texts 那两条（活 cue 行带刻 / 行首统一图标）只按 content/rules/battle_text.json（引擎 62 个 cue）取件，**取不到内容侧 content/mech.py 那一族机制日志** ⇒ 这 18 格进的是**持久战斗日志**（_note_battle 把 logs 原样落档、『战斗日志』读它），实测屏上整场只有它们读不出刻数。★ 本格值写**纯 {t} 不写 {t:.0f}**：内容侧 T() 是**字面 replace**（content/cmds_ast.py:53-55），实测 '{t:.0f}' 永远不会被替换、会把字面量打上屏；引擎 cue 那一族走 str.format 才写 {t:.0f} —— 两侧形态不同是有原因的，**别合并**。★ 图标按真源 26_ §2.2 语义分组逐条选（⚔️ 行动 · 🛡️ 防御/减伤 · 🩸 受伤/流血 · ✨ 强化/成功），并把 COMBAT_MECH_IMMUNE / MITIGATE 原有的 ✨ / 🛡️ 提到行首统一位置。★ 只改这一格的值与 params；读端（content/mech.py 各 logs.append）同步补 t=int(round(_now(battle)))。★ 这 18 格**不在**真源槽位表里（grep '| COMBAT_MECH_… |' 17_文案收口口径_v1 = 0 命中）⇒ 不是生成器拥有的行，不与真源打架。",
+    },
+
+    # ★ P0-1 续批二（2026-09-29 · aep0）：后撤/逃跑/打断/道具上限那一族补【N 刻】。
+    "COMBAT_RETREAT_BLOCK": {
+        "old": "{name} 正押着一手 —— 退不开，这一手白花。",
+        "new": "⚔️【{t} 刻】{name} 正押着一手 —— 退不开，这一手白花。",
+        "why": "P0-1 续（2026-09-29 · 文案修复车道 aep0 · 真机试玩取证）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」。这几格经 `logs.append` / `hand.lines` 进**持久战斗日志**（`_note_battle` 原样落档、『战斗日志』读它），实测屏上它们是最后读不出刻数的那一批。★ 写**纯 {t} 不写 {t:.0f}**：内容侧 `T()` 是**字面 replace**（content/cmds_ast.py:53-55），实测 '{t:.0f}' 永远不被替换、会把字面量打上屏；引擎 cue 那一族走 str.format 才写 {t:.0f}。★ 读端同步补 t：`_retreat_decide`/`_flee_decide` 用 `Battle._now` 现读（与 content/mech.py:293、content/battle_acts.py 新增的 `_now` 逐字同形）；`cmds_battle` 后撤那一手已有 `now` 那一格。★ 图标按真源 26_ §2.2：⚔️ 行动/攻击（这几格全是「你这一手做了什么」）· 📦 换装/道具。★ 其中 COMBAT_RETREAT_BLOCK/OK · FLEE_OK/BLOCK · INT_BREAK/PUSH **在**真源 17_ 槽位表里⇒ 走 DOC_PENDING 跟账（改值的唯一合法路径）；INT_PLAIN / ITEM_CAP 同批。",
+    },
+    "COMBAT_RETREAT_OK": {
+        "old": "它这会儿没在出招 —— 你退开了，这一场没打。",
+        "new": "⚔️【{t} 刻】它这会儿没在出招 —— 你退开了，这一场没打。",
+        "why": "P0-1 续（2026-09-29 · 文案修复车道 aep0 · 真机试玩取证）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」。这几格经 `logs.append` / `hand.lines` 进**持久战斗日志**（`_note_battle` 原样落档、『战斗日志』读它），实测屏上它们是最后读不出刻数的那一批。★ 写**纯 {t} 不写 {t:.0f}**：内容侧 `T()` 是**字面 replace**（content/cmds_ast.py:53-55），实测 '{t:.0f}' 永远不被替换、会把字面量打上屏；引擎 cue 那一族走 str.format 才写 {t:.0f}。★ 读端同步补 t：`_retreat_decide`/`_flee_decide` 用 `Battle._now` 现读（与 content/mech.py:293、content/battle_acts.py 新增的 `_now` 逐字同形）；`cmds_battle` 后撤那一手已有 `now` 那一格。★ 图标按真源 26_ §2.2：⚔️ 行动/攻击（这几格全是「你这一手做了什么」）· 📦 换装/道具。★ 其中 COMBAT_RETREAT_BLOCK/OK · FLEE_OK/BLOCK · INT_BREAK/PUSH **在**真源 17_ 槽位表里⇒ 走 DOC_PENDING 跟账（改值的唯一合法路径）；INT_PLAIN / ITEM_CAP 同批。",
+    },
+    "COMBAT_FLEE_OK": {
+        "old": "你转身就跑，把 {name} 甩在了后头 —— 这一场没打。",
+        "new": "⚔️【{t} 刻】你转身就跑，把 {name} 甩在了后头 —— 这一场没打。",
+        "why": "P0-1 续（2026-09-29 · 文案修复车道 aep0 · 真机试玩取证）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」。这几格经 `logs.append` / `hand.lines` 进**持久战斗日志**（`_note_battle` 原样落档、『战斗日志』读它），实测屏上它们是最后读不出刻数的那一批。★ 写**纯 {t} 不写 {t:.0f}**：内容侧 `T()` 是**字面 replace**（content/cmds_ast.py:53-55），实测 '{t:.0f}' 永远不被替换、会把字面量打上屏；引擎 cue 那一族走 str.format 才写 {t:.0f}。★ 读端同步补 t：`_retreat_decide`/`_flee_decide` 用 `Battle._now` 现读（与 content/mech.py:293、content/battle_acts.py 新增的 `_now` 逐字同形）；`cmds_battle` 后撤那一手已有 `now` 那一格。★ 图标按真源 26_ §2.2：⚔️ 行动/攻击（这几格全是「你这一手做了什么」）· 📦 换装/道具。★ 其中 COMBAT_RETREAT_BLOCK/OK · FLEE_OK/BLOCK · INT_BREAK/PUSH **在**真源 17_ 槽位表里⇒ 走 DOC_PENDING 跟账（改值的唯一合法路径）；INT_PLAIN / ITEM_CAP 同批。",
+    },
+    "COMBAT_FLEE_BLOCK": {
+        "old": "{name} 先一步拦住了退路 —— 没跑成，这一手白花，这一场照打。",
+        "new": "⚔️【{t} 刻】{name} 先一步拦住了退路 —— 没跑成，这一手白花，这一场照打。",
+        "why": "P0-1 续（2026-09-29 · 文案修复车道 aep0 · 真机试玩取证）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」。这几格经 `logs.append` / `hand.lines` 进**持久战斗日志**（`_note_battle` 原样落档、『战斗日志』读它），实测屏上它们是最后读不出刻数的那一批。★ 写**纯 {t} 不写 {t:.0f}**：内容侧 `T()` 是**字面 replace**（content/cmds_ast.py:53-55），实测 '{t:.0f}' 永远不被替换、会把字面量打上屏；引擎 cue 那一族走 str.format 才写 {t:.0f}。★ 读端同步补 t：`_retreat_decide`/`_flee_decide` 用 `Battle._now` 现读（与 content/mech.py:293、content/battle_acts.py 新增的 `_now` 逐字同形）；`cmds_battle` 后撤那一手已有 `now` 那一格。★ 图标按真源 26_ §2.2：⚔️ 行动/攻击（这几格全是「你这一手做了什么」）· 📦 换装/道具。★ 其中 COMBAT_RETREAT_BLOCK/OK · FLEE_OK/BLOCK · INT_BREAK/PUSH **在**真源 17_ 槽位表里⇒ 走 DOC_PENDING 跟账（改值的唯一合法路径）；INT_PLAIN / ITEM_CAP 同批。",
+    },
+    "COMBAT_INT_BREAK": {
+        "old": "它起手的那一下被你截断 —— 这一手它没打出来。",
+        "new": "⚔️【{t} 刻】它起手的那一下被你截断 —— 这一手它没打出来。",
+        "why": "P0-1 续（2026-09-29 · 文案修复车道 aep0 · 真机试玩取证）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」。这几格经 `logs.append` / `hand.lines` 进**持久战斗日志**（`_note_battle` 原样落档、『战斗日志』读它），实测屏上它们是最后读不出刻数的那一批。★ 写**纯 {t} 不写 {t:.0f}**：内容侧 `T()` 是**字面 replace**（content/cmds_ast.py:53-55），实测 '{t:.0f}' 永远不被替换、会把字面量打上屏；引擎 cue 那一族走 str.format 才写 {t:.0f}。★ 读端同步补 t：`_retreat_decide`/`_flee_decide` 用 `Battle._now` 现读（与 content/mech.py:293、content/battle_acts.py 新增的 `_now` 逐字同形）；`cmds_battle` 后撤那一手已有 `now` 那一格。★ 图标按真源 26_ §2.2：⚔️ 行动/攻击（这几格全是「你这一手做了什么」）· 📦 换装/道具。★ 其中 COMBAT_RETREAT_BLOCK/OK · FLEE_OK/BLOCK · INT_BREAK/PUSH **在**真源 17_ 槽位表里⇒ 走 DOC_PENDING 跟账（改值的唯一合法路径）；INT_PLAIN / ITEM_CAP 同批。",
+    },
+    "COMBAT_INT_PUSH": {
+        "old": "你把它压在后面 —— 它下一次行动的到点时刻被推后 {ticks} 刻。",
+        "new": "⚔️【{t} 刻】你把它压在后面 —— 它下一次行动的到点时刻被推后 {ticks} 刻。",
+        "why": "P0-1 续（2026-09-29 · 文案修复车道 aep0 · 真机试玩取证）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」。这几格经 `logs.append` / `hand.lines` 进**持久战斗日志**（`_note_battle` 原样落档、『战斗日志』读它），实测屏上它们是最后读不出刻数的那一批。★ 写**纯 {t} 不写 {t:.0f}**：内容侧 `T()` 是**字面 replace**（content/cmds_ast.py:53-55），实测 '{t:.0f}' 永远不被替换、会把字面量打上屏；引擎 cue 那一族走 str.format 才写 {t:.0f}。★ 读端同步补 t：`_retreat_decide`/`_flee_decide` 用 `Battle._now` 现读（与 content/mech.py:293、content/battle_acts.py 新增的 `_now` 逐字同形）；`cmds_battle` 后撤那一手已有 `now` 那一格。★ 图标按真源 26_ §2.2：⚔️ 行动/攻击（这几格全是「你这一手做了什么」）· 📦 换装/道具。★ 其中 COMBAT_RETREAT_BLOCK/OK · FLEE_OK/BLOCK · INT_BREAK/PUSH **在**真源 17_ 槽位表里⇒ 走 DOC_PENDING 跟账（改值的唯一合法路径）；INT_PLAIN / ITEM_CAP 同批。",
+    },
+    "COMBAT_INT_PLAIN": {
+        "old": "你盯着它的起手。",
+        "new": "⚔️【{t} 刻】你盯着它的起手。",
+        "why": "P0-1 续（2026-09-29 · 文案修复车道 aep0 · 真机试玩取证）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」。这几格经 `logs.append` / `hand.lines` 进**持久战斗日志**（`_note_battle` 原样落档、『战斗日志』读它），实测屏上它们是最后读不出刻数的那一批。★ 写**纯 {t} 不写 {t:.0f}**：内容侧 `T()` 是**字面 replace**（content/cmds_ast.py:53-55），实测 '{t:.0f}' 永远不被替换、会把字面量打上屏；引擎 cue 那一族走 str.format 才写 {t:.0f}。★ 读端同步补 t：`_retreat_decide`/`_flee_decide` 用 `Battle._now` 现读（与 content/mech.py:293、content/battle_acts.py 新增的 `_now` 逐字同形）；`cmds_battle` 后撤那一手已有 `now` 那一格。★ 图标按真源 26_ §2.2：⚔️ 行动/攻击（这几格全是「你这一手做了什么」）· 📦 换装/道具。★ 其中 COMBAT_RETREAT_BLOCK/OK · FLEE_OK/BLOCK · INT_BREAK/PUSH **在**真源 17_ 槽位表里⇒ 走 DOC_PENDING 跟账（改值的唯一合法路径）；INT_PLAIN / ITEM_CAP 同批。",
+    },
+    "COMBAT_ITEM_CAP": {
+        "old": "「{name}」这一场用过了 —— 一场一次，后面的手只能照打。",
+        "new": "📦【{t} 刻】「{name}」这一场用过了 —— 一场一次，后面的手只能照打。",
+        "why": "P0-1 续（2026-09-29 · 文案修复车道 aep0 · 真机试玩取证）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」。这几格经 `logs.append` / `hand.lines` 进**持久战斗日志**（`_note_battle` 原样落档、『战斗日志』读它），实测屏上它们是最后读不出刻数的那一批。★ 写**纯 {t} 不写 {t:.0f}**：内容侧 `T()` 是**字面 replace**（content/cmds_ast.py:53-55），实测 '{t:.0f}' 永远不被替换、会把字面量打上屏；引擎 cue 那一族走 str.format 才写 {t:.0f}。★ 读端同步补 t：`_retreat_decide`/`_flee_decide` 用 `Battle._now` 现读（与 content/mech.py:293、content/battle_acts.py 新增的 `_now` 逐字同形）；`cmds_battle` 后撤那一手已有 `now` 那一格。★ 图标按真源 26_ §2.2：⚔️ 行动/攻击（这几格全是「你这一手做了什么」）· 📦 换装/道具。★ 其中 COMBAT_RETREAT_BLOCK/OK · FLEE_OK/BLOCK · INT_BREAK/PUSH **在**真源 17_ 槽位表里⇒ 走 DOC_PENDING 跟账（改值的唯一合法路径）；INT_PLAIN / ITEM_CAP 同批。",
+    },
+
 }
 
 

@@ -105,6 +105,16 @@ def item_capped(st, iid) -> bool:
 # ══════════════════════════════════════════════════════════════
 # 取值小件
 # ══════════════════════════════════════════════════════════════
+def _now(battle) -> float:
+    """一场战斗的**绝对时刻**（刻）—— 与 `content/mech.py:293` 逐字同形。
+
+    ★ 为什么自己收这一口而不是 import 引擎的 `cues.now_of`：内容侧这几格是**不走 cue
+      总线**的（`logs.append` 直出），拿不到 `TIME_SLOT` ⇒ 时刻只能从 `Battle._now` 现读。
+      读法与引擎那一口逐字同形，不新造第二个钟源。
+    """
+    return float(getattr(battle, "_now", 0.0) or 0.0)
+
+
 def pick_target(battle, target=None) -> dict | None:
     """这一手对着谁 —— 给了活的就用它，否则取敌方第一个还有气的（没有 = None，不兜底）。"""
     if isinstance(target, dict) and actor_alive(target):
@@ -231,7 +241,7 @@ class Hand:
         cat = CAT["interrupt"]
         tgt = pick_target(battle, target)
         if tgt is None:
-            return ([T("COMBAT_INT_PLAIN")], cat, None)
+            return ([T("COMBAT_INT_PLAIN", t=int(round(_now(battle))))], cat, None)
         push = hand_ticks(battle, actor, cat)
         slot = tgt.get("charging")
         broke = isinstance(slot, dict) and not slot.get("unstoppable")
@@ -251,7 +261,9 @@ class Hand:
             #   「★ 只在 codex 写」，与 `note_kill` / `note_read` / `note_gather` 同一族。
             from .codex import note_interrupt
             note_interrupt(self.p)
-        line = T("COMBAT_INT_BREAK") if broke else T("COMBAT_INT_PUSH", ticks=int(push))
+        _t = int(round(_now(battle)))
+        line = (T("COMBAT_INT_BREAK", t=_t) if broke
+                else T("COMBAT_INT_PUSH", t=_t, ticks=int(push)))
         return ([line], cat, None)
 
     # ---------------------------------------------------------- 战斗中用物
@@ -263,7 +275,8 @@ class Hand:
         if int(self.used.get(iid, 0)) >= cap:
             # 上限用满：这一手**回落成普攻**（白纸黑字，不静默、也不白花）
             # ★ fix-j：回落的那一手是**攻击** ⇒ 吃集火目标（`target` 由调用方传进来）
-            return ([T("COMBAT_ITEM_CAP", name=name)] + _plain_attack(battle, actor, target),
+            return ([T("COMBAT_ITEM_CAP", t=int(round(_now(battle))), name=name)]
+                    + _plain_attack(battle, actor, target),
                     "attack", None)
         from .cmds_recipe import _heal_gain                  # 回血口径唯一一口
         mx = ST.actor_max_hp(battle, actor)

@@ -4554,8 +4554,10 @@
     "desc": "战斗指令五条 · 没遇敌（打断/放技能/用物/换武器/后撤）"
   },
   "COMBAT_INT_PLAIN": {
-    "value": "你盯着它的起手。",
-    "params": [],
+    "value": "⚔️【{t} 刻】你盯着它的起手。",
+    "params": [
+      "t"
+    ],
     "category": "战斗",
     "desc": "打断 · 本门没有专门的打断动作时（今天域里只有刺客挂了 mech=interrupt）"
   },
@@ -4568,14 +4570,17 @@
     "desc": "打断 · 有本门动作时（skills 域 mech=interrupt 那一条的名字）"
   },
   "COMBAT_INT_BREAK": {
-    "value": "它起手的那一下被你截断 —— 这一手它没打出来。",
-    "params": [],
+    "value": "⚔️【{t} 刻】它起手的那一下被你截断 —— 这一手它没打出来。",
+    "params": [
+      "t"
+    ],
     "category": "战斗",
     "desc": "打断 · 清掉对方待发（引擎 effects 的 interrupt 动词；怪技没中文名 ⇒ 不报技名）"
   },
   "COMBAT_INT_PUSH": {
-    "value": "你把它压在后面 —— 它下一次行动的到点时刻被推后 {ticks} 刻。",
+    "value": "⚔️【{t} 刻】你把它压在后面 —— 它下一次行动的到点时刻被推后 {ticks} 刻。",
     "params": [
+      "t",
       "ticks"
     ],
     "category": "战斗",
@@ -4614,8 +4619,9 @@
     "desc": "战斗中用物 · 认不出"
   },
   "COMBAT_ITEM_CAP": {
-    "value": "「{name}」这一场用过了 —— 一场一次，后面的手只能照打。",
+    "value": "📦【{t} 刻】「{name}」这一场用过了 —— 一场一次，后面的手只能照打。",
     "params": [
+      "t",
       "name"
     ],
     "category": "战斗",
@@ -4652,14 +4658,17 @@
     "desc": "后撤 · 这一手"
   },
   "COMBAT_RETREAT_OK": {
-    "value": "它这会儿没在出招 —— 你退开了，这一场没打。",
-    "params": [],
+    "value": "⚔️【{t} 刻】它这会儿没在出招 —— 你退开了，这一场没打。",
+    "params": [
+      "t"
+    ],
     "category": "战斗",
     "desc": "后撤 · 能跑掉（对方这一拍没有待发那一手）"
   },
   "COMBAT_RETREAT_BLOCK": {
-    "value": "{name} 正押着一手 —— 退不开，这一手白花。",
+    "value": "⚔️【{t} 刻】{name} 正押着一手 —— 退不开，这一手白花。",
     "params": [
+      "t",
       "name"
     ],
     "category": "战斗",
@@ -4692,16 +4701,18 @@
     "desc": "B4-18 逃跑 · 尚未落地"
   },
   "COMBAT_FLEE_OK": {
-    "value": "你转身就跑，把 {name} 甩在了后头 —— 这一场没打。",
+    "value": "⚔️【{t} 刻】你转身就跑，把 {name} 甩在了后头 —— 这一场没打。",
     "params": [
+      "t",
       "name"
     ],
     "category": "战斗",
     "desc": "P-57 逃跑 · 跑成了（这一场没打）"
   },
   "COMBAT_FLEE_BLOCK": {
-    "value": "{name} 先一步拦住了退路 —— 没跑成，这一手白花，这一场照打。",
+    "value": "⚔️【{t} 刻】{name} 先一步拦住了退路 —— 没跑成，这一手白花，这一场照打。",
     "params": [
+      "t",
       "name"
     ],
     "category": "战斗",
@@ -4930,8 +4941,9 @@
     "desc": "B3-25 离队 · 队长散队（队里就自己一个）"
   },
   "COMBAT_MECH_SEVER": {
-    "value": "它那一手被你截断 —— 【{name}】身上露出破绽：{turns} 刻里挨的每一下都多受 {pct}%，谁都吃得着。",
+    "value": "⚔️【{t} 刻】它那一手被你截断 —— 【{name}】身上露出破绽：{turns} 刻里挨的每一下都多受 {pct}%，谁都吃得着。",
     "params": [
+      "t",
       "name",
       "turns",
       "pct"
@@ -4940,16 +4952,18 @@
     "desc": "机制 · 断势（破绽：承伤 ×1.35 / 200 刻，全队共享）"
   },
   "COMBAT_MECH_SELF_CUT": {
-    "value": "你劈出这一下，自己先见了血（−{n}）。",
+    "value": "🩸【{t} 刻】你劈出这一下，自己先见了血（−{n}）。",
     "params": [
+      "t",
       "n"
     ],
     "category": "战斗",
     "desc": "机制 · 破势的「付」（自伤 8% max_hp）"
   },
   "COMBAT_MECH_SUNDER": {
-    "value": "【{name}】的甲被劈开 —— 防御 −{pct}%，{turns} 刻。",
+    "value": "⚔️【{t} 刻】【{name}】的甲被劈开 —— 防御 −{pct}%，{turns} 刻。",
     "params": [
+      "t",
       "name",
       "turns",
       "pct"
@@ -4958,8 +4972,9 @@
     "desc": "机制 · 破势（目标 def ×0.70 · 300 刻）"
   },
   "COMBAT_MECH_TAUNT": {
-    "value": "你吼了一声 —— 这几刻（{turns} 刻）它只会冲你来。",
+    "value": "⚔️【{t} 刻】你吼了一声 —— 这几刻（{turns} 刻）它只会冲你来。",
     "params": [
+      "t",
       "turns"
     ],
     "category": "战斗",
@@ -4984,16 +4999,18 @@
     "desc": "机制 · 庇护（减伤 30% / 200 刻）"
   },
   "COMBAT_MECH_MATINS": {
-    "value": "光落下来 —— {turns} 刻内，打上来的东西到不了身上。",
+    "value": "✨【{t} 刻】光落下来 —— {turns} 刻内，打上来的东西到不了身上。",
     "params": [
+      "t",
       "turns"
     ],
     "category": "战斗",
     "desc": "机制 · 晨祷（免疫窗 100 刻）"
   },
   "COMBAT_MECH_OATHWALL": {
-    "value": "你把盾立起来 —— 到你下一次行动之前（约 {turns} 刻），落上来的东西轻 {pct}%。",
+    "value": "🛡️【{t} 刻】你把盾立起来 —— 到你下一次行动之前（约 {turns} 刻），落上来的东西轻 {pct}%。",
     "params": [
+      "t",
       "turns",
       "pct"
     ],
@@ -5001,20 +5018,25 @@
     "desc": "机制 · 盾墙（免伤 40%，到下一次行动前）"
   },
   "COMBAT_MECH_ABSOLVE": {
-    "value": "你把它身上那根线解开了。",
-    "params": [],
+    "value": "✨【{t} 刻】你把它身上那根线解开了。",
+    "params": [
+      "t"
+    ],
     "category": "战斗",
     "desc": "机制 · 净罪（解掉一个控制）"
   },
   "COMBAT_MECH_ABSOLVE_NONE": {
-    "value": "你身上没有能解的东西。",
-    "params": [],
+    "value": "✨【{t} 刻】你身上没有能解的东西。",
+    "params": [
+      "t"
+    ],
     "category": "战斗",
     "desc": "机制 · 净罪（没控可解 —— 口令式，不静默；★ 单人收件人 = 自己 ⇒ 主人是「你」）"
   },
   "COMBAT_MECH_LULLABY": {
-    "value": "你把这口气吹进去 —— {turns} 刻再生，每刻回 {per} 点。",
+    "value": "✨【{t} 刻】你把这口气吹进去 —— {turns} 刻再生，每刻回 {per} 点。",
     "params": [
+      "t",
       "turns",
       "per"
     ],
@@ -5022,24 +5044,28 @@
     "desc": "机制 · 安神曲（再生：每刻 = 这一发治疗量的 1/4）"
   },
   "COMBAT_MECH_QUICKSTEP": {
-    "value": "你抢了半拍 —— 下一次出手的到点时刻最多提前 {ticks} 刻，再早也早不过此刻。",
+    "value": "✨【{t} 刻】你抢了半拍 —— 下一次出手的到点时刻最多提前 {ticks} 刻，再早也早不过此刻。",
     "params": [
+      "t",
       "ticks"
     ],
     "category": "战斗",
     "desc": "机制 · 抢拍（提前量 = 技能域 mech_val；引擎那道「不早于当刻」的闸会把它夹小 —— 这一手后摇短于声明量时只能压到当前时刻，试玩 b20/b23 实测（撤改臂逐手量过：ct 174.91→147.29，= min(声明 30, 后摇 27.62)））"
   },
   "COMBAT_MECH_MITIGATE": {
-    "value": "🛡️ 这一下被卸掉了 {pct}%。",
+    "value": "🛡️【{t} 刻】这一下被卸掉了 {pct}%。",
     "params": [
+      "t",
       "pct"
     ],
     "category": "战斗",
     "desc": "机制 · 减免态生效（不退 / 庇护 / 盾墙 —— 承伤乘区）"
   },
   "COMBAT_MECH_IMMUNE": {
-    "value": "✨ 这一下到不了身上。",
-    "params": [],
+    "value": "✨【{t} 刻】这一下到不了身上。",
+    "params": [
+      "t"
+    ],
     "category": "战斗",
     "desc": "机制 · 免疫窗生效（晨祷 —— 承伤乘区压到地板）"
   },
@@ -5072,8 +5098,9 @@
     "desc": "机制 · 狂态（反击态挂上）"
   },
   "COMBAT_MECH_PINDOWN": {
-    "value": "箭钉在它起手的地方 —— 【{name}】{turns} 刻里慢 {pct}%。",
+    "value": "✨【{t} 刻】箭钉在它起手的地方 —— 【{name}】{turns} 刻里慢 {pct}%。",
     "params": [
+      "t",
       "name",
       "pct",
       "turns"
@@ -5082,8 +5109,9 @@
     "desc": "机制 · 箭止（打断 + 减速）"
   },
   "COMBAT_MECH_SILENCE": {
-    "value": "一声闷雷压下去 —— 【{name}】这 {turns} 刻里用不出技能。",
+    "value": "✨【{t} 刻】一声闷雷压下去 —— 【{name}】这 {turns} 刻里用不出技能。",
     "params": [
+      "t",
       "name",
       "turns"
     ],
@@ -5091,8 +5119,9 @@
     "desc": "机制 · 静默（控制：mode=no_skill）"
   },
   "COMBAT_MECH_DAZE": {
-    "value": "星砸在【{name}】头上 —— 它晕了 {turns} 刻，下一手什么都做不了。",
+    "value": "✨【{t} 刻】星砸在【{name}】头上 —— 它晕了 {turns} 刻，下一手什么都做不了。",
     "params": [
+      "t",
       "name",
       "turns"
     ],
@@ -5120,8 +5149,9 @@
     "desc": "机制 · 守夜（承伤降 + 治疗量涨）"
   },
   "COMBAT_MECH_BLEED": {
-    "value": "刀口拉得很深 —— 【{name}】{turns} 刻里每 {intv} 刻失一次血（{stacks} 层）。",
+    "value": "🩸【{t} 刻】刀口拉得很深 —— 【{name}】{turns} 刻里每 {intv} 刻失一次血（{stacks} 层）。",
     "params": [
+      "t",
       "intv",
       "name",
       "stacks",
@@ -5140,8 +5170,9 @@
     "desc": "机制 · 侧闪（面板 eva ×1.6）"
   },
   "COMBAT_MECH_TRANCE": {
-    "value": "它的爪子撞在你的刀口上 —— 它自己挨了 {n} 点。",
+    "value": "✨【{t} 刻】它的爪子撞在你的刀口上 —— 它自己挨了 {n} 点。",
     "params": [
+      "t",
       "n"
     ],
     "category": "战斗",
@@ -5195,8 +5226,9 @@
     "desc": "战斗 · 持续伤害每跳一行（引擎 `battle.schedule.dot_tick` 那一口；★ 收掉引擎兜底里的 {key} 机器键）"
   },
   "COMBAT_MECH_BLOCK": {
-    "value": "🛡️ 举盾挡下 —— 这一下轻了 {n} 点，守誓 +{oath}（现在 {cur}）。",
+    "value": "🛡️【{t} 刻】举盾挡下 —— 这一下轻了 {n} 点，守誓 +{oath}（现在 {cur}）。",
     "params": [
+      "t",
       "cur",
       "n",
       "oath"
@@ -6848,5 +6880,27 @@
     ],
     "category": "战斗",
     "desc": "引擎槽位 `battle.schedule.regen_mp`（`extends/ext_combat/battle/schedule.py:787` 的兜底模板**逐字搬** —— 接线后屏上逐字节不变）· 真源待搬 `00_总纲/17_文案收口口径_v1.md`；本槽位 = 阿斯特兰内容侧从此的真源。"
+  },
+  "COMBAT_FLEE_COLD": {
+    "value": "你转身就跑，把 {name} 甩在了后头 —— 这一场没打。",
+    "params": [
+      "name"
+    ],
+    "category": "战斗",
+    "desc": "★ P0-1 续批（2026-09-29 · aep0）：`逃跑` 的**冷启动**那一支（`cmds_battle.flee` 里 `INST.live(env, uid) is None` —— 此刻根本没有场，`_note_battle` 收到 `[]`）的专属槽位。★ 为什么从 `COMBAT_FLEE_OK` 拆出来：那一格带【N 刻】（真源 26_ §三 优化 1，战斗日志行统一形态），而那一格是**战斗绝对时刻** —— 冷启动时没有战斗可读，硬带就只能印一个编出来的刻数（引擎 `now_of` 口径：给 0 = 诚实的时刻，但这一句压根不是战斗日志行）。★ 场里那一手（`_flee_decide`，掷骰跑成/被拦下）仍走 `COMBAT_FLEE_OK` / `COMBAT_FLEE_BLOCK`，两格都带【N 刻】、都进战斗日志。"
+  },
+  "COMBAT_INT_HEAD_A": {
+    "value": "⚔️{skill} —— 你盯着它的起手。",
+    "params": [
+      "skill"
+    ],
+    "category": "战斗",
+    "desc": "★ P0-1 续批（2026-09-29 · aep0）：`打断` 的**开场前抬头**那一句的专属槽位。★ 为什么从 `COMBAT_INT_HEAD` / `COMBAT_INT_PLAIN` 拆出来：那两格带【N 刻】（战斗日志行统一形态，真源 26_ §三 优化 1），而那一格是**战斗绝对时刻** —— 开场前这一手还没打、读不到战斗钟，硬带就��把字面量 `{t}` 打上屏（实测 e2e 真跑）。★ 场里真断成/压后那两句仍走 `COMBAT_INT_BREAK` / `COMBAT_INT_PUSH`（带刻、进战斗日志）。"
+  },
+  "COMBAT_INT_PLAIN_A": {
+    "value": "⚔️你盯着它的起手。",
+    "params": [],
+    "category": "战斗",
+    "desc": "★ P0-1 续批（2026-09-29 · aep0）：`打断` 的**开场前抬头**那一句的专属槽位。★ 为什么从 `COMBAT_INT_HEAD` / `COMBAT_INT_PLAIN` 拆出来：那两格带【N 刻】（战斗日志行统一形态，真源 26_ §三 优化 1），而那一格是**战斗绝对时刻** —— 开场前这一手还没打、读不到战斗钟，硬带就��把字面量 `{t}` 打上屏（实测 e2e 真跑）。★ 场里真断成/压后那两句仍走 `COMBAT_INT_BREAK` / `COMBAT_INT_PUSH`（带刻、进战斗日志）。"
   }
 }

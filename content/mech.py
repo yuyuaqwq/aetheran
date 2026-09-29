@@ -454,7 +454,7 @@ def _self_cut(battle, caster, m: dict, logs) -> int:
         if real > 0:                       # 全额被护盾吃掉 ⇒ 不谎报一笔没落的血
                                            #   （★ 2026-09-27：闪避那一格已由 `no_dodge` 关掉，
                                            #    所以这里不会再有「被自己闪掉」那种 0）
-            logs.append(T("COMBAT_MECH_SELF_CUT", n=real))
+            logs.append(T("COMBAT_MECH_SELF_CUT", t=int(round(_now(battle))), n=real))
     return cut
 
 
@@ -507,7 +507,8 @@ def aeth_sever(battle, caster, target, params, logs):
     # ★ 那一句里的「多受 N%」= 状态规则表里写的那一档（`debuff_scale.dmg_taken` × 100），
     #   现算 —— 不给槽位留空（`{pct}` 空着会原样打给玩家）。
     _bs = (state_rule(key).get("debuff_scale") or {}).get("dmg_taken")
-    logs.append(T("COMBAT_MECH_SEVER", name=target.get("name", ""), turns=int(turns),
+    logs.append(T("COMBAT_MECH_SEVER", t=int(round(_now(battle))),
+                  name=target.get("name", ""), turns=int(turns),
                   pct=int(round(float(_bs or 0) * 100))))
 
 
@@ -529,7 +530,8 @@ def aeth_sunder(battle, caster, target, params, logs):
         return
     _put(target, key, _now(battle) + turns,
          **{k: panel[k] for k in ("stat", "op", "mult") if k in panel})
-    logs.append(T("COMBAT_MECH_SUNDER", name=target.get("name", ""), turns=int(turns),
+    logs.append(T("COMBAT_MECH_SUNDER", t=int(round(_now(battle))),
+                  name=target.get("name", ""), turns=int(turns),
                   pct=_pct_from_mult(panel.get("mult") or 1)))
 
 
@@ -543,7 +545,7 @@ def aeth_taunt(battle, caster, target, params, logs):
     if not isinstance(holder, dict) or not key or turns <= 0:
         return
     _put(holder, key, _now(battle) + turns, v=_mval(params))
-    logs.append(T("COMBAT_MECH_TAUNT", turns=int(turns)))
+    logs.append(T("COMBAT_MECH_TAUNT", t=int(round(_now(battle))), turns=int(turns)))
 
 
 def _ward(battle, caster, target, params, m, logs, slot: str) -> None:
@@ -579,7 +581,7 @@ def aeth_matins(battle, caster, target, params, logs):
     if not isinstance(holder, dict) or not key or turns <= 0:
         return
     _put(holder, key, _now(battle) + turns)
-    logs.append(T("COMBAT_MECH_MATINS", turns=int(turns)))
+    logs.append(T("COMBAT_MECH_MATINS", t=int(round(_now(battle))), turns=int(turns)))
 
 
 @EF.register_action("aeth_advance_ct")
@@ -604,7 +606,7 @@ def aeth_advance_ct(battle, caster, target, params, logs):
     #   ★ 夹制与声明**一个字没动**（`max(now, …)` 照旧，不许负 ct）——见 `probe_mech` ⑩
     #     与 `skill_mech.json` 那条 judge「少 mech_val 刻，**且不小于当刻**」。
     #   现在这句报的是**声明量**（域里 mech_val），文案那边写「最多提前」把闸说清楚。
-    logs.append(T("COMBAT_MECH_QUICKSTEP", ticks=int(adv)))
+    logs.append(T("COMBAT_MECH_QUICKSTEP", t=int(round(_now(battle))), ticks=int(adv)))
 
 
 @EF.register_action("aeth_mitigate")
@@ -656,9 +658,10 @@ def aeth_mitigate(battle, caster, target, params, logs):
     cur = ctx.get("mult")
     ctx["mult"] = (1.0 if cur is None else float(cur)) * mult
     if immune:
-        logs.append(T("COMBAT_MECH_IMMUNE"))
+        logs.append(T("COMBAT_MECH_IMMUNE", t=int(round(_now(battle)))))
     else:
-        logs.append(T("COMBAT_MECH_MITIGATE", pct=int(round((1.0 - mult) * 100))))
+        logs.append(T("COMBAT_MECH_MITIGATE", t=int(round(_now(battle))),
+                      pct=int(round((1.0 - mult) * 100))))
 
 
 def taunt_picker(battle, actor):
@@ -688,7 +691,7 @@ def _cast_protect(battle, caster, info, m, logs):
     if not key:
         return
     _put(caster, key, now + turns)
-    logs.append(T("COMBAT_MECH_OATHWALL", turns=int(round(turns)),
+    logs.append(T("COMBAT_MECH_OATHWALL", t=int(round(_now(battle))), turns=int(round(turns)),
                   pct=_pct_of_rule(state_rule(key))))
 
 
@@ -697,10 +700,10 @@ def _cast_cleanse(battle, caster, info, m, logs):
     ef = caster.setdefault("effects", {})
     hit = next((k for k, e in ef.items() if isinstance(e, dict) and e.get("mode")), None)
     if hit is None:
-        logs.append(T("COMBAT_MECH_ABSOLVE_NONE"))
+        logs.append(T("COMBAT_MECH_ABSOLVE_NONE", t=int(round(_now(battle)))))
         return
     ef.pop(hit, None)
-    logs.append(T("COMBAT_MECH_ABSOLVE"))
+    logs.append(T("COMBAT_MECH_ABSOLVE", t=int(round(_now(battle)))))
 
 
 def _cast_hot(battle, caster, info, m, logs):
@@ -731,7 +734,7 @@ def _cast_hot(battle, caster, info, m, logs):
         "expire": _now(battle) + turns,
         "period": {"dir": "heal", "interval": 1, "heal_pct": float(per) / float(mx)},
     }
-    logs.append(T("COMBAT_MECH_LULLABY", turns=int(turns), per=per))
+    logs.append(T("COMBAT_MECH_LULLABY", t=int(round(_now(battle))), turns=int(turns), per=per))
 
 
 def _f8_heal(battle, caster, info) -> float:
@@ -896,7 +899,8 @@ def aeth_block_roll(battle, caster, target, params, logs):
         _dmg = float(ctx.get("dmg") or 0)
     except Exception:                                   # noqa: BLE001
         _dmg = 0.0
-    logs.append(T("COMBAT_MECH_BLOCK", n=int(_dmg * mit), oath=oath, cur=got))
+    logs.append(T("COMBAT_MECH_BLOCK", t=int(round(_now(battle))),
+                      n=int(_dmg * mit), oath=oath, cur=got))
 
 
 # ══════════════════════════════════════════════════════════════
@@ -1017,7 +1021,8 @@ def aeth_daze(battle, caster, target, params, logs):
     if not state_rule(key):
         return
     _put(target, key, _now(battle) + turns, mode=mode)
-    logs.append(T("COMBAT_MECH_DAZE", name=target.get("name", ""), turns=int(turns)))
+    logs.append(T("COMBAT_MECH_DAZE", t=int(round(_now(battle))),
+                  name=target.get("name", ""), turns=int(turns)))
 
 
 # ══════════════════════════════════════════════════════════════
@@ -1261,7 +1266,8 @@ def aeth_pin_down(battle, caster, target, params, logs):
     if not key or turns <= 0 or not state_rule(key):
         return
     _put(target, key, _now(battle) + turns)
-    logs.append(T("COMBAT_MECH_PINDOWN", name=target.get("name", ""), turns=int(turns),
+    logs.append(T("COMBAT_MECH_PINDOWN", t=int(round(_now(battle))),
+                  name=target.get("name", ""), turns=int(turns),
                   pct=abs(_panel_delta(state_rule(key)))))
 
 
@@ -1281,7 +1287,8 @@ def aeth_silence_lock(battle, caster, target, params, logs):
     if not state_rule(key):
         return
     _put(target, key, _now(battle) + turns, mode=mode)
-    logs.append(T("COMBAT_MECH_SILENCE", name=target.get("name", ""), turns=int(turns)))
+    logs.append(T("COMBAT_MECH_SILENCE", t=int(round(_now(battle))),
+                  name=target.get("name", ""), turns=int(turns)))
 
 
 @EF.register_action("aeth_frost_veil")
@@ -1322,7 +1329,8 @@ def aeth_bleed(battle, caster, target, params, logs):
     EF.note_dot_source(battle, target, key, caster)
     # ★ 跳的间隔从**规则表那一条**现读（文案里那个「每 N 刻」不许另写一个数 —— 单源）
     _intv = int(float((cfg.get("period") or {}).get("interval") or 1))
-    logs.append(T("COMBAT_MECH_BLEED", name=target.get("name", ""), turns=int(turns),
+    logs.append(T("COMBAT_MECH_BLEED", t=int(round(_now(battle))),
+                  name=target.get("name", ""), turns=int(turns),
                   stacks=n, intv=_intv))
 
 
@@ -1415,7 +1423,8 @@ def aeth_on_taken(battle, caster, target, params, logs):
         if dmg <= 0:
             continue
         real = LD.deal_damage(battle, None, src, dmg, logs)
-        logs.append(T("COMBAT_MECH_TRANCE", name=src.get("name", ""), n=real))
+        logs.append(T("COMBAT_MECH_TRANCE", t=int(round(_now(battle))),
+                      name=src.get("name", ""), n=real))
 
 
 # ── ★ fix-k-critline：暴击那一行（引擎 `crit` 事件 · 内容侧唯一读端）──────────

@@ -445,7 +445,10 @@ _left = sorted(_c.get("effects") or {})
 (ok if "aa_ctl" not in _left and "zz_buff" in _left else bad)(
     "  · 控制态被解掉、非控制条目留着（剩 %s）" % (_left,))
 _mlogs = apply_cast(_b, _c, "SKILL_PRS_absolve")
-_none = CA.T("COMBAT_MECH_ABSOLVE_NONE")
+#: ★ P0-1 续（2026-09-29 · aep0）：这一格现在带【N 刻】⇒ 模板不是渲染结果，
+#:   夹具按**真读端同一口**给 t（`_cast_cleanse` 传的就是 int(round(_now(battle)))），
+#:   否则拿带 `{t}` 的模板去 `in` 一条已填好的行，恒不成立。判据意图（这一句必须出）未动。
+_none = CA.T("COMBAT_MECH_ABSOLVE_NONE", t=int(round(float(getattr(_b, "_now", 0) or 0))))
 (ok if _none in _mlogs else bad)(
     "  · 没控可解 ⇒ 出「没有能解的东西」那一句（不静默）—— 逐字取自槽位 %r" % _none)
 #: ★ fix-h-small（真人试玩 b13 · 修女路）：净罪的**收件人就是施法者自己**

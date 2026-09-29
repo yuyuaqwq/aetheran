@@ -79,12 +79,30 @@ def chk(label, cond, extra=""):
     print("  %s %s%s" % ("OK " if cond else "X  ", label, ("  —— %s" % extra) if extra else ""))
 
 
+#: ★ P0-1 续（2026-09-29 · aep0）：战斗日志行逐字带【N 刻】（真源 26_ §三 优化 1），
+#:   那一格是**战斗绝对时刻**、只有读端知道 ⇒ 夹具现渲染时换通配、断言走 `_hit`。
+#:   ★ 强度不降：通配只覆盖刻数那一格，图标、句子、行尾全部逐字对。
+_STAMP_S = __import__("re").compile(r"^[^【]*【[^】]*刻】")
+
+
 def txt(key, **slots):
     rec = CA._texts().get(key) or {}
     s = rec.get("value", "")
     for k, v in slots.items():
         s = s.replace("{%s}" % k, str(v))
+    if "{t" in s:
+        assert _STAMP_S.match(s), "战斗日志行首必须带【…刻】：%r" % s
+        s = s.replace("{t}", "*")
     return s
+
+
+def _hit(exp, out):
+    """无通配走 `in`（逐字），有通配走正则整行 —— 与 probe_cmds / probe_party 同一手法。"""
+    if "*" in exp:
+        import re
+        rx = re.compile("^" + ".*".join(re.escape(p) for p in exp.split("*")) + "$")
+        return any(rx.match(str(x).strip()) for x in out)
+    return exp in out
 
 
 def txts():
@@ -312,10 +330,11 @@ def _break_once(charging):
 _l1, _n1, _p1 = _break_once(True)
 _l0, _n0, _p0 = _break_once(False)
 chk("②-a 对方在起手（真断成）⇒ 足迹 `interrupts` **+1** 且回话是「截断」那一句",
-    _n1 == 1 and _l1 == [txt("COMBAT_INT_BREAK")],
+    _n1 == 1 and len(_l1) == 1 and _hit(txt("COMBAT_INT_BREAK"), _l1),
     "计数=%d 回话=%r" % (_n1, _l1))
 chk("②-b 对方没起手（只把到点时刻推后）⇒ 计数**不动**（不虚高）",
-    _n0 == 0 and _l0 == [txt("COMBAT_INT_PUSH", ticks=58)] or (_n0 == 0 and _l0 and _l0 != [txt("COMBAT_INT_BREAK")]),
+    _n0 == 0 and (len(_l0) == 1 and _hit(txt("COMBAT_INT_PUSH", ticks=58), _l0)
+                 or (len(_l0) == 1 and not _hit(txt("COMBAT_INT_BREAK"), _l0))),
     "计数=%d 回话=%r" % (_n0, _l0))
 chk("②-c1 读口通：`codex.foot()` 汇总得到它", CX.foot(_p1)["interrupts"] == 1)
 chk("②-c2 读口通：称号那一格（`titles.ctx`）读到它 —— 「十次打断」不再是空的",

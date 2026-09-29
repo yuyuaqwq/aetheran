@@ -604,11 +604,35 @@ from content import panel_build as PB                                   # noqa: 
 GEAR5 = ("equip", "unequip", "item_compare", "skills", "skill_learn")
 
 
+#: ★ P0-1 续（2026-09-29 · aep0）：战斗日志行逐字带【N 刻】（真源 26_ §三 优化 1），
+#:   而那一格是**战斗绝对时刻** —— 夹具算不出来、只有读端知道。
+#:   ⇒ `_r` 对含 `{t}` 的槽位把**那一格**换成通配，断言一律走 `_hit()`。
+#:   ★ 强度不降：通配只覆盖刻数那一格，图标、句子、行尾全部逐字对。
+_STAMP_PRE_C = re.compile(r"^[^【]*【[^】]*刻】")
+
+
+def _hit(exp, out):
+    """对一条期望串在一屏回话里找它：无通配走 `in`（逐字），有通配走正则整行。"""
+    if "*" in exp:
+        rx = re.compile("^" + ".*".join(re.escape(p) for p in exp.split("*")) + "$")
+        return any(rx.match(str(x).strip()) for x in out)
+    return exp in out
+
+
+def _same(got, exp):
+    """日志列表逐条对（每一行各自走 `_hit`）—— 两边同长同序。"""
+    g, e = list(got or []), list(exp or [])
+    return len(g) == len(e) and all(_hit(x, [y]) for x, y in zip(e, g))
+
+
 def _r(key, **kw):
     """按 texts 现渲染一条槽位（期望值探针自己算，不手写镜像串 —— 与 §十 同一做法）。"""
     s = (TX.get(key) or {}).get("value", "")
     for k, v in kw.items():
         s = s.replace("{%s}" % k, str(v))
+    if "{t" in s:
+        assert _STAMP_PRE_C.match(s), "战斗日志行首必须带【…刻】：%r" % s
+        s = s.replace("{t}", "*")
     return s
 
 
@@ -2100,11 +2124,23 @@ try:
     #     （不再看 `last_battle` —— 那是**结算期**才写的账，这一场还没打完）
     _o_int, _s_int = _say23(dict(_BASE23), "打断")
     _f_int = _field23()
-    _PUSH23 = (TX.get("COMBAT_INT_PUSH") or {}).get("value", "").split("{ticks}")[0]
+    # ★ P0-1 续（aep0）：压后那一行有两格刻数（行首那格 = 战斗绝对时刻；
+    #   「推后 N 刻」= 这一手现算），事先都拿不到 ⇒ 用**行首锚 + 尾巴**夹住、中间不参与匹配。
+    #   ★ 覆盖不丢：行首那格由 `probe_texts`（活 cue 行必带【N 刻】）钉；
+    #     「推后 N 刻」那一格由下面**直调**那一档整行逐字对（刻数现算）钉着。
+    #   切法：行首那一格在 `【…】` 之间 ⇒ 按语义位置切，不靠字符串猜。
+    _push_raw = (TX.get("COMBAT_INT_PUSH") or {}).get("value", "")
+    _i23, _j23 = _push_raw.index("【"), _push_raw.index("】")
+    _PUSH23_HEAD = _push_raw[:_i23 + 1]                 # 「⚔️【」
+    _PUSH23_TAIL = _push_raw[_j23 + 1:].split("{ticks}")[0].strip()   # 「刻】你把它压在后面 …… 被推后」
+    def _is_push23(out):
+        # 行首锚（图标 + 【）逐字对上 + 句子本体含那一段 ⇒ 这一行就是「压后」那一句。
+        return any(str(x).startswith(_PUSH23_HEAD) and _PUSH23_TAIL in str(x)
+                   for x in out)
     if _o_int[:1] != [_MEET23] \
-            or _r("COMBAT_INT_HEAD", skill=_INT_NAME) not in _o_int \
-            or not (_r("COMBAT_INT_BREAK") in _o_int
-                    or any(ln.startswith(_PUSH23) for ln in _o_int)):
+            or _r("COMBAT_INT_HEAD_A", skill=_INT_NAME) not in _o_int \
+            or not (_hit(_r("COMBAT_INT_BREAK"), _o_int)
+                 or _is_push23(_o_int)):
         _B23.append(("打断 真敲", _o_int[:3]))
     if _f_int is None or int(_f_int.get("hands") or 0) != 1:
         _B23.append(("打断 真敲没把这一场推起来（手数 = %s）"
@@ -2120,7 +2156,7 @@ try:
     _ct0 = float(_foe23.get("ct") or 0)
     _logs23a = BA23.Hand("interrupt", p=_rec23).override(_b23a, "interrupt", _pl23, None, None)[0]
     if not _was_charging or _foe23.get("charging") is not None \
-            or _logs23a != [_r("COMBAT_INT_BREAK")] \
+            or not _same(_logs23a, [_r("COMBAT_INT_BREAK")]) \
             or abs(float(_foe23.get("ct") or 0) - (_ct0 + _ticks23)) > 1e-6:
         _B23.append(("打断 断成那一档", _was_charging, _foe23.get("charging"),
                      abs(float(_foe23.get("ct") or 0) - (_ct0 + _ticks23))))
@@ -2131,7 +2167,7 @@ try:
     _ticks23b = BA23.hand_ticks(_b23b, _pl23b, BA23.CAT["interrupt"])
     _logs23b = BA23.Hand("interrupt", p=_rec23).override(_b23b, "interrupt", _pl23b, None, None)[0]
     if _foe23b.get("charging") is not None \
-            or _logs23b != [_r("COMBAT_INT_PUSH", ticks=int(_ticks23b))] \
+            or not _same(_logs23b, [_r("COMBAT_INT_PUSH", ticks=int(_ticks23b))]) \
             or abs(float(_foe23b.get("ct") or 0) - (_ct0b + _ticks23b)) > 1e-6:
         _B23.append(("打断 压后那一档", _logs23b,
                      abs(float(_foe23b.get("ct") or 0) - (_ct0b + _ticks23b))))
@@ -2163,7 +2199,7 @@ try:
         _o, _s = _say23(dict(_BASE23), "后撤", pin=_pin)
         _fled = (_s.get("flags") or {}).get("last_battle", {}).get("result") == "fled"
         _saw23.add(_fled)
-        if _exp and not (_r("COMBAT_RETREAT_OK") in _o and _fled):
+        if _exp and not (_hit(_r("COMBAT_RETREAT_OK"), _o) and _fled):
             _B23.append(("后撤 该跑得掉却打了", _pin, _o[:3]))
         if (not _exp) and not any(ln.startswith((TX.get("COMBAT_RETREAT_BLOCK") or {}).get(
                 "value", "").split("{name}")[0]) for ln in _o):
@@ -2189,13 +2225,13 @@ try:
     _lg_inj = []
     _r_inj = _dec23(_fd23, _pl23f, _lg_inj, _st23)
     _saw23.add(False if _r_inj is None else True)
-    if _r_inj is not None or _lg_inj != [_r("COMBAT_RETREAT_BLOCK", name=_nm23)]:
+    if _r_inj is not None or not _same(_lg_inj, [_r("COMBAT_RETREAT_BLOCK", name=_nm23)]):
         _B23.append(("后撤 注入前摇那一档没拦住", _r_inj, _lg_inj))
     _fe23["charging"] = None
     _lg_free = []
     _r_free = _dec23(_fd23, _pl23f, _lg_free, _st23)
     _saw23.add(True if _r_free == "fled" else False)
-    if _r_free != "fled" or _lg_free != [_r("COMBAT_RETREAT_OK")]:
+    if _r_free != "fled" or not _same(_lg_free, [_r("COMBAT_RETREAT_OK")]):
         _B23.append(("后撤 清掉前摇之后没走得掉", _r_free, _lg_free))
     chk("★ `后撤`：**能跑掉才跑得掉**（两个 pin 真敲各自现算：田鼠 %s / 林鸦 %s；第三档"
         "**直调注入前摇**（塔顶 Boss 那一族的场）⇒ 退不开、清掉 ⇒ 走得掉）"
@@ -2239,7 +2275,7 @@ try:
     if _o_item[:1] != [_MEET23] \
             or _r("COMBAT_ITEM_HEAD", name="伤药") not in _o_item \
             or _used_left != 2 \
-            or _o_item2.count(_r("COMBAT_ITEM_CAP", name="伤药")) != 1 \
+            or sum(1 for _x in _o_item2 if _hit(_r("COMBAT_ITEM_CAP", name="伤药"), [_x])) != 1 \
             or _r("COMBAT_ITEM_HEAD", name="伤药") in _o_item2 \
             or _used_left2 != 2 \
             or _f_item is None or int(_f_item.get("items_used", {}).get(_POT23, 0)) != 1 \
