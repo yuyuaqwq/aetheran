@@ -34,6 +34,7 @@ from __future__ import annotations
 
 from .cmds_ast import _data, _p, _save, T
 from .cmds_talk import _arg
+from . import alloc as AL
 from . import argv as AV
 from . import gear as GB
 from . import loot as LT
@@ -105,20 +106,39 @@ def req_of(iid) -> dict | None:
     return {"attr": attr, "v": int(v), "level": int(r.get("level") or 0)}
 
 
-def attr_points(p, attr) -> int:
+def attr_points(p, attr) -> float:
     """档上该五维属性**加了多少点** —— 唯一口径 = `alloc` 那一格。
 
     ★ 建号那 8 点的**起始五维**真源里还没有（`05_玩法数值口径 §二` 同款问题：
       「五维起始值」没有出处）⇒ 这里不编一个起点，只算玩家自己加的
       （`cmds_more.attrs` 那一页说的也是「加过哪些点」）。见 `_notes.md` 的待补项。
+
+    ★ 台账 #262：原先这里是 `int((p.get("alloc") or {}).get(str(attr)) or 0)` ——
+      **无条件 `int()` 截断**。同一批的坏形态（实测）：`alloc={"STR":2.9}` ⇒ `attr_points`
+      报 **2**（配平基准 / 测试档的小数被静默改数）⇒ 玩家加了 2.9 点力量，装备门槛只按 2 点判。
+      与 `alloc.spent` 的口径直接矛盾（那边 `alloc.py:91-93` 明写「读取这一口**不截断**
+      （截断就是静默改数）」）。
+      处置：**取值走 `alloc.of_record`（P-34 那一把尺）+ 不截断**，整数就还整数、有零头就还零头
+      （与 `alloc.spent` 逐字同形：`int(v)` 整数归一，否则原样 float）；比较侧 `unmet_req` 用
+      `>=` 阈值比，于是 2.9 点过「要 2 点」那扇门，而 2.4 点**过不了**「要 3 点」——
+      也就是**门槛只按阈值判，不改数**。档上 `alloc` 坏了 ⇒ `AllocError`（与面板/加点同一把尺），
+      绝不当「没加过点」放过去。判据 `probe_panel ⑨`。
     """
-    return int((p.get("alloc") or {}).get(str(attr)) or 0)
+    got = AL.of_record(p).get(str(attr))                 # ★ 唯一读口（不截断 · 坏档抛）
+    if got is None:
+        return 0
+    return int(got) if float(got).is_integer() else float(got)
 
 
 def unmet_req(p, iid) -> dict | None:
     """没够的门槛：`{name, attr, need, have, gap}`；够了 / 无门槛 ⇒ None。
 
     `attr` 那一格是**中文名**（走 `SYS_STAT_*` 槽位，代码不内联中文）。
+
+    ★ 台账 #262：`have` 可以是**小数**（配平基准 / 测试档）⇒ 判「够不够」用 `>=` 阈值比
+      （这一行本来就是 `>=`，问题是取值那侧把小数 `int()` 截了）；`have` / `gap` 上屏走
+      `_fmt`（9.0 → 9 · 2.4 → 2.4）—— 模板里那两格是 `{have}` / `{gap}` 裸槽位，
+      直接塞 float 会打出 `2.9000000000000004` 那一种。
     """
     req = req_of(iid)
     if not req:
@@ -127,7 +147,7 @@ def unmet_req(p, iid) -> dict | None:
     if have >= req["v"]:
         return None
     return {"name": _item(iid).get("name", iid), "attr": stat_label(req["attr"]),
-            "need": req["v"], "have": have, "gap": req["v"] - have}
+            "need": req["v"], "have": _fmt(have), "gap": _fmt(req["v"] - have)}
 
 
 def stats_of(p, iid) -> dict:

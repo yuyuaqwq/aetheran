@@ -878,6 +878,103 @@ try:
 except Exception as exc:                                                      # noqa: BLE001
     chk("★ B3-19 装备门槛那一节跑得起来", False, "%s: %s" % (type(exc).__name__, exc))
 
+# ══════════════════════════════════════════════════════════════
+# ⑨ ★ 台账 #262：属性门槛**按阈值比、不按 int() 硬截**
+#   病根（`cmds_gear.attr_points` 原先那行）：
+#       `int((p.get("alloc") or {}).get(str(attr)) or 0)`
+#   **无条件 int() 截断** —— 而同一批的 `alloc.spent`（alloc.py:91-93）明写「读取这一口
+#   **不截断**（截断就是静默改数）」⇒ 两把尺。实测 `alloc={"STR":2.9}` ⇒ attr_points 报
+#   **2** ⇒ 玩家加了 2.9 点力量，装备门槛只按 2 点判（0.4 点更惨：截成 0，当没加过）。
+#   判据四条：① 取值不截断（2.9/0.4 逐字回来，整数仍是 int）② 与 `alloc.of_record` 同源
+#            ③ 阈值：差 0.1 点的**高**于门槛 ⇒ 穿得上（改前 int() 截断会判成穿不上）
+#            ④ ★ 静态守卫：`attr_points` 里不许再出现 `int(`（把修法改回截断当场红）
+#   小数只可能来自**配平基准 / 测试档**（玩家自己投的永远是整数，写入由 alloc.apply 把关）
+#   —— 正是「截断会静默改数」的最坏形态。
+print("── ⑨ ★ 台账 #262：装备属性门槛**不按 int() 截断**（与 alloc.spent 同一把尺）")
+try:
+    from content import cmds_gear as _CG9                           # noqa: E402
+    from content import alloc as _AL9                               # noqa: E402
+    _D9 = _CG9._data("items")
+    _pick9 = next((k for k in sorted(_D9)
+                   if (_D9[k].get("req") or {}).get("attr") == "STR"
+                   and k.endswith("_refined")), "")
+    _pick9 = _pick9 or next((k for k in sorted(_D9) if (_D9[k].get("req") or {})), "")
+    if not _pick9:
+        chk("★ ⑨ 找得到一件带 req 的装备做小数门槛", False, "items 域里没有 req")
+    else:
+        _at9 = str((_D9[_pick9].get("req") or {})["attr"])
+        _nd9 = int(_D9[_pick9]["req"]["v"])
+        # ① 取值不截断（整数仍是 int · 小数原样回来 · 类型也对）
+        _vals9 = {2.9: 2.9, 0.4: 0.4, 3: 3, 2.0: 2}
+        _got9 = {v: _CG9.attr_points({"alloc": {_at9: v}}, _at9) for v in _vals9}
+        _trunc9 = [v for v, w in _vals9.items()
+                   if not (abs(float(_got9[v]) - float(w)) < 1e-9
+                           and type(_got9[v]) is type(w))]
+        chk("★ ⑨① attr_points **不截断**：2.9→2.9 · 0.4→0.4 · 3→3 · 2.0→2（实际 %r）"
+            % ({k: _got9[k] for k in sorted(_got9, key=float)},),
+            not _trunc9, "被截断/换型的：%r" % _trunc9)
+        # ② 与 alloc.of_record 同一把尺（P-34：别处不许自己再 `record.get("alloc")` 算一遍）
+        _a9 = {_at9: 2.9, "AGI": 0.4}
+        chk("★ ⑨② 与 `alloc.of_record` 同源（2.9 那个值两边逐字相同）",
+            _CG9.attr_points({"alloc": _a9}, _at9) == _AL9.of_record({"alloc": _a9})[_at9],
+            "%r vs %r" % (_CG9.attr_points({"alloc": _a9}, _at9),
+                          _AL9.of_record({"alloc": _a9})[_at9]))
+        # ③ 阈值方向：差 0.1 点的**高**于门槛 ⇒ 穿得上（改前 int() 会把它截到门槛下）
+        _over9 = float(_nd9) + 0.1
+        _under9 = float(_nd9) - 1.0
+        _ok_over9 = _CG9.unmet_req({"alloc": {_at9: _over9}}, _pick9) is None
+        _sh9 = _CG9.unmet_req({"alloc": {_at9: _under9}}, _pick9)
+        chk("★ ⑨③ 阈值方向：%.1f 点 > 门槛 %d ⇒ 穿得上（改前 int() 截成 %d 会判成穿不上）；"
+            "%.1f 点 ⇒ 拦下且带缺口 %r"
+            % (_over9, _nd9, int(_over9), _under9, ({} if not _sh9 else _sh9.get("gap"))),
+            _ok_over9 and _sh9 is not None,
+            "over⇒%r under⇒%r" % (_ok_over9, _sh9))
+        # 上屏那两格不许带浮点尾巴（模板是裸槽位）
+        _gapstr9 = ({} if not _sh9 else _sh9.get("gap"))
+        chk("★ ⑨③b 缺口上屏不带浮点尾巴（`{have}`/`{gap}` 是裸槽位 ⇒ 走 _fmt）",
+            isinstance(_gapstr9, str) and "e" not in str(_gapstr9).lower()
+            and "0." not in str(_gapstr9)[:1],
+            "gap=%r（类型 %s）" % (_gapstr9, type(_gapstr9).__name__))
+        # ④ ★ 静态守卫：`attr_points` 里**不许再有「无条件 int() 截断」那种写法** ——
+        #   病根那句是 `int((p.get("alloc") or {}).get(str(attr)) or 0)`：int() 直接套在
+        #   **取值那一格**上，任何小数都被砍掉（2.9→2）。修法里那一处 int() 是
+        #   `int(got) if float(got).is_integer() else float(got)` —— **有守卫地**归一
+        #   （整数归整数、小数原样），与 `alloc.spent` 逐字同形 ⇒ 那是合法的，不算。
+        #   判法：扫 attr_points 里每个 int() 调用，它的参数**不许是 alloc 取值那一格**
+        #   （`.get(...)` / 下标 / `of_record(...).get(...)`）；裸值守卫式归一放行。
+        import ast as _ast9                                             # noqa: E402
+        import io as _io9                                               # noqa: E402
+        _REPO9 = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        _t9 = _ast9.parse(_io9.open(os.path.join(_REPO9, "content", "cmds_gear.py"),
+                                    encoding="utf-8").read())
+        _ap9 = next((n for n in _ast9.walk(_t9)
+                     if isinstance(n, (_ast9.FunctionDef, _ast9.AsyncFunctionDef))
+                     and n.name == "attr_points"), None)
+
+        def _is_alloc_read(node):                                       # 这一格是不是 alloc 取值
+            if isinstance(node, _ast9.Subscript):
+                return True
+            if isinstance(node, _ast9.Call) and isinstance(node.func, _ast9.Attribute):
+                return node.func.attr == "get"
+            return False
+
+        _bare262, _guarded262 = [], 0
+        if _ap9:
+            for _c in _ast9.walk(_ap9):
+                if not (isinstance(_c, _ast9.Call) and isinstance(_c.func, _ast9.Name)
+                        and _c.func.id == "int"):
+                    continue
+                if any(_is_alloc_read(_a) for _a in _c.args):
+                    _bare262.append(_ast9.dump(_c)[:90])                # ← 病根形态
+                else:
+                    _guarded262 += 1                                     # ← 有守卫的归一，合法
+        chk("★ ⑨④ 静态守卫：`attr_points` 里**裸 `int()` 套在 alloc 取值上 0 个**"
+            "（病根那句就是那种；守卫式归一 %d 处不算 —— 有守卫的归一是 `alloc.spent` 同形）"
+            % (_guarded262,),
+            _ap9 is not None and not _bare262, "%s" % (_bare262[:2] or ["<没找到 attr_points>"]))
+except Exception as exc:                                                  # noqa: BLE001
+    chk("★ 台账 #262 装备门槛那一节跑得起来", False, "%s: %s" % (type(exc).__name__, exc))
+
 print("")
 print("── ⑧ ★ B3-28 ①：面板栈的键带上「人」那一维（同职业同级的两名玩家不撞同一格）")
 #   原先 `panel_build.build_actor` 的栈 id = `aetheran.<职业>@<等级>`，而栈的声明里烤着
