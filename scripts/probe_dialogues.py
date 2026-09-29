@@ -2047,6 +2047,129 @@ finally:
     assert json.dumps(dl["dlg_derrick"], ensure_ascii=False, sort_keys=True) == (
         json.dumps(_bak29, ensure_ascii=False, sort_keys=True))
 
+# ㉚ ★ P1-40（2026-09-29 · 文案修复车道 P1）—— **「每人一个腔」**（规格 25_ §一 表第 2 行）
+#    缺陷本体：㊰–㉙ 这 30 条判据管的全���是**轮换 / 换皮 / 可达性 / 状态自洽** ——
+#    **没有一条在看「这个角色说话像不像他自己」**。而那正是本包最值钱的一条规格：
+#      · 25_ §一 表第 2 行：「NPC 对话（四层）… 每人一个腔（哈根短句 · 老陶啰嗦 · 小满不加标点）」
+#      · 23_ §二 逐位写了「语气档 · 用词」行（14 位各一行）
+#    那行就是**机器可验**的：它把该位该用的字面标记直接列了出来 ⇒ 域里有没有带上那些词，
+#    是能判的（不像「文笔好不好」那样判不了）。实测域里 14 位里只有 8 位带全（P1-40 补齐的）。
+#    ★ 这条判据**只加强**（新增 ㉚-a/b/c，既有 30 条一个字没动）。
+#    ★ 真源现读、**不抄镜像表**（§十 ③）：词表从 23_ 的「用词」行现解析；
+#      名字 → 树的对应从 `npcs` 域现取（不许在本文件里手写一份 14 位的映射）。
+
+_VOICE_SRC = os.environ.get("GWEN_VOICE_SPEC",
+                            "C:/Users/yuyu/aetheran-plan/06_第一阶段垂直切片/23_NPC设定_v6.md")
+
+#: 类别名不是字面标记（「醉话」「市井热络」这类是**对该腔的命名**，不是他会说的字）
+_VOICE_CATNAME = re.compile(r"(话|腔|声|调)$")
+#: 纯形态描述（「极准」「极短」「克制」—— 只有形容，没有可匹配的词）
+_VOICE_SHAPE = re.compile(r"^(极准|极短|散的|没头没尾|克制|温和|小心|一点|随便)$")
+
+
+def _voice_terms_of_30(wordline):
+    """从一行「用词 …」里抽出该位的**字面标记**。三种分隔一律吃：· 、 「」。"""
+    wl = (wordline or "").replace("**", "")
+    chunks = re.findall(r"[（(]([^）)]*)[）)]", wl)
+    if "：" in wl:                                   # 「市井热络：「哎哟」…」这一种
+        chunks.append(wl.split("：", 1)[1])
+    out = []
+    for seg in chunks:
+        for t in re.split(r"[·、，,\"'「」『』（）()／/]", seg):
+            t = t.strip().strip("★· ")
+            t = re.sub(r"^\*+|\*+$", "", t).strip()
+            if not t or not re.search(r"[一-鿿A-Za-z]", t):
+                continue
+            if _VOICE_CATNAME.search(t) or _VOICE_SHAPE.match(t):
+                continue
+            if t not in out:
+                out.append(t)
+    return out
+
+
+def _voice_spec_of_30():
+    """现解析 23_ §二：返回 [(序号, 名字, [字面标记…])]。读不到 = 空 ⇒ 下面 ㉚-c 当场红。"""
+    try:
+        txt = Path(_VOICE_SRC).read_text(encoding="utf-8")
+    except Exception:
+        return []
+    try:
+        sec = txt[txt.index("## 二、14 位"):txt.index("## 三、这次改了什么")]
+    except ValueError:
+        return []
+    out = []
+    for blk in re.split(r"\n### ", sec)[1:]:
+        m = re.match(r"(\d+)\s*·\s*(.+?)$", blk.split("\n", 1)[0].strip())
+        if not m:
+            continue
+        w = re.search(r"^\s*用词\s+(.+?)$", blk, re.M)
+        out.append((m.group(1), m.group(2).strip(),
+                    _voice_terms_of_30(w.group(1) if w else "")))
+    return out
+
+
+def _npc_name_to_tree_30():
+    """名字 → 树：从 `npcs` 域现取（本文件不手写 14 位映射）。"""
+    mp = {}
+    for k, v in (np_ or {}).items():
+        if not isinstance(v, dict):
+            continue
+        t = v.get("talk") or v.get("dialogue") or v.get("dlg")
+        if t:
+            mp[str(v.get("name") or k)] = t
+    return mp
+
+
+def _voice_gaps_30(spec, name2tree):
+    """⇒ [(名字, 树, [缺��标记…])]；树取不到也算缺口（**豁免 = 静默失效**）。"""
+    gaps = []
+    for _idx, name, terms in spec:
+        if not terms:                       # 皮特那行全是形态描述（两套话）—— 机器判不了，不豁免也别当缺口
+            continue
+        nm = re.split(r"[（(]", name)[0].strip()
+        tree = name2tree.get(nm)
+        node = dl.get(tree) if tree else None
+        blob = ""
+        if node:
+            blob = "\n".join(t.get("text", "")
+                             for n in node["nodes"].values() for t in n.get("texts", []))
+        miss = [t for t in terms if t not in blob]
+        if miss:
+            gaps.append((nm, tree, miss))
+    return gaps
+
+
+_voice_spec = _voice_spec_of_30()
+_voice_n2t = _npc_name_to_tree_30()
+_voice_gaps = _voice_gaps_30(_voice_spec, _voice_n2t)
+_voice_terms_all = sum(len(t) for _i, _n, t in _voice_spec)
+_voice_terms_hit = _voice_terms_all - sum(len(g[2]) for g in _voice_gaps)
+
+chk("㉚-a ★ 「每人一个腔」：23_ §二 逐位「用词」档里的字面标记，域里带了 %d/%d（硬底线 100%% · 规格 25_ §一 表第 2 行）"
+    % (_voice_terms_hit, _voice_terms_all),
+    not _voice_gaps and _voice_terms_all > 0,
+    "缺：%s" % [("%s(%s)缺%s" % (g[0], g[1], g[2])) for g in _voice_gaps] if _voice_gaps
+    else "全带齐（%d 位 · 标记 %d 个）" % (len([1 for _i, _n, t in _voice_spec if t]), _voice_terms_all))
+
+# ㉚-b ★ 真源那份 23_ **读得到且真解析出 14 位**（读不到 / 改名 / 段落挪了 ⇒ 全部标记静默变 0 个
+#    ⇒ ㉚-a 会「0/0」而看起来是绿的）。这一条把那种失效钉成红的。
+chk("㉚-b ★ 真源 23_ §二 解析得到 %d 位（读不到/结构变了 ⇒ 标记静默清零，㉚-a 会假绿）" % len(_voice_spec),
+    len(_voice_spec) >= 14,
+    "只解析到 %d 位：%s" % (len(_voice_spec), [r[0] for r in _voice_spec]))
+
+# ㉚-c ★ 反证：抽掉 dlg_grey 整棵树（域里那一套骂人的词就全没了）⇒ ㉚-a 必抓到
+#    （判据不恒真）。用「移走树」而不是「改词」：验证的是**标记真的取自域**。
+_voice_bak = dl.pop("dlg_grey", None)
+try:
+    _g = _voice_gaps_30(_voice_spec, _voice_n2t)
+    chk("㉚-c ★ 反证：把 dlg_grey 整棵移走 ⇒ ㉚-a 必抓到它（判据不恒真）",
+        any(g[0] == "格雷" for g in _g),
+        "抽完仍全带齐 = 判据恒真" if not any(g[0] == "格雷" for g in _g)
+        else "抓到：%s" % [g[2] for g in _g if g[0] == "格雷"])
+finally:
+    if _voice_bak is not None:
+        dl["dlg_grey"] = _voice_bak
+
 
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
