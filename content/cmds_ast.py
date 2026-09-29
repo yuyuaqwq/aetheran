@@ -2203,32 +2203,28 @@ async def hint(env, sink, uid, player):
 
 
 async def help_cmd(env, sink, uid, player):
-    """指令表 —— **只列有处理器的声明**（P-23）。
+    """指令表 —— 主面板 / 分类子面板（★★ 2026-09-30 改造：照奥兰迪亚套式）。
 
-    ★ 为什么按 `bind` 判：`commands.json` 是声明真源，`bind` 就是「包内真有实现体」那一栏
-      （`content/commands.py::load_declared_bindings` 只登记带 bind 的）。原先按 `visible`
-      全列 ⇒ 94 条里有 43 条是**敲了没反应**的（玩家照着表敲，回一句「未提供处理器」）。
+    · 裸『帮助』= 主面板：标题 + 常用块 + 分类入口。
+    · 『帮助 <分类>』= 该分类的子面板（整屏槽位；分类别名 → 槽位的映射在
+      `commands` 域 `help.topics` 里 —— 代码零中文词表）。
+    · 未知分类**不静默**：一句提示（`SYS_HELP_NOTOPIC`）再出主面板。
+    · 「只列有处理器的声明」的旧口径（P-23）随改造一并退役：子面板是人手写的
+      成品屏，不再按 `bind` 现拼（`SYS_HELP_ROW` / `SYS_HELP_CAT_OTHER` /
+      `SYS_HELP_BATTLE_TURN` 三键退役，登记在 `scripts/probe_copy.py`）。
     """
     cmds = _data("commands")
-    cats = {}
-    for k, v in cmds.items():
-        if v.get("visible") is False:
-            continue
-        if not v.get("bind"):
-            continue
-        cats.setdefault(v.get("category") or T("SYS_HELP_CAT_OTHER"), []).append(v.get("usage") or k)
-    yield T("SYS_HELP_HEAD")
-    for c, ws in cats.items():
-        yield T("SYS_HELP_ROW", cat=c, list=" · ".join("『%s』" % w for w in ws))
-    # ★ P1 BUG-9 ① / P4 E-11（本波 f4）：**界面上的承诺改诚实** —— 战斗那一栏与别的栏一样是
-    #   一串平铺的『防御』『打断』『技能 <参数>』…，读起来像「逐手出招」。
-    #   ★ G2（本波）撤掉的就是那句「一条指令打完整场」：**战斗真分了一手一手**，
-    #     帮助尾巴改成本波的口径（`SYS_HELP_BATTLE_TURN`）。旧槽位 `SYS_HELP_BATTLE_NOTE`
-    #     的包内读端到这一行就没了 —— 它的退役登记在 `scripts/probe_copy.py::RETIRED_DOC`
-    #     （真源那一行的**值**要由主线改：真源仓对本分支只读 ⇒ 账在 `_notes.md`）。
-    _bat = str((cmds.get("attack") or {}).get("category") or "")
-    if _bat and any(str(c) == _bat for c in cats):
-        yield T("SYS_HELP_BATTLE_TURN")
+    from . import argv as _argv
+    topic = (_argv.arg_of(env) or "").strip()
+    if topic:
+        slot = str(((cmds.get("help") or {}).get("topics") or {}).get(topic) or "")
+        if slot:
+            yield T(slot)
+            return
+        yield T("SYS_HELP_NOTOPIC", topic=topic)
+    yield T("SYS_HELP_TITLE")
+    yield T("SYS_HELP_COMMON")
+    yield T("SYS_HELP_INDEX")
 
 
 def declared_soon(env):

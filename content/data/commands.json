@@ -1800,14 +1800,33 @@
   },
   "help": {
     "patterns": [
-      "^帮助$",
-      "^指令$"
+      "^帮助(?:\\s*(.+))?$",
+      "^指令(?:\\s*(.+))?$"
     ],
     "category": "社交与系统",
     "desc": "指令表（分类）",
     "usage": "帮助",
     "visible": true,
     "order": 81,
+    "topics": {
+      "移动": "SYS_HELP_MOVE",
+      "移动与世界": "SYS_HELP_MOVE",
+      "公会": "SYS_HELP_GUILD",
+      "公会与委托": "SYS_HELP_GUILD",
+      "角色": "SYS_HELP_CHAR",
+      "背包": "SYS_HELP_BAG",
+      "背包与物品": "SYS_HELP_BAG",
+      "战斗": "SYS_HELP_BATTLE",
+      "采集": "SYS_HELP_GATHER",
+      "野外采集": "SYS_HELP_GATHER",
+      "生产": "SYS_HELP_CRAFT",
+      "生产与铺子": "SYS_HELP_CRAFT",
+      "图鉴": "SYS_HELP_CODEX",
+      "图鉴与记录": "SYS_HELP_CODEX",
+      "副本": "SYS_HELP_TOWER",
+      "社交": "SYS_HELP_SOCIAL",
+      "社交与系统": "SYS_HELP_SOCIAL"
+    },
     "bind": {
       "handler": "content.cmds_ast:help_cmd",
       "call": "run",
