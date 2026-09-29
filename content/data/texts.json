@@ -4637,11 +4637,12 @@
     "desc": "换武器 · 候选不止一件时那一行（本条声明没有参数 ⇒ 换哪件由数据说话）"
   },
   "COMBAT_SWAP_OK": {
-    "value": "📦 你换上了{icon}{name}（{kind}）—— 这一手花在换手上。",
+    "value": "📦【{t} 刻】你换上了{icon}{name}（{kind}）—— 这一手花在换手上。",
     "params": [
       "icon",
       "kind",
-      "name"
+      "name",
+      "t"
     ],
     "category": "战斗",
     "desc": "换武器 · 换上（04_指令总表 §五「吃一次行动」）"

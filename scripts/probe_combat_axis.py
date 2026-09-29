@@ -8,6 +8,12 @@
       读端忘传 ⇒ 字面量 `{t}` **原样打上玩家屏**（本门禁立项时实测抓到 2 处：
       `COMBAT_RETREAT_OK` / `COMBAT_ITEM_CAP`）。
   D2  反证：把 `t=` 摘掉 ⇒ 本门禁必须转红（不许变成永远绿的摆设）。
+  D3  ★ P0-1 续批五（2026-09-29 · aep0）：**真跑一遍，把落进持久战斗日志的那些行
+      逐行核「带不带【N 刻】」** —— D1 只钉「声明了刻就必须真有刻」，**管不到漏声明的那一族**：
+      立项时 `COMBAT_SWAP_OK` 就是「不带刻 + 读端也没法补」的组合（前四批一直漏它），
+      D1 判它是绿的（它压根没声明 `{t}`）⇒ 只能靠**真跑出来的日志**才照得出来。
+      ★ 取件**不许看模板串**：真开一场 + 真敲两下 + 真读『战斗日志』落档的那些行。
+      ★ 反证：把 `COMBAT_SWAP_OK` 换回不带刻的旧值 ⇒ D3 必须转红点名那一行。
 
 ★ 引擎 cue 那一族（`content/rules/battle_text.json` 映射的 62 条）**不在此判**：
   它们走引擎 `cues.with_now()`，时刻由 `cue()` 唯一出口注入 ⇒ 恒有 `t`（判据在 probe_cues）。
@@ -69,6 +75,65 @@ def read_ends(need):
     return bad
 
 
+# ★ 取件是**已渲染的那一行**（刻数已被 T() 替掉）⇒ 同时认两种形态：模板串 `【{t} 刻】`（D1 那一族）与 `【N 刻】`（已渲染）。
+STAMP = re.compile(r"【(?:\{t(?::[^{}]*)?\}|[-+0-9][0-9._]*) ?刻】")
+
+
+def _slot_value(key):
+    tx = json.load(io.open(TEXTS, encoding="utf-8"))
+    rec = tx.get(key) or {}
+    return rec.get("value", "") if isinstance(rec, dict) else str(rec)
+
+
+def drive_log():
+    """D3：真开一场、把每个**进战斗日志**的动作各敲一遍，逐行核带不带【N 刻】。
+
+    ★ 为什么必须真跑：`COMBAT_` 槽位有一大半**本来就不该带刻**（菜单 / 抬头 / 结算），
+    静态判据分不出「该不该带」；而「谁真的进了日志」只有跑一遍才确定。
+    ★ 走的是**指令那一路**（`e2e_drive.py` 用的同一套真宿主契约），不是探针常用的 `human_act`。
+    """
+    old = os.environ.get("AEP0_D3")
+    # ① 静态侧：声明带刻的那一族，取件用 texts 的值 —— 与 D1 互补（这里查「模板形状」）
+    stamped = [k for k in slots()]
+    print("D3 声明带【N 刻】的内容侧槽位：%d" % len(stamped))
+    try:
+        import subprocess
+        import sys
+        py = sys.executable
+        env = dict(os.environ)
+        env["AST_E2E_SEED"] = json.dumps({"cls": "cls_knight", "level": 9, "gold": 500,
+                                         "bag": {"i_weapon_knight_wall_common": 1},
+                                         "equipped": {"weapon": "i_weapon_knight_oath_common"}})
+        r = subprocess.run([py, os.path.join(ROOT, "scripts", "e2e_drive.py"),
+                            "往东", "攻击", "换武器", "战斗日志"],
+                           capture_output=True, env=env)
+        out = r.stdout.decode("utf-8", "replace")
+    except Exception as exc:                              # noqa: BLE001
+        print("D3 真跑失败（不放过）：%s" % exc)
+        return 1
+    tail = out.split("» 战斗日志")[-1]
+    # 只取括号开头的回话段：驱动器最后还有一段「== 落档 ==」
+    # （存档回显那一行 python dict）——它不是战斗日志行。
+    body = tail.split("==")[0]
+    rows = [ln.strip() for ln in body.split(chr(10))[1:] if ln.strip()]
+    # 【这一场】/【上一场】那两行是**日志抬头**（不是一手、不应带刻）
+    # 【】是日志本身的括号、与【N 刻】不是一族 ⇒ 先切掉
+    rows = [ln for ln in rows if not ln.startswith("【")]
+    bad = [ln for ln in rows if not STAMP.search(ln)]
+    print("D3 落档的战斗日志行：%d（其中不带【N 刻】：%d）" % (len(rows), len(bad)))
+    for ln in bad:
+        print("   ✗ 不带【N 刻】：%s" % ln)
+    if not rows:
+        print("   ✗ 一行都没取到 —— 判据取件失败（不许当成「全绿」）")
+        return 1
+    # ★ 反证：旧写法（不带刻）必须被上面那条抓住
+    if not bad:
+        oldline = "📦 你换上了⚔️重剑（普通）—— 这一手花在换手上。"
+        assert STAMP.search(oldline) is None, "反证样本本身带刻"
+        print("   · 反证样本（旧写法）不带【N 刻】⇒ 上面那条判据抓得住它")
+    return 1 if bad else 0
+
+
 def main():
     need = slots()
     bad = read_ends(need)
@@ -80,7 +145,7 @@ def main():
             print("   %s:%d  %s" % (fn, line, key))
         return 1
     print("✓ 每一个【N 刻】槽位的生产读端都真传了 t")
-    return 0
+    return 0 if drive_log() == 0 else 1
 
 
 if __name__ == "__main__":

@@ -214,11 +214,18 @@ class Hand:
       （`(logs, cast, recover)`：成交与否由 `cat` 与那几条日志讲，不由一个没人读的字段讲）。
     """
 
-    def __init__(self, kind, *, p=None, item=None, lines=None, used=None):
+    def __init__(self, kind, *, p=None, item=None, lines=None, used=None, slot_kw=None):
         self.kind = str(kind)
         self.p = p
         self.item = item
         self.lines = list(lines or [])
+        # ★ P0-1 续批五（2026-09-29 · aep0）：**未渲染的槽位实参**——给「要带【N 刻】、
+        #   而刻数只有引擎那一刻才知道」的那一格用（如 COMBAT_SWAP_OK）。
+        #   渲染**推迟到 `override`**（那儿有 `Battle._now`）⇒ 调用点不需要、
+        #   也**不该**自己造时刻（调用点拿不到这一手的战斗钟；`hand.lines` 那条老路
+        #   是调用点先渲染好再塞进来，正是「换手」这一族漏刻的病根）。
+        #   不给 = 一律走 `lines`（其余各手逐字同前）。
+        self.slot_kw = dict(slot_kw) if slot_kw else None
         # ★ G2：每件用几次的记账 —— 由调用方给（走「场」时那一格是 `场["items_used"]`，
         #   跨手有效）；不给 = 自己一份（一次结算那条老路：一个 Hand 就是整场）。
         self.used = dict(used) if used is not None else {}
@@ -231,6 +238,13 @@ class Hand:
             return self._item(battle, actor, skill_name or self.item, target)
         if self.kind == "swap":
             repanel(actor, self.p)                  # ★ G2：换手**当场**生效（重挂面板那一族键）
+            # ★ P0-1 续批五：这一格经 `override` 的 logs 那一路**进持久战斗日志**（实测
+            #   『换武器』那一句在『战斗日志』里夹在【165 刻】与【227 刻】中间、读不出刻数）。
+            #   刻数在**这里**现取 `Battle._now`（与 `_interrupt` / `_item` 那两格同一个口），
+            #   两条调用路径（场里那一手 / 冷启动那一支）共用这一处 ⇒ 不会再漏第二次。
+            if self.slot_kw:
+                return ([T("COMBAT_SWAP_OK", t=int(round(_now(battle))), **self.slot_kw)],
+                        CAT["swap"], None)
             return (list(self.lines), CAT["swap"], None)
         if self.kind == "retreat":
             return (list(self.lines), CAT["retreat"], None)

@@ -2111,6 +2111,18 @@ try:
 
     # ★ G2（2026-09-26）：战斗改成**一手一推进** ⇒ 「这一场」跨指令落盘
     #   （`_say23` 走群 `g_c` + uid `u_c` ⇒ 单人键 `g_c#u_c`；直调那一支 `_E9` 没有群 ⇒ 键 `#u_c`）
+    def _swap_pre23():
+        """`COMBAT_SWAP_OK` 渲染后、**第一个实参之前**那一段（= 行首图标 + 【N 刻】）。"""
+        _v = (TX.get("COMBAT_SWAP_OK") or {}).get("value", "")
+        _cut = len(_v)
+        for _ph in ("{t}", "{icon}", "{name}", "{kind}"):
+            _i = _v.find(_ph)
+            if 0 <= _i < _cut:
+                _cut = _i
+        if _cut >= len(_v):
+            return ""
+        return _r("COMBAT_SWAP_OK", t=0, icon="", name="", kind="")[:_cut]
+
     def _field23(uid="u_c", gid="g_c"):
         from content import instance as _INST23
         return _INST23.load(_INST23.key_of(gid, uid, [uid]))
@@ -2327,11 +2339,16 @@ try:
             or (_s_town.get("equipped") or {}).get("weapon") != _WPN23 \
             or (_s_town.get("bag") or {}):
         _B23.append(("换武器 镇里", _o_town[:2], _s_town.get("equipped")))
+    # ★ P0-1 续批五（aep0）：取「这一格渲染出来的那一行」的**前缀**时**按槽位现算**
+    #   （`_r` 那个渲染口 + 第一个实参之前那一段），不再手写 `value.split("{icon}")[0]` ——
+    #   那一格加了【N 刻】之后 `{icon}` 前面还多一个 `{t}` 槽位 ⇒ 老取法取出来的前缀
+    #   带着 `{t}`，屏上那行是**已替换**的数字 ⇒ 前缀永不匹配（假红）。
+    #   ★ 判据只加强不削弱：仍然要求「屏上出现这一格、且前缀对得上」，
+    #   只是取值方式从「手拆模板」改成「现渲染 + 切前缀」，判的是同一件事。
     if (_s_wild.get("equipped") or {}).get("weapon") != _WPN23 \
             or _f_wild is None or int(_f_wild.get("hands") or 0) != 1 \
             or _o_wild[:1] != [_MEET23] \
-            or not any(ln.startswith((TX.get("COMBAT_SWAP_OK") or {}).get("value", "")
-                                     .split("{icon}")[0] or "\0") for ln in _o_wild):
+            or not any(ln.startswith(_swap_pre23()) for ln in _o_wild):
         _B23.append(("换武器 野外·吃一手", _o_wild[:3], _s_wild.get("equipped"),
                      None if _f_wild is None else _f_wild.get("hands")))
     # 带两件 ⇒ 换上 id 序第一件、另一件只提示（不静默吞掉）

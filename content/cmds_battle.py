@@ -1007,8 +1007,12 @@ async def swap_weapon(env, sink, uid, player):
     eq0["weapon"] = iid
     p["equipped"] = eq0
     p = _p(p)                                  # ★ 上限/现血按新的 equipped 重新派生（P-27）
-    ok = T("COMBAT_SWAP_OK", icon=rec.get("icon", ""), name=LT.label_of(iid),   # ★ B4-20 同一个显示名口
-           kind=rec.get("kind", ""))
+    # ★ P0-1 续批五（aep0）：这一格带【N 刻】且**进持久战斗日志** ⇒ 刻数只有引擎那一刻
+    #   知道 ⇒ 把**未渲染的实参**交给 `Hand`，由 `battle_acts.Hand.override` 现渲染。
+    #   原先这里先 `T(...)` 渲染好再塞进 `hand.lines` —— 那一族正是「漏刻」的病根
+    #   （调用点拿不到这一手的战斗钟，硬补就是造一个假时刻）。
+    _swap_kw = {"icon": rec.get("icon", ""), "name": LT.label_of(iid),   # ★ B4-20 同一个显示名口
+                "kind": rec.get("kind", "")}
     # ★ G2：分段推进 —— 这一手花在换手上（场里那一格的面板由 `Hand("swap")` 当场重挂，
     #   换完就轮到对方那一手；换下来的那件已经回背包了）
     from . import instance as INST
@@ -1024,7 +1028,7 @@ async def swap_weapon(env, sink, uid, player):
         if len(cand) > 1:                          # 还有别的能换（只提示 —— 换哪一件由数据说话）
             yield T("COMBAT_SWAP_ASK", list=" · ".join(
                 "『%s』" % LT.label_of(k) for k in cand[1:]))
-        hand = BA.Hand("swap", p=p, lines=[ok])
+        hand = BA.Hand("swap", p=p, slot_kw=_swap_kw)
         async for line in INST.take_turn(env, p, uid, player, hand=hand):
             yield line
         return
@@ -1040,7 +1044,7 @@ async def swap_weapon(env, sink, uid, player):
     if len(cand) > 1:                          # 还有别的能换（只提示 —— 换哪一件由数据说话）
         yield T("COMBAT_SWAP_ASK", list=" · ".join(
             "『%s』" % LT.label_of(k) for k in cand[1:]))
-    hand = BA.Hand("swap", p=p, lines=[ok])
+    hand = BA.Hand("swap", p=p, slot_kw=_swap_kw)
     yield _mline
     for line in encounter_lines(ms[pick[0]], p):
         yield line
