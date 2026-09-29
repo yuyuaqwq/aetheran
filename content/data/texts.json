@@ -1549,7 +1549,7 @@
     "desc": "钱"
   },
   "SYS_CODEX_HEAD": {
-    "value": "【图鉴】四本谱 —— 见过的都记在这里。",
+    "value": "📜 【图鉴】四本谱 —— 见过的都记在这里。",
     "params": [],
     "category": "系统",
     "desc": "图鉴一览表头"
@@ -1596,7 +1596,7 @@
     "desc": "图鉴一览 · 尾注"
   },
   "SYS_CODEX_BOOK_HEAD": {
-    "value": "【{book}】{n} 条（记满 {target}）",
+    "value": "📜 【{book}】{n} 条（记满 {target}）",
     "params": [
       "book",
       "n",
@@ -1606,7 +1606,7 @@
     "desc": "一本谱的表头 · 有记满的那种"
   },
   "SYS_CODEX_BOOK_HEAD_OPEN": {
-    "value": "【{book}】{n} 条",
+    "value": "📜 【{book}】{n} 条",
     "params": [
       "book",
       "n"
@@ -4719,7 +4719,7 @@
     "desc": "P-57 逃跑 · 被拦下（这一手白花 · 照打）"
   },
   "SYS_PARTY_HEAD": {
-    "value": "【队伍】{n}/{max} 人 · 队长：{cap}",
+    "value": "👥 【队伍】{n}/{max} 人 · 队长：{cap}",
     "params": [
       "n",
       "max",
