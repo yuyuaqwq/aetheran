@@ -110,18 +110,27 @@ def _safe_parts(text, seps):
     而 `_CLAUSE` 是「除正列切点外的任何字符」—— 它会在 『 里面切一下，
     切出来的前半段就是个**没有收尾的「**（实测：`「他说『你不懂』`）。
     保护：切前先看“这一段里有没有未闭合的引号”，有就不切。
+    ★★ **括号另用一只计数器**（2026-09-29 P1-34 修的真缺陷）
+    --------------------------------------------
+    改前只数引号，切点可以落进 （…） 里面 ⇒ 切出来的前半段是个**没有收尾的（**，
+    它的 `）` 掉到下一行开头 —— 屏上就是一个**孤零零的 `）`**。
+    实测（改动前）：域里 100 行括号不配对 · 7 行整行只有一个 `）`
+    （dlg_lian 三处 · bella/laotao/ed/pete 各一处）；成因逐字见 `dlg_lian/meet[1]`：
+        「（过了很久。」→「久到你以为她不会说话了。）」← 切点落在括号里
+    ★ 原注释担心的「一句中途的引语（（终于转身）我告诉你：…）」**不受影响**：
+      那只括号在同一段里**自成对** ⇒ 括号计数器在段末回到 0，照样能切。
+      被挡住的只是**真的没闭合**的括号 —— 那正是**不许切**的那一种。
     """
     segs = re.findall(seps, text)
     if len(segs) < 2:
         return [text] if text else []
-    out, cur, depth = [], "", 0
+    out, cur, depth, bdepth = [], "", 0, 0
     for seg in segs:
         cur += seg
-        # 只计引号的开合（②）不计 （）—— 否则一句中途的引语
-        # （例如「（终于转身）我告诉你：是我们自己的。」）会把 depth 压成不平衡
         depth += seg.count("「") - seg.count("」")
         depth += seg.count("『") - seg.count("』")
-        if depth == 0:                      # 引号全闭了 ⇒ 这里才是一个合法切点
+        bdepth += seg.count("（") - seg.count("）")
+        if depth == 0 and bdepth == 0:       # 引号与括号都闭合了 ⇒ 合法切点
             out.append(cur)
             cur = ""
     if cur.strip():
@@ -239,6 +248,33 @@ def _fit(line, limit):
     return out
 
 
+#: 整行**只有收尾括号**（`）` / `）`+空白）—— 它属于**上一行**（2026-09-29 P1-34）
+_ORPHAN_CLOSE = re.compile(r"^[）\s]+$")
+
+
+def _rejoin_orphan_close(lines):
+    """把「整行只剩收尾括号」的行并回**上一行**末尾。
+
+    为什么要这个（2026-09-29 P1-34 实测抓到的真缺陷）
+    ---------------------------------------------------
+    `speak()` 逐行处理：它把原文里已经切坏的行**当输入**，于是
+    「（她还是看着北边。」「手指在膝盖上敲了两下，停了。」「）」三行里，
+    那个孤零零的 `）` 被当成一条**独立台词行**原样留着
+    ⇒ 屏上单独印一行 `）`。实测 6 处（lian/bella/pete/laotao/ed 各若干）。
+    ★ 只**移动括号**，一个字都不改：并回的那一行照原样保留全部文字。
+    ★ 为什么必须在 `speak()` 里做、而不是单独跑一次清洗脚本：
+      探针 ⑨ 会**真跑一遍**归一化并要求**幂等**（跑第二遍不许再改数据）——
+      改完数据但不改这里 ⇒ 幂等判据当场红（本次实测：清洗后重跑又改 3 条）。
+    """
+    out = []
+    for ln in lines:
+        if _ORPHAN_CLOSE.match(ln.strip()) and out and out[-1].strip():
+            out[-1] = out[-1] + ln.strip()
+        else:
+            out.append(ln)
+    return out
+
+
 def speak(text, limit=LIMIT):
     """一段台词 → 行表（已 strip；空行丢掉）。"""
     out = []
@@ -263,7 +299,8 @@ def speak(text, limit=LIMIT):
     final = []
     for ln in out:
         final.extend(_fit(ln, limit))
-    return final
+    # ④ ★ 收尾括号并回上一行（`_rejoin_orphan_close` 的来由见那里）
+    return _rejoin_orphan_close(final)
 
 
 def rewrite(doc, limit=LIMIT):

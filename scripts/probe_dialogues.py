@@ -299,6 +299,64 @@ chk("★ 反证：旧形态（%d 字一行 · %d 组引号）会被判红；切�
     bool(_ob9) and not _line_bad("\n".join(_NL.speak(_OLD_DURIN))),
     "%s" % (_ob9[:1] or "没抓住"))
 
+# ⑨-b ★★ P1-34（2026-09-29 · 文案修复车道 P1）—— **屏上不许出现孤零零的收尾括号**
+#    缺陷本体（玩家可见 · 逐字可复现）：`dlg_lian/meet[0]` 印出来是这样
+#        （她还是看着北边。
+#        手指在膝盖上敲了两下，停了。
+#        ）                    ← ★ 单独一行，就一个 `）`
+#        「你又来了。」
+#    根因：`normalize_dialogue_lines._safe_parts` 的切点只数**引号**不数**括号**
+#    （原注释明写「只计引号的开合（②）不计 （）」），切点可以落进 （…） 里面
+#    ⇒ 那个 `）` 被甩到下一行开头。改前实测 6 处（lian 2 · bella/pete/laotao/ed 各 1）。
+#    ★ 为什么 ⑨ 那一组没抓到：它只查「行 ≤ 72 字」与「一行最多一组「」」，
+#      **从不查括号配对** ⇒ 一个 1 字宽的 `）` 行完全合规（这正是它能一路绿过去的原因）。
+#    ★ 两条都查（缺一不可）：⑨-b-a 整行只有收尾括号（屏上一行孤括号）
+#      ⑨-b-b 整条台词括号配对（切在括号中间的那种）
+#    分档：现值都是 0 ⇒ 硬底线 0 —— 不是"逐步放宽"，是**把已经修好的事钉住**。
+_ORPHAN_CLS = re.compile(r"^[\uFF09\s\u3000]+$")
+_orph9, _unbal9, _n_ln9 = [], [], 0
+for _k9b, _v9b in dl.items():
+    for _nk9b, _nd9b in _v9b["nodes"].items():
+        for _i9b, _t9b in enumerate(_nd9b["texts"]):
+            _s9b = _t9b["text"]
+            for _l9b in _s9b.split("\n"):
+                if not _l9b.strip():
+                    continue
+                _n_ln9 += 1
+                if _ORPHAN_CLS.match(_l9b.strip()):
+                    _orph9.append("%s/%s[%d]=%s" % (_k9b, _nk9b, _i9b, _l9b.strip()[:6]))
+            if _s9b.count("（") != _s9b.count("）"):
+                _unbal9.append("%s/%s[%d]" % (_k9b, _nk9b, _i9b))
+chk("⑨-b-a ★ 屏上没有「整行只剩收尾括号」的台词行（硬底线 0 · 现值 %d / %d 行）"
+    % (len(_orph9), _n_ln9), not _orph9,
+    (" · ".join(_orph9[:6]) or "无（%d 行全合规）" % _n_ln9))
+chk("⑨-b-b ★ 每条台词的 （）成对（切点不许落进括号里 —— 那会把 `）` 甩到下一行）"
+    "（硬底线 0 · 现值 %d）" % len(_unbal9), not _unbal9,
+    (" · ".join(_unbal9[:6]) or "全部成对"))
+
+#   反证：把改前那一条**逐字**塞回域里 ⇒ 两条判据都必抓到（判据不恒真）。
+#   ★ 抄的是改动前 `dialogues.json` 里的原样（从备份取出，不手编 —— 手编就编成了另一句话）。
+_old_orphan = "（她还是看着北边。\n手指在膝盖上敲了两下，停了。\n）\n「你又来了。」"
+_ho9a = [x for x in _old_orphan.split("\n") if _ORPHAN_CLS.match(x.strip())]
+_ho9b = _old_orphan.count("（") != _old_orphan.count("）")
+#   ★ 这一条只归 ⑨-b-a 管（不是两条都抓）：改前那一条**整条是配对的**
+#     （1 个 `（` 对 1 个 `）`）—— 它坏在「`）` 单独占了一行」，
+#     ⑨-b-b 查的是「整条台词的括号数不相等」，**本就该放行**它。
+#     要两条都抓，得用「切点真落进括号里」的那一形态（见 ⑨-b-d）。
+#     写成"两条都抓"就是给判据加了一条它不该背的负担 ⇒ 实测当场红（本文这行就是这么红的）。
+chk("⑨-b-c ★ 反证：逐字塞回改前那一条 ⇒ ⑨-b-a 必抓到那个孤括号行（%d 个）"
+    "，而 ⑨-b-b 放行它（整条 %s）—— 两类各归各的"
+    % (len(_ho9a), "配对成立" if not _ho9b else "不成立"),
+    bool(_ho9a) and not _ho9b, "改前形态：%r" % _old_orphan[:40])
+
+#   反证二：钉**成因**而不只钉结果 —— `_safe_parts` 现在数括号，
+#   同一段文本改前会被切开（`）` 掉到下一行）、改后不会。
+_parts9b = _NL._safe_parts("（他没吼。他停了一下，手没停）", _NL._SENT)
+chk("⑨-b-d ★ 反证：`_safe_parts` 不许把切点放进 （…） 里面（%d 段 · 逐段配对 %s）"
+    % (len(_parts9b), all(x.count("（") == x.count("）") for x in _parts9b)),
+    all(x.count("（") == x.count("）") for x in _parts9b), "切出来：%s" % _parts9b[:3])
+
+
 # ⑩ ★ P1（2026-09-28 · 文案修复车道）—— 规格 23_NPC对话树_v1 §一④ 的两条机器判据
 #    「对话分四层（**每位 NPC 都按这个结构写**）」+「重复对话要**轮换**
 #    （别每天同一句 —— 同一句话看三遍就变成机器）」。
