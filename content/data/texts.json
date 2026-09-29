@@ -1707,7 +1707,7 @@
     "desc": "旧物谱 · 空"
   },
   "SYS_FOOT_HEAD": {
-    "value": "【记录】走过 {places} 个地方 · 打过 {kills} 只 · {days} 个游戏日",
+    "value": "📊 【记录】走过 {places} 个地方 · 打过 {kills} 只 · {days} 个游戏日",
     "params": [
       "days",
       "kills",
@@ -1748,7 +1748,7 @@
     "desc": "记录 · 空"
   },
   "SYS_EGG_HEAD": {
-    "value": "【彩蛋】\n你已经把 {n} 件事连起来了\n（一共 {total} 件）",
+    "value": "📜 【彩蛋】\n你已经把 {n} 件事连起来了\n（一共 {total} 件）",
     "params": [
       "n",
       "total"
@@ -1820,7 +1820,7 @@
     "desc": "称号跟着名字走（观察 / 状态）"
   },
   "SYS_TITLE_HEAD": {
-    "value": "【称号】{n} / {total}",
+    "value": "📜 【称号】{n} / {total}",
     "params": [
       "n",
       "total"
@@ -2591,7 +2591,7 @@
     "desc": "问路 · 去处多过三处时补的一行（2026-09-27 夜班试玩 w3 p1：原先只报 3 处、也不说按什么挑的，读起来像「路全在这儿」）"
   },
   "SYS_GUILD_HEAD": {
-    "value": "【公会】门面比镇上任何一家都像样：一块木牌，牌上画着一把断了的剑和一只手。",
+    "value": "📜 【公会】门面比镇上任何一家都像样：一块木牌，牌上画着一把断了的剑和一只手。",
     "params": [],
     "category": "系统",
     "desc": "公会 · 抬头"
@@ -3269,7 +3269,7 @@
     "desc": "副业 · 标记 · 可接"
   },
   "SYS_EV_HEAD": {
-    "value": "【今天的动静】",
+    "value": "📜 【今天的动静】",
     "params": [],
     "category": "世界动静",
     "desc": "事件 · 异动的头行（29 §七⑦）"
@@ -3589,7 +3589,7 @@
     "desc": "装备/卸下 · 面板派生的上限跟着变（P-27）"
   },
   "SYS_CMP_HEAD": {
-    "value": "【对比】{name}（{quality} · {kind}） · 现在这件：{cur}",
+    "value": "📊 【对比】{name}（{quality} · {kind}） · 现在这件：{cur}",
     "params": [
       "cur",
       "kind",
@@ -3847,7 +3847,7 @@
     "desc": "词条名 · res_shadow（01_属性字典 §二·五）"
   },
   "SYS_BSHOW_HEAD": {
-    "value": "【单子 {order}】{name}（{level} 级以上）",
+    "value": "📜 【单子 {order}】{name}（{level} 级以上）",
     "params": [
       "order",
       "name",
@@ -4350,7 +4350,7 @@
     "desc": "B3-16b 客栈 · 指箱子"
   },
   "SYS_CARAVAN_HEAD": {
-    "value": "【商队歇脚处】通北商道上下来的消息先到这儿。",
+    "value": "📜 【商队歇脚处】通北商道上下来的消息先到这儿。",
     "params": [],
     "category": "系统",
     "desc": "B3-16b 商队 · 抬头"
@@ -4499,7 +4499,7 @@
     "desc": "B3-16b 排行 · 库没接上"
   },
   "SYS_NOTICE_HEAD": {
-    "value": "【公告】本服现在跑的是这一份：",
+    "value": "📜 【公告】本服现在跑的是这一份：",
     "params": [],
     "category": "系统",
     "desc": "B3-16b 公告 · 抬头"
@@ -5955,7 +5955,7 @@
     "desc": "同族 · 商队 · 车没来是为什么（条件从 events 域的 period 现取）"
   },
   "SYS_CARAVAN_GOODS": {
-    "value": "跟着车来的货摊在棚子底下：",
+    "value": "📜 跟着车来的货摊在棚子底下：",
     "params": [],
     "category": "系统",
     "desc": "同族 · 商队 · 到货那几件抬头"

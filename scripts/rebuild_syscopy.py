@@ -1191,10 +1191,8 @@ DOC_PENDING = {
     },
     "SYS_CMP_HEAD": {
         "old": "【对比】{name}（{quality} · {kind}） ｜ 现在这件：{cur}",
-        "new": "【对比】{name}（{quality} · {kind}） · 现在这件：{cur}",
-        "why": "P2-9②：同一个对比界面里 SYS_CMP_ROW / _NOTE_CUR / _NOTE_NEW 三条都是行首 "
-               "· 锚点、SYS_CMP_VERDICT 也统一用 · 作分隔 ⇒ 拿它自己界面里那些行的"
-               "口径。只改这一格的值，槽位与取件点一个字没动。",
+        "new": "📊 【对比】{name}（{quality} · {kind}） · 现在这件：{cur}",
+        "why": "P2-26（**本条把先后两笔合进一对** —— DOC_PENDING 一个 key 只存一对 {old,new}，而这一格有两笔：P2-9② 把 ｜ 收敛成 ·、P2-26 再加 📊；真源 17_ 槽位表仍停在**第一笔之前**那个 ｜ 值 ⇒ old 必须取表里现值，否则 pending_ok 判「跟账第三态」、生成器当场抛。与 P0 对 COMBAT_CORE_SILENCED 的处理同族：合并不丢口径，两笔的意图都写在这一条里。）对比屏（cmds_gear.py:411）抬头裸【】起头，屏内 SYS_CMP_ROW 是行首 `· ` 的**属性**行（「生命上限 {old} → {new}」）⇒ 屏上是一张「这件 vs 你身上那件」的属性对比表 ⇒ 真源 26_ §2.2「📊 面板 / 状态」，同族 SYS_GEAR_HP_CAP / SYS_ATTR_VITAL 已固化。★ 不用 📍：槽位名里没有地图，屏上也没有一行在讲位置。★ P2-9② 的分隔符口径（拿本屏 _ROW / _NOTE_CUR / _NOTE_NEW 自己的 `· ` 作准）仍有效。",
     },
 
     "SYS_JOB_TAKEN": {
@@ -1369,6 +1367,16 @@ DOC_PENDING = {
         "old": "⚠️ {name} 进入「{phase}」\n👁️ {note}\n💡 {tip}",
         "new": "⚠️【{t} 刻】{name} 进入「{phase}」\n👁️ {note}\n💡 {tip}",
         "why": "P0-1 续批四（2026-09-29 · 文案车道 aep0 · 真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」）：★ **这是「进持久战斗日志的那一族」最后一条没带刻的**（本轮现算：24 条经 logs.append / hand.lines 进日志的战斗行，改之前 23 条已带、只有这一条没有）。★ **为什么前几轮一直漏**（探针与 AST 两处盲区叠加，与上一批 `_grant`/`_ward` 同族病）：① probe_texts 那两条刻数判据按 content/rules/battle_text.json（引擎 62 个 cue）取件，而这一格是**内容侧**在 `content/combat.py::_phase_enter` 里 `logs.append` 的 ⇒ 取不到；② 枚举入口只找 `logs.append` 的调用点形参，而 `_phase_enter` 是**经 hook 回调**进去的（`Battle.script_hook(b, actor, logs)`）⇒ 只看 `logs` 变量名的那一族也漏。★ 本轮**只加强不削弱**：给 probe_combat 加两条判据（行首图标 + 【N 刻】、「屏上那一行的刻 == 那一刻的战斗钟」），取件从**真跑出来的那一行**（`_PLG[0]`）现算、刻数按引擎公开面 `now_of` 同一个式子现算 ⇒ 读端改刻源或忘传 t 都会当场红；另加一条反证（旧写法必红）。★ 值写**纯 {t} 不写 {t:.0f}**：内容侧 T() 是字面 replace（content/cmds_ast.py:53-55），格式符会被原样打上屏；引擎 cue 那一族走 str.format 才写 {t:.0f} —— 两侧形态不同是有原因的，别合并。★ 读端补刻在**一处**（`_phase_enter` 那一行取 `int(round(float(getattr(battle,\"_now\",0.0) or 0.0)))`），靠 `hook(b, ...)` 现传的 `b` —— **别在调用点逐个补**。★ 本格**不在**真源 17_ 槽位表里（grep COMBAT_BOSS_PHASE 17_文案收口口径_v1 = 0 命中）⇒ 不是生成器拥有的行、不与真源打架；登记在册是为了两态互锁（不登记就红在 probe_copy ⑤ 与 probe_generators ②③）。",
+    },
+    "COMBAT_MECH_ONCE": {
+        "old": "这一场你已经放过了 —— 【{name}】一场只出一次手。",
+        "new": "⚔️【{t} 刻】这一场你已经放过了 —— 【{name}】一场只出一次手。",
+        "why": "P0-1 续批七（2026-09-29 · 文案车道 aep0 · **真机试玩取证**）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」。★ **前六批为什么还是漏了这两格**（与已修的 18 格同族病、但落点更深一层）：那 18 格走 logs.append(T(...))，取件靠 probe_texts 里那条「logs, …COMBAT_…」的正则能捞到；**这两格走的是引擎 skill_gate_fn 的回执**（引擎 _use_gate_text → logs.extend(_usay)，content/mech.py::skill_gate），**返回值不是 logs.append** ⇒ 三条取件口（cue 表 / T(…) 字面量 / logs, 形参）**一条都取不到它** ⇒ 判据全绿、屏上零刻数。★ 复现（现跑可复现）：AST_E2E_SEED 带 loc=belt_north / node=bn_tower / cls=cls_berserker / level=9 / hp=200，跑 python scripts/e2e_drive.py 攻击 → 技能 焚身 → 技能 焚身 → 战斗日志 ⇒『战斗日志』里「这一场你已经放过了 —— 【焚身】一场只出一次手。」**原样落进去、零刻数**，而同一屏其余每一行都带【N 刻】。★ 值写**纯 {t} 不写 {t:.0f}**：内容侧 T() 是**字面 replace**（content/cmds_ast.py:53-55），格式符会被原样打上屏（同本族 18 格）。★ 只改这一格的值与 params；读端在 content/mech.py::skill_gate 补 t=int(round(_now(battle)))（与那 18 格同一个式子）。★ 图标 ⚔️ 逐字取真源 26_ §2.2「行动/出手」语义，与本族动作行同锚。★ 本格**不在**真源 17_ 槽位表里（grep = 0 命中）⇒ 不是生成器拥有的行、不与真源打架；登记在册是为了两态互锁（不登记就红在 probe_copy ⑤ 与 probe_generators ②③）。★ 本格 = once_per_battle（焚身）那道否决口的回执。"
+    },
+    "COMBAT_MECH_HP_GATE": {
+        "old": "你还没攒够这点血 —— 【{name}】要 {need} 点才付得起，你现在只剩 {cur} 点。",
+        "new": "⚔️【{t} 刻】你还没攒够这点血 —— 【{name}】要 {need} 点才付得起，你现在只剩 {cur} 点。",
+        "why": "P0-1 续批七（2026-09-29 · 文案车道 aep0 · **真机试玩取证**）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」。★ **前六批为什么还是漏了这两格**（与已修的 18 格同族病、但落点更深一层）：那 18 格走 logs.append(T(...))，取件靠 probe_texts 里那条「logs, …COMBAT_…」的正则能捞到；**这两格走的是引擎 skill_gate_fn 的回执**（引擎 _use_gate_text → logs.extend(_usay)，content/mech.py::skill_gate），**返回值不是 logs.append** ⇒ 三条取件口（cue 表 / T(…) 字面量 / logs, 形参）**一条都取不到它** ⇒ 判据全绿、屏上零刻数。★ 复现（现跑可复现）：AST_E2E_SEED 带 loc=belt_north / node=bn_tower / cls=cls_berserker / level=9 / hp=200，跑 python scripts/e2e_drive.py 攻击 → 技能 焚身 → 技能 焚身 → 战斗日志 ⇒『战斗日志』里「这一场你已经放过了 —— 【焚身】一场只出一次手。」**原样落进去、零刻数**，而同一屏其余每一行都带【N 刻】。★ 值写**纯 {t} 不写 {t:.0f}**：内容侧 T() 是**字面 replace**（content/cmds_ast.py:53-55），格式符会被原样打上屏（同本族 18 格）。★ 只改这一格的值与 params；读端在 content/mech.py::skill_gate 补 t=int(round(_now(battle)))（与那 18 格同一个式子）。★ 图标 ⚔️ 逐字取真源 26_ §2.2「行动/出手」语义，与本族动作行同锚。★ 本格**不在**真源 17_ 槽位表里（grep = 0 命中）⇒ 不是生成器拥有的行、不与真源打架；登记在册是为了两态互锁（不登记就红在 probe_copy ⑤ 与 probe_generators ②③）。★ 本格 = min_hp_pct（狂斩）那道血线门的回执。"
     },
     # ★ P0-1 续批（2026-09-29 · aep0）：内容侧机制日志那一族补【N 刻】—— 见各条 why。
     "COMBAT_MECH_SELF_CUT": {
@@ -2306,6 +2314,67 @@ DOC_PENDING = {
                "（`副业` 总览 vs `副业 采集` 单列），本包既定口径是「同屏三条抬头必须同锚」"
                "（见 SYS_MINE_HEAD/MINE_DONE/MINE_RANK 那次三格同批）⇒ 本格与上一条同锚同接法，"
                "否则打『副业 采集』时那一屏整屏全裸、而总览屏带 📜 ⇒ 两屏读起来像两种东西。",
+    },
+
+    # ===== P2-26（文案车道 aep2 · 2026-09-29 16:3x · A 类裸抬头**清零**）=====
+    # A 类 = 值以【 开头（屏上的纯【】标题行）且行首没有图标的那一格。
+    # ★ 现算（逐条扫 texts.json，不抄作业书）：动手前 **11 条**（45 条 _HEAD 里）⇒ 本批处理 9 条。
+    # ★ 判据承 P2-24/P2-25 的「补锚三问」，第 ③ 问**按读端取证、不按槽位名猜**。
+    # ★ 排期口径两条**别推翻**（承 P2-24/P2-25）：并列行（`· ` 起头）一个都不补 ·
+    #   散文式抬头不补 · 接法 SPACE 形 · 图标逐字取真源 26_ §2.2 · 只补 A 类纯【】标题行。
+    "SYS_FOOT_HEAD": {
+        "old": "【记录】走过 {places} 个地方 · 打过 {kills} 只 · {days} 个游戏日",
+        "new": "📊 【记录】走过 {places} 个地方 · 打过 {kills} 只 · {days} 个游戏日",
+        "why": "P2-26（第 ③ 问取证）：`足迹` 屏（cmds_codex.py::footprint）抬头裸【】起头，"
+               "屏内 SYS_FOOT_MORE / _BOOKS 两条都是行首 `· ` 的统计行。"
+               "★ 屏上是一张**纯统计面板**（走过/打过/读过/采过/交过 + 四本谱进度）⇒ 真源 26_ §2.2 逐字「📊 面板 / 状态 —— 属性、背包、面板」，"
+               "且本包已固化为该语义（SYS_ATTR_HEAD / SYS_STATUS_HEAD / SYS_RANKING_HEAD）。"
+               "★ 同屏那两条 `· ` 行按既定口径 `· ` 本身即行首锚、不叠图标 ⇒ 只动抬头这一格。",
+    },
+    "SYS_GUILD_HEAD": {
+        "old": "【公会】门面比镇上任何一家都像样：一块木牌，牌上画着一把断了的剑和一只手。",
+        "new": "📜 【公会】门面比镇上任何一家都像样：一块木牌，牌上画着一把断了的剑和一只手。",
+        "why": "P2-26（第 ③ 问取到**槽位名会骗人**的一处）：槽位叫「公会」，"
+               "但读端（cmds_quest.py::guild, :1148）第二格 SYS_GUILD_DESK 逐字是「柜台在挂板墙那边」⇒ 屏上讲的**就是挂板墙那个地点**，"
+               "而挂板墙三条抬头（SYS_BOARD_HEAD / _BOUNTY_HEAD / _SIDE_HEAD）早已固化 📜 ⇒ 本格同族同锚，"
+               "不新造 🏠（真源 26_ §2.2 有 🏠「镇上/场所」，但本包 P2-23 已裁决「场所一律走 📍、不启用 🏠」，"
+               "此处屏上又不是场所而是单子）。★ 同屏另两格：DESK 是散文、HOW 是「」引起的指令指引 ⇒ 都不是行首锚，"
+               "不碰。",
+    },
+    "SYS_EV_HEAD": {
+        "old": "【今天的动静】",
+        "new": "📜 【今天的动静】",
+        "why": "P2-26（第 ③ 问）：`异动` 屏（cmds_ast.py:1024）抬头裸【】起头，"
+               "屏内是events_now 逐条事件正文（世界动静域）。真源 26_ §2.2 的表里**没有「异动」字面**⇒ 不硬造同义图标；"
+               "按本包已固化的「清单 / 事件类 = 📜」归（与 SYS_CARAVAN_HEAD 同族）。"
+               "★ 屏内逐条事件正文没有行首锚（不带 · 也不带图标）⇒ 抬头这个锚是**全屏唯一**的，"
+               "  补上正是「该配图标而没配」的那一类缺口。",
+    },
+    "SYS_CARAVAN_HEAD": {
+        "old": "【商队歇脚处】通北商道上下来的消息先到这儿。",
+        "new": "📜 【商队歇脚处】通北商道上下来的消息先到这儿。",
+        "why": "P2-26（第 ③ 问）：`商队歇脚处` 屏（cmds_places.py:173）抬头裸【】起头，"
+               "屏内是 events_now 的 world 档逐条消息 ⇒ 与 SYS_EV_HEAD **同读端同形状**（都是「一屏一个清单头 + 逐条正文」）⇒ 同锚。"
+               "⚠️ 别按槽位名里的「商队/歇脚处」去配 🏠 或 📍：屏上没有任何一行在讲位置（真源 26_ §2.2 📍 = 位置/地图/去哪）。",
+    },
+    "SYS_NOTICE_HEAD": {
+        "old": "【公告】本服现在跑的是这一份：",
+        "new": "📜 【公告】本服现在跑的是这一份：",
+        "why": "P2-26（第 ③ 问）：`公告` 屏（cmds_self.py:283）抬头裸【】起头，"
+               "屏内三格是本服版本 / 能敲什么 / 下一步 ⇒ 一份清单 ⇒ 📜（与挂板墙、指令表、本群榜同族）。"
+               "★ 屏内另两格是行首 `· ` 的清单行 ⇒ 按既定口径不叠图标，只动抬头。",
+    },
+    "SYS_CARAVAN_GOODS": {
+        "old": "跟着车来的货摊在棚子底下：",
+        "new": "📜 跟着车来的货摊在棚子底下：",
+        "why": "P2-26b（★ **由 `probe_icon_consistency` ① 当场抓出来的真缺陷**，不��预先想到的）：补了 SYS_CARAVAN_HEAD 的 📜 之后，`商队` 屏里另一条 **section_head**（`SYS_CARAVAN_GOODS`，槽位名以 `_GOODS` 结尾、落在 `probe_icon_consistency` 的 HEAD_SUF 里）仍是裸的 ⇒ **同屏两条 section_head 一条带图标一条不带**，正是鱼鱼口径（「emoji 是可以的……只要很规整观感好问题就不大」）要判的那一类。⇒ 同批补 📜，与该族已固化的 SYS_SMITH_CRAFT_HEAD / SYS_SMITH_SRC_HEAD 一致。",
+    },
+    "SYS_BSHOW_HEAD": {
+        "old": "【单子 {order}】{name}（{level} 级以上）",
+        "new": "📜 【单子 {order}】{name}（{level} 级以上）",
+        "why": "P2-26（第 ③ 问）：`单子 <编号>` 屏（cmds_more.py:160，"
+               "B3-12 委托全文）抬头裸【】起头。★ 它与 SYS_BOARD_HEAD 是**同一张单子的两种看法**（板上那一条 vs 打开看全文）⇒ 挂板墙那三条早已固化 📜 ⇒ 本格必须同锚；"
+               "只补它会造成「板上带 📜、打开单子整屏全裸」。",
     },
 }
 
