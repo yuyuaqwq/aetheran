@@ -3580,7 +3580,7 @@
     "desc": "装备/对比 · 效果类词条（域里那句人话）"
   },
   "SYS_GEAR_HP_CAP": {
-    "value": "生命上限 {old} → {new}",
+    "value": "📊 生命上限 {old} → {new}",
     "params": [
       "new",
       "old"
