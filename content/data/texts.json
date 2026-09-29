@@ -2196,7 +2196,7 @@
     "desc": "去"
   },
   "SYS_STATUS_HEAD": {
-    "value": "【{who}】{race} · {cls} · {level} 级",
+    "value": "📊【{who}】{race} · {cls} · {level} 级",
     "params": [
       "who",
       "race",
@@ -2207,7 +2207,7 @@
     "desc": "状态 · 第一行"
   },
   "SYS_STATUS_VITALS": {
-    "value": "生命 {hp}/{hp_max} ｜ 法力 {mo}/{mo_max} ｜ 铜板 {gold}",
+    "value": "📊 生命 {hp}/{hp_max} ｜ 法力 {mo}/{mo_max} ｜ 铜板 {gold}",
     "params": [
       "hp",
       "hp_max",
@@ -2219,7 +2219,7 @@
     "desc": "状态 · 第二行"
   },
   "SYS_STATUS_EXP": {
-    "value": "经验 {exp} ｜ 在 {place}",
+    "value": "📊 经验 {exp} ｜ 在 {place}",
     "params": [
       "exp",
       "place"
