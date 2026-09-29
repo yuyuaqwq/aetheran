@@ -1619,6 +1619,93 @@ finally:
     dl["dlg_masha"] = _bak25                            # 按 key 精确还原
     _items25.pop("i_ghost_never_dropped", None)         # 反证道具也还原（不留痕）
 
+# ㉖ ★「换皮」门禁 —— 补的是**既有判据之间的缝**（P1-32 实测出来的真缺陷）
+# ---------------------------------------------------------------------------
+# 为什么单开一条（前面 ㉑–㉕ 都抓不住它）：
+#   ㉫-类的轮换判据量的是**能不能轮出多句**（`heard` 去重 + 层序让位）；
+#   ⑫ 量的是「一个层里只有 1 句吗」。而**换皮**是反过来的形态 ——
+#   层里**有**两条，`need` 也**各不相同**（一条挂时辰、一条无条件 ⇒ 都轮得到），
+#   可它们的**台词逐字一样**，只多一个动作括号：
+#       dlg_lian/daily#0   （夜里。…）「这一页我认得。」「下一行不认得。」…
+#       dlg_lian/daily#3   （她把册子翻到…）「这一页我认得。」「下一行不认得。」…
+#   ⇒ 读端（`_pick_layer` 记 `heard`）认为「玩家听到两句不同的」，
+#     屏上却是一模一样两行 —— 这就是鱼鱼那句「观感不好」的**第二次搭话就重样**。
+#   ★ 现值：同层 100% 换皮 0 对、≥0.60 的 2 对（格雷/艾德 0.62–0.65，
+#     是同一腔调的**部分**重合、不是复制）；跨层 100% 0 对、≥0.75 的 1 对
+#     （莉安 meet#1 ~ idle#0，是她「没说完」那条尾巴的有意复现，不判红）。
+#   ⇒ 棘轮钉「**100% 换皮 0 对**」这一条硬底线（0 就是 0，不是「现在还有几对」），
+#     另两条只钉「不许变多」并逐步加严。
+
+import difflib as _dl26
+
+_D26 = 0.95          # 判「复制」的相似度（不是 1.0：动作括号与空行会差一点点）
+_WARN26 = 0.60       # 只报数的宽档（不改判据，只让下一批看得见基线）
+
+
+def _d26_pairs(nodes_by_layer):
+    """同层内两两比 + 同树跨层比 → (硬, 宽) 两档的对。"""
+    hard, wide = [], []
+    for k, N in nodes_by_layer.items():
+        items = [(a, i, _speech_only(t.get("text", "")))
+                 for a in sorted(N) for i, t in enumerate(N[a].get("texts", []))]
+        for x in range(len(items)):
+            for y in range(x + 1, len(items)):
+                a1, i1, s1 = items[x]
+                a2, i2, s2 = items[y]
+                if a1 != a2 or not s1 or not s2:
+                    continue
+                r = _dl26.SequenceMatcher(None, s1, s2).ratio()
+                if r >= _D26:
+                    hard.append((k, a1, i1, a2, i2, round(r, 2)))
+                if r >= _WARN26:
+                    wide.append((k, a1, i1, a2, i2, round(r, 2)))
+    return hard, wide
+
+
+_by26 = {k: v["nodes"] for k, v in dl.items()}
+_hard26, _wide26 = _d26_pairs(_by26)
+chk("㉖-a ★ 换皮（同层两句台词逐字复制，只差一个动作括号）0 对 · 硬底线 ≤ 0",
+    not _hard26,
+    "换皮：%s" % _hard26 if _hard26
+    else "同层 %d 层逐对过完 · 100%% 复制 0 对 · ≥%.2f 的 %d 对（基线，逐步加严）"
+         % (sum(len(v) for v in _by26.values()), _WARN26, len(_wide26)))
+
+# 跨层：莉安 meet#1 与 idle#0 共享她「……守着。那块石头。你读过了。」那半句
+#   —— 那是她**没说完**这条人设的有意复现（idle 是同一句话的下半截），所以跨层
+#   只钉「不许变多」（棘轮），不钉 0。
+_xl26 = []
+for k, N in _by26.items():
+    items = [(a, i, _speech_only(t.get("text", "")))
+             for a in sorted(N) for i, t in enumerate(N[a].get("texts", []))]
+    for x in range(len(items)):
+        for y in range(x + 1, len(items)):
+            a1, i1, s1 = items[x]
+            a2, i2, s2 = items[y]
+            if a1 == a2 or not s1 or not s2:
+                continue
+            r = _dl26.SequenceMatcher(None, s1, s2).ratio()
+            if r >= 0.85:
+                _xl26.append((k, a1, i1, a2, i2, round(r, 2)))
+_XL_BASE26 = 1        # 棘轮：现值 1（莉安 meet#1~idle#0，有意），不许变多
+chk("㉖-b ★ 跨层复现：同树两层台词高度雷同 ≤ %d 对（棘轮 · 莉安那句是有意的）" % _XL_BASE26,
+    len(_xl26) <= _XL_BASE26,
+    "跨层：%s" % _xl26 if _xl26 else "%d 对（= 基线，钉住不许变多）" % len(_xl26))
+
+# ㉖-c ★ 反证：把 lian 的 daily#3 压回 daily#0 那句（100% 复制）⇒ ㉖-a 必抓到。
+_bak26 = json.loads(json.dumps(dl["dlg_lian"]))
+try:
+    _victim26 = _bak26["nodes"]["daily"]["texts"][3]
+    dl["dlg_lian"]["nodes"]["daily"]["texts"][3]["text"] =         _bak26["nodes"]["daily"]["texts"][0]["text"]
+    _hard_probe26, _ = _d26_pairs({k: v["nodes"] for k, v in dl.items()})
+    chk("㉖-c ★ 反证：把 dlg_lian 的 daily#3 压回 daily#0 那句 ⇒ ㉖-a 必抓到（判据不恒真）",
+        any(x[0] == "dlg_lian" for x in _hard_probe26),
+        "压完 %d 对（抓到了：%s）" % (len(_hard_probe26),
+                                    [x for x in _hard_probe26 if x[0] == "dlg_lian"]))
+finally:
+    dl["dlg_lian"] = _bak26                # 按 key 精确还原（不留痕）
+    assert json.dumps(dl["dlg_lian"], ensure_ascii=False, sort_keys=True) ==         json.dumps(_bak26, ensure_ascii=False, sort_keys=True)
+
+
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
 sys.exit(0 if ok else 1)
