@@ -24,6 +24,7 @@
 """
 from __future__ import annotations
 
+import ast
 import io
 import json
 import os
@@ -68,7 +69,8 @@ _RULES = os.path.join(REPO, "content", "rules", "mana.json")
 _TBL = json.loads(io.open(_RULES, encoding="utf-8").read())
 _REG = dict(_TBL.get("regen") or {})
 _GATE = dict(_TBL.get("gate") or {})
-_K_EVERY = "every" + "_ticks"                                       # 守卫要求：content/*.py 里不落字面量
+# ★ 键名从表里现取（不再两段拼 —— 守卫与被守卫对拼=语义抵消，审计 L1420）
+_K_EVERY = [k for k in _REG if "every" in k][0]
 _EVERY = int(_REG[_K_EVERY])
 _AMOUNT = int(_REG["amount"])
 
@@ -96,18 +98,132 @@ print("     · 换算成玩家看得见的话：一次行动 ≈ 95–100 刻 �
 # ══════════════════════════════════════════════════════════════
 # ② 单一来源（静态守卫）+ 回话槽位
 # ══════════════════════════════════════════════════════════════
-_bad_src = []
+# ─────────────────────────────────────────────────────────────────────────
+# ② 静态守卫（2026-09-29 审计 L1420 重做 · 门禁可信度维度）
+#   旧口径（`:106` 一行）：`_K_EVERY in _t` / `"0.05" in _t` / `re.search(回蓝率…)`
+#   —— 实测**七种写法里只抓得住两种**（`every = 20` / `_EVERY = 20` / `regen_ticks = 20` /
+#   字面键值对 / 拼串两段拼键名 全部漏过），而它自称守的是「回复率只许在 mana.json」。
+#   更要命的是探针自己用**同一串拼法**造 `_K_EVERY` —— 守卫与被守卫在做同一件见不得光的
+#   事（双方对拼 ⇒ 语义抵消）；真 `content/mana.py` 也是这么拼的（它要躲开这条守卫）
+#   ⇒ 这条判据在自己盯着的那个文件上就是恒真的同义反复。
+#   新口径 = AST，**一个键名都不拼**：
+#     A 键名层：任何**能折成字符串的常量**（含两段拼接）命中
+#       **从 `mana.json` 现取的键名族** ⇒ 红。
+#     B 数值层：绑到 regen/mana 概念名上的数字字面量，取值等于**表里现取的真值** ⇒ 红。
+#     C 单一主源层：那两个键名只许在 `content/mana.py` 定义一次。
+#   键名族与真值**一律从表里现取**（`_REG`）⇒ 探针不参与对拼，改表即自动跟着走。
+# ─────────────────────────────────────────────────────────────────────────
+_REG_KEYS = [k for k in _REG]                       # 现取（不硬编码）
+_REG_VALS = {k: v for k, v in _REG.items()          # 现取：键 → 表里的真值
+             if isinstance(v, (int, float)) and not isinstance(v, bool)}
+
+
+def _all_keys(obj, acc):
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            acc.add(k)
+            _all_keys(v, acc)
+    elif isinstance(obj, list):
+        for v in obj:
+            _all_keys(v, acc)
+    return acc
+
+
+def _keys_of_file(path):
+    try:
+        return _all_keys(json.loads(io.open(path, encoding="utf-8").read()), set())
+    except Exception:
+        return set()
+
+
+# 键名族 = regen 那两格里**只有 mana.json 自己有**的那些。
+# 共用词（如 `amount` 同时在 resources.json / battle_text.json 里当键名）不算「法力独有」，
+# 拿它当守卫词 = 把别的域也误判进来（实测 resources.py:343 就被这样打红过）。
+_RULES_DIR = os.path.join(REPO, "content", "rules")
+_OWN_KEYS = [k for k in _REG_KEYS
+             if not any(k in _keys_of_file(os.path.join(_RULES_DIR, f))
+                        for f in os.listdir(_RULES_DIR)
+                        if f.endswith(".json") and f != "mana.json")]
+if not _OWN_KEYS:                                   # 表把两格都改成共用词 ⇒ 守卫无从判起
+    _OWN_KEYS = list(_REG_KEYS)
+_TOKENS = {"regen", "mana", "mp"}                   # 概念名族（键名派生的在下面并入）
+for _k in _REG_KEYS:
+    _TOKENS.add(_k.lower())
+    _TOKENS.update(p for p in re.split(r"[^0-9A-Za-z]+", _k) if len(p) >= 3)
+_NAME_RE = re.compile("|".join(sorted(_TOKENS)), re.IGNORECASE)
+_DOCS = set()          # docstring 的 ast.Constant 节点 id —— 叙述给人读，不是取值
+
+
+def _fold(node):
+    """这个节点能折出的全部字符串常量（含 `"a" + "b"` 两段拼接）。"""
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return {node.value}
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        a, b = _fold(node.left), _fold(node.right)
+        if a is None or b is None:
+            return None
+        return {x + y for x in a for y in b}
+    return None
+
+
+def _names_of(node):
+    out = [t.id for t in getattr(node, "targets", []) or [] if isinstance(t, ast.Name)]
+    tg = getattr(node, "target", None)
+    if isinstance(tg, ast.Name):
+        out.append(tg.id)
+    return out
+
+
+_num_hit, _def_site, _raw_hit = [], [], []
 for _root, _dirs, _files in os.walk(os.path.join(REPO, "content")):
     _dirs[:] = [d for d in _dirs if d != "__pycache__"]
-    for _f in _files:
+    for _f in sorted(_files):
         if not _f.endswith(".py"):
             continue
-        _t = io.open(os.path.join(_root, _f), encoding="utf-8").read()
-        _hit = (_K_EVERY in _t) or ("0.05" in _t) or bool(re.search(r"回蓝率?\s*[:=]\s*[\d.]", _t))
-        if _hit:
-            _bad_src.append(_f)
-chk("★ ② 静态守卫：回复率那两个数 / 键名只许在 `content/rules/mana.json`"
-    "（`content/*.py` 里自己算回复率的写法 ⇒ 红）", not _bad_src, "%s" % _bad_src)
+        _path = os.path.join(_root, _f)
+        _rel = os.path.relpath(_path, REPO).replace(os.sep, "/")
+        _tree = ast.parse(io.open(_path, encoding="utf-8").read(), _path)
+        _DOCS.clear()
+        for _n in ast.walk(_tree):
+            _body = getattr(_n, "body", None)
+            if isinstance(_body, list) and _body and isinstance(_body[0], ast.Expr)                     and isinstance(_body[0].value, ast.Constant)                     and isinstance(_body[0].value.value, str):
+                _DOCS.add(id(_body[0].value))
+        for _n in ast.walk(_tree):
+            if id(_n) in _DOCS:                       # docstring 不算「取值」
+                continue
+            for _s in _fold(_n) or ():
+                for _k in _OWN_KEYS:
+                    if _k in _s and len(_s) <= 64:     # 只抓「就是个键名」的短串
+                        _raw_hit.append((_rel, _n.lineno, _s))
+            if isinstance(_n, (ast.Assign, ast.AnnAssign)):
+                _names = _names_of(_n)
+                _val = getattr(_n, "value", None)
+                if _names and _val is not None and any(_NAME_RE.search(x) for x in _names):
+                    for _sub in ast.walk(_val):
+                        if isinstance(_sub, ast.Constant) and isinstance(_sub.value, (int, float))                                 and not isinstance(_sub.value, bool):
+                            for _k, _v in _REG_VALS.items():
+                                if _sub.value == _v:
+                                    _num_hit.append("%s:%d %s=%r（= 表里 %s）"
+                                                    % (_rel, _sub.lineno, _names[0], _sub.value, _k))
+                for _s in _fold(_val) or ():
+                    if _s in _OWN_KEYS and _names:
+                        _def_site.append((_rel, _n.lineno, "%s = %r" % (_names[0], _s)))
+
+# 绑定点（`_K_EVERY = "every" + "_ticks"` 这**唯一合法**的拼写处）本身不算违规；
+# 违规的是「在绑定点之外又拼了一次」—— 例如另一个文件自己也去读那一格。
+_def_pos = {(r, ln) for (r, ln, _) in _def_site}
+_key_hit = ["%s:%d %r" % (r, ln, s) for (r, ln, s) in _raw_hit if (r, ln) not in _def_pos]
+_offsite = ["%s:%d %s" % t for t in _def_site if t[0] != "content/mana.py"]
+chk("★ ②-A 键名层（AST · 键名族从 mana.json 现取、且只取法力**独有**的那几格）：`content/*.py` 里不落它"
+    "（两段拼接出来的键名一并抓 —— 那是对拼写法）", not _key_hit, "; ".join(_key_hit[:6]))
+chk("★ ②-B 数值层（AST · 真值从 mana.json 现取）：回复率那两个数不落进 `content/*.py`"
+    "（`every = 20` / `_EVERY = 20` / `regen_ticks = 20` / 字面键值对 四种旧写法全抓）",
+    not _num_hit, "; ".join(_num_hit[:6]))
+chk("★ ②-C 单一主源层：法力独有那几个键名**全树恰好一个拼写点**，且在 `content/mana.py`"
+    "（别处再抄一份 = 表与代码分叉；抄零份 = `every_of()` 读不到那一格）",
+    not _offsite and len(_def_site) == len(_OWN_KEYS),
+    "拼写点 %d 个（应 %d 个，各对应一格）· 外面的：%s"
+    % (len(_def_site), len(_OWN_KEYS), "; ".join(_offsite[:4]) or "无"))
 _slot_rec = TXT.get(str(_GATE.get("slot") or "")) or {}
 chk("★ ② 拦下那句话用的**已有槽位** `%s` 真在 texts 域里，且声明的两格参数都在（`rv` / `cur` 喂得进）"
     % _GATE.get("slot"),
