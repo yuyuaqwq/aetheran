@@ -2311,8 +2311,15 @@ try:
     _o_focus1, _s_focus1 = _say23(dict(_BASE23), "集火 %s" % _MON23[_MS23]["name"])
     _o_focus2, _s_focus2 = _say23(dict(_BASE23), "集火 谁都不认识的名字")
     _o_focus3, _s_focus3 = _say23(dict(_BASE23), "集火")
+    #   ★ P0-2c（2026-09-29 · aep0）：`COMBAT_FOCUS_MISS` 带了第二个参数
+    #     `here`（「眼下能点的那几只」，读端 `_foe_names_in(ms)` / `_foe_names(st)` 现算）
+    #     ⇒ 期望串**也要传**它，否则期望里留着占位符、与实渲染不等（红的是这条对比，
+    #     不是行为变了）。★ 传的值走**读端那一个函数**现算（不手写镜像串、不另抄一份「有哪些怪」）。
+    from content.cmds_battle import _foe_names_in as _fni23
+    _HERE23 = "、".join(_fni23(_MON23))
     if _o_focus1 != [_r("COMBAT_FOCUS_NAMED", name=_MON23[_MS23]["name"])] \
-            or _o_focus2 != [_r("COMBAT_FOCUS_MISS", name="谁都不认识的名字")] \
+            or _o_focus2 != [_r("COMBAT_FOCUS_MISS", name="谁都不认识的名字",
+                                   here=_HERE23)] \
             or _o_focus3 != [_r("COMBAT_FOCUS_SOLO")] \
             or _o_focus1 == _o_focus2 or _o_focus2 == _o_focus3 \
             or _s_focus1 != dict(_BASE23) or _s_focus2 != dict(_BASE23) \

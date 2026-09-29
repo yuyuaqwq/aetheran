@@ -304,6 +304,50 @@ def _match_foe(st, want):
     return None
 
 
+def _foe_names(st, limit=3):
+    """眼前还站着的那几只（**场上的显示名**）—— `COMBAT_FOCUS_MISS` 说「你写的名字不在这一群」时用。
+
+    ★ 为什么要它：`COMBAT_FOCUS_MISS` 原来那句是「『X』认不出是哪一只 —— 写一只认得出的怪」，
+      「认不出」「认得出」是**实现层的判定词**（真机试玩取证，见 `rebuild_syscopy.py::DOC_PENDING`
+      里 P0-2c 那一条）。改后的措辞要把「能点的是哪几只」**直接摆给玩家看** ⇒ 这一格得现算。
+    ★ 取的是同一把尺子（`hp > 0` 的敌方 actor + 它们的显示名），与 `_match_foe` 同一个源 ——
+      两处不另抄一份「谁算敌人」，否则「点得中的」与「报得出的」会漂。
+    ★ **限 `limit` 只**（默认 3）：真源 26_ §三 优化 3「一屏 400 字」是硬约束，
+      Boss 场里活怪有十几只、全列就破屏了。
+    """
+    out = []
+    for a in ((st.get("battle") or {}).get("sides") or {}).get("enemy") or []:
+        if not isinstance(a, dict) or int(a.get("hp", 0) or 0) <= 0:
+            continue
+        nm = str(a.get("name") or "").strip()
+        if nm and nm not in out:
+            out.append(nm)
+        if len(out) >= max(1, int(limit or 1)):
+            break
+    return out
+
+
+def _foe_names_in(ms, limit=3):
+    """**没在打**的那一档：`here` 列的是「这一带会遇到的那些」（怪物域的显示名）。
+
+    ★ 与 `_foe_names(st)` 分开是因为源不同：那一档没有场（`st` 是 None）、
+      能列的只有域里那些名字。与 `_match_foe` 那条 `hit` 分支同一个源（同一个 `ms` 循环）。
+    ★ **限 `limit` 只**（默认 3）：全列是 17 行、真源 26_ §三 优化 3「一屏 400 字」会当场破。
+      取哪几只：域里原序的前几只（域内 `items()` 已是稳定序 ⇒ 玩家每次看到的是同一批，
+      不会刷一次变一次）。★ 真要全部 ⇒ 玩家敲『怪物谱』，那一屏本就是干这个的。
+    """
+    out = []
+    for mid, m in (ms or {}).items():
+        if str(mid).startswith("_"):
+            continue
+        nm = str((m or {}).get("name") or "").strip()
+        if nm and nm not in out:
+            out.append(nm)
+        if len(out) >= max(1, int(limit or 1)):
+            break
+    return out
+
+
 def _retreat_decide():
     """`后撤` 的条件那一手（★ G2 起走「场」，判据与 B3-23 逐字同一套）。
 
@@ -940,7 +984,12 @@ async def focus_fire(env, sink, uid, player):
     if st is not None:
         foe = _match_foe(st, want)
         if foe is None:
-            yield T("COMBAT_FOCUS_MISS", name=want) if want else T("COMBAT_FOCUS_SOLO")
+            #   ★ `here` 恒有值、不写 `or "一只"` 那种兜底：`hp > 0` 的敌人刚才已被
+            #   `_match_foe` 走了一遍（它自己也按同一把尺子挑），走到这一支说明
+            #   **场上至少站着一只**，只是名字没对上 ⇒ `.join()` 非空。
+            #   ★ 且代码里**一个字不许自造**（`probe_copy ②`：已收口文件内联中文 0 条）。
+            yield (T("COMBAT_FOCUS_MISS", name=want, here="、".join(_foe_names(st)))
+                    if want else T("COMBAT_FOCUS_SOLO"))
             return
         INST.set_focus(env, uid, foe.get("uid"))
         yield T("COMBAT_FOCUS_LOCK", name=foe.get("name") or foe.get("uid") or "")
@@ -964,7 +1013,12 @@ async def focus_fire(env, sink, uid, player):
     # ★ F6（QA P3）：点了名却认不出 —— 与「空着没点」分开说。原先两句回的是同一句话，
     #   玩家以为「集火 不存在的怪」被听懂了（其实只是掉进了「没组队」那一句）。
     if want:
-        yield T("COMBAT_FOCUS_MISS", name=want)
+        # ★ 没在打的那一档：`here` 换成**这一带会遇到的那些**（上面那个 `ms` 循环刚走过、
+        #   名字取的就是它 ⇒ 同一个源，不另抄一份「有哪些怪」）。
+        #   ★ 仍走 `COMBAT_FOCUS_MISS`、**不回** `COMBAT_NEED_FOE`：F6（QA P3）钉的是
+        #     「点了名却认不出」必须与「空着没点名」分开说（`probe_cmds` 五那条判据）；
+        #     并进 `NEED_FOE` 那一刻它就与「空着」那一档同形了 —— 判据在保护一件真事。
+        yield T("COMBAT_FOCUS_MISS", name=want, here="、".join(_foe_names_in(ms)))
         return
     yield T("COMBAT_FOCUS_SOLO")
 

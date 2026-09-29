@@ -1373,7 +1373,7 @@
     "desc": "旧哨塔 · 进门之后那一眼（宽）· P-19 改写"
   },
   "SYS_RECIPE_HEAD": {
-    "value": "【配方】会做 {known} 道 · 还没学会 {locked} 道（凑到料就能做）",
+    "value": "📜 【配方】会做 {known} 道 · 还没学会 {locked} 道（凑到料就能做）",
     "params": [
       "known",
       "locked"
@@ -2493,7 +2493,7 @@
     "desc": "提示 · 当前委托万事俱备那一条（QB-5）"
   },
   "SYS_HELP_HEAD": {
-    "value": "【指令表】",
+    "value": "📜 【指令表】",
     "params": [],
     "category": "系统",
     "desc": "帮助 · 表头"
@@ -4470,7 +4470,7 @@
     "desc": "B3-16b 改名 · 改过了"
   },
   "SYS_RANKING_HEAD": {
-    "value": "【本群榜】按等级与经验排 —— 只有这个群里的人。",
+    "value": "📊 【本群榜】按等级与经验排 —— 只有这个群里的人。",
     "params": [],
     "category": "系统",
     "desc": "B3-16b 排行 · 抬头"
@@ -5459,7 +5459,7 @@
     "desc": "B4-27 放弃 · 冷却（1 个游戏日 —— 源 05 §一）"
   },
   "SYS_SHOP_HEAD": {
-    "value": "【药铺】{name}",
+    "value": "💰 【药铺】{name}",
     "params": [
       "name"
     ],
