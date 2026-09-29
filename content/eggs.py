@@ -70,10 +70,6 @@ def line_of(eid: str) -> str:
     return entry(eid).get("line") or ""
 
 
-def pair_of(eid: str) -> list:
-    return list(entry(eid).get("pair") or [])
-
-
 def how_of(eid: str) -> str:
     return entry(eid).get("how") or ""
 

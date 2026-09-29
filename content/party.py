@@ -174,11 +174,6 @@ def clear(p) -> None:
     _flags(p).pop(FLAG, None)
 
 
-def is_captain(p) -> bool:
-    r = rec_of(p)
-    return bool(r) and r.get("role") == ROLE_CAPTAIN
-
-
 def pid_of(uid, tick) -> str:
     """队名（可复现）：发起人 + 起队那一刻 —— 不掷骰子。"""
     return "pt_%s_%d" % (str(uid), int(tick))

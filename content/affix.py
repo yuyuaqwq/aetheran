@@ -97,13 +97,6 @@ def pe_of(aids) -> int:
     return sum(int(rec_of(a).get("pe", 0) or 0) for a in aids or [])
 
 
-def axes_of(aids) -> set:
-    out: set = set()
-    for a in aids or []:
-        out.update(str(x) for x in (rec_of(a).get("axis") or []))
-    return out
-
-
 # ══════════════════════════════════════════════════════════════
 # ① 抽词条（可复现 · PE ≤ 24 · 同轴不叠 · 等级档位）
 # ══════════════════════════════════════════════════════════════

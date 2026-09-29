@@ -486,11 +486,6 @@ def where_hit(rec, loc) -> bool:
     return (not w) or (loc in w)
 
 
-def last_refresh(p) -> dict:
-    """上次刷新时开着哪些窗（宿主维护门落的档 · `content/timed_events.py` 写）—— 呈现口用它标「新开/收了」。"""
-    return dict(_flags(p).get("ev") or {})
-
-
 def crowd_roster(st: dict | None = None, p=None) -> dict:
     """现在被事件「吸走」的 NPC：`{npc_id: 节点 id}`（集日那两位的临时在场）。
 
@@ -506,15 +501,6 @@ def crowd_roster(st: dict | None = None, p=None) -> dict:
         for n in c.get("npcs") or []:
             out[str(n)] = str(c["node"])
     return out
-
-
-def crowd_text_at(node, st: dict | None = None, p=None) -> str:
-    """这一站聚人那一下的文案槽位（没有 = 空串）。"""
-    for rec in events_now(st, p):
-        c = (rec.get("effects") or {}).get("crowd") or {}
-        if c.get("node") == node and c.get("text"):
-            return str(c["text"])
-    return ""
 
 
 def _mul_effect(key, st, p) -> dict:
