@@ -313,6 +313,47 @@ def battle_try(iid, s):
         return False, 0, 0
     lv = _battle_level(str(s["where"]), spot[0], spot[1],
                        int((MON.get(s["where"]) or {}).get("lv") or 5))
+    # ★ 2026-09-30 收红批二：`s["pool"]` 是**未鉴定容器**（`unid_*`，kind_key=`unidentified`）时，
+    #   内容物装在容器的 `pool` 键里（不是 `entries`）⇒ 旧的 `roll_pool(s["pool"])` 读不到、
+    #   预筛恒空（红报形态「打了 0 场」）。真链是**两段**，这里两段都真跑：
+    #     ① 打怪掉**容器**（真敲 attack · 每手新档 ⇒ `drops_seen` 恒 0、与预扫同种子；连手到容器进包）
+    #     ② 开容器（`open_unid` —— 与 `cmds_talk` 同一口 + 同一条种子纪律 `_unid_seed`；
+    #        扫「游戏日 × 手上剩几件」到开出为止，与「换人 × 场次」同一精神）
+    _pid = str(s.get("pool") or "")
+    if (LT.pools().get(_pid) or {}).get("kind_key") == "unidentified":
+        from content.cmds_talk import _unid_seed      # ★ 种子唯一真源（不自己拼一份）
+        _mid = str(s["where"])
+        _direct = [str(x) for x in ((MON.get(_mid) or {}).get("drops") or [])]
+        uids = []
+        for i in range(400):
+            uid = "u_srcb%03d" % i
+            for _dpid in _direct:
+                drops = LT.roll_pool(_dpid, level=lv,
+                                     rnd=random.Random(CB.drop_seed(uid, _mid, 0, 0)))
+                if any(d["id"] == _pid for d in drops):
+                    uids.append(uid)
+                    break
+            if len(uids) >= 3:
+                break
+        tries = 0
+        for uid in uids:
+            _dropped = False
+            for _ in range(BATTLE_ATT):
+                p = _fresh(spot[0], spot[1], lv)
+                run_ag(CB.attack(None, None, uid, p))
+                tries += 1
+                if _hit(p, _pid):                     # 容器真掉进背包（真敲出来的）
+                    _dropped = True
+                    break
+            if not _dropped:
+                continue
+            for day in range(DAY_CAP * 8):
+                for left in (1, 2, 3):
+                    got = LT.open_unid(_pid, level=lv, gated=True,
+                                       rnd=random.Random(_unid_seed(uid, day, _pid, left)))
+                    if got and got.get("id") == iid:
+                        return True, tries, lv
+        return False, tries, lv
     uids = []
     for i in range(400):
         uid = "u_srcb%03d" % i

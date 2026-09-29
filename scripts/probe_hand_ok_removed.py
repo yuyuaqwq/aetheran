@@ -39,8 +39,11 @@ print("一、实例上的字段（真建对象，不读源码）")
 h = BA.Hand("interrupt")
 attrs = sorted(vars(h))
 chk("★ `Hand('interrupt')` 上没有 `ok` 那一格", not hasattr(h, "ok"), attrs)
-chk("★ 原有五格一件不少（kind/p/item/lines/used）",
-    attrs == ["item", "kind", "lines", "p", "used"], attrs)
+# ★ 2026-09-30 收红批二：`slot_kw` 是 P0-1 续批五（ca04636）**有意**加的第六格
+#   （未渲染的槽位实参 —— 给「要带【N 刻】」那一格用，渲染推迟到 override）。
+#   清单随之五格 → 六格；仍然**精确相等**（防删防乱加，判据只紧不松）。
+chk("★ 原有六格一件不少（kind/p/item/lines/slot_kw/used）",
+    attrs == ["item", "kind", "lines", "p", "slot_kw", "used"], attrs)
 chk("★ 零个字段名含 ok 那一族（防改名绕开这条判据）",
     not [a for a in attrs if a.lower() in ("ok", "is_ok", "success", "succeed", "done")], attrs)
 

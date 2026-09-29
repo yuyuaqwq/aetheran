@@ -15,7 +15,8 @@
 ③ ★ 反证（把显示名改成 ASCII ⇒ 当场红）：不许「表里有这个 key」就算过
 ④ 引擎侧静态守卫：那两个注入点不许出现中文字面量（引擎零游戏名词）
 ⑤ 覆盖率：表内键集 == 真源现算全集（少一条=缺口 · 多一条=孤儿），两条都现算
-⑥ 12 条「不是缺陷」那族逐字不变（占位符叫 kind/cat 但传的是中文显示名）
+⑥ 11 条「不是缺陷」那族逐字不变（占位符叫 kind/cat 但传的是中文显示名；
+   SYS_HELP_ROW 已随帮助改造 b4508e2 退役，见第⑥节注释）
 ⑦ 真渲染一遍：翻译层产出的那一行 == 文案表那句，且未登记键透传不崩
 
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_machine_key_names.py
@@ -247,15 +248,17 @@ for _tag, _want in _KNOWN_DEBT.items():
     chk("④b 引擎既有欠账（payload 里的中文兜底词 '目标'）实数 %d（基线 %d · 不许变多）"
         % (_got, _want), _got <= _want, "比基线多出来的就是新引入的")
 
-# ========== ⑥ 12 条「不是缺陷」那族逐字不变 ==========
+# ========== ⑥ 11 条「不是缺陷」那族逐字不变 ==========
+# ★ 2026-09-30 收红批二：SYS_HELP_ROW 已随帮助面板改造（b4508e2）退役
+#   （真源 17_ L1164「旧三键随本批退役」）⇒ 从本清单出：12 → 11 条。
 _notdefect = ["COMBAT_RES_SHORT", "COMBAT_SWAP_OK", "SYS_ALLOC_OK", "SYS_ALLOC_SHORT",
               "SYS_CMP_EMPTY", "SYS_CMP_HEAD", "SYS_GEAR_EQUIP_OK", "SYS_GEAR_UNEQUIP_OK",
-              "SYS_HELP_ROW", "SYS_MAP_HEAD", "SYS_SKILL_ROW", "SYS_SORT_ROW"]
+              "SYS_MAP_HEAD", "SYS_SKILL_ROW", "SYS_SORT_ROW"]
 _in_mk = sorted(s for s in _notdefect if s in mk_slots)
-chk("⑥ 12 条「不是缺陷」那族不在机器键清单里（未被误判成缺陷）",
-    len(_notdefect) == 12 and not _in_mk, "混进来的：%s" % "、".join(_in_mk))
+chk("⑥ 11 条「不是缺陷」那族不在机器键清单里（未被误判成缺陷）",
+    len(_notdefect) == 11 and not _in_mk, "混进来的：%s" % "、".join(_in_mk))
 _lost = sorted(s for s in _notdefect if s not in TEXTS)
-chk("⑥ 那一族 12 条逐条还在 texts 表里（一个字没动）", not _lost, "少了：%s" % "、".join(_lost))
+chk("⑥ 那一族 11 条逐条还在 texts 表里（一个字没动）", not _lost, "少了：%s" % "、".join(_lost))
 
 # ========== ⑦ 真渲染一遍：翻译层产出的那一行 == 文案表那句 ==========
 from content import battle_text as BT                        # noqa: E402

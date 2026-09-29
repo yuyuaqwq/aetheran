@@ -495,11 +495,22 @@ chk("★ 满血 ⇒ 第一行是变体那一段（%s）· 有伤 ⇒ 回到基�
     and _look_full[0] == V(_SC_VAR) and _look_hurt[0] == V(_SC_BASE)
     and _look_full[0] != _look_hurt[0],
     "full=%r / hurt=%r" % (_look_full[:1], _look_hurt[:1]))
+# ★ 2026-09-30 收红批二：P4 折行批（baf269c/a37d10d）把两版各自按 ≤14 折行 ⇒
+#   「只差最后一行」的口径更新为「只差**尾段**（折行后可多行）」。防漂意图不变：
+#   共享正文（第一处不同行之前）逐字相同 —— 两处抄一份正文就会漂，这一条钉着它。
+#   ★ 下界 10 = 折行后当前形态的共享行数（防「共享部分被砍短」；两版同步增行不红）。
 _pre_full, _pre_hurt = V(_SC_VAR).split("\n"), V(_SC_BASE).split("\n")
-chk("★ 两版只差**最后一行**（前几行逐字相同 —— 两处抄一份正文就会漂，这一条钉着它）",
-    _pre_full[:-1] == _pre_hurt[:-1] and len(_pre_full) == len(_pre_hurt)
-    and _pre_full[-1] != _pre_hurt[-1],
-    "%d 行 vs %d 行" % (len(_pre_full), len(_pre_hurt)))
+_common = 0
+for _a, _b in zip(_pre_full, _pre_hurt):
+    if _a != _b:
+        break
+    _common += 1
+_tail_f, _tail_h = _pre_full[_common:], _pre_hurt[_common:]
+chk("★ 两版共享正文逐字相同（前 %d 行）· 只差尾段（%d 行 vs %d 行 · 折行后可多行）"
+    % (_common, len(_tail_f), len(_tail_h)),
+    _common >= 10 and _tail_f and _tail_h and _tail_f != _tail_h
+    and "伤口" in "".join(_tail_h) and "伤口" not in "".join(_tail_f),
+    "共享 %d 行 · 尾段 %d vs %d" % (_common, len(_tail_f), len(_tail_h)))
 chk("★ 反证（拆掉修复）：不走这一支（`variant=None`）⇒ 满血也回基础那一版（写着「伤口」那一段）",
     CA._scene_line(TOWN, _CHAPEL_NODE, None, variant=None) == V(_SC_BASE)
     and "伤口" in V(_SC_BASE) and "伤口" not in V(_SC_VAR),

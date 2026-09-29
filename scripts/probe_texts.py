@@ -187,15 +187,18 @@ for _l, _nd, _k in _lk:
     if _k in tx:
         _vals.setdefault(tx[_k]["value"], []).append(_nd)
 _dupes = {v: who for v, who in _vals.items() if len(who) > 1}
-_bad11 = [(nd, len(tx[k]["value"]), tx[k]["value"]) for _l, nd, k in _lk
-          if k in tx and (len(tx[k]["value"]) > 40 or "\n" in tx[k]["value"])]
+# ★ 2026-09-30 收红批二：P4 折行批（baf269c/a37d10d）起「世界动静」按 ≤14 分段 ——
+#   旧的「不许 \n」与折行口径**直接矛盾**，此处更新为折行版：
+#   总量（去掉 \n）仍 ≤ 40 字；行宽形态交给 `probe_line_width` 钉（职责不重复）。
+_bad11 = [(nd, len(tx[k]["value"].replace("\n", "")), tx[k]["value"]) for _l, nd, k in _lk
+          if k in tx and len(tx[k]["value"].replace("\n", "")) > 40]
 chk("★ 聆听：%d 个节点**各有自己一句**（槽位 `WORLD_LISHEN_<节点>` 逐个在 texts 里）"
     % len(nodes), not _missing, "缺：%s" % (_missing[:4] or "无"))
 chk("★ 聆听：没有哪个节点还落回通用句 `SYS_LISTEN_DEFAULT`（旧口径 = 镇上 11 站同一句）",
     not _leaked, "%s" % (_leaked[:3] or "0 个节点"))
 chk("★ 聆听：%d 句两两不同（同一张图上也是）」" % len(_vals), not _dupes,
     "%s" % (_dupes or "无重复"))
-chk("★ 聆听：每句都是**一行**、且 ≤ 40 字（一屏一行读得完）", not _bad11,
+chk("★ 聆听：每句 ≤ 40 字（折行形态由 probe_line_width 管 —— P4 起按 ≤14 分段）", not _bad11,
     "%s" % (_bad11[:3] or "全在 40 字以内"))
 chk("★ 聆听 真跑逐节点产出的就是该节点那一句（%d 个节点）" % len(nodes),
     not [1 for _l, _nd, _k in _lk if _k in tx and _listen_lines(_l, _nd)[0] != tx[_k]["value"]],
