@@ -58,6 +58,14 @@ from ext_combat.battle import landing as LD                          # noqa: E40
 from ext_combat.battle import schedule as SCH                        # noqa: E402
 from ext_combat.battle import stats as ST                            # noqa: E402
 from ext_combat.battle.actors import ActCtx, make_actor              # noqa: E402
+def _io_src(path):
+    """读一份源文件（㉏ L407 静态守卫用；读不到一律抛，不静默当空）。"""
+    with open(path, "r", encoding="utf-8") as fh:
+        return fh.read()
+
+
+import re                                                            # noqa: E402  ㉏ L407
+_MECH_SRC = _io_src(REPO + "/content/mech.py")                      # noqa: E402  ㉏ L407
 
 fails = []
 ok = lambda m: print("  ✓ " + m)
@@ -487,6 +495,42 @@ _gain = int(_c.get("hp") or 0) - _hp0
 (ok if _heals and set(_heals) == {_per} and _gain == min(sum(_heals), _mx - _hp0) else bad)(
     "  · 真推进 ⇒ 每刻回 %d 点、跳 %d 次、共回 %d 点（= 治疗 %d × %s 每刻；超出上限的那点被 clamp）"
     % (_per, len(_heals), _gain, _heal, _ratio))
+
+# ── ㉏ L407：安神曲那处 `or 1` 垫分母（取不到 ⇒ 不写态）─────────────
+print()
+print("── ㉏ L407：`_cast_hot` 的生命上限分母（取不到就不写态，零常数垫底）")
+
+# ① 静态：垫底常数只许是 0（同体的体上限一律不托常数）
+_mx_falls = re.findall(r"actor_max_hp\(battle, \w+\) or (\d+)", _MECH_SRC)
+_bad_fall = sorted({n for n in _mx_falls if n != "0"})
+(ok if not _bad_fall else bad)(
+    "★ ① `content/mech.py` 里 `actor_max_hp(...) or <数>` 的垫底全是 0（实测 %d 处：%s）"
+    % (len(_mx_falls), "、".join(_mx_falls) or "无"))
+
+# ② 真跑（带牙反证）：上限读不到那一档 ⇒ 不写态。
+#    形状是实测出的（不是猜的）：`_monster_base_stats` 的回落链是
+#    `max_hp → hp → 1`，因此只有**四个键全空**才会回到 0。
+_bq = fresh("cls_priest", hp=150)
+_cq = _bq.focus()
+for _k in ("max_hp", "panel_stack", "class_name"):
+    _cq.pop(_k, None)
+_cq["hp"] = 0
+_pct_bad = 0.0
+try:
+    apply_cast(_bq, _cq, "SKILL_PRS_lullaby")
+    _eq = (_cq.get("effects") or {}).get(_mk) or {}
+    _pct_bad = float((_eq.get("period") or {}).get("heal_pct") or 0)
+    _leaked = bool(_eq)
+except Exception:                                       # noqa: BLE001
+    _leaked = False
+(ok if not _leaked else bad)(
+    "★ ② 上限读不到 ⇒ 不写态（修前这档 heal_pct=15.000000；"
+    "修后 effects=%s，heal_pct=%.6f）" % ("有（泄漏）" if _leaked else "无", _pct_bad))
+
+# ③ 正常档零回归：上限读得到 ⇒ heal_pct 落在 (0,1)（分母是真上限）
+(ok if _e and _pd.get("dir") == "heal" and 0.0 < float(_pd.get("heal_pct") or 0) < 1.0 else bad)(
+    "★ ③ 上限读得到 ⇒ heal_pct=%.6f 落在 (0,1)（修前同值 0.034483，零回归）"
+    % float(_pd.get("heal_pct") or 0))
 
 print()
 print("── ⑬ pending 那两条技能（后撤 ×2）：真放一次不抛、不写任何状态（缺口是**声明**出来的，不静默假生效）")

@@ -722,7 +722,20 @@ def _cast_hot(battle, caster, info, m, logs):
     _mx_raw = caster.get("max_hp")
     mx = int(_mx_raw) if _mx_raw else 0
     if mx <= 0:
-        mx = int(ST.actor_max_hp(battle, caster) or 1)
+        try:
+            mx = int(ST.actor_max_hp(battle, caster) or 0)
+        except Exception:                                   # noqa: BLE001 · 面板未装配 / 栈未声明
+            mx = 0
+    # ★ 审计 L407（2026-09-29 · 批次 1）：兜底原先写 `or 1`。
+    #   引擎 `stats.actor_max_hp` 那一口的**默认值本身就是 1**
+    #   （`actor_stats(...).get("max_hp", actor.get("max_hp", 1))`）⇒ 面板取不到时
+    #   `mx` 恒为 1，而 `heal_pct = per / mx` 是「每跳回**上限**的百分比」
+    #   ⇒ 读不到上限时每跳直接回满血。台账实测：同场景上限 116 那档 0.0172，
+    #   读不到那档 **2.0（116 倍）**，不报错、不留痕。
+    #   同文件另三处（399 / 1220 / 1393）一律 `or 0` = 「取不到就不写态」⇒ 此处同口径；
+    #   且 `mx <= 0` 时**不挂再生**（分母为 0 的百分比无意义，静默写一个巨大值更糟）。
+    if mx <= 0:
+        return
     try:
         heal = _heal_base_of(battle, caster, info)
     except Exception:                                   # noqa: BLE001
