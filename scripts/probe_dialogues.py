@@ -1494,6 +1494,131 @@ _ok24 = ("CT.rotate(" in _poi24) and ("CT.note_heard(" in _poi24)
 chk("㉔-c ★ POI 触摸那条路的轮换/记账走 `CT.rotate` + `CT.note_heard`（不抄第二份）", _ok24,
     "rotate=%s note_heard=%s" % ("CT.rotate(" in _poi24, "CT.note_heard(" in _poi24))
 
+# ══════════════════════════════════════════════════════════════════
+# ㉕ ★★ P1-30（2026-09-29 · 文案车道 P1）—— **每一条台词的 need 都得「拿得到」**
+#    这一节是 P1-27 的伴生补齐。P1-27 把「认不出的 need 键」从「静默当满足」改成
+#    fail-closed，方向对；但它只把「**键名**认不认得」关死了，**键值**没人管：
+#
+#    ★ 真缺口（实测出来的，前两版猜错过两次，见提交消息）：
+#      事件 / 旗标 / 图鉴三类，键值只要**指向一个存在的东西**，就一定有机会满足。
+#      真正会**永久死句**的是道具那一类：
+#        `{"holding": "i_xxx"}` —— `i_xxx` 在 items 域里查无此物，
+#        或查得到却**没有任何来源**（掉落池 / 采集 / 配方 / 任务奖励都没有它）
+#        ⇒ 玩家这一辈子拿不到 ⇒ 那一句话**永远出不来**，
+#        而 ③（键名合法）、⑩~㉔（域里此刻没有这一句）、schema **全都判不出**，
+#        **全链零报错**。写的人以为那句话挂上了，玩家看不到它，
+#        也没有任何一道门会红 —— 比「重复」更难被发现（它连个重样的现象都没有）。
+#
+#    为什么属「门禁只加强」：③ 查**键名合法**，㉕ 查**键值拿得到**
+#      —— 两者合起来才叫「这一句是活的」。③ 一字未改，既有判据一行未动。
+#    四个 oracle 各自**跟着定义方走**（不另抄一份名单）：
+#      `event`   → `content.calendar.events()`（世界事件只有那一张表）
+#      `flag`    → `content.prog.map_slug`（真实进度那一族）；表外那几个各自有写端
+#      `holding` → items 域（存在）**且** 掉落池 / 采集 / 配方 / 任务四路至少一路给得出
+#      `codex`   → codex 域（`谱:条目` 两段都要认）
+#    ★ 只查**域里真用到的那些 token**（不查全表）—— 域没用到的，不该被门禁管。
+import content.prog as _PG25
+import content.calendar as _CAL25
+
+_items25 = st.domain("items") or {}
+_codex25 = st.domain("codex") or {}
+_events25 = _CAL25.events()
+_pools25 = st.domain("drop_pools") or {}
+_gath25 = st.domain("gathering") or {}
+_recipes25 = st.domain("recipes") or {}
+_quests25 = st.domain("quests") or {}
+
+
+def _toks25(kind):
+    """域里用到的这一类 token（值可能是标量也可能是列表）—— 现算，不抄名单。"""
+    _s = set()
+    for _v in dl.values():
+        for _nd in _v["nodes"].values():
+            for _t in _nd.get("texts") or []:
+                _x = (_t.get("need") or {}).get(kind)
+                if not _x:
+                    continue
+                _s.update(_x if isinstance(_x, list) else [_x])
+    return sorted(_s)
+
+
+def _obtainable25(item_id):
+    """这一件**拿得到**吗 —— 四条来源任一给得出就算（掉落池 / 采集 / 配方 / 任务）。
+
+    ★ 「items 域里有这一条」只说明**它被定义过**，不等于**玩家拿得到**：
+      域里可以躺着一个谁都不掉的道具（写道具时手滑 = 那一族内容全废，
+      而且没有任何一道门会红）。这里现查四路来源，不抄名单。
+    """
+    if item_id not in _items25:
+        return "items 域里没有这一件"
+    _blob = json.dumps([_pools25, _gath25, _recipes25, _quests25], ensure_ascii=False)
+    if item_id in _blob:
+        return ""
+    return "items 域里有，但掉落池/采集/配方/任务四路都给不出（玩家永远拿不到）"
+
+
+#: 旗标里**不是**委托 slug 的那几个 —— 各自有各的写端（`content.prog` 的表外老口径）。
+#: 认不出的旗标 = 没人写它 = 那一句永远出不来 ⇒ 与「键值拿不到」同罪。
+_FLAG_WRITERS25 = {"nameline_done", "swordband_done", "oldroad_done",
+                   "quest_lamp_oil_done", "quest_return_stone_done", "asked_for_rain_herb"}
+
+_ev25 = _toks25("event")
+_hd25 = _toks25("holding")
+_fg25 = _toks25("flag")
+_cx25 = _toks25("codex")
+
+_dead25 = []
+for _e in _ev25:
+    if _e not in _events25:
+        _dead25.append("event:%s（世界事件表里没有）" % _e)
+for _h in _hd25:
+    _why = _obtainable25(_h)
+    if _why:
+        _dead25.append("holding:%s —— %s" % (_h, _why))
+for _f in _fg25:
+    if not _PG25.map_slug(_f) and _f not in _FLAG_WRITERS25:
+        _dead25.append("flag:%s（既不是委托 slug · 也没登记写端）" % _f)
+for _c in _cx25:
+    _bk, _, _rid = _c.partition(":")
+    if not (_bk and _rid) or _rid not in (_codex25.get(_bk) or {}):
+        _dead25.append("codex:%s（图鉴里没有这一条）" % _c)
+
+chk("㉕-a ★ 每条台词的 need 都**拿得到**（事件 / 道具（含拿得到）/ 旗标 / 图鉴四条都得指向世界里真实存在、玩家真能拿到的东西）",
+    not _dead25,
+    "认不出 ⇒ 那一句永远出不来：%s" % _dead25 if _dead25
+    else "查了 %d 事件 + %d 道具（含来源） + %d 旗标 + %d 图鉴条（全对得上）"
+         % (len(_ev25), len(_hd25), len(_fg25), len(_cx25)))
+
+# ㉕-b ★ 反证：挂一个「**定义了却没人给得出**」的道具 ⇒ ㉕-a 必须抓到它。
+#   ★ 为什么这一条才是真缺口（第一版拿「拼错的键名」当缺口被打脸：③ 抓得住键名；
+#     第二版拿「键名合法 · 值不存在」也被打脸：`holding` 只读 bag，背包真有就理应出得来）。
+#     剩下的就是这一种：**items 域里有它，而四路来源都给不出**。
+#   ★ 三半都要成立，缺一这条判据就是恒真的（自己瞎）：
+#     ① ③「只查键名」的口径**放行**（它只看得见 `holding` 这个键，看不见值）；
+#     ② 真读端在「玩家只有正常来源」时**挑不出**（拿不到 ⇒ 永远不满足）；
+#     ③ ㉕-a 自己的 oracle **抓得住**（按 key 精确还原 ⇒ 抓完不留痕）。
+_bak25 = json.loads(json.dumps(dl["dlg_masha"]))
+try:
+    _ghost25 = "i_ghost_never_dropped"
+    _items25[_ghost25] = {"name": "㉕ 反证用 · 谁都不掉的道具", "kind": "杂物",
+                          "kind_key": "junk", "icon": "📦", "price": 0, "desc": "㉕ 反证用"}
+    _bad25 = {"holding": _ghost25}                    # 键合法 · 道具存在 · 没人给得出
+    dl["dlg_masha"]["nodes"]["hidden"]["texts"].append(
+        {"need": _bad25, "text": "㉕ 反证用 · 这一句在真档里永远出不来"})
+    _oldview_passes25 = set(_bad25) <= set(NEED_KINDS)     # ③ 的口径 ⇒ 放行（漏）
+    _read_end_never25 = CT._pick_indexed(
+        [{"need": _bad25, "text": "不该出"}],
+        {"flags": {}, "bag": {}, "equipped": {}, "hp": 999},   # 正常途径 = 拿不到 ⇒ 空包
+        {"hour": "hr_dusk", "weather": "w_fog"})[1] is None
+    _shape_catches25 = bool(_obtainable25(_ghost25))          # ㉕-a 的 oracle ⇒ 抓
+    chk("㉕-b ★ 反证：挂一个「**定义了却没人给得出**」的道具 ⇒ ㉕-a 必抓到（而 ③「只查键名」放行它）",
+        _oldview_passes25 and _read_end_never25 and _shape_catches25,
+        "③ 会放行=%s · 读端挑不出=%s · ㉕-a 抓得住=%s（缺口就在①与③之间）"
+        % (_oldview_passes25, _read_end_never25, _shape_catches25))
+finally:
+    dl["dlg_masha"] = _bak25                            # 按 key 精确还原
+    _items25.pop("i_ghost_never_dropped", None)         # 反证道具也还原（不留痕）
+
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
 sys.exit(0 if ok else 1)
