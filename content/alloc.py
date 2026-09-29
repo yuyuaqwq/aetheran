@@ -42,7 +42,56 @@ class AllocError(Exception):
       · **声明错了**：档上的职业不在 `classes` 域里 / 域里那条没有 `suggest_alloc`
 
     两类都不许静默兜底（"当作没投过"最坏：玩家以为投了、面板没变）。
+
+    ★ **两条文案（台账 L2154）**
+      · `str(exc)` = **机器侧原话**，带坏值与字段名，**只进日志**（`_LOG.warning(..., exc_info=True)`）
+      · `exc.player_reason` = **玩家那一行**，只说「哪一类坏」+ 玩家自己看得懂的口径，
+        **零机器键 / 零字段名**。`cmds_ast.alloc_points` 的两个 catch 一律填 `player_reason`。
+
+    保留原构造签名（`AllocError("…")` 一字不改）⇒ 17 个既有抛点不必全改；
+    缺 `player_reason` 时由 `__init__` 按**参数个数**回落到一个分类句（见下）。
     """
+
+    def __init__(self, msg: str, player_reason: str = None):
+        super().__init__(msg)
+        self.player_reason = player_reason or _classify(msg)
+
+    def __repr__(self):            # 让黑盒探针/异常树里能一眼看到玩家那一行
+        return "AllocError(%r, player_reason=%r)" % (str(self), self.player_reason)
+
+
+#: 坏值 → 玩家那一行（**零机器键**）。
+#: ★ 顺序敏感：先按「消息里出现的是哪一类坏值形状」判，判不出再回落通用句。
+#:   刻意**不**把坏值本身写进来 —— 那正是 L2154 要治的（`'ZZZ'` / `'abc'` 上屏）。
+#:   五维名（STR/AGI/…）**不算**机器键（它们是玩家在「加点 力量」里认得的键，
+#:   且 `_stat_slot` 本来就把它们翻成中文显示名），但**坏掉的键**不是。
+def _classify(msg: str) -> str:
+    """机器侧原话 → 玩家那一行（分类句，零机器键）。"""
+    if "不是一份表" in msg:
+        return "加点记录格式不对"
+    if "认不出的维" in msg:
+        return "加点记录里有认不出的属性名"
+    if "不是有限数" in msg:
+        return "加点记录里有一格算不出数"
+    if "不是数字" in msg:
+        return "加点记录里有一格不是数字"
+    if "是负数" in msg:
+        return "加点记录里有一格是负数"
+    if "是小数" in msg:
+        return "加点记录里有一格是零头"
+    if "不是整数" in msg:
+        return "等级那格不是整数"
+    if "不是一个数" in msg:
+        return "等级那格不是数字"
+    if "至少 1" in msg:
+        return "点数得是 1 往上"
+    if "已花" in msg and "总点数" in msg:
+        return "加点记录比该有的总点数还多"
+    if "不在 classes 域里" in msg:
+        return "存档里的职业名对不上"
+    if "没有 suggest_alloc" in msg:
+        return "存档里的职业少了建议加点"
+    return "加点这条线算不下去了"
 
 
 def classes() -> dict:
@@ -57,7 +106,7 @@ def classes() -> dict:
 # ══════════════════════════════════════════════════════════════
 # 一、点数：等级 → 总点数 − 已花 = 余额（**唯一口**）
 # ══════════════════════════════════════════════════════════════
-def _level_of(level) -> int:
+def level_of(level) -> int:
     """等级取值的**唯一校验口**：正常化到 ≥1 的整数，认不出就点名抛。
 
     ★ 台账 L2153-3：`total_points` 原来是裸的 `max(1, int(level or 1))`，
@@ -82,7 +131,7 @@ def _level_of(level) -> int:
 
 def total_points(level) -> int:
     """该等级一共该有多少点（建号 8 + 每级 3）。**不落档** —— 等级改了它自动跟着改。"""
-    return LV1_POINTS + PER_LEVEL_POINTS * (_level_of(level) - 1)
+    return LV1_POINTS + PER_LEVEL_POINTS * (level_of(level) - 1)
 
 
 def spent(alloc) -> int:

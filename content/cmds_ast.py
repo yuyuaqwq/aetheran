@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 
 from . import calendar as CAL        # 时辰/天气的唯一出口（它不 import 本模块，无环）
@@ -43,6 +44,10 @@ def _texts():
 #: ★ 全包**只有这一处**写得出它 —— 别处要判「取不到文案」就 import 这个常量
 #:   （审计 L2212 / L2614：原先 4 处逐字硬编码，改上游标记文案时下游 3 处静默失效）。
 MISSING_MARK = "[MISSING TEXT"
+
+
+#: ★ 机器侧诊断的 logger（玩家可见文本禁机器键 ⇒ 细节只进这里；台账 L2154）
+_LOG = logging.getLogger("aetheran.alloc")
 
 
 def T(key: str, **slots):
@@ -1504,17 +1509,49 @@ async def alloc_points(env, sink, uid, player):
       · 档上那一格 `alloc` 本身是坏的（认不出的维 / 小数 / 超投）⇒ 点名（`SYS_ALLOC_BAD_SAVE`），
         不"当作没投过"接着加
     """
-    p = _p(player)
+    # ★ 台账 L2154-2：原先 `p = _p(player)` 是**裸的一行**，而 `_p` 自己的面板那一口
+    #   （`hp_cap` → `build_actor` → `ALLOC.of_record`）也走同一把尺 ⇒ 坏档在**这一行**
+    #   就抛 AllocError，**先于**下面那个 catch ⇒ 四种坏档（坏维 / 非数字 / 负数 / 坏等级）
+    #   实测整个异常**裸逃出指令**（那处 `T(SYS_ALLOC_BAD_SAVE, why=…)` 对它们是死支）。
+    #   修法 = 把这一行也纳入同一个 catch（不新造处理路径，同一句玩家文案、同一条日志）。
+    # ★ 台账 L2154-3：等级那一格**先**过本包已有的 fail-closed 口。
+    #   为什么不放在后面：`_p()` 自己就调 `panel_build.actor_of_record`（`:376` 裸
+    #   `max(1, int(rec.get("level") or 1))`），坏等级在**这一行**就 ValueError 裸逃出
+    #   指令 —— 而 `panel_build.py` **不在批次 1 的文件面**（别车道/公共面，撞不得）。
+    #   ⇒ 在进 `_p()` 之前先自己把这一格验掉：不改别处、也不靠一个宽 `except` 兜。
+    #   `_p` 之后那处 `AL.level_of` 保留（归一化后的档再取一次，同一把尺）。
+    try:
+        lv = max(1, AL.level_of(player.get("level") if isinstance(player, dict) else None))
+    except AL.AllocError as e:
+        _LOG.warning("[aep.alloc] 读档时等级那格坏了：%s", e, exc_info=True)
+        yield T("SYS_ALLOC_BAD_SAVE", why=e.player_reason)
+        return
+    try:
+        p = _p(player)
+    except AL.AllocError as e:
+        _LOG.warning("[aep.alloc] 读档时加点格坏了（面板那一口先抛）：%s", e, exc_info=True)
+        yield T("SYS_ALLOC_BAD_SAVE", why=e.player_reason)
+        return
     cls = str(p.get("cls") or "").strip()
     if not cls:
         yield T("SYS_ATTR_NOCLS")
         return
-    lv = max(1, int(p.get("level") or 1))
+    # 等级那一格已在进 `_p()` 之前验过（上面）；归一化后的档**再取一次**走同一把尺
+    # —— 防止 `_fresh` 填了默认值后口径漂移。
+    try:
+        lv = max(1, AL.level_of(p.get("level")))
+    except AL.AllocError as e:
+        _LOG.warning("[aep.alloc] 归一化后等级那格坏了：%s", e, exc_info=True)
+        yield T("SYS_ALLOC_BAD_SAVE", why=e.player_reason)
+        return
     try:
         al = AL.of_record(p)                     # 这档实际分了多少（唯一口；坏档 ⇒ 抛）
         left = AL.balance(lv, al)
     except AL.AllocError as e:
-        yield T("SYS_ALLOC_BAD_SAVE", why=e)
+        # ★ 台账 L2154：原填 `why=e`（整个 str）⇒ 档里的坏键 `'ZZZ'` 原样上屏。
+        #   玩家那一行只拿 `player_reason`（分类句）；机器侧原话 + 栈进日志，不丢诊断。
+        _LOG.warning("[aep.addoc] 读档时加点格坏了：%s", e, exc_info=True)
+        yield T("SYS_ALLOC_BAD_SAVE", why=e.player_reason)
         return
     usage = str((_data("commands").get("alloc") or {}).get("usage") or "")
     arg = _alloc_arg(env)
@@ -1557,7 +1594,9 @@ async def alloc_points(env, sink, uid, player):
     try:
         p["alloc"] = AL.apply(al, stat, cnt)
     except AL.AllocError as e:                   # 档上那一格是小数（配平基准那种）⇒ 不截断，点名
-        yield T("SYS_ALLOC_BAD_SAVE", why=e)
+        # ★ 台账 L2154 同上：玩家只拿分类句，带坏值的原话进日志。
+        _LOG.warning("[aep.alloc] 写入前加点格坏了：%s", e, exc_info=True)
+        yield T("SYS_ALLOC_BAD_SAVE", why=e.player_reason)
         return
     p = _p(p)                     # ★ 出档口再算一遍：生命上限跟着加点一起动（P-27 同一个口）
     if player is not None:
