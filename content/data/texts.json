@@ -2937,7 +2937,7 @@
     "desc": "我的委托 · 手上空的"
   },
   "SYS_MINE_HEAD": {
-    "value": "【进行中】{n} 条",
+    "value": "📜 【进行中】{n} 条",
     "params": [
       "n"
     ],
@@ -2945,7 +2945,7 @@
     "desc": "我的委托 · 进行中表头"
   },
   "SYS_MINE_DONE": {
-    "value": "【已交】{n} 条",
+    "value": "📜 【已交】{n} 条",
     "params": [
       "n"
     ],
@@ -2962,7 +2962,7 @@
     "desc": "我的委托 · 进度那半格（同一条 require 的达成数 —— QB-4 · 源 04 §二 + 24 §二「（三次）」）"
   },
   "SYS_MINE_RANK": {
-    "value": "【评级】{tier}",
+    "value": "📜 【评级】{tier}",
     "params": [
       "tier"
     ],
@@ -4249,7 +4249,7 @@
     "desc": "B3-12 箱子 · 取出"
   },
   "SYS_ACH_HEAD": {
-    "value": "【成就】今天能记的都在这儿",
+    "value": "📜 【成就】今天能记的都在这儿",
     "params": [],
     "category": "系统",
     "desc": "B3-12 成就 · 抬头"
