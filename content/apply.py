@@ -144,8 +144,25 @@ def _expr_vars() -> dict:
     return tbl
 
 
+# ★★ 引擎 `formula/_REF_PREFIXES`（`saintess_engine/formula/__init__.py`）里的四个前缀
+#   —— 带它们的是**声明路径**，不是表达式变量：`FormulaTable._params` 自己在**运行期**
+#   沿 `const.` / `skeleton.` / `param.` 的**表**取值，`formula.` 是引用另一条公式
+#   ⇒ 四者都**不该**进 `expr_vars_fn` 的变量表。
+#   为什么现在才炸（2026-09-29 实测）：引擎 a68b183 起 `declared_vars()` **按名校验**
+#   （`const.K_block` 带 `.`，tokenizer 的 var 组认不出 ⇒ 恒不可达）⇒ fail-closed 抛。
+#   原写法只排除了 `formula.`，于是 7 条 `const.*` 全被当变量名塞进去
+#   ⇒ 装配期抛 ⇒ **整包 60 余支探针（含 probe_texts/probe_copy/probe_guard_text）
+#   一起红在 import**，且 `e2e_drive.py` 也进不去。
+_REF_PREFIXES = ("const.", "formula.", "skeleton.", "param.")
+
+
 def _names_in_params(params: dict) -> set:
-    """`params` 段里出现的变量名（含 `expr` 表达式里的与 `ref` 指向的入参名）。"""
+    """`params` 段里出现的变量名（含 `expr` 表达式里的与**无前缀** `ref` 指向的入参名）。
+
+    ★ 别把带前缀的 `ref` 路径当变量名（见上面 `_REF_PREFIXES` 的注）：
+      声明形如 `{"K": {"ref": "const.K_def"}}` 时，表达式里引用的是**入参名 `K`**，
+      而 `K` 的值由引擎 `_params` 沿 `const.` 自己去表里取 —— 与变量表无关。
+    """
     import re
     out = set()
     for spec in params.values():
@@ -154,7 +171,7 @@ def _names_in_params(params: dict) -> set:
         if isinstance(spec.get("expr"), str):
             out |= set(re.findall(r"[A-Za-z_][A-Za-z0-9_]*", spec["expr"]))
         ref = spec.get("ref")
-        if isinstance(ref, str) and not ref.startswith("formula."):
+        if isinstance(ref, str) and not ref.startswith(_REF_PREFIXES):
             out.add(ref)
     return out
 
