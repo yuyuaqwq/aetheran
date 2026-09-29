@@ -1053,6 +1053,84 @@ def main():
     finally:
         _unpin(saved)
 
+    # ══════════════════════════════════════════════════════════════════════
+    # ★ P0-1 续批七（2026-09-29 · 文案车道 aep0）：**整场战斗日志逐行带【N 刻】的常驻判据**。
+    #   ★ 为什么要有这一条（这是前六批反复漏同一族的**结构性原因**，不是措辞问题）：
+    #     `probe_texts` 那两条刻数判据都是**按取件口**判的 —— ① 引擎 cue 映射表
+    #     （content/rules/battle_text.json，62 个槽位）② 内容侧 `T("COMBAT_…")` 字面量
+    #     ③ `logs, "COMBAT_…"` 形参。三条口都**按写法/按调用点**取件，而实战里
+    #     「进持久战斗日志」的路还有第四条：**引擎 hook 的返回值**
+    #     （`skill_gate_fn` → `_use_gate_text` → `logs.extend(_usay)`，content/mech.py::skill_gate）
+    #     —— 那两个槽位在三条口里一条都取不到 ⇒ 判据全绿、屏上零刻数
+    #     （本轮真机复现：bn_tower 打游荡的骸骨连敲两次『技能 焚身』，那句「这一场你已经放过了」
+    #      原样落在『战斗日志』里、零刻数）。
+    #   ⇒ 这一条**不看任何取件口**：真打几场，把**真正落进 logs 的每一行**取出来逐行判。
+    #     刻数只有读端知道 ⇒ 判据用 `_STAMP_T`（行首形如 `图标【N 刻】`），**不逐字对刻数**。
+    #   ★ 强度：新增覆盖（这一族此前**没有任何门禁**），判据只加强不削弱。
+    # ══════════════════════════════════════════════════════════════════════
+    from content import instance as _INST2            # noqa: E402
+    _unread = []          # 真落在 logs 里、行首却没有【…刻】的那些行
+    _seen = 0
+
+    def _sweep_logs(env, uid, tag):
+        """这一场**已经落进 logs 的每一行**都逐行判（真跑出来的，不是查表）。"""
+        nonlocal _seen
+        for ln in (_INST2.live_logs(env, uid) or []):
+            _seen += 1
+            if not _STAMP_T.match(str(ln)):
+                _unread.append((tag, str(ln)))
+
+    # ① 狂斩/焚身那条「否决口」——本轮修的那两格就落在这里（berserker 专属）
+    db = _fresh("stamp_gate")
+    host, ad = _boot(db, "g_st")
+    # hp 由 `_seed` 自己按该号的面板上限填（不手打血量 —— 换职业自动跟着变）
+    _seed("g_st", "u_bs", cls="cls_berserker", level=9)
+    env = _E("g_st")
+    #: ★ 钉**厚血那只**（游荡的骸骨 hp 309）—— 田鼠 66 血两下就打死，场会在第二次
+    #:   『技能 焚身』之前结束 ⇒ 那道 once_per_battle 否决口**根本没被触发** ⇒
+    #:   本判据会「什么都没测到」却照样全绿（本轮实测栽过：钉 MID 时共核 28 行、零例外，
+    #:   但把读端补的 t 撤掉重跑**照样全绿** —— 那就是判据漏测，不是修复生效）。
+    saved = _pin(monster="ms_bone_wanderer")
+    try:
+        random.seed(20260926)
+        _drive(host, ad, "u_bs", "攻击")
+        random.seed(20260926)
+        _drive(host, ad, "u_bs", "技能 焚身")
+        _sweep_logs(env, "u_bs", " berserker")
+        random.seed(20260926)
+        _drive(host, ad, "u_bs", "技能 焚身")       # 第二次 ⇒ 触发 once_per_battle 那道否决
+        _sweep_logs(env, "u_bs", "berserker/否决")
+    finally:
+        _unpin(saved)
+    # ② 骑士普通路径（护盾/格挡/减伤那一族机制日志）
+    db = _fresh("stamp_gate2")
+    host, ad = _boot(db, "g_st2")
+    _seed("g_st2", "u_kt", cls="cls_knight", level=9)
+    env = _E("g_st2")
+    saved = _pin()
+    try:
+        for _i in range(3):
+            random.seed(20260926)
+            _drive(host, ad, "u_kt", "攻击" if _i == 0 else "防御")
+            _sweep_logs(env, "u_kt", "knight")
+    finally:
+        _unpin(saved)
+    # ③ 逃跑那条（`COMBAT_FLEE_COLD` **按设计**没有刻 —— 冷启动没有场可读时刻，
+    #    见那一格的 note）⇒ 它**不在 logs 里**（走 `_note_battle(p, name, [], "fled")`），
+    #    所以本判据不会把它算进来。屏上那一行不是「战斗日志行」，不归这条判据管。
+    chk("★ 真打几场 · **进持久战斗日志的每一行**行首都带【N 刻】（真源 26_ §三 优化 1）"
+        "—— 共核 %d 行、零例外" % _seen,
+        _seen > 0 and not _unread,
+        "共 %d 行；无刻的行：%s" % (_seen, _unread[:6]))
+    # ★ 反证：判据抓得住「一个时刻格都没有」那一族（用改之前的真值当反例，
+    #   与本文件 _pre_fix / probe_texts 同手法 —— 不放水、不靠豁免清单）。
+    _pre_no_stamp = [
+        "这一场你已经放过了 —— 【焚身】一场只出一次手。",      # 本轮改之前
+        "你还没攒够这点血 —— 【狂斩】要 40 点才付得起，你现在只剩 12 点。",
+    ]
+    chk("★ 反证：改之前那两句（进日志但零刻数）会被上面那条判成红",
+        all(not _STAMP_T.match(x) for x in _pre_no_stamp))
+
     print()
     print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
     return 0 if ok else 1

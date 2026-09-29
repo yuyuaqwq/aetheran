@@ -1121,13 +1121,21 @@ def skill_gate(battle, actor, info):
         #   而本函数 docstring（+ 表里 min_hp_pct._src）自写的判据是「hp − 这一笔 ≥ 1」。
         #   ⇒ 按 docstring 收紧 1 点；保底留 1 血那一档仍由 _self_cut_amount 独立兜着。
         if hp - need < 1:                               # 真源「付完还得剩得下血」
-            return [T("COMBAT_MECH_HP_GATE", name=str((info or {}).get("name") or ""),
+            # ★ P0-1 续批七（aep0）：补 t= —— 这一格经引擎 `_use_gate_text` → `logs.extend(_usay)`
+            #   **进持久战斗日志**（`_note_battle` 原样落档 ·『战斗日志』读它），真机试玩实测
+            #   它是整场日志里**唯一读不出刻数**的一行（其余每一行都带【N 刻】）⇒
+            #   真源 26_ §三 优化 1「所有战斗日志行统一以【N 刻】开头」。刻数与本文件
+            #   其余 18 格同一个式子 `_now(battle)`（引擎公开面 now_of 的同一读法）。
+            return [T("COMBAT_MECH_HP_GATE", t=int(round(_now(battle))),
+                      name=str((info or {}).get("name") or ""),
                       need=need, cur=hp)]
     if _flag(m, "once_per_battle"):
         key = str((info or {}).get("name") or "")
         box = _used_of(battle)
         if box.get(key):
-            return [T("COMBAT_MECH_ONCE", name=key)]
+            # ★ P0-1 续批七（aep0）：同上，补 t=（复现命令见提交信息：bn_tower 打游荡的骸骨
+            #   连敲两次『技能 焚身』，第二次那一句「这一场你已经放过了」原样落在『战斗日志』里）。
+            return [T("COMBAT_MECH_ONCE", t=int(round(_now(battle))), name=key)]
         box[key] = 1
     return None
 
