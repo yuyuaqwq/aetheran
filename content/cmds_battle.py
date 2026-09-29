@@ -742,7 +742,7 @@ async def retreat(env, sink, uid, player):
         p["hp"] = max(1, int(pa.get("hp", 0) or p.get("hp") or 1))
         for line in _fmt(logs):
             yield line
-        yield T("COMBAT_RETREAT_OK")
+        yield T("COMBAT_RETREAT_OK", t=int(round(now)))
         _note_battle(p, ms[pick[0]].get("name", pick[0]), logs, "fled")
         if player is not None:
             player.update(p)
@@ -892,9 +892,15 @@ async def battle_item(env, sink, uid, player):
         #   结算口径一个字不动：这一手照花、按**普攻**落（与 `Hand._item` 用满那一支同形）。
         #   这一格只在**真有一场在跑**且这件已用满时才走。
         if BA.item_capped(INST.live(env, uid), iid):
+            # ★ P0-2 修字面量：这一格带【N 刻】（真源 26_ §三 优化 1「所有战斗日志行统一以【N 刻】开头」）
+            #   ⇒ 读端**必须**真传 t，否则 `T()` 的 `s.replace('{t}', …)` 换不掉、
+            #   字面量 `{t}` 直接打上玩家屏。时刻取这一场已存的绝对时刻（`battle.now`，
+            #   与 `instance.py:771` 算「它那一手还剩几刻」同一口），不是另起一个钟。
+            _bd = (INST.live(env, uid) or {}).get("battle") or {}
             async for line in INST.take_turn(
                     env, p, uid, player, action="attack",
-                    head=T("COMBAT_ITEM_CAP", name=rec.get("name", iid))):
+                    head=T("COMBAT_ITEM_CAP", name=rec.get("name", iid),
+                           t=int(round(float(_bd.get("now", 0) or 0))))):
                 yield line
             return
         async for line in INST.take_turn(env, p, uid, player, head=_head, hand=hand):
