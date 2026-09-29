@@ -282,7 +282,7 @@
     "desc": "精英怪出现"
   },
   "COMBAT_BOSS_PHASE": {
-    "value": "⚠️ {name}进入「{phase}」\n👁️ {note}\n💡 {tip}",
+    "value": "⚠️ {name} 进入「{phase}」\n👁️ {note}\n💡 {tip}",
     "params": [
       "name",
       "note",

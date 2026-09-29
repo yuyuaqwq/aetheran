@@ -392,6 +392,29 @@ _old_tl = "⚔️ {t} 刻，{who}打断成功"
 chk("★ 反证：旧写法 %r 不满足 `【N 刻】`（= 上面那条判据抓得住它）" % _old_tl,
     not re.search(r"【\{t\} 刻】", _old_tl))
 
+#: ===== P0-5（文案修复车道 aep0 · 2026-09-29）· 精英怪名与后文黏连 =====
+#: 屏上取证（e2e_drive 真跑 骑士 vs † 群居的林鸦 †）：
+#:   `◆ † 群居的林鸦 †手上是空的` —— 精英显示名是 `† 群居的林鸦 †`（**尾随一个空格**），
+#:   槽位模板再写「{name}手」就把名字的收尾括号吞掉半个，读起来像「…†手上」。
+#:
+#: ★ 判据为什么**只**管行内、不管行首：`你是{name}了。` 代入「人类」得「你是人类了。」
+#:   —— 纯中文专名贴汉字是**正确**的中文排版（实测那一批 18 条全是这一类，见下）。
+#:   真缺陷只出现在**插值可能带尾随空格**（精英怪名 `† … † `）的那几格。
+#: 判据 = 「`{name}`/`{who}` 之后**紧贴**汉字，且该槽位取的是**战斗中的 actor 名**」
+#:        —— 判据的锚是**取件面**（combat/instance 那一族），不是「全表黏连」。
+_SPLICE = re.compile(r"\{(?:name|who)\}(?=[一-鿿])")
+_FOE_SLOTS = {  # 取件点 = 战斗面拿 actor 名（`actor.get("name")` / `name_of(grp, u)`）
+    "COMBAT_TURN_FOE_IDLE", "COMBAT_TURN_FOE_DOING", "COMBAT_FALL", "COMBAT_BOSS_PHASE",
+}
+_spliced = sorted(k for k in _FOE_SLOTS
+                  if k in tx and _SPLICE.search(tx[k].get("value", "")))
+chk("★ 对手名（精英带 † 尾随空格）后与汉字之间留一个空格",
+    not _spliced, "与后文黏在一起：%s" % _spliced)
+#: 反证：改之前那两条写法必红 —— 钉住「这条判据抓得住它」
+chk("★ 反证：旧写法 `{name}手上是空的` 会被上面那条判成红",
+    bool(_SPLICE.search("◆ {name}手上是空的 —— 这一拍它没押着招。"))
+    and not _SPLICE.search("◆ {name} 手上是空的 —— 这一拍它没押着招。"))
+
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
 sys.exit(0 if ok else 1)
