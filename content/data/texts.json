@@ -264,7 +264,7 @@
     "desc": "暴击"
   },
   "COMBAT_FALL": {
-    "value": "💀 {who}倒下了",
+    "value": "💀 {who} 倒下了",
     "params": [
       "who"
     ],
@@ -6158,7 +6158,7 @@
     "desc": "G2 分段推进 · 谁先动（它的 ct 更小）——同 §〇·五"
   },
   "COMBAT_TURN_FOE_DOING": {
-    "value": "◆ {name}正押着一手 —— 那一手还有 {left} 刻落到你身上。",
+    "value": "◆ {name} 正押着一手 —— 那一手还有 {left} 刻落到你身上。",
     "params": [
       "name",
       "left"
@@ -6167,7 +6167,7 @@
     "desc": "G2 分段推进 · 四段式 ② 对方在干什么（在飞行动的剩余刻数，引擎 pending_left）——真源 03_ §二"
   },
   "COMBAT_TURN_FOE_IDLE": {
-    "value": "◆ {name}手上是空的 —— 这一拍它没押着招。",
+    "value": "◆ {name} 手上是空的 —— 这一拍它没押着招。",
     "params": [
       "name"
     ],
@@ -6890,7 +6890,7 @@
     "desc": "★ P0-1 续批（2026-09-29 · aep0）：`逃跑` 的**冷启动**那一支（`cmds_battle.flee` 里 `INST.live(env, uid) is None` —— 此刻根本没有场，`_note_battle` 收到 `[]`）的专属槽位。★ 为什么从 `COMBAT_FLEE_OK` 拆出来：那一格带【N 刻】（真源 26_ §三 优化 1，战斗日志行统一形态），而那一格是**战斗绝对时刻** —— 冷启动时没有战斗可读，硬带就只能印一个编出来的刻数（引擎 `now_of` 口径：给 0 = 诚实的时刻，但这一句压根不是战斗日志行）。★ 场里那一手（`_flee_decide`，掷骰跑成/被拦下）仍走 `COMBAT_FLEE_OK` / `COMBAT_FLEE_BLOCK`，两格都带【N 刻】、都进战斗日志。"
   },
   "COMBAT_INT_HEAD_A": {
-    "value": "⚔️ {skill} —— 你盯着它的起手。",
+    "value": "{skill} —— 你盯着它的起手。",
     "params": [
       "skill"
     ],
@@ -6898,7 +6898,7 @@
     "desc": "★ P0-1 续批（2026-09-29 · aep0）：`打断` 的**开场前抬头**那一句的专属槽位。★ 为什么从 `COMBAT_INT_HEAD` / `COMBAT_INT_PLAIN` 拆出来：那两格带【N 刻】（战斗日志行统一形态，真源 26_ §三 优化 1），而那一格是**战斗绝对时刻** —— 开场前这一手还没打、读不到战斗钟，硬带就��把字面量 `{t}` 打上屏（实测 e2e 真跑）。★ 场里真断成/压后那两句仍走 `COMBAT_INT_BREAK` / `COMBAT_INT_PUSH`（带刻、进战斗日志）。"
   },
   "COMBAT_INT_PLAIN_A": {
-    "value": "⚔️ 你盯着它的起手。",
+    "value": "你盯着它的起手。",
     "params": [],
     "category": "战斗",
     "desc": "★ P0-1 续批（2026-09-29 · aep0）：`打断` 的**开场前抬头**那一句的专属槽位。★ 为什么从 `COMBAT_INT_HEAD` / `COMBAT_INT_PLAIN` 拆出来：那两格带【N 刻】（战斗日志行统一形态，真源 26_ §三 优化 1），而那一格是**战斗绝对时刻** —— 开场前这一手还没打、读不到战斗钟，硬带就��把字面量 `{t}` 打上屏（实测 e2e 真跑）。★ 场里真断成/压后那两句仍走 `COMBAT_INT_BREAK` / `COMBAT_INT_PUSH`（带刻、进战斗日志）。"
