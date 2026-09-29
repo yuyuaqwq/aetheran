@@ -1921,6 +1921,61 @@ chk("㉗-f ★ 判据与反证同源：三条都走 `_idle_*_of`（不各写一�
     "a/b/c 与 d1/d2/d3 共用 3 个谓词")
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# ㉘ ★ P1-38（2026-09-29 · 文案车道 aep1）—— **`need=null` 的兜底句不许断言玩家存档状态**
+#    缺陷本体：`need=null` 的句子**在任何存档下都会出**，而「你带着一把卷刃的剑」
+#    「你今天手在抖」是**存档状态**（带没带剑看 equipped、有没有伤看 hurt）。
+#    ⇒ 同一个 NPC 两趟之内先说「空的。」再说「刃口卷了」= 玩家看到自相矛盾。
+#    P1-36 修的那句（艾德 idle#2「你身上还有伤」vs meet 的「没伤 —— 用不着治」）
+#    与 P1-37 修的三句（柯尔 daily#11/#13 · meet#2）**都是这一类**。
+#
+# ★ 为什么必须立判据（量不出来的那一类）：
+#     ㉖ 量相似度 · ㉓ 量情报量 · ㉕ 量 need 拿不得到 ——
+#     二十七条既有判据**没有一条**问「这句与玩家当前状态冲不冲突」。
+#     它只在**真敲指令**时现形（P1-36 是 e2e_drive 撞出来的）。
+#
+# ★ 词表**刻意窄**：只收「断言玩家装备 / 玩家伤情」的词。
+#   不收「伤 / 钱 / 等级」泛词 —— 域里 167 句 need=null 有大量正当的**世界事实**
+#   （「热水要钱」「面送来的时候是七袋」= 客栈的价钱，不是玩家的钱包），收宽了必误伤。
+_STATE_CLAIM_28 = ("刃口", "你的剑", "你的靴", "这靴子", "手在抖", "拿不稳", "伤着手")
+
+
+def _state_claim_28(tree, layer, idx, text):
+    """这条 need=null 的句子，有没有**只可能对某个存档为真**的断言？"""
+    sp = "".join(re.findall(r"「([^」]*)」", text or ""))
+    return [w for w in _STATE_CLAIM_28 if w in sp]
+
+
+_claims28 = []
+for _k28, _v28 in dl.items():
+    for _l28, _nd28 in _v28.get("nodes", {}).items():
+        for _i28, _t28 in enumerate(_nd28.get("texts", [])):
+            if _t28.get("need") is not None:
+                continue                       # 带 need 的本来就在判断状态，不犯
+            _hit28 = _state_claim_28(_k28, _l28, _i28, _t28.get("text", ""))
+            if _hit28:
+                _claims28.append((_k28, _l28, _i28, _hit28))
+chk("㉘-a ★ `need=null` 的兜底句不许断言玩家装备/伤情（那种话只对某个存档为真，"
+    "而兜底句在任何存档下都出 ⇒ 玩家会看到自相矛盾）0 处 · 硬底线 ≤ 0",
+    not _claims28,
+    "断言了：%s" % _claims28 if _claims28
+    else "need=null 共 %d 句逐句过完 · 状态断言 0 处（P1-36/P1-37 已清）"
+         % sum(1 for _v in dl.values() for _nd in _v.get("nodes", {}).values()
+               for _t in _nd.get("texts", []) if _t.get("need") is None))
+
+# ㉘-b ★ 反证：把柯尔 daily#13 塞回「你今天手在抖」那句 ⇒ ㉘-a 必抓到（判据不恒真）。
+_bak28 = json.loads(json.dumps(dl["dlg_cole"]))
+try:
+    dl["dlg_cole"]["nodes"]["daily"]["texts"][13]["text"] =         "「你今天手在抖。」\n（他头也不抬，锤子没停）\n「不是累的。是拿不稳。」"
+    _probe28 = _state_claim_28("dlg_cole", "daily", 13,
+                               dl["dlg_cole"]["nodes"]["daily"]["texts"][13]["text"])
+    chk("㉘-b ★ 反证：把 dlg_cole 的 daily#13 塞回「你今天手在抖」⇒ ㉘-a 必抓到（判据不恒真）",
+        bool(_probe28), "塞完抓到：%s" % _probe28)
+finally:
+    dl["dlg_cole"] = _bak28
+    assert json.dumps(dl["dlg_cole"], ensure_ascii=False, sort_keys=True) ==         json.dumps(_bak28, ensure_ascii=False, sort_keys=True)
+
+
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
 sys.exit(0 if ok else 1)
