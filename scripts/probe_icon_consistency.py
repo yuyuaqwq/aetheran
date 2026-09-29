@@ -168,21 +168,34 @@ chk(u"① 同角色同屏的图标不一致 = 0 处", not hits, u"%d 处" % len(
 
 print(u"② 反证（判据有牙）：真盘 0 缺陷时没有现成的「有/无」对可注入 ⇒ "
       u"自己造一个：找一组同角色、**本已全带图标**的行，抽掉其中一行的图标")
-_probe = None
+# ★★ 候选**按槽位名排好序**再逐个试（原来直接取 `we[0]`，而 `we` 来自 set 迭代
+#   ⇒ 每次跑抽到哪一条随机 ⇒ 同一棵树时红时绿。实测：连跑 5 次红 2 绿 3，
+#   `PYTHONHASHSEED=0` 固定后 6/6 全绿 —— 判据没错，是**抽样不确定**）。
+#   排序 = 抽样可复现；**逐个试到真会红** = 挑中的那个必定造得出不一致（反证才有牙）。
+#   判据只加强：下面每个候选都要真命中才算数，取不到就照旧报「判据可能恒绿」。
+_cands = []
 for (rel, name), info in sorted(funcs.items()):
     allslots = {x for x in _collect(rel, name, funcs) if x in TX}
     by_role = {}
-    for x in allslots:
+    for x in sorted(allslots):
         by_role.setdefault(_role(x, _val(x)), []).append(x)
     for role, group in sorted(by_role.items()):
         if role == OTHER_ROLE or len(group) < MIN_ROWS:
             continue
-        we = [x for x in group if _has_emo(x)]
-        if len(we) >= MIN_ROWS:          # 全带图标那一组 ⇒ 抽掉一个就造出不一致
-            _probe = (rel, name, role, we[0])
+        for x in sorted(group):
+            if _has_emo(x):
+                _cands.append((rel, name, role, x))
+_probe = None
+for _c in _cands:
+    _r, _n, _ro, _slot = _c
+    _keep = TX[_slot]["value"]
+    try:
+        TX[_slot]["value"] = EMO.sub(u"", _keep, count=1)
+        if scan(funcs):
+            _probe = _c
             break
-    if _probe:
-        break
+    finally:
+        TX[_slot]["value"] = _keep
 
 if not _probe:
     chk(u"② 找得到反证注入点", False, u"★ 判据可能恒绿，请核")
