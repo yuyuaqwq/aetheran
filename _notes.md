@@ -14375,3 +14375,73 @@ x SYS_ALLOC_OK（跟账第三态：表里既不是旧值也不是新值）
 - **「该配图标而没配」的判据已能自动捞**（`probe_icon_consistency` ①④⑤⑥），但它只在
   「同屏同角色**有的带有的不带**」时开；**整屏全裸**（33 族那批）它结构上抓不到
   ⇒ 那 33 族只能靠人按屏补，或新写一支「整屏无锚」的判据（本车道未做）。
+
+## P2-21（2026-09-29 13:0x-13:2x · 文案车道 aep2）—— 背包屏 / 整理屏补 🎒（2 格 · `d761fb9`）
+
+**交班第一句**：作业书 P2-1 / P2-2 / P2-4 三个数**全部已过期**。本轮现取后确认三者都已收口
+（P2-1 并列行 26 带锚 / 0 裸；P2-2 符号已收敛；P2-4b 在 `ab1e34a` 分层结案）
+⇒ 本轮做 **P2-3**，编号顺延 P2-21。
+
+### 一、本件（2 格 · 屏抬头补行首语义锚）
+
+```
+SYS_BAG_HEAD   【背包】{n} 种             -> 🎒 【背包】{n} 种
+SYS_SORT_HEAD  【整理】{n} 种，按类归好了  -> 🎒 【整理】{n} 种，按类归好了
+```
+
+真源 `aetheran-plan` 只读 ⇒ 走 `rebuild_syscopy.py::DOC_PENDING` 两态跟账（old=真源现值 /
+new=落表值）。生成器连跑两遍幂等（`rebuild_syscopy ②③：rc=0/0 · 写入 0 处`）。
+
+### 二、★★ 本轮真被门禁抓到一次（不是走过场）
+
+第一版我把锚写成 **`🎒【背包】`**（BRACKET 形，紧贴【），**`probe_emoji_order` ① 当场红**：
+
+```
+[①] 屏 SYS_BAG — '🎒' 两种接法：['BRACKET', 'SPACE']
+    SYS_BAG_FULL   🎒 背包满了
+    SYS_BAG_HEAD   🎒【背包】{n} 种
+```
+
+同屏的 `SYS_BAG_FULL` 是 SPACE 形 ⇒ 我那格与它打架。**处置 = 把我那格改成 SPACE 形**
+（与 10 条 `SYS_*_HEAD` 的既有写法一致），**判据一个字未改**。
+★ 教训：同屏里已有一条**带同一图标**的行时，接法（emoji 与正文之间空不空）已经是**现成事实** ——
+先 grep 同屏同图标的那几条，再写锚。字典只说「哪个图标归哪个语义」，**没说接法**。
+
+### 三、★ 「整屏全裸」不是「都该补图标」——用门据自己的角色分类器现算
+
+`probe_icon_consistency` ①④⑤⑥ 只在「同屏同角色**有的带有的不带**」时开 ⇒ **整屏全裸结构上抓不到**。
+用它的 `_role` / `_val` / `_has_emo` 现算，20 组「整组全裸」的屏/角色组：
+
+```
+整组全裸 = 20 组（HEAD 类 6 组 + 并列行 14 组）
+并列行（· 起头）：board / achievements / codex / codex_monster / footprint /
+  gear(affix/equip/compare) / recipe(cook/forge/list/smith) / skill / self(notice)  ← 共 14 组
+屏抬头（【…】）：battle_log / quest_mine / self(rank) / quest(trade) / codex(footprint)
+```
+
+★ **并列行那 14 组按既定口径一个都不补**：`· ` **就是**并列行的行首锚（P2-15 已定），
+再加一层 emoji = 两重行首，反而破坏规整。⇒ **P2-3 的真实对象只有「屏抬头」那几组**。
+★ 这也修正了上一轮留在本文件里的那句「整屏 0 图标还有 33 族 / 290 格」——
+**那个数把散文槽位（`QUEST_*` 123 条 · `WORLD_LISHEN_*` 32 条场景描写）也算进去了**，
+那些加了 emoji 才是错的。**290 格不是待办量，别拿它当排期依据。**
+
+### 四、门禁（收工现取 · Python 3.12）
+
+```
+全绿  probe_guard_text · probe_icon_consistency · probe_emoji_order · probe_battle_icon_coherence
+既有红 probe_texts 3 红 / probe_copy 2 行红（观察·聆听两屏两版场景末行 · onboard.py 超快照上限）
+全量 72 支：61 绿 / 11 红 —— 与 P2-20 记录的基线**同集**（同 11 支；probe_generators 红在
+      rebuild_titles.py 的 title_wall_listener，不在本件文件面）
+基线取证：把自己的 2 行 stash 掉复跑，red 数与红集逐条同因 ⇒ 非本件引入
+e2e 真宿主：背包 / 整理 两屏抬头均带 🎒
+```
+
+### 五、留给下一轮
+
+- **P2-3 继续按「屏抬头」这一类走**，每屏一条提交。下一批候选（按玩家常看排）：
+  `SYS_ACH_HEAD`（成就屏，`cmds_more.py::achievements`）· `SYS_EGG_HEAD`（彩蛋）·
+  `SYS_TITLE_HEAD`（称号）· `SYS_FOOT_HEAD`（记录）· `SYS_MINE_HEAD/DONE/RANK`（我的委托）·
+  `SYS_JUNK_HEAD`（旧货铺 🎒 同族？）· `SYS_SHOP_HEAD`（药铺）。
+  ★ 补之前先看**同屏有没有已带该图标的行**（本轮踩的就是这个，见 §二）。
+  ★ 词典对应关系现成的：背包 🎒 · 状态/属性 📊 · 任务/清单 📜 · 队伍 👥 · 金钱 💰。
+- **别拿「整屏 0 图标 290 格」当排期依据**（见 §三：那数混了散文槽位）。
