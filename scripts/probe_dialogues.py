@@ -2516,6 +2516,112 @@ chk("㉜-e ★ 整条 ㉜（含它自己的反证）跑完，被测域逐字未�
     == json.dumps(dl, ensure_ascii=False, sort_keys=True),
     "开跑前 %d 棵" % len(_fingerprint34))
 
+
+# ===========================================================================
+# ㉝ ★ P1-46/47（2026-09-29 · 文案车道 aep1）—— **daily 层的池深**
+#   ★ 为什么要有这条（本轮真挖出来的东西，前面 9x 条判据全都盖不到）：
+#     ⑫-a 只看「某个层**只有 1 句**」的**形状**（阈值 1）；
+#     ⑰-a 是「同刻连敲 8 下 ≥ 4 句」，现值最差 8 —— 离天花板还差一倍；
+#     ⑲/⑳ 量的是**相邻重样**（0 / 0.00），㉒ 量的是**全听过之后**。
+#     ⇒ 40 连敲实测：⑰/⑲/⑳ 全绿，可 P1-46 之前有 8 位的 `daily` 只有
+#       **5 句无条件** ⇒ 玩家第 9 趟就在那 5 句里翻来覆去，而 ed/cole/grey
+#       还在第 9 句。**「相邻不重样」与「玩到第 20 趟还有新话」是两件事。**
+#   ★ 底线的来历（不是拍的，也不是照抄 ⑰-a）：
+#     改前分布 5,5,5,5,5,5,5,5,6,9,9,10,10,12 ⇒ **双峰、中间档 0 位**；
+#     P1-46/47 各补 4 位（5 → 8）之后变成 6,8×8,9,9,10,10,12。
+#     ⇒ 底线取 **6** = 现值最薄那一位（derrick），**它一行不改** ⇒ 本件不自红；
+#       随内容推进可加严到 8（derrick 补到 8 之后）。**判据只加强不削弱。**
+#   ★ 为什么拿 `daily` 当这一面的尺、不是 `main`/`hidden`：
+#     `main`/`hidden` 的多数句是**带 need 的**（等旗标 / 等道具），玩家到得了；
+#     而 `daily` 是玩家 **90% 的话轮真正落在的那一层**（㉒-b 实测 40 趟里 32–35 趟）。
+_MIN_DAILY_UNCOND = 6
+_daily_uncond35 = {}
+for _k35 in sorted(_npc):
+    if not _k35.startswith("dlg_"):
+        continue
+    _daily_uncond35[_k35] = sum(
+        1 for _t in _npc[_k35]["nodes"].get("daily", {}).get("texts", [])
+        if not _t.get("need"))
+_thin35 = {k: v for k, v in _daily_uncond35.items() if v < _MIN_DAILY_UNCOND}
+chk("㉝-a ★ daily 层池深：%d 位每位的**无条件句** ≥ %d 句"
+    "（玩家 90%% 的话轮落在 daily；⑫-a 只管「只有 1 句」的形状，"
+    "⑰/⑲/⑳/㉒ 一条都量不到「池深差一倍」——现值最薄 %d 句）"
+    % (len(_daily_uncond35), _MIN_DAILY_UNCOND,
+       min(_daily_uncond35.values()) if _daily_uncond35 else 0),
+    not _thin35,
+    "薄于底线的：%s" % ("、".join("%s=%d" % (k.replace("dlg_", ""), v)
+                               for k, v in sorted(_thin35.items())) or "无"))
+print("      daily·无条件句数分布：" + " · ".join(
+    "%s=%d" % (k.replace("dlg_", ""), v) for k, v in sorted(_daily_uncond35.items())))
+
+# ㉝-b **反证**：把某位压回「只剩 _MIN_DAILY_UNCOND-1 句无条件」⇒ ㉝-a 必抓到
+#   ★ 压的是真实的 `_npc`（与 ⑫-b 同一个纪律：改副本那次替换根本不生效 ⇒ 尸绿）。
+_daily35_bak = json.loads(json.dumps(_npc))
+# 靶子按**现值**动态挑（别写死一个已经补好的名字，否则下一位补完又写成恒真）
+_probe35 = min((k for k in _daily_uncond35 if k.startswith("dlg_")),
+               key=lambda k: (_daily_uncond35[k], k))
+_npc[_probe35]["nodes"]["daily"]["texts"] = [
+    c for c in _daily35_bak[_probe35]["nodes"]["daily"]["texts"]
+    if c.get("need") is None][:_MIN_DAILY_UNCOND - 1]
+_thin35_b = {}
+for _k35b in _daily_uncond35:
+    if not _k35b.startswith("dlg_"):
+        continue
+    _thin35_b[_k35b] = sum(
+        1 for _t in _npc[_k35b]["nodes"].get("daily", {}).get("texts", [])
+        if not _t.get("need"))
+_thin35_b = {k: v for k, v in _thin35_b.items() if v < _MIN_DAILY_UNCOND}
+_npc.clear()
+_npc.update(json.loads(json.dumps(_daily35_bak)))   # ★ 深拷：
+#   update 进去的是**同一批 dict 对象** ⇒ 后面 ㉝-d 再改 _npc 会顺手改掉这份快照，
+#   ㉝-e 于是拿「被自己污染的快照」当基线 ⇒ 假红（同 ㉗-e/㉜-e 那族坑的变体）。
+chk("㉝-b ★ 反证：把 %s 的 daily 压到只剩 %d 句无条件 ⇒ ㉝-a 必抓到它（判据不恒真）"
+    % (_probe35.replace("dlg_", ""), _MIN_DAILY_UNCOND - 1), bool(_thin35_b),
+    "越界者：%s" % ("、".join("%s=%d" % (k.replace("dlg_", ""), v)
+                              for k, v in sorted(_thin35_b.items())) or "无（判据恒真）"))
+
+# ㉝-c ★ **玩家实感**：同刻连敲 40 下，每位轮得到的**不同台词数**
+#   ★ 与 ⑰-a 的差别是**趟数**（8 → 40）⇒ ⑰-a 结构上测不到「第 9 趟开始翻老货」；
+#     ⑰-a 现值最差 8 = 8 趟的**天花板**（连敲 8 下最多 8 句不同）⇒ 它已经打满了。
+#   底线 12 = P1-47 之后的现值最差（durin 15，改前 12）—— **不要求一次到 15**。
+_MIN_DISTINCT40 = 12
+_distinct40 = {k: len({t for t in _rot_seq_same(k, 40) if t}) for k in sorted(_npc)}
+_thin40 = {k: v for k, v in _distinct40.items() if v < _MIN_DISTINCT40}
+chk("㉝-c ★ 玩家实感：同刻连敲 40 下，每位至少轮得到 %d 句**不同**台词"
+    "（⑰-a 只敲 8 下 ⇒ 天花板 8，它已打满，测不到这一面——现值最差 %d 句）"
+    % (_MIN_DISTINCT40, min(_distinct40.values()) if _distinct40 else 0),
+    not _thin40,
+    "不足的：%s" % ("、".join("%s=%d" % (k.replace("dlg_", ""), v)
+                             for k, v in sorted(_thin40.items())) or "无"))
+print("      40 趟·不同台词数：" + " · ".join(
+    "%s=%d" % (k.replace("dlg_", ""), v) for k, v in sorted(_distinct40.items())))
+
+# ㉝-d ★ 反证：把 daily 压薄 ⇒ ㉝-c 必抓到（钉住的是真行为）
+#   ★ 压到 **3 句**（不是 5）：实测每少一句无条件少 1 句不同台词，
+#     压到 5 只掉到 12 = **正好压在底线上** ⇒ 那样的反证**不锐**（改判据它就红）。
+_SQUEEZE40 = 3
+_d40_bak = json.loads(json.dumps(_npc))
+_probe35c = min((k for k in _daily_uncond35 if k.startswith("dlg_")),
+                key=lambda k: (_daily_uncond35[k], k))
+_npc[_probe35c]["nodes"]["daily"]["texts"] = [
+    c for c in _d40_bak[_probe35c]["nodes"]["daily"]["texts"]
+    if c.get("need") is None][:_SQUEEZE40]
+_d40_after = len({t for t in _rot_seq_same(_probe35c, 40, nodes=_npc) if t})
+_npc.clear()
+_npc.update(json.loads(json.dumps(_d40_bak)))   # ★ 同样深拷（理由同上）
+chk("㉝-d ★ 反证：把 %s 的 daily 压到只剩 %d 句无条件 ⇒ ㉝-c 必抓到它（判据不恒真）"
+    % (_probe35c.replace("dlg_", ""), _SQUEEZE40), _d40_after < _MIN_DISTINCT40,
+    "压完 %d 句（底线 %d · 压得越狠反证越锐；实测每少一句少 1 句不同台词）"
+    % (_d40_after, _MIN_DISTINCT40))
+
+# ㉝-e ★ 整条 ㉝（含 ㉝-b/㉝-d 两条反证）跑完，被测域逐字未变
+#   （与 ㉜-e 同一个纪律：反证不许把被测数据留在残缺态给后面判据读）
+chk("㉝-e ★ 整条 ㉝（含它自己的反证）跑完，被测域逐字未变（反证不许改坏被测数据）",
+    json.dumps(_daily35_bak, ensure_ascii=False, sort_keys=True)
+    == json.dumps(_npc, ensure_ascii=False, sort_keys=True),
+    "%s 的 daily 仍 %d 句" % (_probe35c.replace("dlg_", ""),
+                              len(_npc[_probe35c]["nodes"]["daily"]["texts"])))
+
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
 sys.exit(0 if ok else 1)
