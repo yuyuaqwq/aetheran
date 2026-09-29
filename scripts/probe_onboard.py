@@ -112,9 +112,8 @@ except OSError:
 TX = json.loads(io.open(TEXTS, encoding="utf-8").read())
 GID = "g_onboard"
 
-NEED = ["SYS_ONBOARD_OPEN", "SYS_ONBOARD_STEP1", "SYS_ONBOARD_STEP2", "SYS_ONBOARD_STEP3",
-        "SYS_ONBOARD_GOAL", "SYS_ONBOARD_GOAL_STEP", "SYS_ONBOARD_GOAL_JOB",
-        "SYS_ONBOARD_GOAL_FIRST", "SYS_ONBOARD_GOAL_IDLE", "SYS_ONBOARD_FIRST_GIVEN"]
+NEED = ["SYS_ONBOARD_OPEN", "SYS_ONBOARD_GOAL", "SYS_ONBOARD_GOAL_STEP", "SYS_ONBOARD_GOAL_JOB",
+        "SYS_ONBOARD_GOAL_FIRST", "SYS_ONBOARD_GOAL_IDLE", "SYS_ONBOARD_WELCOME"]
 miss = [k for k in NEED if k not in TX or not str(TX[k].get("value") or "").strip()]
 chk("引导族槽位 %d 条都在 texts 域（这一层的存在性）" % len(NEED), not miss, "%s" % miss)
 
@@ -177,8 +176,9 @@ nm = _drive(h, ad, UID3, "名字 老陈")
 from content.cmds_quest import _quests as _q   # noqa: E402
 _fid = OB.first_quest_id()
 _qname = (_q().get(_fid) or {}).get("name", "")
-chk("③ 取名那一拍**报了**第一件委托（自动派上了才说）",
-    any("挂在你身上" in ln for ln in nm), "屏=%r" % nm[-2:])
+chk("③ 取名那一拍递**欢迎屏**（自动派上了才说）—— 名字 / 族 / 职业 / 第一件委托一屏收",
+    any("✨" in ln and "风车镇" in ln for ln in nm)
+    and any(_qname and _qname in ln for ln in nm), "屏=%r" % nm[-2:])
 mine = _drive(h, ad, UID3, "我的委托")
 chk("③ 第一件委托已在「我的委托」在册上（不是玩家自己接的）",
     bool(_qname) and any(_qname in ln for ln in mine), "屏=%r" % mine[:3])

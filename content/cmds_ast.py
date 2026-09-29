@@ -470,6 +470,22 @@ def register_screen() -> list:
     return out
 
 
+def register_welcome(p, quest_rec) -> list:
+    """建号完成（起名那一刻）的**欢迎屏** —— 名字 / 族 / 职业 / 出生点 / 第一件委托。
+
+    ★ 2026-09-30（B3）：一屏收束 —— 替掉原 `SYS_ONBOARD_FIRST_GIVEN` 的系统腔
+      （「板上那条最小的活，系统先替你接了」）。族 / 职业用呈现口现取；
+      委托的显示名与目标步骤由调用方从 quests 域给（`rename` 那一下才拿得到）。
+    """
+    q = quest_rec or {}
+    return [T("SYS_ONBOARD_WELCOME",
+              name=str(p.get("name") or ""),
+              race=_race_label(p.get("race")),
+              cls=_cls_label(p.get("cls")),
+              quest=str(q.get("name") or ""),
+              objective=str(q.get("objective") or ""))]
+
+
 def _race_label(race):
     """呈现口用：族 id → 中文名（`elf` → 精灵）；没定给 SYS_UNSET，认不出就原样回显。"""
     if not str(race or "").strip():

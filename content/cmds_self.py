@@ -200,9 +200,12 @@ async def rename(env, sink, uid, player):
     _save(env)
     yield T("SYS_RENAME_DONE", name=want)
     if _given:                                # ★ 派上了才说 —— 没派成（老档/交过活）一个字都不提
-        #   `name` = 那一件的**显示名**（现取自 quests 域，呈现口不认机器键 id）
-        yield T("SYS_ONBOARD_FIRST_GIVEN",
-                name=(_q().get(OB.first_quest_id()) or {}).get("name", ""))
+        # ★ 2026-09-30（B3）：欢迎屏 —— 名字/族/职业/出生点/第一件委托一屏收
+        #   （替掉原 FIRST_GIVEN 单句「系统先替你接了」；显示名全从域现取）
+        from . import cmds_ast as CA                      # 本地 import：免得装载期成环
+        _qrec = _q().get(OB.first_quest_id()) or {}
+        for _w in CA.register_welcome(p, _qrec):
+            yield _w
 
 
 def _board_rows(p, group_id, uid) -> list:
