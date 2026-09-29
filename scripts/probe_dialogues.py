@@ -1975,6 +1975,78 @@ finally:
     dl["dlg_cole"] = _bak28
     assert json.dumps(dl["dlg_cole"], ensure_ascii=False, sort_keys=True) ==         json.dumps(_bak28, ensure_ascii=False, sort_keys=True)
 
+# ─────────────────────────────────────────────────────────────────────────────
+# ㉙ ★ P1-39（2026-09-29 · 文案车道 aep1）—— **跨树换皮**（一个 NPC 抄另一个 NPC / 地点物件）
+#    缺陷本体：㉖ 判的是「**同一棵**树里两句雷同」——`_d26_pairs` 逐棵 `for k, N in ...` 扫，
+#            跨层那条也带 `if a1 == a2: continue`（只比同树）⇒ 一句台词被从
+#            `talk_gate_west`（地点物件）**整句搬进** `dlg_derrick`（NPC），
+#            ⑩/⑪/⑫/⑬/⑲/⑳/㉖/㉖-b **一条都抓不住**（它们全都只看单树或只看形状）。
+#            玩家侧的观感：磨坊主在讲**磨坊的门**，那句话讲的却是**西门的门**；
+#            而且它与 `talk_gate_west/meet#2` 是同一个事实 ⇒ 同一扇门被两个嘴讲两遍。
+#    ★ 口径：阈值**直接用 ㉖-d 那个 `_WARN26`**（0.60 = 「开头或收尾逐字相同」那一档），
+#      相似度**直接用 ㉖ 的 `_dl26` + `_WARN26`**；归一化见 `_body29`
+#      （**不能**直接复用 ㉖ 的 `_speech_only`：它只认「」，`talk_*` 整族没有引号 ⇒ 会漏）。
+#    ★ 分档：现值 **0 对**（本批把 derrick 那处治掉之后现测）⇒ 硬底线钉 0，
+#      本批不因此自红；随内容推进只能更严。
+_ACT29 = re.compile(r"[（(][^）)]*[）)]")     # 动作括号
+_QUOTE29 = re.compile(r"「([^」]*)」")          # 台词本体
+
+
+def _body29(t):
+    """台词本体。有引号取引号内容；**没有引号**（`talk_*` 地点物件那种旁白）
+    就取整句去动作括号 —— ★ 这一条是必须的：`_speech_only` 只认「」，
+    直接复用它会让 `talk_*` 整族（19 棵里 5 棵）**一条都进不来**，
+    而本条判据要抓的恰恰是「NPC 抄地点物件」这一族（P1-39 的实例）。"""
+    q = "".join(_QUOTE29.findall(t or ""))
+    if len(q) >= 8:
+        return "".join(q.split())
+    s = "".join(_ACT29.sub("", t or "").split())
+    return s if len(s) >= 8 else ""
+
+
+def _cross_tree_pairs_29():
+    """跨树（tree A != tree B）两句台词的雷同对。阈值复用 ㉖-d 的 `_WARN26`。"""
+    rows = []
+    for k, v in dl.items():
+        for a, N in v["nodes"].items():
+            for i, t in enumerate(N.get("texts", [])):
+                s = _body29(t.get("text", ""))
+                if s:                                # 太短的句子相似度噪声大
+                    rows.append((k, a, i, s))
+    hits = []
+    for x in range(len(rows)):
+        for y in range(x + 1, len(rows)):
+            if rows[x][0] == rows[y][0]:             # 同树 = ㉖ 的活，这里不管
+                continue
+            r = _dl26.SequenceMatcher(None, rows[x][3], rows[y][3]).ratio()
+            if r >= _WARN26:
+                hits.append((round(r, 3), rows[x][:3], rows[y][:3]))
+    hits.sort(reverse=True)
+    return hits, len(rows)
+
+
+_cross29, _cross_n29 = _cross_tree_pairs_29()
+chk("㉙-a ★ 跨树换皮：不同树之间两句台词雷同（r≥%.2f）%d 对 · 硬底线 ≤ 0（随内容推进加严）"
+    % (_WARN26, len(_cross29)),
+    not _cross29,
+    "雷同：%s" % _cross29 if _cross29
+    else "%d 句台词跨 %d 棵树两两过完（只查异树）· 0 对" % (_cross_n29, len(dl)))
+
+# ㉙-b ★ 反证：把 dlg_derrick/idle#1 塞回 talk_gate_west/meet#2 那句 ⇒ ㉙-a 必抓到
+#    （判据不恒真）。这一处是改前域里**真实存在过**的形状，注入它 = 回到已修好的样子。
+_bak29 = json.loads(json.dumps(dl["dlg_derrick"]))
+try:
+    dl["dlg_derrick"]["nodes"]["idle"]["texts"][1]["text"] = (
+        dl["talk_gate_west"]["nodes"]["meet"]["texts"][2]["text"])
+    _hit29, _ = _cross_tree_pairs_29()
+    chk("㉙-b ★ 反证：把 dlg_derrick/idle#1 塞回 talk_gate_west/meet#2 ⇒ ㉙-a 必抓到（判据不恒真）",
+        bool(_hit29),
+        "塞完抓到 %d 对：%s" % (len(_hit29), _hit29[:3]))
+finally:
+    dl["dlg_derrick"] = _bak29
+    assert json.dumps(dl["dlg_derrick"], ensure_ascii=False, sort_keys=True) == (
+        json.dumps(_bak29, ensure_ascii=False, sort_keys=True))
+
 
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
