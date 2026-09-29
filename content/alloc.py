@@ -45,7 +45,8 @@ class AllocError(Exception):
 
     ★ **两条文案（台账 L2154）**
       · `str(exc)` = **机器侧原话**，带坏值与字段名，**只进日志**（`_LOG.warning(..., exc_info=True)`）
-      · `exc.player_reason` = **玩家那一行**，只说「哪一类坏」+ 玩家自己看得懂的口径，
+      · `exc.player_reason` = **玩家那一行的槽位名**（`SYS_ALLOC_SAVE_*` —— ★ 2026-09-29
+        收尾批槽位化），只说「哪一类坏」+ 玩家自己看得懂的口径，
         **零机器键 / 零字段名**。`cmds_ast.alloc_points` 的两个 catch 一律填 `player_reason`。
 
     保留原构造签名（`AllocError("…")` 一字不改）⇒ 17 个既有抛点不必全改；
@@ -66,32 +67,36 @@ class AllocError(Exception):
 #:   五维名（STR/AGI/…）**不算**机器键（它们是玩家在「加点 力量」里认得的键，
 #:   且 `_stat_slot` 本来就把它们翻成中文显示名），但**坏掉的键**不是。
 def _classify(msg: str) -> str:
-    """机器侧原话 → 玩家那一行（分类句，零机器键）。"""
+    """机器侧原话 → 玩家那一行的**槽位名**（分类句，零机器键）。
+
+    ★ 2026-09-29 文案收口收尾：返回值从「内联句子」改成**槽位名**（`SYS_ALLOC_SAVE_*`
+    —— 真源 17_「收尾批」十六条）—— 消费点 `T("SYS_ALLOC_BAD_SAVE", why=T(e.player_reason))`
+    负责取文案（`T()` 是字面 replace，嵌套一层即可）。内联清零（probe_copy ② 红转绿）。"""
     if "不是一份表" in msg:
-        return "加点记录格式不对"
+        return "SYS_ALLOC_SAVE_SHAPE"
     if "认不出的维" in msg:
-        return "加点记录里有认不出的属性名"
+        return "SYS_ALLOC_SAVE_STAT"
     if "不是有限数" in msg:
-        return "加点记录里有一格算不出数"
+        return "SYS_ALLOC_SAVE_NAN"
     if "不是数字" in msg:
-        return "加点记录里有一格不是数字"
+        return "SYS_ALLOC_SAVE_NOTNUM"
     if "是负数" in msg:
-        return "加点记录里有一格是负数"
+        return "SYS_ALLOC_SAVE_NEG"
     if "是小数" in msg:
-        return "加点记录里有一格是零头"
+        return "SYS_ALLOC_SAVE_FRAC"
     if "不是整数" in msg:
-        return "等级那格不是整数"
+        return "SYS_ALLOC_SAVE_LVINT"
     if "不是一个数" in msg:
-        return "等级那格不是数字"
+        return "SYS_ALLOC_SAVE_LVNUM"
     if "至少 1" in msg:
-        return "点数得是 1 往上"
+        return "SYS_ALLOC_SAVE_ONE"
     if "已花" in msg and "总点数" in msg:
-        return "加点记录比该有的总点数还多"
+        return "SYS_ALLOC_SAVE_OVER"
     if "不在 classes 域里" in msg:
-        return "存档里的职业名对不上"
+        return "SYS_ALLOC_SAVE_CLASS"
     if "没有 suggest_alloc" in msg:
-        return "存档里的职业少了建议加点"
-    return "加点这条线算不下去了"
+        return "SYS_ALLOC_SAVE_SUGGEST"
+    return "SYS_ALLOC_SAVE_UNKNOWN"
 
 
 def classes() -> dict:

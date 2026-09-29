@@ -16,6 +16,9 @@ ROOT = os.path.dirname(HERE)
 sys.path.insert(0, ROOT)
 os.environ.setdefault("GWEN_FRAMEWORK_DIR", r"C:/Users/yuyu/framework-engine")
 os.environ.setdefault("GWEN_HOST_DIR", r"C:/Users/yuyu/qqbot/data/plugins/dragonfall")
+ENGINE = os.environ.get("GWEN_ENGINE") or os.environ["GWEN_FRAMEWORK_DIR"]
+if ENGINE and ENGINE not in sys.path:
+    sys.path.insert(0, ENGINE)           # ★ 自带 sys.path 修补（门禁铁律）：saintess_engine 在引擎仓根
 
 from content import alloc as AL
 from content import cmds_ast as CA
@@ -86,7 +89,7 @@ async def main():
         src = io.open(os.path.join(ROOT, f), encoding="utf-8").read()
         check("SYS_ALLOC_BAD_SAVE\", why=e)" not in src,
               "C %s 无 why=e 残留" % f)
-        n_player = src.count("SYS_ALLOC_BAD_SAVE\", why=e.player_reason)")
+        n_player = src.count("SYS_ALLOC_BAD_SAVE\", why=T(e.player_reason))")   # ★ 2026-09-29 收尾批：嵌套取槽位（内联清零）
         n_catch = src.count("except AL.AllocError as e:")
         check(n_player >= 3 and n_player == n_catch,
               "C %s 每个 AllocError catch 都填 player_reason（%d/%d）" % (f, n_player, n_catch),

@@ -1524,13 +1524,13 @@ async def alloc_points(env, sink, uid, player):
         lv = max(1, AL.level_of(player.get("level") if isinstance(player, dict) else None))
     except AL.AllocError as e:
         _LOG.warning("[aep.alloc] 读档时等级那格坏了：%s", e, exc_info=True)
-        yield T("SYS_ALLOC_BAD_SAVE", why=e.player_reason)
+        yield T("SYS_ALLOC_BAD_SAVE", why=T(e.player_reason))
         return
     try:
         p = _p(player)
     except AL.AllocError as e:
         _LOG.warning("[aep.alloc] 读档时加点格坏了（面板那一口先抛）：%s", e, exc_info=True)
-        yield T("SYS_ALLOC_BAD_SAVE", why=e.player_reason)
+        yield T("SYS_ALLOC_BAD_SAVE", why=T(e.player_reason))
         return
     cls = str(p.get("cls") or "").strip()
     if not cls:
@@ -1542,7 +1542,7 @@ async def alloc_points(env, sink, uid, player):
         lv = max(1, AL.level_of(p.get("level")))
     except AL.AllocError as e:
         _LOG.warning("[aep.alloc] 归一化后等级那格坏了：%s", e, exc_info=True)
-        yield T("SYS_ALLOC_BAD_SAVE", why=e.player_reason)
+        yield T("SYS_ALLOC_BAD_SAVE", why=T(e.player_reason))
         return
     try:
         al = AL.of_record(p)                     # 这档实际分了多少（唯一口；坏档 ⇒ 抛）
@@ -1551,7 +1551,7 @@ async def alloc_points(env, sink, uid, player):
         # ★ 台账 L2154：原填 `why=e`（整个 str）⇒ 档里的坏键 `'ZZZ'` 原样上屏。
         #   玩家那一行只拿 `player_reason`（分类句）；机器侧原话 + 栈进日志，不丢诊断。
         _LOG.warning("[aep.addoc] 读档时加点格坏了：%s", e, exc_info=True)
-        yield T("SYS_ALLOC_BAD_SAVE", why=e.player_reason)
+        yield T("SYS_ALLOC_BAD_SAVE", why=T(e.player_reason))
         return
     usage = str((_data("commands").get("alloc") or {}).get("usage") or "")
     arg = _alloc_arg(env)
@@ -1596,7 +1596,7 @@ async def alloc_points(env, sink, uid, player):
     except AL.AllocError as e:                   # 档上那一格是小数（配平基准那种）⇒ 不截断，点名
         # ★ 台账 L2154 同上：玩家只拿分类句，带坏值的原话进日志。
         _LOG.warning("[aep.alloc] 写入前加点格坏了：%s", e, exc_info=True)
-        yield T("SYS_ALLOC_BAD_SAVE", why=e.player_reason)
+        yield T("SYS_ALLOC_BAD_SAVE", why=T(e.player_reason))
         return
     p = _p(p)                     # ★ 出档口再算一遍：生命上限跟着加点一起动（P-27 同一个口）
     if player is not None:

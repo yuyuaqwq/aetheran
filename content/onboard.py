@@ -48,9 +48,9 @@ FIRST_ORDER = 1
 #: （`content/probe_machine_key_names.py` 那一族钉着，顶栏也在它的视野里）。
 #: 一格一句，各说各的（不许三条同句式 —— 那会立刻顶高复读率）。
 STEP_WHAT = {
-    "race":  "你还没定下自己是谁",
-    "class": "你还没定下往后怎么打",
-    "name":  "你还没名字",
+    "race":  "SYS_ONBOARD_WHAT1",
+    "class": "SYS_ONBOARD_WHAT2",
+    "name":  "SYS_ONBOARD_WHAT3",
 }
 
 
@@ -107,7 +107,8 @@ def goal_text(p) -> str:
     from .cmds_quest import _hint_lines, _quests, _mine
     step = step_of(p)
     if step in STEP_WHAT:
-        return T("SYS_ONBOARD_GOAL_STEP", what=STEP_WHAT[step])
+        # ★ 2026-09-29 文案收口收尾：STEP_WHAT 值改槽位名（内联清零）——嵌套取一遍。
+        return T("SYS_ONBOARD_GOAL_STEP", what=T(STEP_WHAT[step]))
     qs = _quests()
     act = _mine(p)
     if act:

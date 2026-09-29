@@ -168,14 +168,19 @@ def _docstring_ids(tree):
 
 
 def _diagnostic_ids(tree):
-    """异常消息（raise / *Error / *Exception / *Warning）—— 给写代码的人看的，放行。"""
+    """异常消息（raise / *Error / *Exception / *Warning）+ **日志调用**—— 给写代码的人看的，放行。
+    ★ 2026-09-29（文案收口收尾 · 格温）：补日志五档（`.warning/.warn/.info/.debug/.error/`
+      `.critical`）—— `cmds_ast` 的 `[aep.alloc] …` 那族走 `_LOG.warning`，去向是服务器
+      日志、不上屏，与异常消息同类（判据精度来过一遍，目标始终是「**玩家面**文案零内联」）。"""
     ids = set()
+    _logfns = ("warning", "warn", "info", "debug", "error", "critical", "exception")
     for node in ast.walk(tree):
         hit = isinstance(node, ast.Raise)
         if isinstance(node, ast.Call):
             fn = node.func
             name = getattr(fn, "id", None) or getattr(fn, "attr", None) or ""
-            hit = hit or name.endswith("Error") or name.endswith("Exception") or name.endswith("Warning")
+            hit = (hit or name.endswith("Error") or name.endswith("Exception")
+                   or name.endswith("Warning") or name in _logfns)
         if hit:
             for sub in ast.walk(node):
                 if isinstance(sub, ast.Constant) and isinstance(sub.value, str):
@@ -183,11 +188,27 @@ def _diagnostic_ids(tree):
     return ids
 
 
+def _probe_literal_ids(tree):
+    """「形状探测」字面量（`if "…" in msg`）—— 内部匹配用、不上屏，放行。
+
+    ★ 2026-09-29（文案收口收尾 · 格温）：`alloc._classify` 那族「机器侧原话片段」的
+      判据精度修正 —— 判据目的是「玩家面文案零内联」，而这类字面量的去向是
+      `in` / `not in` 比较（特征：字符串字面量做比较的**左**操作数），不会上屏。
+      （真正上屏的句子是 `return "…"` 那一侧 —— 仍必须走槽位，一条不漏。）"""
+    ids = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Compare) and isinstance(node.left, ast.Constant) \
+                and isinstance(node.left.value, str):
+            if any(isinstance(op, (ast.In, ast.NotIn)) for op in node.ops):
+                ids.add(id(node.left))
+    return ids
+
+
 def scan(path):
     """一个 .py 里的「含汉字的字符串字面量」（docstring / 异常消息 不算）+ T("KEY") 的键。"""
     src = io.open(str(path), encoding="utf-8").read()
     tree = ast.parse(src)
-    skip = _docstring_ids(tree) | _diagnostic_ids(tree)
+    skip = _docstring_ids(tree) | _diagnostic_ids(tree) | _probe_literal_ids(tree)
     hits, keys = [], []
     for node in ast.walk(tree):
         if isinstance(node, ast.Constant) and isinstance(node.value, str) and id(node) not in skip:

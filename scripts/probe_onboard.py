@@ -142,17 +142,18 @@ after = _drive(h, ad, UID1, "观察")
 chk("① 反证：建号走完之后开场白不再给（老玩家不该每敲一次重看一遍世界史）",
     not any(open_txt and open_txt in ln for ln in after))
 UID2 = "u_steps"
+from content import cmds_ast as _CA      # ★ ② 的期望值：STEP_WHAT 已槽位化（2026-09-29 收尾批）⇒ 经槽位取渲染文本
 _seed(GID, UID2, level=1, gold=30, loc="windmill_town", node="wt_gate_n")
 g1 = _drive(h, ad, UID2, "状态")
-chk("② 建号第 1 步（未定族）顶栏指向那一步", OB.STEP_WHAT["race"] in chr(10).join(g1),
+chk("② 建号第 1 步（未定族）顶栏指向那一步", _CA.T(OB.STEP_WHAT["race"]) in chr(10).join(g1),
     "屏=%r" % g1[:1])
 _drive(h, ad, UID2, "选族 矮人")
 g2 = _drive(h, ad, UID2, "状态")
-chk("② 建号第 2 步（未定职业）顶栏指向那一步", OB.STEP_WHAT["class"] in chr(10).join(g2),
+chk("② 建号第 2 步（未定职业）顶栏指向那一步", _CA.T(OB.STEP_WHAT["class"]) in chr(10).join(g2),
     "屏=%r" % g2[:1])
 _drive(h, ad, UID2, "选职业 骑士")
 g3 = _drive(h, ad, UID2, "状态")
-chk("② 建号第 3 步（未定名字）顶栏指向那一步", OB.STEP_WHAT["name"] in chr(10).join(g3),
+chk("② 建号第 3 步（未定名字）顶栏指向那一步", _CA.T(OB.STEP_WHAT["name"]) in chr(10).join(g3),
     "屏=%r" % g3[:1])
 
 _goal_lines = [ln for g in (g1, g2, g3) for ln in g if "当前该做" in ln]

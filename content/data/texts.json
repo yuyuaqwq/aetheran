@@ -6931,7 +6931,9 @@
   },
   "SYS_ONBOARD_GOAL_STEP": {
     "value": "建号没走完 —— {what}。",
-    "params": ["what"],
+    "params": [
+      "what"
+    ],
     "category": "引导",
     "desc": "★ copy-p5：顶栏正文第 ①档（建号没走完）。★ `{what}` 传**呈现名**（不是机器键）：`race`/`class`/`name` 三个键在 `content/onboard.py::STEP_WHAT` 里各配一句玩家读得懂的话 —— 机器键绝不许上屏（判据 = `probe_onboard` ②）。★ 句式是「建号没走完 —— <那句话>。」，`{what}` 是**整句**（带句号）⇒ 不拼出「先把…那一步走完」那种夹生句。★ **这一屏一个指令名都不打**：玩家要敲什么，往下『我的委托』/『状态』自己会带出来。"
   },
@@ -6965,5 +6967,101 @@
     ],
     "category": "引导",
     "desc": "★ copy-p5（B 档 ③ · 第一件委托自动派）：`cmds_self.rename` 里建号走完那一拍，真的派上了（`onboard.auto_first_quest` 返回真）才说这一句；没派成（老档 / 交过活 / 手上已有活）一个字都不提 ⇒ 不出现「说有派、其实没派」。★ `{name}` 由调用方给委托名（呈现口不认机器键）。"
+  },
+  "SYS_ALLOC_SAVE_SHAPE": {
+    "value": "加点记录格式不对",
+    "params": [],
+    "category": "系统",
+    "desc": "收尾批 · alloc 读档坏值分类（格式不是一份表）"
+  },
+  "SYS_ALLOC_SAVE_STAT": {
+    "value": "加点记录里有认不出的属性名",
+    "params": [],
+    "category": "系统",
+    "desc": "收尾批 · 同上（认不出的维）"
+  },
+  "SYS_ALLOC_SAVE_NAN": {
+    "value": "加点记录里有一格算不出数",
+    "params": [],
+    "category": "系统",
+    "desc": "收尾批 · 同上（不是有限数）"
+  },
+  "SYS_ALLOC_SAVE_NOTNUM": {
+    "value": "加点记录里有一格不是数字",
+    "params": [],
+    "category": "系统",
+    "desc": "收尾批 · 同上"
+  },
+  "SYS_ALLOC_SAVE_NEG": {
+    "value": "加点记录里有一格是负数",
+    "params": [],
+    "category": "系统",
+    "desc": "收尾批 · 同上"
+  },
+  "SYS_ALLOC_SAVE_FRAC": {
+    "value": "加点记录里有一格是零头",
+    "params": [],
+    "category": "系统",
+    "desc": "收尾批 · 同上（是小数）"
+  },
+  "SYS_ALLOC_SAVE_LVINT": {
+    "value": "等级那格不是整数",
+    "params": [],
+    "category": "系统",
+    "desc": "收尾批 · 同上"
+  },
+  "SYS_ALLOC_SAVE_LVNUM": {
+    "value": "等级那格不是数字",
+    "params": [],
+    "category": "系统",
+    "desc": "收尾批 · 同上"
+  },
+  "SYS_ALLOC_SAVE_ONE": {
+    "value": "点数得是 1 往上",
+    "params": [],
+    "category": "系统",
+    "desc": "收尾批 · 同上（至少 1）"
+  },
+  "SYS_ALLOC_SAVE_OVER": {
+    "value": "加点记录比该有的总点数还多",
+    "params": [],
+    "category": "系统",
+    "desc": "收尾批 · 同上（已花 > 总点数）"
+  },
+  "SYS_ALLOC_SAVE_CLASS": {
+    "value": "存档里的职业名对不上",
+    "params": [],
+    "category": "系统",
+    "desc": "收尾批 · 同上（不在 classes 域里）"
+  },
+  "SYS_ALLOC_SAVE_SUGGEST": {
+    "value": "存档里的职业少了建议加点",
+    "params": [],
+    "category": "系统",
+    "desc": "收尾批 · 同上（没有 suggest_alloc）"
+  },
+  "SYS_ALLOC_SAVE_UNKNOWN": {
+    "value": "加点这条线算不下去了",
+    "params": [],
+    "category": "系统",
+    "desc": "收尾批 · 同上（_classify 兜底）"
+  },
+  "SYS_ONBOARD_WHAT1": {
+    "value": "你还没定下自己是谁",
+    "params": [],
+    "category": "系统",
+    "desc": "收尾批 · 顶栏「当前该做」（race 步）· STEP_WHAT 槽位化"
+  },
+  "SYS_ONBOARD_WHAT2": {
+    "value": "你还没定下往后怎么打",
+    "params": [],
+    "category": "系统",
+    "desc": "收尾批 · 同上（class 步）"
+  },
+  "SYS_ONBOARD_WHAT3": {
+    "value": "你还没名字",
+    "params": [],
+    "category": "系统",
+    "desc": "收尾批 · 同上（name 步）"
   }
 }
