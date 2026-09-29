@@ -457,22 +457,21 @@ def elite_of(monsters: dict, loc: str, node: str, uid: str, game_day, level: int
     r = rate_of(node_role, int(node_index[0]), int(node_index[1]))
     if r is None:
         return None
-    cand = []
-    for k, m in monsters.items():
-        hb = m.get("habitat") or {}
-        if loc not in (hb.get("maps") or []):
-            continue
-        ns = hb.get("nodes") or []
-        if ns and node not in ns:
-            continue
-        cand.append(k)
-    if not cand:
+    # ★ 审计 B2 收口（台账 L1148 同族的另一半面）：候选 + 等级就近 top-3 这一段
+    #   原先在这里内联一份，而 `content/combat.encounter_cand` 的抬头明写
+    #   「两处共用这一处（**同一把尺子**）…… 两处要回答的是同一件事；各写一份 = 迟早对不上」。
+    #   ⇒ 这一份就是那个「迟早对不上」的第二份：**零判据钉着它**。
+    #   今天实跑两者逐条同值（8 组样本：不同等级 × 不同域内键序）⇒ 属潜伏项，
+    #   但承诺是「同一把尺子」，不是「今天恰好一样」⇒ 收成单源。
+    #   循环 import：`content/combat.py:23` 就 `from . import affix as AFFIX`
+    #   ⇒ 顶层 import 会成环，用仓内既有的函数内 import 惯例（同本文件 :58 / :366）。
+    from .combat import encounter_cand                # noqa: PLC0415
+    _all_cand, top = encounter_cand(monsters, loc, node, level, keep=3)
+    if not top:
         return None
     rnd = random.Random(seed_of(uid, loc, node, game_day))
     if rnd.random() >= r:
         return None                                   # 今天这一格不刷精英（与概率表同种子）
-    cand.sort(key=lambda k: abs(int(monsters[k].get("lv", 1)) - int(level)))
-    top = cand[:3]
     mid = rnd.choice(top)
     aids = roll(monsters[mid].get("elite_pool") or [], rnd.randint(0, 2 ** 31), monsters[mid].get("lv", 1))
     if not aids:
