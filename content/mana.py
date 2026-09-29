@@ -386,6 +386,16 @@ def regen_amount(battle, actor):
     try:
         now = float(battle._now)
     except Exception:                                   # noqa: BLE001
+        # ★ 审计 L1419（台账自裁「判合法容错 · 不动」）：这一行兜的是「拿不到战斗钟」，
+        #   不是「回蓝率算不出来」—— `return None` 在这个钩子里的含义就是**本拍不回**
+        #   （引擎 `_apply_base_mp_regen`：回执 None ⇒ 什么都不做、不出日志），
+        #   与上面两个守卫（没有法力条 / actor 没有 mp 字段）**同款**，不是静默兜底。
+        #   台账点名的**唯一瑕疵**：它同时兜住了「引擎把 `_now` 改名」这种升级即断的形态
+        #   —— 表现是**静默变成永不回蓝**（而不是报错）。
+        #   ★ 但**不是内容侧单方面放宽**：引擎自己读同一个字段也是 duck-typing ——
+        #     `extends/ext_combat/battle/schedule.py` 里是
+        #     `now = float(getattr(battle, "_now", 0.0) or 0.0)`（缺字段当 0.0、不抛）
+        #     ⇒ **两端口径同向**。真要根治 = 引擎加一个公开 tick 读口（动引擎，归主线）。
         return None
     if _K_TICK not in actor:
         # ★ 这一场的**开战刻**（游戏钟）= 本函数第一次被问到的这一刻（审计 L1410-1）。
