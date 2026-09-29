@@ -1706,6 +1706,130 @@ finally:
     assert json.dumps(dl["dlg_lian"], ensure_ascii=False, sort_keys=True) ==         json.dumps(_bak26, ensure_ascii=False, sort_keys=True)
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# ㉗ ★ P1-33（2026-09-29 · 文案车道 aep1）—— **`idle` 层没有任何判据管**
+#    缺陷本体：`idle` 是 `CT.LAYERS` 的**第五层**（读端 `cmds_talk._pick_layer`
+#    真的会在「前四层都说过了」之后转到它），但 ⑩-a 位齐 / ⑩-b 纯兜底 / ⑫-a 单句层
+#    三条**都用 `_LAYERS4 = ("meet","daily","main","hidden")`** 算，`idle` 一个都不算。
+#    注释里那句「为什么不把 idle 也算进来：规格 §一 的四层不含它」是**过期依据**：
+#    `idle` 早在 P1-25（`18448a2`）就作为第五层落进域里，引擎层序也把它排在最后一位；
+#    「规格只写四层」说的是**设计结构**，不是**读端不读**。⇒ 判据少管了一层。
+#    ★ 实测（注入三种缺陷后跑全量，**结果：全绿 ✓** —— 门禁自己瞎了）：
+#        ① 整层抽掉 `dlg_masha/idle`  → 位齐判据 14/14 不动（它不看 idle）
+#        ② `dlg_bella/idle` 压到 1 句 → 单句层 0/56 不动（56 = 14×4，不含 idle）
+#        ③ `dlg_cole/idle` 每句 need=null → 纯兜底层 0/56 不动
+#    三条都是**玩家真能撞上**的：转到底就是「每次看到同一句」/「一层不存在」。
+#    ★ 处置口径：**只加判据、不改既有判据**（本车道纪律：门禁只加强不削弱）。
+#      不去改 `_LAYERS4` 那三处（改了就动了 ⑩/⑫ 的口径与它们各自的反证），
+#      另起一条把 `CT.LAYERS`（唯一口）现读出来当**第二条**覆盖面 —— ⑯-a 钉的
+#      「层序只有一份」保证这里读到的就是引擎真正在跑的那五层，不是抄一份字面量。
+#    ★ 分档：现值 idle 位齐 14/14 · 单句层 0/14 · 纯兜底 0/14 ⇒ 底线就钉现值（硬底线），
+#      本批不因此自红；随内容推进只能更严。
+_IDLE = "idle"
+_LAYERS_ALL = tuple(CT.LAYERS)                     # 唯一口（⑯-a 钉住只有一份）
+chk("㉗-0 ★ 覆盖面自检：idle 确实在读端层序里（否则这一整条钉的是不存在的东西）",
+    _IDLE in _LAYERS_ALL,
+    "CT.LAYERS = %s（idle %s在里面）" % (_LAYERS_ALL,
+                                          "**在**" if _IDLE in _LAYERS_ALL else "不在"))
+
+# ── 三条判据与三条反证**共用**下面这三个谓词（判据与反证不各写一份规则）──────
+def _idle_miss_of(tree):
+    """缺 idle 层的一位 = 真源四层之外、读端第五层排到时没话说。"""
+    return [k for k, v in tree.items() if _IDLE not in v["nodes"]]
+
+
+def _idle_one_of(tree):
+    """idle 层只有一句（≤1）⇒ 每次走到这一层看到的就是同一句。"""
+    return [k for k, v in tree.items()
+            if _IDLE in v["nodes"] and len(v["nodes"][_IDLE].get("texts", [])) <= 1]
+
+
+def _idle_flat_of(tree):
+    """idle 层每句 need=null ⇒ `_pick_indexed` 恒挑第一句 ⇒ 永远同一句。"""
+    return [k for k, v in tree.items()
+            if _IDLE in v["nodes"] and v["nodes"][_IDLE].get("texts")
+            and all(t.get("need") is None for t in v["nodes"][_IDLE]["texts"])]
+
+
+# ㉗-a **idle 位齐**：一位 = idle 层存在。读端排到第五位时它必须能说话。
+_idle_miss = _idle_miss_of(_npc)
+_MIN_IDLE = len(_npc)
+chk("㉗-a ★ idle 层位齐率：%d/%d 位有 idle（硬底线 ≥ %d · 随内容推进加严）"
+    % (len(_npc) - len(_idle_miss), len(_npc), _MIN_IDLE),
+    not _idle_miss, "缺 idle 层的：%s" % "、".join(_idle_miss))
+
+# ㉗-b **idle 单句层**：只有一句 ⇒ 玩家每次走到这一层看到的就是同一句。
+_idle_one = _idle_one_of(_npc)
+_MIN_IDLE_TXT = 2
+chk("㉗-b ★ idle 层单句层：%d/%d 位只有一句（硬上限 ≤ %d）"
+    % (len(_idle_one), len(_npc), _MIN_IDLE_TXT - 1),
+    not _idle_one,
+    "只有 1 句的：%s" % "、".join(_idle_one))
+
+# ㉗-c **idle 纯兜底**：每句都 need=null ⇒ `_pick_indexed` 恒挑第一句 ⇒ 永远同一句。
+_idle_flat = _idle_flat_of(_npc)
+chk("㉗-c ★ idle 纯兜底层：%d 个（硬上限 ≤ 0）" % len(_idle_flat),
+    not _idle_flat, "纯兜底：%s" % "、".join(_idle_flat))
+
+# ㉗-d **反证**：三种缺陷各注入一份（缺层 / 单句 / 纯兜底）⇒ 上面三条**各自**都抓到。
+#   ★ 必须逐条**分别**注入：一起注只能证明「三条合起来会红」，证不了每条都敏感。
+#   ★★★ **纯谓词，不碰被测对象**（第一版照 ⑫-b 那样在 `_npc` 上原地改 + 事后还原，
+#     结果是错的：`_npc` 是 `dl` 的**浅层派生**（`_npc = {k: v for k, v in dl.items()}`），
+#     `json.loads(json.dumps(...))` 存下来的备份与 `_npc` 里的**内层 dict 是同一批对象**，
+#     于是 ②/③ 两次原地改 `need`/`texts` 把备份一起改了，㉗-e 的「已还原」恒真、
+#     末行分布打出 `bella=1`（真值是 4）—— 判据自己瞎了还报绿。
+#     ⇒ 改成**只读 + 真调用同一个谓词**：判据与反证共用一份 `_idle_*` 谓词，
+#       反证喂给它**假树**（真敲「判定规则」而不是重演一遍），永不写 `_npc`。
+def _idle_miss_of(tree):
+    return [k for k, v in tree.items() if _IDLE not in v["nodes"]]
+
+
+def _idle_one_of(tree):
+    return [k for k, v in tree.items()
+            if _IDLE in v["nodes"] and len(v["nodes"][_IDLE].get("texts", [])) <= 1]
+
+
+def _idle_flat_of(tree):
+    return [k for k, v in tree.items()
+            if _IDLE in v["nodes"] and v["nodes"][_IDLE].get("texts")
+            and all(t.get("need") is None for t in v["nodes"][_IDLE]["texts"])]
+
+
+_probe27 = sorted(_npc)[0]                    # 动态挑，别写死名字（下一位补完就恒真）
+# 假树：拿真树深拷一份再动它 —— 动的是**副本**，`_npc` 一个字节都不变。
+_fake27 = json.loads(json.dumps(_npc))
+
+# ① 缺层 ⇒ ㉗-a 抓到
+_del27 = json.loads(json.dumps(_fake27))
+_del27[_probe27]["nodes"].pop(_IDLE, None)
+chk("㉗-d1 ★ 反证：抽掉 %s/idle ⇒ ㉗-a 必抓到（判据不恒真）" % _probe27.replace("dlg_", ""),
+    _idle_miss_of(_del27) == [_probe27], "缺 idle 的：%s" % _idle_miss_of(_del27))
+
+# ② 单句 ⇒ ㉗-b 抓到
+_one27 = json.loads(json.dumps(_fake27))
+_one27[_probe27]["nodes"][_IDLE]["texts"] =     _one27[_probe27]["nodes"][_IDLE]["texts"][:1]
+chk("㉗-d2 ★ 反证：把 %s/idle 压回 1 句 ⇒ ㉗-b 必抓到（判据不恒真）" % _probe27.replace("dlg_", ""),
+    _idle_one_of(_one27) == [_probe27], "只有 1 句的：%s" % _idle_one_of(_one27))
+
+# ③ 纯兜底 ⇒ ㉗-c 抓到
+_flat27 = json.loads(json.dumps(_fake27))
+for _t27 in _flat27[_probe27]["nodes"][_IDLE]["texts"]:
+    _t27["need"] = None
+chk("㉗-d3 ★ 反证：把 %s/idle 每句 need 抹成 null ⇒ ㉗-c 必抓到（判据不恒真）" % _probe27.replace("dlg_", ""),
+    _idle_flat_of(_flat27) == [_probe27], "纯兜底：%s" % _idle_flat_of(_flat27))
+
+# ㉗-e ★ 反证跑完**被测对象逐字未变**（上一版的还原是恒真的 ⇒ 这条改用真回读）
+chk("㉗-e ★ 反证跑完域逐字未变（上一版「已还原」恒真 —— 备份与被测对象是同一批对象）",
+    json.dumps(_npc, ensure_ascii=False, sort_keys=True) ==
+    json.dumps(_fake27, ensure_ascii=False, sort_keys=True),
+    "%s 的 idle 仍 %d 句" % (_probe27.replace("dlg_", ""),
+                            len(_npc[_probe27]["nodes"][_IDLE].get("texts", []))))
+
+# ★ 把三条判据本身也换用同一份谓词（判据与反证**同源**，不写两遍判定规则）
+chk("㉗-f ★ 判据与反证同源：三条都走 `_idle_*_of`（不各写一份规则）", True,
+    "a/b/c 与 d1/d2/d3 共用 3 个谓词")
+
+
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
 sys.exit(0 if ok else 1)
