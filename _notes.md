@@ -14124,3 +14124,43 @@ texts.json 里 **21 个 hunk**，其中 **18 个是别线的**（P0 那 18 格 C
   每屏一条提交，不要试图一次铺开。
 - P2-4a / P2-4b（29 条机器键里的 17 条）仍交主线（要改引擎 cue payload）。
 - 真源 `17_文案收口口径_v1.md` 本轮**零改动**（改值全走 DOC_PENDING）⇒ 无待跟账行。
+
+---
+
+## 机器键上屏车道 copy-p3 · 2026-09-29 复核轮（1/1 件已落）
+
+**起点不是「活没做」，是「活已经做完了，验收时挖到一个真洞」**：P2-4b 那批
+（`4b0dc56` 显示名表 + 翻译层 · 接缝 `3c47ed0`）已把 17 条里的 15 条接线，
+`probe_machine_key_names` 22 条全绿。本轮**逐条复核既有判据**时发现：
+
+```text
+name_map.json 的 bar（血条）段 = 空 {}，而 check_domain() 只对账 state / res
+  ⇒ bar 段零判据。今天全绿是**巧合**（本包没配 enemy_bar ⇒ 真源空 = 表空）。
+  ⇒ 将来谁配了 enemy_bar 而忘了补显示名，4 条 gauge 槽位的 {bar} 就把
+    shaken / aim 直接印到玩家脸上，且**没有任何一支探针会红**。
+```
+
+处置（`8f2e3d4`）：`name_map._want_bar_keys()` + `check_domain` 第三条判据 +
+探针判据 ⑧ 四条（含两条有牙的反证）。**引擎零改动。**
+
+### 下一位接手要知道的四件事
+
+```text
+① 17 条的切分层级（别重数）：15 条已接线（key/bar 族 15）· 2 条在 pending_actions
+   在册等机制上线（op / tag / action）· 12 条「不是缺陷」那族**别捡回来**。
+② bar 段今天恒为空且**这是对的**（真源没配 enemy_bar）—— 判据已经在那儿等它上线，
+   配了 enemy_bar 的那一批要同时往 name_map.json 的 bar 段补显示名（取既有真源，不新造词）。
+③ 渲染口**故意不抛**（模块头规矩 1）：引擎把元素免疫包在 try/except Exception: pass 里，
+   渲染口一抛会连「伤害归 0」一起静默失效 ⇒ fail-closed 只放装配期 check_domain()。
+   这条别当漏洞改。
+④ probe_resources ⑧「引擎仓工作区干净」现在会红 —— 那是**别车道的在途脏树**，
+   与本车道无关（取证法：stash 掉本车道改动复跑同一条照样红）。
+```
+
+### 复现命令
+
+```bash
+export GWEN_ENGINE=C:/Users/yuyu/framework-engine
+export GWEN_HOST_DIR=C:/Users/yuyu/framework-engine
+C:/Users/yuyu/AppData/Local/Programs/Python/Python312/python.exe scripts/probe_machine_key_names.py
+```
