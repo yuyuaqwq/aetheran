@@ -34,7 +34,21 @@
                           "object",
                           "null"
                         ],
-                        "description": "条件：flag/quest_done/time/event/holding/weather/…（null=兜底）"
+                        "description": "条件：flag/quest_done/time/event/holding/weather/…（null=兜底）",
+                        "propertyNames": {
+                          "enum": [
+                            "flag",
+                            "holding",
+                            "time",
+                            "weather",
+                            "event",
+                            "last",
+                            "quest_done",
+                            "hurt",
+                            "equipped",
+                            "codex"
+                          ]
+                        }
                       },
                       "text": {
                         "type": "string"
@@ -85,7 +99,21 @@
                           "object",
                           "null"
                         ],
-                        "description": "条件：flag/quest_done/time/event/holding/weather/…（null=兜底）"
+                        "description": "条件：flag/quest_done/time/event/holding/weather/…（null=兜底）",
+                        "propertyNames": {
+                          "enum": [
+                            "flag",
+                            "holding",
+                            "time",
+                            "weather",
+                            "event",
+                            "last",
+                            "quest_done",
+                            "hurt",
+                            "equipped",
+                            "codex"
+                          ]
+                        }
                       },
                       "text": {
                         "type": "string"

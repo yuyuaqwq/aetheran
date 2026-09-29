@@ -856,6 +856,60 @@ try:
     _r15 = list(_v15.iter_errors(_bad15))
     chk("⑮-c ★ 反证：树名不合规 ⇒ schema 会拒绝（判据不恒真）", bool(_r15),
         "塞了 %r ⇒ %d 处报错" % ("写法不合法_1", len(_r15)))
+
+    # ⑮-d/e/f ★ P1-43（2026-09-29 · 文案修复车道 aep1）—— **`need` 的键名在装配期就拦住**
+    #    缺陷本体：`need` 那一格只写了 `type: [object,null]`，**不约束键名** ⇒ 域里打错一个键
+    #    （`tim` 之于 `time` / `wether` 之于 `weather`）照样过 schema、照样装得进包里。
+    #    运行时那一路由 ㉓-a 兜住（`cmds_talk._pick_indexed` 认不出的键判**不满足**），
+    #    但代价是**条件句被静默洗成永不出**：它挂在兜底句之后 ⇒ 那一层少一句能说的话，
+    #    而屏上零报错、连反证都看不出来。⇒ 装配期不拦 = 把病拖到玩家面前才发作。
+    #    修法：schema 的 `need` 加 `propertyNames.enum`（键名枚举，与**读端**那份同源）。
+    #    ★ 枚举**不手抄第二份**：`cmds_talk.NEED_KINDS` 是「认得哪些键」的唯一口（③ 已 import），
+    #      枚举逐项与它对账（⑮-e）—— 读端加了一个键而忘了改 schema，当场红（反之亦然）。
+    def _need_enum(sch):
+        """从 schema 里把 `need` 的键名枚举挖出来（两族 dlg_/talk_ 各一份，两份要一致）。"""
+        out = []
+        for _fam, _sub in (sch.get("patternProperties") or {}).items():
+            _nodes = ((_sub.get("properties") or {}).get("nodes") or {})
+            for _np in (_nodes.get("patternProperties") or {}).values():
+                for _t in ((((_np.get("properties") or {}).get("texts") or {}).get("items") or {})
+                           .get("properties") or {}).values():
+                    _pn = _t.get("propertyNames") or {}
+                    if _pn.get("enum"):
+                        out.append((_fam, tuple(_pn["enum"])))
+        return out
+
+    _en15 = _need_enum(_sch15)
+    _fams15 = sorted({f for f, _ in _en15})
+    chk("⑮-d ★ schema 钉住了 `need` 的键名（拼错一个键装配期就红，不许拖到运行期）",
+        bool(_en15) and all(len(e) == len(set(e)) for _, e in _en15),
+        "两族各一份枚举：%s" % " · ".join("%s=%d 项" % (f, len(e))
+                                        for f, e in sorted(set(_en15))))
+    # 两族那两份必须**逐项相同**（子树是复用的，枚举不许只改一族 ⇒ 另一族静默不拦）
+    _same15 = len({e for _, e in _en15}) == 1
+    chk("⑮-e ★ 两族（`dlg_` / `talk_`）的键名枚举逐项相同（只改一族 = 另一族静默不拦）",
+        _same15, "族：%s" % " · ".join(_fams15))
+    # ★ 与**读端**那份对账：单一真源 = `cmds_talk.NEED_KINDS`（schema 只是它的投影）
+    _need_ref15 = tuple(NEED_KINDS)
+    _drift15 = sorted(set(_need_ref15) ^ set(_en15[0][1])) if _en15 else []
+    chk("⑮-f ★ 枚举与读端 `NEED_KINDS` 同一份（读端加了键而忘了改 schema ⇒ 当场红）",
+        bool(_en15) and tuple(sorted(_en15[0][1])) == tuple(sorted(_need_ref15)),
+        "读端 %d 项 / schema %d 项%s" % (len(_need_ref15), len(_en15[0][1]) if _en15 else 0,
+                                        " · 分歧：%s" % " ".join(_drift15) if _drift15 else " · 一致"))
+    # ⑮-g ★ 反证：一个键都拼错 ⇒ schema 必拒；合法键 + need=null 必仍过（防「拦过头」）
+    for _i15, _kk15 in enumerate(("tim", "wether", "quest-done", "不存在")):
+        _err_typo = list(_v15.iter_errors(
+            {"dlg_typo": {"nodes": {"meet": {"texts": [
+                {"need": {_kk15: "x"}, "text": "拼错的键"}, {"need": None, "text": "兜底"}]}}}}))
+        chk("⑮-g%d ★ 反证：need 键 %r 拼错 ⇒ 装配期就红（判据不恒真）" % (_i15 + 1, _kk15),
+            bool(_err_typo), "报错 %d 处" % len(_err_typo))
+    _ok15 = list(_v15.iter_errors(
+        {"dlg_ok": {"nodes": {"meet": {"texts": [{"need": None, "text": "兜底"}]}}}}))
+    _ok15b = list(_v15.iter_errors(
+        {"dlg_ok": {"nodes": {"meet": {"texts": [
+            {"need": {"time": "hr_dawn", "weather": "w_rain"}, "text": "合法条件句"}]}}}}))
+    chk("⑮-h ★ 防「拦过头」：合法键与 `need=null` 兜底句仍过（别把条件句一起打死）",
+        not _ok15 and not _ok15b, "兜底 %d 处报错 / 合法条件句 %d 处报错" % (len(_ok15), len(_ok15b)))
 except ImportError:
     chk("⑮-a/b/c ★ 域合自己的 schema（真跑 jsonschema）", False,
         "装不上 jsonschema —— fail-closed：跳过这条 = 判据恒真，正是它当初没被发现的原因")
