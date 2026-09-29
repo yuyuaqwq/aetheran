@@ -153,6 +153,25 @@ def _want_res_keys() -> set:
     return {str(k) for k in res}
 
 
+def _want_bar_keys() -> set:
+    """血条键现算全集（真源 = 内容侧 `mech_cfg("enemy_bar")` 那张配置表的键）。
+
+    ★ 为什么这一段在 2026-09-29 才补：原先 `bar` 段是空 `{}` 而**零判据** ——
+      本包当时没配 `enemy_bar`（表空 = 真源空 = 恰好一致），于是「没人断言它对」这件事
+      本身没人看见。将来任何人配了 `enemy_bar` 而忘了补显示名，4 条 gauge 槽位的
+      `{bar}` 就会把 `shaken` / `aim` 直接印到玩家脸上，且**没有任何一支探针会红**。
+      现在这一段让那种情况当场红（见 `check_domain` ③ 与探针 ⑧）。
+    ★ 取件口 = 引擎 `gauge.bar_def` 走的那条路（`mech_cfg("enemy_bar")`）——
+      **现读，不缓存**：装配期判据不能被 fixture 的运行期缓存影响（同 `_want_res_keys`）。
+    ★ 取不到（没装配 / 表不是 dict）⇒ 空集，与「本包没配 enemy_bar」同一形状。
+    """
+    from ext_combat.battle import game_config as _GC
+    cfg = _GC.mech_cfg("enemy_bar")        # 内容侧 `mech_cfg_fn` 注入；未装配 → {}
+    if not isinstance(cfg, dict):
+        return set()
+    return {str(k) for k in cfg if not str(k).startswith("_")}
+
+
 class TranslatedTable:
     """给 `Battle(text=…)` 用的**翻译代理**：渲染前把 payload 的机器键换成显示名。
 
@@ -253,5 +272,17 @@ def check_domain() -> dict:
             "name_map.json 里有真源已不存在的键（孤儿条目）：%s —— "
             "真源改了没同步这张表；删掉它们（孤儿会让「表里有这个 key」的空判断为真）"
             % "、".join(orphan))
-    return {"state": sorted(have_state), "res": sorted(have_res), "bar": sorted(m["bar"]),
+    # ③ 血条键：真源 `mech_cfg("enemy_bar")` 配了哪几个 bar，表里就得有哪几个显示名。
+    #   ★ 这一条在 2026-09-29 补：原先 bar 段空着且**零判据**，配了 enemy_bar 会静默漏名。
+    want_bar, have_bar = _want_bar_keys(), set(m["bar"])
+    if want_bar - have_bar:
+        raise NameMapError(
+            "血条键没有显示名（玩家会在战斗日志里看到 %s 这类 ASCII 键）\n"
+            "去 content/rules/name_map.json 的 bar 段补 —— 显示名取既有真源"
+            % "、".join(sorted(want_bar - have_bar)))
+    if have_bar - want_bar:
+        raise NameMapError(
+            "name_map.json 的 bar 段有真源不存在的键（孤儿）：%s —— "
+            "没配 enemy_bar 却先写了显示名，删掉它们" % "、".join(sorted(have_bar - want_bar)))
+    return {"state": sorted(have_state), "res": sorted(have_res), "bar": sorted(have_bar),
             "pending_actions": list(_PENDING_ACTIONS)}

@@ -278,6 +278,61 @@ _line3 = _tbl.render("battle.effects.stack_add", key="zzz_unregistered", n="1", 
 chk("⑦ 未登记键照原样透传（露机器键 + 探针可见），不崩不静默丢行",
     "zzz_unregistered" in _line3, "屏上：%s" % _line3)
 
+# ========== ⑧ 血条（bar）段：与真源 `enemy_bar` 配置严格对账 ==========
+# ★ 这一段是 2026-09-29 补的**真门禁洞**：bar 段原先是空 {} 且**零判据** ——
+#   本包今天没配 enemy_bar（真源空 = 表空 = 恰好一致），于是「没人断言它对」这件事
+#   本身没人看见。将来任何人配了 enemy_bar 而忘了补显示名，4 条 gauge 槽位的 {bar}
+#   就会把 shaken / aim 直接印到玩家脸上，且**没有任何一支探针会红**。
+# ⇒ 判据分四步：① 两侧现算对齐 ② 真源配了 bar 却不补名 ⇒ 抛（有牙）
+#   ③ 渲染口真跑一遍 `{bar}` 槽位（证明翻译层对 bar 这一格也生效，不是只对 key 生效）
+_want_bar, _have_bar = NM._want_bar_keys(), set(_m["bar"])
+chk("⑧ 血条键与真源 `enemy_bar` 配置逐条对齐（表 %d · 真源 %d）"
+    % (len(_have_bar), len(_want_bar)),
+    _want_bar == _have_bar,
+    "差集 %s" % sorted(_want_bar ^ _have_bar))
+
+# ② 反证：真源配了 bar 键而表里没补显示名 ⇒ 装配期点名抛（猴补真源，不碰真实装配）
+_real_mech_cfg = None
+try:
+    from ext_combat.battle import game_config as _GC
+    _real_mech_cfg = _GC.mech_cfg
+    import ext_combat.battle.game_config as _GCm
+    _orig_hook = _GCm._cfg.get_hook
+
+    def _fake_hook(name, _r=_orig_hook):
+        if name == "mech_cfg_fn":
+            return lambda n: ({"shaken": {"threshold_base": 50}} if n == "enemy_bar" else {})
+        return _r(name)
+    _GCm._cfg.get_hook = _fake_hook
+    _m["bar"] = {}
+    try:
+        NM.check_domain()
+        _bar_gap_raised, _bar_gap_msg = False, ""
+    except NM.NameMapError as _e:
+        _bar_gap_raised, _bar_gap_msg = ("shaken" in str(_e)), str(_e)
+    finally:
+        _GCm._cfg.get_hook = _orig_hook
+        _m["bar"] = {}
+finally:
+    pass
+chk("⑧ 反证：真源配了 enemy_bar 而表里没补显示名 ⇒ 装配期点名抛（不静默上屏）",
+    _bar_gap_raised, _bar_gap_msg[:110])
+
+# ③ 渲染口对 bar 那一格也生效（表里有 bar 键时）
+_m["bar"] = {"shaken": "震慑"}
+try:
+    _bl = _tbl.render("battle.gauge.gain", bar="shaken", add="2", val="3", maxcap="6", t=142)
+    _bl2 = _tbl.render("battle.gauge.trigger", bar="shaken", count="3", t=142)
+finally:
+    _m["bar"] = {}
+chk("⑧ 真渲染 gauge 两族：`{bar}` 翻成显示名（不露 shaken）",
+    ("震慑" in _bl and "shaken" not in _bl and "震慑" in _bl2 and "shaken" not in _bl2),
+    "屏上：%s ｜ %s" % (_bl, _bl2))
+chk("⑧ 真源没配 enemy_bar 时 `{bar}` 照原样透传（露机器键 + 可被上面那条反证逮到）",
+    "shaken" in _tbl.render("battle.gauge.gain", bar="shaken", add="2", val="3",
+                            maxcap="6", t=142),
+    "本包今天没配 enemy_bar —— 这一族到不了屏，判据在等它上线")
+
 print()
 print("  · 机器键槽位（现算 %d 条）：%s" % (len(mk_slots), "、".join(sorted(mk_slots))))
 print("  · 显示名表：状态键 %d · 资源键 %d · 血条键 %d"
