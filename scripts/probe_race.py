@@ -117,8 +117,14 @@ def main():
     lines = drive(ad, host, "观察", uid)
     joined = "\n".join(lines)
     hit6 = sum(1 for n in ("人类", "精灵", "矮人", "兽人", "龙裔", "亚人") if n in joined)
-    if hit6 == 6 and "还不知道自己是谁" in joined:
-        ok("新号「观察」递六族菜单（命中 6/6）")
+    # ★ 2026-09-30（注册面改造）：菜单头与「怎么选」从 texts 域**现读** —— 文案再改这句跟着走；
+    #   判据只管「菜单完整」（六族在 + 头句在 + 选法在），不再钉旧文案字面。
+    with io.open(os.path.join(REPO, "content", "data", "texts.json"), encoding="utf-8") as _f:
+        _TX_R = json.load(_f)
+    _head_r = (_TX_R.get("SYS_RACE_HEAD") or {}).get("value", "")
+    _how_r = (_TX_R.get("SYS_RACE_HOW") or {}).get("value", "")
+    if hit6 == 6 and _head_r and _head_r in joined and _how_r and _how_r in joined:
+        ok("新号「观察」递六族菜单（命中 6/6；头句与选法 = texts 域现值）")
     else:
         bad("新号第一眼不是菜单（命中 %d/6）：%s" % (hit6, joined[:140]))
     if "往哪走" not in joined:

@@ -26,8 +26,9 @@ priority 降序、同值按注册序，见引擎 `tests/test_host_priority_route
   ③ 同名同形的**不可见**声明（`battle_item` 的「使用」）不参与路由 —— 路由只在可见声明里排
   ④ ★ 端到端（真宿主契约）：真敲那四条 —— 回话来自期望的声明；且裸「放弃」**不许动档**
      （`quest_abandon` 空参取 `act[0]` ⇒ 会静默丢掉第一条委托）
-  ⑤ ★ P-23（真敲）：**「帮助」列的就是「可见 + 有处理器」那些** —— 逐条对账（多一条 = 玩家
-     照着敲会撞空，少一条 = 能用的没告诉玩家）；43 条「声明了没处理器」一条都不许在表里
+  ⑤ ★ P-23 新口径（2026-09-30 帮助改造后）：**「帮助」= 主面板 + 全部子面板** —— 逐条对账
+     （占位名两套 ⇒ 归一后比：面板写 `<名字>`、声明写 `<参数>`）；「声明了没处理器」的一条
+     都不许在表里；每个分类子面板必须真出（不许空 / 不许回落「没有这个分类」）
   ⑥ ★ P-23（真敲 43 条）：这些声明**回的是人话**（槽位 `SYS_CMD_SOON`）—— 不许再把
      **内部 key** 与「包内 content/commands.py 里没有它的 handler」漏给玩家
   ⑦ ★ P-23（真敲）：「读」这条**有处理器却没声明**的接上了 —— 抬头与正文都对；同一处两个
@@ -447,23 +448,41 @@ UNBOUND = {k: v for k, v in DECL.items()
 #:     余下 5 条：climb（攀爬）· sneak（潜行）· feedback · settings · battle_pref。
 UNBOUND_MAX = 5
 
-print("⑤ ★ P-23：「帮助」只列**有处理器**的声明（真敲 · 逐条对账）")
+print("⑤ ★ P-23 新口径（2026-09-30 帮助改造后）：主面板 + 全部子面板 · 逐条对账")
 try:
     _ad.out.clear()
     _host.handle({"uid": "u_c", "group_id": "g_c", "text": "帮助"})
-    _help = list(_ad.out)
-    _listed = [w for ln in _help for w in re.findall(r"『([^』]*)』", ln)]
-    _ghost = sorted(set(w for w in _listed) & set(v.get("usage") for v in UNBOUND.values()))
-    _keys_in_help = sorted(k for k in DECL for ln in _help if k in ln)
-    _off = sorted(set(_listed) ^ set(BOUND_USAGES))
-    chk("★ 「帮助」列的就是「可见 + 有处理器」那些（%d 条 · 真敲回来逐条对账）" % len(BOUND_USAGES),
-        not _off and sorted(_listed) == sorted(BOUND_USAGES), "对不上：%s" % _off)
+    _panels = [list(_ad.out)]
+    _topics = list(((DECL.get("help") or {}).get("topics") or {}).keys())
+    _nt = (TX.get("SYS_HELP_NOTOPIC") or {}).get("value", "")
+    _sub_bad = []
+    for _cat in _topics:
+        _ad.out.clear()
+        _host.handle({"uid": "u_c", "group_id": "g_c", "text": "帮助 %s" % _cat})
+        _p = list(_ad.out)
+        _panels.append(_p)
+        if not _p or (_nt and _nt.replace("{topic}", str(_cat)) in "\n".join(_p)):
+            _sub_bad.append(_cat)      # 空 / 回落到「没有这个分类」= 这一类没接上
+    _all = [ln for _p in _panels for ln in _p]
+
+    def _norm(w):
+        # 占位名两套（面板写 `<名字>`、声明写 `<参数>`）⇒ 归一后逐条对账
+        return re.sub(r"[<\[（(].*?[>\]）)]", "", w).strip()
+
+    _listed = [w for ln in _all for w in re.findall(r"『([^』]*)』", ln)]
+    _ghost = sorted(set(_listed) & set((v.get("usage") or "") for v in UNBOUND.values()))
+    _off = sorted(set(_norm(w) for w in _listed if w) ^ set(_norm(w) for w in BOUND_USAGES if w))
+    _keys_in_help = sorted(k for k in DECL for ln in _all if k in ln)
+    chk("★ %d 个分类子面板都真出（逐类真敲；不许空 / 不许回落主面板）" % len(_topics),
+        not _sub_bad, "%s" % _sub_bad[:8])
+    chk("★ 「帮助」（主面板 + 子面板）列的与「可见 + 有处理器」的 %d 条对得上（占位名归一后逐条对账）"
+        % len(BOUND_USAGES), not _off, "对不上：%s" % _off)
     chk("★ %d 条「声明了没处理器」的一条都不在「帮助」里（敲了没反应的别骗玩家去敲）" % len(UNBOUND),
         not _ghost, "%s" % _ghost[:6])
-    chk("★ 「帮助」里没有内部 key（%d 行逐行扫 %d 个 key）" % (len(_help), len(DECL)),
+    chk("★ 「帮助」里没有内部 key（%d 行逐行扫 %d 个 key）" % (len(_all), len(DECL)),
         not _keys_in_help, "%s" % _keys_in_help[:6])
 except Exception as exc:                                                   # noqa: BLE001 —— 起不来就是红
-    chk("★ P-23 1/3「帮助只列有处理器的」跑得起来（真宿主契约）", False,
+    chk("★ P-23 1/3「帮助对账」跑得起来（真宿主契约）", False,
         "%s: %s" % (type(exc).__name__, exc))
 
 print("⑥ ★ P-23：%d 条「声明了没处理器」真敲一遍 —— 回的是人话（不漏内部 key / 文件路径）" % len(UNBOUND))
