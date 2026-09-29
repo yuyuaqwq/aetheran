@@ -225,6 +225,11 @@ def main():
 
     # ── ⑥ 还没翻过任何列表 · 空背包不分页
     print("⑥ 没翻过列表 ⇒ 点名那一句；空背包 ⇒ 不分页")
+    # ★ 2026-09-30（注册面改造）：注册守卫先行 ——「全新的人」也要**建号走完**才到得了
+    #   分页这一层（无族/无职业/无名会被引回注册）；pager 光标/背包都还是空的。
+    _fresh_seed = dict(seed)
+    _fresh_seed.update({"bag": {}, "equipped": {}, "books": {}})
+    ad.saved["u_fresh"] = _fresh_seed
     _none = T("SYS_PAGE_NONE", lists=PG.lists_hint())   # ★ g4-④：列表名从登记处现算
     _o_none = say("下一页", uid="u_fresh")
     _fresh_txt = json.dumps(ad.saved.get("u_fresh") or {}, ensure_ascii=False)
@@ -469,14 +474,21 @@ def main():
            % (len(_lost14), " · ".join(AV14.usage(PG.LIST_DECL[k]) for k in _lost14)))
     else:
         bad("反证不成立（旧句居然点名到了）：%s" % _lost14)
-    # 两态：真源那一行跟账前后都对得上（跟账后 `_old_said` 那半句就退场）
+    # 两态：真源那一行跟账前后都对得上（跟账后 `_old_said` 那半句就退场；
+    # ★ 2026-09-30 跟账已完成（B6 全清）⇒ 本处按「登记待跟账 / 已跟账」两态收）
     import rebuild_syscopy as RS14                                        # noqa: E402
     _fx14 = getattr(RS14, "DOC_PENDING", {}).get("SYS_PAGE_NONE") or {}
-    ok("两态：`SYS_PAGE_NONE` 已登记待跟账（真源那句跟账前后都绿）—— 登记理由 %d 字"
-       % len(str(_fx14.get("why") or ""))) if _fx14 else \
-        bad("`SYS_PAGE_NONE` 没登记进 `rebuild_syscopy.DOC_PENDING`（真源那句还没跟账 ⇒ 两处口径）")
-    if _old14 == T("SYS_PAGE_NONE", lists=PG.lists_hint()):
+    _same14 = "{lists}" in str((texts.get("SYS_PAGE_NONE") or {}).get("value") or "")
+    if _fx14 or _same14:
+        ok("两态：`SYS_PAGE_NONE` 或登记待跟账、或已跟账（域里就是新值；表侧一致性由"
+           " rebuild --dry 幂等钉）—— %s"
+           % ("登记理由 %d 字" % len(str(_fx14.get("why") or "")) if _fx14 else "已跟账"))
+    else:
+        bad("`SYS_PAGE_NONE` 既没登记又没跟账（真源那句还没跟账 ⇒ 两处口径）")
+    if "{lists}" in _old14:
         ok("域里那条就是新值（{lists} 占位已生效 · 旧那句只留在反证里）")
+    else:
+        bad("域里那条还不是新值（缺 {lists} 占位）")
 
     print()
     print("----")

@@ -150,7 +150,7 @@ chk("★ 十条条件整表编译通过（形状错当场抛）", set(SPECS) == 
 # ⑤ ★ 逐条造实例：满足它的档 → scan 必须命中它；再扫一遍不再报
 def profile_for(tid: str):
     """造一个「刚好满足这条称号」的档 + 它需要的那一格时辰/天气。"""
-    p = {"day": 4, "level": 3, "name": "试", "loc": "", "node": "", "bag": {}, "equipped": {},
+    p = {"day": 4, "level": 3, "name": "试", "cls": "cls_knight", "loc": "", "node": "", "bag": {}, "equipped": {},
          "books": {"relic": {}, "material": {}, "monster": {}, "flavor": {}},
          "foot": {"nodes": {}, "visits": {}}, "flags": {}, "heard": {}}
     stx = dict(CAL.state())
@@ -355,6 +355,11 @@ except OSError:
     pass
 try:
     _ad = _Ad(STEPS)
+    # ★ 2026-09-30（注册面改造）：注册守卫先行 —— 端到端前先给建号三件套（族/职业/名）
+    _ad.saved = {"race": "human", "cls": "cls_knight", "name": "试刀",
+                 "level": 3, "loc": "windmill_town", "node": "wt_gate_n",
+                 "bag": {}, "equipped": {}, "codex": {}, "flags": {}, "prev": [],
+                 "foot": {"nodes": {}, "visits": {}}, "heard": {}}
     _host = Host(_ad, str(REPO), inject={"db_path": _db, "clock": (lambda: _night_epoch())})
     _host.boot()
     _lines = {}

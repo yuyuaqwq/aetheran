@@ -101,9 +101,10 @@ def drive_log():
         import sys
         py = sys.executable
         env = dict(os.environ)
-        env["AST_E2E_SEED"] = json.dumps({"cls": "cls_knight", "level": 9, "gold": 500,
-                                         "bag": {"i_weapon_knight_wall_common": 1},
-                                         "equipped": {"weapon": "i_weapon_knight_oath_common"}})
+        env["AST_E2E_SEED"] = json.dumps({"cls": "cls_knight", "race": "human", "name": "试刀",
+                                          "level": 9, "gold": 500,
+                                          "bag": {"i_weapon_knight_wall_common": 1},
+                                          "equipped": {"weapon": "i_weapon_knight_oath_common"}})
         r = subprocess.run([py, os.path.join(ROOT, "scripts", "e2e_drive.py"),
                             "往东", "攻击", "换武器", "战斗日志"],
                            capture_output=True, env=env)

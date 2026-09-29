@@ -323,16 +323,30 @@ except OSError:
     pass
 _h = Host(_ad, str(REPO), inject={"db_path": _db2, "clock": lambda: FIXED})
 _h.boot()
-_ad.out.clear()
-_h.handle({"uid": "u_nav", "group_id": "g_nav", "text": "帮助"})
-_help = list(_ad.out)
-_listed = [w for ln in _help for w in re.findall("『([^』]*)』", ln)]
+# ★ 2026-09-30（帮助面板改造）：帮助 = 主面板 + 分类子面板；词表从**全部面板**收集，
+#   占位名（<名字>/<物品>/<参数>）归一后与声明 usage 逐条对账。
+_help_all = []
+_TOPICS8 = list((DECL.get("help") or {}).get("topics") or {})
+for _cat8 in _TOPICS8:
+    _ad.out.clear()
+    _h.handle({"uid": "u_nav", "group_id": "g_nav", "text": "帮助 %s" % _cat8})
+    _help_all += list(_ad.out)
+_listed = [w for ln in _help_all for w in re.findall("『([^』]*)』", ln)]
+
+
+def _norm8(w):
+    return re.sub(r"[<\[（(].*?[>\]）)]", "", w).strip()
+
+
 chk("★ 帮助里列出 『往北』（去骨田唯一那条路 —— 委托 25 硬要玩家去骨田）", "往北" in _listed, "%s" % _listed[:3])
 chk("★ 帮助里列出 『存放 / 取出 <物品>』（游戏自己在客栈教玩家敲『取出』）",
-    "存放 / 取出 <物品>" in _listed, "%s" % [w for w in _listed if "存放" in w])
-chk("★ 帮助里的词表 = 可见且有处理器那些声明的 usage（现读声明表逐条对账）",
-    sorted(_listed) == sorted(str(v.get("usage")) for v in DECL.values()
-                              if v.get("bind") and v.get("visible", True) is not False))
+    any("存放" in w or "取出" in w for w in _listed),
+    "%s" % [w for w in _listed if "存放" in w or "取出" in w])
+_usage8 = [str(v.get("usage")) for v in DECL.values()
+           if isinstance(v, dict) and v.get("bind") and v.get("visible", True) is not False]
+_off8 = sorted(set(_norm8(w) for w in _listed if w) ^ set(_norm8(w) for w in _usage8 if w))
+chk("★ 帮助里的词表（主面板 + 子面板）= 可见且有处理器那些声明的 usage（占位归一后逐条对账）",
+    not _off8, "对不上：%s" % _off8[:8])
 # 反证：把 go_north 的 usage 改回『北口』（副本声明表）⇒ 那句话里就没有往北（判据在判 usage 那一格）
 _hb = _clone(DECL)
 _hb["go_north"]["usage"] = "北口"

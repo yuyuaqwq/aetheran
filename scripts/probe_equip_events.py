@@ -188,7 +188,8 @@ def _talk_run(iid, node_name, npc_name, *, hold=True, talks=1, done_main=False):
       瑟兰只在主线 3 过了才在场（B3-5 接的）。这条用例要按「商队到了」那个档跑。
     """
     steps = ["去 %s" % node_name] + ["搭话 %s" % npc_name] * int(talks)
-    seed = {"race": "human", "hp": 100, "hp_max": 100, "loc": "windmill_town",
+    seed = {"race": "human", "cls": "cls_knight", "name": "试刀",
+            "hp": 100, "hp_max": 100, "loc": "windmill_town",
             "node": "wt_gate_n", "bag": ({iid: 1} if hold else {})}
     if done_main:
         seed["flags"] = {"quests_done": ["q_main_03"]}

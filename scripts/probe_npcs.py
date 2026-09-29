@@ -117,6 +117,9 @@ class _Ad(object):
         # ★ P-10：档上要有族（否则「观察」第一眼变成选族菜单）
         d = dict(self.saved or {})
         d.setdefault("race", "human")
+        # ★ 2026-09-30（注册面改造）：注册守卫先行 —— 建号走完（族/职业/名）才到得了玩
+        d.setdefault("cls", "cls_knight")
+        d.setdefault("name", "试刀")
         return d
 
     def save_player(self, uid, data):

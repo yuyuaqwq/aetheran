@@ -187,6 +187,7 @@ class _Ad(object):
         self.boom = bool(boom)
         self.out = []
         self.saved = {"loc": "windmill_town", "node": "wt_gate_n", "race": "human",
+                      "cls": "cls_knight", "name": "试刀",
                       "level": 3, "gold": 50, "bag": {}, "equipped": {}, "codex": {},
                       "flags": {}, "prev": [], "foot": {}}
 
@@ -514,7 +515,8 @@ def tower_investigate_lines(seen_birch, force_direct=False):
     ad2 = _Ad2()
     ad2.saved = {"loc": TOWER, "node": "tower_horn_room", "prev": [], "race": "human",
                  "level": 6, "gold": 30, "bag": {}, "equipped": {}, "codex": {}, "flags": {},
-                 "cls": "cls_knight", "foot": {"nodes": {}, "visits": {}},
+                 "cls": "cls_knight", "name": "试刀",
+                 "foot": {"nodes": {}, "visits": {}},
                  "books": {"relic": ({"poi_named_birch": {"day": 1, "known": False}}
                                     if seen_birch else {})}}
     db = os.path.join(os.environ.get("LOCALAPPDATA", "/tmp"), "Temp", "ast_probe_silent_tower.db")

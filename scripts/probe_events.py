@@ -218,6 +218,8 @@ class _Ad(object):
             return None
         d = dict(self.saved or {})
         d.setdefault("race", "human")           # 定过族（否则「观察」第一眼是选族菜单）
+        d.setdefault("cls", "cls_knight")       # ★ 2026-09-30：注册守卫 —— 建号走完才到得了玩
+        d.setdefault("name", "试刀")
         return d
 
     def save_player(self, uid, data):

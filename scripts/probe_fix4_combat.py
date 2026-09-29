@@ -549,21 +549,14 @@ chk("★ ⑥ 两态对照：`攻击` 在同一处**一个字没动**（照旧回
 # ⑦ `帮助` 尾巴那句诚实说明（P1 BUG-9 ① / P4 E-11）
 # ══════════════════════════════════════════════════════════════
 print(NL + "⑦ `帮助` 里战斗那栏的尾巴（P1 BUG-9 ① / P4 E-11 · ★ G2 换向）")
-_l_help = say("帮助")
-# ★ G2（2026-09-26 · 本波）：战斗从「一条指令打完整场」改成**一手一手**
-#   ⇒ 尾巴那句换成 SYS_HELP_BATTLE_TURN（判据跟着换向，下面「不带来新『』词」那条判据不动）。
-#   旧槽位 SYS_HELP_BATTLE_NOTE 的退役登记在 scripts/probe_copy.py::RETIRED_DOC。
-_want_note = T("SYS_HELP_BATTLE_TURN")
-chk("★ ⑦ 敲 `帮助` ⇒ 末尾那行逐字 == 槽位渲染（战斗那栏的尾巴说的是本波口径：一条指令一手）",
-    bool(_l_help) and _l_help[-1] == _want_note, "末行 %s" % (_l_help[-1:] or ["（空）"]))
-_listed = [w for ln in _l_help for w in re.findall(r"『([^』]*)』", ln)]
-_decl = load("content/data/commands.json")
-_usage = {str(v.get("usage")) for v in _decl.values()
-          if isinstance(v, dict) and v.get("bind") and v.get("visible", True) is not False}
-chk("★ ⑦ 反证：那一行**没带来任何一个新『』词**（『』词表仍与「可见 + 有处理器」那些逐条相等 —— "
-    "帮助里列的指令一条没多、一条没少）",
-    sorted(set(_listed)) == sorted(_usage),
-    "多出来：%s" % sorted(set(_listed) ^ _usage)[:6])
+# ★ 2026-09-30（帮助面板改造）：帮助 = 主面板 + 分类子面板；战斗那栏的尾巴在
+#   『帮助 战斗』子面板里。旧槽位 SYS_HELP_BATTLE_TURN / SYS_HELP_BATTLE_NOTE 已随
+#   改造退场（退役登记见 probe_copy.py::RETIRED_DOC / 帮助节）。
+_l_help = say("帮助 战斗")
+chk("★ ⑦ 敲 `帮助 战斗` ⇒ 尾巴说的是本波口径（「一手一手」那句在末行）",
+    bool(_l_help) and "一手一手" in _l_help[-1], "末行 %s" % (_l_help[-1:] or ["（空）"]))
+# ⑦-反证（『』词表与「可见 + 有处理器」逐条相等的对账）随帮助改造移交 probe_cmds ⑤
+# （主面板 + 子面板 · 占位名归一后对账），此处不再重复一份镜像。
 
 print(NL + "结果：%s" % ("全绿 ✓" if not BAD else "有红 ✗（%d 条）" % len(BAD)))
 for m in BAD:

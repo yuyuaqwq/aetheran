@@ -289,6 +289,7 @@ class _Ad(object):
         self._msgs = []
         self.out = []
         self.saved = {"loc": "windmill_town", "node": "wt_gate_n", "race": "human",
+                      "cls": "cls_knight", "name": "试刀",
                       "level": 3, "gold": 50, "bag": {}, "equipped": {}, "codex": {},
                       "flags": {}, "prev": []}
         #: ★ B3-7：容器那几处要**换人再搜一遍**（`uid` 进采集种子 —— 换人 = 换一串抽签）
