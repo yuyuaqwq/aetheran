@@ -1041,6 +1041,29 @@ _hurt6 = [x for x in _l6 if "受到" in x]
     "  · 一笔自付**只出一行**：专用行 %s（真扣 %d）· 引擎那条通用伤害行不再重复（%s）"
     % (_self_cut_of(_l6), _d6, _hurt6[:1] or "没有"))
 
+#: ★ P0-2b（2026-09-29 · aep0）：**诊断行不许上屏**。上一条只钉「通用伤害行不重复」，
+#:   抓不住另一种漏法：遮挡表在 cue 那一路返回空串 ⇒ 引擎 `_render` 把它判成**坏数据**、
+#:   就地 append 一行 `MISS_LINE`（引擎 L2060 `9eeb12d` 之后）⇒ 屏上多出
+#:   「⚠️ 这条表现没渲染出来（cue 装配/文案缺口，见诊断）」。
+#:   ★ 真机复现（`scripts/e2e_drive.py … 技能 焚身`）：那一行原样进战斗屏与『战斗日志』。
+#:   判据取**引擎那条常量现取**（`saintess_engine.cues.MISS_LINE`，不抄一份字符串）；
+#:   抄一份就等于开第二个真源（引擎改措辞时两处漂，这条判据会静默失守）。
+try:
+    from saintess_engine.cues import MISS_LINE as _MISS6
+except ImportError:                                   # 引擎树还没迁移到 cue 形状
+    _MISS6 = ""
+_diag6 = [x for x in _l6 if _MISS6 and str(x) == _MISS6]
+(ok if not _diag6 else bad)(
+    "  · 那一笔**不冒出诊断行**：屏上 %s（引擎那条「没渲染出来」的坏数据行 = 常量现取）"
+    % ("一处都没有" if not _diag6 else _diag6[:1]))
+#: 反证：那条常量**真的**是本包会踩到的形状（不是判据空转）—— 引擎此刻产它时逐字相同。
+from content import battle_text as BT                                # noqa: E402  遮挡那一族
+_g = BT._QuietOnce(BT.table())
+_badline = _g.render_or("battle.landing.damage", "")
+(ok if (str(_badline) == "" and _MISS6) else bad)(
+    "  · 反证：遮挡表确实把那条渲染成空串（%r）⇒ 正是引擎判它坏数据、产 %r 的那一步"
+    % (_badline, _MISS6 or "（本引擎树无该常量）"))
+
 #: 反证（这一条判据不是空转）：同一调里「怪打你」那条**照旧**上屏 —— 遮挡只认自付那一笔，
 #:   没把引擎那条 key 全局改掉（`content/rules/battle_text.json` 里它**照样没声明**）。
 _b7, _c7 = _bare("cls_berserker", mid=DOG, hp=500)

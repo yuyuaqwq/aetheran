@@ -449,8 +449,12 @@ def _self_cut(battle, caster, m: dict, logs) -> int:
             #   `real == 0` ⇒ 下面那条 `if real > 0` 不写行 ⇒ 屏上少一句、档上少扣血。
             #   实测（probe_mech ⑥ 偶发红）：同一棵树连跑若干次里必有一次自伤「没打出来」。
             real = LD.deal_damage(battle, None, caster, cut, logs, no_dodge=True)
-        # 顶掉的那一行是**空串**（引擎把渲染结果无条件 append）⇒ 只剔这一笔新增里的空串
-        logs[_n0:] = [x for x in logs[_n0:] if str(x) != ""]
+        # ★ 顶掉的那一行在两条路上形状不同，**归口**给 `BT.drop_quiet_lines` 剔（2026-09-29 修）：
+        #   旧路 `render_via` = 空串；新路 cue = 引擎 `_render` 见空串判**坏数据**、就地
+        #   append 一行 `MISS_LINE`（引擎 L2060 `9eeb12d` 之后）⇒ 那一行原样上屏，玩家在
+        #   战斗屏看到「⚠️ 这条表现没渲染出来（cue 装配/文案缺口，见诊断）」。
+        #   ★ 引擎零改动：那一行是普通字符串，剔在包侧。
+        logs[_n0:] = BT.drop_quiet_lines(logs[_n0:])
         if real > 0:                       # 全额被护盾吃掉 ⇒ 不谎报一笔没落的血
                                            #   （★ 2026-09-27：闪避那一格已由 `no_dodge` 关掉，
                                            #    所以这里不会再有「被自己闪掉」那种 0）

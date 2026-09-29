@@ -171,9 +171,12 @@ class _QuietOnce:
 
     def render_or(self, key, default, /, **slots):
         if self._armed and key == _ENGINE_DAMAGE_KEY:
-            self._armed = False
-            return ""                     # 旧路（`render_via`）：引擎照 append ⇒ 调用方剔空串
-                                          # 新路（cue）：总线 `_render` 见到空串**直接不出行**
+            self._armed = False         # 一次性：只顶第一条（这一调里不会再有第二条）
+            return ""                   # 旧路（`render_via`）：引擎照 append ⇒ 调用方剔空串
+                                        # ★ 新路（cue）：总线 `_render` 把「渲染出空串」判成
+                                        #   **坏数据**，就地产出一行 `MISS_LINE`（引擎 L2060 那笔
+                                        #   之后）⇒ 那一行会原样上屏。调用方 `drop_quiet_lines`
+                                        #   连空串与 `MISS_LINE` 一起剔。
         if self._t is None:               # 没注入表 ⇒ 与 `render_or(None, …)` 同一条路
             return safe_format(default, slots)
         return self._t.render_or(key, default, **slots)
@@ -190,6 +193,36 @@ class _QuietOnce:
         if self._t is None:
             raise AttributeError(name)
         return getattr(self._t, name)
+
+
+def _miss_line() -> str:
+    """引擎那条「这一行没渲染出来」的坏数据行 —— **现取，不抄一份**。
+
+    ★ 抄一份就等于开第二个真源（改措辞/换常量时两处漂）。引擎没装 cue 形状时
+    拿不到常量 ⇒ 回 `""`（那一路本来也不产这行）。
+    """
+    try:
+        from saintess_engine.cues import MISS_LINE
+    except ImportError:                              # 引擎树还没迁移到 cue 形状
+        return ""
+    return str(MISS_LINE or "")
+
+
+#: 「有意不出这一行」的两种上屏形状：空串（旧路 `render_via` 照 append）+ 引擎那条坏数据行
+#: （新路 cue：`_render` 见空串判坏数据、就地产一行 `MISS_LINE`）。
+def drop_quiet_lines(lines) -> list:
+    """把**这一次遮挡**里「有意不出行」的那些剔掉，**只动**传进来的那一段。
+
+    ★ 为什么归口成这一个函数：`quiet_engine_damage` 的替身表在两条路上留下的
+      形状不一样（空串 / `MISS_LINE`），而调用方（`content/mech.py::_self_cut`）只该
+      关心「那一笔自付血只出一行」。**引擎零改动** —— 坏数据行是引擎就地 append 进
+      `logs` 的普通字符串，包侧剔掉它不需要碰引擎。
+    ★ 边界：只比**逐字相等**，不做包含/前缀匹配 —— 玩家真的打出「⚠️ 这条表现没渲染出来」
+      这一句时（极不可能，但不是包侧能判定的），宁可留着也不误剔。
+    """
+    miss = _miss_line()
+    keep = [x for x in lines if str(x) != "" and (not miss or str(x) != miss)]
+    return keep
 
 
 @contextlib.contextmanager
