@@ -469,7 +469,7 @@ def _grant(battle, caster, m: dict, params: dict, logs, slot: str, **fields):
     if not isinstance(caster, dict) or not key or turns <= 0 or not state_rule(key):
         return ""
     _put(caster, key, _now(battle) + turns)
-    logs.append(T(slot, turns=int(turns), **fields))
+    logs.append(T(slot, t=int(round(_now(battle))), turns=int(turns), **fields))
     return key
 
 
@@ -556,7 +556,8 @@ def _ward(battle, caster, target, params, m, logs, slot: str) -> None:
     if not isinstance(holder, dict) or not key or turns <= 0:
         return
     _put(holder, key, _now(battle) + turns)
-    logs.append(T(slot, turns=int(turns), pct=_pct_of_rule(state_rule(key))))
+    logs.append(T(slot, t=int(round(_now(battle))), turns=int(turns),
+                     pct=_pct_of_rule(state_rule(key))))
 
 
 @EF.register_action("aeth_standfast")

@@ -322,12 +322,32 @@ chk("★ 活 cue 映射表读得到（活槽位清单的取件口）", bool(_liv
 #: `【{t:.0f} 刻】` 与 `【{t} 刻】` 都算合规形态 —— 引擎 62 个 cue 传的**一律是带格式符的那个**。
 _HAS_T = re.compile(r"\{t(?::[^{}]*)?\}")
 _STAMP_T = re.compile(r"【\{t(?::[^{}]*)?\} ?刻】")
-_src_combat = "".join(
-    io.open(os.path.join(_dp, _fn), encoding="utf-8", errors="replace").read()
-    for _dp, _dn, _fns in os.walk(REPO / "content") if "__pycache__" not in _dp
-    for _fn in _fns if _fn.endswith(".py"))
+#: ★ P0-1 续批三（2026-09-29 · aep0）：**修一处恒空的取件**（不是新加，是把死的写成活的）。
+#:   原来那行把 `if "__pycache__" not in _dp` / `if _fn.endswith(".py")` 挂在**生成器表达式的
+#:   `for` 子句**上 —— 语法上合法，语义上是**先算 `for` 再走 `if` 条件表达式**，
+#:   实测 `len(_src_combat) == 0`（一个文件都没读到）。⇒ 「活读端」集合退化成
+#:   「只有 cue 表那一档」，这一族一个也进不来 —— 这是上一轮**判据全绿却没接**的机械原因。
+#:   改成**显式循环 + 两个 if 都在循环体里**，取件真能读到 content/ 下的 .py。
+#:   ★ 强度变化：判据从「只核 cue 表」变成「核 content/ 下全部调用点」⇒ **只加强不削弱**。
+_src_chunks = []
+for _dp, _dn, _fns in os.walk(REPO / "content"):
+    if "__pycache__" in _dp:
+        continue
+    for _fn in _fns:
+        if _fn.endswith(".py"):
+            _src_chunks.append(io.open(os.path.join(_dp, _fn),
+                                       encoding="utf-8", errors="replace").read())
+_src_combat = "".join(_src_chunks)
 _TL_ALIVE = set(_live_cue) | set(
     re.findall(r'T\(\s*"(COMBAT_[A-Z0-9_]+)"', _src_combat))
+#: ★ P0-1 续批三（2026-09-29 · aep0）：**「活读端」的第二种形状 —— 经变量透传的槽位**。
+#:   上面那行只认 `T("COMBAT_…")` 的**字面量**调用点；而 content/mech.py 的 `_grant()` / `_ward()`
+#:   是 `logs.append(T(slot, …))` —— **槽位名在形参上**，字面量在**调用点**（`…, logs, "COMBAT_MECH_STANDFAST")`）。
+#:   两处盲区叠加（AST 枚举只看 logs.append 的第一个实参 · cue 表零命中）⇒ 这一族在两轮里
+#:   一直是「判据全绿、屏上没刻数」。本轮**从调用点现算**（不手抄名单）：
+#:   凡是作为**位置实参**出现在 `logs.append(` / `hand.lines` 那一族收尾处的
+#:   `COMBAT_*` 字符串字面量，都算「有活读端」。
+_TL_ALIVE |= set(re.findall(r'logs,\s*"(COMBAT_[A-Z0-9_]+)"', _src_combat))
 _tl_all = {k: v for k, v in _com.items() if _HAS_T.search(v)}
 #: ★ 只核**既活着、又真带时刻格**的那一批 —— 活槽位里还有续行片段/标题行（不带 `{t}`），
 #:   它们本来就该被这条判据跳过（P0-3 那条判据管它们，理由见 `_NO_TIME_BY_DESIGN`）。

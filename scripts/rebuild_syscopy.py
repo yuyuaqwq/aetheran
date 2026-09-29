@@ -1500,6 +1500,51 @@ DOC_PENDING = {
         "why": "copy-p5：旧值一屏**三个指令名**（查看 / 看 <编号> / 悬赏）。保留了『看 <编号>』那个指向（那是唯一告诉玩家「如何看委托全文」的地方——`SYS_BOARD_HOW`「接<编号>接活 · 我的委托看进度」里没它），去掉了多余的『悬赏』那一步（看板的人本来就在板边上）。",
     },
 
+
+    # ★ P0-1 续批三（2026-09-29 · aep0）：`_grant` / `_ward` 那一族 8 格补【N 刻】。
+    #   上一轮漏网的原因写在每条 why 里（AST 看不见 helper 间接入口 + cue 表零命中 ⇒ 两处盲区叠加）。
+
+    "COMBAT_MECH_STANDFAST": {
+        "old": "你不退。{turns} 刻内，落上来的东西都轻 {pct}%。",
+        "new": "🛡️【{t} 刻】你不退。{turns} 刻内，落上来的东西都轻 {pct}%。",
+        "why": "P0-1 续批三（2026-09-29 · 文案车道 aep0 · **补上一轮的漏网一族**）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」。★ **上一轮为什么漏**（探针与 AST 两处盲区叠加）：① 枚举只按 `logs.append` / `hand.lines` 找入口，而这 8 格**经 `_grant()` / `_ward()` 两个 helper 间接进 logs**⇒ AST 看不见；② `probe_texts` 那两条判据按 content/rules/battle_text.json（引擎 62 个 cue）取件，而这 8 格**零 cue 映射**（grep battle_text.json = 0 命中）⇒ 判据也取不到。两处盲区叠在一起，于是这一族在两轮里一直是「绿但没接」。★ 本轮判据**只加强不削弱**：给 probe_texts 加一条独立判据「经 `_grant`/`_ward` 进持久战斗日志的那一族必须带【N 刻】」，取件从**那两个 helper 本体**现算（不再靠 cue 表）。★ 读端（content/mech.py）：`_grant` / `_ward` 各补 `t=int(round(_now(battle)))` —— 一处改覆盖 8 格，**别在调用点逐个补**（那正是上一轮的漏法）。★ 写**纯 {t} 不写 {t:.0f}**：内容侧 `T()` 是字面 replace（content/cmds_ast.py:53-55），'{t:.0f}' 永远不被替换、会把字面量打上屏（真机 e2e 实测过）；引擎 cue 那一族走 str.format 才写 {t:.0f}—— 两侧形态不同是有原因的，别合并。★ 图标按真源 26_ §2.2 语义分组：🛡️ 防御/减伤/招架（STANDFAST/AEGIS/REARGUARD/RIPOSTE/FROSTVEIL 五格同族）· 🩸 付代价（血债割自己一道口子）· ✨ 增益（守夜把手上的暖挪过来 / 侧身闪避）。★ 这 8 格**不在**真源 17_ 槽位表里（grep '| COMBAT_MECH_… |' = 0 命中 ×8）⇒ 不是生成器拥有的行，登记在册是为了两态互锁（不登记就红在 probe_copy ⑤ 与 probe_generators ②③）。",
+    },
+    "COMBAT_MECH_AEGIS": {
+        "old": "你先把话垫在前面 —— {turns} 刻内，落上来的东西轻 {pct}%。",
+        "new": "🛡️【{t} 刻】你先把话垫在前面 —— {turns} 刻内，落上来的东西轻 {pct}%。",
+        "why": "P0-1 续批三（2026-09-29 · 文案车道 aep0 · **补上一轮的漏网一族**）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」。★ **上一轮为什么漏**（探针与 AST 两处盲区叠加）：① 枚举只按 `logs.append` / `hand.lines` 找入口，而这 8 格**经 `_grant()` / `_ward()` 两个 helper 间接进 logs**⇒ AST 看不见；② `probe_texts` 那两条判据按 content/rules/battle_text.json（引擎 62 个 cue）取件，而这 8 格**零 cue 映射**（grep battle_text.json = 0 命中）⇒ 判据也取不到。两处盲区叠在一起，于是这一族在两轮里一直是「绿但没接」。★ 本轮判据**只加强不削弱**：给 probe_texts 加一条独立判据「经 `_grant`/`_ward` 进持久战斗日志的那一族必须带【N 刻】」，取件从**那两个 helper 本体**现算（不再靠 cue 表）。★ 读端（content/mech.py）：`_grant` / `_ward` 各补 `t=int(round(_now(battle)))` —— 一处改覆盖 8 格，**别在调用点逐个补**（那正是上一轮的漏法）。★ 写**纯 {t} 不写 {t:.0f}**：内容侧 `T()` 是字面 replace（content/cmds_ast.py:53-55），'{t:.0f}' 永远不被替换、会把字面量打上屏（真机 e2e 实测过）；引擎 cue 那一族走 str.format 才写 {t:.0f}—— 两侧形态不同是有原因的，别合并。★ 图标按真源 26_ §2.2 语义分组：🛡️ 防御/减伤/招架（STANDFAST/AEGIS/REARGUARD/RIPOSTE/FROSTVEIL 五格同族）· 🩸 付代价（血债割自己一道口子）· ✨ 增益（守夜把手上的暖挪过来 / 侧身闪避）。★ 这 8 格**不在**真源 17_ 槽位表里（grep '| COMBAT_MECH_… |' = 0 命中 ×8）⇒ 不是生成器拥有的行，登记在册是为了两态互锁（不登记就红在 probe_copy ⑤ 与 probe_generators ②③）。",
+    },
+    "COMBAT_MECH_REARGUARD": {
+        "old": "你把背后让出来 —— 这半拍晚一步（下一次出手推后 {ticks} 刻），换来 {turns} 刻里落上来的东西轻 {pct}%。",
+        "new": "🛡️【{t} 刻】你把背后让出来 —— 这半拍晚一步（下一次出手推后 {ticks} 刻），换来 {turns} 刻里落上来的东西轻 {pct}%。",
+        "why": "P0-1 续批三（2026-09-29 · 文案车道 aep0 · **补上一轮的漏网一族**）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」。★ **上一轮为什么漏**（探针与 AST 两处盲区叠加）：① 枚举只按 `logs.append` / `hand.lines` 找入口，而这 8 格**经 `_grant()` / `_ward()` 两个 helper 间接进 logs**⇒ AST 看不见；② `probe_texts` 那两条判据按 content/rules/battle_text.json（引擎 62 个 cue）取件，而这 8 格**零 cue 映射**（grep battle_text.json = 0 命中）⇒ 判据也取不到。两处盲区叠在一起，于是这一族在两轮里一直是「绿但没接」。★ 本轮判据**只加强不削弱**：给 probe_texts 加一条独立判据「经 `_grant`/`_ward` 进持久战斗日志的那一族必须带【N 刻】」，取件从**那两个 helper 本体**现算（不再靠 cue 表）。★ 读端（content/mech.py）：`_grant` / `_ward` 各补 `t=int(round(_now(battle)))` —— 一处改覆盖 8 格，**别在调用点逐个补**（那正是上一轮的漏法）。★ 写**纯 {t} 不写 {t:.0f}**：内容侧 `T()` 是字面 replace（content/cmds_ast.py:53-55），'{t:.0f}' 永远不被替换、会把字面量打上屏（真机 e2e 实测过）；引擎 cue 那一族走 str.format 才写 {t:.0f}—— 两侧形态不同是有原因的，别合并。★ 图标按真源 26_ §2.2 语义分组：🛡️ 防御/减伤/招架（STANDFAST/AEGIS/REARGUARD/RIPOSTE/FROSTVEIL 五格同族）· 🩸 付代价（血债割自己一道口子）· ✨ 增益（守夜把手上的暖挪过来 / 侧身闪避）。★ 这 8 格**不在**真源 17_ 槽位表里（grep '| COMBAT_MECH_… |' = 0 命中 ×8）⇒ 不是生成器拥有的行，登记在册是为了两态互锁（不登记就红在 probe_copy ⑤ 与 probe_generators ②③）。",
+    },
+    "COMBAT_MECH_BLOODDEBT": {
+        "old": "你割开自己一道口子 —— 接下来 {turns} 刻，你的刀重 {pct}%。",
+        "new": "🩸【{t} 刻】你割开自己一道口子 —— 接下来 {turns} 刻，你的刀重 {pct}%。",
+        "why": "P0-1 续批三（2026-09-29 · 文案车道 aep0 · **补上一轮的漏网一族**）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」。★ **上一轮为什么漏**（探针与 AST 两处盲区叠加）：① 枚举只按 `logs.append` / `hand.lines` 找入口，而这 8 格**经 `_grant()` / `_ward()` 两个 helper 间接进 logs**⇒ AST 看不见；② `probe_texts` 那两条判据按 content/rules/battle_text.json（引擎 62 个 cue）取件，而这 8 格**零 cue 映射**（grep battle_text.json = 0 命中）⇒ 判据也取不到。两处盲区叠在一起，于是这一族在两轮里一直是「绿但没接」。★ 本轮判据**只加强不削弱**：给 probe_texts 加一条独立判据「经 `_grant`/`_ward` 进持久战斗日志的那一族必须带【N 刻】」，取件从**那两个 helper 本体**现算（不再靠 cue 表）。★ 读端（content/mech.py）：`_grant` / `_ward` 各补 `t=int(round(_now(battle)))` —— 一处改覆盖 8 格，**别在调用点逐个补**（那正是上一轮的漏法）。★ 写**纯 {t} 不写 {t:.0f}**：内容侧 `T()` 是字面 replace（content/cmds_ast.py:53-55），'{t:.0f}' 永远不被替换、会把字面量打上屏（真机 e2e 实测过）；引擎 cue 那一族走 str.format 才写 {t:.0f}—— 两侧形态不同是有原因的，别合并。★ 图标按真源 26_ §2.2 语义分组：🛡️ 防御/减伤/招架（STANDFAST/AEGIS/REARGUARD/RIPOSTE/FROSTVEIL 五格同族）· 🩸 付代价（血债割自己一道口子）· ✨ 增益（守夜把手上的暖挪过来 / 侧身闪避）。★ 这 8 格**不在**真源 17_ 槽位表里（grep '| COMBAT_MECH_… |' = 0 命中 ×8）⇒ 不是生成器拥有的行，登记在册是为了两态互锁（不登记就红在 probe_copy ⑤ 与 probe_generators ②③）。",
+    },
+    "COMBAT_MECH_RIPOSTE": {
+        "old": "你不躲 —— {turns} 刻里谁碰你一下，就得挨你一刀（{pct}% 的攻击）。",
+        "new": "🛡️【{t} 刻】你不躲 —— {turns} 刻里谁碰你一下，就得挨你一刀（{pct}% 的攻击）。",
+        "why": "P0-1 续批三（2026-09-29 · 文案车道 aep0 · **补上一轮的漏网一族**）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」。★ **上一轮为什么漏**（探针与 AST 两处盲区叠加）：① 枚举只按 `logs.append` / `hand.lines` 找入口，而这 8 格**经 `_grant()` / `_ward()` 两个 helper 间接进 logs**⇒ AST 看不见；② `probe_texts` 那两条判据按 content/rules/battle_text.json（引擎 62 个 cue）取件，而这 8 格**零 cue 映射**（grep battle_text.json = 0 命中）⇒ 判据也取不到。两处盲区叠在一起，于是这一族在两轮里一直是「绿但没接」。★ 本轮判据**只加强不削弱**：给 probe_texts 加一条独立判据「经 `_grant`/`_ward` 进持久战斗日志的那一族必须带【N 刻】」，取件从**那两个 helper 本体**现算（不再靠 cue 表）。★ 读端（content/mech.py）：`_grant` / `_ward` 各补 `t=int(round(_now(battle)))` —— 一处改覆盖 8 格，**别在调用点逐个补**（那正是上一轮的漏法）。★ 写**纯 {t} 不写 {t:.0f}**：内容侧 `T()` 是字面 replace（content/cmds_ast.py:53-55），'{t:.0f}' 永远不被替换、会把字面量打上屏（真机 e2e 实测过）；引擎 cue 那一族走 str.format 才写 {t:.0f}—— 两侧形态不同是有原因的，别合并。★ 图标按真源 26_ §2.2 语义分组：🛡️ 防御/减伤/招架（STANDFAST/AEGIS/REARGUARD/RIPOSTE/FROSTVEIL 五格同族）· 🩸 付代价（血债割自己一道口子）· ✨ 增益（守夜把手上的暖挪过来 / 侧身闪避）。★ 这 8 格**不在**真源 17_ 槽位表里（grep '| COMBAT_MECH_… |' = 0 命中 ×8）⇒ 不是生成器拥有的行，登记在册是为了两态互锁（不登记就红在 probe_copy ⑤ 与 probe_generators ②③）。",
+    },
+    "COMBAT_MECH_FROSTVEIL": {
+        "old": "霜从你脚底结上来 —— {turns} 刻里落上来的东西轻 {pct}%，你自己的法术也轻 {cost}%。",
+        "new": "🛡️【{t} 刻】霜从你脚底结上来 —— {turns} 刻里落上来的东西轻 {pct}%，你自己的法术也轻 {cost}%。",
+        "why": "P0-1 续批三（2026-09-29 · 文案车道 aep0 · **补上一轮的漏网一族**）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」。★ **上一轮为什么漏**（探针与 AST 两处盲区叠加）：① 枚举只按 `logs.append` / `hand.lines` 找入口，而这 8 格**经 `_grant()` / `_ward()` 两个 helper 间接进 logs**⇒ AST 看不见；② `probe_texts` 那两条判据按 content/rules/battle_text.json（引擎 62 个 cue）取件，而这 8 格**零 cue 映射**（grep battle_text.json = 0 命中）⇒ 判据也取不到。两处盲区叠在一起，于是这一族在两轮里一直是「绿但没接」。★ 本轮判据**只加强不削弱**：给 probe_texts 加一条独立判据「经 `_grant`/`_ward` 进持久战斗日志的那一族必须带【N 刻】」，取件从**那两个 helper 本体**现算（不再靠 cue 表）。★ 读端（content/mech.py）：`_grant` / `_ward` 各补 `t=int(round(_now(battle)))` —— 一处改覆盖 8 格，**别在调用点逐个补**（那正是上一轮的漏法）。★ 写**纯 {t} 不写 {t:.0f}**：内容侧 `T()` 是字面 replace（content/cmds_ast.py:53-55），'{t:.0f}' 永远不被替换、会把字面量打上屏（真机 e2e 实测过）；引擎 cue 那一族走 str.format 才写 {t:.0f}—— 两侧形态不同是有原因的，别合并。★ 图标按真源 26_ §2.2 语义分组：🛡️ 防御/减伤/招架（STANDFAST/AEGIS/REARGUARD/RIPOSTE/FROSTVEIL 五格同族）· 🩸 付代价（血债割自己一道口子）· ✨ 增益（守夜把手上的暖挪过来 / 侧身闪避）。★ 这 8 格**不在**真源 17_ 槽位表里（grep '| COMBAT_MECH_… |' = 0 命中 ×8）⇒ 不是生成器拥有的行，登记在册是为了两态互锁（不登记就红在 probe_copy ⑤ 与 probe_generators ②③）。",
+    },
+    "COMBAT_MECH_NIGHTWATCH": {
+        "old": "你把灯挪到自己跟前 —— {turns} 刻里落上来的东西轻 {pct}%，手上的暖多 {gain}%。",
+        "new": "✨【{t} 刻】你把灯挪到自己跟前 —— {turns} 刻里落上来的东西轻 {pct}%，手上的暖多 {gain}%。",
+        "why": "P0-1 续批三（2026-09-29 · 文案车道 aep0 · **补上一轮的漏网一族**）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」。★ **上一轮为什么漏**（探针与 AST 两处盲区叠加）：① 枚举只按 `logs.append` / `hand.lines` 找入口，而这 8 格**经 `_grant()` / `_ward()` 两个 helper 间接进 logs**⇒ AST 看不见；② `probe_texts` 那两条判据按 content/rules/battle_text.json（引擎 62 个 cue）取件，而这 8 格**零 cue 映射**（grep battle_text.json = 0 命中）⇒ 判据也取不到。两处盲区叠在一起，于是这一族在两轮里一直是「绿但没接」。★ 本轮判据**只加强不削弱**：给 probe_texts 加一条独立判据「经 `_grant`/`_ward` 进持久战斗日志的那一族必须带【N 刻】」，取件从**那两个 helper 本体**现算（不再靠 cue 表）。★ 读端（content/mech.py）：`_grant` / `_ward` 各补 `t=int(round(_now(battle)))` —— 一处改覆盖 8 格，**别在调用点逐个补**（那正是上一轮的漏法）。★ 写**纯 {t} 不写 {t:.0f}**：内容侧 `T()` 是字面 replace（content/cmds_ast.py:53-55），'{t:.0f}' 永远不被替换、会把字面量打上屏（真机 e2e 实测过）；引擎 cue 那一族走 str.format 才写 {t:.0f}—— 两侧形态不同是有原因的，别合并。★ 图标按真源 26_ §2.2 语义分组：🛡️ 防御/减伤/招架（STANDFAST/AEGIS/REARGUARD/RIPOSTE/FROSTVEIL 五格同族）· 🩸 付代价（血债割自己一道口子）· ✨ 增益（守夜把手上的暖挪过来 / 侧身闪避）。★ 这 8 格**不在**真源 17_ 槽位表里（grep '| COMBAT_MECH_… |' = 0 命中 ×8）⇒ 不是生成器拥有的行，登记在册是为了两态互锁（不登记就红在 probe_copy ⑤ 与 probe_generators ②③）。",
+    },
+    "COMBAT_MECH_SIDESTEP": {
+        "old": "你侧过半个身子 —— {turns} 刻里闪避涨 {pct}%。",
+        "new": "✨【{t} 刻】你侧过半个身子 —— {turns} 刻里闪避涨 {pct}%。",
+        "why": "P0-1 续批三（2026-09-29 · 文案车道 aep0 · **补上一轮的漏网一族**）：真源 26_ §三 优化 1 逐字「所有战斗日志行统一以【N 刻】开头」。★ **上一轮为什么漏**（探针与 AST 两处盲区叠加）：① 枚举只按 `logs.append` / `hand.lines` 找入口，而这 8 格**经 `_grant()` / `_ward()` 两个 helper 间接进 logs**⇒ AST 看不见；② `probe_texts` 那两条判据按 content/rules/battle_text.json（引擎 62 个 cue）取件，而这 8 格**零 cue 映射**（grep battle_text.json = 0 命中）⇒ 判据也取不到。两处盲区叠在一起，于是这一族在两轮里一直是「绿但没接」。★ 本轮判据**只加强不削弱**：给 probe_texts 加一条独立判据「经 `_grant`/`_ward` 进持久战斗日志的那一族必须带【N 刻】」，取件从**那两个 helper 本体**现算（不再靠 cue 表）。★ 读端（content/mech.py）：`_grant` / `_ward` 各补 `t=int(round(_now(battle)))` —— 一处改覆盖 8 格，**别在调用点逐个补**（那正是上一轮的漏法）。★ 写**纯 {t} 不写 {t:.0f}**：内容侧 `T()` 是字面 replace（content/cmds_ast.py:53-55），'{t:.0f}' 永远不被替换、会把字面量打上屏（真机 e2e 实测过）；引擎 cue 那一族走 str.format 才写 {t:.0f}—— 两侧形态不同是有原因的，别合并。★ 图标按真源 26_ §2.2 语义分组：🛡️ 防御/减伤/招架（STANDFAST/AEGIS/REARGUARD/RIPOSTE/FROSTVEIL 五格同族）· 🩸 付代价（血债割自己一道口子）· ✨ 增益（守夜把手上的暖挪过来 / 侧身闪避）。★ 这 8 格**不在**真源 17_ 槽位表里（grep '| COMBAT_MECH_… |' = 0 命中 ×8）⇒ 不是生成器拥有的行，登记在册是为了两态互锁（不登记就红在 probe_copy ⑤ 与 probe_generators ②③）。",
+    },
+
 }
 
 
