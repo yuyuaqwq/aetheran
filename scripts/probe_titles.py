@@ -543,24 +543,18 @@ chk("★ P1-49 ⑨-a 会被自己打破的数（read_all / heard / visited）：
     "对不上：%s" % (_stale49[:4] if _stale49
                     else "查了 %d 处手抄数（全对得上）" % len(_copied49)))
 
-# ⑨-b ★ 反证：**真的给那棵树加两句**（照着 P1-46/47 干过的事重做一遍）
-#    ⇒ ⑨-a 必须当场抓到它 —— 若本条恒绿，它钉的就是个摆设。
-_bak49 = json.loads(json.dumps(DL["dlg_hagen"]))
-try:
-    DL["dlg_hagen"]["nodes"]["daily"]["texts"].append({"text": "⑨-b 反证用 · 树又长了两句"})
-    DL["dlg_hagen"]["nodes"]["daily"]["texts"].append({"text": "⑨-b 反证用 · 树又长了两句之二"})
-    _live_b49 = _live_counts(_copied49, PO, DL)
-    _stale_b49 = [(tg or k, n, _live_b49.get((k, tg)))
-                  for _no, k, tg, n in _copied49 if tg and (k, tg) in _live_b49
-                  and _live_b49[(k, tg)] != n]
-    chk("★ 反证：给 dlg_hagen 加两句（现算 26→28、真源仍写 9）⇒ ⑨-a 必抓到（判据不恒真）",
-        any(t == "@dlg_hagen" for t, _n, _v in _stale_b49),
-        "抓到：%s" % (_stale_b49 or "没抓到 ⇒ ⑨-a 恒真，判据是摆设"))
-finally:
-    DL["dlg_hagen"] = _bak49            # 按 key 精确还原（反证不许改坏被测数据）
-    chk("★ 反证跑完域逐字未变（备份与被测对象同一批对象那种恒真）",
-        DL["dlg_hagen"] == _bak49, "dlg_hagen 仍 %d 句"
-        % sum(len(nd.get("texts") or []) for nd in DL["dlg_hagen"]["nodes"].values()))
+# ⑨-b ★ 反证（2026-09-29 收口改 · 构造性）：heard 已改 `*` 写口（真源不再手抄数字），
+#   旧反证「给树加两句 → 抓到手抄 9」依赖的现场形态（真源写 9）不复存在 ⇒ 失效。
+#   改为**直接构造**「有人把手抄数写回真源」的假数据，断言对账器必抓到
+#   「9 vs 现算」——无论现场有没有真手抄，对账器每轮都被验证一次（防摆设）。
+_fake49 = [(0, "heard", "@dlg_hagen", 9)]
+_live_f49 = _live_counts(_fake49, PO, DL)
+_stale_f49 = [(tg or k, n, _live_f49.get((k, tg)))
+              for _no, k, tg, n in _fake49 if tg and (k, tg) in _live_f49
+              and _live_f49[(k, tg)] != n]
+chk("★ 反证（构造）：假装真源又手抄「heard@dlg_hagen>=9」⇒ 对账器必抓到（判据不恒真）",
+    bool(_stale_f49) and _stale_f49[0][1] == 9 and _stale_f49[0][2] != 9,
+    "抓到：%s" % (_stale_f49 if _stale_f49 else "没抓到 ⇒ 对账器是摆设"))
 
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))

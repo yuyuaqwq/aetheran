@@ -128,6 +128,14 @@ def clause_node(part: str, where: str) -> dict:
             raise SystemExit("口径 %s：%s 不该带目标（写成 键>=数）" % (where, key))
         if key in COUNT_AT_KEYS and not has_at:
             raise SystemExit("口径 %s：%s 要写成 键@目标>=数（少了目标就没处判）" % (where, key))
+        if num.strip() == "*":
+            # ★ 2026-09-29 收口（P1-49 推荐落法②）: `*` = 「全部 = 现算」——禁手抄数字
+            #   （手抄数每轮都会被自己打破：9 → 23 → 26）。目前只对 heard@对话树开放
+            #   （read_all / visited 的「数」与多文档一致性对账纠缠，且被 ⑨ 判据独立看护，
+            #   维持手抄+对账形态）。归一化在 main2 组装前一并做（_resolve_all）。
+            if key != "heard":
+                raise SystemExit("口径 %s：%r —— `*`（现算全部）只适用于 heard@对话树" % (where, part))
+            return {"op": "ge", "left": _seq(key, target), "right": {"const": "*"}}
         if not num.strip().lstrip("-").isdigit():
             raise SystemExit("口径 %s：%r 的数是手滑了吗（要整数）" % (where, part))
         return {"op": "ge", "left": _seq(key, target), "right": {"const": int(num.strip())}}
@@ -154,6 +162,30 @@ def cond_node(expr: str, where: str) -> dict:
         raise SystemExit("口径 %s：条件是空的" % where)
     nodes = [clause_node(p, where) for p in parts]
     return nodes[0] if len(nodes) == 1 else {"op": "and", "args": nodes}
+
+
+def _resolve_all(node: dict, D: dict) -> dict:
+    """`heard@树>=*` 的「全部」→ 现算条数（写口唯一化：星号只在生成这一步落成数字）。
+
+    ★ 2026-09-29 收口（P1-49）：`*` = 该树全部台词条数——**禁手抄数字**（手抄数每轮
+    都会被自己打破：9 → 23 → 26）。归一化放「解析之后、对账/写域之前」：下游
+    （counter_ok / titles.json）见到的永远是数字，**本模块是唯一写口**。
+    """
+    op = node.get("op")
+    if op in ("and", "or"):
+        return {"op": op, "args": [_resolve_all(x, D) for x in (node.get("args") or [])]}
+    r = node.get("right")
+    if op == "ge" and isinstance(r, dict) and r.get("const") == "*":
+        steps = node["left"]["field"]
+        target = steps[1]["key"] if len(steps) > 1 else None
+        tree = (D.get("dialogues") or {}).get(str(target)) or {}
+        if not tree:
+            raise SystemExit("heard@%s>=* 不是一棵对话树" % target)
+        n = sum(len(nd.get("texts") or []) for nd in (tree.get("nodes") or {}).values())
+        out = dict(node)
+        out["right"] = {"const": int(n)}
+        return out
+    return node
 
 
 # ══════════════════════════════════════════════════════════════
@@ -350,7 +382,7 @@ def main2(src, conds, dry) -> None:      # noqa: C901 —— 一段直叙的重�
         if cid in seen:
             raise SystemExit("id 重复：%s" % cid)
         seen.add(cid)
-        node = cond_node(expr, "条件 #%d" % no)
+        node = _resolve_all(cond_node(expr, "条件 #%d" % no), D)
         for field, val, target in walk(node, []):
             k = _key_of(field)
             if k in COUNT_KEYS + COUNT_AT_KEYS:

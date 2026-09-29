@@ -116,7 +116,7 @@
     "how": "打断成功累计 10 次",
     "seen": "",
     "where": "名字后面（观察 / 状态）",
-    "why": "21「打断成功累计 10 次」；计数口 foot.interrupts —— 由 `content/codex.py::note_interrupt` 写（2026-09-28 接线：`content/battle_acts.py::Hand._interrupt` 里 `broke` 为真时落一次）",
+    "why": "21「打断成功累计 10 次」；计数口 foot.interrupts —— 已接线（2026-09-28：content/battle_acts.py::Hand._interrupt 落点 → codex.note_interrupt）；★ 2026-09-29 收口：原名「三次打断」与阈值 10 自相矛盾（审计 L3874），包域 978c91b 已改名，本行补搬真源",
     "cond": {
       "op": "ge",
       "left": {
@@ -239,7 +239,7 @@
     "how": "听完哈根的全部对话",
     "seen": "",
     "where": "名字后面（观察 / 状态）",
-    "why": "21「听完哈根的全部对话」；9 = dlg_hagen 全部台词条数（rebuild 现算；B3-4 给哈根加了装备事件那一条：8 → 9）—— 取句顺序那条坑见 P-12",
+    "why": "21「听完哈根的全部对话」；* = dlg_hagen 全部台词条数（由 rebuild 现算写口 · 禁手抄数字；2026-09-29 收口改——原手抄的 9 已随树长大失效 9→23→26，此后树再长无需改真源）—— 取句顺序那条坑见 P-12",
     "cond": {
       "op": "ge",
       "left": {
@@ -254,7 +254,7 @@
         ]
       },
       "right": {
-        "const": 9
+        "const": 26
       }
     }
   }

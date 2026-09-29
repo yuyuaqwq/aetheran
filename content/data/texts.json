@@ -1170,8 +1170,8 @@
     "category": "称号",
     "desc": "称号 · 跟着名字走，不给数值"
   },
-  "TITLE_TRIPLE_INTERRUPT": {
-    "value": "三次打断",
+  "TITLE_TEN_INTERRUPTS": {
+    "value": "十次打断",
     "params": [],
     "category": "称号",
     "desc": "称号 · 跟着名字走，不给数值"
