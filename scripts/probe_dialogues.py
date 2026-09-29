@@ -2171,6 +2171,170 @@ finally:
         dl["dlg_grey"] = _voice_bak
 
 
+# ㉛ ★ P1-41（2026-09-29 · 文案修复车道 P1）—— **「节奏」**（23_ §一② 语气六要素的第 2 条）
+#    缺陷本体：㊰–㉚ 五十多条判据里，管「腔」的那一条（㉚）**只读「用词」那一行**。
+#      · ㉚ 答的是「这个人有没有用他的词」—— 树级、44 个字面标记、覆盖 100%；
+#      · 而 23_ §一②「句子节奏 · 急/慢/断/拖」是**语气六要素里独立的一条**，
+#        14 位在 §二 逐位各写了一行「节奏 …」，**至今没有一条判据读它**。
+#    为什么这条最玩家可感：用词管「他挑哪个字」，节奏管「**他一句话说多长、断几句**」。
+#      屏上先来的是句子长度与断句 —— 节奏塌了，台词立刻显得像同一个人写的。
+#    ★ 真源现读、**不抄镜像表**（与 ㉚ 同一条纪律）：节奏档从 23_ §二 的「节奏」行现解析。
+#    ★ 这条判据**只加强**（新增 ㉛-a…d，既有 50 余条一个字未动）。
+
+#: 「短」/「拖」两类**从真源那一行现读**的判别词（本文件不手写「哪几位是短句」名单）。
+#: ⚠ 只认**字面写着节奏方向且能量出来**的档；「慢，稳」「急，短促，命令式」「拖」这类
+#:   是形容/单字 —— 机器判不了或不稳（皮特「醉时拖」实测长句 12.7% 比哈根 5.3% 高、却属短句族），
+#:   一律当「—」不参与本判据，**不硬编**（硬编就是自己造口径）。
+_RHYTHM_SHORT_OF_31 = ("三五个字", "短不是", "短，砸着说", "短句 + 重复")
+_RHYTHM_DRAG_OF_31 = ("塞三件事", "说不完", "自己打断自己")
+
+
+def _rhythm_spec_of_31():
+    """现解析 23_ §二的「节奏」行：返回 [(序号, 名字, 节奏档原文)]。读不到 = 空 ⇒ ㉛-a 当场红。"""
+    try:
+        txt = Path(_VOICE_SRC).read_text(encoding="utf-8")
+        sec = txt[txt.index("## 二、14 位"):txt.index("## 三、这次改了什么")]
+    except Exception:
+        return []
+    out = []
+    for blk in re.split(r"\n### ", sec)[1:]:
+        m = re.match(r"(\d+)\s*·\s*(.+?)$", blk.split("\n", 1)[0].strip())
+        if not m:
+            continue
+        w = re.search(r"^\s*节奏\s+(.+?)$", blk, re.M)
+        out.append((m.group(1), m.group(2).strip(), (w.group(1) if w else "").replace("**", "").strip()))
+    return out
+
+
+def _clauses_of_31(text):
+    """一段台词 → 分句清单（屏上真正看到的「一句一句」）。
+
+    ★ **只在句末标点断句**。`，、` 是句内停顿（同一口气），`…` 是拖（还没说完）——
+      一律不切。★ 这不是洁癖：实测按逗号切，14 位的「≥3 分句段占比」全落在 90–100%，
+      **一位也分不开** ⇒ 那种判据是恒真的假绿。按句末切才有区分度（哈根 10% vs 贝拉 45%）。
+    ★ 动作括号（……）不是他嘴里的话，不进分句。
+    """
+    out = []
+    for s in re.findall(r"「([^」]+)」", text or ""):
+        s = s.replace("…", "").replace(" ", "").replace("　", "")
+        out.extend([p for p in re.split(r"[。！？]", s) if p.strip()])
+    return out
+
+
+def _clauses_of_tree_31(tree_id):
+    """一棵树的全部分句（一棵 = 一位 NPC 的全部对话）。"""
+    out = []
+    for node in ((dl.get(tree_id) or {}).get("nodes") or {}):
+        for it in (((dl.get(tree_id) or {})["nodes"][node]).get("texts") or []):
+            out.extend(_clauses_of_31(it.get("text", "")))
+    return out
+
+
+#: 「长分句」= 一句 ≥ 12 个字。★ 12 不是拍的：屏上一行放 14 字，10 字那档会把「整齐、句子短且完整」
+#:   的玛莎（10–12 字的制度句）误算成拖 ⇒ 两档拉平、判据失去区分度（实测 10 字档：玛莎 40.7% > 哈根 10.5%，
+#:   而真源明明说玛莎句子短）。12 字档：哈根 5.3 / 莉安 6.3 ← 短，贝拉 34.3 / 老陶 23.9 ← 拖。
+_RHYTHM_LONG_LEN_31 = 12
+#: 组间倍数下限（相对关系判据）。**不用绝对阈值**——逐位钉绝对数是美术判断、必然被调参冲垮；
+#:   真正要保护的是「真源说『他短』的那些人，句子确实比『他拖』的那些人短」。
+#:   实测域内两档中位数：短 16.8% vs 拖 36.2%（约 2.2 倍）⇒ 钉 1.3 倍留足余量。
+_RHYTHM_DRAG_RATIO_31 = 1.3
+
+_rhythm_spec = _rhythm_spec_of_31()
+_rhythm_n2t = _npc_name_to_tree_30()
+_rhythm_gap = []
+_rhythm_short, _rhythm_drag = [], []
+for _idx, _raw, _rh in _rhythm_spec:
+    _nm = re.split(r"（", _raw)[0].strip()
+    _tr = _rhythm_n2t.get(_nm)
+    if not _tr or _tr not in dl:
+        _rhythm_gap.append("%s：对话树缺失" % _nm)
+        continue
+    _pl = _clauses_of_tree_31(_tr)
+    if not _pl:
+        _rhythm_gap.append("%s：没有可分句的台词" % _nm)
+        continue
+    _pct = 100.0 * sum(1 for p in _pl if len(p) >= _RHYTHM_LONG_LEN_31) / len(_pl)
+    if any(t in _rh for t in _RHYTHM_SHORT_OF_31):
+        _rhythm_short.append((_nm, _pct))
+    elif any(t in _rh for t in _RHYTHM_DRAG_OF_31):
+        _rhythm_drag.append((_nm, _pct))
+
+
+def _median(xs):
+    xs = sorted(xs)
+    n = len(xs)
+    return 0.0 if not n else (xs[n // 2] if n % 2 else (xs[n // 2 - 1] + xs[n // 2]) / 2.0)
+
+
+# ㉛-a ★ **覆盖面自检**：真源读得到、且「短」与「拖」两档都真的解析出了人。
+#    （读不到真源 / 判别词全落空 ⇒ 两组都空 ⇒ 下面 ㉛-b 变成「0 ≥ 0」而**恒绿**，这条专治那种假绿。）
+chk("㉛-a ★ 「节奏」覆盖面：23_ §二 解析 %d 位 · 短句位 %d 位 · 拖句位 %d 位（任一为 0 ⇒ ㉛-b 会假绿）"
+    % (len(_rhythm_spec), len(_rhythm_short), len(_rhythm_drag)),
+    len(_rhythm_spec) >= 14 and _rhythm_short and _rhythm_drag and not _rhythm_gap,
+    "全部就绪 · 短句位：%s ｜ 拖句位：%s" % (
+        ["%s%.0f%%" % x for x in _rhythm_short], ["%s%.0f%%" % x for x in _rhythm_drag])
+    if (len(_rhythm_spec) >= 14 and _rhythm_short and _rhythm_drag and not _rhythm_gap)
+    else "解析 %d 位 · 短 %d · 拖 %d · 缺：%s" % (
+        len(_rhythm_spec), len(_rhythm_short), len(_rhythm_drag), _rhythm_gap))
+
+# ㉛-b ★ **主判据**：真源说「他短」的那几位，长句占比的中位数必须**明显低于**说「他拖」的那几位。
+#    这是 23_ §一② 在域里唯一说得清、且能量出来的样子（节奏档是**相对关系**，不是绝对美术值）。
+_med_s, _med_d = _median([p for _n, p in _rhythm_short]), _median([p for _n, p in _rhythm_drag])
+chk("㉛-b ★ 「拖」位的长句确实比「短」位更拖：拖句位中位 %.0f%% ≥ 短句位中位 %.0f%% × %.1f（相对关系判据）"
+    % (_med_d, _med_s, _RHYTHM_DRAG_RATIO_31),
+    _med_d >= _med_s * _RHYTHM_DRAG_RATIO_31,
+    "短句位 %s（中位 %.0f%%）· 拖句位 %s（中位 %.0f%% · %.1f 倍）"
+    % (["%s%.0f%%" % x for x in _rhythm_short], _med_s,
+       ["%s%.0f%%" % x for x in _rhythm_drag], _med_d,
+       (_med_d / _med_s) if _med_s else 0.0))
+
+# ㉛-c ★ **反证（判据不恒真）**：把「拖句位」里最拖的那位（贝拉）整棵树换成极短分句
+#    ⇒ 两档中位数会拉平/倒挂 ⇒ ㉛-b 必抓到。
+#    ★ 注入后**逐字还原**并单独用 ㉛-d 核（㉗-e 那个「备份与被测对象是同一批对象」的恒真坑）。
+# ★ 反证要压**整组**：只压一位，中位数会被另一位撑着不动（实测 12 字档：压完贝拉，
+#   拖组中位 29% → 14%，仍高于底线 11% ⇒ 判据抓不住 = 那个反证是无效的）。
+_rh_trees_31 = []
+for _i0, _r0, _rh0 in _rhythm_spec:
+    _n0 = re.split(r"（", _r0)[0].strip()
+    _t0 = _rhythm_n2t.get(_n0)
+    if _t0 and _t0 in dl and _n0 in [x[0] for x in _rhythm_drag]:
+        _rh_trees_31.append(_t0)
+_rh_bak = dict((t, json.dumps(dl[t], ensure_ascii=False, sort_keys=True)) for t in _rh_trees_31)
+try:
+    for _t3 in _rh_trees_31:
+        for _b3 in (dl[_t3].get("nodes") or {}).values():
+            for _it in (_b3.get("texts") or []):
+                _it["text"] = "「短。」" + chr(10) + "「就这些。」"
+    _d2 = []
+    for _i2, _r2, _rh2 in _rhythm_spec:
+        _n2 = re.split(r"（", _r2)[0].strip()
+        if _n2 not in [x[0] for x in _rhythm_drag]:
+            continue
+        _t2 = _rhythm_n2t.get(_n2)
+        _p2 = _clauses_of_tree_31(_t2) if _t2 in dl else []
+        if _p2:
+            _d2.append(100.0 * sum(1 for p in _p2 if len(p) >= _RHYTHM_LONG_LEN_31) / len(_p2))
+    _med_d2 = _median(_d2)
+    # 底线与 ㉛-b **同一条**（同一份 _med_s 与同一个倍率）—— 反证算的是「把最拖那位抹平之后还过不过」
+    chk("㉛-c ★ 反证：把拖句位**整组**（%d 棵）换成极短分句 ⇒ ㉛-b 必抓到（判据不恒真）" % len(_rh_trees_31),
+        _med_d2 < _med_s * _RHYTHM_DRAG_RATIO_31,
+        "压完拖句位中位 %.0f%% < 底线 %.0f%%（同一份 _med_s × %.1f，抓得住）"
+        % (_med_d2, _med_s * _RHYTHM_DRAG_RATIO_31, _RHYTHM_DRAG_RATIO_31))
+finally:
+    for _t4, _b4 in _rh_bak.items():
+        dl[_t4] = json.loads(_b4)
+
+# ㉛-d ★ 反证跑完域**逐字未变**（否则 ㉛-c 的「抓得住」是自说自话）
+chk("㉛-d ★ 反证跑完域逐字未变（备份与被测对象同一批对象那种恒真，㉗-e 的同族坑）",
+    all(json.dumps(dl[t], ensure_ascii=False, sort_keys=True) == v for t, v in _rh_bak.items()),
+    "拖句位 %d 棵已逐字还原（%s）" % (len(_rh_bak), " · ".join(
+        "%s %d 节点" % (t, len(dl[t].get("nodes") or {})) for t in _rh_bak)))
+
+print("      节奏档（长句=一句≥%d 字）：短句位 %s ｜ 拖句位 %s"
+      % (_RHYTHM_LONG_LEN_31,
+         " · ".join("%s%.0f%%" % x for x in _rhythm_short),
+         " · ".join("%s%.0f%%" % x for x in _rhythm_drag)))
+
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
 sys.exit(0 if ok else 1)
