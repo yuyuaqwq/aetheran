@@ -3206,7 +3206,7 @@
     "desc": "旧物谱 · 端详 · 手上没有这一件"
   },
   "SYS_TRADE_HEAD": {
-    "value": "【副业】手艺人自己的活 —— 不在玛莎那块板上。",
+    "value": "📜 【副业】手艺人自己的活 —— 不在玛莎那块板上。",
     "params": [],
     "category": "系统",
     "desc": "副业 · 抬头（B3-3 生活职业任务）"
@@ -3228,7 +3228,7 @@
     "desc": "副业 · 尾注"
   },
   "SYS_TRADE_LIST_HEAD": {
-    "value": "【{trade}】{n} 条",
+    "value": "📜 【{trade}】{n} 条",
     "params": [
       "trade",
       "n"
@@ -3426,7 +3426,7 @@
     "desc": "下一层 · 上去了"
   },
   "SYS_TOWER_MAP_HEAD": {
-    "value": "【{name} · {floor}】（第 {n}/{all} 层）",
+    "value": "📍 【{name} · {floor}】（第 {n}/{all} 层）",
     "params": [
       "name",
       "floor",
@@ -4376,7 +4376,7 @@
     "desc": "B3-16b 商队 · 怎么细问"
   },
   "SYS_JUNK_HEAD": {
-    "value": "【旧货铺】柜台上摊着一堆没人要的东西。",
+    "value": "🎒 【旧货铺】柜台上摊着一堆没人要的东西。",
     "params": [],
     "category": "系统",
     "desc": "B3-16b 旧货 · 抬头"
