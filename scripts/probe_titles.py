@@ -490,6 +490,78 @@ chk("★ P-67 解释在**后半句**（拿称号 7 的档真跑 → 玩家看到
     bool(_hit14) and _row14 == _want14 and "小满" in _want14,
     "%r%s" % (_row14, ("（造档失败：%s）" % _err14) if _err14 else ""))
 
+# ⑨ ★ P1-49（2026-09-29 · 文案修复车道 aep1）—— **别再手抄「会自己长的那个数」**
+#    缺陷本体（本车道自己造的，因果链已查清到提交）：
+#      称号 10「北墙根的听众」条件写 `heard@dlg_hagen>=9`，而 dlg_hagen 已长到 26 句
+#      ⇒ `rebuild_titles` 当场抛（"写的是 9，而那棵树有 26 条台词（现算）"）
+#      ⇒ probe_titles ③ 红、probe_generators ②③ 连带红（同一根因，两支红）。
+#    真凶不是「称号写错了 9」，是**那个数被手抄进了真源文档**：
+#      P1-36 → P1-47 本车道把 dlg_hagen 从 9 句加深到 26 句（轮换池要够深），
+#      每加一次就打破一次 ⇒ 光改一次真源，下一批补句还会红。
+#    ★ 本条钉的**不是**"现在这个数对不对"（那是 ③ 在管，本条一个字不动它），
+#      钉的是**这类数还有没有别的会被手抄** —— 判据只加强，既有 21 条一字未改。
+#
+#: 会被自己打破的数（rebuild 自己的注释就是这么写的：「计数器的那个数不许手打：
+#:   read_all 的数 = pois 里 into_codex 的条数；heard 的数 = 那棵对话树全部台词条数」）。
+_AST49 = ("read_all", "heard", "visited")
+
+
+def _copied_counts(spec_text):
+    """真源 16_ §二 表里所有「会被自己打破的数」→ `[(行号, 键, 目标, 手抄的数)]`。"""
+    out = []
+    for no, line in enumerate(spec_text.split(chr(10)), 1):
+        if not line.strip().startswith("|"):
+            continue
+        for k in _AST49:
+            m = re.search(r"`?%s(@[A-Za-z0-9_:]+)?>=(\d+)`?" % k, line)
+            if m:
+                out.append((no, k, m.group(1) or "", int(m.group(2))))
+    return out
+
+
+def _live_counts(copies, pois, dlg):
+    """同一口径现算一遍（**不抄第二处规则**）→ `{(键, 目标): 现算值}`。"""
+    out = {}
+    for _no, k, tg, _n in copies:
+        if k == "read_all" and (k, "") not in out:
+            out[(k, "")] = len([1 for _k2, v in pois.items() if v.get("into_codex")])
+        elif k == "heard" and tg and (k, tg) not in out:
+            tree = dlg.get(tg.split(":", 1)[-1].lstrip("@")) or {}   # tg 形如 @dlg_hagen
+            out[(k, tg)] = sum(len(nd.get("texts") or [])
+                               for nd in (tree.get("nodes") or {}).values())
+    return out
+
+
+_copied49 = _copied_counts(RB.rd(RB.SPEC))
+_live49 = _live_counts(_copied49, PO, DL)
+_stale49 = [(tg or k, n, _live49.get((k, tg)))
+            for _no, k, tg, n in _copied49 if tg and (k, tg) in _live49
+            and _live49[(k, tg)] != n]
+chk("★ P1-49 ⑨-a 会被自己打破的数（read_all / heard / visited）：手抄 == 现算"
+    "（★ 独立于 ③ —— rebuild 已抛时本条仍给结论）",
+    not _stale49,
+    "对不上：%s" % (_stale49[:4] if _stale49
+                    else "查了 %d 处手抄数（全对得上）" % len(_copied49)))
+
+# ⑨-b ★ 反证：**真的给那棵树加两句**（照着 P1-46/47 干过的事重做一遍）
+#    ⇒ ⑨-a 必须当场抓到它 —— 若本条恒绿，它钉的就是个摆设。
+_bak49 = json.loads(json.dumps(DL["dlg_hagen"]))
+try:
+    DL["dlg_hagen"]["nodes"]["daily"]["texts"].append({"text": "⑨-b 反证用 · 树又长了两句"})
+    DL["dlg_hagen"]["nodes"]["daily"]["texts"].append({"text": "⑨-b 反证用 · 树又长了两句之二"})
+    _live_b49 = _live_counts(_copied49, PO, DL)
+    _stale_b49 = [(tg or k, n, _live_b49.get((k, tg)))
+                  for _no, k, tg, n in _copied49 if tg and (k, tg) in _live_b49
+                  and _live_b49[(k, tg)] != n]
+    chk("★ 反证：给 dlg_hagen 加两句（现算 26→28、真源仍写 9）⇒ ⑨-a 必抓到（判据不恒真）",
+        any(t == "@dlg_hagen" for t, _n, _v in _stale_b49),
+        "抓到：%s" % (_stale_b49 or "没抓到 ⇒ ⑨-a 恒真，判据是摆设"))
+finally:
+    DL["dlg_hagen"] = _bak49            # 按 key 精确还原（反证不许改坏被测数据）
+    chk("★ 反证跑完域逐字未变（备份与被测对象同一批对象那种恒真）",
+        DL["dlg_hagen"] == _bak49, "dlg_hagen 仍 %d 句"
+        % sum(len(nd.get("texts") or []) for nd in DL["dlg_hagen"]["nodes"].values()))
+
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
 sys.exit(0 if ok else 1)
