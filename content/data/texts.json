@@ -4562,14 +4562,6 @@
     "category": "战斗",
     "desc": "打断 · 本门没有专门的打断动作时（今天域里只有刺客挂了 mech=interrupt）"
   },
-  "COMBAT_INT_HEAD": {
-    "value": "{skill} —— 你盯着它的起手。",
-    "params": [
-      "skill"
-    ],
-    "category": "战斗",
-    "desc": "打断 · 有本门动作时（skills 域 mech=interrupt 那一条的名字）"
-  },
   "COMBAT_INT_BREAK": {
     "value": "⚔️【{t} 刻】它起手的那一下被你截断 —— 这一手它没打出来。",
     "params": [
@@ -4695,12 +4687,6 @@
     "params": [],
     "category": "战斗",
     "desc": "B4-18 集火 · 有队（P0-2：原句是「🚧 还没接上」开发口吻上屏；功能仍缺，仅改措辞）"
-  },
-  "COMBAT_FLEE_TODO": {
-    "value": "🚧「逃跑」还没接上\n💡 打不过就打『后撤』—— 对方没在出招时，它把你带出去。",
-    "params": [],
-    "category": "战斗",
-    "desc": "B4-18 逃跑 · 尚未落地"
   },
   "COMBAT_FLEE_OK": {
     "value": "⚔️【{t} 刻】你转身就跑，把 {name} 甩在了后头 —— 这一场没打。",
@@ -5279,12 +5265,6 @@
     "params": [],
     "category": "系统",
     "desc": "B4-7 建号第二步 · 选完族那一下的下一步（真源 18 §一 第 2 步）"
-  },
-  "SYS_CLS_HEAD": {
-    "value": "族定了 —— 还没定下怎么打。\n—— 六种打法，挑一个你愿意一直用的。",
-    "params": [],
-    "category": "系统",
-    "desc": "B4-7 建号第二步 · 菜单头"
   },
   "SYS_CLS_LEAD": {
     "value": "📜 族定了 —— 还没定下怎么打。\n—— 六种打法，挑一个你愿意一直用的。",
