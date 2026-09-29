@@ -1888,7 +1888,7 @@
     "desc": "观察 · 尾注"
   },
   "SYS_MAP_HEAD": {
-    "value": "【{name}（{kind}）】",
+    "value": "📍 【{name}（{kind}）】",
     "params": [
       "name",
       "kind"
@@ -2440,7 +2440,7 @@
     "desc": "读 · 这处没有可读物"
   },
   "SYS_READ_HEAD": {
-    "value": "【{name}】",
+    "value": "📜 【{name}】",
     "params": [
       "name"
     ],
@@ -4066,7 +4066,7 @@
     "desc": "B3-12 五维名 · 抗性与治疗强度（宪法 §2.1 WIL）"
   },
   "SYS_ITEM_HEAD": {
-    "value": "【{name}】{icon} {detail} ×{n}",
+    "value": "📦 【{name}】{icon} {detail} ×{n}",
     "params": [
       "name",
       "icon",
@@ -4288,7 +4288,7 @@
     "desc": "B3-12 成就 · 不设「记满」的那本（旧物谱）"
   },
   "SYS_PLACE_HEAD": {
-    "value": "【{name}】",
+    "value": "📍 【{name}】",
     "params": [
       "name"
     ],
