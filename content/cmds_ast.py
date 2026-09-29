@@ -418,7 +418,7 @@ async def be_race(env, sink, uid, player):
         return
 
     if not want:
-        yield T("SYS_RACE_NOARG", all=" · ".join(v.get("name", k) for k, v in all6))
+        yield T("SYS_RACE_NOARG", all="、".join(v.get("name", k) for k, v in all6))
         return
 
     hit = None
@@ -427,7 +427,7 @@ async def be_race(env, sink, uid, player):
             hit = (k, v)
             break
     if hit is None:
-        yield T("SYS_RACE_BAD", want=want, all=" · ".join(v.get("name", k) for k, v in all6))
+        yield T("SYS_RACE_BAD", want=want, all="、".join(v.get("name", k) for k, v in all6))
         return
 
     kid, rec = hit
@@ -593,7 +593,7 @@ async def be_class(env, sink, uid, player):
 
     hit = _cls_match(want)
     if hit is None:
-        yield T("SYS_CLS_BAD", want=want, all=" · ".join(v.get("name", k) for k, v in all6))
+        yield T("SYS_CLS_BAD", want=want, all="、".join(v.get("name", k) for k, v in all6))
         return
 
     kid, rec = hit

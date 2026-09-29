@@ -3085,13 +3085,13 @@
     "desc": "去 · 目标就是脚下这一站"
   },
   "SYS_RACE_HEAD": {
-    "value": "📜 你还不知道自己是谁。\n—— 先想清楚：你是从哪儿来的？",
+    "value": "你是：",
     "params": [],
     "category": "系统",
     "desc": "建号 · 头（新号第一眼）"
   },
   "SYS_RACE_ROW": {
-    "value": "{i} {name} —— {line}",
+    "value": "{i} {name}，{line}",
     "params": [
       "i",
       "name",
@@ -3101,7 +3101,7 @@
     "desc": "建号 · 每个族一行"
   },
   "SYS_RACE_HOW": {
-    "value": "选一个：『我是 人类』 · 或者把六个都读一遍再决定。",
+    "value": "哪个是你？打『我是 <族名>』。拿不准就把六个都读一遍。",
     "params": [],
     "category": "系统",
     "desc": "建号 · 怎么选"
@@ -3125,7 +3125,7 @@
     "desc": "建号 · 选好了（含「为什么来」）"
   },
   "SYS_RACE_TALENT": {
-    "value": "天赋 · {name}：{effect}（已生效）",
+    "value": "天赋「{name}」：{effect}（已生效）",
     "params": [
       "name",
       "effect"
@@ -3134,7 +3134,7 @@
     "desc": "建号 · 天赋一行"
   },
   "SYS_RACE_COST": {
-    "value": "代价 · {name}：{effect}（已生效）",
+    "value": "代价「{name}」：{effect}（已生效）",
     "params": [
       "name",
       "effect"
@@ -3143,7 +3143,7 @@
     "desc": "建号 · 代价一行"
   },
   "SYS_RACE_HAS": {
-    "value": "你已经定了 —— 你是{name}。",
+    "value": "你已经定了，你是{name}。",
     "params": [
       "name"
     ],
@@ -4429,7 +4429,7 @@
     "desc": "B3-16b 评级 · 头目那一行"
   },
   "SYS_RENAME_ASK": {
-    "value": "想叫什么？打『名字 <名字>』—— 一到八个字，只改这一回。",
+    "value": "想叫什么？打『名字 <名字>』。一到八个字，只改这一回。",
     "params": [],
     "category": "系统",
     "desc": "B3-16b 改名 · 没带名字"
@@ -4443,7 +4443,7 @@
     "desc": "B3-16b 改名 · 改好了"
   },
   "SYS_RENAME_USED": {
-    "value": "名字只改一次 —— 这一回已经用掉了。",
+    "value": "名字只改一次，这一回已经用掉了。",
     "params": [],
     "category": "系统",
     "desc": "B3-16b 改名 · 改过了"
@@ -5246,13 +5246,13 @@
     "desc": "B4-7 建号第二步 · 选完族那一下的下一步（真源 18 §一 第 2 步）"
   },
   "SYS_CLS_LEAD": {
-    "value": "📜 族定了 —— 还没定下怎么打。\n—— 六种打法，挑一个你愿意一直用的。",
+    "value": "你打算怎么打？挑一个，定了就一直用下去。",
     "params": [],
     "category": "系统",
     "desc": "⑦ 建号第二步 · 菜单头（替掉会重报一遍族别的 SYS_CLS_HEAD —— 那一步的族刚定过 · fix3-⑦）"
   },
   "SYS_CLS_ROW": {
-    "value": "{i} {icon} {name}（{role}）{star} —— {desc}",
+    "value": "{i} {icon} {name}（{role}）{star}，{desc}",
     "params": [
       "i",
       "star",
@@ -5265,13 +5265,13 @@
     "desc": "B4-7 建号第二步 · 每种打法一行（名 · 定位 · 一句自述）"
   },
   "SYS_CLS_STAR": {
-    "value": " ★推荐",
+    "value": "★推荐",
     "params": [],
     "category": "系统",
     "desc": "B4-7 建号第二步 · 与你那一族合得上的那行（races.recommend；「任意」不算）"
   },
   "SYS_CLS_MECH": {
-    "value": "节奏 · {mech}",
+    "value": "节奏：{mech}",
     "params": [
       "mech"
     ],
@@ -5279,7 +5279,7 @@
     "desc": "B4-7 建号第二步 · 打起来什么感觉（classes.mech · 真源 18 §一「节奏来源一句话」）"
   },
   "SYS_CLS_HOW": {
-    "value": "选一个：『选职业 骑士』 · 或者把每一种都读一遍再决定。",
+    "value": "打『选职业 <职业名>』，比如『选职业 骑士』。拿不准就把每一种都读一遍。",
     "params": [],
     "category": "系统",
     "desc": "B4-7 建号第二步 · 怎么选"
@@ -5293,7 +5293,7 @@
     "desc": "B4-7 建号第二步 · 定好了"
   },
   "SYS_CLS_HP": {
-    "value": "生命 {hp}/{max} —— 往后的升级与换装都长在这一条上。",
+    "value": "生命 {hp}/{max}。往后升级、换装，都长在这一条上。",
     "params": [
       "hp",
       "max"
@@ -5302,7 +5302,7 @@
     "desc": "B4-7 建号第二步 · 面板随职业落地（P-27 唯一来源）"
   },
   "SYS_CLS_NEXT": {
-    "value": "还没投的点有 {left} —— 打『{alloc}』投出去；『技能』看你往后会哪些。",
+    "value": "还没投的点有 {left}。打『{alloc}』投出去；『技能』看往后会哪些。",
     "params": [
       "left",
       "alloc"
@@ -5311,13 +5311,13 @@
     "desc": "B4-7 建号第二步 · 收尾指路（点数走 alloc.left_of_record · 触发词从声明取）"
   },
   "SYS_CLS_NAME": {
-    "value": "名字还没定 —— 打『名字 <名字>』，只改这一回。",
+    "value": "名字还没定。打『名字 <名字>』，只改这一回。",
     "params": [],
     "category": "系统",
     "desc": "B4-7 建号第二步 · 建号第三步没走完时点一行（真源 18 §一 第 3 步）"
   },
   "SYS_CLS_HAS": {
-    "value": "你已经定了 —— 你是{name}。",
+    "value": "你已经定了，你是{name}。",
     "params": [
       "name"
     ],
@@ -5325,7 +5325,7 @@
     "desc": "B4-7 建号第二步 · 已经选过了（不许手滑换）"
   },
   "SYS_CLS_NORACE": {
-    "value": "先定下你是哪一族 —— 打『我是 <族名>』。",
+    "value": "先定下你是哪一族。打『我是 <族名>』。",
     "params": [],
     "category": "系统",
     "desc": "B4-7 建号第二步 · 族还没定"
@@ -5340,7 +5340,7 @@
     "desc": "B4-7 建号第二步 · 认不出那个词"
   },
   "SYS_CLS_VIEW": {
-    "value": "【{icon} {name}】（{role}）\n{desc}\n节奏 · {mech}",
+    "value": "【{icon} {name}】（{role}）\n{desc}\n节奏：{mech}",
     "params": [
       "icon",
       "name",
@@ -5656,7 +5656,7 @@
     "desc": "P-54 · 路由未命中的回话（引擎 `route_miss_text_fn` 的供体 · 指向的「帮助」取自本包 commands.json 的可见声明）"
   },
   "SYS_CLS_EDGE": {
-    "value": "优势 · {adv} · 弱点 · {weak}",
+    "value": "优势：{adv} ｜ 弱点：{weak}",
     "params": [
       "adv",
       "weak"
@@ -5665,7 +5665,7 @@
     "desc": "P-50 建号第二步 · 每门一句优势 + 一句弱点（句子在 classes 域：adv / weak 两格）"
   },
   "SYS_ORIGIN_HOME": {
-    "value": "家乡 · {home} · 寿数 · {life}",
+    "value": "家乡：{home} ｜ 寿数：{life}",
     "params": [
       "home",
       "life"
@@ -6313,7 +6313,7 @@
     "desc": "探索 · **掷空**那一句的另一种（fxexp）：脚下这一站**有拾取点**（采集点声明）时，把现成的点列出来（`list` 由现成槽位 SYS_SRC_GATHER 逐点拼，动作词走 SYS_GATHER_VERB_*）—— 提示不空手。"
   },
   "SYS_GUARD_REGISTER": {
-    "value": "未找到你的角色档 —— 请先创建角色。",
+    "value": "你还不知道自己是谁。\n打『我是 <族名>』，比如『我是 人类』。",
     "params": [],
     "category": "系统",
     "desc": "P-11 · 内置 `player` 守卫（没建档）拦下的那一句 —— 引擎 `guard_text_fn` 的供体之一（引擎给的中性键 `guard.register_missing`）。逐字 = 宿主改前 `main.py` 那两句之一（宿主面改成只传键，玩家看到的字一个没动）。"
@@ -6889,7 +6889,7 @@
     "desc": "★ copy-p5（2026-09-29 · 去 AI 感 + 新手引导车道 · B 档）：建号三步的**标题块** —— 加在那一步第一行**之前**（不替代它原有的话）。★ **不加新步骤**：守 P-69「建号这段每多一步都在掉人」，建号仍是 `cmds_ast.BUILD_STEPS` 那四格。"
   },
   "SYS_ONBOARD_OPEN": {
-    "value": "风车镇还在转。\n只是转得比十年前慢。\n路修到北边就没了。\n再往北是骨田，\n骨田后面有一座塔。塔比镇老。\n镇上都记得塔。没人上去过。\n你是今天早上进的镇。\n门房问你要什么，你没答上来。\n他也没再问。",
+    "value": "你睁开眼，头晕沉沉的，感觉自己忘记了什么。\n\n这儿叫风车镇。你是今天早上进的镇，门房问你要什么，你没答上来。他也没再问。\n\n镇上的风车转得很慢，吱呀一声，吱呀一声。往北的路走到头就散了，只剩车辙。车辙尽头是骨田，骨田里有座塔，比镇子还老，没人上去过。\n\n你看向了自己的手。",
     "params": [],
     "category": "引导",
     "desc": "★ copy-p5（同上）：**新玩家第一屏的开场白** —— 玩家第一次来（`content/onboard.py::is_new`）。★ 范式照 `SCENE_WT_CHAPEL` 的密度与腔调：具体场景 + 具体物件 + 留一个钩子，不解释自己是什么、也不列指令。★ 判据 = `scripts/probe_onboard.py` ①（新玩家第一屏必含本槽位）。"
