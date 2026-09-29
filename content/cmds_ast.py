@@ -1795,6 +1795,35 @@ def poi_gate_lines(here) -> list:
     return [ln for _pid, _rec, _st, ln in here if ln]
 
 
+def _poi_pick_by_name(here, want):
+    """按玩家写下的名字，从这一站的候选里挑出**该挑的那几件**（空名单 = 没挑中）。
+
+    ★ 命中的判定**只在这一处**（审计 L159）。原先 `touch` / `read_thing` 两处各写一遍
+      `want == name or want in name`，**没有 `len` 闸** ⇒ 敲一个单字就是「拿它去挨个名字试」：
+        `be_dogs` 敲「记」同时命中「重复七次的记号」「白桦林深处的记号」两件，
+        `bn_bone` 敲「碑」同时命中「半埋的碑」「十一块碑」两件
+      ⇒ 玩家想摸一件、却连带把两件的增益/消耗一并领走（`touch` 那一支），读也是一次读出两件。
+
+    · **全名相等优先于名字的一部分**（一条叫「记号」、另一条叫「深处的记号」时，
+      玩家写「记号」要拿到前者 —— 与 `loot.match_ids` / `cmds_skill._by_name` 同一口径，
+      免得撞上哪一条取决于遍历序，K71 同族）；
+    · **部分命中至少两个字**（`len(want) >= 2`）—— 单字不是名字，是运气；
+    · 两档都没命中就交**空名单**，由调用方照实点名说「这儿没有叫这个的」——
+      **不静默塞一件给他**（原口径里点错名会拿到别的，正是这件事）。
+    """
+    want = str(want or "").strip()
+    if not want:
+        return list(here)
+    exact, part = [], []
+    for item in here:
+        nm = str(item[1].get("name") or "")        # ★ 候选形状恒为 (pid, rec, 状态, 那一行)
+        if want == nm:
+            exact.append(item)
+        elif nm and len(want) >= 2 and want in nm:
+            part.append(item)
+    return exact or part
+
+
 #: ★ P-28：`effect.buff` 带数值时落进**现成容器** `food_buff`（形状 `{stat, pct, until}`）。
 #:   stat 只认这四档 —— 与 `gear.BUFF_KEY` 是同一个词表（菜那套 + 本批加的 `spd`），别另开一份。
 #:   ★ 为什么本批把 `spd` 加进白名单（甲 · 数据里那件要的就是它）：骨田边那件 POI 是
@@ -2051,8 +2080,7 @@ async def touch(env, sink, uid, player):
         return
     want = AV.arg_of(env)                     # ★ F6：跟着自己的声明剥参（连写也算）
     if want:
-        hit = [x for x in here
-               if want == (x[1].get("name") or "") or want in (x[1].get("name") or "")]
+        hit = _poi_pick_by_name(here, want)          # ★ 命中判定只此一处（L159）
         if not hit:
             yield T("SYS_TOUCH_MISS", name=want,
                     list=" · ".join("『%s』" % v.get("name") for _pid, v, _st, _ln in here))
@@ -2114,8 +2142,7 @@ async def read_thing(env, sink, uid, player):
           if v.get("read_text")]
     here = at
     if want:
-        here = [(pid, v, st_, ln_) for pid, v, st_, ln_ in here
-                if want == (v.get("name") or "") or want in (v.get("name") or "")]
+        here = _poi_pick_by_name(here, want)          # ★ 命中判定只此一处（L159）
     usable = [(pid, v, st_, ln_) for pid, v, st_, ln_ in here if st_ != "no"]
     blocked = [ln_ for _pid, _v, _st, ln_ in here if _st == "no"]
     if not usable:
