@@ -321,7 +321,6 @@ _vs, _vr = _pick if _pick else ("", {})
 _need = int((_vr or {}).get("mp") or 0)
 _info = dict(SL.skill_info("cls_mage", _vs) or {}) if _vs else {}
 _info.setdefault("name", (_vr or {}).get("name") or _vs)
-_want_line = str(_slot_rec.get("value")).format(rv=float(_need), cur=0.0)
 
 
 def _usable(mo, mp_need=None, _info=None):
@@ -329,15 +328,42 @@ def _usable(mo, mp_need=None, _info=None):
     a = b.sides[CB.PLAYER_SIDE][0]
     logs = []
     got = ACT._skill_usable(b, a, _info or {}, logs)
-    return got, [str(x) for x in logs]
+    # ★ P0-1 续批六（2026-09-29 · aep0）：返回当时那个战斗钟。期望值与实得值
+    #   同源（同一个式子现算，不手写一个数）—— 否则改了刻源这条判据
+    #   会静默变红。取法与生产 content/mana.py::gate_line 逐字同形。
+    return got, [str(x) for x in logs], float(getattr(b, "_now", 0.0) or 0.0)
 
 
-_ok_no, _logs_no = _usable(0, _info=_info)
-_ok_yes, _logs_yes = _usable(max(1, _need), _info=_info)
+def _gate_line(rv, cur, t):
+    """那一句的期望值——现渲染，不手拼字面量。"""
+    return str(_slot_rec.get("value")).format(rv=float(rv), cur=float(cur), t=float(t))
+
+
+_ok_no, _logs_no, _t_no = _usable(0, _info=_info)
+_want_line = _gate_line(_need, 0, _t_no)
+_ok_yes, _logs_yes, _t_yes = _usable(max(1, _need), _info=_info)
 chk("★ ⑤ 蓝不够 ⇒ **拦下**：`_skill_usable` 回 False，那一句逐字 = 槽位 `%s` 渲染（「%s」）"
     % (_GATE.get("slot"), _want_line),
     bool(_vs) and _ok_no is False and _want_line in _logs_no,
     "实得：%s" % str(_logs_no[:2])[:90])
+# ★ P0-1 续批六（2026-09-29 · 文案修复车道 aep0）：那一句进**持久战斗日志**。
+#   引擎 `extends/ext_combat/battle/actions.py::_mp_gate_text` 把内容侧回执展开后 `logs.extend(_say)`，
+#   而 `logs` 就是那张落档的日志表 ⇒ 与那 37 格带刻的同一面。
+#   真源 `26_§三 优化 1` 逐字「所有战斗日志行统一以【N 刻】开头」。
+#   取件 = **本条真跑出来那一行**（`_logs_no`），不是模板串 → 改模板但读端没接刻也会红。
+import re as _re6
+_STAMP6 = _re6.compile(r"^⚡【(\d+) 刻】")
+_m6 = _STAMP6.match(_logs_no[0]) if _logs_no else None
+chk("★ ⑤-b 法力门槛那一句进持久战斗日志 ⇒ 行首带【N 刻】（真源 26_ §三 优化 1）  —— 屏=%r"
+    % (_logs_no[0] if _logs_no else None,),
+    _m6 is not None and int(_m6.group(1)) == int(round(_t_no)),
+    "实得：%s" % str(_logs_no[:1])[:90])
+# 反证：把模板换回不带刻的旧值 ⇒ 上面那条必红（不许变成永远绿的附幕）。
+_bad6 = "⚡ 法力不够 —— 这一手要 {rv:.0f} 点，你现在只有 {cur:.0f} 点。".format(
+    rv=float(_need), cur=0.0)
+chk("★ ⑤-c 反证：旧写法（无【N 刻】）不满足上面那条判据  —— %r" % _bad6,
+    _STAMP6.match(_bad6) is None)
+
 chk("★ ⑤ 蓝够（= 这一手的耗法 %s）⇒ **放行**（不拦、不出那句）" % _need,
     bool(_vs) and _ok_yes is True and not any(_GATE.get("slot") and _want_line in x for x in _logs_yes),
     "实得：%s" % str(_logs_yes[:2])[:90])
@@ -350,10 +376,10 @@ if _cheap and _vs:
     _i2 = dict(SL.skill_info("cls_mage", _cheap[0]) or {})
     _i2.setdefault("name", _cheap[1].get("name") or _cheap[0])
     _n2 = int(_cheap[1].get("mp") or 0)
-    _ok2, _l2 = _usable(_n2 - 1, _info=_i2)
+    _ok2, _l2, _t2 = _usable(_n2 - 1, _info=_i2)
     chk("★ ⑤ 门槛线是**这一手自己**的耗法：换一条 %s 点的技、给 %s 点 ⇒ 拦下那一句里的数 = %s"
         % (_n2, _n2 - 1, _n2),
-        _ok2 is False and str(_slot_rec.get("value")).format(rv=float(_n2), cur=float(_n2 - 1)) in _l2,
+        _ok2 is False and _gate_line(_n2, _n2 - 1, _t2) in _l2,
         "实得：%s" % str(_l2[:2])[:90])
 _plain = next(((_s, _r) for _s, _r in sorted((st.domain("skills") or {}).items())
                if not str(_s).startswith("_") and _r.get("owner_class") == "cls_mage"
@@ -362,7 +388,7 @@ _plain = next(((_s, _r) for _s, _r in sorted((st.domain("skills") or {}).items()
 if _plain:
     _i3 = dict(SL.skill_info("cls_mage", _plain[0]) or {})
     _i3.setdefault("name", _plain[1].get("name") or _plain[0])
-    _ok3, _l3 = _usable(0, _info=_i3)
+    _ok3, _l3, _t3 = _usable(0, _info=_i3)
     chk("★ ⑤ 不耗法的一手（`%s` · mp 0）在 **0 蓝**时也放得出来（普攻那类永远不受蓝约束）"
         % _plain[1].get("name"), _ok3 is True and not _l3, "实得：%s" % str(_l3[:2])[:90])
 else:
@@ -389,7 +415,7 @@ _saved = {k: CFG._HOOKS.get(k) for k in ("mp_regen_fn", "mp_gate_fn")}
 try:
     CFG._HOOKS["mp_regen_fn"] = None
     CFG._HOOKS["mp_gate_fn"] = None
-    _ok_off, _l_off = _usable(0)
+    _ok_off, _l_off, _t_off = _usable(0)
     chk("★ ⑦ 反证：两个钩子卸掉 ⇒ **0 蓝照样放得出来**（= P-51 之前「耗法 = 空账」的现状），"
         "那句拦下的话一个字都不出现",
         _ok_off is True and not _l_off, "实得：%s" % str(_l_off[:2])[:90])

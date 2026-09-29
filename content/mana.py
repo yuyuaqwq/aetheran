@@ -437,9 +437,18 @@ def gate_line(battle, actor, info, need_mp):
     # 回话 = texts 域那一句（与「核心资源不足」同一句 · 不点资源名）。那个槽位带格式符
     # （`{rv:.0f}` 这类）⇒ 走 format 渲染，不走 T 的朴素替换（T 只替换 `{名字}`，
     # 会把这几个格式符原样漏给玩家）。渲染不出来 ⇒ 当场抛（fail-closed，不吐坏模板）。
+    # ★ P0-1 续批六（2026-09-29 · aep0）：这一句经引擎
+    #   `extends/ext_combat/battle/actions.py::_mp_gate_text` 的 `logs.extend(_say)`
+    #   进**持久战斗日志**（与那 37 格带刻的同一面），而它是整场
+    #   里最后一批「读不出刻数」的。真源 `26_§三 优化 1` 逐字
+    #   「所有战斗日志行统一以【N 刻】开头」 ⇒ 补 `t`。刻数现读 `Battle._now`
+    #   （与 `content/battle_acts.py::_now` 逐字同形，不新造第二个钟源）。
+    #   ★ 此处写 `{t:.0f}`（而非内容侧 `T()` 那个纯 `{t}`）：本行走 `str.format`，
+    #   与引擎 cue 那一族同形 —— 两侧形态不同是有原因的，**别合并**。
     tmpl = T(_slot_name())
     try:
-        return str(tmpl).format(rv=float(need), cur=float(cur))
+        return str(tmpl).format(rv=float(need), cur=float(cur),
+                                t=float(getattr(battle, "_now", 0.0) or 0.0))
     except Exception as _e:                             # noqa: BLE001
         raise ValueError("门槛回话槽位 %r 渲染不出来（%s）：%r" % (_slot_name(), _e, tmpl))
 
