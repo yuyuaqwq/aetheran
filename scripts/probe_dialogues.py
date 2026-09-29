@@ -368,7 +368,17 @@ chk("⑨-b-d ★ 反证：`_safe_parts` 不许把切点放进 （…） 里面�
 
 # 范围：只管 **NPC 那 14 棵**（`dlg_` 前缀）。`talk_*` 是地点/篝火的
 # 「看一眼说一句」物件，规格 §一 的四层是写给 NPC 的，不套在它们身上。
-_npc = {k: v for k, v in dl.items() if str(k).startswith("dlg_")}
+# ★★ P1-42（2026-09-29 · 文案车道 aep1）—— 这行原来是**浅层**派生
+#   `{k: v for k, v in dl.items()}`：两边**共用同一批 `nodes` 子对象** ⇒ 后面那十几条
+#   反证（⑪-b ⑫-b ⑭ ⑰-b ⑲-b ⑳-b ㉑-b ㉗-d1…）在「压缩/替换某一层」时，
+#   **顺手把 `dl` 里被测数据一起改了**；而它们各自的「还原」只换回 `_npc` 自己的键
+#   （`_npc[k] = _sv` / `_npc.clear(); _npc.update(_bak)`）⇒ **`dl` 永久停在被污染态**。
+#   实测：⑫-b 把 `dlg_bella` 的 `daily` 从 8 句压成 1 句后再没回来；㉜（口头禅判据）
+#   第一个撞上它 —— bella 的 `daily` 只剩 1 句时，「她说过自己那句口头禅吗」答不出是。
+#   ⇒ 治法是**深拷贝**（反证要改就改自己那份副本，被测数据一个字都不许被碰）。
+#   ★ 这不是改判据口径，是修**判据的实现**（反证污染了被测对象）；
+#     既有那五十余条判据与它们的反证一个字没动，14/14 那些数在真数据上原样成立。
+_npc = {k: json.loads(json.dumps(v)) for k, v in dl.items() if str(k).startswith("dlg_")}
 
 # ⑩-a **位齐率**：一位 = meet ∧ daily ∧ main ∧ hidden 四层都在。
 #   真源 23_NPC对话树_v1 §一写的是四层都要；但 §四那句「隐藏线 6 段（莉安·哈根·皮特·
@@ -2334,6 +2344,113 @@ print("      节奏档（长句=一句≥%d 字）：短句位 %s ｜ 拖句位 
       % (_RHYTHM_LONG_LEN_31,
          " · ".join("%s%.0f%%" % x for x in _rhythm_short),
          " · ".join("%s%.0f%%" % x for x in _rhythm_drag)))
+
+_fingerprint34 = json.loads(json.dumps(dl))   # ㉜-e 的基线（逐字）
+# ㉜ ★ P1-42（2026-09-29 · 文案修复车道 aep1）—— **「口头禅」**（23_ §一④ 语气六要素第 4 条）
+#    缺口本体：㊰–㉛ 五十余条判据里管「腔」的 ㉚ **只读 23_ §二 的「用词」行**；
+#      23_ §一④「口头禅」一直没有判据，而 `npcs.json` 的 `persona.catch` **全仓 0 读端**
+#      （`content/*.py` 里 grep `catch` 零命中）⇒ 那一格是**死数据**：人设卡写着这个人
+#      「反复说」那几个字，屏上一次都没出现。实测 **14 位里 5 位没说过自己那句**
+#      （cole / derrick / ed / grey / nana）—— P1-42 已把那 5 条补上（现 14/14）。
+#    ★ 与 ㉚ 的分工（别做成恒等的新门禁）：㉚ 判「**用词档**里的字面标记有没有带」
+#      （树级 44 个标记）；㉜ 判「**他自己那一句口头禅**有没有真被说出来」
+#      （人设卡那一格 · 逐位 1 条）。两者取的源不同（一行「用词」 vs 一格 `catch`），
+#      取不到的那一侧各自 fail-closed（㉚-b 钉位数 · ㉜-b 钉「位 ↔ 树」配对数）。
+#    ★ 归一：口头禅在卡里带 `「」`/空格/省略号（`「我年轻时候……」`、`「你看你看这个 」`），
+#      屏上不一定照抄那个形状（他说话带动作、带停顿）⇒ 比对前把标点/空白/括号全剥掉。
+#      ★ 第一版我就是**漏了归一**判 laotao / xiaoman MISS —— 那两个 catch 带 `……` 与尾空格。
+#      （脚本 bug 冒充数据缺陷，与 §十「认不出的两种对不上」同族。）
+_npcs34 = st.domain("npcs") or {}
+_dl34 = dl
+
+
+def _norm34(s):
+    """口头禅比对用的归一：剥掉一切标点/空白/括号（他说话带动作带停顿，形状不必一致）。"""
+    return re.sub(r"[\s「」『』…⋯—\-·、，。！？!?：:；;（）()\[\]【】《》\"']+", "", s or "")
+
+
+def _tree_of34(npc_key, npc_rec):
+    """人 → 树：走 `npcs` 域现取（不手写一份 14 位映射，㉚ 同款纪律）。"""
+    d = (npc_rec or {}).get("dialogue") or ""
+    return d if d in _dl34 else None
+
+
+#: 人设卡里那格口头禅（`npcs` 域现读）；域里压根没这格 / 为空 ⇒ 不计入分母，
+#:   并由 ㉜-b 单独钉「配对数」——否则「都空」会算成 14/14 的假满分。
+_pairs34 = []
+_unpaired34 = []
+for _nk, _nv in _npcs34.items():
+    _catch = ((_nv.get("persona") or {}).get("catch") or "").strip()
+    if not _catch:
+        continue
+    _tr = _tree_of34(_nk, _nv)
+    if not _tr:
+        _unpaired34.append("%s(catch 有 · 树指向不存在)" % _nk)
+        continue
+    _pairs34.append((_nk, _tr, _catch))
+
+_miss34 = []
+_hit34 = 0
+for _nk, _tr, _catch in _pairs34:
+    _core = _norm34(_catch)
+    _texts = [t.get("text") or "" for _nd in _dl34[_tr]["nodes"].values()
+              for t in _nd.get("texts", [])]
+    if _core and any(_core in _norm34(_x) for _x in _texts):
+        _hit34 += 1
+    else:
+        _miss34.append("%s(%s)：从没说过自己那句 %s" % (_tr, _nk, _catch))
+chk("㉜-a ★ 口头禅（23_ §一④）：每位都说得出自己那一句 %d/%d"
+    "（硬底线 100%% · 人设卡 `persona.catch` 逐位）"
+    % (_hit34, len(_pairs34)),
+    not _miss34 and len(_pairs34) > 0,
+    " · ".join(_miss34) if _miss34 else "全带齐（%d 位）" % len(_pairs34))
+
+# ㉜-b ★ fail-closed：人 ↔ 树的配对**数**要与 NPC 总数对得上 —— 域里某位 NPC 的
+#   `dialogue` 指错树 / `persona.catch` 被清空 ⇒ 他就从分母里静默消失，
+#   ㉜-a 会「12/12 全绿」而实际少了一整个角色（㉚-b 的同族坑：源读不到 ⇒ 假绿）。
+chk("㉜-b ★ 人 ↔ 对话树配对齐全（%d 对 · 读不到/指错/清空 ⇒ 上面会假绿）" % len(_pairs34),
+    not _unpaired34 and len(_pairs34) >= 14,
+    " · ".join(_unpaired34) if _unpaired34
+    else "全配上（%d 对）" % len(_pairs34))
+
+# ㉜-c ★ 反证：把 dlg_ed 整棵移走 ⇒ ㉜-a 必抓到（判据不恒真）
+_c34 = next((t for _n, t, _c in _pairs34 if t == "dlg_ed"), None) or _pairs34[0][1]
+_cbak34 = _dl34.pop(_c34, None)
+try:
+    _g34 = []
+    for _nk, _tr, _catch in _pairs34:
+        if _tr not in _dl34:
+            _g34.append(_tr)
+            continue
+        _core = _norm34(_catch)
+        _texts = [t.get("text") or "" for _nd in _dl34[_tr]["nodes"].values()
+                  for t in _nd.get("texts", [])]
+        if not (_core and any(_core in _norm34(_x) for _x in _texts)):
+            _g34.append(_tr)
+    chk("㉜-c ★ 反证：抽掉 %s 整棵 ⇒ ㉜-a 必抓到它（判据不恒真）" % _c34,
+        _c34 in _g34, "抽完仍全带齐 = 判据恒真")
+finally:
+    if _cbak34 is not None:
+        _dl34[_c34] = _cbak34
+
+# ㉜-d ★ 反证跑完域**逐字未变**（㉗-e / ㉛-d 那个「备份与被测对象同一批对象」的恒真坑）
+chk("㉜-d ★ 反证跑完域逐字未变（%s 仍 %d 句）"
+    % (_c34, len([t for _nd in _dl34[_c34]["nodes"].values() for t in _nd.get("texts", [])])),
+    _cbak34 is not None and _c34 in _dl34)
+
+print("      口头禅档：" + " · ".join("%s=%s" % (t, "有" if _norm34(c) else "空")
+                                  for _n, t, c in _pairs34[:14]))
+
+# ㉜-e ★ 「反证不许污染被测数据」——**钉成常驻判据**（P1-42 修完 `_npc` 之后钉住它）
+#    起因：`_npc` 是 `dl` 的浅层派生 ⇒ 十几条反证在压/换某一层时**顺手改了被测数据**，
+#    而各自的「还原」只还原自己那份 ⇒ `dl` 永久停在残缺态（`dlg_bella` 的 `daily`
+#    8 句 → 1 句）。后果不是探针自己红，而是**后面所有读 `dl` 的判据读的是残缺数据**。
+#    判据：㉜ 开跑前存一份 `dl` 的逐字指纹，跑完逐字比 —— 将来任何人新写一条反证、
+#    又犯了同一类错（改了 `_npc` 却以为没改 `dl`），当场红。
+chk("㉜-e ★ 整条 ㉜（含它自己的反证）跑完，被测域逐字未变（反证不许改坏被测数据）",
+    json.dumps(_fingerprint34, ensure_ascii=False, sort_keys=True)
+    == json.dumps(dl, ensure_ascii=False, sort_keys=True),
+    "开跑前 %d 棵" % len(_fingerprint34))
 
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
