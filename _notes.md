@@ -14899,3 +14899,138 @@ probe_texts 3 红 / probe_copy 3 红 ⇒ **逐条在未改态（git stash 掉本
 ④ P-2（对话域手编、无生成器）这条已知偏离仍在，等主线立项
 ```
 
+
+## P2-26（2026-09-29 16:2x-17:2x · 文案车道 aep2）—— A 类裸抬头清零（10 格 · `bad6231`）
+
+作业书 P2-1 / P2-2 / P2-4 三个数**再次已过期**（三件在 P2-1~P2-25 各轮已收口）⇒ 本轮做 P2-3，编号 P2-26。
+
+### 一、现算的范围（逐条扫 texts.json，不抄作业书）
+
+```
+_HEAD 共 45 条；A 类（值以【开头、纯【】标题行、**行首无图标**）= **11 条**
+⇒ 本批补 **9** + 刻意不补 **2**
+```
+
+★ 作业书只给了「0% 覆盖的界面」那张表，**没给 A 类这个数**；上轮交接记的是「11 条裸抬头」，
+本轮现算仍是 11（一条没被别人动过）⇒ 可以直接用，但**别把交接里的数当地基**。
+
+### 二、补的 10 格（图标逐字取真源 26_ §2.2；判据承 P2-24/P2-25「补锚三问」）
+
+```
+📜 SYS_GUILD_HEAD   ★ 第 ③ 问抓到**槽位名会骗人**：槽位叫「公会」，但读端 cmds_quest.py:1148
+                    下一格 SYS_GUILD_DESK 逐字是「柜台在挂板墙那边」⇒ 屏上就是挂板墙那个地点，
+                    而挂板墙三条 _HEAD 早已固化 📜 ⇒ 同族同锚，不新造 🏠。
+📜 SYS_BSHOW_HEAD   它与 SYS_BOARD_HEAD 是**同一张单子的两种看法**（板上 vs 打开看全文）。
+📜 SYS_NOTICE_HEAD / SYS_EV_HEAD / SYS_CARAVAN_HEAD
+                    屏上都是「一屏一个清单头 + 逐条正文」⇒ 同读端同形状同锚。
+📜 SYS_EGG_HEAD / SYS_TITLE_HEAD   屏上是「N/total」+ 逐条 ⇒ 与 SYS_CODEX_HEAD 同族。
+📊 SYS_FOOT_HEAD    屏上是**纯统计面板** ⇒ 26_ §2.2 逐字「📊 面板/状态」。
+📊 SYS_CMP_HEAD     屏上是「这件 vs 你身上那件」的**属性**对比表 ⇒ 同族 SYS_GEAR_HP_CAP 已固化。
+📜 SYS_CARAVAN_GOODS ★ **本轮唯一一格是「探针抓出来的」**，见 §三。
+```
+
+### 三、★ 本轮最值钱的一条：**补锚会生出新的不一致，判据替你抓**
+
+补完 `SYS_CARAVAN_HEAD` 之后跑门禁，`probe_icon_consistency` ① **当场红**：
+
+```
+✗ content/cmds_places.py :: caravan (L155) 角色=section_head
+```
+
+⇒ 同一屏里另一条 **section_head**（`SYS_CARAVAN_GOODS`，槽位名以 `_GOODS` 结尾、落在
+`probe_icon_consistency::HEAD_SUF` 里）**仍是裸的** ⇒ 「同屏两条 section_head 一条带一条不带」。
+
+**这不是我漏想，是「补一半」的必然结果** ⇒ 教训：**同屏同角色那一族要一次补齐**，
+否则每补一格都在制造一条新的不一致，而手动列清单列不全（`_GOODS`/`_SHOP`/`_LEAD` 这些
+后缀在槽位名里，不看 `HEAD_SUF` 根本想不到）。⇒ **下轮开工先跑一遍
+`probe_icon_consistency` 拿「屏 × 角色」全表，别只盯 `_HEAD` 后缀那一族。**
+
+★ 反过来也验证了判据有牙：手工抽掉 `SYS_CARAVAN_GOODS` 的 📜 ⇒ ① 当场红同一条。
+
+### 四、刻意**不补**的 2 格（写明理由，不当漏项留给下轮）
+
+```
+COMBAT_LOG_HEAD / COMBAT_LOG_LIVE_HEAD（同一函数两屏，cmds_battle.py:1193/1208）
+★ 真机实测：这一屏**行行都自带行首锚**（🌀 出手 / 💥 挨打 / 🛡 防御）⇒ 抬头再加 ⚔️ 是**两层行首**，
+  且违反 26_ §7b ⑦「图标是锚点，但别每行都堆」。
+★ 这一屏不缺锚，缺的是**行内**锚的接法统一 —— 那是行内那一层的活，不在「屏抬头」这一族里。
+```
+
+⇒ **「11 条裸抬头」收工后现算是 2**（就是这两格，且是**刻意**的），
+下轮别再把它们当漏项捡回来。
+
+### 五、口径纪律（本轮踩到的三处，都写进注册里了）
+
+```
+① **真源仓只读**：改值一律走 `rebuild_syscopy.py::DOC_PENDING` 登记 {old,new,why}。
+   ★ `old` 由脚本**从域里现算**（剥掉图标那一位）—— 手打中文出过事：
+   `sed` 把 `】` 吃成 `【`，生成的登记是坏的（"【记录【走过"）。⇒ **凡要复制中文，一律从域里读**。
+② ★★ **DOC_PENDING 一个 key 只存一对 {old,new}**，而 SYS_CMP_HEAD 有先后两笔
+   （P2-9② 把 ｜ 收敛成 · · 本轮加 📊）⇒ 必须**合成一对**（old 取真源表现值），
+   否则 `pending_ok` 判「跟账第三态」、生成器当场抛。
+   ★★ 顺带踩到同族的一个更阴的坑：合成时我一度在**两处**都留了 `SYS_CMP_HEAD`
+   —— Python dict 后者覆盖前者 ⇒ **静默失效**（P2-9 那条的注释其实已经写明这个坑，
+   我还是踩了）。判据：`grep -c '"<KEY>": {' rebuild_syscopy.py` 必须是 1。
+③ 图标**字形**照 P2-6：📜/📊/📍/🎒/📦 本仓一律**裸形态不带 VS16**
+   （现取 📜 24 处 / 📊 8 处 / 📍 5 处 / 🎒 4 处 / 📦 8 处，带 VS16 的 0 处）
+   ⇒ 本批不引入第二种形态，`probe_icon_consistency` ③ 仍绿。
+```
+
+### 六、门禁（Python 3.12 · 现取 · 共 74 支）
+
+```
+本车道相关：probe_icon_consistency **全绿**（六档 + 四条反证）· probe_emoji_order 绿
+          · probe_guard_text 绿 · probe_battle_icon_coherence 绿
+          · rebuild_syscopy.py 干跑两遍 rc=0/0 零写入（probe_generators ②③ 里**我那档是绿的**）
+全量 74 支 = 63 绿 / 11 红。红集逐条归因，**没有一条落在本件文件面**：
+  probe_copy / probe_texts / probe_line_width = 内联中文（alloc/cmds_ast/onboard）+ 场景两版 + 档①111 行
+  probe_generators / probe_titles = rebuild_titles 那棵树 23 条台词对不上（称号域）
+  probe_mech / probe_resources = content/mech.py + 引擎仓工作区
+  probe_onsite = 场景两版 · probe_sources = 掉落率（lv9 怪掉 unid_rare 概率）
+  probe_instance / probe_hand_ok_removed = 物品档五格 + 战斗那一面
+★ 本笔**一条判据未动**。
+```
+
+### 七、真机冒烟（`e2e_drive.py` 真宿主，逐屏渲染核过）
+
+```
+📜 【公告】本服现在跑的是这一份：  ｜ 📜 【今天的动静】
+📜 【商队歇脚处】通北商道上下来的消息先到这儿。
+📊 【记录】走过 1 个地方 · 打过 0 只 · 1 个游戏日
+📜 【公会】门面比镇上任何一家都像样：…（下一格接「柜台在挂板墙那边」⇒ 与挂板墙三条同锚）
+```
+
+★ `SYS_BSHOW_HEAD` / `SYS_CMP_HEAD` 两屏**真机没走到**（建号闸：`登记` 要先取名、
+接活要见习证）⇒ 这两格靠 `probe_cmds`（绿）+ `probe_icon_consistency` 兜。
+
+### 八、★ 一个自踩的坑 + 复原（值得下轮照着做）
+
+为验「① 对 `_GOODS` 那一族有牙」，我手工改了一次 `texts.json`，验完
+**`git checkout -- content/data/texts.json` 复原** —— ★ 那一下把**并行车道 aep0 的两行
+在途改动一起抹了**（`COMBAT_MECH_HP_GATE` / `COMBAT_MECH_ONCE` 加 ⚔️【{t} 刻】+ `t` 槽位）。
+
+复原做法（`git checkout --` 之前先留证据）：
+
+```bash
+git diff -- <共享文件> > "$LOCALAPPDATA/Temp/<自己>_all.patch"   # ★ 动手前先留
+# …做完注入实验、checkout 复原之后…
+# 从那份 patch 里把**别人的 hunk**摘出来重放（值 + params 两处都要）
+```
+
+⇒ 复原后 `git diff` 与 aep0 的原改动**逐字一致**，他们随后提交为 `63d979e`，
+内容与复原版逐字相同 ⇒ **没有造成损失**（若没留那份 patch 就真丢了）。
+★ 纪律落定：**共享文件上做注入实验，`git checkout --` 之前必须先 `git diff > patch`**；
+或者更省事：**别在共享文件上做注入实验**，让 `probe_icon_consistency` 自己那条反证
+（它每次跑都自己注入、自己还原）去证。
+
+### 九、留给下一轮（现算，接手不必重算）
+
+```
+A 类裸抬头：11 → **2**（COMBAT_LOG_HEAD / COMBAT_LOG_LIVE_HEAD，§四 刻意不补）⇒ 这一族收工。
+★ 下轮**别只盯 `_HEAD`**：`HEAD_SUF` 里还有 `_GOODS` / `_SHOP` / `_LEAD` / `_SRC_HEAD`
+  / `_BOUNTY_HEAD` / `_SIDE_HEAD` ⇒ 先跑 `probe_icon_consistency` 拿「屏 × 角色」全表再排期。
+DOC_PENDING 现 **296** 条待跟账（含本轮 7 条）⇒ 真源表那些行需主线跟账。
+★ 排期口径承 P2-24/P2-25/P2-26（都别推翻）：并列行（`· ` 起头）一个都不补 ·
+  散文式抬头不补 · 接法 SPACE 形 · 图标逐字取真源 26_ §2.2 · 只补 A 类纯【】标题行 ·
+  补之前先答那三问 · 同屏同角色一次补齐。
+```
