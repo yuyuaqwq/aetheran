@@ -398,8 +398,8 @@ async def trade(env, sink, uid, player):
     if not want:
         yield T("SYS_TRADE_HEAD")
         for t in meta:
-            yield "  " + T("SYS_TRADE_ROW", trade=t.get("trade"),
-                           n=len(rows.get(t.get("trade")) or []), what=t.get("what") or "")
+            yield T("SYS_TRADE_ROW", trade=t.get("trade"),
+                       n=len(rows.get(t.get("trade")) or []), what=t.get("what") or "")
         yield T("SYS_TRADE_HOW")
         return
     hit = next((t for t in meta if want == t.get("trade")), None)
@@ -1195,8 +1195,8 @@ async def board(env, sink, uid, player):
         yield T("SYS_BOARD_BOUNTY_HEAD")
         for qid, v in bounty:
             mark = T("SYS_BOARD_ACTIVE") if qid in active else ""
-            yield "  " + T("SYS_BOARD_BOUNTY_ROW", order=v["order"], name=v["name"],
-                           mark=mark, level=v["min_level"])
+            yield T("SYS_BOARD_BOUNTY_ROW", order=v["order"], name=v["name"],
+                       mark=mark, level=v["min_level"])
     # ★ fix-m-bounty ②：这一段列的是**还能接的**活儿 —— 已交的不列（改前把在场 NPC 的支线
     #   **全列**，不看 `done` ⇒ 玩家照着点一条**交掉**的单子，回的是「这条你已经接了（或交过了）。」
     #   —— ranger b130/b131 实测；板子是「挂板墙上的单子」，交掉的单子不在板上）。
@@ -1209,8 +1209,8 @@ async def board(env, sink, uid, player):
         for _qid, v in side[:3]:
             # ★ 支线也**必须带编号**：不带编号 + `接 <编号>` 只认主线 ⇒ 18 条支线全接不了
             #   （2026-09-25 端到端玩出来的真 bug）。硬编码中文一并收进槽位（B3-6 口径）。
-            yield "  " + T("SYS_BOARD_SIDE_ROW", order=v["order"], name=v["name"],
-                           objective=v["objective"])
+            yield T("SYS_BOARD_SIDE_ROW", order=v["order"], name=v["name"],
+                       objective=v["objective"])
     yield T("SYS_BOARD_HOW")
 
 

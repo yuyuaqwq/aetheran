@@ -2453,8 +2453,12 @@ _HOW36 = _slot36("SYS_BOARD_HOW")
 
 
 def _row36(v, mark=""):
-    return "  " + _slot36("SYS_BOARD_BOUNTY_ROW", order=v["order"], name=v["name"],
-                          mark=mark, level=v["min_level"])
+    # ★ P2-16（2026-09-29 · 文案车道 aep2）：**顶格**，不再补两格缩进。
+    #   槽位 `SYS_BOARD_BOUNTY_ROW` 自带 `· ` 行首锚（『· 悬赏 {order} —— …』）⇒ 顶格才是
+    #   「与上面那行并列的三档」；补缩进会读成「三档缩在『📜 悬赏三档常年挂在公会上』下面」。
+    #   ★ 真子行（`要做什么：` / `接下来：』` 那一族）**仍旧缩进** —— 那是刻意的两级。
+    return _slot36("SYS_BOARD_BOUNTY_ROW", order=v["order"], name=v["name"],
+                    mark=mark, level=v["min_level"])
 
 
 #: ★ 主线那一行的定位器 —— **从槽位取前缀**（P2 车道 2026-09-28）。
@@ -2761,8 +2765,9 @@ else:
         _at_day(_DAY_MKT, 10.0)
         _side_here = [(k2, v2) for k2, v2 in QE.items()
                       if v2["chain"] == "side" and v2["giver"] in _HERE_MKT]
-        _rows8 = ["  " + _slot36("SYS_BOARD_SIDE_ROW", order=v2["order"], name=v2["name"],
-                                 objective=v2["objective"]) for _k2, v2 in _side_here[:3]]
+        # ★ P2-16：同 ③36 —— 槽位自带 `· ` 锚 ⇒ 顶格；原来补的缩进把三条支线读成嵌套。
+        _rows8 = [_slot36("SYS_BOARD_SIDE_ROW", order=v2["order"], name=v2["name"],
+                           objective=v2["objective"]) for _k2, v2 in _side_here[:3]]
         _k8, _v8 = _side_here[0]
         _row8 = _rows8[0]
         _o9a = _board36({"card": 1})                   # 全没交
