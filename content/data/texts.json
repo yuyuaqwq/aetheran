@@ -5459,7 +5459,7 @@
     "desc": "B4-27 放弃 · 冷却（1 个游戏日 —— 源 05 §一）"
   },
   "SYS_SHOP_HEAD": {
-    "value": "💰 【药铺】{name}",
+    "value": "📍 【药铺】{name}",
     "params": [
       "name"
     ],
