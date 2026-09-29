@@ -22,9 +22,10 @@
 
 三条动作的口径（每条判据都在探针里）
 ------------------------------------
-① 建队 `create` —— 发起人即队长（`captain_is_founder`）。
+① 建队 `create` —— **发起人即队长**：这是**结构性不变式**（建队那一下谁按的就是谁），
+   不是可调口径 —— 审计 L892 核实过它原先在域里只是个没人读的幻影字段，已删。
 ② 邀请 `invite` —— 邀请记在**队长那一格**上（`invites`），有效期 `invite_ttl_ticks` 刻；
-   被邀的人自己敲『同意』才算入队（`join_needs_accept`）—— 文字游戏里弹不出窗，
+   被邀的人自己敲『同意』才算入队（**结构性不变式**，同 L892 已从域里删了那个幻影字段）—— 文字游戏里弹不出窗，
    「同意」就是**他本人打的那一下**（`accept`）。⇒ 「离线的人进不来」是**结构性**保证：
    他不敲那一下就在队外；邀请到点作废（有明确回话，不静默）。宿主没给 presence 注入面，
    本包**不编**「多久没落档 = 离线」那种数（见本分支 _notes.md 的待拍板）。
@@ -106,7 +107,13 @@ def rules() -> dict:
     ttl = rec.get("invite_ttl_ticks")
     if isinstance(ttl, bool) or not isinstance(ttl, int) or ttl < 1:
         raise PartyError("pt_rules.invite_ttl_ticks 得是正整数（刻）：%r" % (ttl,))
-    for k in ("same_map", "same_node", "captain_is_founder", "join_needs_accept"):
+    # ★ 审计 L892（中）：原循环还管 `captain_is_founder` / `join_needs_accept` 两条 ——
+    #   实跑两条**零读取**（探针：改成相反值，建队/邀请/同意三步的结果逐项相同）
+    #   ⇒ 那是**幻影声明**：schema 必填 + 域里有 + 文档说「受它管」，改它行为一点不变。
+    #   真身是**结构性不变式**不是旋钮：建队那一下的人当队长、「同意」是本人敲的那一下
+    #   （文字游戏弹不出窗）—— 形态决定的，写成可调字段只会让人以为改了有用。
+    #   口径不挂在代码里假装可变 ⇒ 已从域 / schema / 本校验循环一并删。
+    for k in ("same_map", "same_node"):
         if not isinstance(rec.get(k), bool):
             raise PartyError("pt_rules.%s 得是 true / false：%r" % (k, rec.get(k)))
     return rec

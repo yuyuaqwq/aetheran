@@ -152,12 +152,18 @@ chk("域读得到（%d 条口径 + `_src` 元信息 · 上限 %s 人 · 邀请�
     len(RECS) == 1 and "pt_rules" in RECS and "_src" in PJ)
 chk("★ 必填字段**照 schema 现读**（%s）—— 一条不缺" % " / ".join(REQ),
     all(k in _val for k in REQ), "%s" % sorted(_val))
-chk("值域合法（上限 = ≥2 的整数 · 有效期 = 正整数 · 四个开关都是 true/false）",
+# ★ 审计 L892：开关名单**照 schema 的 required 现读**（原先写死四个，其中两个已随幻影声明删掉）。
+#   强度不减：仍然逐个断言是 bool，只是名单不再硬编码 —— 将来域里增删开关这条自动跟着对账。
+_BOOL_KEYS = [k for k in REQ if k in ("same_map", "same_node")]
+chk("值域合法（上限 = ≥2 的整数 · 有效期 = 正整数 · 开关都是 true/false · 现读 %s）"
+    % (" / ".join(_BOOL_KEYS),),
     isinstance(_val.get("max_members"), int) and not isinstance(_val.get("max_members"), bool)
     and _val["max_members"] >= 2
     and isinstance(_val.get("invite_ttl_ticks"), int) and _val["invite_ttl_ticks"] > 0
-    and all(isinstance(_val.get(k), bool)
-            for k in ("same_map", "same_node", "captain_is_founder", "join_needs_accept")))
+    and _BOOL_KEYS
+    and all(isinstance(_val.get(k), bool) for k in _BOOL_KEYS)
+    # 反向：已删的两条幻影字段**不许被偷偷加回来**（加回来仍是零读取的假旋钮）
+    and not any(k in _val for k in ("captain_is_founder", "join_needs_accept")))
 chk("★ 记录键名都命中 schema 的 patternProperties（%s）"
     % " / ".join(SCHEMA["patternProperties"]),
     all(re.match(r"^pt_[a-z0-9_]+$", k) for k in RECS))
