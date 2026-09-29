@@ -18,7 +18,10 @@
         "player"
       ]
     },
-    "guard_desc": "在北口或野外"
+    "guard_desc": "在北口或野外",
+    "guards": [
+      "hook:register"
+    ]
   },
   "go_north": {
     "patterns": [
@@ -38,7 +41,10 @@
         "player"
       ]
     },
-    "guard_desc": "在镇上"
+    "guard_desc": "在镇上",
+    "guards": [
+      "hook:register"
+    ]
   },
   "go_east": {
     "patterns": [
@@ -58,7 +64,10 @@
         "player"
       ]
     },
-    "guard_desc": "在镇上"
+    "guard_desc": "在镇上",
+    "guards": [
+      "hook:register"
+    ]
   },
   "go_west": {
     "patterns": [
@@ -78,7 +87,10 @@
         "player"
       ]
     },
-    "guard_desc": "在镇上"
+    "guard_desc": "在镇上",
+    "guards": [
+      "hook:register"
+    ]
   },
   "go_back": {
     "patterns": [
@@ -99,7 +111,10 @@
         "player"
       ]
     },
-    "guard_desc": "在野外"
+    "guard_desc": "在野外",
+    "guards": [
+      "hook:register"
+    ]
   },
   "map": {
     "patterns": [
@@ -119,7 +134,10 @@
         "player"
       ]
     },
-    "guard_desc": "随时"
+    "guard_desc": "随时",
+    "guards": [
+      "hook:register"
+    ]
   },
   "look": {
     "patterns": [
@@ -163,7 +181,10 @@
         "player"
       ]
     },
-    "guard_desc": "有可交互动时"
+    "guard_desc": "有可交互动时",
+    "guards": [
+      "hook:register"
+    ]
   },
   "listen": {
     "patterns": [
@@ -183,7 +204,10 @@
         "player"
       ]
     },
-    "guard_desc": "随时"
+    "guard_desc": "随时",
+    "guards": [
+      "hook:register"
+    ]
   },
   "explore": {
     "patterns": [
@@ -204,7 +228,10 @@
         "player"
       ]
     },
-    "guard_desc": "随时"
+    "guard_desc": "随时",
+    "guards": [
+      "hook:register"
+    ]
   },
   "read": {
     "patterns": [
@@ -224,7 +251,10 @@
         "player"
       ]
     },
-    "guard_desc": "有可读物时"
+    "guard_desc": "有可读物时",
+    "guards": [
+      "hook:register"
+    ]
   },
   "ask_way": {
     "patterns": [
@@ -244,7 +274,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "time": {
     "patterns": [
@@ -265,7 +298,10 @@
         "player"
       ]
     },
-    "guard_desc": "随时"
+    "guard_desc": "随时",
+    "guards": [
+      "hook:register"
+    ]
   },
   "event_now": {
     "patterns": [
@@ -286,7 +322,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "guild": {
     "patterns": [
@@ -306,7 +345,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "register": {
     "patterns": [
@@ -326,7 +368,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "board": {
     "patterns": [
@@ -347,7 +392,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "board_show": {
     "patterns": [
@@ -366,7 +414,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "quest_accept": {
     "patterns": [
@@ -390,6 +441,9 @@
     },
     "params": [
       "cmd=接"
+    ],
+    "guards": [
+      "hook:register"
     ]
   },
   "quest_deliver": {
@@ -414,6 +468,9 @@
     },
     "params": [
       "cmd=交"
+    ],
+    "guards": [
+      "hook:register"
     ]
   },
   "quest_abandon": {
@@ -437,6 +494,9 @@
     },
     "params": [
       "cmd=放弃"
+    ],
+    "guards": [
+      "hook:register"
     ]
   },
   "quest_mine": {
@@ -457,7 +517,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "trade": {
     "patterns": [
@@ -478,7 +541,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "rank": {
     "patterns": [
@@ -498,7 +564,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "rank_up": {
     "patterns": [
@@ -518,7 +587,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "status": {
     "patterns": [
@@ -557,7 +629,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "alloc": {
     "patterns": [
@@ -577,7 +652,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "skills": {
     "patterns": [
@@ -597,7 +675,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "skill_learn": {
     "patterns": [
@@ -618,7 +699,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "equip": {
     "patterns": [
@@ -641,7 +725,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "unequip": {
     "patterns": [
@@ -664,7 +751,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "titles": {
     "patterns": [
@@ -684,7 +774,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "rename": {
     "patterns": [
@@ -748,7 +841,10 @@
         "player"
       ]
     },
-    "guard_desc": "随时"
+    "guard_desc": "随时",
+    "guards": [
+      "hook:register"
+    ]
   },
   "item_show": {
     "patterns": [
@@ -770,7 +866,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "item_use": {
     "patterns": [
@@ -794,7 +893,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "item_drop": {
     "patterns": [
@@ -815,7 +917,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "item_sell": {
     "patterns": [
@@ -836,7 +941,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "item_buy": {
     "patterns": [
@@ -858,7 +966,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "stash": {
     "patterns": [
@@ -882,7 +993,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "bag_sort": {
     "patterns": [
@@ -902,7 +1016,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "item_compare": {
     "patterns": [
@@ -924,7 +1041,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "money": {
     "patterns": [
@@ -945,7 +1065,10 @@
         "player"
       ]
     },
-    "guard_desc": "随时"
+    "guard_desc": "随时",
+    "guards": [
+      "hook:register"
+    ]
   },
   "attack": {
     "patterns": [
@@ -966,7 +1089,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "interrupt": {
     "patterns": [
@@ -986,7 +1112,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "defend": {
     "patterns": [
@@ -1007,7 +1136,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "retreat": {
     "patterns": [
@@ -1027,7 +1159,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "skill_cast": {
     "patterns": [
@@ -1050,7 +1185,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "battle_item": {
     "patterns": [
@@ -1096,7 +1234,10 @@
         "player"
       ]
     },
-    "priority": 50
+    "priority": 50,
+    "guards": [
+      "hook:register"
+    ]
   },
   "focus_fire": {
     "patterns": [
@@ -1116,7 +1257,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "swap_weapon": {
     "patterns": [
@@ -1135,7 +1279,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "auto_battle": {
     "patterns": [
@@ -1154,7 +1301,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "battle_log": {
     "patterns": [
@@ -1173,7 +1323,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "gather": {
     "patterns": [
@@ -1193,7 +1346,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "dig": {
     "patterns": [
@@ -1213,7 +1369,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "fish": {
     "patterns": [
@@ -1233,7 +1392,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "search": {
     "patterns": [
@@ -1253,7 +1415,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "rest": {
     "patterns": [
@@ -1274,7 +1439,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "pick_up": {
     "patterns": [
@@ -1294,7 +1462,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "climb": {
     "patterns": [
@@ -1307,7 +1478,10 @@
     "usage": "攀爬",
     "visible": true,
     "order": 58,
-    "guard_desc": "有断墙或树"
+    "guard_desc": "有断墙或树",
+    "guards": [
+      "hook:register"
+    ]
   },
   "sneak": {
     "patterns": [
@@ -1319,7 +1493,10 @@
     "usage": "潜行",
     "visible": true,
     "order": 59,
-    "guard_desc": "有怪"
+    "guard_desc": "有怪",
+    "guards": [
+      "hook:register"
+    ]
   },
   "smith": {
     "patterns": [
@@ -1339,7 +1516,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "enhance": {
     "patterns": [
@@ -1359,7 +1539,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "forge": {
     "patterns": [
@@ -1379,7 +1562,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "herbalist": {
     "patterns": [
@@ -1400,7 +1586,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "chapel": {
     "patterns": [
@@ -1419,7 +1608,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "junk_shop": {
     "patterns": [
@@ -1439,7 +1631,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "inn": {
     "patterns": [
@@ -1458,7 +1653,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "caravan": {
     "patterns": [
@@ -1477,7 +1675,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "codex": {
     "patterns": [
@@ -1497,7 +1698,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "codex_material": {
     "patterns": [
@@ -1517,7 +1721,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "codex_flavor": {
     "patterns": [
@@ -1537,7 +1744,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "codex_monster": {
     "patterns": [
@@ -1557,7 +1767,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "codex_relic": {
     "patterns": [
@@ -1578,7 +1791,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "relic_study": {
     "patterns": [
@@ -1598,7 +1814,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "footprint": {
     "patterns": [
@@ -1618,7 +1837,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "tower_enter": {
     "patterns": [
@@ -1638,7 +1860,10 @@
         "player"
       ]
     },
-    "guard_desc": "在入口"
+    "guard_desc": "在入口",
+    "guards": [
+      "hook:register"
+    ]
   },
   "tower_next": {
     "patterns": [
@@ -1657,7 +1882,10 @@
         "player"
       ]
     },
-    "guard_desc": "副本内"
+    "guard_desc": "副本内",
+    "guards": [
+      "hook:register"
+    ]
   },
   "tower_map": {
     "patterns": [
@@ -1676,7 +1904,10 @@
         "player"
       ]
     },
-    "guard_desc": "副本内"
+    "guard_desc": "副本内",
+    "guards": [
+      "hook:register"
+    ]
   },
   "tower_investigate": {
     "patterns": [
@@ -1695,7 +1926,10 @@
         "player"
       ]
     },
-    "guard_desc": "副本内"
+    "guard_desc": "副本内",
+    "guards": [
+      "hook:register"
+    ]
   },
   "tower_leave": {
     "patterns": [
@@ -1715,7 +1949,10 @@
         "player"
       ]
     },
-    "guard_desc": "副本内"
+    "guard_desc": "副本内",
+    "guards": [
+      "hook:register"
+    ]
   },
   "party": {
     "patterns": [
@@ -1736,7 +1973,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "party_invite": {
     "patterns": [
@@ -1756,7 +1996,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "party_accept": {
     "patterns": [
@@ -1776,7 +2019,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "party_leave": {
     "patterns": [
@@ -1796,7 +2042,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "help": {
     "patterns": [
@@ -1835,7 +2084,10 @@
         "player"
       ]
     },
-    "guard_desc": "随时"
+    "guard_desc": "随时",
+    "guards": [
+      "hook:register"
+    ]
   },
   "hint": {
     "patterns": [
@@ -1855,7 +2107,10 @@
         "player"
       ]
     },
-    "guard_desc": "随时"
+    "guard_desc": "随时",
+    "guards": [
+      "hook:register"
+    ]
   },
   "notice": {
     "patterns": [
@@ -1874,7 +2129,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "feedback": {
     "patterns": [
@@ -1885,7 +2143,10 @@
     "usage": "反馈",
     "visible": true,
     "order": 84,
-    "guard_desc": "随时"
+    "guard_desc": "随时",
+    "guards": [
+      "hook:register"
+    ]
   },
   "settings": {
     "patterns": [
@@ -1896,7 +2157,10 @@
     "usage": "设置",
     "visible": true,
     "order": 85,
-    "guard_desc": "随时"
+    "guard_desc": "随时",
+    "guards": [
+      "hook:register"
+    ]
   },
   "battle_pref": {
     "patterns": [
@@ -1907,7 +2171,10 @@
     "usage": "自动战斗偏好",
     "visible": true,
     "order": 86,
-    "guard_desc": "随时"
+    "guard_desc": "随时",
+    "guards": [
+      "hook:register"
+    ]
   },
   "ranking": {
     "patterns": [
@@ -1930,7 +2197,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "achievements": {
     "patterns": [
@@ -1949,7 +2219,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "talk": {
     "patterns": [
@@ -1973,7 +2246,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "go_to": {
     "patterns": [
@@ -2032,7 +2308,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "cook": {
     "patterns": [
@@ -2056,7 +2335,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "recipes": {
     "patterns": [
@@ -2077,7 +2359,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "eggs": {
     "patterns": [
@@ -2097,7 +2382,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "be_race": {
     "patterns": [
@@ -2161,7 +2449,10 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   },
   "page_back": {
     "patterns": [
@@ -2180,6 +2471,9 @@
         "uid",
         "player"
       ]
-    }
+    },
+    "guards": [
+      "hook:register"
+    ]
   }
 }

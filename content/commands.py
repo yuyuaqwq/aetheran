@@ -67,7 +67,9 @@ def load_declared_bindings() -> tuple:
         fn = bind_handler(spec.bind, lead=lambda env: (env,),
                           where="commands.json[%s]" % key)
         params = tuple(entry.get("params") or ())
-        _declare(key, fn, (), params)
+        # ★ 2026-09-30（注册面改造）：声明侧挂的守卫（如 ["player"]）随声明进表 ——
+        #   此前这里写死空守卫，把「声明里挂守卫」这条路径整个堵死（运行时守卫恒为空）。
+        _declare(key, fn, tuple(spec.guards or ()), params)
         bound.append(key)
     return tuple(bound)
 
@@ -90,7 +92,8 @@ def load_declared_soon() -> tuple:
         entry = table[key]
         if not isinstance(entry, dict) or entry.get("bind"):
             continue
-        _declare(key, _soon_handler, (), tuple(entry.get("params") or ()))
+        _declare(key, _soon_handler, tuple(entry.get("guards") or ()),
+                 tuple(entry.get("params") or ()))
         soon.append(key)
     return tuple(soon)
 

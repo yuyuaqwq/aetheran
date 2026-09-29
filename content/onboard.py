@@ -32,13 +32,6 @@ from __future__ import annotations
 #:   第一步 = 定族 / 第二步 = 定职业 / 第三步 = 取名 / 第四步 = 进镇
 #: ★ 与 `cmds_ast.BUILD_STEPS` 同序同长 —— 那一条是唯一真源，本层**只读不改**。
 
-#: 标题块（每步一个）—— 加在那一步**第一行**之前，不替代它原有的话。
-STEP_HEAD = {
-    "race":  "SYS_ONBOARD_STEP1",      # 📜 第一步 · 你是谁
-    "class": "SYS_ONBOARD_STEP2",      # ⚔️ 第二步 · 你怎么打
-    "name":  "SYS_ONBOARD_STEP3",      # ✒️ 第三步 · 你叫什么
-}
-
 #: 第一件委托（自动派的那一条）—— **现取**自 quests 域的 `order == 1` 主线，
 #: 本模块不写死 id（域里改了就跟着改）。
 FIRST_ORDER = 1
@@ -67,18 +60,6 @@ def step_of(p) -> str:
     if not str((p or {}).get("name") or "").strip():
         return "name"
     return "town"
-
-
-def is_new(p) -> bool:
-    """**第一次**来（建号还没走完）—— 开场白只给这一档。"""
-    return step_of(p) in ("race", "class", "name")
-
-
-def step_head_lines(p) -> list:
-    """该步的**标题块**（空表 = 已走完 / 不用给）—— 本层唯一出标题块的口。"""
-    from .cmds_ast import T                     # 本地 import：cmds_ast 要 import 本模块
-    k = STEP_HEAD.get(step_of(p))
-    return [T(k)] if k else []
 
 
 def _has_text(key) -> bool:

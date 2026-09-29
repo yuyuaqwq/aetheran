@@ -445,8 +445,6 @@ async def be_race(env, sink, uid, player):
     if cost:
         yield T("SYS_RACE_COST", name=cost.get("name", ""), effect=cost.get("effect", ""))
     if not p.get("cls"):        # ★ B4-7：建号第二步在等着（定过就不再啰嗦）
-        for _h in OB.step_head_lines(p):   # ★ copy-p5：第二步标题块（同一个口，cmds_ast.look 那处同款）
-            yield _h
         yield T("SYS_CLS_ASK")
 
 
@@ -457,6 +455,18 @@ def race_menu():
         out.append(T("SYS_RACE_ROW", i="①②③④⑤⑥"[i - 1] if i <= 6 else str(i),
                      name=v.get("name", k), line=v.get("line") or ""))
     out.append(T("SYS_RACE_HOW"))
+    return out
+
+
+def register_screen() -> list:
+    """未建号玩家的「注册屏」：开场 + 六族菜单 —— **一份组装，出口共用**。
+
+    ★ 2026-09-30（注册面改造 · 鱼鱼口径）：出口 = ① `观察`（新号第一眼）
+      ② 路由未命中（`miss_text` —— 接 `fn(text, prefix, player)` 之后走这里）。
+      三处不许各拼一遍 —— 拼法改了只动这里。
+    """
+    out = [T("SYS_ONBOARD_OPEN"), "━" * 12]
+    out.extend(race_menu())
     return out
 
 
@@ -611,8 +621,6 @@ async def be_class(env, sink, uid, player):
         yield T("SYS_CLS_HP", hp=p.get("hp"), max=p.get("hp_max"))
     yield T("SYS_CLS_NEXT", left=AL.left_of_record(p), alloc=_alloc_verb())
     if not str(p.get("name") or "").strip():            # 建号第三步（取名）还没走完
-        for _h in OB.step_head_lines(p):   # ★ copy-p5：第三步标题块（同上）
-            yield _h
         yield T("SYS_CLS_NAME")
 
 
@@ -826,17 +834,10 @@ def egg_lines(p, player=None, env=None) -> list:
 # ══════════════════════════════════════════════════════════════
 async def look(env, sink, uid, player):
     p = _p(player)
-    # ★ copy-p5（B 档 ① · 开场白）：**新玩家第一屏**先给一屏世界观框架 ——
-    #   口径 `content/onboard.py::is_new`（建号还没走完那一档），只给一次性的「第一次」。
-    #   ★ 位置在种族菜单**之前**：新玩家第一眼不是六行族表，是「你到了个什么地方」。
-    if OB.is_new(p):
-        yield T("SYS_ONBOARD_OPEN")
-        yield "━" * 12
-    # ★ P-10：还没定族 —— 第一眼不是风景，是「你是谁」（建号是玩的第一步）
+    # ★ 2026-09-30（注册面改造）：还没定族 —— 第一眼不是风景，是「注册屏」
+    #   （开场 + 六族菜单；一份组装 `register_screen()`，与路由未命中共用同一出口）。
     if not p.get("race"):
-        for line in OB.step_head_lines(p):   # ★ copy-p5：标题块加在那一步**第一行之前**
-            yield line
-        for line in race_menu():
+        for line in register_screen():
             yield line
         return
     if TT.newest(p):                            # ★ B3-2：称号跟着名字走（一个都没拿到就不多这一行）

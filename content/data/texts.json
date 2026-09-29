@@ -6318,6 +6318,18 @@
     "category": "系统",
     "desc": "P-11 · 内置 `player` 守卫（没建档）拦下的那一句 —— 引擎 `guard_text_fn` 的供体之一（引擎给的中性键 `guard.register_missing`）。逐字 = 宿主改前 `main.py` 那两句之一（宿主面改成只传键，玩家看到的字一个没动）。"
   },
+  "SYS_GUARD_CLS": {
+    "value": "还差一步：打『选职业』。定下来，往后就靠这一手。",
+    "params": [],
+    "category": "系统",
+    "desc": "★ 2026-09-30（注册面改造）：守卫拦下 —— 定了族、还没定职业时。"
+  },
+  "SYS_GUARD_NAME": {
+    "value": "还差一步：打『名字 <名字>』。往后大家就这么叫你。",
+    "params": [],
+    "category": "系统",
+    "desc": "★ 2026-09-30（注册面改造）：守卫拦下 —— 定了职业、还没起名时。"
+  },
   "SYS_GUARD_BATTLE": {
     "value": "你现在不在战斗中。",
     "params": [],
