@@ -1,0 +1,36 @@
+{
+  "_note": "机器键 → 玩家可见显示名的**唯一映射表**。\n为什么需要它：引擎 cue 的 payload 直传 ASCII 机器键（`{key}` / `{bar}`），玩家在战斗日志里会看到 `aim` / `silenced` 这类内部词。\n本表由 `content/name_map.py::render_slots` 在**渲染前**翻译 payload（引擎零改动 —— 「第二款游戏不改一行能用」的判据：翻译口全在本包，引擎只管发 ASCII 键）。\n★ 真源纪律：显示名一律取既有真源（状态键取技能域 mech 对应的技能中文名 · 资源键取 `resources.json` 的 `name`），**不许在这里新造词**；本表是**索引**不是第二份命名。\n★ fail-closed：cue 的 payload 带了表里没有的机器键 ⇒ 装配期点名抛，绝不静默回落成机器键本身（那正是要修的缺陷）。",
+  "_src": "状态键 = content/rules/skill_mech.json（mech 的 state / rules 键）× content/data/skills.json（mech → 技能中文名）· 资源键 = content/rules/resources.json（resources[*].name）",
+  "state": {
+    "aegis_veil": "庇护",
+    "bleeding": "割喉",
+    "blood_debt": "血债",
+    "break_mark": "断势",
+    "frost_shell": "霜障",
+    "hawk_eye_crit": "鹰眼",
+    "hawk_eye_hit": "鹰眼",
+    "iron_oath": "不退",
+    "litany_ward": "晨祷",
+    "night_lamp": "守夜",
+    "oathwall": "盾墙",
+    "pinned": "箭止",
+    "rear_guard": "断后",
+    "regen": "安神曲",
+    "riposte_guard": "狂态",
+    "sidestep_veil": "侧闪",
+    "silenced": "静默",
+    "soothed": "抚慰",
+    "star_daze": "星眩",
+    "starlit": "枕星",
+    "sunder": "破势",
+    "taunt_mark": "挑战咆哮",
+    "whetted": "刃熟"
+  },
+  "res": {
+    "RES_AIM": "准星",
+    "RES_LITANY": "祷言",
+    "RES_MARK": "印记",
+    "RES_OATH": "守誓值"
+  },
+  "bar": {}
+}

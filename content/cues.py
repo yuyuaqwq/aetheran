@@ -78,6 +78,8 @@ def check_domain() -> dict:
     cue / 哪一格。返回「cue 名 → 槽位名」（供探针与装配日志用）。
     """
     from . import battle_text as BT
+    from . import name_map as _NM          # ★ P2-4b：机器键 → 显示名对账（装配期 fail-closed）
+    _NM.check_domain()                     #   少一条显示名 ⇒ 当场点名抛，不静默漏
     names = cue_names()
     decl = BT.slots()                       # `content/rules/battle_text.json::slots`
     tbl = BT.table()                        # 本包真正注入 `Battle(text=…)` 的那张表

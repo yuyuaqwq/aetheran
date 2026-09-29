@@ -117,9 +117,27 @@ def table() -> TextTable:
     return _CACHE["table"]
 
 
-def battle_text() -> TextTable:
-    """`Battle(text=…)` 的实参（语义名 —— 调用点不必知道它是 `TextTable`）。"""
-    return table()
+def battle_text():
+    """`Battle(text=…)` 的实参（语义名 —— 调用点不必知道它是 `TextTable`）。
+
+    ★ P2-4b（2026-09-29）：外面套一层**显示名翻译**（`content/name_map.py`）。
+      引擎 cue 的 payload 直传 ASCII 机器键（`{key}` / `{bar}`），玩家会在战斗日志里
+      看到 `silenced` / `shaken` 这类内部词；翻译放在**渲染前**、**本包这一侧**，
+      所以**引擎零改动**（第二款游戏接上去只换 `name_map.json`，引擎一行不动）。
+
+      为什么要套一层而不是改文案模板：模板里 `{key}` 是**引擎 payload 的槽位名**，
+      改模板等于把引擎的接口名抄进 17 格文案（双源温床）；而且 payload 里那一格
+      本来就该是「显示名」——它已经出现在玩家眼前了。
+    """
+    from . import name_map as _NM
+    # ★ 缓存跟着**真表**走：`table()` 那一格被清掉重建时（探针猴补槽位走的就是这条路），
+    #   这里必须跟着重建代理，否则会端着一张**过期**的表发那一行（实测 probe_cues ⑥ 由此红）。
+    #   判据 = 代理包的正是**当前**那张表。
+    _cur = table()
+    if _CACHE.get("wrapped_src") is not _cur:
+        _CACHE["wrapped"] = _NM.TranslatedTable(_cur)
+        _CACHE["wrapped_src"] = _cur
+    return _CACHE["wrapped"]
 
 
 # ══════════════════════════════════════════════════════════════

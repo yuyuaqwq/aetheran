@@ -216,8 +216,16 @@ B = _build()
 _REAL_BUS = ECU.cue_of(B)
 chk("③ 引擎 `cue_of(battle)` 非空（这款游戏**接了** cue）", _REAL_BUS is not None, repr(_REAL_BUS))
 chk("③ 总线里的订阅表 == 本包声明的那一张", dict(getattr(_REAL_BUS, "subs", {}) or {}) == SUBS)
+#: ★ P2-4b：`Battle(text=…)` 外面套了一层**显示名翻译代理**（`name_map.TranslatedTable`），
+#:   所以 identity 链多一跳 —— 断言的**意图一字未改**（仍是「句子真源只有一处」），
+#:   只是把这一跳写进去，并额外钉住「代理不持有第二份文案」（拆包后就是那一张）。
+_tbl_inj = B.text
+_tbl_real = getattr(_tbl_inj, "wrapped", _tbl_inj)
 chk("③ 总线持有的表 is 注入 `Battle(text=…)` 的那一张 is `battle_text.table()`（句子真源一处）",
-    getattr(_REAL_BUS, "table", None) is B.text and B.text is BT.table())
+    getattr(_REAL_BUS, "table", None) is B.text and _tbl_real is BT.table())
+chk("③ 翻译代理只是**翻译层**、不持有第二份文案（拆包后逐字是那一张）",
+    not hasattr(_tbl_inj, "_specs") or _tbl_inj._specs is _tbl_real._specs,
+    "代理类型 %s" % type(_tbl_inj).__name__)
 
 # ══════════════════════════════════════════════════════════════
 # ④ 真发一次（三条原点位）⇒ 逐字节 == 文案表那一条
