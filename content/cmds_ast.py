@@ -22,6 +22,7 @@ from . import timed_events as TE     # 限时事件那一格（B3-5）：宿主�
 from . import affix as AFFIX
 from . import explore as EX          # ★ fxexp：探索遇怪的概率与掷骰（唯一出口 · 表在 rules/）
 from . import argv as AV          # ★ B4-11：取参的唯一口（零依赖 ⇒ 本模块也能 import）         # ★ B3-24：精英词条（观察那行预告 = 遭遇的同一个种子）
+from . import onboard as OB       # ★ copy-p5：引导层（B 档「有目标感」）—— 只 import，不反向依赖
 
 _DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 _CACHE: dict = {}
@@ -439,6 +440,8 @@ async def be_race(env, sink, uid, player):
     if cost:
         yield T("SYS_RACE_COST", name=cost.get("name", ""), effect=cost.get("effect", ""))
     if not p.get("cls"):        # ★ B4-7：建号第二步在等着（定过就不再啰嗦）
+        for _h in OB.step_head_lines(p):   # ★ copy-p5：第二步标题块（同一个口，cmds_ast.look 那处同款）
+            yield _h
         yield T("SYS_CLS_ASK")
 
 
@@ -603,6 +606,8 @@ async def be_class(env, sink, uid, player):
         yield T("SYS_CLS_HP", hp=p.get("hp"), max=p.get("hp_max"))
     yield T("SYS_CLS_NEXT", left=AL.left_of_record(p), alloc=_alloc_verb())
     if not str(p.get("name") or "").strip():            # 建号第三步（取名）还没走完
+        for _h in OB.step_head_lines(p):   # ★ copy-p5：第三步标题块（同上）
+            yield _h
         yield T("SYS_CLS_NAME")
 
 
@@ -816,8 +821,16 @@ def egg_lines(p, player=None, env=None) -> list:
 # ══════════════════════════════════════════════════════════════
 async def look(env, sink, uid, player):
     p = _p(player)
+    # ★ copy-p5（B 档 ① · 开场白）：**新玩家第一屏**先给一屏世界观框架 ——
+    #   口径 `content/onboard.py::is_new`（建号还没走完那一档），只给一次性的「第一次」。
+    #   ★ 位置在种族菜单**之前**：新玩家第一眼不是六行族表，是「你到了个什么地方」。
+    if OB.is_new(p):
+        yield T("SYS_ONBOARD_OPEN")
+        yield "━" * 12
     # ★ P-10：还没定族 —— 第一眼不是风景，是「你是谁」（建号是玩的第一步）
     if not p.get("race"):
+        for line in OB.step_head_lines(p):   # ★ copy-p5：标题块加在那一步**第一行之前**
+            yield line
         for line in race_menu():
             yield line
         return
@@ -1334,6 +1347,12 @@ def live_hp(env, uid, p):
 
 async def status(env, sink, uid, player):
     p = _p(player)
+    # ★ copy-p5（B 档 ② · 面板顶栏「当前该做：⋯」）：**第一行** —— 玩家打开面板第一眼看到
+    #   「现在该干什么」，而不是一串数字。四档正文现算（`onboard.goal_line` 一个口）。
+    #   ★ 读档这一刻先校正一次（`refresh_goal`）：那一格是派生态，换进程回来时按旧值印会过期。
+    _goal = OB.goal_line(p)
+    if _goal:
+        yield _goal
     nm = name_with_title(p)                     # ★ B3-2：称号跟着名字走进面板
     yield T("SYS_STATUS_HEAD", who=nm, race=_race_label(p.get("race")),
             cls=_cls_label(p.get("cls")), level=p.get("level"))

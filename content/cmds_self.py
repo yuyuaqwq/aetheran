@@ -187,10 +187,22 @@ async def rename(env, sink, uid, player):
         return
     p["name"] = want
     f["renamed"] = _day()
+    # ★ copy-p5（B 档 ③ · 第一件委托自动派）：**建号走完那一刻**把第一件活挂上去 ——
+    #   口径全在 `content/onboard.py::auto_first_quest`（派哪一条 / 幂等 / 不绕哪道门都写在那儿）。
+    #   ★ 为什么落在「取名」而不是「选职业」：建号第三步走完才是真正的「这个号能玩了」，
+    #     而顶栏与『我的委托』都从这一刻开始有话说（`onboard.refresh_goal` 同拍校正）。
+    from . import onboard as OB                           # 本地 import：免得装载期成环
+    from .cmds_quest import _quests as _q                 # 委托域的**唯一**读口（别处同款）
+    _given = OB.auto_first_quest(p, _q()) if OB.step_of(p) == "town" else []
+    OB.refresh_goal(p)
     if player is not None:
         player.update(p)
     _save(env)
     yield T("SYS_RENAME_DONE", name=want)
+    if _given:                                # ★ 派上了才说 —— 没派成（老档/交过活）一个字都不提
+        #   `name` = 那一件的**显示名**（现取自 quests 域，呈现口不认机器键 id）
+        yield T("SYS_ONBOARD_FIRST_GIVEN",
+                name=(_q().get(OB.first_quest_id()) or {}).get("name", ""))
 
 
 def _board_rows(p, group_id, uid) -> list:

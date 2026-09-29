@@ -6902,5 +6902,74 @@
     "params": [],
     "category": "战斗",
     "desc": "★ P0-1 续批（2026-09-29 · aep0）：`打断` 的**开场前抬头**那一句的专属槽位。★ 为什么从 `COMBAT_INT_HEAD` / `COMBAT_INT_PLAIN` 拆出来：那两格带【N 刻】（战斗日志行统一形态，真源 26_ §三 优化 1），而那一格是**战斗绝对时刻** —— 开场前这一手还没打、读不到战斗钟，硬带就��把字面量 `{t}` 打上屏（实测 e2e 真跑）。★ 场里真断成/压后那两句仍走 `COMBAT_INT_BREAK` / `COMBAT_INT_PUSH`（带刻、进战斗日志）。"
+  },
+  "SYS_ONBOARD_STEP1": {
+    "value": "📜 第一步 · 你是谁",
+    "params": [],
+    "category": "引导",
+    "desc": "★ copy-p5（2026-09-29 · 去 AI 感 + 新手引导车道 · B 档）：建号三步的**标题块** —— 加在那一步第一行**之前**（不替代它原有的话）。★ **不加新步骤**：守 P-69「建号这段每多一步都在掉人」，建号仍是 `cmds_ast.BUILD_STEPS` 那四格。"
+  },
+  "SYS_ONBOARD_STEP2": {
+    "value": "⚔️ 第二步 · 你怎么打",
+    "params": [],
+    "category": "引导",
+    "desc": "★ copy-p5（2026-09-29 · 去 AI 感 + 新手引导车道 · B 档）：建号三步的**标题块** —— 加在那一步第一行**之前**（不替代它原有的话）。★ **不加新步骤**：守 P-69「建号这段每多一步都在掉人」，建号仍是 `cmds_ast.BUILD_STEPS` 那四格。"
+  },
+  "SYS_ONBOARD_STEP3": {
+    "value": "✒️ 第三步 · 你叫什么",
+    "params": [],
+    "category": "引导",
+    "desc": "★ copy-p5（2026-09-29 · 去 AI 感 + 新手引导车道 · B 档）：建号三步的**标题块** —— 加在那一步第一行**之前**（不替代它原有的话）。★ **不加新步骤**：守 P-69「建号这段每多一步都在掉人」，建号仍是 `cmds_ast.BUILD_STEPS` 那四格。"
+  },
+  "SYS_ONBOARD_OPEN": {
+    "value": "风车镇还在转。\n只是转得比十年前慢。\n路修到北边就没了。\n再往北是骨田，\n骨田后面有一座塔。塔比镇老。\n镇上都记得塔。没人上去过。\n你是今天早上进的镇。\n门房问你要什么，你没答上来。\n他也没再问。",
+    "params": [],
+    "category": "引导",
+    "desc": "★ copy-p5（同上）：**新玩家第一屏的开场白** —— 玩家第一次来（`content/onboard.py::is_new`）。★ 范式照 `SCENE_WT_CHAPEL` 的密度与腔调：具体场景 + 具体物件 + 留一个钩子，不解释自己是什么、也不列指令。★ 判据 = `scripts/probe_onboard.py` ①（新玩家第一屏必含本槽位）。"
+  },
+  "SYS_ONBOARD_GOAL": {
+    "value": "🎯 当前该做：{body}",
+    "params": [
+      "body"
+    ],
+    "category": "引导",
+    "desc": "★ copy-p5（同上）：面板顶栏「当前该做：⋯」那一行 —— `content/onboard.py::goal_line` 一个口。★ 四档正文（`SYS_ONBOARD_GOAL_STEP` / `_JOB` / `_FIRST` / `_IDLE`）现算，本格只出前缀。★ 判据 = probe_onboard ④（把正文摘掉 ⇒ 本行当场不显示 ⇒ 门禁红）与 ⑤（清掉 `flags.current_goal` ⇒ 回落到兜底那一句，不静默不显示）。"
+  },
+  "SYS_ONBOARD_GOAL_STEP": {
+    "value": "建号没走完 —— {what}。",
+    "params": ["what"],
+    "category": "引导",
+    "desc": "★ copy-p5：顶栏正文第 ①档（建号没走完）。★ `{what}` 传**呈现名**（不是机器键）：`race`/`class`/`name` 三个键在 `content/onboard.py::STEP_WHAT` 里各配一句玩家读得懂的话 —— 机器键绝不许上屏（判据 = `probe_onboard` ②）。★ 句式是「建号没走完 —— <那句话>。」，`{what}` 是**整句**（带句号）⇒ 不拼出「先把…那一步走完」那种夹生句。★ **这一屏一个指令名都不打**：玩家要敲什么，往下『我的委托』/『状态』自己会带出来。"
+  },
+  "SYS_ONBOARD_GOAL_JOB": {
+    "value": "{name} —— {objective}",
+    "params": [
+      "name",
+      "objective"
+    ],
+    "category": "引导",
+    "desc": "★ copy-p5：顶栏正文第 ②档（手上有活）—— 与『提示』`content/cmds_quest.py::_hint_lines` **同一把尺**（同一个口取委托名与 objective），不是第二处口径。"
+  },
+  "SYS_ONBOARD_GOAL_FIRST": {
+    "value": "先把{name}接了。",
+    "params": [
+      "name"
+    ],
+    "category": "引导",
+    "desc": "★ copy-p5：顶栏正文第 ③档（一件都没接）—— 第一件委托的**兜底指路**；正常情况下它由 B 档 ③ 自动派上（`onboard.auto_first_quest`），这一档只在自动派没发生时出现。"
+  },
+  "SYS_ONBOARD_GOAL_IDLE": {
+    "value": "镇上的人都有活要干。\n去『悬赏』看看有没有人缺人手。",
+    "params": [],
+    "category": "引导",
+    "desc": "★ copy-p5：顶栏正文第 ④档（**回落**）—— 手上一条没接、交过活 ⇒ 这一格必须有话，不许静默不显示（判据 = probe_onboard ⑤ 的反证）。"
+  },
+  "SYS_ONBOARD_FIRST_GIVEN": {
+    "value": "🎁 {name} 挂在你身上了。\n板上那条最小的活，系统先替你接了。",
+    "params": [
+      "name"
+    ],
+    "category": "引导",
+    "desc": "★ copy-p5（B 档 ③ · 第一件委托自动派）：`cmds_self.rename` 里建号走完那一拍，真的派上了（`onboard.auto_first_quest` 返回真）才说这一句；没派成（老档 / 交过活 / 手上已有活）一个字都不提 ⇒ 不出现「说有派、其实没派」。★ `{name}` 由调用方给委托名（呈现口不认机器键）。"
   }
 }
