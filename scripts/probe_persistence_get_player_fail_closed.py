@@ -73,7 +73,7 @@ for label, payload in (("truncated JSON", '{"name": "鱼鱼", "level":'),
                        ("top level is a list", '["a", "b"]'),
                        ("top level is a number", "12345")):
     c = PS.connect()
-    c.execute("UPDATE %s SET data=? WHERE group_id=? AND uid=?" % PS.TBL, (payload, "g1", "u1"))
+    c.execute("UPDATE %s SET data=? WHERE group_id=? AND uid=?" % PS.TBL, (payload, PS.WORLD, "u1"))
     c.commit()
     c.close()
     raised = None
@@ -99,18 +99,18 @@ print("[3] a failed read must not write anything / must leave the row intact")
 PS.update_player("g2", "u2", name="阿斯特兰", level=42, gold=123456)
 c = PS.connect()
 c.execute("UPDATE %s SET data=? WHERE group_id=? AND uid=?" % PS.TBL,
-          ('{"name": "阿斯特兰", "level":', "g2", "u2"))
+          ('{"name": "阿斯特兰", "level":', PS.WORLD, "u2"))
 c.commit()
 c.close()
 before = sqlite3.connect(DB).execute(
-    "SELECT data FROM %s WHERE group_id='g2' AND uid='u2'" % PS.TBL).fetchone()[0]
+    "SELECT data FROM %s WHERE group_id='world' AND uid='u2'" % PS.TBL).fetchone()[0]
 try:
     PS.get_player("g2", "u2")
     chk("corrupt save read raises (so the engine never re-creates it)", False, "read returned silently")
 except Exception:                                             # noqa: BLE001
     chk("corrupt save read raises (so the engine never re-creates it)", True)
 after = sqlite3.connect(DB).execute(
-    "SELECT data FROM %s WHERE group_id='g2' AND uid='u2'" % PS.TBL).fetchone()[0]
+    "SELECT data FROM %s WHERE group_id='world' AND uid='u2'" % PS.TBL).fetchone()[0]
 chk("the failed read wrote nothing (row bytes unchanged)", after == before, repr(after[:90]))
 
 print("RESULT: %s" % ("PASS" if ok else "FAIL"))

@@ -68,7 +68,19 @@ PS.bind(db_path=DB, clock=lambda: 0.0)
 
 
 def _seed(gid, uid, **fields):
-    """Create a normal save through the production ports (no hand-written table rows)."""
+    """Create a normal save through the production ports (no hand-written table rows).
+
+    ★ 2026-10-01（数据共享归一后）：所有 gid 落同一条 world 行 —— 各用例**自己隔离**：
+      起手先删上一个用例留下的行（含 _corrupt 造的坏档），否则坏档漏给下一个 seed。
+    """
+    with PS.lock():
+        c = PS.connect()
+        try:
+            c.execute("DELETE FROM %s WHERE group_id=? AND uid=?" % PS.TBL,
+                      (PS.WORLD, str(uid)))
+            c.commit()
+        finally:
+            c.close()
     PS.get_player(gid, uid)
     PS.update_player(gid, uid, **fields)
     return fields
@@ -76,14 +88,14 @@ def _seed(gid, uid, **fields):
 
 def _corrupt(gid, uid, blob):
     c = sqlite3.connect(DB)
-    c.execute("UPDATE %s SET data=? WHERE group_id=? AND uid=?" % PS.TBL, (blob, gid, uid))
+    c.execute("UPDATE %s SET data=? WHERE group_id=? AND uid=?" % PS.TBL, (blob, PS._world(gid), uid))
     c.commit()
     c.close()
 
 
 def _raw(gid, uid):
     return sqlite3.connect(DB).execute(
-        "SELECT data FROM %s WHERE group_id=? AND uid=?" % PS.TBL, (gid, uid)).fetchone()[0]
+        "SELECT data FROM %s WHERE group_id=? AND uid=?" % PS.TBL, (PS._world(gid), uid)).fetchone()[0]
 
 
 # ── 1. the normal path must be byte-for-byte unchanged (read-modify-write keeps old cells) ──

@@ -143,7 +143,13 @@ PS.update_player("g1", "u1", level=1)
 PS.update_player("g1", "u2", level=2)
 PS.update_player("g2", "u1", level=3)
 PS.update_player("g3", "u9", level=9)                                    # 另一群人（两口必须分得开）
-chk("★ groups_of_player（同一个人在哪几个群）", sorted(PS.groups_of_player("u1")) == ["g1", "g2"],
+# ★ 2026-10-01（数据共享 · 鱼鱼口径「私聊/群聊数据要共享」）：档行归一到 `WORLD` ——
+#   下面三条断言跟着口径改（有意差异，不是放水）：
+#   · groups_of_player = 单世界恒 [world]（u1 在 g1/g2 的两行**合并成一行**）
+#   · all_players 全量 4→3（g1/u1 与 g2/u1 合并 · 合并后的档 = 后写的 l3）
+#   · 「按群过滤」这个维度退役 —— 带群参也回全量（榜/名册本就是全服口径）
+#   广播那口（下两行）**没改**：活跃群记在 meta，get_player_groups 仍回真实群号。
+chk("★ groups_of_player（单世界恒一个键）", sorted(PS.groups_of_player("u1")) == ["world"],
     PS.groups_of_player("u1"))
 # ★ 审计 L1702：广播群表那口是**零参**宿主契约（引擎 host/shell.py::_group_table 逐字这么调）——
 #   原先只有按 uid 那一支 ⇒ 升级即 TypeError，而包内零生产消费者、跑包内测试照不出来。
@@ -152,8 +158,10 @@ chk("★ get_player_groups 零参 = 全部群（引擎调用形状）",
 chk("★ 两口不串：零参 != 按 uid", sorted(PS.get_player_groups()) != sorted(PS.groups_of_player("u1")),
     "零参=%s 按uid=%s" % (sorted(PS.get_player_groups()), sorted(PS.groups_of_player("u1"))))
 allp = PS.all_players()
-chk("★ all_players 全量 = 4 条", len(allp) == 4, len(allp))
-chk("★ all_players 按群过滤", len(PS.all_players("g1")) == 2, PS.all_players("g1"))
+chk("★ all_players 全量 = 3 条（★ 数据共享：g1/u1 与 g2/u1 归一合并 · 后写 l3 覆盖 l1）",
+    len(allp) == 3, len(allp))
+chk("★ all_players 带群参也回全量（★ 数据共享：按群过滤维度退役 · 榜/名册 = 全服口径）",
+    len(PS.all_players("g1")) == 3, PS.all_players("g1"))
 
 # ⑦ ★ 审计 L1702 三条（引擎侧零覆盖）：本模块不许再登记**从不读**的注入键。
 import re as _re
@@ -205,9 +213,18 @@ try:
     chk("★ data 顶层非 dict ⇒ 当场抛（不降级）", False, "竟然正常返回了")
 except RuntimeError as _ex2:
     chk("★ data 顶层非 dict ⇒ 当场抛（不降级）", "u_bad" in str(_ex2), str(_ex2)[:120])
+# ★ 2026-10-01（数据共享）：all_players 归一后**恒扫全表** —— 坏档在表里时，任何一次
+#   all_players 调用都会 fail-closed 抛（这正是行为：一个坏档 = 榜整体喊出来，不静默少人）。
+#   下面验「好档原样回来」⇒ 先把上面故意造的坏行清掉（坏档的两条判据已在上面两个 try 里验完）。
+_c4b = sqlite3.connect(p3)
+_c4b.execute("DELETE FROM %s WHERE uid=?" % PS.TBL, ("u_bad",))
+_c4b.commit()
+_c4b.close()
 _good = {r["uid"]: r["data"] for r in PS.all_players("g2")}
-chk("★ 好数据零行为变化（g2 那一条原样回来）",
-    _good == {"u_far": {"name": "丙", "level": 9, "exp": 99}}, _good)
+chk("★ 好数据零行为变化（★ 数据共享：恒全表 = 三条好档逐条原样回来）",
+    _good == {"u_ok1": {"name": "甲", "level": 5, "exp": 99},
+              "u_ok2": {"name": "乙", "level": 7, "exp": 99},
+              "u_far": {"name": "丙", "level": 9, "exp": 99}}, _good)
 #  ④ 静态守卫（独立读源，不 import）：全文件不许再有「解析失败就造空档」的降级写法。
 #     （第 25 轮纪律：判据要独立第三方读源，别拿被测对象自己比自己。）
 _all_fn = _re.search(r"(?m)^def all_players\(.*?(?=^def |^# ──)", _pers_src, _re.S)

@@ -46,6 +46,19 @@ META_COLS = ("k", "v")
 #: 分隔符只有这一处定义 —— 键里的两截都不许再含它，否则会撞别人的行）
 META_SEP = ":"
 
+#: ★ 2026-10-01（鱼鱼口径「私聊/群聊数据要共享」）：**游戏世界里没有「群」这个维度** ——
+#:   一个人（uid）一份档、一个世界。宿主传进来的 `group_id`（群号 / `"private"`）只是
+#:   **会话路由**，存档键一律归一到 `WORLD`（实测：私聊 `private` 与群号各存一行 ⇒
+#:   同一个 1454832774 互不可见 —— 私聊注册过、群里又能注册）。
+#:   未来「多世界预留」（06_阶段交接指南）= 把 `_world()` 换成「群 → 世界」映射，**只此一处**。
+WORLD = "world"
+
+
+def _world(group_id=None) -> str:
+    """会话 group_id → 世界键（今天恒 `WORLD`；将来多世界映射的唯一改动点）。"""
+    return WORLD
+
+
 #: 注入句柄的**本模块真源**。只列**本模块真读的**两个键 ——
 #: `log` / `tlog` / `attach_tlog` / `grant_reward` 由 `content/facade.py` 的 `HANDLES`
 #: 持有并消费（`facade.log()` 等），本模块零读取点（审计 L1702：纯写零读）。
@@ -117,12 +130,16 @@ def init_db():
 
 # ── 读写档 ─────────────────────────────────────────────────
 def get_player(group_id, uid):
-    """读档（dict | None）。`None` = 新玩家（引擎会问包要初始档）。"""
+    """读档（dict | None）。`None` = 新玩家（引擎会问包要初始档）。
+
+    ★ 2026-10-01（数据共享）：键按 `_world()` 归一 —— 私聊/群聊同一份档（签名不变，
+      宿主照旧传真实 group_id，本半边只认世界键）。
+    """
     with _LOCK:
         c = connect()
         try:
             row = c.execute("SELECT data FROM %s WHERE group_id=? AND uid=?" % TBL,
-                            (str(group_id or ""), str(uid or ""))).fetchone()
+                            (_world(group_id), str(uid or ""))).fetchone()
         finally:
             c.close()
     # ★ 审计 L1701：原为 `except Exception: return None`。**`None` 的含义被这一处偷走了** ——
@@ -172,7 +189,7 @@ def update_player(group_id, uid, **fields):
         c = connect()
         try:
             row = c.execute("SELECT data FROM %s WHERE group_id=? AND uid=?" % TBL,
-                            (str(group_id or ""), str(uid or ""))).fetchone()
+                            (_world(group_id), str(uid or ""))).fetchone()
             cur = {}
             if row:
                 # ★ 审计 L1701-同族（写口）：读口 get_player 已在同一次修复里 fail-closed，
@@ -202,7 +219,17 @@ def update_player(group_id, uid, **fields):
             c.execute("INSERT INTO %s(group_id, uid, data, updated_at) VALUES(?,?,?,?) "
                       "ON CONFLICT(group_id, uid) DO UPDATE SET data=excluded.data, "
                       "updated_at=excluded.updated_at" % TBL,
-                      (str(group_id or ""), str(uid or ""), blob, clock()))
+                      (_world(group_id), str(uid or ""), blob, clock()))
+            # ★ 2026-10-01（数据共享 · 归一的另一半）：档行归一后 players 表里不再有真实群号，
+            #   而 `get_player_groups()`（引擎广播扇出的**零参契约口**）要的正是「哪些群活跃过」
+            #   ⇒ 真实群号**顺手记一条 meta**（raw 键，不经 `group_get/set` —— 那两个口的
+            #   group_id 参数是**域侧复合键**（如 `instance` 的 `群#uid`），归一归在域侧
+            #   `key_of`，这里记的真群号不能被抹）。私聊（`"private"`）不算群，不记。
+            _g = str(group_id or "")
+            if _g and _g != "private" and _g != WORLD:
+                c.execute("INSERT INTO %s(k, v) VALUES(?,?) "
+                          "ON CONFLICT(k) DO UPDATE SET v=excluded.v" % TBL_META,
+                          ("active_group%s%s" % (META_SEP, _g), "1"))
             c.commit()
         finally:
             c.close()
@@ -219,20 +246,33 @@ def get_player_groups():
       （只有探针按 uid 调）⇒ 跑包内测试永远照不出来。
       奥兰迪亚那份同名口（`content/persistence/players.py::get_player_groups`）也是零参，
       两款游戏同一契约。
-    ★ 「某个人在哪几个群」是**另一个问题**，走 `groups_of_player(uid)` —— 不塞可选参数进来：
-      两套语义（群表 / 单人分布）名字必须能各自说清，否则调用方迟早拿错那一支。
+    ★ 2026-10-01（数据共享）：档行归一到 `WORLD` 后，players 表里没有真实群号了 ⇒
+      本口改扫 **meta 的 `active_group:*`**（写档时顺手记的活跃群）——返回内容与原语义
+      一致（「有玩家活跃过的群号」），广播扇出不受数据共享影响。
     """
     with _LOCK:
         c = connect()
         try:
-            rows = c.execute("SELECT DISTINCT group_id FROM %s" % TBL).fetchall()
+            rows = c.execute(
+                "SELECT k FROM %s WHERE k LIKE ?" % TBL_META,
+                ("active_group" + META_SEP + "%",)).fetchall()
         finally:
             c.close()
-    return [r["group_id"] for r in rows]
+    out = []
+    for r in rows:
+        k = str(r["k"])
+        g = k.split(META_SEP, 1)[1] if META_SEP in k else ""
+        if g and g not in out:
+            out.append(g)
+    return out
 
 
 def groups_of_player(uid):
-    """某个 uid 落在哪几个群（**不是**广播群表 —— 那口是 `get_player_groups`）。"""
+    """某个 uid 落在哪个世界（**不是**广播群表 —— 那口是 `get_player_groups`）。
+
+    ★ 2026-10-01（数据共享）：档只有一份（键 = `WORLD`）⇒ 单世界语义下恒 `[WORLD]`；
+      「他活跃过哪些群」是广播表的问题，归 `get_player_groups` —— 两套语义各走各的口。
+    """
     with _LOCK:
         c = connect()
         try:
@@ -244,7 +284,11 @@ def groups_of_player(uid):
 
 
 def all_players(group_id=None):
-    """本群（或全库）所有玩家档 —— 榜 / 名册的唯一原料。
+    """本世界所有玩家档 —— 榜 / 名册的唯一原料（`group_id` 参数保签名但**不再筛世界**）。
+
+    ★ 2026-10-01（数据共享）：档行归一到 `WORLD` ⇒「按群过滤」这个维度在游戏里不存在了，
+      任何 group_id（含私聊的 `private`）进来都回**全表** —— 榜/名册本来就是全服口径。
+      签名不改：宿主与包内调用方（`排行` / 名册）照旧传，语义由本 docstring 定义。
 
     ★ fail-closed（★ 审计 L1702-同族，读口余量）：原为 `except Exception: d = {}` ——
       **坏档被静默降级成空档**。`{}` 在下面两个消费端里**与「这个人没有档」完全同义**：
@@ -261,11 +305,7 @@ def all_players(group_id=None):
     with _LOCK:
         c = connect()
         try:
-            if group_id is None:
-                rows = c.execute("SELECT group_id, uid, data FROM %s" % TBL).fetchall()
-            else:
-                rows = c.execute("SELECT group_id, uid, data FROM %s WHERE group_id=?" % TBL,
-                                 (str(group_id),)).fetchall()
+            rows = c.execute("SELECT group_id, uid, data FROM %s" % TBL).fetchall()
         finally:
             c.close()
     out = []
