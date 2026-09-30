@@ -138,15 +138,26 @@ LAYERS = ("meet", "daily", "main", "hidden", "idle")
 FAMILIAR_TALKS = 3
 
 
-def _layers_ok(layer, familiar) -> bool:
-    """这一层这一趟轮不轮得到（★ 只加「熟了才出 daily」这一道门，need 判定不碰）。
+def _meet_unheard(nodes, heard) -> bool:
+    """`meet` 层还有没有**没听过**的那几句（★ 审计高发现的读口 · 2026-09-30）。"""
+    texts = (nodes.get("meet") or {}).get("texts") or []
+    return any("%s#%s" % ("meet", i) not in heard for i in range(len(texts)))
 
-    · `meet`  —— 只在**还不熟**时出（初次见面那一档）
+
+def _layers_ok(layer, familiar, met_unheard=False) -> bool:
+    """这一层这一趟轮不轮得到（★ 只加「熟了才出 daily」这道门，need 判定不碰）。
+
+    · `meet`  —— 只在**还不熟**时出（初次见面那一档）；★ 2026-09-30 审计高发现（台账 L2783）
+      补第二半：**熟了也留着，直到它的句子听完**（`met_unheard`）—— 主流程「先记账再选层」
+      ⇒ 第 3 趟起 meet 永久关，见面层的时辰/天气变体**永远说不出来**（「听完全部对话」类
+      称号恒拿不到：9 句树实测上界 7、26 句树结构上界 24）。**让位/排层都不受影响**：
+      熟了以后 P1-7 仍按「没听过的层先说」挑（daily 照常第 3 趟接棒），meet 只在
+      **各层头一句都听过了**的回落里补它自己没说完的那几句（修法 = 方案 B，见报告 §10.6）。
     · `daily` —— 只在**熟了**时出
     · `main` / `hidden` / `idle` —— 不加新门槛：主线推到那儿才说 · 隐藏条件满足才出
     """
     if layer == "meet":
-        return not familiar
+        return (not familiar) or met_unheard
     if layer == "daily":
         return familiar
     return True
@@ -182,7 +193,9 @@ def _pick_layer(nodes, p, st, dlg_id):
     """挑这一趟说**哪一层、哪一句** → `(层, 序号, 台词)`；一句都说不出就 `(None, None, None)`。
 
     ★ P-12：**人先熟、事才说** —— 层序走 `LAYERS`（meet → daily → main → hidden → idle），
-      `meet` 只在还不熟时算数、`daily` 只要熟了算数（模块开头 ②）。
+      `meet` 在**还不熟**时算数、`daily` 只要熟了算数（模块开头 ②）；
+      ★ 2026-09-30 方案 B：熟了之后 `meet` **留窗到它的句子听完**（`_meet_unheard`）——
+      否则见面层第 3 趟永关、时辰/天气变体永远出不来（台账 L2783 高发现 · 报告 §10.6）。
       ⇒ **还不熟时只有 `meet` 那一档会说话**（`daily` 的门没过 · `main` / `hidden` 排在后面
       且前面有兜底句）：主线与底牌要**熟了**才轮得到 —— 这就是「人先熟、事才说」。
     ★ 每层**内部**仍是老口径：`_pick_indexed` 按 need 条件取第一条满足的（一个字没改）。
@@ -196,8 +209,9 @@ def _pick_layer(nodes, p, st, dlg_id):
     #    层序 / 熟了才轮到 daily / 每层只取 `_pick_indexed` 的头一条 /
     #    说过的层让位给没说的层 —— 全部照旧（装备事件那句与支线旗标都靠它送达）。
     cands = []                                     # 够层的那几层，按层序
+    met_unheard = _meet_unheard(nodes, heard)      # ★ 方案 B：熟了之后 meet 留窗到听完（审计 L2783）
     for layer in LAYERS:
-        if layer not in nodes or not _layers_ok(layer, familiar):
+        if layer not in nodes or not _layers_ok(layer, familiar, met_unheard):
             continue
         idx, txt = _pick_indexed(nodes[layer].get("texts"), p, st)
         if txt:
@@ -490,10 +504,12 @@ def rotate(nodes, p, st, dlg_id, picked, familiar=None, heard=None):
             #     `heard` 记的仍是老口径那一格（⑧ 的 P-12 语义一个字没动）——
             #     本条只在「老口径那一句玩家已经听过了」之后改变**这一趟说哪句**。
             #   ★ 扫的是**够层**的那些层（`_layers_ok` 那道门照旧）⇒
-            #     「不熟时只有 meet 会说话」不被破：meet 在这里仍被门挡住。
+            #     「不熟时只有 meet 会说话」不被破：meet 熟了以后按 `_meet_unheard` 留窗
+            #     （★ 2026-09-30 方案 B —— 听完就关，没听完仍在门内；审计 L2783）。
             #   ★ 层序用 `LAYERS` 变量（不是字面量）—— ⑯-a 的静态守卫就认这一格。
             for _l3 in LAYERS:
-                if _l3 not in nodes or not _layers_ok(_l3, familiar):
+                if _l3 not in nodes or not _layers_ok(
+                        _l3, familiar, _meet_unheard(nodes, heard)):
                     continue
                 for _i3, _ln3 in enumerate(nodes[_l3].get("texts") or []):
                     if "%s#%s" % (_l3, _i3) in heard:

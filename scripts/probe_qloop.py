@@ -535,24 +535,31 @@ else:
     _out = _drive(CQ.quest_deliver, _p2, "交 21")
     if not any(ln.startswith(_JOB_DELIVERED) for ln in _out):
         _b4.append(("听够三次却交不掉（计数口径被动了）", _out[:3]))
-    # 反证 ④-c：把 daily / main 两层摘掉（= 改前那棵树）⇒ 第 3 次当场静默
+    # 反证 ④-c：把 daily / main 两层摘掉（= 改前那棵树）⇒ meet 三句听完当场干
+    #   ★ 2026-09-30 方案 B 同步：原断言「第 3 次当场静默」的干点随 meet 留窗**后移到听完那刻**
+    #     （那正是被方案 B 修掉的 bug 本尊）。反证仍钉「摘层必干」，并加一档 **B 回归哨**：
+    #     第 3 次不许干（留窗生效）。确定性 = 反证专用夹具把 meet 的 time-need 桩掉
+    #     （测的是层容量，不是 need —— 三句任何时刻都出得来 ⇒ 第 4 次必干，与跑表时辰无关）。
     _keep_data = CT._data
 
     def _old_data(name, _real=_keep_data, _dlg=_DLG, _nodes=_NODES):
         d = _real(name)
         if name == "dialogues" and _dlg in d:
             d = dict(d)
-            d[_dlg] = {"nodes": {k: v for k, v in _nodes.items() if k == "meet"}}
+            _meet = {"texts": [dict(_t, need=None) for _t in _nodes["meet"]["texts"]]}
+            d[_dlg] = {"nodes": {"meet": _meet}}
         return d
 
     try:
         CT._data = _old_data
         _p3 = _player(level=9, loc=_SPOT[0], node=_SPOT[1], flags={"card": 1})
-        _r3 = [_drive(CT.talk, _p3, "搭话 老陶") for _i in range(3)]
+        _r3 = [_drive(CT.talk, _p3, "搭话 老陶") for _i in range(5)]
     finally:
         CT._data = _keep_data
-    if not (_SILENT in _r3[2]):
-        _b4.append(("反证没生效（摘掉那两层后第 3 次竟然还有话）", _r3[2][:3]))
+    if not (_SILENT in _r3[3]):
+        _b4.append(("反证没生效（摘掉那两层后 meet 三句听完、第 4 次竟然还有话）", _r3[3][:3]))
+    if _SILENT in _r3[2]:
+        _b4.append(("第 3 次就干了 —— 方案 B 的 meet 留窗没生效（回归哨）", _r3[2][:3]))
     if _SILENT in _r3[0] or _SILENT in _r3[1]:
         _b4.append(("反证那一档的前两次不该静默", _r3[:2]))
 (ok if not _b4 else bad)(
@@ -803,7 +810,11 @@ _DLG8 = str((NPCS.get("npc_cole") or {}).get("dialogue") or "")
 
 def _cole(flags):
     return _player(level=9, loc=_SPOT8[0], node=_SPOT8[1],
-                   flags=dict({"card": 1, "talked": {_DLG8: 3}}, **flags))
+                   flags=dict({"card": 1, "talked": {_DLG8: 3}}, **flags),
+                   # ★ 2026-09-30 方案 B 同步：熟档夹具把 meet 三句**都标听过** —— 真实走过
+                   #   见面期的档就是这样；原夹具 talked=3 却 heard 空 = 不可能态，方案 B 下
+                   #   meet（头句没记）会回抢头名、把 daily 的旗标句压住（③④⑤ 三条一起偏）。
+                   heard={_DLG8: {"meet#0": 1, "meet#1": 1, "meet#2": 1}})
 
 
 def _pick8(flags):

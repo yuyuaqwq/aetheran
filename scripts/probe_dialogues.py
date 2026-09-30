@@ -213,11 +213,14 @@ for _n in (0, 2):                                     # 还不熟 ⇒ 只有 mee
     _ly, _, _tx = _pick12(_n)
     if _ly != "meet":
         bad8.append("搭 %d 次（还不熟）出的却是「%s」层 —— 应当是 meet" % (_n, _ly))
-for _n, _h, _want in ((3, (), "daily"),                     # 熟了 ⇒ daily（不是剧透的 main）
-                      (9, ("daily#0",), "main"),
-                      (9, ("daily#0", "main#0"), "hidden"),
-                      (9, ("daily#0", "main#0", "hidden#0"), "idle"),
-                      (9, ("daily#0", "main#0", "hidden#0", "idle#0"), "daily")):
+# ★ 2026-09-30 方案 B 同步（meet 留窗到听完 · 审计 L2783）：熟档的 heard 里**补 `meet#0`**
+#   —— 真实档第 1 趟就把它记下，原夹具没记 ⇒ 合成出「熟了却没听过见面句」的不可能态，
+#   方案 B 下 meet 因此回抢头名。补上后：假树 meet 仅 1 句 ⇒ 听完即关，五档期望**逐字不变**。
+for _n, _h, _want in ((3, ("meet#0",), "daily"),                     # 熟了 ⇒ daily（不是剧透的 main）
+                      (9, ("meet#0", "daily#0"), "main"),
+                      (9, ("meet#0", "daily#0", "main#0"), "hidden"),
+                      (9, ("meet#0", "daily#0", "main#0", "hidden#0"), "idle"),
+                      (9, ("meet#0", "daily#0", "main#0", "hidden#0", "idle#0"), "daily")):
     _ly, _, _tx = _pick12(_n, _h)
     if _ly != _want:
         bad8.append("搭 %d 次 · 听过 %s ⇒ 出的却是「%s」层（应当是 %s）"
@@ -1276,6 +1279,12 @@ _MUST_WORSEN = 0.5          # 压回单条后至少要变差这么多，才算�
 _keep20 = [c for c in _dup20_bak[_probe20]["nodes"]["daily"]["texts"]
            if c.get("need") is None][:1]
 _npc[_probe20]["nodes"]["daily"]["texts"] = _keep20
+# ★ 2026-09-30 方案 B 同步：meet 熟了留窗到听完 ⇒ 它的变体在回落里也补多样性 ——
+#   只压 daily 时均值只垫到 +0.12（< 0.5 底线，压不锐）。**两池同压**（meet 也压回 1 句
+#   无条件，临时夹具、下面照旧深拷还原）—— 底线 0.5 一个字不动，牙口更锐。
+_npc[_probe20]["nodes"]["meet"]["texts"] = [
+    c for c in _dup20_bak[_probe20]["nodes"]["meet"]["texts"]
+    if c.get("need") is None][:1]
 _after20 = sum(_rot_dup_unflagged(_probe20, _h, _w) for _h, _w in _REAL_STATES)     / float(len(_REAL_STATES))
 _npc.clear()
 _npc.update(_dup20_bak)
@@ -2599,6 +2608,9 @@ print("      40 趟·不同台词数：" + " · ".join(
 # ㉝-d ★ 反证：把 daily 压薄 ⇒ ㉝-c 必抓到（钉住的是真行为）
 #   ★ 压到 **3 句**（不是 5）：实测每少一句无条件少 1 句不同台词，
 #     压到 5 只掉到 12 = **正好压在底线上** ⇒ 那样的反证**不锐**（改判据它就红）。
+#   ★ 2026-09-30 方案 B（meet 留窗到听完 · 审计 L2783）之后：meet 的变体在回落里也补句
+#     ⇒ 只压 daily 时它把 40 趟多样性垫到**正好 12**（压不锐）。同步 = **两池同压**
+#     （meet 压到 1 句无条件，与 ㉑-b 同款临时夹具）—— 底线 12 一个字不动，牙口更锐。
 _SQUEEZE40 = 3
 _d40_bak = json.loads(json.dumps(_npc))
 _probe35c = min((k for k in _daily_uncond35 if k.startswith("dlg_")),
@@ -2606,12 +2618,15 @@ _probe35c = min((k for k in _daily_uncond35 if k.startswith("dlg_")),
 _npc[_probe35c]["nodes"]["daily"]["texts"] = [
     c for c in _d40_bak[_probe35c]["nodes"]["daily"]["texts"]
     if c.get("need") is None][:_SQUEEZE40]
+_npc[_probe35c]["nodes"]["meet"]["texts"] = [
+    c for c in _d40_bak[_probe35c]["nodes"]["meet"]["texts"]
+    if c.get("need") is None][:1]
 _d40_after = len({t for t in _rot_seq_same(_probe35c, 40, nodes=_npc) if t})
 _npc.clear()
 _npc.update(json.loads(json.dumps(_d40_bak)))   # ★ 同样深拷（理由同上）
-chk("㉝-d ★ 反证：把 %s 的 daily 压到只剩 %d 句无条件 ⇒ ㉝-c 必抓到它（判据不恒真）"
+chk("㉝-d ★ 反证：把 %s 的 daily 压到只剩 %d 句无条件、meet 压到 1 句 ⇒ ㉝-c 必抓到它（判据不恒真）"
     % (_probe35c.replace("dlg_", ""), _SQUEEZE40), _d40_after < _MIN_DISTINCT40,
-    "压完 %d 句（底线 %d · 压得越狠反证越锐；实测每少一句少 1 句不同台词）"
+    "压完 %d 句（底线 %d · 两池同压——方案 B 后 meet 也补句，单压 daily 不锐；每少一句少 1 句不同台词）"
     % (_d40_after, _MIN_DISTINCT40))
 
 # ㉝-e ★ 整条 ㉝（含 ㉝-b/㉝-d 两条反证）跑完，被测域逐字未变

@@ -332,6 +332,56 @@ def _need_unsat(need, D, prog_mod) -> str:
     return ""
 
 
+def _reach_ub(tree, dlg_id, D) -> int:
+    """这棵树「need 全放行」下的**模拟可达上界** —— 真调读端 `_pick_layer` 跑 200 趟。
+
+    ★ 审计残余 #13 方案 B（2026-09-30 · 台账 L2788 原建议 · 车道2 实跑口径移植，
+      原脚本 `开服准备/_lane2_reach_sim.py`）：世界状态在 4 时辰 × 4 天气 = 16 种里轮转；
+      `flag_ok` / `allows` / `event_on` 三桩放行 —— 量的是**上界**（真实档的主线旗标只会
+      更晚不会更远）。`holding` / `codex` / `equipped` / `quest_done` 这几档按域现填进假档
+      （它们是内联判，桩不着）。桩用 try/finally 还原，绝不留脏全局。
+    静态档（`_need_unsat`）管「指得着真东西」，这道管「**说得出来**」—— 层窗关死 /
+    每趟只出一句 这类结构病，恒真对拍永远抓不到（9 句树实测上界 7、26 句树修前 23）。
+    """
+    from content import cmds_talk as CT, heard as HD, prog as _PROG, calendar as CAL
+    cal, wea = D.get("calendar") or {}, D.get("weather") or {}
+    hours = [k for k in cal if not str(k).startswith("_")]
+    weathers = [k for k in wea if not str(k).startswith("_")]
+    states = [{"hour": h, "weather": w} for h in hours for w in weathers] or [{}]
+    nodes = tree.get("nodes") or {}
+    # 需要域数据垫的几档（内联判）：bag / books / equipped / quest 旗
+    bag, books, equipped, flags = {}, {}, {}, {"talked": {}}
+    for _nd in nodes.values():
+        for _tx in _nd.get("texts") or []:
+            _n = _tx.get("need") or {}
+            if _n.get("holding"):
+                bag[str(_n["holding"])] = 1
+            if _n.get("codex"):
+                _bk, _, _rid = str(_n["codex"]).partition(":")
+                books.setdefault(_bk, {})[_rid] = {"day": 1}
+            if _n.get("equipped"):
+                equipped[str(_n["equipped"])] = "i_probe"
+            if _n.get("quest_done"):
+                flags[str(_n["quest_done"])] = True
+    p = {"flags": flags, "bag": bag, "books": books, "equipped": equipped,
+         "foot": {"nodes": {}, "visits": {}}, "heard": {}, "level": 20,
+         "cls": "cls_knight", "race": "human", "hp": 1,
+         "loc": "windmill_town", "node": "wt_gate_n"}
+    _f, _a, _e = _PROG.flag_ok, CAL.allows, CAL.event_on
+    _PROG.flag_ok = lambda _p, _v: True
+    CAL.allows = lambda _v, st=None: True
+    CAL.event_on = lambda _v, st=None, _p=None: True
+    try:
+        for _i in range(200):
+            CT._note_talk(p, dlg_id)
+            ly, idx, txt = CT._pick_layer(nodes, p, states[_i % len(states)], dlg_id)
+            if txt:
+                HD.note(p, dlg_id, ly, idx)
+    finally:
+        _PROG.flag_ok, CAL.allows, CAL.event_on = _f, _a, _e
+    return HD.counts(p).get(str(dlg_id), 0)
+
+
 def counter_ok(key: str, num: int, target, why: str, D: dict) -> str:
     """计数子句的对账：★ 那个数不许手打 —— 能从数据现算的必须与现算值相等。"""
     if num < 1:
@@ -378,6 +428,13 @@ def counter_ok(key: str, num: int, target, why: str, D: dict) -> str:
         if bad:
             return ("heard@%s 可达上界 %d < 门槛 %d：有 %d 条台词的 need 指不着真东西"
                     "（这称号会拿不到）—— %s" % (target, n - len(bad), num, len(bad), "；".join(bad[:3])))
+        # ★ 第二道牙（方案 B · 台账 L2788 原建议）：**模拟可达上界** —— 真敲读端 200 趟。
+        #   静态档管「指得着」，这道管「说得出来」：层窗关死（meet 第 3 趟永关那类）会让
+        #   上界 < 门槛 ⇒ 当场红；方案 B（`_layers_ok` meet 留窗到听完）落地后应为 26 <= 26。
+        ub = _reach_ub(tree, str(target), D)
+        if num > ub:
+            return ("heard@%s 模拟可达上界 %d < 门槛 %d（200 趟 · 16 种世界状态轮转 · need 全放行）"
+                    " —— 层窗 / 轮换把句子关死了（这称号会拿不到）" % (target, ub, num))
     else:
         tok = PRODUCER.get(key)
         if not tok or tok not in why:
@@ -451,7 +508,7 @@ def main() -> None:
 def main2(src, conds, dry) -> None:      # noqa: C901 —— 一段直叙的重建流程
     cal, wea, texts = load("calendar"), load("weather"), load("texts")
     D = {n: load(n) for n in ("maps", "pois", "items", "quests", "monsters", "races",
-                              "codex", "dialogues", "events")}
+                              "codex", "dialogues", "events", "calendar", "weather")}
     D["hours"] = {str((texts[e["slot"]] or {}).get("value")) for k, e in cal.items() if not str(k).startswith("_")}
     D["weathers"] = {str((texts[e["slot"]] or {}).get("value")) for k, e in wea.items() if not str(k).startswith("_")}
     if not D["hours"] or not D["weathers"]:
