@@ -7,6 +7,9 @@ ENGINE="C:/Users/yuyu/framework-engine"
 PKG="C:/Users/yuyu/aetheran-package"
 PLAN="C:/Users/yuyu/aetheran-plan"
 export GWEN_ENGINE="$ENGINE"
+# ★ 2026-09-30 收红批三：probe_skills 的「三头对账（补）」读 GWEN_FRAMEWORK_DIR（fail-closed：
+#   不设就红「没跑成」，见 4575b62）；本套件补上导出，让这条判据**真跑**而不是告缺。
+export GWEN_FRAMEWORK_DIR="$ENGINE"
 
 echo "==== 1. 三仓状态 ===="
 for r in "$PLAN" "$PKG" "$ENGINE"; do
