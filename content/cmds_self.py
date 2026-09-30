@@ -196,7 +196,7 @@ async def rename(env, sink, uid, player):
     # ★ B5（P-60）：`auto_first_quest` 返回**派了谁的 id**（`""` = 没派）—— 欢迎屏与接时行文
     #   都按这个 id 取，别再拿 `first_quest_id()` 无参值（那条对建完号的档是主线 1，
     #   而实际派出去的是**本族引子** —— 显示与真派的会是两条不同的委托）。
-    _given = OB.auto_first_quest(p, _q()) if OB.step_of(p) == "town" else ""
+    _given, _gl = OB.auto_first_quest(p, _q()) if OB.step_of(p) == "town" else ("", [])
     OB.refresh_goal(p)
     if player is not None:
         player.update(p)
@@ -217,6 +217,8 @@ async def rename(env, sink, uid, player):
             _st = _beat(_qrec, "STORY")
             if _st:
                 yield _st
+            for _l in _gl:                # ★ F21（试玩 2/2 真错）：得到行跟在开场白后 ——
+                yield _l                  #   与手接活的「STORY → 得到」同序；原先护腕静默入包
 
 
 def _board_rows(p, group_id, uid) -> list:

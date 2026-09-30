@@ -319,9 +319,9 @@ _done60b = list(((_dh60b.get("flags") or {}).get("quests_done")) or [])
 chk("★ 按族段 · 交掉引子 ⇒ 主线 1 **自动上手**（接力成册 · 不卡在证门上）",
     _act60b == [OB.first_quest_id()] and "q_intro_human" in _done60b,
     "active=%s done=%s" % (_act60b, _done60b))
-_r60b = OB.auto_first_quest(_dh60b, _q())
-chk("★ 按族段 · 幂等（手上已有接力的活 ⇒ 再调一次不重派）",
-    _r60b == "", "auto_first_quest 回=%r" % _r60b)
+_r60b, _ng60b = OB.auto_first_quest(_dh60b, _q())     # ★ F21 后返回 (id, give 行)
+chk("★ 按族段 · 幂等（手上已有接力的活 ⇒ 再调一次不重派、且不发东西）",
+    _r60b == "" and not _ng60b, "auto_first_quest 回=%r give行=%r" % (_r60b, _ng60b))
 
 print("探针：引导层 · B 档：%s" % ("全绿" if not failures else "有红 X（%d 条）" % len(failures)))
 sys.exit(1 if failures else 0)

@@ -159,7 +159,7 @@ def refresh_goal(p) -> bool:
     return True
 
 
-def auto_first_quest(p, quests) -> str:
+def auto_first_quest(p, quests) -> "tuple[str, list]":
     """第一件委托**自动派**（建号走完那一刻）—— 返回**派了谁的 id**（`""` = 没派）。
 
     ★ 口径（B 档 ③）：
@@ -174,6 +174,9 @@ def auto_first_quest(p, quests) -> str:
         否则第一件委托接时不给东西 = 玩家看见一件没有起步道具的活。
     ★ B5（P-60）两处改口径：
       · 返回 bool → **id**（`rename` 拿它显示真派的那条 + 交引子钩子拿它取名字）。
+      · ★ F21（2026-10-01 · 试玩 2/2 交叉真错）：一并返回 **give 的「得到：…」行** ——
+        原先 `_hand_over` 的行被丢在这里，护腕静默入包（与手接活的「STORY → 得到」不对称）；
+        调用方 yield 出来即可（没 give 的条目回 `[]`，屏上无变化）。
       · 「交过活就不再补」的守卫从 `quests_done 非空 ⇒ False` 改成**按目标判**
         （`k in quests_done ⇒ ""`）—— 不然交掉引子后 `quests_done` 非空，
         主线 1 永远接不上（B5 设计稿 §4.2）。
@@ -182,7 +185,7 @@ def auto_first_quest(p, quests) -> str:
     """
     from .cmds_quest import _mine as _mine_q
     if _mine_q(p):
-        return ""
+        return "", []
     # ★ 守卫的精确语义（P-60 落地当天 probe_cmds 改名那条咬出来的）：
     #   派发只服务「**本族引子 → 主线 1**」这条新手接力线 —— 交过的活**全在引子集合里**
     #   （= 真新号 [空]，或刚交掉引子 [只含引子]）才放行；交过**别条**的老档一个字不补。
@@ -191,25 +194,25 @@ def auto_first_quest(p, quests) -> str:
     _intro_ids60 = {k for k, x in (quests or {}).items()
                     if str(x.get("chain")) == "intro"}
     if not _done60 <= _intro_ids60:
-        return ""
+        return "", []
     k = first_quest_id(p)                # ★ B5：带档（本族引子优先，交过落主线 1）
     if not k:
-        return ""
+        return "", []
     if k in ((p.get("flags") or {}).get("quests_done") or []):
-        return ""                        # ★ 目标已交（原「quests_done 非空就不派」按目标判）
+        return "", []                        # ★ 目标已交（原「quests_done 非空就不派」按目标判）
     x = (quests or {}).get(k) or {}
     if not x:
-        return ""
+        return "", []
     if int(p.get("level", 1) or 1) < int(x.get("min_level", 1) or 1):
-        return ""                        # 等级不够就不派（不绕那一道）
+        return "", []                        # 等级不够就不派（不绕那一道）
     fl = dict(p.get("flags") or {})
     act = list(fl.get("quests_active") or [])
     if k in act:
-        return ""
+        return "", []
     from .cmds_quest import _hand_over, _require_of, _set_base
     if _require_of(x):
         _set_base(p, k, x)
-    _hand_over(p, x)
+    lines = _hand_over(p, x)          # ★ F21（试玩 2/2 真错）：给付行要回屏（原先丢在这里）
     fl["quests_active"] = act + [k]
     p["flags"] = fl
-    return k
+    return k, lines

@@ -1376,12 +1376,14 @@ async def quest_deliver(env, sink, uid, player):
     #     这段后面再改就还得再落一次 —— 否则屏上说了「接上了」档里没有。
     if str(x.get("chain")) == "intro":
         from . import onboard as OB                       # 本地 import：免得装载期成环
-        nk = OB.auto_first_quest(p, qs)
+        nk, _ng = OB.auto_first_quest(p, qs)
         if nk:
             if player is not None:
                 player.update(p)
             _save(env)
             yield T("SYS_JOB_AUTO_NEXT", name=(qs.get(nk) or {}).get("name", nk))
+            for _l in _ng:                 # ★ F21：接力那条的 give 得到行（main1 今天无 give ⇒ 空 · 屏不变）
+                yield _l
 
 
 def _obj_ok(x, p, k=None):

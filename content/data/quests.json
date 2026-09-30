@@ -1148,7 +1148,7 @@
     "map": "windmill_town",
     "min_level": 1,
     "need": null,
-    "objective": "观察镇口 → 挂板墙读账 → 搭话小满 → 出北口 → 打退田鼠 → 看战利品 → 回来交活",
+    "objective": "观察镇口 → 去挂板墙 → 搭话小满 → 出北口 → 打退田鼠 → 看战利品 → 回来交活",
     "require": [
       {
         "kind": "talk",
@@ -1238,7 +1238,7 @@
     "map": "windmill_town",
     "min_level": 1,
     "need": null,
-    "objective": "观察镇口 → 挂板墙读账 → 搭话柯尔 → 出北口 → 打退田鼠 → 看战利品 → 回来交活",
+    "objective": "观察镇口 → 去挂板墙 → 搭话柯尔 → 出北口 → 打退田鼠 → 看战利品 → 回来交活",
     "require": [
       {
         "kind": "talk",
@@ -1283,7 +1283,7 @@
     "map": "windmill_town",
     "min_level": 1,
     "need": null,
-    "objective": "观察镇口 → 挂板墙读账 → 搭话玛莎 → 出北口 → 打退田鼠 → 看战利品 → 回来交活",
+    "objective": "观察镇口 → 去挂板墙 → 搭话玛莎 → 出北口 → 打退田鼠 → 看战利品 → 回来交活",
     "require": [
       {
         "kind": "talk",
