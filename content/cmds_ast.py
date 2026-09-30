@@ -461,13 +461,37 @@ def race_menu():
 def register_screen() -> list:
     """未建号玩家的「注册屏」：开场 + 六族菜单 —— **一份组装，出口共用**。
 
-    ★ 2026-09-30（注册面改造 · 鱼鱼口径）：出口 = ① `观察`（新号第一眼）
-      ② 路由未命中（`miss_text` —— 接 `fn(text, prefix, player)` 之后走这里）。
-      三处不许各拼一遍 —— 拼法改了只动这里。
+    ★ 2026-09-30（注册面改造 · 鱼鱼口径）：出口 = ① `观察`（新号第一眼）。
+    ★ 2026-10-01（鱼鱼口径）：② **`注册` 指令**（`onboard_screen`）——
+      玩家发「注册」就该走这套开场，不靠碰运气敲「观察」。
+      ③ 路由未命中（`miss_text`）**裁定不做**（2026-09-30：要动引擎 `_miss_reply` 形状，
+      波及奥兰迪亚同名供体 —— 等鱼鱼点头再动）。
+      几处出口都不许各拼一遍 —— 拼法改了只动这里。
     """
     out = [T("SYS_ONBOARD_OPEN"), "━" * 12]
     out.extend(race_menu())
     return out
+
+
+async def onboard_screen(env, sink, uid, player):
+    """『注册』指令 —— 三态分流（鱼鱼 2026-10-01 口径：发「注册」走那套开场）。
+
+    · 没定族 → `register_screen()`（开场四段 + 六族菜单 · 与 `观察` 同一份组装）
+    · 差职业 / 差名字 → 守卫那两句（`guards.guard_register` —— **复用，不新造**）
+    · 已建完号 → `SYS_REG_ALREADY`（新槽 · 真源 17 表 §四十一）
+    声明侧**不挂** `hook:register`（同 `观察` 的白名单口径）—— 挂了就被守卫拦成短句，全屏出不来。
+    """
+    p = _p(player)
+    if not p.get("race"):
+        for line in register_screen():
+            yield line
+        return
+    from .guards import guard_register          # 本地 import（guards 反向也本地 import cmds_ast，互为防环）
+    msg = guard_register(env, player)
+    if msg:
+        yield msg
+        return
+    yield T("SYS_REG_ALREADY")
 
 
 def register_welcome(p, quest_rec) -> list:

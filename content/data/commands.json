@@ -2387,6 +2387,26 @@
       "hook:register"
     ]
   },
+  "onboard_screen": {
+    "patterns": [
+      "^注册$"
+    ],
+    "category": "角色",
+    "desc": "注册：新玩家从这里开始",
+    "usage": "注册",
+    "guard_desc": "随时",
+    "visible": true,
+    "order": 2,
+    "bind": {
+      "handler": "content.cmds_ast:onboard_screen",
+      "call": "run",
+      "args": [
+        "uid",
+        "player"
+      ]
+    },
+    "guards": []
+  },
   "be_race": {
     "patterns": [
       "^我是\\s*(.+)$",

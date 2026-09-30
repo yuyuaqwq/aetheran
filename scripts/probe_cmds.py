@@ -1892,6 +1892,29 @@ try:
     _cmp16("登记（办下来）", _say16("登记"), [_r("SYS_REG_DONE")])
     _card16 = (_sv16().get("flags") or {}).get("card")
     _cmp16("登记（已经有证）", _say16("登记"), [_r("SYS_REG_HAS")])
+    # ★ 2026-10-01（注册入口 · 鱼鱼口径）：『注册』指令三态 —— 玩家发「注册」走那套开场。
+    #   ① 声明侧**不挂** hook:register（挂了就被守卫拦成短句，全屏出不来 —— 同『观察』白名单）。
+    #   ② 已建完号 → SYS_REG_ALREADY（新槽 · 真源 17 表 §四十一）。
+    #   ③ 无档 → 与『观察』**逐字节同屏**（钉「一份组装，出口共用」—— 拼法只许一处）。
+    #   ④ 差职业 → 守卫那句复用（不新造）。
+    with open(os.path.join(str(REPO), "content", "data", "commands.json"), encoding="utf-8") as _f:
+        _CMDS16 = json.load(_f)
+    _os16 = _CMDS16.get("onboard_screen") or {}
+    chk("★ 『注册』声明不挂 `hook:register`（挂了被守卫拦成短句 · 全屏出不来）",
+        "hook:register" not in (_os16.get("guards") or []) and "^注册$" in (_os16.get("patterns") or []),
+        "guards=%s patterns=%s" % (_os16.get("guards"), _os16.get("patterns")))
+    _cmp16("注册（已建完号）", _say16("注册"), [_r("SYS_REG_ALREADY")])
+    _bak16 = {k: _ad16.saved.pop(k, None) for k in ("race", "cls", "name")}
+    _reg16, _look16 = _say16("注册"), _say16("观察")
+    _cmp16("注册（无档 · 与『观察』同一份组装逐字节）", _reg16, _look16)
+    _ad16.saved["race"] = _bak16["race"]
+    _cmp16("注册（差职业）", _say16("注册"), [_r("SYS_GUARD_CLS")])
+    _ad16.saved.update({k: v for k, v in _bak16.items() if v is not None})   # 还原档给后续段用
+    chk("★ 『注册』三态真敲：无档出全屏（开场+六族菜单 · 与『观察』逐字节同屏）· 差职业回守卫句 · "
+        "已建完号回 SYS_REG_ALREADY",
+        not [x for x in _BAD16 if x[0].startswith("注册")],
+        "%s" % [x for x in _BAD16 if x[0].startswith("注册")][:3])
+
     #: 「刚办证」那一档的已交条数**现读**（前面几档动过 `flags.quests_done` —— 期望值跟着档走）
     _cnt16 = len(((_sv16().get("flags") or {}).get("quests_done") or []))
     #: ★ B4-16：评级那一屏的档名与门槛都**从口径表现取**（探针自己读 rules/ranks.json，
