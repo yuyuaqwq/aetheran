@@ -89,6 +89,7 @@ st.install()
 
 from content import calendar as CAL                                   # noqa: E402
 from content import cmds_ast as CA                                    # noqa: E402
+from content.cmds_ast import _data                                    # noqa: E402  ★ #46：域读口（与 content 同一个）
 from content import cmds_talk as CT                                   # noqa: E402
 from content import combat as CB                                      # noqa: E402
 from content import timed_events as TE                                # noqa: E402
@@ -96,11 +97,11 @@ from content import facade as FC                                      # noqa: E4
 from content import persistence as PS                                 # noqa: E402
 
 EV = CAL.events()
-TX = CAL._d("texts")
-MAPS = CAL._d("maps")
-NPCS = CAL._d("npcs")
+TX = _data("texts")
+MAPS = _data("maps")
+NPCS = _data("npcs")
 WX = CAL.weathers()
-QS = CAL._d("quests")
+QS = _data("quests")
 
 print("① 域形状")
 chk("events 域读得到（4 条 · 第一阶段）", len(EV) == 4, " · ".join(EV))
@@ -121,9 +122,9 @@ try:
 except SystemExit as exc:                                              # 设计案不在 / 认不出触发串
     chk("★ 重跑生成器解析出来的四条与域里逐字段相同", False, exc)
 chk("★ 域里记着生成物身份（source + generator · 可追溯）",
-    "29_世界事件_设计_v1.md" in str(CAL._d("events").get("_meta", {}).get("source"))
-    and bool(CAL._d("events")["_meta"].get("generator")),
-    CAL._d("events")["_meta"].get("generator", "")[:40])
+    "29_世界事件_设计_v1.md" in str(_data("events").get("_meta", {}).get("source"))
+    and bool(_data("events")["_meta"].get("generator")),
+    _data("events")["_meta"].get("generator", "")[:40])
 
 print("③ ★ 跨域对账：文案槽位 / 图 / 节点 / npc / 天气 / 委托 都是真件")
 bad3 = []
@@ -185,7 +186,7 @@ chk("★ 世界级不看游戏日（第 7 天与第 99 天同结论）",
     CAL.event_on("ev_caravan", st7, p_before) == CAL.event_on("ev_caravan", mk(99), p_before))
 
 print("⑦ 每日尺度：那条路可算（第一阶段数据里没有每日条目）")
-EVRAW = CAL._d("events")                                   # ★ 缓存里的那张表本体（注入要动它）
+EVRAW = _data("events")                                    # ★ 缓存里的那张表本体（`cmds_ast._CACHE` —— 注入要动它）
 EVRAW["ev_probe_daily"] = {"no": 99, "name": "probe", "scale": "每日", "scale_key": "daily",
                            "period": {"daily": True}, "text": "SYS_EV_NONE", "where": [], "effects": {}}
 try:
@@ -303,7 +304,7 @@ except Exception as exc:                                   # noqa: BLE001
     chk("★ 真宿主端到端跑得起来（场地那条线）", False, "%s: %s" % (type(exc).__name__, exc))
 
 print("⑩ ★ 消费端 ② 遇敌权重（没给 = 零变化 · 给了 = 真偏）")
-MS = CAL._d("monsters")
+MS = _data("monsters")
 BEST, TOP = None, []
 for mk_, mv in MAPS.items():
     for n in mv.get("nodes") or []:
@@ -489,7 +490,7 @@ chk("★ 第二天（收了）：「异动」说「集日 —— 收了。」且
 FC.bind_host(clock=lambda: epoch_at(100, 21.0))      # 还原（后面还有用例）
 
 print("⑯ 对话层 `need.event` 真被点亮（读端 = 事件层的唯一口 `CAL.event_on`）")
-bl = (CAL._d("dialogues") or {}).get("dlg_bella", {}).get("nodes", {}).get("daily", {}).get("texts", [])
+bl = (_data("dialogues") or {}).get("dlg_bella", {}).get("nodes", {}).get("daily", {}).get("texts", [])
 i_before, _ = CT._pick_indexed(bl, {}, st7)
 i_after, _ = CT._pick_indexed(bl, {"flags": {"quests_done": ["q_main_03"]}}, st7)
 chk("★ 那句「今天杜林到了」只在**商队到了**之后出（没到：挑不到它 · 到了：头一句就是它）"
@@ -504,7 +505,7 @@ for k, v in NPCS.items():
     t = (v.get("condition") or {}).get("event")
     if t:
         toks.append(("npcs.%s" % k, t))
-for dk, dv in (CAL._d("dialogues") or {}).items():
+for dk, dv in (_data("dialogues") or {}).items():
     if not isinstance(dv, dict):
         continue
     for nk, nv in (dv.get("nodes") or {}).items():
@@ -548,3 +549,4 @@ for eid, v in EV.items():
 print()
 print("结果：%s" % ("全绿 ✓" if ok else "有红 ✗"))
 sys.exit(0 if ok else 1)
+EVRAW = _data("events")                                     # ★ 缓存里的那张表本体（`cmds_ast._CACHE`——注入要动它）

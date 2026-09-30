@@ -11,7 +11,9 @@
 
 ★ 玩家档只多两个键（都是加出来的，老档不用迁移）：
     books = {"material": {...}, "flavor": {...}, "monster": {...}, "relic": {...}}
-    foot  = {"nodes": {"<loc>:<node>": 第几个游戏日}, "kills": n, "reads": n, "gathers": n}
+    foot  = {"nodes": {"<loc>:<node>": 第几个游戏日}, "day_seen": [第几个游戏日, …],
+             "kills": n, "reads": n, "gathers": n, "visits": {…: 去过几回}}
+      ★ `nodes` 只记**第一回到**（老口径）⇒ 「N 个游戏日」另记在 `day_seen`（每次走到/站到记一个）
 
 ★ 旧物谱一条记**两格**（都是一次性的判断，落档后不可逆 · 都由本模块写）：
     known   —— 「问对人」认出来了（`known` / `reveal` / `revealable`：真名 + 来处那段）
@@ -22,12 +24,6 @@
 ★ `codex` 那个平表（id → True）是 loot 的「第一次见到」集合 —— 本模块**不碰**它（两处各管一头）。
 """
 from __future__ import annotations
-
-import json
-import os
-
-_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
-_C: dict = {}
 
 BOOKS = ("material", "flavor", "monster", "relic")
 
@@ -41,15 +37,11 @@ KIND_BOOK = {"material": "material", "junk": "material", "clue": "material", "fo
 PICK_BOOK = {"keepsake": "relic", "unidentified": "relic"}
 
 
-def _d(name: str):
-    if name not in _C:
-        with open(os.path.join(_DIR, name + ".json"), encoding="utf-8") as f:
-            _C[name] = json.load(f)
-    return _C[name]
-
-
 def data() -> dict:
-    return _d("codex")
+    # ★ 2026-09-30 审计残余 #46：读表收敛到 `content.cmds_ast._data`（仓内唯一的域读口）——
+    #   本模块被 `cmds_ast` 在装载期 import，顶层引会成环（codex → cmds_ast → codex）⇒ 本地 import。
+    from .cmds_ast import _data                        # ★ 域读口（与别处同一个）
+    return _data("codex")
 
 
 def meta() -> dict:
@@ -61,8 +53,17 @@ def book(name: str) -> dict:
 
 
 def label(name: str) -> str:
-    """谱 id → 中文名（缺了回 id，不静默编一个）。"""
-    return (meta().get("book_label") or {}).get(name) or name
+    """谱 id → 中文名（★ 2026-09-30 审计残余 #15：缺了**当场抛**，不回落机器键）。
+
+    这个返回值直接进玩家可见的那几行（`SYS_CODEX_*` / `SYS_ACH_*`）⇒ `or name` 回落 =
+    把 ASCII 机器键印给玩家（判据 ⑥ 明禁）。缺哪一格由 `scripts/probe_codex` ⑰ 的常驻门禁
+    （`set(book_label) ⊇ set(BOOKS)`）盯住 —— 数据齐着的今天这一行永远走不到。
+    """
+    lab = (meta().get("book_label") or {}).get(name)
+    if not lab:
+        raise KeyError("codex._meta.book_label 缺谱 %r（谱名的唯一真源 = 生成器 BOOK_LABEL —— "
+                       "先补数据，不回落机器键）" % (name,))
+    return str(lab)
 
 
 def targets() -> dict:
@@ -108,6 +109,9 @@ def _foot(p: dict) -> dict:
         f[k] = int(f.get(k) or 0)
     if not isinstance(f.get("visits"), dict):     # ★ B3-2：去过几回（「骨田的常客」靠它）
         f["visits"] = {}
+    # ★ 2026-09-30 审计残余 #34：来过的那些**游戏日**（`nodes` 只记第一回到 ⇒ 反复走同一处不涨）
+    if not isinstance(f.get("day_seen"), list):
+        f["day_seen"] = []
     p["foot"] = f
     return f
 
@@ -121,6 +125,22 @@ def today(p: dict) -> int:
     """
     from . import calendar as CAL                  # 本地 import：免得装载期成环
     return CAL.day_now()
+
+
+def _note_day(p: dict) -> None:
+    """「今天来过」记一笔（★ 2026-09-30 审计残余 #34 —— 玩家可见的「N 个游戏日」靠它）。
+
+    为什么不能只看 `nodes`：那一格是**第一回到**（`note_visit` 首次才写）⇒ 同一个人
+    3 个游戏日反复走同一个节点，`nodes` 里还是第 1 天那天，`days` 恒 1
+    （黑盒实测：`visits={'wt_gate_n':3}` 而 `days=1`，`SYS_FOOT_HEAD` 直印这个数）。
+    口径照 B4-9：0 = 不知道是哪天记的，不算一天。
+    """
+    d = int(today(p) or 0)
+    if d <= 0:
+        return
+    seen = _foot(p)["day_seen"]
+    if d not in seen:
+        seen.append(d)
 
 
 def has(p: dict, bk: str, rid: str) -> bool:
@@ -243,6 +263,7 @@ def note_pick(p: dict, rid: str) -> bool:
 
 def note_visit(p: dict, loc: str, node: str) -> bool:
     """走到一个节点 → 记录（去过哪儿）。"""
+    _note_day(p)                                 # ★ #34：站到也算「这一天来过」
     nodes = _foot(p)["nodes"]
     key = "%s:%s" % (loc, node)
     if key in nodes:
@@ -258,6 +279,7 @@ def note_step(p: dict, loc: str, node: str) -> int:
     拿它当次数会把「路过一次捡了个东西」也算成一趟 —— 所以计数只认**真的走到**。
     返回这个节点累计去过的回数。
     """
+    _note_day(p)                                 # ★ #34：走一趟记一个游戏日（跨天才算数）
     v = _foot(p)["visits"]
     key = "%s:%s" % (loc, node)
     v[key] = int(v.get(key) or 0) + 1
@@ -403,7 +425,10 @@ def foot(p: dict) -> dict:
     f = _foot(p)
     # ★ B4-9：**0 = 不知道是哪天记的**（B4-9 之前、还没 tick 过那些路写下的日期戳）——
     #   它不算一个游戏日。全都不知道 ⇒ 至少 1（他确实玩过一天）。
-    days = sorted({int(d or 0) for d in f["nodes"].values() if int(d or 0) > 0})
+    # ★ 2026-09-30 审计残余 #34：**并集** = `nodes`（第一回到那天）∪ `day_seen`（每次走到/站到那天）。
+    #   原口径只取 `nodes` ⇒ 「N 个游戏日」在「反复走同一处」这种最平常的玩法下恒为 1。
+    days = {int(d or 0) for d in f["nodes"].values() if int(d or 0) > 0}
+    days |= {int(d or 0) for d in f.get("day_seen") or [] if int(d or 0) > 0}
     return {"nodes": dict(f["nodes"]), "kills": f["kills"], "reads": f["reads"],
             "gathers": f["gathers"], "visits": dict(f["visits"]),
             "interrupts": f["interrupts"], "clears": f["clears"], "days": max(1, len(days))}

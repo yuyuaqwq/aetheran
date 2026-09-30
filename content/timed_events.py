@@ -40,16 +40,13 @@ __all__ = ["refresh_timed", "snapshot", "STATE_KEY"]
 STATE_KEY = "ev"
 
 
-def _store():
-    """存档半边（正本 = `content/persistence.py`；经包门面取件 —— 包内不 import 宿主）。"""
-    return getattr(facade, "persistence", None)
-
-
 def _log(msg):
     """一条诊断给运维看（ASCII —— 玩家看不到；宿主没注入口就算了）。"""
     try:
         facade.log("[timed_events] " + str(msg))
     except Exception:                                          # noqa: BLE001
+        # ★ 审计残余 #49（归档·勿删）：`facade.log` 是「宿主没注入口就算了」的**可选注入**
+        #   —— 判据 2 覆盖过的**合法容错**一例（不是引擎逻辑兜底）。登记理由，防下一轮当死码清。
         pass
 
 
@@ -64,9 +61,11 @@ def refresh_timed(group_id, qq_id):
     返回一个诊断 dict（宿主不解释返回值）：`{"changed": bool, "why"/"day"/"on"…}`。
     """
     try:
-        ps = _store()
-        if ps is None:
-            return {"changed": False, "why": "no-store"}
+        # ★ 审计残余 #10：原 `_store()` = `getattr(facade, "persistence", None)` —— facade 模块级
+        #   就 `from . import persistence` ⇒ getattr 的 None 分支**不可达**，却伪装成「宿主没给
+        #   存档半边」的优雅降级（掩盖的其实是 get_player 抛错 → `:88 except → why=error`）。
+        #   直取 + 删死枝；`why: "no-store"` 一并退役（全仓零消费，含探针）。
+        ps = facade.persistence
         p = ps.get_player(group_id, qq_id)
         if not isinstance(p, dict):
             return {"changed": False, "why": "no-player"}       # 还没建档 ⇒ 零动作

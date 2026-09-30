@@ -216,6 +216,12 @@ class Hand:
 
     def __init__(self, kind, *, p=None, item=None, lines=None, used=None, slot_kw=None):
         self.kind = str(kind)
+        # ★ 审计残余 #16（台账建议②）：打断手的记账写在玩家档上（`foot.interrupts`）——
+        #   缺 `p` 原先静默建到 None（计数不落档、判据 fixture 也不现形）。fail-closed：
+        #   拒绝建账到 None；真调用方（cmds_battle）一直传 p，探针 fixture 本批补齐。
+        if self.kind == "interrupt" and p is None:
+            raise RuntimeError("打断手必须带玩家档 p（foot.interrupts 记在玩家档上）—— "
+                               "kind=interrupt 缺 p（fail-closed，不许静默记到 None）")
         self.p = p
         self.item = item
         self.lines = list(lines or [])

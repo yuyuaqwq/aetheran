@@ -1525,55 +1525,43 @@ _dirty = [ln for ln in (_git.stdout or "").splitlines() if ln.strip()]
 #     （`tools/_cue_freeze.py`）· 标签机制三笔（`tags.py` / `traits.py` / `state_effects.py` /
 #     `actors.py` / `battle.py` 的状态容器与注册表收口）。基准 = 那批开工前引擎的 HEAD。
 #     ⇒ 声明面变成 **34 份代码文件**（多一个就红 —— 强度不变，只是这一批面大）。
-_ENGINE_BASE = "8f85f7d"   # 换批只扩声明面（47 份），基准仍是共同起点
+#  ★ 2026-09-30（审计残余批）**换批**：本批引擎仓落点 = 审计残余 28 条落码 + E25 引擎面
+#    核验 + wiki remap（`8d49f44..fe902b1` 三笔 · 29 份代码 + docs 落账 16 份）。
+#    ★ 吸收说明（照实记）：`78da079..8d49f44` 之间还有其它各线 275 笔提交 / 214 份文件
+#      未走本契约 —— 2026-09-30 14:00 **基线实测本判据已红**（不是本批打红的，但换批
+#      必须有主）。基准前移到 `8d49f44`（本批开工前引擎 HEAD）⇒ 那段由换批吸收；
+#      **强度不变**（本批面里多一份 / 少一份照样红）。docs 仍只计数、不逐名。
+_ENGINE_BASE = "8d49f44"   # 换批只扩声明面（47 份），基准仍是共同起点
 _want_touched = sorted([
     "README.md",
-    "examples/host-skeleton/main.py",
-    "examples/minimal-game/content/apply.py",
-    "examples/minimal-game/content/bridge.py",
-    "examples/minimal-game/content/cues.py",
-    "examples/minimal-game/content/data/rules.py",
-    "examples/minimal-game/content/texts.py",
-    "examples/minimal-game/tests/test_smoke.py",
-    "extends/ext_combat/battle/actions.py",
     "extends/ext_combat/battle/actors.py",
-    "extends/ext_combat/battle/attributes.py",
-    "extends/ext_combat/battle/battle.py",
-    "extends/ext_combat/battle/cues.py",
-    "extends/ext_combat/battle/effects.py",
-    "extends/ext_combat/battle/game_config.py",
     "extends/ext_combat/battle/landing.py",
-    "extends/ext_combat/battle/schedule.py",
-    "extends/ext_combat/battle/serialize.py",
-    "extends/ext_combat/battle/state_effects.py",
-    "extends/ext_combat/battle/tags.py",
-    "extends/ext_combat/battle/traits.py",
-    "extends/ext_combat/gauge/__init__.py",
-    "extends/ext_combat/gauge/actions.py",
+    "extends/ext_life/__init__.py",
+    "extends/ext_quest/quest/__init__.py",
+    "extends/ext_quest/quest/ledger.py",
+    "extends/ext_quest/tests/test_quest_shape.py",
+    "extends/ext_world/run/progress.py",
+    "extends/ext_world/run/roster.py",
+    "extends/ext_world/space/graph.py",
+    "games/orlandia",
+    "saintess_engine/acts/__init__.py",
+    "saintess_engine/clock/wall.py",
+    "saintess_engine/conditions/declarative.py",
     "saintess_engine/config.py",
+    "saintess_engine/container/stack.py",
     "saintess_engine/cues.py",
-    "saintess_engine/domains.py",
+    "saintess_engine/events/bus.py",
     "saintess_engine/host/runtime.py",
-    "saintess_engine/text/__init__.py",
-    "saintess_engine/text/template.py",
-    "tests/_cue_text_fixture.py",
-    "tests/test_attrs_write_port.py",
-    "tests/test_battle_text_inject.py",
-    "tests/test_builtin_false_warn.py",
-    "tests/test_cross_hand_state.py",
-    "tests/test_cue_coverage.py",
+    "saintess_engine/log/facade.py",
+    "saintess_engine/session/adapter.py",
+    "saintess_engine/version.py",
+    "tests/test_acts.py",
+    "tests/test_clock_wall.py",
     "tests/test_cues_shape.py",
-    "tests/test_dot_cur_hp_shape.py",
-    "tests/test_editor_wiki.py",
-    "tests/test_engine_neutral_fallback.py",
-    "tests/test_gauge_actions_frozen.py",
-    "tests/test_segment_declaration.py",
-    "tests/test_state_container.py",
-    "tests/test_state_container_r2.py",
-    "tests/test_tags.py",
-    "tools/_cue_coverage.py",
-    "tools/_cue_freeze.py",
-    "tools/check_wiki_refs.py",])
+    "tests/test_engine_version.py",
+    "tests/test_log.py",
+    "tests/test_package_import_closure.py",
+    "tests/test_texts_schema_contract.py",])
 _committed = {p for p in subprocess.run(
     ["git", "diff", "--name-only", "%s..HEAD" % _ENGINE_BASE], cwd=ENGINE,
     capture_output=True, text=True).stdout.split() if p}

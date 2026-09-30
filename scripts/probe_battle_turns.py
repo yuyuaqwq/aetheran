@@ -892,7 +892,8 @@ def main():
         ("技能《安神曲》(治疗)", "skill", "SKILL_PRS_lullaby", None),
         ("技能《庇护》(增益)", "skill", "SKILL_PRS_aegis", None),
         ("技能《圣杖》(魔法)", "skill", "SKILL_PRS_staff", None),
-        ("打断", None, None, BA2.Hand("interrupt")),
+        # ★ 审计残余 #16：interrupt 档 `p` 必填（fail-closed）—— 地标判据只需实例，给最小档。
+        ("打断", None, None, BA2.Hand("interrupt", p={"uid": "u_landmark"})),
         ("用物", None, None, BA2.Hand("item")),
         ("换手", None, None, BA2.Hand("swap")),
         ("后撤", None, None, BA2.Hand("retreat")))]

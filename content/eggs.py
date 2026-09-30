@@ -17,28 +17,20 @@
 """
 from __future__ import annotations
 
-import json
-import os
-
 from saintess_engine.conditions.declarative import compile_specs
 
 from . import calendar as CAL
 
-_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
-_C: dict = {}
 _SPECS = None
-
-
-def _d(name: str):
-    if name not in _C:
-        with open(os.path.join(_DIR, name + ".json"), encoding="utf-8") as f:
-            _C[name] = json.load(f)
-    return _C[name]
 
 
 # ── 数据 ──────────────────────────────────────────────────────
 def data() -> dict:
-    return _d("eggs")
+    """十条彩蛋数据 —— ★ 域读口收敛到 `cmds_ast._data`（审计残余 #46：原先这里是与
+    calendar/codex/loot/titles **逐字同形的第 5 份懒加载器**；同仓先例 = `prog.py:61`）。
+    本地 import 避免装载期与 cmds_ast 成环（cmds_ast 顶层 import 本模块）。"""
+    from .cmds_ast import _data
+    return _data("eggs")
 
 
 def entries() -> dict:
@@ -68,10 +60,6 @@ def title_of(eid: str) -> str:
 def line_of(eid: str) -> str:
     """连起来之后那句话（真源在 eggs 域，代码只传槽位）。"""
     return entry(eid).get("line") or ""
-
-
-def how_of(eid: str) -> str:
-    return entry(eid).get("how") or ""
 
 
 def total() -> int:
@@ -119,9 +107,13 @@ def ctx(p: dict, st: dict | None = None) -> dict:
         "done": set(flags.get("quests_done") or []),
         "kill": {k for k in CX.book("monster") if CX.kills_of(p, k) > 0},
         "hour": st["hour_name"],
+        # ★ 审计残余 #9：`weather` 今天十条 cond 零使用，但它是口径 §三 的**合法子句键**
+        #   （rebuild_eggs.CTX_FIELD 有映射、并按它做取值校验）⇒ **登记预留**、不删
+        #   （删了 = 文档 §三 与代码各说各的）。
         "weather": st["weather_name"],
-        "day": CAL.day_now(),                     # ★ B4-9：日期戳现算（别读档上那格）
-        "level": int(p.get("level") or 1),
+        # ★ 审计残余 #9：原另有 `day`（scan 每次触发都要跑一次 `CAL.day_now()` —— 台账点名
+        #   的那笔调用）与 `level` —— 口径 §三 无此二键、十条 cond 与 titles cond 均零消费
+        #   ⇒ 删（死 ctx 键）；B4-9「日期戳现算」不受影响（scan 内仍现算 `day` 落档）。
     }
 
 
@@ -139,7 +131,8 @@ def has(p: dict, eid: str) -> bool:
 
 
 def count(p: dict) -> int:
-    return len(found(p))
+    """连起来的有几条 —— membership 判定**只走 `has`**（审计残余 #28：一处判定）。"""
+    return sum(1 for eid in entries() if has(p, eid))
 
 
 def left(p: dict) -> int:
@@ -147,9 +140,8 @@ def left(p: dict) -> int:
 
 
 def built(p: dict) -> list:
-    """已连起来的（顺序 = 数据里的顺序）→ `[(id, 标题, 那句话)]`。"""
-    b = found(p)
-    return [(k, title_of(k), line_of(k)) for k in entries() if k in b]
+    """已连起来的（顺序 = 数据里的顺序）→ `[(id, 标题, 那句话)]`（membership 同走 `has`）。"""
+    return [(k, title_of(k), line_of(k)) for k in entries() if has(p, k)]
 
 
 def scan(p: dict, st: dict | None = None) -> list:

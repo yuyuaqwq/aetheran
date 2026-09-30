@@ -15,29 +15,32 @@ from __future__ import annotations
 
 __all__ = ["bind_host", "HANDLES", "persistence", "db_path", "clock", "log", "tlog"]
 
+# ★ 2026-09-30 审计残余 #11：手写 6 行注入样板 → 引擎 `wire.slot()`（「这段样板在包里
+#   抄了 37 遍」的第 38 遍就此收口）。存储面（增量 · `None` = 不改 · 整批校验再落盘）
+#   由引擎单源提供；`HANDLES` 从「本模块的字典」变成 wire 存储面的**只读活视图**
+#   —— 名字与读者逐字不变（`probe_codex` ⑯ 钉的增量口径就是这个面）。
+from saintess_engine.wire import slot as _slot
+
 from . import persistence
 
-#: 觉察口（`log` / `tlog`）与宿主注入的句柄。**增量口径**
-#: —— 与 `persistence.bind`（`None` / 缺省 = 不改）同一口径。
-HANDLES: dict = {}
+#: 觉察口（`log` / `tlog`）与宿主注入的句柄（wire 存储面的只读活视图 · **增量口径**
+#: —— 与 `persistence.bind`（`None` / 缺省 = 不改）同一口径）。
+_WIRE, _bind_wire = _slot()
+HANDLES = _WIRE.handles()
 
 
 def bind_host(**inject):
     """宿主注入入口。返回收到的键（引擎不解释返回值，只为便于诊断）。
 
-    ★ 为什么不再 `clear()`（引擎 L2711）：
-        两边句柄口径相反 —— `persistence.bind` 是**增量**（`None` = 不改），
-        而这里原先整个 `clear()` 再 `update`，于是**覆盖**。
-        实跑：全绑 `{db_path,clock,log,tlog}` → 另起一次 `bind_host(clock=…)`
-          → `HANDLES` 只剩 `{clock}`，而 `persistence._H` 照旧保留全部 6 个
-          ⇒ **同一批句柄出两个真相**，且 `facade.log(…)` 静默返 `None`（
-          宿主回调**未被调用**，日志直接丢、零报错）。
-        口径：两边同一个「增量、`None` = 不改」，`HANDLES` 和
-        `persistence._H` 才不会对同一批句柄给出不同答案。
+    ★ **增量、`None` = 不改、绝不 `clear()`**（引擎 L2711 口径）—— 2026-09-30 起由引擎
+      `wire.slot()` 单源提供。历史教训留一句：原先这里整个 `clear()` 再 `update`，
+      于是二次 `bind_host(clock=…)` 会把 `HANDLES` 洗成只剩 `{clock}`、而
+      `persistence._H` 照旧保留全部键 ⇒ 同一批句柄出两个真相，且 `facade.log(…)`
+      静默返 `None`（宿主回调未被调用、日志直接丢、零报错）。
+    本函数只做包内两件事：把**累积面**转发给 `persistence.bind`（它自己那格同口径增量，
+    两边才不会对同一批句柄给出不同答案）、返回诊断。
     """
-    for _k, _v in (inject or {}).items():
-        if _v is not None:
-            HANDLES[_k] = _v
+    _bind_wire(**inject)
     persistence.bind(**HANDLES)
     return {"bound": sorted(HANDLES)}
 

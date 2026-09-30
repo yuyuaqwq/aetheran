@@ -19,27 +19,20 @@
 from __future__ import annotations
 
 import hashlib
-import json
-import os
 
 from . import facade
 
-_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
-_C: dict = {}
 _NAME_MAP = None
 
 
 # ── 读表 ──────────────────────────────────────────────────────
-def _d(name: str):
-    if name not in _C:
-        with open(os.path.join(_DIR, name + ".json"), encoding="utf-8") as f:
-            _C[name] = json.load(f)
-    return _C[name]
-
-
 def _entries(dom: str) -> dict:
     """域里的条目（`_` 前缀 = 私有键，不是条目 —— 与编辑器/装载器同口径）。"""
-    return {k: v for k, v in _d(dom).items() if not str(k).startswith("_")}
+    # ★ 2026-09-30 审计残余 #46：读表收敛到 `content.cmds_ast._data`（仓内唯一的域读口，
+    #   先例 = `content/prog.py` 的 `from .cmds_ast import _data`）。本模块被 `cmds_ast`
+    #   在装载期 import ⇒ 顶层引会成环，**每个读表的函数本地 import**（别名/转发壳一律不留）。
+    from .cmds_ast import _data                        # ★ 域读口（与别处同一个）
+    return {k: v for k, v in _data(dom).items() if not str(k).startswith("_")}
 
 
 def hours() -> dict:
@@ -51,7 +44,8 @@ def weathers() -> dict:
 
 
 def clock_meta() -> dict:
-    return dict(_d("calendar").get("_clock") or {})
+    from .cmds_ast import _data                        # ★ 域读口（与别处同一个）
+    return dict(_data("calendar").get("_clock") or {})
 
 
 def scale_seconds() -> int:
@@ -63,7 +57,8 @@ def scale_seconds() -> int:
 
 
 def _slot_text(key: str) -> str:
-    rec = (_d("texts") or {}).get(key)
+    from .cmds_ast import _data                        # ★ 域读口（与别处同一个）
+    rec = (_data("texts") or {}).get(key)
     if not rec:
         raise KeyError("texts 域缺槽位 %r（名字与风味的真源都在 texts）" % key)
     return rec.get("value", "")
@@ -104,6 +99,7 @@ def desc_slot(eid: str, st: dict | None = None) -> str:
       变体槽位**存在**就用它，否则回落到 `desc_slot` 那一格。变体是**纯增项**：
       表里没写变体的组合走基础句（今天只有「夜里的晴」一条）。
     """
+    from .cmds_ast import _data                        # ★ 域读口（与别处同一个）
     e = hours().get(eid) or weathers().get(eid) or {}
     base = e.get("desc_slot") or ""
     if not (st and base):
@@ -111,7 +107,7 @@ def desc_slot(eid: str, st: dict | None = None) -> str:
     other = st.get("hour") if eid in weathers() else st.get("weather")
     if other:
         alt = variant_key(base, other)
-        rec = (_d("texts") or {}).get(alt)
+        rec = (_data("texts") or {}).get(alt)
         if isinstance(rec, dict) and str(rec.get("value") or "").strip():
             return alt
     return base
@@ -158,7 +154,8 @@ def rain_max_gap_days() -> int:
 
 def weathers_meta() -> dict:
     """`weather._rules`（私有块 · 权重来源 / 保底 / 季节与地图那几条说明）。"""
-    return dict(_d("weather").get("_rules") or {})
+    from .cmds_ast import _data                        # ★ 域读口（与别处同一个）
+    return dict(_data("weather").get("_rules") or {})
 
 
 def weather_raw(day: int) -> str:
@@ -317,7 +314,8 @@ def token_alias() -> dict:
     口径与理由（为什么「退潮 = 夜」）见 `content/rules/calendar.json` 的 `_口径` ⑥；
     落表 = `scripts/rebuild_calendar.py` ⑦（fail-closed：指向不存在的名字 / 与真名字撞名 ⇒ 当场抛）。
     """
-    a = _d("calendar").get("_token_alias")
+    from .cmds_ast import _data                        # ★ 域读口（与别处同一个）
+    a = _data("calendar").get("_token_alias")
     return {str(k): str(v) for k, v in (a or {}).items()} if isinstance(a, dict) else {}
 
 

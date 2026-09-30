@@ -36,13 +36,14 @@ st.install()
 
 from content import calendar as CAL                                   # noqa: E402
 from content import cmds_ast, cmds_talk                               # noqa: E402
+from content.cmds_ast import _data                                    # noqa: E402  ★ #46：域读口（与 content 同一个）
 
 SCALE = CAL.scale_seconds()
 FIXED = 100 * SCALE + (21.0 / 24.0) * SCALE
 
 HRS = CAL.hours()
 WEA = CAL.weathers()
-TX = (CAL._d("texts") or {})
+TX = (_data("texts") or {})
 
 print("探针：calendar 域（时辰表）")
 
@@ -97,18 +98,18 @@ def _tokens(obj, key, out):
 
 
 doors, must_hour, must_weather = [], [], []
-for gid, g in (CAL._d("gathering") or {}).items():      # 采集点：时辰或天气都行（「雨后才有」）
+for gid, g in (_data("gathering") or {}).items():        # 采集点：时辰或天气都行（「雨后才有」）
     if g.get("time"):
         doors.append(("gathering.time:" + gid, g["time"]))
     for e in (g.get("pool") or []):
         if e.get("when"):
             doors.append(("gathering.pool.when:" + gid, e["when"]))
-for npc_id, npc in (CAL._d("npcs") or {}).items():       # NPC 出场：时辰
+for npc_id, npc in (_data("npcs") or {}).items():         # NPC 出场：时辰
     for tok in ((npc.get("condition") or {}).get("time") or []):
         must_hour.append(("npcs.condition.time:" + npc_id, tok))
 dlg_h, dlg_w = [], []
-_tokens(CAL._d("dialogues"), "time", dlg_h)
-_tokens(CAL._d("dialogues"), "weather", dlg_w)
+_tokens(_data("dialogues"), "time", dlg_h)
+_tokens(_data("dialogues"), "weather", dlg_w)
 must_hour += [("dialogues.need.time", t) for t in dlg_h]
 must_weather += [("dialogues.need.weather", t) for t in dlg_w]
 
@@ -148,13 +149,13 @@ at_wall_night = [k for k, _v in cmds_ast._npcs_here("windmill_town", "wt_wall", 
 at_wall_day = [k for k, _v in cmds_ast._npcs_here("windmill_town", "wt_wall", day)]
 chk("★ NPC 出场随时辰变（哈根：夜在墙根、昼不在）",
     at_wall_night == ["npc_hagen"] and at_wall_day == [], "夜 %s / 昼 %s" % (at_wall_night, at_wall_day))
-derrick = (CAL._d("dialogues") or {}).get("dlg_derrick", {}).get("nodes", {}).get("daily", {}).get("texts", [])
+derrick = (_data("dialogues") or {}).get("dlg_derrick", {}).get("nodes", {}).get("daily", {}).get("texts", [])
 rain_st = dict(day, weather="w_rain")
 line_rain = cmds_talk._pick_line(derrick, {}, rain_st)
 line_day = cmds_talk._pick_line(derrick, {}, day)
 chk("★ 对话按时辰/天气择优（德里克的雨天那句只在雨天出）",
     line_rain != line_day and line_rain and "雨" in line_rain, "%s" % str(line_rain)[:24])
-gid, pt = "gt_be_herb_1", (CAL._d("gathering") or {})["gt_be_herb_1"]
+gid, pt = "gt_be_herb_1", (_data("gathering") or {})["gt_be_herb_1"]
 chk("★ 采集门槛：那条雨后才长的菌，晴天采不到",
     CAL.allows(pt.get("time"), rain_st) and not CAL.allows(pt.get("time"), day), "门槛=%s" % pt.get("time"))
 

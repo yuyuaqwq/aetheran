@@ -16,6 +16,8 @@
   ⑪ ★ P-8 行为：自己看（端详）—— 看过 ≠ 认出来 · 不可逆 · 手上没有不给看 · 物证句来自实物域
   ⑫ ★ B3-7 旧物谱入口：新那条（`unid_tower`）真拿得到（有出产）· 塔内那 6 条就地线索不进谱（12 类不动）
   ⑬ ★ B3-10：12 条「读的」旧物逐条真跑『旧物谱』—— 问号行 / 认出后那行**照字出**（逐字取自 14 号文档）
+  ⑭ ★ B4-9 日期戳 + 2026-09-30 审计残余 #34：**同一节点跨天**也计进「N 个游戏日」（原口径只取 `nodes` 第一回到 ⇒ 恒 1）
+  ⑰ ★ 2026-09-30 审计残余 #15：`_meta.book_label ⊇ BOOKS`（现算不手抄）· `codex.label()` fail-closed
 
 用法：GWEN_ENGINE=C:/Users/yuyu/framework-engine python scripts/probe_codex.py
 """
@@ -422,6 +424,27 @@ _p14b = {"loc": "windmill_town", "node": "wt_gate_n", "foot": {
     "nodes": {"windmill_town:wt_gate_n": 0, "belt_north:bn_bone": 0}}}  # B4-9 之前留下的老档
 chk("★ 老档里那些「0 = 不知道哪天」不算一个游戏日（全都不知道 ⇒ 至少 1）",
     CM.foot(_p14b)["days"] == 1, CM.foot(_p14b))
+# ★ 2026-09-30 审计残余 #34：**同一节点跨天**也算天数 —— 原口径 `days` 只从 `nodes` 取，
+#   而 `nodes` 只在**第一回到**时写（`note_visit` 首次才落）⇒ 3 个游戏日反复走同一个节点
+#   （镇口磨剑 / 骨田刷怪就是这个形态）⇒ `visits={'wt_gate_n':3}` 而 `days=1`，
+#   玩家可见的 `SYS_FOOT_HEAD` 直印这个数。修法 = `nodes` ∪ `day_seen` 并集（`_note_day` 每次走到/站到记一笔）。
+#   ★ 上面三条断言口径**没变**，理由：并集只多记「同一节点又来的那天」——初档只有一天、
+#     跨日那次是**新节点**（`be_birch` 的 day 本来就在 `nodes` 里）、老档 `day_seen` 缺省为空
+#     ⇒ 三条各自的结果逐字不变（此处继续断言它们，就是钉住「没顺手改坏老口径」）。
+_p14c = {"loc": "windmill_town", "node": "wt_gate_n", "foot": {}}
+#   ★ 照**真走路**那两条腿记（`cmds_ast` 里 `note_visit` + `note_step` 成对调）：
+CM.note_visit(_p14c, "windmill_town", "wt_gate_n")
+CM.note_step(_p14c, "windmill_town", "wt_gate_n")             # 第 1 天走这一处
+FAC2.bind_host(clock=lambda: _FIX + 2 * CAL2.scale_seconds())  # 钟再推过一整个游戏日
+CM.note_visit(_p14c, "windmill_town", "wt_gate_n")
+CM.note_step(_p14c, "windmill_town", "wt_gate_n")             # 第 2 天**同一个节点**
+FAC2.bind_host(clock=lambda: _FIX + 3 * CAL2.scale_seconds())
+CM.note_visit(_p14c, "windmill_town", "wt_gate_n")
+CM.note_step(_p14c, "windmill_town", "wt_gate_n")             # 第 3 天还是它
+_f14c = CM.foot(_p14c)
+chk("★ #34 同一节点连走 3 个游戏日 ⇒ 「3 个游戏日」（原口径恒 1 · `nodes` 仍只记第一回到）",
+    _f14c["days"] == 3 and len(_f14c["nodes"]) == 1
+    and _f14c["visits"].get("windmill_town:wt_gate_n") == 3, _f14c)
 FAC2.bind_host(**_HANDLES)                                             # 还原（含 db_path 与真钟）
 
 #: 静态守卫：**玩家档上那一格** `p["day"]` 只许 `calendar.tick()` 读（它是跨日标记，
@@ -551,6 +574,34 @@ chk("★ 两边句柄不出两个真相：注入过的键一个都不能从 `HAN
     set(_fac2_first_keys) <= set(FAC2.HANDLES),
     "首次注入=%s / 二次后 HANDLES=%s" % (sorted(_fac2_first_keys), sorted(FAC2.HANDLES)))
 FAC2.bind_host(**_HANDLES)                                        # 还原
+
+print()
+print("⑰ ★ 2026-09-30 审计残余 #15：`book_label` 盖满 `BOOKS` · `label()` fail-closed")
+#   ★ 为什么门禁放**这里**（不是 `rebuild_codex.py` 自检）：`book_label` 是生成器写出来的
+#     那一格，但「产出缺一格」要看的是**产物**（`content/data/codex.json`）—— 本探针每轮
+#     基线都跑、牙齿常驻；生成器只在有人重跑时自检，手编/漏跑都照不到。
+#   ★ `BOOKS` 一律现算 `content.codex.BOOKS`（不抄本文件上面那个同名元组 —— 抄一份就两处口径）。
+_bl17 = dict((CM.meta() or {}).get("book_label") or {})
+chk("★ ⑰ `_meta.book_label ⊇ BOOKS`（现算 = `codex.BOOKS`：%s）—— 缺一格那本谱的谱名就没出处"
+    % (list(CM.BOOKS),), set(CM.BOOKS) <= set(_bl17),
+    "缺：%s" % (sorted(set(CM.BOOKS) - set(_bl17)) or "无"))
+try:
+    _names17 = {b: CM.label(b) for b in CM.BOOKS}
+    _err17 = ""
+except Exception as exc:                                             # noqa: BLE001 —— 抛就是红
+    _names17, _err17 = {}, "%s: %s" % (type(exc).__name__, exc)
+chk("★ ⑰ 四本谱的谱名都取得到 · 都不是机器键（`label()` 的正向跑）",
+    not _err17 and all(str(v).strip() and v != b for b, v in _names17.items()),
+    _err17 or _names17)
+#   反证：喂一个 `book_label` 里没有的谱 id ⇒ 必须**当场抛**（`or name` 那条回落路已封）。
+try:
+    CM.label("__no_such_book__")
+    _err17b = "没抛 —— 机器键回落又活了"
+except KeyError:
+    _err17b = ""
+except Exception as exc:                                             # noqa: BLE001
+    _err17b = "抛是抛了，但不是 KeyError：%s: %s" % (type(exc).__name__, exc)
+chk("★ ⑰ 反证：谱名缺格当场抛（不回落成机器键）", not _err17b, _err17b)
 
 print()
 print("按谱：%s" % " · ".join("%s %d" % (LABEL[b], len(BOOK[b])) for b in BOOKS))

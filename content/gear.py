@@ -73,7 +73,12 @@ def gear_stats(player) -> dict:
             if not isinstance(v, (int, float)) or isinstance(v, bool):
                 continue
             v = float(v)
-            if i == 0:
+            # ★ 审计残余 #29：主词条（首位）吃强化，**效果类永远不吃** —— 原判只看位置
+            #   （`i == 0`），docstring 那条「效果类不参与强化」代码并不保证：数据里今天
+            #   效果类从不在首位（0 处），把效果类排到首位就会被 ×(1+bonus) 放大。
+            #   判别键 = `note`（items schema 注的就是效果类词条：30 个效果 stat 全带、
+            #   15 个数值 stat 全不带、无一混用 —— 数据与 schema 双证；不手抄效果名单）。
+            if i == 0 and not a.get("note"):
                 v = v * (1.0 + enhance_bonus(player, iid))
             out[a.get("stat")] = round(out.get(a.get("stat"), 0.0) + v, 4)
     return out

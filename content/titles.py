@@ -19,30 +19,21 @@
 """
 from __future__ import annotations
 
-import json
-import os
-
 from saintess_engine.conditions.declarative import compile_specs
 
 from . import calendar as CAL
 from . import eggs as EG
 from . import heard as HD
 
-_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
-_C: dict = {}
 _SPECS = None
-
-
-def _d(name: str):
-    if name not in _C:
-        with open(os.path.join(_DIR, name + ".json"), encoding="utf-8") as f:
-            _C[name] = json.load(f)
-    return _C[name]
 
 
 # ── 数据 ──────────────────────────────────────────────────────
 def data() -> dict:
-    return _d("titles")
+    # ★ 2026-09-30 审计残余 #46：读表收敛到 `content.cmds_ast._data`（仓内唯一的域读口）——
+    #   本模块被 `cmds_ast` 在装载期 import ⇒ 顶层引会成环（titles → cmds_ast → titles）。
+    from .cmds_ast import _data                        # ★ 域读口（与别处同一个）
+    return _data("titles")
 
 
 def entries() -> dict:

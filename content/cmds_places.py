@@ -197,7 +197,8 @@ async def caravan(env, sink, uid, player):
                         name=g["rec"].get("name") or g["id"], gold=g["gold"],
                         level=SH.level_need(g["rec"]))
             continue
-        for g in SH.goods_at(key):                 # 车到了、可你还不到级：照实说（不静默）
+        for g in SH.goods_at(key, p):           # 车到了、可你还不到级：照实说（不静默）
+                                                 # ★ 审计残余 #2：`p` 要带 —— 事件橱上不带档 = 猜事件状态（fail-closed 会当场抛）
             yield T("SYS_SHELF_LOCK", name=g["rec"].get("name") or g["id"],
                     level=SH.level_need(g["rec"]), now=int(p.get("level") or 0))
             break

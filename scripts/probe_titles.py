@@ -283,10 +283,37 @@ hh = {"day": 9}
 f1 = HD.note(hh, "dlg_hagen", "meet", 0)
 f2 = HD.note(hh, "dlg_hagen", "meet", 0)
 HD.note(hh, "dlg_hagen", "daily", 1)
-chk("★ 听过哪一句记哪一句（同一句不记第二遍）",
-    f1 and not f2 and HD.count(hh, "dlg_hagen") == 2, HD.count(hh, "dlg_hagen"))
+chk("★ 听过哪一句记哪一句（同一句不记第二遍）",          # ★ 审计残余 #31：HD.count 死导出已删，改由 counts 派生
+    f1 and not f2 and HD.counts(hh).get("dlg_hagen") == 2, HD.counts(hh).get("dlg_hagen"))
 chk("★ 出题口拿到的是「句数」（heard 那个键要的形状）",
     (TT.ctx(hh).get("heard") or {}).get("dlg_hagen") == 2, TT.ctx(hh).get("heard"))
+
+# ★ 审计残余 #12 三态门禁：heard 读不改档 · 坏值留原值 · 写口 fail-closed
+_hg = {}
+HD.counts(_hg)
+HD.lines(_hg, "dlg_probe")
+chk("★ heard 读口零写档（空档跑 counts/lines 后档逐字不变 —— 不再落出 `heard` 键）",
+    _hg == {} and "heard" not in _hg, _hg)
+_hb = {"heard": ["坏数据"]}
+HD.counts(_hb)
+HD.lines(_hb, "dlg_probe")
+chk("★ 读遇坏值留原值（返回空可读、档上的证据一个字节不动 —— 不再就地替换成 {}）",
+    _hb == {"heard": ["坏数据"]}, _hb)
+try:
+    HD.note(_hb, "dlg_probe", "x", 0)
+    _n_err = ""
+except RuntimeError as _e:
+    _n_err = str(_e)
+chk("★ 写遇顶层坏值当场抛（fail-closed，拒绝静默覆盖）",
+    bool(_n_err) and _hb == {"heard": ["坏数据"]}, _hb)
+_hb2 = {"heard": {"dlg_x": "不是dict"}}
+try:
+    HD.note(_hb2, "dlg_x", "x", 0)
+    _n_err2 = ""
+except RuntimeError as _e:
+    _n_err2 = str(_e)
+chk("★ 写遇句级坏值当场抛（句账留原值，不许被静默换掉）",
+    bool(_n_err2) and _hb2["heard"]["dlg_x"] == "不是dict", _hb2)
 
 # ⑨ 触发点接线（源码级）+ 称号指令接在 content.cmds_title 上
 src_ast = open(str(REPO / "content" / "cmds_ast.py"), encoding="utf-8").read()

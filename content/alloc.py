@@ -258,6 +258,22 @@ def weights(cls_id) -> dict:
     sug = rec.get("suggest_alloc")
     if not isinstance(sug, dict) or not sug:
         raise AllocError("职业 %r 没有 suggest_alloc（建议权重是唯一来源，缺了不猜）" % cid)
+    # ★ 2026-09-30 审计残余 #8（fail-closed 最后一道口）：键 ⊆ STATS + 值是**正有限数**。
+    #   坏数据在源头拦住——以前直接 `dict(sug)` 返回，下游 `flat()`/`plan()` 会
+    #   ZeroDivisionError（全 0 权重）/ 负权重 / TypeError 逃出本模块，而 `AllocError`
+    #   的类承诺「加点这条线上的错都当场点名」。这两条不变式同时保证 flat/plan 的除数
+    #   `base = sum(值) > 0` —— 那两处不再各兜一道（审计建议的两条校验合并在本口）。
+    for _k, _v in sug.items():
+        if _k not in STATS:
+            raise AllocError("职业 %r 的 suggest_alloc 有认不出的维：%r（五维：%s）"
+                             % (cid, _k, " / ".join(STATS)))
+        if isinstance(_v, bool) or not isinstance(_v, (int, float)):
+            raise AllocError("职业 %r 的 suggest_alloc[%s] 不是数字：%r" % (cid, _k, _v))
+        if float(_v) != float(_v) or float(_v) in (float("inf"), float("-inf")):
+            raise AllocError("职业 %r 的 suggest_alloc[%s] 不是有限数：%r" % (cid, _k, _v))
+        if float(_v) <= 0:
+            raise AllocError("职业 %r 的 suggest_alloc[%s] 不是正数：%r（全 0 ⇒ 平铺要除以 0）"
+                             % (cid, _k, _v))
     return dict(sug)
 
 

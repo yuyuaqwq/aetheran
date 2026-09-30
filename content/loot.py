@@ -9,27 +9,18 @@
 """
 from __future__ import annotations
 
-import json
-import os
 import random
 
-_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
-_C: dict = {}
-
-
-def _d(name: str):
-    if name not in _C:
-        with open(os.path.join(_DIR, name + ".json"), encoding="utf-8") as f:
-            _C[name] = json.load(f)
-    return _C[name]
-
-
+# ★ 2026-09-30 审计残余 #46：读表收敛到 `content.cmds_ast._data`（仓内唯一的域读口）——
+#   本模块被 `cmds_ast` 一族在装载期 import ⇒ 顶层引会成环，**每个读表的函数本地 import**。
 def pools() -> dict:
-    return _d("drop_pools")
+    from .cmds_ast import _data                        # ★ 域读口（与别处同一个）
+    return _data("drop_pools")
 
 
 def items() -> dict:
-    return _d("items")
+    from .cmds_ast import _data                        # ★ 域读口（与别处同一个）
+    return _data("items")
 
 
 #: ★ B3-6b-2d-keys-2：条目机器键的兜底（条目没写、物品表也没有时）—— **ASCII 键**，不是中文枚举。

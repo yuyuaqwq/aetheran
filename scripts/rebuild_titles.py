@@ -27,6 +27,11 @@ import sys
 
 PLAN = os.environ.get("AETHERAN_PLAN", "C:/Users/yuyu/aetheran-plan")
 PKG = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# ★ 审计残余 #13（2026-09-30）：`counter_ok` 的 heard 档要 `from content import prog`
+#   （旗写端唯一真源）—— 生成器被当子进程跑时 `sys.path[0]` 是 scripts/，这里自举到仓根，
+#   谁调（手跑 / probe_generators 子进程）都能 import content。
+if PKG not in sys.path:
+    sys.path.insert(0, PKG)
 DATA = os.path.join(PKG, "content", "data")
 
 DOC21 = os.path.join(PLAN, "06_第一阶段垂直切片", "21_长期目标层_v1.md")
@@ -253,6 +258,80 @@ def value_ok(field: str, v, target, D: dict) -> str:
     return "不认识的字段 %s" % field
 
 
+def _need_unsat(need, D, prog_mod) -> str:
+    """`need` 的静态可达性：回空串 = 满足得了；否则一句为什么（★ 审计残余 #13 的牙）。
+
+    键表与语义**跟读端 `cmds_talk._pick_indexed` 对齐**（唯一真源 = `cmds_talk.NEED_KINDS`，
+    本地 import，不抄词表）：
+      · `None`/缺 = 无条件；
+      · `time`/`weather`：值在时辰表 / 天气表里（D 那两格现算）；
+      · `flag`：有写端 —— `prog.map_slug` 认得出（表外 token 要先进本函数核过再落）；
+      · `holding`：那件在 items 域；`equipped`：那个槽真有装备在用（槽名取自 items 域）；
+      · `event`：在 events 域；`quest_done`：在 quests 域；
+      · `hurt`：打一场就有伤 —— 恒可达；
+      · `last`：写端还没核过 ⇒ fail-closed（域里今天 0 用，第一次用它的人先来核这档）；
+      · 认不出的键（读端 `NEED_KINDS` 也没有）= fail-closed —— 与读端同一条理由：
+        拼错的键会把这句洗成**无条件**（`_pick_indexed` 按不满足算，门禁按拿不到算）。
+    """
+    if need is None:
+        return ""
+    if not isinstance(need, dict):
+        return "need 形状坏了（%s，要 dict 或 null）" % type(need).__name__
+    from content.cmds_talk import NEED_KINDS as _KINDS   # 读端词表的唯一真源（本地 import）
+    items = D.get("items") or {}
+    slots = {str(v.get("slot")) for v in items.values()
+             if isinstance(v, dict) and v.get("slot")}
+    events = D.get("events") or {}
+    quests = D.get("quests") or {}
+    for k, v in need.items():
+        vals = v if isinstance(v, list) else [v]
+        if k == "time":
+            for x in vals:
+                if str(x) not in D["hours"]:
+                    return "time=%r 不在时辰表" % (x,)
+        elif k == "weather":
+            for x in vals:
+                if str(x) not in D["weathers"]:
+                    return "weather=%r 不在天气表" % (x,)
+        elif k == "flag":
+            for x in vals:
+                if prog_mod.map_slug(x) is None:
+                    return "flag=%r 没有写端（prog 认不出）" % (x,)
+        elif k == "holding":
+            for x in vals:
+                if str(x) not in items:
+                    return "holding=%r 不在 items 域" % (x,)
+        elif k == "equipped":
+            for x in vals:
+                if str(x) not in slots:
+                    return "equipped=%r 没有任何一件装备用这个槽（槽名取自 items 域）" % (x,)
+        elif k == "event":
+            for x in vals:
+                if str(x) not in events:
+                    return "event=%r 不在 events 域" % (x,)
+        elif k == "quest_done":
+            for x in vals:
+                if str(x) not in quests:
+                    return "quest_done=%r 不在 quests 域" % (x,)
+        elif k == "codex":
+            # `<谱>:<条目>` —— 谱与条目都要在图鉴域里点得着（与读端 CX.has 的形状同口径）
+            for x in vals:
+                bk, _, rid = str(x).partition(":")
+                book = (D.get("codex") or {}).get(bk)
+                if not (bk and rid and isinstance(book, dict) and rid in book):
+                    return "codex=%r 在图鉴域里点不着（要 <谱>:<条目>，谱与条目都要在域里）" % (x,)
+        elif k == "hurt":
+            pass                                        # 打一场就有伤：恒可达
+        elif k == "last":
+            return "need.last 的写端还没核过（域里今天 0 用 —— 第一次用它的人先把这档核进本函数）"
+        else:
+            if k not in _KINDS:
+                return ("读端 NEED_KINDS 不认的键 %r（拼错的键会把这句洗成无条件 —— "
+                        "_pick_indexed 按不满足算）" % (k,))
+            return "认不出的 need 键 %r（这档门禁还没核过它）" % (k,)
+    return ""
+
+
 def counter_ok(key: str, num: int, target, why: str, D: dict) -> str:
     """计数子句的对账：★ 那个数不许手打 —— 能从数据现算的必须与现算值相等。"""
     if num < 1:
@@ -283,6 +362,22 @@ def counter_ok(key: str, num: int, target, why: str, D: dict) -> str:
         n = sum(len(nd.get("texts") or []) for nd in (tree.get("nodes") or {}).values())
         if num != n:
             return "heard@%s 写的是 %d，而那棵树有 %d 条台词（现算）" % (target, num, n)
+        # ★ 审计残余 #13（2026-09-30 · 台账 L2788「至少档」）：上面那道对拍是**恒真**的
+        #   （`num` 本身就是生成器按 `n` 现算写的，见本称号 `why` 那格）⇒ 零牙。补一道
+        #   **可达上界**：每条台词的 `need` 必须指得着真东西 —— 时辰/天气在域表里、
+        #   `flag` 有写端（`prog.map_slug` 认得出）、`holding` 那件在 items 域。
+        #   断言 = 门槛 <= 可达上界（= need 满足得了的条数；有指不着的 ⇒ 上界 < 门槛 ⇒ 当场红）。
+        #   运行时那半（真敲 `_pick_layer` 数最差句数 / 每趟只出一句）归 probe_dialogues 的硬底线判据。
+        from content import prog as _PROG                    # 旗写端的唯一真源（本地 import）
+        bad = []
+        for _nid, _nd in (tree.get("nodes") or {}).items():
+            for _ti, _tx in enumerate(_nd.get("texts") or []):
+                _why = _need_unsat(_tx.get("need"), D, _PROG)
+                if _why:
+                    bad.append("%s[%d] %s" % (_nid, _ti, _why))
+        if bad:
+            return ("heard@%s 可达上界 %d < 门槛 %d：有 %d 条台词的 need 指不着真东西"
+                    "（这称号会拿不到）—— %s" % (target, n - len(bad), num, len(bad), "；".join(bad[:3])))
     else:
         tok = PRODUCER.get(key)
         if not tok or tok not in why:
@@ -356,7 +451,7 @@ def main() -> None:
 def main2(src, conds, dry) -> None:      # noqa: C901 —— 一段直叙的重建流程
     cal, wea, texts = load("calendar"), load("weather"), load("texts")
     D = {n: load(n) for n in ("maps", "pois", "items", "quests", "monsters", "races",
-                              "codex", "dialogues")}
+                              "codex", "dialogues", "events")}
     D["hours"] = {str((texts[e["slot"]] or {}).get("value")) for k, e in cal.items() if not str(k).startswith("_")}
     D["weathers"] = {str((texts[e["slot"]] or {}).get("value")) for k, e in wea.items() if not str(k).startswith("_")}
     if not D["hours"] or not D["weathers"]:

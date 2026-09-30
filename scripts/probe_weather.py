@@ -38,12 +38,13 @@ st = load_stack(str(REPO), inject={"db_path": DB, "clock": lambda: FIXED})
 st.install()
 
 from content import calendar as CAL                                   # noqa: E402
+from content.cmds_ast import _data                                    # noqa: E402  ★ #46：域读口（与 content 同一个）
 
 SCALE = CAL.scale_seconds()
 FIXED = 100 * SCALE
 WEA = CAL.weathers()
 HRS = CAL.hours()
-TX = (CAL._d("texts") or {})
+TX = (_data("texts") or {})
 
 print("探针：weather 域（天气表）")
 
@@ -178,7 +179,7 @@ chk("★ 保底后「雨」的占比 ≥ 表里的份额（只增不减：%.1f%%
     share_g >= share_w, "表里的 %.1f%% → 保底后 %.1f%%（N=%d）" % (100 * share_w, 100 * share_g, N))
 
 # ⑨ ★ fail-closed + 现读常量真生效（反证：改表里那一格，行为当场跟着变）
-_wj = CAL._d("weather")
+_wj = _data("weather")
 _rec = _wj.setdefault("_rules", {})
 _old = _rec.get("rain_max_gap_days")
 before = [CAL.weather_of(100000 + i) for i in range(40)]
@@ -224,7 +225,7 @@ def _tokens(obj, key, out):
             _tokens(v, key, out)
 
 
-_tokens(CAL._d("dialogues"), "weather", dlg)
+_tokens(_data("dialogues"), "weather", dlg)
 unknown = [t for t in dlg if CAL.resolve(t) != ("weather", CAL.resolve(t)[1])]
 chk("★ 对话的天气门槛（%d 处）都认得出" % len(dlg), bool(dlg) and not unknown,
     "%s" % (dlg or "无"))
@@ -240,7 +241,7 @@ chk("没原文的天气不给旗标（不许脑补）",
     "晴 %s / 初雪 %s" % (f("w_sunny"), f("w_snow")))
 
 # ⑬ 规则块：来源都记着（可追溯）
-rules = (CAL._d("weather") or {}).get("_rules") or {}
+rules = (_data("weather") or {}).get("_rules") or {}
 chk("★ 权重来源记在表里（可追溯）", bool(rules.get("weights_source")) and bool(rules.get("source")),
     "%s · 跳过 %s" % (str(rules.get("weights_source"))[:38], rules.get("skipped")))
 
@@ -369,7 +370,7 @@ chk("★ 真跑那一屏用的就是变体那句（夜里那行 == 变体槽位�
     "%s" % (_night_line[:1] or "没跑到"))
 
 # 反证：把变体槽位临时撤掉 ⇒ 读口当场回落到基础句（证明这一格不是摆设）
-_tx_live = CAL._d("texts")
+_tx_live = _data("texts")
 _keep = _tx_live.pop(_VAR, None)
 try:
     _fallback = CAL.desc_slot("w_sunny", _st_night)

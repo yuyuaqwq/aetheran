@@ -36,7 +36,8 @@ import content.battle_acts as BA                                             # n
 
 # ───────────────────────────────────────────── 一、真建一个 Hand，看它有没有那一格
 print("一、实例上的字段（真建对象，不读源码）")
-h = BA.Hand("interrupt")
+# ★ 审计残余 #16：interrupt 档 `p` 必填（fail-closed）—— 本探针只看字段面，给最小档。
+h = BA.Hand("interrupt", p={"uid": "u1"})
 attrs = sorted(vars(h))
 chk("★ `Hand('interrupt')` 上没有 `ok` 那一格", not hasattr(h, "ok"), attrs)
 # ★ 2026-09-30 收红批二：`slot_kw` 是 P0-1 续批五（ca04636）**有意**加的第六格
@@ -86,7 +87,7 @@ class _Back(BA.Hand):
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
         self.ok = False                                   # ← 模拟有人写回来
-_h2 = _Back("interrupt")
+_h2 = _Back("interrupt", p={"uid": "u1"})   # ★ 审计残余 #16：interrupt 档 p 必填（反证节同样要给）
 chk("★ 一个长出 `ok` 的子类确实被第①节那格逮到（不是恒真断言）", hasattr(_h2, "ok"))
 
 print("结果：%s" % ("全绿 ✓" if not fails else "有红 ✗"))

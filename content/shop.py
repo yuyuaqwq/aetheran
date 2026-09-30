@@ -45,7 +45,13 @@ _CACHE = None
 
 
 def rules() -> dict:
-    """`content/rules/shop.json`（唯一真源）—— 读一次，进程内复用。"""
+    """`content/rules/shop.json`（唯一真源）—— 读一次，进程内复用。
+
+    ★ 审计残余 #14 登记（2026-09-30）：与 `content/inn.py::_rules`（原 `rules()`）**逐字同形**（difflib
+      0.959，只差报错文案与末尾 `quality_mult` 断言）—— 台账判定**不合并**：收益 8 行 <
+      复核成本。`content/ranks.py` 同形不同校验（0.649）别硬合。候选形状：
+      `rules_loader(path, label, extra_check)`，下次有人动 loader 时一并裁决。
+    """
     global _CACHE
     if _CACHE is None:
         if not os.path.exists(RULES):
@@ -222,6 +228,8 @@ def can_sell(rec: dict, key=None, p=None) -> bool:
     · `shop_key` 那一路：条目自己的 `shop` 那一格 == 这一家的键；
           （同样**要有价**；两条收法都走 `_stock_rule` 那一个口，不各保一份）
     · 挂在事件上的那一家：事件不成立 ⇒ 这件货**不在柜上**（商队那一家）。
+      ★ `p` 没传而这一家挂事件 ⇒ **当场抛**（与 `_gate_level` 同口径 fail-closed——
+        猜出来的事件状态会静默放行；审计残余 #2）。
     """
     if not isinstance(rec, dict):
         return False
@@ -229,7 +237,12 @@ def can_sell(rec: dict, key=None, p=None) -> bool:
     if not _stock_rule(rec, sp):
         return False
     ev = str(sp.get("event") or "")
-    if ev and p is not None and not CAL.event_on(ev, p=p):
+    # ★ 2026-09-30 审计残余 #2：原式是 `ev and p is not None and …` —— `p` 缺省时
+    #   事件闸**整条跳过**（这里放、相邻 `_gate_level` 却抛，口径自相矛盾）。
+    if ev and p is None:
+        raise RuntimeError("这一件（%s · 事件 %s）按事件卖，可 `p` 没传 —— 事件状态猜不出来（铺子 %r）"
+                           % (rec.get("name"), ev, key))
+    if ev and not CAL.event_on(ev, p=p):
         return False
     return True
 
@@ -327,7 +340,12 @@ def where(name, p=None) -> dict | None:
         sp = shelf_rec(k)
         ev = str(sp.get("event") or "")
         why = ""
-        if ev and p is not None and not CAL.event_on(ev, p=p):
+        # ★ 审计残余 #2（与 `can_sell` 同批）：按事件卖而 `p` 没传 ⇒ 当场抛，
+        #   不许 `p is not None` 静默跳过（事件状态全靠猜 = 「车没到」那句会假）。
+        if ev and p is None:
+            raise RuntimeError("这一件（%s · 事件 %s）按事件卖，可 `p` 没传 —— 事件状态猜不出来（铺子 %r）"
+                               % (rec.get("name"), ev, k))
+        if ev and not CAL.event_on(ev, p=p):
             why = "event"
         elif not _gate_level(k, p, rec):
             why = "level"
