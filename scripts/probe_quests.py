@@ -217,8 +217,8 @@ bad = lambda m: (fails.append(m), CHECKS.__setitem__(0, CHECKS[0] + 1), print(" 
 print("探针：quests 域（任务与委托）")
 print("  ✓ quests 域读得到  —— %d 条" % len(QE))
 
-# ① 三类齐全 + 数量
-for kind, want in (("主线", 12), ("支线", 18), ("悬赏", 3), ("生活", 8)):
+# ① 三类齐全 + 数量（★ B5：加「引子 6 条」—— 六族各一，见文件尾 [引子段]）
+for kind, want in (("主线", 12), ("支线", 18), ("悬赏", 3), ("生活", 8), ("引子", 6)):
     n = len([v for v in QE.values() if v["kind"] == kind])
     (ok if n == want else bad)("%s %d 条（应 %d）" % (kind, n, want))
 
@@ -2927,6 +2927,12 @@ def _mk39(x, k):
     fl["card"] = 1
     p["flags"] = fl
     p["loc"], p["node"] = "windmill_town", _BOARD39
+    # ★ B5（P-60）：`chain=intro` 的条目带 race 门 —— **档跟着条目走**（接别族那条会被
+    #   `SYS_JOB_FOREIGN_RACE` 拦下 ⇒ 本段 6 条引子全接不下）。非引子条目没有 `race` 字段，
+    #   这一行一个字不动档 ⇒ 老口径逐字节不变；**判据没松** —— 引子照样被逐条真敲（基线 / 态一 /
+    #   态二 / 反证一视同仁，只是造档时按它的族造）。
+    if x.get("race"):
+        p["race"] = str(x["race"])
     return p
 
 
@@ -3124,6 +3130,104 @@ for _ln in _l39:
     print("      %s" % _ln)
 print("      老档兼容（⑤）：%s" % " · ".join(_old39))
 print("      反证（④ · 关掉 `_set_base`）：%s" % " · ".join("%s → %s" % t for t in _rev39))
+
+# ★ B5 六族引子（P-60）：六族各一 · 三段行文 · race 门真敲
+#   【口径】`开服准备/B5_六族引子_落地设计.md` §1–§4（chain=intro · kind=引子 · order 41–46 ·
+#     race 六短名与档上同一格 · require = talk+kill+item 三型 · give = 信物 + 旧旅人的护腕）。
+#   【判据】① 6 条六族各一 / order 41–46 且**全域无撞号** / kind 与 giver
+#     ② require 三型逐条**真验来源**（talk 挂了对话树 · kill 在 monsters 域 · 持有物在 items 域
+#        **且在 give 里** = 有来源不赌脸）· give 两件都在域
+#     ③ 六条三拍 18 槽 `_slot_of` 全落在 texts（缺一个就是接活/交付屏印 [MISSING TEXT]）
+#     ④ **race 门真敲**：elf 档去接 human 那条 ⇒ 被拒 + 话术上屏 + 档不动；同族接得下
+#     （交引子接力主线 1 与六族各派各的在 probe_onboard [按族段] —— 那边有完整建号链路）
+print()
+print("── ★ B5 六族引子：六族各一 · 三段行文 · race 门")
+from content.cmds_ast import T as _T60                                    # noqa: E402
+_b60 = []
+_intro60 = {k: x for k, x in QE.items() if str(x.get("chain")) == "intro"}
+_RACES60 = sorted(("human", "elf", "dwarf", "orc", "dragonkin", "beastkin"))
+_MONS60 = st.domain("monsters") or {}
+_ITEMS60 = st.domain("items") or {}
+
+# ① 6 条 · 六族各一 · kind=引子 · order 41–46 且全域无撞号 · giver 真 NPC
+if len(_intro60) != 6:
+    _b60.append("引子条数 = %d（应 6）" % len(_intro60))
+_r60 = sorted(str(x.get("race") or "") for x in _intro60.values())
+if _r60 != _RACES60:
+    _b60.append("六族各一破了：%s" % _r60)
+if any(x.get("kind") != "引子" for x in _intro60.values()):
+    _b60.append("kind 非引子：%s" % sorted(
+        k for k, x in _intro60.items() if x.get("kind") != "引子"))
+_o60 = sorted(int(x.get("order") or 0) for x in _intro60.values())
+if _o60 != list(range(41, 47)):
+    _b60.append("order 不是 41–46：%s" % _o60)
+_all_o60 = [int(x.get("order") or 0) for x in QE.values() if x.get("order") is not None]
+_dup60 = sorted({o for o in _all_o60 if _all_o60.count(o) > 1})
+if _dup60:
+    _b60.append("order 全域撞号：%s" % _dup60)
+_bad_g60 = sorted(k for k, x in _intro60.items() if x.get("giver") not in NPCS)
+if _bad_g60:
+    _b60.append("giver 不是真 NPC：%s" % _bad_g60)
+
+# ② require 三型逐条真验来源 + give 两件都在域
+for _k60, _x60 in sorted(_intro60.items()):
+    _rq60 = CQ._require_of(_x60)
+    _kd60 = sorted(str(r.get("kind") or "") for r in _rq60)
+    if _kd60 != ["item", "kill", "talk"]:
+        _b60.append("%s require 不是 talk+kill+item 三型：%s" % (_k60, _kd60))
+        continue
+    _giv60 = {str((g or {}).get("item") or "") for g in (_x60.get("give") or [])}
+    for _r60 in _rq60:
+        if _r60.get("kind") == "talk":
+            if not CQ._dlg_of(str(_r60.get("npc") or "")):
+                _b60.append("%s talk 的 NPC 没挂对话树：%s" % (_k60, _r60))
+        elif _r60.get("kind") == "kill":
+            if str(_r60.get("monster") or "") not in _MONS60:
+                _b60.append("%s kill 的怪不在 monsters 域：%s" % (_k60, _r60))
+        elif _r60.get("kind") == "item":
+            _iid60 = str(_r60.get("item") or "")
+            if _iid60 not in _ITEMS60:
+                _b60.append("%s 持有物不在 items 域：%s" % (_k60, _iid60))
+            if _iid60 not in _giv60:
+                _b60.append("%s 持有物没来源（不在 give 里 = 教程件赌脸）：%s" % (_k60, _iid60))
+    _gl60 = sorted(_giv60)
+    if len(_gl60) != 2 or any(g not in _ITEMS60 for g in _gl60):
+        _b60.append("%s give 不是两件都在域：%s" % (_k60, _gl60))
+
+# ③ 六条三拍 18 槽 _slot_of 全落在 texts（缺一个 = 屏上 [MISSING TEXT]）
+for _k60, _x60 in sorted(_intro60.items(), key=lambda kv: int(kv[1].get("order") or 0)):
+    for _pt60 in ("STORY", "PROGRESS", "DELIVER"):
+        _s60 = CQ._slot_of(_x60, _pt60)
+        if str(_s60).startswith("QUEST_UNMAPPED") or _s60 not in TX:
+            _b60.append("%s %s 槽位没落在 texts：%s" % (_k60, _pt60, _s60))
+
+# ④ race 门真敲：elf 档去接 human 那条 ⇒ 被拒 + 话术上屏 + 档不动；同族接得下
+_hum60 = next((x for x in _intro60.values() if str(x.get("race")) == "human"), None)
+if _hum60 is None:
+    _b60.append("域里没有 human 引子（④ 没法敲）")
+else:
+    _o_h60 = int(_hum60["order"])
+    _pe60 = _sat_player(_hum60, "q_intro_human", day=1)
+    _pe60["race"] = "elf"                              # 精灵去接人类那条
+    _fl60 = dict(_pe60.get("flags") or {})
+    _fl60["quests_active"] = []
+    _pe60["flags"] = _fl60
+    _out60 = _drive(CQ.quest_accept, _pe60, "接 %d" % _o_h60)
+    if not any(_T60("SYS_JOB_FOREIGN_RACE") in ln for ln in _out60):
+        _b60.append("族外接没被拦（话术没上屏）：%s" % _out60[:2])
+    if "q_intro_human" in ((_pe60.get("flags") or {}).get("quests_active") or []):
+        _b60.append("族外接还进册了（race 门形同虚设）")
+    _ph60 = _mk39(_hum60, "q_intro_human")             # 同族（human）⇒ 接得下
+    _out60b = _drive(CQ.quest_accept, _ph60, "接 %d" % _o_h60)
+    if "q_intro_human" not in ((_ph60.get("flags") or {}).get("quests_active") or []):
+        _b60.append("同族接不下（race 门误伤）：%s" % _out60b[:2])
+
+(ok if not _b60 else bad)(
+    "★ B5 六族引子：6 条六族各一（order 41–46 · 全域无撞号）· require 三型逐条验到来源"
+    "（talk 挂树 · kill 在域 · 持有物在 items 且在 give）· give 两件在域 · 三拍 18 槽全在 texts · "
+    "race 门真敲（族外拒且话术上屏 + 档不动 · 同族接得下）（坏 %s）" % (_b60 or "无"))
+for _ln60 in _b60:
+    print("      %s" % _ln60)
 
 for n in notes:
     print("  · " + n)

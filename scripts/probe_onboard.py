@@ -174,7 +174,12 @@ _drive(h, ad, UID3, "选族 矮人")
 _drive(h, ad, UID3, "选职业 骑士")
 nm = _drive(h, ad, UID3, "名字 老陈")
 from content.cmds_quest import _quests as _q   # noqa: E402
-_fid = OB.first_quest_id()
+# ★ B5（P-60）：**带档**取第一件 —— 派发口径改按族走（矮人 ⇒ 引子『交不掉的货』），
+#   无参老口径固定回 order==1 主线 1，跟实际派出去的那条对不上（③ 两条断言会假红）。
+#   ★ 有意差异登记（B5 设计稿 §5 probe_onboard 改法③）：断言**一个字没松** ——
+#     仍旧查「真派那条的名字在一屏上 + 在册 + 只派一条」，只是「第一件」改成按档现算。
+_d3 = PS.get_player(GID, UID3) or {}
+_fid = OB.first_quest_id(_d3)
 _qname = (_q().get(_fid) or {}).get("name", "")
 chk("③ 取名那一拍递**欢迎屏**（自动派上了才说）—— 名字 / 族 / 职业 / 第一件委托一屏收",
     any("✨" in ln and "风车镇" in ln for ln in nm)
@@ -182,7 +187,6 @@ chk("③ 取名那一拍递**欢迎屏**（自动派上了才说）—— 名字
 mine = _drive(h, ad, UID3, "我的委托")
 chk("③ 第一件委托已在「我的委托」在册上（不是玩家自己接的）",
     bool(_qname) and any(_qname in ln for ln in mine), "屏=%r" % mine[:3])
-_d3 = PS.get_player(GID, UID3) or {}
 _act = list(((_d3.get("flags") or {}).get("quests_active")) or [])
 chk("★ ③ 幂等：手上只有那一条（没被派两遍）", len(_act) == 1, "quests_active=%s" % _act)
 
@@ -223,7 +227,12 @@ chk("★ ⑤ 那格是**派生态**：删掉它顶栏照样现算得出（不靠
 _p5b = dict(_d3)
 _f5b = dict(_p5b.get("flags") or {})
 _f5b["quests_active"] = []
-_f5b["quests_done"] = [OB.first_quest_id()] if OB.first_quest_id() else []
+# ★ B5（P-60）：兜底档的「第一件」**带档**算（矮人 ⇒ 引子），**接力的下一棒**（order==1
+#   主线 1）也得一并标成交 —— 引子交了顶栏会指「先把镇口的石头接了」（这正是 B5 的接力行为，
+#   不是 bug）；真的「没话」= 头两棒都交完。断言一个字没松（还是查 IDLE 句落在屏上）。
+_fid5 = OB.first_quest_id(_d3)
+_fid5n = OB.first_quest_id()
+_f5b["quests_done"] = [k for k in (_fid5, _fid5n) if k]
 _f5b.pop("current_goal", None)
 _p5b["flags"] = _f5b
 _line5 = OB.goal_line(_p5b)
@@ -241,6 +250,78 @@ _empty = [k for k in ("SYS_ONBOARD_GOAL_STEP", "SYS_ONBOARD_GOAL_JOB",
            "SYS_ONBOARD_GOAL_FIRST", "SYS_ONBOARD_GOAL_IDLE")
           if not str(TX.get(k, {}).get("value") or "").strip()]
 chk("★ 顶栏四档正文都在（缺一档 ⇒ 那一档玩家看到空屏）", not _empty, "%s" % _empty)
+
+# ★ B5 六族引子（P-60）[按族段]：六族各派各的 · 欢迎屏 · 交引子接力主线 1 · 幂等
+#   【口径】B5 设计稿 §4：建号自动派**本族**引子（`first_quest_id(p)` 按 race 现算）；
+#     交掉引子 ⇒ 主线 1 **自动上手**（否则新玩家手上没活、自己『接 1』又撞 B4-27 证门 = 断档）；
+#     两处都幂等（已派过 / 手上已有活 ⇒ 不回派）。
+#   【判据】六次**真建号**（选族 → 选职业 → 取名三拍真敲）：每族派的 id = 该族引子、
+#     欢迎屏印它的名字、六条互不相同；人类那条把三条件推满真交一次 ⇒ 屏上出接力话术 +
+#     档上接力成主线 1 + 再调一次不重派。
+print()
+print("── ★ B5 六族引子 [按族段]：六族各派各的 · 欢迎屏 · 交引子接力主线 1 · 幂等")
+import content.cmds_quest as _CQ60                                      # noqa: E402
+_R60 = (("人类", "human"), ("精灵", "elf"), ("矮人", "dwarf"),
+        ("兽人", "orc"), ("龙裔", "dragonkin"), ("亚人", "beastkin"))
+_INTRO60 = {k: x for k, x in _q().items() if str(x.get("chain")) == "intro"}
+_seen60 = {}
+for _i60, (_rn60, _rs60) in enumerate(_R60):
+    _u60 = "u_intro_%s" % _rs60
+    _seed(GID, _u60, level=1, gold=30, loc="windmill_town", node="wt_gate_n")
+    _drive(h, ad, _u60, "选族 %s" % _rn60)
+    _drive(h, ad, _u60, "选职业 骑士")
+    _w60 = _drive(h, ad, _u60, "名字 试%s" % _rn60)
+    _d60 = PS.get_player(GID, _u60) or {}
+    _exp60 = next((k for k, x in _INTRO60.items() if str(x.get("race")) == _rs60), "")
+    _act60 = list(((_d60.get("flags") or {}).get("quests_active")) or [])
+    chk("★ 按族段 · %s 建号派的是**本族**引子（期望 %s）" % (_rn60, _exp60),
+        bool(_exp60) and _act60 == [_exp60], "quests_active=%s" % _act60)
+    _qnm60 = (_q().get(_exp60) or {}).get("name", "")
+    chk("★ 按族段 · %s 欢迎屏印的是本族引子的名字" % _rn60,
+        bool(_qnm60) and any(_qnm60 in ln for ln in _w60), "屏=%r" % (_w60[-2:] if _w60 else []))
+    if _exp60:
+        _seen60[_rs60] = _exp60
+chk("★ 按族段 · 六族各派各的（六条 id 互不相同 = 没有串族）",
+    len(_seen60) == 6 and len(set(_seen60.values())) == 6, "%s" % _seen60)
+
+# 交引子 ⇒ 主线 1 自动上手（三条件接活后各推满一格：talk 挂树 · kill 打过一只 ·
+#   持有物是接活那一下 give 到手的（基线在 give 之前 ⇒ 自然算「接活后新达成」））
+_uh60 = "u_intro_human"
+_dh60 = PS.get_player(GID, _uh60) or {}
+_flh60 = dict(_dh60.get("flags") or {})
+_tkh60 = dict(_flh60.get("talked") or {})
+_dlg60 = _CQ60._dlg_of("npc_xiaoman")
+_tkh60[_dlg60] = int(_tkh60.get(_dlg60) or 0) + 1
+_flh60["talked"] = _tkh60
+_bkh60 = dict((_dh60.get("books") or {}).get("monster") or {})
+_mr60 = dict(_bkh60.get("ms_field_mouse") or {})
+_mr60["kills"] = int(_mr60.get("kills") or 0) + 1
+_mr60.setdefault("day", 1)
+_bkh60["ms_field_mouse"] = _mr60
+_bk60 = dict(_dh60.get("books") or {})
+_bk60["monster"] = _bkh60
+_dh60["books"] = _bk60
+_dh60["flags"] = _flh60
+_fl60 = {kk: vv for kk, vv in _dh60.items() if kk not in ("group_id", "qq_id", "uid")}
+PS.update_player(GID, _uh60, **_fl60)                                # 照 _Ad.save_player 的剔法落档
+_del60 = _drive(h, ad, _uh60, "交 探路")
+_qnmh60 = (_q().get("q_intro_human") or {}).get("name", "")
+_nxt60 = ((_q().get(OB.first_quest_id()) or {}).get("name") or "")
+chk("★ 按族段 · 三条件（talk/kill/持有物）齐 ⇒ 引子**真交得掉**",
+    bool(_qnmh60) and any(CA.T("SYS_JOB_DELIVERED", name=_qnmh60) in ln for ln in _del60),
+    "屏=%r" % _del60[-3:])
+chk("★ 按族段 · 交掉引子 ⇒ 屏上出**接力话术**（SYS_JOB_AUTO_NEXT）",
+    bool(_nxt60) and any(CA.T("SYS_JOB_AUTO_NEXT", name=_nxt60) in ln for ln in _del60),
+    "屏=%r" % _del60[-3:])
+_dh60b = PS.get_player(GID, _uh60) or {}
+_act60b = list(((_dh60b.get("flags") or {}).get("quests_active")) or [])
+_done60b = list(((_dh60b.get("flags") or {}).get("quests_done")) or [])
+chk("★ 按族段 · 交掉引子 ⇒ 主线 1 **自动上手**（接力成册 · 不卡在证门上）",
+    _act60b == [OB.first_quest_id()] and "q_intro_human" in _done60b,
+    "active=%s done=%s" % (_act60b, _done60b))
+_r60b = OB.auto_first_quest(_dh60b, _q())
+chk("★ 按族段 · 幂等（手上已有接力的活 ⇒ 再调一次不重派）",
+    _r60b == "", "auto_first_quest 回=%r" % _r60b)
 
 print("探针：引导层 · B 档：%s" % ("全绿" if not failures else "有红 X（%d 条）" % len(failures)))
 sys.exit(1 if failures else 0)

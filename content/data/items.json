@@ -2664,4 +2664,79 @@
       }
     ]
   }
+,
+  "i_intro_tuft": {
+    "name": "一撮灰毛",
+    "icon": "🐾",
+    "kind": "信物",
+    "kind_key": "keepsake",
+    "quality": "普通",
+    "price": 0,
+    "desc": "商队老狗身上薅下来的。攥着它，商队的人就认你。"
+  },
+  "i_intro_page": {
+    "name": "一页旧物谱",
+    "icon": "📜",
+    "kind": "信物",
+    "kind_key": "keepsake",
+    "quality": "普通",
+    "price": 0,
+    "desc": "从北边吹来的那半页。剩下的半页还在原处。"
+  },
+  "i_intro_iron": {
+    "name": "一截铁屑",
+    "icon": "🔩",
+    "kind": "信物",
+    "kind_key": "keepsake",
+    "quality": "普通",
+    "price": 0,
+    "desc": "柯尔砧上崩下来的。那批货的料。"
+  },
+  "i_intro_receipt": {
+    "name": "一张回执",
+    "icon": "🧾",
+    "kind": "信物",
+    "kind_key": "keepsake",
+    "quality": "普通",
+    "price": 0,
+    "desc": "玛莎撕的半张。活干完了才作数。"
+  },
+  "i_intro_coldstone": {
+    "name": "一块冷石",
+    "icon": "🪨",
+    "kind": "信物",
+    "kind_key": "keepsake",
+    "quality": "普通",
+    "price": 0,
+    "desc": "北边捡的。比别处的石头凉。"
+  },
+  "i_intro_letter": {
+    "name": "一封信",
+    "icon": "✉️",
+    "kind": "信物",
+    "kind_key": "keepsake",
+    "quality": "普通",
+    "price": 0,
+    "desc": "没署名。北墙根那位在等它。"
+  },
+  "i_intro_bracer": {
+    "name": "旧旅人的护腕",
+    "icon": "💍",
+    "kind": "饰品",
+    "kind_key": "accessory",
+    "quality": "普通",
+    "slot": "accessory",
+    "price": 0,
+    "affixes": [
+      {
+        "stat": "crit",
+        "v": 4
+      },
+      {
+        "stat": "hit",
+        "v": 4
+      }
+    ],
+    "desc": "上一个旅人留下的。护得住手腕，撑得住第一天。"
+  }
 }

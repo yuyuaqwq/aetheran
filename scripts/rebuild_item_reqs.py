@@ -84,7 +84,11 @@ FAMILY_FREE = ("helmet_thick", "helmet_bright", "boots_steady",
                # ★ Q-22（2026-09-26 · 分支 fxd）：铁匠铺上架的**起手武器**「柯尔打的粗剑」——
                #   与那三件粗货同族（普通品阶 ⇒ `QUALITY_MULT[普通] = None` ⇒ 本来就走不到门槛那一支），
                #   登记在这里是为了让「每个家族都登记过」那条判据照得见它（`probe_items ⑩`）。
-               "smith_blade")
+               "smith_blade",
+               # ★ B5（P-60 · 2026-09-30）：六族引子接活发的**教程护腕**「旧旅人的护腕」——
+               #   同款理由：普通品阶走不到门槛那支，登记进来让「每个家族都登记过」照得见
+               #   （不登记 = probe_items ⑩ 当场红「谁都没管」）。设计稿 §1：无 req 无 level。
+               "intro_bracer")
 
 QUALITIES = ("普通", "精制", "稀有", "遗物")
 

@@ -169,6 +169,12 @@ for qid, q in Q.items():
     for r in (q.get("rewards") or []):
         if isinstance(r, dict) and r.get("item"):
             _add(str(r["item"]), "quest", qid)
+    # ★ B5（P-60）第六路：**接活发放**（`quests.<id>.give`）—— 六族引子的信物与教程护腕
+    #   都是接活那一下到手的（B5 设计稿 §1「教程件不赌脸、有来源」）。kind = `quest_give`，
+    #   ③ 可达档照旧只查 gather/monster（发放物不占地图位置 —— 与 rewards 那一路同口径）。
+    for r in (q.get("give") or []):
+        if isinstance(r, dict) and r.get("item"):
+            _add(str(r["item"]), "quest_give", qid)
 
 _no_site = [k for k in MUST if not SITES.get(k)]
 (ok if not _no_site else bad)("★ 每个必须有渠道的 id 都有产出口（%d 个 id · 产出口 %d 条 · 没有的 %s）"
@@ -397,8 +403,9 @@ for iid in MUST:
         extra = "打了 %d 场" % n
     if not got and not gs and not ms:                  # 只由配方/委托出产的那类（②已证它在）
         kd = (ss[0]["kind"] if ss else "?")
-        got = kd in ("recipe", "quest")
-        how = "%s出产（%s）" % ({"recipe": "配方", "quest": "委托"}.get(kd, kd),
+        got = kd in ("recipe", "quest", "quest_give")
+        how = "%s出产（%s）" % ({"recipe": "配方", "quest": "委托",
+                                "quest_give": "接活发放"}.get(kd, kd),
                                ss[0]["where"] if ss else "—")
     runs[iid] = (got, how, extra)
     (ok if got else bad)("%-28s %-12s %s  —— %s%s"

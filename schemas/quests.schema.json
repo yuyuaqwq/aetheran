@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "阿斯特兰 · 任务与委托（quests 域）",
-  "description": "12 主线（认知推进链）+ 18 支线 + 3 悬赏档 + 8 生活职业任务（B3-3，链 `trade`，按 `trade` 字段分四个副业）。字段契约见 08_第1批_字段级设计_v1.md；`trade` 与 `_meta.trades` 见 06_第一阶段垂直切片/28_生活职业任务_设计_v1.md。",
+  "description": "12 主线（认知推进链）+ 18 支线 + 3 悬赏档 + 8 生活职业任务（B3-3，链 `trade`，按 `trade` 字段分四个副业）+ 6 族引子（B5，链 `intro`，按 `race` 一族一条 · order 41–46 · 建号自动派本族那条）。字段契约见 08_第1批_字段级设计_v1.md；`trade` 与 `_meta.trades` 见 06_第一阶段垂直切片/28_生活职业任务_设计_v1.md；六族引子见 00_总纲/17 §四十。",
   "type": "object",
   "patternProperties": {
     "^_": {
@@ -30,7 +30,8 @@
             "支线",
             "悬赏",
             "世界事件",
-            "生活"
+            "生活",
+            "引子"
           ]
         },
         "chain": {
@@ -38,8 +39,20 @@
             "main",
             "side",
             "bounty",
-            "trade"
+            "trade",
+            "intro"
           ]
+        },
+        "race": {
+          "enum": [
+            "human",
+            "elf",
+            "dwarf",
+            "orc",
+            "dragonkin",
+            "beastkin"
+          ],
+          "$comment": "B5 六族引子的族限定（短名 = 档上 `p.race` 同一格，`cmds_ast` 建号时 `kid.replace(\"race_\",\"\")` 落）：`quest_accept` 见它且与档不符 ⇒ `SYS_JOB_FOREIGN_RACE` 拒；`onboard.first_quest_id(p)` 按它挑建号自动派的本族那条。只写在 `chain=intro` 的条目上。"
         },
         "trade": {
           "enum": [

@@ -193,7 +193,10 @@ async def rename(env, sink, uid, player):
     #     而顶栏与『我的委托』都从这一刻开始有话说（`onboard.refresh_goal` 同拍校正）。
     from . import onboard as OB                           # 本地 import：免得装载期成环
     from .cmds_quest import _quests as _q                 # 委托域的**唯一**读口（别处同款）
-    _given = OB.auto_first_quest(p, _q()) if OB.step_of(p) == "town" else []
+    # ★ B5（P-60）：`auto_first_quest` 返回**派了谁的 id**（`""` = 没派）—— 欢迎屏与接时行文
+    #   都按这个 id 取，别再拿 `first_quest_id()` 无参值（那条对建完号的档是主线 1，
+    #   而实际派出去的是**本族引子** —— 显示与真派的会是两条不同的委托）。
+    _given = OB.auto_first_quest(p, _q()) if OB.step_of(p) == "town" else ""
     OB.refresh_goal(p)
     if player is not None:
         player.update(p)
@@ -203,9 +206,17 @@ async def rename(env, sink, uid, player):
         # ★ 2026-09-30（B3）：欢迎屏 —— 名字/族/职业/出生点/第一件委托一屏收
         #   （替掉原 FIRST_GIVEN 单句「系统先替你接了」；显示名全从域现取）
         from . import cmds_ast as CA                      # 本地 import：免得装载期成环
-        _qrec = _q().get(OB.first_quest_id()) or {}
+        _qrec = _q().get(_given) or {}                    # ★ B5：显示**真派**的那条（本族引子）
         for _w in CA.register_welcome(p, _qrec):
             yield _w
+        # ★ B5：**接时行文上屏** —— 引子走自动派（不进 `quest_accept`，三段行文里的 STORY
+        #   那一路永远走不到），不在这儿补一针，6 条开场白全是死文案（设计稿 §4.3）。
+        #   · 只给 `intro` 链补：主线 1 回落那条老路径**一个字不动**（欢迎屏基线零冲击）。
+        if str(_qrec.get("chain")) == "intro":
+            from .cmds_quest import _beat
+            _st = _beat(_qrec, "STORY")
+            if _st:
+                yield _st
 
 
 def _board_rows(p, group_id, uid) -> list:

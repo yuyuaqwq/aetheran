@@ -1137,4 +1137,275 @@
     "hook": "",
     "unlock": []
   }
+,
+  "q_intro_human": {
+    "name": "探路",
+    "kind": "引子",
+    "chain": "intro",
+    "order": 41,
+    "race": "human",
+    "giver": "npc_xiaoman",
+    "map": "windmill_town",
+    "min_level": 1,
+    "need": null,
+    "objective": "观察镇口 → 挂板墙读账 → 搭话小满 → 出北口 → 打退田鼠 → 看战利品 → 回来交活",
+    "require": [
+      {
+        "kind": "talk",
+        "npc": "npc_xiaoman",
+        "n": 1
+      },
+      {
+        "kind": "kill",
+        "monster": "ms_field_mouse",
+        "n": 1
+      },
+      {
+        "kind": "item",
+        "item": "i_intro_tuft",
+        "n": 1
+      }
+    ],
+    "give": [
+      {
+        "item": "i_intro_tuft",
+        "n": 1
+      },
+      {
+        "item": "i_intro_bracer",
+        "n": 1
+      }
+    ],
+    "reward_exp": 40,
+    "reward_gold": 10,
+    "teach": "",
+    "insight": "",
+    "hook": "",
+    "unlock": []
+  },
+  "q_intro_elf": {
+    "name": "石头",
+    "kind": "引子",
+    "chain": "intro",
+    "order": 42,
+    "race": "elf",
+    "giver": "npc_masha",
+    "map": "windmill_town",
+    "min_level": 1,
+    "need": null,
+    "objective": "观察镇口 → 读那块石头 → 搭话玛莎 → 出北口 → 打退田鼠 → 看战利品 → 回来交活",
+    "require": [
+      {
+        "kind": "talk",
+        "npc": "npc_masha",
+        "n": 1
+      },
+      {
+        "kind": "kill",
+        "monster": "ms_field_mouse",
+        "n": 1
+      },
+      {
+        "kind": "item",
+        "item": "i_intro_page",
+        "n": 1
+      }
+    ],
+    "give": [
+      {
+        "item": "i_intro_page",
+        "n": 1
+      },
+      {
+        "item": "i_intro_bracer",
+        "n": 1
+      }
+    ],
+    "reward_exp": 40,
+    "reward_gold": 10,
+    "teach": "",
+    "insight": "",
+    "hook": "",
+    "unlock": []
+  },
+  "q_intro_dwarf": {
+    "name": "交不掉的货",
+    "kind": "引子",
+    "chain": "intro",
+    "order": 43,
+    "race": "dwarf",
+    "giver": "npc_cole",
+    "map": "windmill_town",
+    "min_level": 1,
+    "need": null,
+    "objective": "观察镇口 → 挂板墙读账 → 搭话柯尔 → 出北口 → 打退田鼠 → 看战利品 → 回来交活",
+    "require": [
+      {
+        "kind": "talk",
+        "npc": "npc_cole",
+        "n": 1
+      },
+      {
+        "kind": "kill",
+        "monster": "ms_field_mouse",
+        "n": 1
+      },
+      {
+        "kind": "item",
+        "item": "i_intro_iron",
+        "n": 1
+      }
+    ],
+    "give": [
+      {
+        "item": "i_intro_iron",
+        "n": 1
+      },
+      {
+        "item": "i_intro_bracer",
+        "n": 1
+      }
+    ],
+    "reward_exp": 40,
+    "reward_gold": 10,
+    "teach": "",
+    "insight": "",
+    "hook": "",
+    "unlock": []
+  },
+  "q_intro_orc": {
+    "name": "找活",
+    "kind": "引子",
+    "chain": "intro",
+    "order": 44,
+    "race": "orc",
+    "giver": "npc_masha",
+    "map": "windmill_town",
+    "min_level": 1,
+    "need": null,
+    "objective": "观察镇口 → 挂板墙读账 → 搭话玛莎 → 出北口 → 打退田鼠 → 看战利品 → 回来交活",
+    "require": [
+      {
+        "kind": "talk",
+        "npc": "npc_masha",
+        "n": 1
+      },
+      {
+        "kind": "kill",
+        "monster": "ms_field_mouse",
+        "n": 1
+      },
+      {
+        "kind": "item",
+        "item": "i_intro_receipt",
+        "n": 1
+      }
+    ],
+    "give": [
+      {
+        "item": "i_intro_receipt",
+        "n": 1
+      },
+      {
+        "item": "i_intro_bracer",
+        "n": 1
+      }
+    ],
+    "reward_exp": 40,
+    "reward_gold": 10,
+    "teach": "",
+    "insight": "",
+    "hook": "",
+    "unlock": []
+  },
+  "q_intro_dragonkin": {
+    "name": "北边有东西在叫",
+    "kind": "引子",
+    "chain": "intro",
+    "order": 45,
+    "race": "dragonkin",
+    "giver": "npc_hagen",
+    "map": "windmill_town",
+    "min_level": 1,
+    "need": null,
+    "objective": "观察镇口 → 白烛堂读铭文 → 搭话哈根 → 出北口 → 打退田鼠 → 看战利品 → 回来交活",
+    "require": [
+      {
+        "kind": "talk",
+        "npc": "npc_hagen",
+        "n": 1
+      },
+      {
+        "kind": "kill",
+        "monster": "ms_field_mouse",
+        "n": 1
+      },
+      {
+        "kind": "item",
+        "item": "i_intro_coldstone",
+        "n": 1
+      }
+    ],
+    "give": [
+      {
+        "item": "i_intro_coldstone",
+        "n": 1
+      },
+      {
+        "item": "i_intro_bracer",
+        "n": 1
+      }
+    ],
+    "reward_exp": 40,
+    "reward_gold": 10,
+    "teach": "",
+    "insight": "",
+    "hook": "",
+    "unlock": []
+  },
+  "q_intro_beastkin": {
+    "name": "一句话",
+    "kind": "引子",
+    "chain": "intro",
+    "order": 46,
+    "race": "beastkin",
+    "giver": "npc_xiaoman",
+    "map": "windmill_town",
+    "min_level": 1,
+    "need": null,
+    "objective": "观察镇口 → 白烛堂读铭文 → 搭话小满 → 出北口 → 打退田鼠 → 看战利品 → 回来交活",
+    "require": [
+      {
+        "kind": "talk",
+        "npc": "npc_xiaoman",
+        "n": 1
+      },
+      {
+        "kind": "kill",
+        "monster": "ms_field_mouse",
+        "n": 1
+      },
+      {
+        "kind": "item",
+        "item": "i_intro_letter",
+        "n": 1
+      }
+    ],
+    "give": [
+      {
+        "item": "i_intro_letter",
+        "n": 1
+      },
+      {
+        "item": "i_intro_bracer",
+        "n": 1
+      }
+    ],
+    "reward_exp": 40,
+    "reward_gold": 10,
+    "teach": "",
+    "insight": "",
+    "hook": "",
+    "unlock": []
+  }
 }

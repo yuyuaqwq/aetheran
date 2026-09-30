@@ -97,7 +97,7 @@ def goal_text(p) -> str:
         x = qs.get(k) or {}
         return T("SYS_ONBOARD_GOAL_JOB", name=x.get("name", k),
                  objective=x.get("objective", ""))
-    first = first_quest_id()
+    first = first_quest_id(p)            # ★ B5：带档 —— 引子没接时顶栏指本族引子那条
     if first and first not in (p.get("flags") or {}).get("quests_done", []):
         return T("SYS_ONBOARD_GOAL_FIRST", name=(qs.get(first) or {}).get("name", first))
     return T("SYS_ONBOARD_GOAL_IDLE")
@@ -114,13 +114,25 @@ def goal_line(p) -> str:
     return T("SYS_ONBOARD_GOAL", body=body)
 
 
-def first_quest_id() -> str:
+def first_quest_id(p=None) -> str:
     """第一件委托的 id —— **现算**（`quests` 域里 `order == FIRST_ORDER` 的那条）。
 
     ★ 不写死 `q_main_01`：域里换 id / 加一条更早的，这一句跟着改。
       取不到（域缺 / 没有 order=1）⇒ 回 `""`（调用方当「没有第一件」，不静默编一条）。
+    ★ B5 六族引子（P-60）：**带档调用**（`first_quest_id(p)`）先看**本族引子** ——
+      `chain == "intro"` 且 `race` 与档上同一格、且**没交过**的那条；引子交过了就落回
+      `order == FIRST_ORDER`（主线 1，接力下一棒）。**无参调用行为一字不变**（老调用点
+      与探针都是无参，不被动）；`p` 没写族（没建完号）也走老路。
     """
     from .cmds_quest import _quests
+    if p is not None:
+        race = str(p.get("race") or "")
+        if race:
+            done = (p.get("flags") or {}).get("quests_done") or []
+            for k, x in (_quests() or {}).items():
+                if (str(x.get("chain")) == "intro" and str(x.get("race") or "") == race
+                        and k not in done):
+                    return k
     best, bo = "", None
     for k, x in (_quests() or {}).items():
         o = x.get("order")
@@ -147,40 +159,57 @@ def refresh_goal(p) -> bool:
     return True
 
 
-def auto_first_quest(p, quests) -> bool:
-    """第一件委托**自动派**（建号走完那一刻）—— 返回「有没有派」。
+def auto_first_quest(p, quests) -> str:
+    """第一件委托**自动派**（建号走完那一刻）—— 返回**派了谁的 id**（`""` = 没派）。
 
     ★ 口径（B 档 ③）：
-      · 派**哪一条** = `first_quest_id()`（域里 order==1 那条，现算）
+      · 派**哪一条** = `first_quest_id(p)`（★ B5：带档 —— 本族引子没交过就是它；
+        引子交过了落回 order==1 主线 1 ⇒ 这一句同时管「交引子接上主线 1」的接力）
       · **不绕 `quest_accept` 的三道门**（见习证 / 等级 / 已接过）—— 那是「玩家自己去接活」
         的守卫；这一件是**系统派给他上手的第一件事**，在公会谈活之前、在城里，
         照 B4-27 那道门会把玩家卡在「先办证」上 ⇒ 第一件没有证。
-        ⇒ 但**不是把守卫删掉**：只对这一条、只在「一件都没接过」时派，且**必须能重复调用**
-          （幂等：已派过 / 交过 / 手上已有活 ⇒ 一律不回派）。
+        ⇒ 但**不是把守卫删掉**：只对这一条、只在「目标没交 & 手上没活 & 等级够」时派，
+          且**必须能重复调用**（幂等：已派过 / 手上已有活 ⇒ 一律不回派）。
       · **发不发东西** = 走 `quest_accept` 那同一对 `_hand_over` / `_set_base`（不重写一遍），
         否则第一件委托接时不给东西 = 玩家看见一件没有起步道具的活。
+    ★ B5（P-60）两处改口径：
+      · 返回 bool → **id**（`rename` 拿它显示真派的那条 + 交引子钩子拿它取名字）。
+      · 「交过活就不再补」的守卫从 `quests_done 非空 ⇒ False` 改成**按目标判**
+        （`k in quests_done ⇒ ""`）—— 不然交掉引子后 `quests_done` 非空，
+        主线 1 永远接不上（B5 设计稿 §4.2）。
+      · 老档安全：这一句只有 `rename`（`renamed` 拦重入，建号那一刻）与「交引子」
+        钩子两处调用 —— 老玩家交不到引子（race 门 + 没接），碰不到第二处。
     """
     from .cmds_quest import _mine as _mine_q
     if _mine_q(p):
-        return False
-    if (p.get("flags") or {}).get("quests_done"):
-        return False                       # 交过活的人不是新玩家，不再补第一件
-    k = first_quest_id()
+        return ""
+    # ★ 守卫的精确语义（P-60 落地当天 probe_cmds 改名那条咬出来的）：
+    #   派发只服务「**本族引子 → 主线 1**」这条新手接力线 —— 交过的活**全在引子集合里**
+    #   （= 真新号 [空]，或刚交掉引子 [只含引子]）才放行；交过**别条**的老档一个字不补。
+    #   （第一版只按「目标没交」判 ⇒ 交过支线的老档改名时也会被派活，当场被探针逮住。）
+    _done60 = set((p.get("flags") or {}).get("quests_done") or [])
+    _intro_ids60 = {k for k, x in (quests or {}).items()
+                    if str(x.get("chain")) == "intro"}
+    if not _done60 <= _intro_ids60:
+        return ""
+    k = first_quest_id(p)                # ★ B5：带档（本族引子优先，交过落主线 1）
     if not k:
-        return False
+        return ""
+    if k in ((p.get("flags") or {}).get("quests_done") or []):
+        return ""                        # ★ 目标已交（原「quests_done 非空就不派」按目标判）
     x = (quests or {}).get(k) or {}
     if not x:
-        return False
+        return ""
     if int(p.get("level", 1) or 1) < int(x.get("min_level", 1) or 1):
-        return False                       # 等级不够就不派（不绕那一道）
+        return ""                        # 等级不够就不派（不绕那一道）
     fl = dict(p.get("flags") or {})
     act = list(fl.get("quests_active") or [])
     if k in act:
-        return False
+        return ""
     from .cmds_quest import _hand_over, _require_of, _set_base
     if _require_of(x):
         _set_base(p, k, x)
-    gained = _hand_over(p, x)
+    _hand_over(p, x)
     fl["quests_active"] = act + [k]
     p["flags"] = fl
-    return bool(gained) or True
+    return k

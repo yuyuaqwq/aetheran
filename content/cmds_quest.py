@@ -332,12 +332,13 @@ def _set(p, key, val):
 # 消费端只按 `chain` + `order` 映射取槽位（一个中文都不内联）。
 #   · `order` 是域里现成的稳定标识（『接 <编号>』用的就是它：主线 1–12 · 支线 13–30 ·
 #     生活 31–38 · 悬赏档 101–103），所以键名 = 链模板 + 编号 —— 不拿名字拼键名。
-#   · 四条链的模板写成**字面量**（`_SLOT_TPL`）：probe_copy ⑤ 的「口径表每条都被引用」认这种
-#     `前缀%02d_%s` 形状（模板拼出来的键也算引用），别改成运行时拼串。
+#   · 四条链 + 六族引子（B5，链 `intro`）的模板写成**字面量**（`_SLOT_TPL`）：probe_copy ⑤ 的
+#     「口径表每条都被引用」认这种 `前缀%02d_%s` 形状（模板拼出来的键也算引用），别改成运行时拼串。
 #   · 认不出的链**不许静默留白**：回一个 fail-closed 哨兵键 —— `T()` 当场回显
 #     `[MISSING TEXT: QUEST_UNMAPPED_STORY]`（探针 ㉓ 也钉着「域里每条都算得出真槽位」）。
 _SLOT_TPL = {"main": "QUEST_MAIN%02d_%s", "side": "QUEST_SIDE%02d_%s",
-             "trade": "QUEST_TRADE%02d_%s", "bounty": "QUEST_BOUNTY%02d_%s"}
+             "trade": "QUEST_TRADE%02d_%s", "bounty": "QUEST_BOUNTY%02d_%s",
+             "intro": "QUEST_INTRO%02d_%s"}
 
 
 def _slot_of(x, part):
@@ -1247,6 +1248,15 @@ async def quest_accept(env, sink, uid, player):
     if k in _mine(p) or (k in _done(p) and not _reaccept_ok(x, k, p)):
         yield T("SYS_JOB_ALREADY")
         return
+    # ★ B5 六族引子（P-60）：**race 门** —— `chain == "intro"` 的条目带 `race`（族短名），
+    #   别的族的引子接不了（探针 probe_quests [引子段] 钉着「族外必拒 · 族内不受这条拦」）。
+    #   · 为什么排在「已经接过」之后：手上已有这条的重复提示优先（不被 race 门抢答）；
+    #     排在见习证门**之前**：族外那条根本不该轮到办证的话题（先说清「不归你」）。
+    #   · 只拦 `race` 非空的条目 —— 引子之外的委托一个字不受影响；档上没写族（没建完号）
+    #     时带 race 的引子也接不了 —— fail-closed，那本来也走不到这里。
+    if x.get("race") and str(x.get("race")) != str(p.get("race") or ""):
+        yield T("SYS_JOB_FOREIGN_RACE")
+        return
     # ★ B4-27（P-53）：「接 <编号>」这一条**真有门了** —— 先办见习证。
     #   · 口径依据 = `06_第一阶段垂直切片/04_指令总表 §二`「`接 <编号>` 的守卫 = **已登记 · 未接**」
     #     （`03_风车镇 §一` 那一格只写了「等级够 · 未接」——两份真源打架，本轮按**命令表真源**落，
@@ -1357,6 +1367,21 @@ async def quest_deliver(env, sink, uid, player):
         yield T("SYS_JOB_LEVELUP", level=lv)
     if x.get("hook"):
         yield "（「%s」）" % x["hook"]
+    # ★ B5 六族引子（P-60）：交掉**引子** ⇒ 主线 1 自动上手（`SYS_JOB_AUTO_NEXT` 那一行跟着出）。
+    #   · 为什么非自动接不可：引子是建号那一刻**自动派**的（绕见习证门），交完若不接上，
+    #     新玩家手上没活、自己去『接 1』又被 B4-27 的证门拦住 = 断档（交完就没下一步）。
+    #   · 幂等与老档：`auto_first_quest` 自己按「目标没交 & 手上没活 & 等级够」判（B5 改的口径），
+    #     重入不派两遍；老玩家交不到引子（race 门 + 没接），这条钩子碰不到他们。
+    #   · 落档：auto 改了 p（接活发东西 + 挂进 quests_active），在**已经 update+save 过**的
+    #     这段后面再改就还得再落一次 —— 否则屏上说了「接上了」档里没有。
+    if str(x.get("chain")) == "intro":
+        from . import onboard as OB                       # 本地 import：免得装载期成环
+        nk = OB.auto_first_quest(p, qs)
+        if nk:
+            if player is not None:
+                player.update(p)
+            _save(env)
+            yield T("SYS_JOB_AUTO_NEXT", name=(qs.get(nk) or {}).get("name", nk))
 
 
 def _obj_ok(x, p, k=None):

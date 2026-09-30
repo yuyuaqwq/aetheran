@@ -715,8 +715,13 @@ if list(_q13.get("give") or []) != _want_give:
     _b7.append(("q_side_13.give = %s ≠ 15 §二 那一行 hold= 的 %s（两处口径）"
                 % (_q13.get("give"), _want_give), ""))
 _givers = sorted(k for k, v in QE.items() if v.get("give"))
-if _givers != ["q_side_13"]:
-    _b7.append(("带 `give` 的条目 = %s（今天只该有「还石头」一条 —— 多一条就是新开的形状没人裁）"
+# ★ B5（P-60）：名单从「只有还石头」扩成「还石头 + 六族引子」—— 引子的 give 是**裁决过的**
+#   形状（B5 设计稿 §1：接活发「本族信物 + 旧旅人的护腕」，教程件不赌脸、有来源）。
+#   判据**没松**：名单仍钉死（现算引子集合 + side_13），多一条 / 少一条照旧红。
+_intro_givers60 = sorted(k for k, v in QE.items() if str(v.get("chain")) == "intro")
+if _givers != sorted(_intro_givers60 + ["q_side_13"]):
+    _b7.append(("带 `give` 的条目 = %s（裁决名单 = 六族引子（B5 §1）+「还石头」——"
+                "多一条就是新开的形状没人裁）"
                 % _givers, ""))
 # ② 真敲「接 25」
 _p0 = _player(level=1, flags={"card": 1})
